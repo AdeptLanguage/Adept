@@ -3,15 +3,14 @@ ifeq ($(OS), Windows_NT)
 	CC=x86_64-w64-mingw32-gcc
 	LINKER=x86_64-w64-mingw32-g++
 	LLVM_LINKER_FLAGS=-LC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/lib
-    RM=del >nul 2>&1
+	LLVM_INCLUDE_DIRS=-IC:/.storage/OpenSource/llvm-5.0.0.src/include -IC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/include
 else
 	CC=gcc
 	LINKER=g++
-	LLVM_LINKER_FLAGS=
 endif
 
 # LLVM Flags
-LLVM_INCLUDE_FLAGS=-DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
+LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
 
 # LLVM library dependencies (Probably don't need all of them but whatever)
 LLVM_LIBS=-lLLVMCoverage -lgtest_main -lgtest -lLLVMDlltoolDriver -lLLVMLibDriver -lLLVMOption -lLLVMOrcJIT -lLLVMTableGen -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen \
