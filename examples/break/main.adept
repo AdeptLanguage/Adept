@@ -1,0 +1,11 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    i usize = 0; while i != 100 {
+        if i == 10, break
+        printf('> %d\n', cast int i)
+        i += 1
+    }
+    return 0
+}

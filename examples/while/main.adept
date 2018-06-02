@@ -1,0 +1,11 @@
+
+foreign puts(*ubyte) int
+
+func main(in argc int, in argv **ubyte) int {
+    i int = 0
+    while i != 10 {
+        puts('Increamenting i...')
+        i += 1
+    }
+    return 0
+}

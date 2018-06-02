@@ -1,0 +1,7 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('%c%c%c%c%c%c%c', 'H'ub, 'e'ub, 'l'ub, 'l'ub, 'o'ub, '!'ub, '\n'ub)
+    return 0
+}

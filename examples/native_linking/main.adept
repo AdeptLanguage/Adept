@@ -1,0 +1,80 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+foreign 'libglfw3.a'
+foreign 'libgdi32.a'
+foreign 'libopengl32.a'
+
+struct GLFWwindow ()
+
+foreign glfwInit() int
+foreign glfwCreateWindow(int, int, *ubyte, ptr, ptr) *GLFWwindow
+foreign glfwMakeContextCurrent(*GLFWwindow) void
+foreign glfwSwapInterval(int) void
+foreign glfwWindowShouldClose(*GLFWwindow) int
+foreign glfwGetFramebufferSize(*GLFWwindow, out *int, out *int) void
+foreign glfwSwapBuffers(*GLFWwindow) void
+foreign glfwPollEvents() void
+foreign glfwDestroyWindow(*GLFWwindow) void
+foreign glfwTerminate() void
+foreign glfwGetTime() double
+
+foreign glClear(int) void
+foreign glViewport(int, int, int, int) void
+foreign glMatrixMode(int) void
+foreign glBegin(int) void
+foreign glLoadIdentity() void
+foreign glRotated(double, double, double, double) void
+foreign glColor3f(float, float, float) void
+foreign glVertex3f(float, float, float) void
+foreign glEnd() void
+
+GL_COLOR_BUFFER_BIT == 0x00004000
+GL_PROJECTION == 0x1701
+GL_MODELVIEW == 0x1700
+GL_TRIANGLES == 0x0004
+
+func main(in argc int, in argv **ubyte) int {
+    if glfwInit() == 0 {
+        puts('Failed to init glfw')
+        return 1
+    }
+
+    window *GLFWwindow = glfwCreateWindow(640, 480, 'GLFW window', null, null)
+
+    glfwMakeContextCurrent(window)
+    glfwSwapInterval(1)
+
+    width int
+    height int
+
+    until glfwWindowShouldClose(window) {
+        glfwGetFramebufferSize(window, &width, &height)
+        glClear(GL_COLOR_BUFFER_BIT)
+
+        glViewport(0, 0, width, height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        glRotated(glfwGetTime()*100.0, 0.0, 1.0, 0.0)
+
+        glBegin(GL_TRIANGLES)
+        glColor3f(1.0, 0.0, 0.0)
+        glVertex3f(0.0, 0.5, 0.0)
+        glColor3f(0.0, 1.0, 0.0)
+        glVertex3f(0.5, -0.5, 0.0)
+        glColor3f(0.0, 0.0, 1.0)
+        glVertex3f(-0.5, -0.5, 0.0)
+        glEnd()
+
+        glfwSwapBuffers(window)
+        glfwPollEvents()
+    }
+
+    glfwDestroyWindow(window)
+    glfwTerminate()
+    return 0
+}

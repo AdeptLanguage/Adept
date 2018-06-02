@@ -1,0 +1,15 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    ms_function(10, 11)
+    c int = ms_function(13, 8)
+    ref stdcall func(int, int) int = func &ms_function
+    d int = ref(14, 43)
+    printf('c = %d, d = %d\n', c, d)
+    return 0
+}
+
+stdcall func ms_function(a int, b int) int {
+    return a + b
+}

@@ -1,0 +1,11 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('0xC0DEBEEF = %d\n', 0xC0DEBEEF)
+    printf('0x000000FF = %d\n', 0x000000FF)
+    printf('0x00000FFF = %d\n', 0x00000FFF)
+    printf('0x0000FFFF = %d\n', 0x0000FFFF)
+    return 0
+}

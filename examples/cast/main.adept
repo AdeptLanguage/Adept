@@ -1,0 +1,150 @@
+
+import 'sys/cstdio.adept'
+
+struct Person (age int)
+
+func main(in argc int, in argv **ubyte) int {
+    // ========== to 'bool' ==========
+    //bool2bool   bool = cast bool true
+    byte2bool   bool = cast bool 21sb
+    ubyte2bool  bool = cast bool 21ub
+    short2bool  bool = cast bool 21ss
+    ushort2bool bool = cast bool 21us
+    int2bool    bool = cast bool 21si
+    uint2bool   bool = cast bool 21ui
+    long2bool   bool = cast bool 21sl
+    ulong2bool  bool = cast bool 21ul
+    float2bool  bool = cast bool 21.0f
+    double2bool bool = cast bool 21.0d
+
+    // ========== to 'byte' ==========
+    bool2byte   byte = cast byte true
+    //byte2byte   byte = cast byte 21sb
+    ubyte2byte  byte = cast byte 21ub
+    short2byte  byte = cast byte 21ss
+    ushort2byte byte = cast byte 21us
+    int2byte    byte = cast byte 21si
+    uint2byte   byte = cast byte 21ui
+    long2byte   byte = cast byte 21sl
+    ulong2byte  byte = cast byte 21ul
+    float2byte  byte = cast byte 21.0f
+    double2byte byte = cast byte 21.0d
+
+    // ========== to 'ubyte' ==========
+    bool2ubyte   ubyte = cast ubyte true
+    byte2ubyte   ubyte = cast ubyte 21sb
+    //ubyte2ubyte  ubyte = cast ubyte 21ub
+    short2ubyte  ubyte = cast ubyte 21ss
+    ushort2ubyte ubyte = cast ubyte 21us
+    int2ubyte    ubyte = cast ubyte 21si
+    uint2ubyte   ubyte = cast ubyte 21ui
+    long2ubyte   ubyte = cast ubyte 21sl
+    ulong2ubyte  ubyte = cast ubyte 21ul
+    float2ubyte  ubyte = cast ubyte 21.0f
+    double2ubyte ubyte = cast ubyte 21.0d
+
+    // ========== to 'short' ==========
+    bool2short   short = cast short true
+    byte2short   short = cast short 21sb
+    ubyte2short  short = cast short 21ub
+    //short2short  short = cast short 21ss
+    ushort2short short = cast short 21us
+    int2short    short = cast short 21si
+    uint2short   short = cast short 21ui
+    long2short   short = cast short 21sl
+    ulong2short  short = cast short 21ul
+    float2short  short = cast short 21.0f
+    double2short short = cast short 21.0d
+
+    // ========== to 'ushort' ==========
+    bool2ushort   ushort = cast ushort true
+    byte2ushort   ushort = cast ushort 21sb
+    ubyte2ushort  ushort = cast ushort 21ub
+    short2ushort  ushort = cast ushort 21ss
+    //ushort2ushort ushort = cast ushort 21us
+    int2ushort    ushort = cast ushort 21si
+    uint2ushort   ushort = cast ushort 21ui
+    long2ushort   ushort = cast ushort 21sl
+    ulong2ushort  ushort = cast ushort 21ul
+    float2ushort  ushort = cast ushort 21.0f
+    double2ushort ushort = cast ushort 21.0d
+
+    // ========== to 'int' ==========
+    bool2int   int = cast int true
+    byte2int   int = cast int 21sb
+    ubyte2int  int = cast int 21ub
+    short2int  int = cast int 21ss
+    ushort2int int = cast int 21us
+    //int2int    int = cast int 21si
+    uint2int   int = cast int 21ui
+    long2int   int = cast int 21sl
+    ulong2int  int = cast int 21ul
+    float2int  int = cast int 21.0f
+    double2int int = cast int 21.0d
+
+    // ========== to 'uint' ==========
+    bool2uint   uint = cast uint true
+    byte2uint   uint = cast uint 21sb
+    ubyte2uint  uint = cast uint 21ub
+    short2uint  uint = cast uint 21ss
+    ushort2uint uint = cast uint 21us
+    int2uint    uint = cast uint 21si
+    //uint2uint uint = cast uint 21ui
+    long2uint   uint = cast uint 21sl
+    ulong2uint  uint = cast uint 21ul
+    float2uint  uint = cast uint 21.0f
+    double2uint uint = cast uint 21.0d
+
+    // ========== to 'long' ==========
+    bool2long   long = cast long true
+    byte2long   long = cast long 21sb
+    ubyte2long  long = cast long 21ub
+    short2long  long = cast long 21ss
+    ushort2long long = cast long 21us
+    int2long    long = cast long 21si
+    uint2long   long = cast long 21ui
+    //long2long   long = cast long 21sl
+    ulong2long  long = cast long 21ul
+    float2long  long = cast long 21.0f
+    double2long long = cast long 21.0d
+
+    // ========== to 'ulong' ==========
+    bool2ulong   ulong = cast ulong true
+    byte2ulong   ulong = cast ulong 21sb
+    ubyte2ulong  ulong = cast ulong 21ub
+    short2ulong  ulong = cast ulong 21ss
+    ushort2ulong ulong = cast ulong 21us
+    int2ulong    ulong = cast ulong 21si
+    uint2ulong   ulong = cast ulong 21ui
+    long2ulong   ulong = cast ulong 21sl
+    //ulong2ulong  ulong = cast ulong 21ul
+    float2ulong  ulong = cast ulong 21.0f
+    double2ulong ulong = cast ulong 21.0d
+
+    // ========== to 'float' ==========
+    bool2float   float = cast float true
+    byte2float   float = cast float 21sb
+    ubyte2float  float = cast float 21ub
+    short2float  float = cast float 21ss
+    ushort2float float = cast float 21us
+    int2float    float = cast float 21si
+    uint2float   float = cast float 21ui
+    long2float   float = cast float 21sl
+    ulong2float  float = cast float 21ul
+    //float2float  float = cast float 21.0f
+    double2float float = cast float 21.0d
+
+    // ========== to 'double' ==========
+    bool2double   double = cast double true
+    byte2double   double = cast double 21sb
+    ubyte2double  double = cast double 21ub
+    short2double  double = cast double 21ss
+    ushort2double double = cast double 21us
+    int2double    double = cast double 21si
+    uint2double   double = cast double 21ui
+    long2double   double = cast double 21sl
+    ulong2double  double = cast double 21ul
+    float2double  double = cast double 21.0f
+    //double2double double = cast double 21.0d
+    return 0
+}

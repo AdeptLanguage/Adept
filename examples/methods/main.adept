@@ -1,0 +1,30 @@
+
+import 'sys/cstdio.adept'
+
+struct Person (name *ubyte, age int)
+
+func main(in argc int, in argv **ubyte) int {
+    isaac Person
+    isaac.set('Isaac', 15)
+    isaac.print()
+    printf('isaac.getAge() = %d\n', isaac.getAge())
+
+    josh *Person = malloc(sizeof Person)
+    josh.set('Josh', 14)
+    josh.print()
+    free(josh)
+    return 0
+}
+
+func set(this *Person, name *ubyte, age int) void {
+    this.name = name
+    this.age = age
+}
+
+func print(this *Person) void {
+    printf('Person (name = "%s", age = %d)\n', this.name, this.age)
+}
+
+func getAge(this *Person) int {
+    return this.age
+}

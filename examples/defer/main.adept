@@ -1,0 +1,10 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    puts('Defering statements...')
+    defer puts('defer 1')
+    defer puts('defer 2')
+    defer puts('defer 3')
+    return 0
+}

@@ -1,0 +1,14 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    countup int = 0
+
+    while continue {
+        countup += 1
+        printf('%d\n', countup)
+        unless countup == 10, continue
+    }
+
+    return 0
+}

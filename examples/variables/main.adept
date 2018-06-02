@@ -1,0 +1,9 @@
+
+foreign puts(*ubyte) int
+
+func main(in argc int, in argv **ubyte) int {
+    hello_world *ubyte = 'Hello Variables!'
+    another int = 10
+    puts(hello_world)
+    return 0
+}

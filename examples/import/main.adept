@@ -1,0 +1,7 @@
+
+import "hello.adept"
+
+func main(in argc int, in argv **ubyte) int {
+    hello_world()
+    return 0
+}

@@ -1,0 +1,12 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+MY_CONSTANT == 7 * 3
+APPLICATION_NAME == 'Constants Example Program'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('MY_CONSTANT = %d\n', MY_CONSTANT)
+    printf('APPLICATION_NAME = %s\n', APPLICATION_NAME)
+    return 0
+}

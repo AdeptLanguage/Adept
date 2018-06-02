@@ -1,0 +1,10 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    i usize = 0; while i != 10 {
+        i += 1; if i == 3  or i == 6, continue
+        printf('> %d\n', cast int i)
+    }
+    return 0
+}

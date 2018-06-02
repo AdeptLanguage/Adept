@@ -1,0 +1,8 @@
+
+struct Person (name *ubyte, age int, parent Parent)
+struct Parent (gender bool)
+
+func main(in argc int, in argv **ubyte) int {
+    person Person
+    return 0
+}

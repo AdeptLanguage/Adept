@@ -1,0 +1,13 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('First argument of program is: "%s"\n', *argv)
+
+    my_string *ubyte = malloc(1)
+    *my_string = 0
+    printf('Empty string my_string has contents: "%s"\n')
+    free(my_string)
+    return 0
+}

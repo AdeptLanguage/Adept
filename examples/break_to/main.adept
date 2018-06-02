@@ -1,0 +1,28 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    i, j usize = 0
+
+    // This code will result in i and j being 21.
+    // This isn't a very practical example of when you would use this,
+    // but it showcases the feature well in little code, so whatever
+
+    while outer : i != 100 {
+        while inner : j != 100 {
+            if i == 10 and j == 10, break outer
+            j += 1
+        }
+        j = 0; i += 1
+    }
+
+    // Labels can be resued. The first surrounding block with the
+    // given label will be selected if there are duplicates.
+    while outer : i != 50 or j != 50 {
+        i += 1; j += 1
+        if i == 21, break outer
+    }
+
+    printf('%d %d\n', i, j)
+    return 0
+}
