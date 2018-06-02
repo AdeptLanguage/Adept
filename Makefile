@@ -1,14 +1,13 @@
 
 ifeq ($(OS), Windows_NT)
-	CC=x86_64-264-mingw32-gcc
-	LINKER=x86_64-264-mingw32-g++
+	CC=x86_64-w64-mingw32-gcc
+	LINKER=x86_64-w64-mingw32-g++
 	LLVM_LINKER_FLAGS=-LC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/lib
-    RM ?= del /Q
+    RM=del >nul 2>&1
 else
 	CC=gcc
 	LINKER=g++
 	LLVM_LINKER_FLAGS=
-	RM ?= rm -f 2> /dev/null
 endif
 
 # LLVM Flags
@@ -62,7 +61,12 @@ $(DEBUG_OBJECTS): $(OBJDIR)/debug/%.o : $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(ADDITIONAL_DEBUG_CFLAGS) $< -o $@
 
 clean:
-	$(RM) obj/debug/*.* 
-	$(RM) obj/*.* 2> /dev/null
-	$(RM) bin/*.* 2> /dev/null
-
+ifeq ($(OS), Windows_NT)
+	del obj\debug\*.* /Q
+	del obj\*.* /Q
+	del bin\*.* /Q
+else
+	rm -f 2> /dev/null obj/debug/*.*
+	rm -f 2> /dev/null obj/*.*
+	rm -f 2> /dev/null bin/*.*
+endif
