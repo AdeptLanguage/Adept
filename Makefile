@@ -1,13 +1,18 @@
 
-CC=x86_64-w64-mingw32-gcc
+ifeq ($(OS), Windows_NT)
+	CC=x86_64-264-mingw32-gcc
+	LINKER=x86_64-264-mingw32-g++
+	LLVM_LINKER_FLAGS=-LC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/lib
+    RM ?= del /Q
+else
+	CC=gcc
+	LINKER=g++
+	LLVM_LINKER_FLAGS=
+	RM ?= rm -f 2> /dev/null
+endif
 
-# Linker must work with C++ because the LLVM libraries depend on C++ linking features
-LINKER=x86_64-w64-mingw32-g++
-
-# Directories where built LLVM 5.0 libraries, headers, etc. are
-LLVM_LIB_DIR=C:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/lib
-LLVM_INCLUDE_FLAGS=-IC:/.storage/OpenSource/llvm-5.0.0.src/include -IC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/include -DNDEBUG \
--DLLVM_BUILD_GLOBAL_ISEL -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
+# LLVM Flags
+LLVM_INCLUDE_FLAGS=-DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
 
 # LLVM library dependencies (Probably don't need all of them but whatever)
 LLVM_LIBS=-lLLVMCoverage -lgtest_main -lgtest -lLLVMDlltoolDriver -lLLVMLibDriver -lLLVMOption -lLLVMOrcJIT -lLLVMTableGen -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen \
@@ -28,7 +33,7 @@ LLVM_LIBS=-lLLVMCoverage -lgtest_main -lgtest -lLLVMDlltoolDriver -lLLVMLibDrive
 
 CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O3 -fmax-errors=5 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
-LDFLAGS=-L$(LLVM_LIB_DIR)
+LDFLAGS=$(LLVM_LINKER_FLAGS)
 SOURCES=src/assemble_expr.c src/assemble_find.c src/assemble_stmt.c src/assemble_type.c src/assemble.c src/ast_expr.c src/ast_type.c src/ast.c src/backend.c src/color.c \
 src/compiler.c src/filename.c src/inference.c src/ir_to_llvm.c src/ir.c src/irbuilder.c src/levenshtein.c src/lex.c src/main.c src/memory.c src/parse.c src/pkg.c \
 src/pragma.c src/search.c src/token.c src/util.c
@@ -57,6 +62,7 @@ $(DEBUG_OBJECTS): $(OBJDIR)/debug/%.o : $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(ADDITIONAL_DEBUG_CFLAGS) $< -o $@
 
 clean:
-	del obj\debug\*.* /Q
-	del obj\*.* /Q
-	del bin\*.* /Q
+	$(RM) obj/debug/*.* 
+	$(RM) obj/*.* 2> /dev/null
+	$(RM) bin/*.* 2> /dev/null
+

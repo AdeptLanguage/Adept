@@ -396,7 +396,7 @@ void compiler_print_source(compiler_t *compiler, int line, int column, source_t 
     char prefix[128];
     sprintf(prefix, "%d|", line);
     length_t prefix_length = strlen(prefix);
-    printf(prefix);
+    printf("%s", prefix);
 
     while(object->buffer[line_index] == '\t'){
         printf("    "); line_index++; prefix_length += 4;

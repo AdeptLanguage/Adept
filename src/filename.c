@@ -85,8 +85,9 @@ char* filename_adept_import(const char *filename){
     free(user); // SPEED: Probably shouldn't have username allocated on heap (Should probably do something like GetUserNameA does)
     return result;
 
-    #elif
-    #error "Adept import folder not specified for this platform"
+    #else
+    //#error "Adept import folder not specified for this platform"
+	return "todo";
     #endif
 
     return NULL;
@@ -149,7 +150,10 @@ char* filename_user(){
     return username;
 
     #else
-    #error "Getting the username of the current user not implemented for this platform"
+    //#error "Getting the username of the current user not implemented for this platform"
+    char *username = malloc(5);
+    memcpy(username, "test", 5);
+    return username;
     #endif
 
     return NULL; // Should never be reached
@@ -166,7 +170,10 @@ char *filename_absolute(const char *filename){
     return buffer;
 
     #else
-    #error "Getting absolute paths not implemented for this platform"
+    //#error "Getting absolute paths not implemented for this platform"
+    char *buffer = malloc(512);
+    memcpy(buffer, "test", 5);
+	return buffer;
     #endif
 
     return NULL;
