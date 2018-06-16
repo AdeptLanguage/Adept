@@ -18,7 +18,7 @@ int assemble_find_func(compiler_t *compiler, object_t *object, const char *name,
         return 0;
     }
 
-    if(++index != ir_module->funcs_length){
+    while(++index != ir_module->funcs_length){
         mapping = &ir_module->func_mappings[index];
 
         if(mapping->is_beginning_of_group == -1){
@@ -67,7 +67,7 @@ int assemble_find_func_conforming(ir_builder_t *builder, const char *name, ir_va
         return 0;
     }
 
-    if(++index != ir_module->funcs_length){
+    while(++index != ir_module->funcs_length){
         mapping = &ir_module->func_mappings[index];
 
         if(mapping->is_beginning_of_group == -1){
@@ -106,7 +106,7 @@ int assemble_find_method_conforming(ir_builder_t *builder, const char *struct_na
         return 0;
     }
 
-    if(++index != ir_module->methods_length){
+    while(++index != ir_module->methods_length){
         method = &ir_module->methods[index];
 
         if(method->is_beginning_of_group == -1){
