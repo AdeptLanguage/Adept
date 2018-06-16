@@ -1,0 +1,10 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    value1 ptr = null
+    value2 *int = null
+    value3 **int = null
+    return 0
+}

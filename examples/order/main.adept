@@ -1,0 +1,27 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    first()
+    printf('sum(8, 13) = %d\n', sum(8, 13))
+    return 0
+}
+
+func first() void {
+    printf('This function was declared first\n')
+}
+
+func first() void {
+    printf('This function was declared second\n')
+}
+
+func sum(a ptr, b ptr) int {
+    printf('sum(ptr, ptr) was called\n')
+    return 0
+}
+
+func sum(a int, b int) int {
+    printf('sum(int, int) was called\n')
+    return a + b
+}

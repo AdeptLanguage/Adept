@@ -1,0 +1,18 @@
+
+import 'sys/cstdio.adept'
+
+alias HANDLE = ptr
+alias s32 = int
+alias char = ubyte
+alias cstr = *char
+
+func main(in argc int, in argv **ubyte) int {
+    handle HANDLE = null
+    signed32 s32 = 0
+    character char = 65
+    name cstr = 'Isaac'
+
+    format cstr = '%p, %d, "%c", "%s"\n'
+    printf(format, handle, signed32, character, name)
+    return 0
+}

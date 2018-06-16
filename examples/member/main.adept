@@ -1,0 +1,22 @@
+
+import "sys/cstdio.adept"
+import "sys/cstdlib.adept"
+
+struct Person (firstname *ubyte, age int, lastname *ubyte)
+
+func main(in argc int, in argv **ubyte) int {
+    person Person
+    person.firstname = 'Isaac'
+    person.lastname = 'Shelton'
+    person.age = 15
+    printf('Person: %s, %s\n', person.firstname, person.lastname)
+
+    anonymous *Person = malloc(24)
+    anonymous.firstname = 'Unknown'
+    anonymous.lastname = 'Unknown'
+    anonymous.age = 0
+
+    printf('Anonymous: %s, %s\n', anonymous.firstname, anonymous.lastname)
+    free(anonymous)
+    return 0
+}

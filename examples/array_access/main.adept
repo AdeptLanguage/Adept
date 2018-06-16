@@ -1,0 +1,15 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    memory *ubyte = malloc(3)
+    memory[0] = 72
+    memory[1] = 105
+    memory[2] = 0
+    printf('memory is: %s\n', memory)
+    memory[1] = memory[2]
+    printf('memory is now: "%s"\n', memory)
+    free(memory)
+    return 0
+}

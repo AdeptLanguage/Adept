@@ -1,0 +1,14 @@
+
+import 'sys/cstdio.adept'
+
+struct Person (name *ubyte, age int)
+
+packed struct PackedPerson (name *ubyte, age int)
+
+func main(in argc int, in argv **ubyte) int {
+    printf('sizeof ubyte = %llu\n', sizeof ubyte)
+    printf('sizeof int = %llu\n', sizeof int)
+    printf('sizeof Person = %llu\n', sizeof Person)
+    printf('sizeof PackedPerson = %llu\n', sizeof PackedPerson)
+    return 0
+}

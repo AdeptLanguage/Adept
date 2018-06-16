@@ -1,0 +1,12 @@
+
+foreign puts(*ubyte) int
+
+func main(in argc int, in argv **ubyte) int {
+    i int = 0
+    i += 10
+    i -= 2
+    i *= 3
+    i /= 8
+    puts('Should exit with a value of 3')
+    return i
+}

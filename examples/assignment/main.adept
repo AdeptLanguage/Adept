@@ -1,0 +1,9 @@
+
+foreign puts(*ubyte) int
+
+func main(in argc int, in argv **ubyte) int {
+    message *ubyte = 'This text will not be displayed'
+    message = 'Hello World!'
+    puts(message)
+    return 0
+}

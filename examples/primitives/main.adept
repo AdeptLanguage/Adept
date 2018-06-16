@@ -1,0 +1,14 @@
+
+func main(in argc int, in argv **ubyte) int {
+    signed8 byte = -50sb
+    unsigned8 ubyte = 255ub
+    signed16 short = -256ss
+    unsigned16 ushort = 65535us
+    signed32 int = -1000000si
+    unsigned32 uint = 4000000ui
+    signed64 long = -1000000000sl
+    unsigned64 ulong = 1000000000ul
+    float32 float = 3.1415f
+    float64 double = 3.14159265d
+    return 0
+}

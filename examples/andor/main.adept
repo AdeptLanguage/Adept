@@ -1,0 +1,25 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    if 1 and 1 {
+        puts('1 and 1')
+    }
+    if 1 or 1 {
+        puts('1 or 1')
+    }
+    if 0 && 1 {
+        puts('0 && 1')
+    }
+    if 0 || 1 {
+        puts('0 || 1')
+    }
+    if 0 and 0 {
+        puts('0 and 0')
+    }
+    if 0 or 0 {
+        puts('0 or 0')
+    }
+    return 0
+}

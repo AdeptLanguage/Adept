@@ -1,0 +1,11 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    memory ptr = malloc(10)
+    printf('Memory allocated at %p\n', memory)
+    printf('Memory pointer on stack is at %p\n', &memory)
+    free(memory)
+    return 0
+}

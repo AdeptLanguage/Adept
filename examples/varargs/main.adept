@@ -1,0 +1,8 @@
+
+foreign printf(*ubyte, ...) int
+
+func main(in argc int, in argv **ubyte) int {
+    printf('You can call %s functions using %s!\n', 'variadic', 'Adept')
+    printf('11 + 10 = %d\n', 11 + 10)
+    return 0
+}

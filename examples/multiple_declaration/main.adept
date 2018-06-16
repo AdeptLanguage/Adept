@@ -1,0 +1,14 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    a, b int = 0
+    printf('a = %d, b = %d\n', a, b)
+
+    one, two, three, four int = 21
+    printf('one = %d\n', one)
+    printf('two = %d\n', two)
+    printf('three = %d\n', three)
+    printf('four = %d\n', four)
+    return 0
+}

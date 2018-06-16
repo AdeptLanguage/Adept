@@ -1,0 +1,16 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+counter int = 1
+
+func main(in argc int, in argv **ubyte) int {
+    increase_counter()
+    increase_counter()
+    printf('counter = %d\n', counter)
+    return 0
+}
+
+func increase_counter() void {
+    counter += 5
+}

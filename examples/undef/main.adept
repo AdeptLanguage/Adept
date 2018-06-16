@@ -1,0 +1,14 @@
+
+import 'sys/cstdio.adept'
+
+// 'undef' does nothing for globals, they will be initialized as zero regardless
+global_var int = undef
+
+func main(in argc int, in argv **ubyte) int {
+    // {initialized int} will be assigned to default value of zero
+    // {uninitialized int = undef} will be whatever memory was left there
+    initialized int
+    uninitialized int = undef
+    printf('init = %d, uninit = %d, global_var = %d\n', initialized, uninitialized, global_var)
+    return 0
+}

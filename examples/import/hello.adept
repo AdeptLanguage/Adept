@@ -1,0 +1,6 @@
+
+foreign puts(*ubyte) int
+
+func hello_world() void {
+    puts('Hello World!')
+}

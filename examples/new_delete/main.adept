@@ -1,0 +1,23 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+struct Person (name *ubyte, age int)
+
+func main(in argc int, in argv **ubyte) int {
+    isaac *Person = new Person
+    defer delete isaac
+
+    isaac.create('Isaac', 15)
+    isaac.print()
+    return 0
+}
+
+func create(this *Person, name *ubyte, age int) void {
+    this.name = name
+    this.age = age
+}
+
+func print(this *Person) void {
+    printf('Person {%s, %d}\n', this.name, this.age)
+}

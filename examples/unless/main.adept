@@ -1,0 +1,9 @@
+
+foreign puts(in *ubyte) int
+
+func main(in argc int, in argv **ubyte) int {
+    unless argc == 1 {
+        puts('Arguments were specified')
+    }
+    return 0
+}
