@@ -831,7 +831,7 @@ int assemble_statements(ir_builder_t *builder, ast_expr_t **statements, length_t
                 funcpair_t pair;
                 if(assemble_find_method_conforming(builder, struct_name, call_expr->name,
                         arg_values, arg_types, call_expr->arity + 1, &pair)){
-                    compiler_panicf(builder->compiler, call_expr->source, "Undeclared function '%s'", call_expr->name);
+                    compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
                     for(length_t t = 0; t != call_expr->arity + 1; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
                     return 1;

@@ -734,7 +734,7 @@ int assemble_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
             // Find function that fits given name and arguments
             funcpair_t pair;
             if(assemble_find_method_conforming(builder, struct_name, call_expr->name, arg_values, arg_types, call_expr->arity + 1, &pair)){
-                compiler_panicf(builder->compiler, call_expr->source, "Undeclared function '%s'", call_expr->name);
+                compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
                 ast_types_free_fully(arg_types, call_expr->arity + 1);
                 return 1;
             }
