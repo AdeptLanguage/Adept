@@ -1,0 +1,9 @@
+
+pragma options '-n pragma -O3'
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('Hello World')
+    return 0
+}

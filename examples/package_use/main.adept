@@ -1,0 +1,8 @@
+
+import 'sys/cstdio.adept'
+import '../package/sum.dep'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('8 + 13 = %d\n', sum_ints(8, 13))
+    return 0
+}
