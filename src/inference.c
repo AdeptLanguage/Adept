@@ -308,7 +308,11 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
         }
         break;
     case EXPR_ADDRESS:
+        if(infer_expr(compiler, object, ast_func, &((ast_expr_address_t*) *expr)->value, EXPR_NONE)) return 1;
+        break;
     case EXPR_DEREFERENCE:
+        if(infer_expr(compiler, object, ast_func, &((ast_expr_deref_t*) *expr)->value, EXPR_NONE)) return 1;
+        break;
     case EXPR_NULL:
         break;
     case EXPR_ARRAY_ACCESS:

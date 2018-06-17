@@ -407,13 +407,15 @@ int assemble_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
                 memmove(struct_value_ast_type.elements, &struct_value_ast_type.elements[1], sizeof(ast_elem_t*) * (struct_value_ast_type.elements_length - 1));
                 struct_value_ast_type.elements_length--; // Reduce length accordingly
 
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                ((ir_instr_load_t*) instruction)->result_type = ((ir_type_t*) struct_value->type->extra);
-                ((ir_instr_load_t*) instruction)->value = struct_value;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                struct_value = build_value_from_prev_instruction(builder);
+                if(EXPR_IS_MUTABLE(member_expr->value->id)){
+                    ir_basicblock_new_instructions(builder->current_block, 1);
+                    instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
+                    ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
+                    ((ir_instr_load_t*) instruction)->result_type = ((ir_type_t*) struct_value->type->extra);
+                    ((ir_instr_load_t*) instruction)->value = struct_value;
+                    builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                    struct_value = build_value_from_prev_instruction(builder);
+                }
             }
 
             if(struct_value_ast_type.elements_length == 0 || struct_value_ast_type.elements[0]->id != AST_ELEM_BASE){
