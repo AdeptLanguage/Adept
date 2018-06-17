@@ -686,10 +686,15 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
         return 1;
     }
 
-    char* object_filename = filename_ext(object->filename, "o");
-    char* executable_filename = filename_ext(object->filename, "exe"); // May need to change based on operating system etc.
-    length_t object_filename_length = strlen(object_filename);
-    length_t executable_filename_length = strlen(executable_filename);
+    if(compiler->output_filename == NULL){
+        // May need to change based on operating system etc.
+        compiler->output_filename = filename_ext(object->filename, "exe");
+    } else {
+        // Automatically add proper extension if missing
+        filename_auto_ext(&compiler->output_filename, FILENAME_AUTO_EXECUTABLE);
+    }
+
+    char* object_filename = filename_ext(compiler->output_filename, "o");
 
     char *cpu = "generic";
     char *features = "";
@@ -708,7 +713,6 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     if(ir_to_llvm_globals(&llvm, object) || ir_to_llvm_functions(&llvm, object)
     || ir_to_llvm_function_bodies(&llvm, object)){
         free(object_filename);
-        free(executable_filename);
         free(llvm.func_skeletons);
         free(llvm.global_variables);
         LLVMDisposeTargetMachine(target_machine);
@@ -750,14 +754,9 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
         linker_additional[linker_additional_index] = '\0';
     }
 
-    if(compiler->output_filename != NULL){
-        // Automatically add proper extension if missing
-        filename_auto_ext(&compiler->output_filename, FILENAME_AUTO_EXECUTABLE);
-    }
-
-    // linker + " \"" + object_filename + "\" -o " + executable_filename + "\""
-    char *gcc_link_command = malloc(linker_length + 1 + linker_options_length + linker_additional_length + 2 + object_filename_length + 6 + executable_filename_length + 2);
-    sprintf(gcc_link_command, "%s %s%s \"%s\" -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename ? compiler->output_filename : executable_filename);
+    // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
+    char *gcc_link_command = malloc(linker_length + 1 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 6 + strlen(compiler->output_filename) + 2);
+    sprintf(gcc_link_command, "%s %s%s \"%s\" -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename);
 
     if(linker_additional_length != 0) free(linker_additional);
 
@@ -769,7 +768,6 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
         LLVMDisposeTargetMachine(target_machine);
         LLVMDisposeMessage(error_message);
         free(object_filename);
-        free(executable_filename);
     }
 
     LLVMRunPassManager(pass_manager, llvm.module);
@@ -779,15 +777,13 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     if(system(gcc_link_command) != 0){
         redprintf("EXTERNAL ERROR: gcc link command failed\n%s\n", gcc_link_command);
         free(object_filename);
-        free(executable_filename);
         free(gcc_link_command);
         return 1;
     }
 
-    if(compiler->traits & COMPILER_EXECUTE_RESULT) system(compiler->output_filename ? compiler->output_filename : executable_filename);
+    if(compiler->traits & COMPILER_EXECUTE_RESULT) system(compiler->output_filename);
 
     free(object_filename);
-    free(executable_filename);
     free(gcc_link_command);
     return 0;
 }

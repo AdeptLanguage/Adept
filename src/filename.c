@@ -4,6 +4,7 @@
 #include <windows.h>
 #endif
 
+#include "util.h"
 #include "ground.h"
 #include "filename.h"
 
@@ -98,31 +99,26 @@ char* filename_ext(const char *filename, const char *ext_without_dot){
 
     length_t i;
     length_t filename_length = strlen(filename);
-    char *without_ext;
+    char *without_ext = NULL;
     length_t without_ext_length;
     length_t ext_length = strlen(ext_without_dot);
-    bool found = false;
 
     for(i = filename_length - 1 ; i != 0; i--){
         if(filename[i] == '.'){
             without_ext = malloc(i);
             memcpy(without_ext, filename, i);
             without_ext_length = i;
-            found = true;
-
             break;
         } else if(filename[i] == '/' || filename[i] == '\\'){
-            without_ext = malloc(filename_length + 1);
-            memcpy(without_ext, filename, filename_length);
-            without_ext[filename_length] = '\0';
+            without_ext = strclone(filename);
             without_ext_length = filename_length;
-            found = true;
             break;
         }
     }
 
-    if(!found){
-        return NULL;
+    if(without_ext == NULL){
+        without_ext = strclone(filename);
+        without_ext_length = filename_length;
     }
 
     char *with_ext = malloc(without_ext_length + ext_length + 2);
