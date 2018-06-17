@@ -784,7 +784,7 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
         return 1;
     }
 
-    if(compiler->traits & COMPILER_EXECUTE_RESULT) system(executable_filename);
+    if(compiler->traits & COMPILER_EXECUTE_RESULT) system(compiler->output_filename ? compiler->output_filename : executable_filename);
 
     free(object_filename);
     free(executable_filename);
