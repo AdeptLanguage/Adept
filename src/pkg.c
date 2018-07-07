@@ -81,17 +81,17 @@ int pkg_read(compiler_t *compiler, object_t *object){
     fread(&pkg_header, sizeof(pkg_header_t), 1, file);
 
     if(pkg_version.magic_number != 0x74706461){
-        fprintf(stderr, "INTERNAL ERROR: Tried to read a package file that isn't a package\n");
+        fprintf(stderr, "INTERNAL ERROR: Tried to read a package file '%s' that isn't a package\n", object->filename);
         return 1;
     }
 
     if(pkg_version.endianness != 0x00EF){
-        fprintf(stderr, "INTERNAL ERROR: Failed to read package because of mismatched endianness\n");
+        fprintf(stderr, "INTERNAL ERROR: Failed to read package '%s' because of mismatched endianness\n", object->filename);
         return 1;
     }
 
     if(pkg_version.iteration_version != TOKEN_ITERATION_VERSION){
-        fprintf(stderr, "INTERNAL ERROR: Incompatible package iteration versions\n");
+        fprintf(stderr, "INTERNAL ERROR: Incompatible package iteration version for package '%s'\n", object->filename);
         return 1;
     }
 
@@ -124,7 +124,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
             fread(&read, sizeof(char), 1, file);
             for(buildup_length = 0; read != '\0'; buildup_length++){
                 if(buildup_length == 1024) {
-                    fprintf(stderr, "Token extra data exceeded 1024 which is currently unsupported\n");
+                    fprintf(stderr, "Token extra datain '%s' exceeded 1024 which is currently unsupported\n", object->filename);
                     free(buildup);
                     return 1;
                 }
@@ -140,7 +140,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
             fread(&read, sizeof(char), 1, file);
             for(buildup_length = 0; read != '\0'; buildup_length++){
                 if(buildup_length + 1 == 1024) {
-                    fprintf(stderr, "Token extra data exceeded 1024 which is currently unsupported\n");
+                    fprintf(stderr, "Token extra datain '%s' exceeded 1024 which is currently unsupported\n", object->filename);
                     free(buildup);
                     return 1;
                 }
@@ -156,7 +156,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
             fread(&read, sizeof(char), 1, file);
             for(buildup_length = 0; read != '\0'; buildup_length++){
                 if(buildup_length + 1 == 1024) {
-                    fprintf(stderr, "Token extra data exceeded 1024 which is currently unsupported\n");
+                    fprintf(stderr, "Token extra datain '%s' exceeded 1024 which is currently unsupported\n", object->filename);
                     free(buildup);
                     return 1;
                 }

@@ -2,76 +2,129 @@
 import 'sys/cstdio.adept'
 import 'sys/cstring.adept'
 
+PLACE_FREE   == '_'ub
+PLACE_CIRCLE == 'o'ub
+PLACE_CROSS  == 'x'ub
+
 func main(in argc int, in argv **ubyte) int {
-    marker ubyte
     player int = 1
-    x, y, winner int = 0
+    winner int = 0
+
+    // The Tic-Tac-Toe Board
     board *ubyte = new ubyte * 9
     defer delete board
 
-    memset(board, 0x5F, sizeof ubyte * 9)
+    memset(board, PLACE_FREE, sizeof ubyte * 9)
 
     while winner == 0 {
-        print_board(board)
+        printBoard(board)
 
-        taken bool = true; while taken {
-            x_valid bool = false; until x_valid {
-                printf('\nEnter x coordinate for player %d (ranging from 1-3): ', player)
-                scanf('%d', &x)
-                if x < 1 || x > 3, printf('Number must be within range 1 to 3\n')
-                else x_valid = true
-            }
+        x, y int // The place to place a new marker
+        requestPlace(board, player, &x, &y)
 
-            y_valid bool = false; until y_valid {
-                printf('\nEnter y coordinate for player %d (ranging from 1-3): ', player)
-                scanf('%d', &y)
-                if y < 1 || y > 3, printf('Number must be within range 1 to 3\n')
-                else y_valid = true
-            }
+        marker ubyte = PLACE_CROSS
+        if player == 2, marker = PLACE_CIRCLE
 
-            if board[(y - 1) * 3 + x - 1] != 0x5F, printf('That spot is taken, enter different coordinates\n')
-            else taken = false
-        }
-
-        if player == 1, marker = 0x78
-        else marker = 0x6F
-
+        // Place the player's marker on the board
         board[(y - 1) * 3 + x - 1] = marker
 
-        full bool = true; i usize = 0; while i != 9 {
-            if board[i] == 0x5F, full = false
-            i += 1
-        }
-
         // 8 possible ways to win
-        if      did_win(board, marker, 0, 1, 2), winner = player
-        else if did_win(board, marker, 3, 4, 5), winner = player
-        else if did_win(board, marker, 6, 7, 8), winner = player
-        else if did_win(board, marker, 0, 3, 6), winner = player
-        else if did_win(board, marker, 1, 4, 7), winner = player
-        else if did_win(board, marker, 2, 5, 8), winner = player
-        else if did_win(board, marker, 0, 4, 8), winner = player
-        else if did_win(board, marker, 6, 4, 2), winner = player
+        if      won(board, marker, 0, 1, 2), winner = player
+        else if won(board, marker, 3, 4, 5), winner = player
+        else if won(board, marker, 6, 7, 8), winner = player
+        else if won(board, marker, 0, 3, 6), winner = player
+        else if won(board, marker, 1, 4, 7), winner = player
+        else if won(board, marker, 2, 5, 8), winner = player
+        else if won(board, marker, 0, 4, 8), winner = player
+        else if won(board, marker, 6, 4, 2), winner = player
 
-        if full and winner == 0, printf('\nGame resulted in statemate!\n'); return 0
-        else if player == 1, player = 2 else player = 1
-
+        // Check if someone was declared the winner
         if winner != 0 {
             printf('\nPlayer %d wins!\n', winner)
-            print_board(board)
+
+            // Print the board which contains the winning move
+            printBoard(board)
+
+            // Ask if they want to play again
             printf('\nDo you want to play again? (y|n): ')
             getchar() // Pass over entered newline character
-            if getchar() == 0x79, winner = 0; player = 1; memset(board, 0x5F, sizeof ubyte * 9)
+
+            if getchar() == 'y'ub {
+                // Reset the winner & player
+                winner = 0; player = 1
+
+                // Free all the places on the board
+                memset(board, PLACE_FREE, sizeof ubyte * 9)
+
+                // Go back to start of game loop
+                continue
+            } else {
+                // Exit the game since they didn't want to play again
+                return 0
+            }
         }
+
+        // Check for stalemate
+        if boardCompletelyFull(board) and winner == 0 {
+            printf('\nGame resulted in statemate!\n')
+            return 0
+        }
+
+        switchPlayer(&player)
     }
+
     return 0
 }
 
-func did_win(board *ubyte, marker ubyte, a int, b int, c int) bool {
+func switchPlayer(inout player *int) void {
+    // Switchs between player 1 and player 2
+    *player = cast int !(*player - 1) + 1
+}
+
+func requestPlace(in board *ubyte, in player int, out x *int, out y *int) void {
+    until break { // Until we have a place that isn't taken
+        requestCoord(x, 'x', player)
+        requestCoord(y, 'y', player)
+
+        // If that place on the board is free, then break because we found a valid spot
+        if board[(*y - 1) * 3 + *x - 1] == PLACE_FREE, break
+
+        // That spot is taken, so try again
+        printf('That spot is taken, enter different coordinates\n')
+    }
+}
+
+func requestCoord(out coord *int, in coordName *ubyte, in player int) void {
+    until break { // Until we have a valid coordinate
+        printf('\nEnter %s coordinate for player %d (ranging from 1-3): ', coordName, player)
+
+        // Get the coordinate
+        scanf('%d', coord)
+
+        // If the coordinate isn't out of range, then we have a valid coordinate
+        unless *coord < 1 || *coord > 3, break
+
+        // That coordinate is invalid so try again
+        printf('Number must be within range 1 to 3\n')
+    }
+}
+
+func won(board *ubyte, marker ubyte, a int, b int, c int) bool {
+    // Check three positions that constitute a win
     return board[a] == marker && board[b] == marker && board[c] == marker
 }
 
-func print_board(board *ubyte) void {
+func boardCompletelyFull(in board *ubyte) bool {
+    // Check to see if the board is completely full
+    i usize = 0; while i != 9 {
+        if board[i] == PLACE_FREE, return false
+        i += 1
+    }
+    return true
+}
+
+func printBoard(board *ubyte) void {
+    // Print the board to standard output
     printf('%c  %c  %c\n%c  %c  %c\n%c  %c  %c\n', board[0], board[1], board[2],
         board[3], board[4], board[5], board[6], board[7], board[8])
 }

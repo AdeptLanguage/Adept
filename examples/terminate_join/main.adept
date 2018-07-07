@@ -8,7 +8,7 @@ func main(in argc int, in argv **ubyte) int {
 
     i int = 0; while i != 10, i += 1; printf('%d\n', i)
 
-    if i == 0, puts('Failed get off the ground')
+    if i == 0, puts('Failed to get off the ground')
     else if i > 0 && i < 10, puts('Failed to completely launch')
     else puts('Launched successfully')
     return 0
