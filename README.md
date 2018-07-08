@@ -15,7 +15,7 @@ Adept is a low-level programming language for general purpose programming.
 - Better system to build the compiler
 
 # Applications in Adept 2.0
-- [Tic-Tac-Toe](https://github.com/IsaacShelton/Adept/blob/master/examples/tictactoe/main.adept)
+- [Tic-Tac-Toe](https://github.com/IsaacShelton/AdeptTicTacToe)
 - [Neural Network](https://github.com/IsaacShelton/AdeptNeuralNetwork)
 - [2D Platformer](https://github.com/IsaacShelton/Adept2DPlatformer)
 
