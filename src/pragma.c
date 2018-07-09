@@ -17,7 +17,8 @@ int parse_pragma(parse_ctx_t *ctx){
     char *option = (char*) tokens[*i].data;
 
     if(strcmp(option, "help") == 0){
-        show_help(); return 1;
+        show_help();
+        return 1;
     } else if(strcmp(option, "options") == 0){
         if(tokens[++(*i)].id != TOKEN_CSTRING && tokens[*i].id != TOKEN_STRING){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected string containing compiler options after 'pragma options'");
@@ -50,6 +51,7 @@ int parse_pragma(parse_ctx_t *ctx){
             return 1;
         }
 
+        // Change the target output filename
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, (char*) tokens[*i].data);
         return 0;
@@ -60,8 +62,10 @@ int parse_pragma(parse_ctx_t *ctx){
             return 1;
         }
 
+        // Get the optimization level string
         const char *level = (char*) tokens[*i].data;
 
+        // Change the optimization level accordingly
         if(strcmp(level, "none") == 0){
             ctx->compiler->optimization = OPTIMIZATION_NONE;
             return 0;
@@ -80,6 +84,23 @@ int parse_pragma(parse_ctx_t *ctx){
             printf("Possible levels are: none, less, normal or aggressive\n");
             return 1;
         }
+    } else if(strcmp(option, "compiler_version") == 0){
+        if(tokens[++(*i)].id != TOKEN_CSTRING && tokens[*i].id != TOKEN_STRING){
+            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected compiler version string after 'pragma compiler_version'");
+            puts("\nDid you mean: pragma compiler_version '2.0'?");
+            return 1;
+        }
+
+        // Get the target compiler version
+        const char *target_version = (char*) tokens[*i].data;
+
+        // Check to make sure we support the target version
+        if(strcmp(target_version, "2.0") != 0){
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", target_version);
+            puts("\nSupported Versions: '2.0'");
+            return 1;
+        }
+        return 0;
     } else {
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Unrecognized pragma option '%s'", option);
         return 1;

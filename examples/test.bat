@@ -81,8 +81,6 @@ call :compile structs
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile terminate_join
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
-call :compile tictactoe
-if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile truefalse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile undef

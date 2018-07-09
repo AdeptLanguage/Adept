@@ -1,4 +1,5 @@
 
+pragma compiler_version '2.0'
 pragma options '-n pragma -O3'
 
 import 'sys/cstdio.adept'

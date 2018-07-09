@@ -78,16 +78,16 @@ char* filename_adept_import(const char *filename){
     char *user = filename_user();
     length_t user_len = strlen(user);
     length_t filename_len = strlen(filename);
-    char *result = malloc(filename_len + user_len + 41); // "C:\Users\........\AppData\Roaming\.adept\import\"
+    char *result = malloc(filename_len + user_len + 45); // "C:\Users\........\AppData\Roaming\.adept\2.0\import\"
     memcpy(result, "C:/Users/", 9);
     memcpy(&result[9], user, user_len);
-    memcpy(&result[9 + user_len], "/.adept/import/", 15);
-    memcpy(&result[24 + user_len], filename, filename_len + 1);
+    memcpy(&result[9 + user_len], "/.adept/2.0/import/", 19);
+    memcpy(&result[28 + user_len], filename, filename_len + 1);
     free(user); // SPEED: Probably shouldn't have username allocated on heap (Should probably do something like GetUserNameA does)
     return result;
 
     #else
-    //#error "Adept import folder not specified for this platform"
+    #error "Adept import folder not specified for this platform"
 	return "todo";
     #endif
 
