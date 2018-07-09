@@ -4,6 +4,9 @@ ifeq ($(OS), Windows_NT)
 	LINKER=x86_64-w64-mingw32-g++
 	LLVM_LINKER_FLAGS=-LC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/lib
 	LLVM_INCLUDE_DIRS=-IC:/.storage/OpenSource/llvm-5.0.0.src/include -IC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/include
+	RES_C=C:/.storage/MinGW64/bin/windres
+	WIN_ICON=obj/icon.res
+	WIN_ICON_SRC=resource/icon.rc
 else
 	CC=gcc
 	LINKER=g++
@@ -47,8 +50,13 @@ release: $(SOURCES) $(EXECUTABLE)
 
 debug: $(SOURCES) $(ADDITIONAL_DEBUG_SOURCES) $(DEBUG_EXECUTABLE)
 
+ifeq ($(OS), Windows_NT)
+$(EXECUTABLE): $(OBJECTS) $(WIN_ICON)
+	$(LINKER) $(LDFLAGS) $(OBJECTS) $(WIN_ICON) $(LLVM_LIBS) -o $@
+else
 $(EXECUTABLE): $(OBJECTS)
 	$(LINKER) $(LDFLAGS) $(OBJECTS) $(LLVM_LIBS) -o $@
+endif
 
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
@@ -58,6 +66,9 @@ $(DEBUG_EXECUTABLE): $(DEBUG_OBJECTS)
 
 $(DEBUG_OBJECTS): $(OBJDIR)/debug/%.o : $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(ADDITIONAL_DEBUG_CFLAGS) $< -o $@
+
+$(WIN_ICON):
+	$(RES_C) -J rc -O coff -i $(WIN_ICON_SRC) -o $(WIN_ICON)
 
 clean:
 ifeq ($(OS), Windows_NT)
