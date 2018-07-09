@@ -273,6 +273,28 @@ func main(in argc int, in argv **ubyte) int {
 }
 ```
 
+### Type Casting
+```
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    x int = 8
+    y int = 13
+
+    // Primitive value casting
+    positionX double = cast double x
+    positionY double = cast double y
+
+    // Arbitrary pointer casting
+    ptr_cast_result *uint = cast *uint &x
+
+    // Expression result casting
+    sum usize = cast usize (positionX + positionY)
+
+    return 0
+}
+```
+
 # Applications in Adept 2.0
 - [Tic-Tac-Toe](https://github.com/IsaacShelton/AdeptTicTacToe)
 - [Neural Network](https://github.com/IsaacShelton/AdeptNeuralNetwork)
