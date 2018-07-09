@@ -2,7 +2,15 @@
 # Adept 2.0
 A blazing fast language for general purpose programming.
 
-## Basic Usage
+## Command-Line Usage
+`adept [filename] [options]`
+
+- filename - default is 'main.adept'
+- options - secondary compiler options
+
+You can optionally use `adept2` instead of `adept` if you have multiple versions installed.
+
+## Basic Functionality
 ### Variables
 ```
 import 'sys/cstdio.adept'
