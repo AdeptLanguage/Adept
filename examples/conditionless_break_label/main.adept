@@ -1,0 +1,21 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    value int = 0
+
+    until break at_10 {
+        value += 1
+        if value == 10, break at_10
+    }
+
+    printf('value is %d after "until break at_10" loop\n', value)
+
+    while continue not_at_0 {
+        value -= 1
+        unless value == 0, continue not_at_0
+    }
+
+    printf('value is %d after "while continue not_at_0" loop\n', value)
+    return 0
+}

@@ -1,0 +1,37 @@
+
+// An example using the 'new Type * amount' syntax dynamically
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+import 'sys/cstring.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    args_string *ubyte = argumentsString(argc, argv)
+    defer delete args_string
+
+    puts(args_string)
+    return 0
+}
+
+func argumentsString(in argc int, in argv **ubyte) *ubyte {
+    index usize = 0
+    total_length usize = argumentsStringLength(argc, argv)
+    str *ubyte = new ubyte * total_length
+
+    i int = 0; while i != argc {
+        memcpy(&str[index], argv[i], strlen(argv[i]))
+        index += strlen(argv[i])
+
+        if i + 1 == argc, str[index] = 0x00; return str
+        else str[index] = ' 'ub; index += 1
+
+        i += 1
+    }
+    return str
+}
+
+func argumentsStringLength(in argc int, in argv **ubyte) usize {
+    i int = 0; total usize = 0
+    while i != argc, total += strlen(argv[i]) + 1; i += 1
+    return total
+}

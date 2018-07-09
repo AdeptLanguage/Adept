@@ -19,6 +19,8 @@ call :compile cast
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile character_literals
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile conditionless_break_label
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile constants
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile continue
@@ -56,6 +58,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile native_linking
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile new_delete
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile new_dynamic
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile not
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
