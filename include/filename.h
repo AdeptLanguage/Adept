@@ -34,10 +34,6 @@ char* filename_adept_import(const char *filename);
 // Changes the extension of a filename
 char* filename_ext(const char *filename, const char *ext_without_dot);
 
-// ---------------- filename_user ----------------
-// Gets the current user's username
-char* filename_user();
-
 // ---------------- filename_absolute ----------------
 // Gets the absolute filename for a filename
 char* filename_absolute(const char *filename);

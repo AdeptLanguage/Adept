@@ -75,20 +75,15 @@ char* filename_adept_import(const char *filename){
 
     #ifdef _WIN32
 
-    char *user = filename_user();
-    length_t user_len = strlen(user);
     length_t filename_len = strlen(filename);
-    char *result = malloc(filename_len + user_len + 45); // "C:\Users\........\AppData\Roaming\.adept\2.0\import\"
-    memcpy(result, "C:/Users/", 9);
-    memcpy(&result[9], user, user_len);
-    memcpy(&result[9 + user_len], "/.adept/2.0/import/", 19);
-    memcpy(&result[28 + user_len], filename, filename_len + 1);
-    free(user); // SPEED: Probably shouldn't have username allocated on heap (Should probably do something like GetUserNameA does)
+    char *result = malloc(filename_len + 21); // "C:/Adept/2.0/import/..."
+    memcpy(result, "C:/Adept/2.0/import/", 20);
+    memcpy(&result[20], filename, filename_len + 1);
     return result;
 
     #else
     #error "Adept import folder not specified for this platform"
-	return "todo";
+	// return "todo";
     #endif
 
     return NULL;
@@ -129,32 +124,6 @@ char* filename_ext(const char *filename, const char *ext_without_dot){
     return with_ext;
 }
 
-char* filename_user(){
-    // NOTE: Returns string that must be freed by caller
-    // Returns the username of the current user
-
-    #if defined(_WIN32) || defined(_WIN64)
-
-    char username_buffer[256];
-    DWORD buffer_length = 256;
-    if(GetUserNameA(username_buffer, &buffer_length) == 0){
-        redprintf("INTERNAL ERROR: Username exceeds 256 characters!\n");
-        exit(1); // Not a good idea but whatever
-    }
-    char *username = malloc(buffer_length);
-    memcpy(username, username_buffer, buffer_length);
-    return username;
-
-    #else
-    //#error "Getting the username of the current user not implemented for this platform"
-    char *username = malloc(5);
-    memcpy(username, "test", 5);
-    return username;
-    #endif
-
-    return NULL; // Should never be reached
-}
-
 char *filename_absolute(const char *filename){
     #if defined(_WIN32) || defined(_WIN64)
 
@@ -166,10 +135,10 @@ char *filename_absolute(const char *filename){
     return buffer;
 
     #else
-    //#error "Getting absolute paths not implemented for this platform"
-    char *buffer = malloc(512);
-    memcpy(buffer, "test", 5);
-	return buffer;
+    #error "Getting absolute paths not implemented for this platform"
+    // char *buffer = malloc(512);
+    // memcpy(buffer, "test", 5);
+	// return buffer;
     #endif
 
     return NULL;

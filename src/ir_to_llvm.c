@@ -728,7 +728,7 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     free(llvm.global_variables);
 
     // TODO: SECURITY: Stop using system(1) call to invoke linker
-    const char *linker = "x86_64-w64-mingw32-gcc"; // May need to change depending on system etc.
+    const char *linker = "C:/Adept/2.0/mingw64/bin/x86_64-w64-mingw32-gcc"; // May need to change depending on system etc.
     length_t linker_length = strlen(linker);
 
     const char *linker_options = "-Wl,--start-group";
