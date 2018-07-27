@@ -76,8 +76,8 @@ char* filename_adept_import(const char *filename){
     #ifdef _WIN32
 
     length_t filename_len = strlen(filename);
-    char *result = malloc(filename_len + 21); // "C:/Adept/2.0/import/..."
-    memcpy(result, "C:/Adept/2.0/import/", 20);
+    char *result = malloc(filename_len + 21); // "C:/Adept/2.1/import/..."
+    memcpy(result, "C:/Adept/2.1/import/", 20);
     memcpy(&result[20], filename, filename_len + 1);
     return result;
 

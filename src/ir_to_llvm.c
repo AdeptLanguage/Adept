@@ -728,10 +728,10 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     free(llvm.global_variables);
 
     // TODO: SECURITY: Stop using system(1) call to invoke linker
-    const char *linker = "C:/Adept/2.0/mingw64/bin/x86_64-w64-mingw32-gcc"; // May need to change depending on system etc.
+    const char *linker = "C:/Adept/2.1/ld"; // May need to change depending on system etc.
     length_t linker_length = strlen(linker);
 
-    const char *linker_options = "-Wl,--start-group";
+    const char *linker_options = "--start-group";
     length_t linker_options_length = strlen(linker_options);
 
     char *linker_additional = "";
@@ -755,8 +755,8 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 
     // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
-    char *gcc_link_command = malloc(linker_length + 1 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 6 + strlen(compiler->output_filename) + 2);
-    sprintf(gcc_link_command, "%s %s%s \"%s\" -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename);
+    char *link_command = malloc(linker_length + 1 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 28 + strlen(compiler->output_filename) + 2);
+    sprintf(link_command, "%s %s%s \"%s\" C:/Adept/2.1/libdep.a -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename);
 
     if(linker_additional_length != 0) free(linker_additional);
 
@@ -774,17 +774,17 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMDisposeTargetMachine(target_machine);
     LLVMDisposePassManager(pass_manager);
 
-    if(system(gcc_link_command) != 0){
-        redprintf("EXTERNAL ERROR: gcc link command failed\n%s\n", gcc_link_command);
+    if(system(link_command) != 0){
+        redprintf("EXTERNAL ERROR: gcc link command failed\n%s\n", link_command);
         free(object_filename);
-        free(gcc_link_command);
+        free(link_command);
         return 1;
     }
 
     if(compiler->traits & COMPILER_EXECUTE_RESULT) system(compiler->output_filename);
 
     free(object_filename);
-    free(gcc_link_command);
+    free(link_command);
     return 0;
 }
 

@@ -1,0 +1,10 @@
+
+// With no deprecation message
+pragma deprecated
+
+// With deprecation message
+pragma deprecated 'Use \'newer/better/undeprecated.adept\' instead'
+
+func main(in argc int, in argv **ubyte) int {
+    return 0
+}

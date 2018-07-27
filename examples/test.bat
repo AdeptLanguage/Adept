@@ -29,6 +29,8 @@ call :compile continue_to
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile defer
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile deprecated
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcptr
@@ -93,6 +95,9 @@ call :compile unless
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile unlesselse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+REM This file should always fail
+call :compile unsupported
+if %errorlevel% neq 1 popd & exit /b %errorlevel%
 call :compile until
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile until_break

@@ -236,7 +236,7 @@ int lex(compiler_t *compiler, object_t *object){
             lex_state.buildup[lex_state.buildup_length++] = buffer[i];
             break;
         case LEX_STATE_CSTRING:
-            if(buffer[i] == '\'' && !(lex_state.buildup_length != 0 && lex_state.buildup[lex_state.buildup_length-1] == '\\')){
+            if(buffer[i] == '\''){
                 // End of string literal
                 t = &(tokens[tokenlist->length++]);
 
@@ -272,8 +272,10 @@ int lex(compiler_t *compiler, object_t *object){
                 switch(buffer[++i]){
                 case 'n': lex_state.buildup[lex_state.buildup_length++] = '\n'; break;
                 case 'r': lex_state.buildup[lex_state.buildup_length++] = '\r'; break;
+                case 't': lex_state.buildup[lex_state.buildup_length++] = '\t'; break;
                 case 'b': lex_state.buildup[lex_state.buildup_length++] = '\b'; break;
                 case '\'': lex_state.buildup[lex_state.buildup_length++] = '\''; break;
+                case '\\': lex_state.buildup[lex_state.buildup_length++] = '\\'; break;
                 default:
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Unknown string escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);

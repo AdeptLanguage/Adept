@@ -101,6 +101,48 @@ int parse_pragma(parse_ctx_t *ctx){
             return 1;
         }
         return 0;
+    } else if(strcmp(option, "deprecated") == 0){
+        char *deprecation_message = NULL;
+
+        if(tokens[++(*i)].id != TOKEN_NEWLINE){
+            if(tokens[(*i)].id != TOKEN_CSTRING && tokens[*i].id != TOKEN_STRING){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected message after 'pragma deprecated'");
+                return 1;
+            }
+
+            deprecation_message = (char*) tokens[*i].data;
+        } else (*i)--;
+
+        if(deprecation_message != NULL){
+            compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "This file is deprecated and may be removed in the future\n \xC0 %s", deprecation_message);
+        } else {
+            compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "This file is deprecated and may be removed in the future");
+        }
+        return 0;
+    } else if(strcmp(option, "unsupported") == 0){
+        char *unsupported_message = NULL;
+
+        if(tokens[++(*i)].id != TOKEN_NEWLINE){
+            if(tokens[(*i)].id != TOKEN_CSTRING && tokens[*i].id != TOKEN_STRING){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected message after 'pragma unsupported'");
+                return 1;
+            }
+
+            unsupported_message = (char*) tokens[*i].data;
+        } else (*i)--;
+
+        if(unsupported_message != NULL){
+            object_panic_plain(ctx->object, "This file is no longer supported or was never supported to begin with!");
+            redprintf(" \xC0 %s\n", unsupported_message);
+        } else {
+            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
+        }
+        return 1;
+    } else if(strcmp(option, "windows_only") == 0){
+        #ifndef _WIN32
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
+        return 1;
+        #endif
     } else {
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Unrecognized pragma option '%s'", option);
         return 1;
