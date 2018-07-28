@@ -20,10 +20,12 @@
 */
 #define TOKEN_ITERATION_VERSION 0x00000007
 
+typedef unsigned int tokenid_t;
+
 // ---------------- token_t ----------------
 // Structure for an individual token
 typedef struct {
-    unsigned int id;
+    tokenid_t id;
     void *data;
 } token_t;
 

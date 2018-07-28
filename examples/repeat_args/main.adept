@@ -1,0 +1,11 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    printIntegers(10, 8, 54, 21)
+    return 0
+}
+
+func printIntegers(x, y, z, w int) void {
+    printf('%d %d %d %d\n', x, y, z, w)
+}

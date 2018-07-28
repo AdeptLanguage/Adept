@@ -19,7 +19,7 @@ int parse_pragma(parse_ctx_t *ctx);
 // ---------------- parse_pragma_string ----------------
 // Returns a string that is after the current token.
 // Returns NULL if syntax error.
-char *parse_pragma_string(token_t *tokens, length_t *i);
+char* parse_pragma_string(token_t *tokens, length_t *i);
 
 // ---------------- parse_pragma_cloptions ----------------
 // Parses the 'options' pragma directive's command line

@@ -36,7 +36,7 @@ CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O3 -fmax-errors=5 -W
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 LDFLAGS=$(LLVM_LINKER_FLAGS)
 SOURCES=src/assemble_expr.c src/assemble_find.c src/assemble_stmt.c src/assemble_type.c src/assemble.c src/ast_expr.c src/ast_type.c src/ast.c src/backend.c src/color.c \
-src/compiler.c src/filename.c src/inference.c src/ir_to_llvm.c src/ir.c src/irbuilder.c src/levenshtein.c src/lex.c src/main.c src/memory.c src/parse.c src/pkg.c \
+src/compiler.c src/filename.c src/inference.c src/ir_to_llvm.c src/ir.c src/irbuilder.c src/levenshtein.c src/lex.c src/main.c src/memory.c src/parse.c src/parse_util.c src/pkg.c \
 src/pragma.c src/search.c src/token.c src/util.c
 ADDITIONAL_DEBUG_SOURCES=src/debug.c
 SRCDIR=src

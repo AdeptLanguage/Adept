@@ -4,7 +4,7 @@
 #include "filename.h"
 
 int parse_pragma(parse_ctx_t *ctx){
-    // pragma <option> ...
+    // pragma <directive> ...
     //   ^
 
     length_t *i = ctx->i;
@@ -126,7 +126,7 @@ int parse_pragma(parse_ctx_t *ctx){
     return 0;
 }
 
-char *parse_pragma_string(token_t *tokens, length_t *i){
+char* parse_pragma_string(token_t *tokens, length_t *i){
     // pragma <directive> 'a string'
     //             ^
 

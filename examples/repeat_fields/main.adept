@@ -1,0 +1,15 @@
+
+import 'sys/cstdio.adept'
+
+struct IntVector (x, y, z int)
+
+func main(in argc int, in argv **ubyte) int {
+    i IntVector
+    i.set(1, 2, 3)
+    printf('%d %d %d\n', i.x, i.y, i.z)
+    return 0
+}
+
+func set(this *IntVector, x, y, z int) void {
+    this.x = x; this.y = y; this.z = z
+}

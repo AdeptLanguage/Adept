@@ -755,8 +755,8 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 
     // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
-    char *link_command = malloc(linker_length + 1 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 28 + strlen(compiler->output_filename) + 2);
-    sprintf(link_command, "%s %s%s \"%s\" C:/Adept/2.1/libdep.a -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename);
+    char *link_command = malloc(linker_length + 45 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 28 + strlen(compiler->output_filename) + 2);
+    sprintf(link_command, "%s C:/Adept/2.1/crt2.o C:/Adept/2.1/crtbegin.o %s%s \"%s\" C:/Adept/2.1/libdep.a -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename);
 
     if(linker_additional_length != 0) free(linker_additional);
 
