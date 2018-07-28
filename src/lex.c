@@ -179,7 +179,7 @@ int lex(compiler_t *compiler, object_t *object){
             } else {
                 // NOTE: MUST be pre sorted alphabetically (used for string_search)
                 //         Make sure to update values inside token.h and token.c after modifying this list
-                const length_t keywords_length = 45;
+
                 const char * const keywords[] = {
                     "alias", "and", "break", "case", "cast", "continue", "dangerous", "def", "default", "defer",
                     "delete", "dynamic", "else", "enum", "external", "false", "for", "foreign", "func", "funcptr",
@@ -187,6 +187,8 @@ int lex(compiler_t *compiler, object_t *object){
                     "packed", "pragma", "private", "public", "return", "sizeof", "static", "stdcall", "struct", "switch",
                     "true", "undef", "unless", "until", "while"
                 };
+                
+                const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
 
                 // Terminate string buildup buffer
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
