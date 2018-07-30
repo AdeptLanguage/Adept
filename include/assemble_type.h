@@ -17,12 +17,12 @@
 #include "irbuilder.h"
 
 // Possible type conforming modes
-#define CONFORM_MODE_STANDARD   TRAIT_NONE // Basic conforming rules
-#define CONFORM_MODE_PRIMITIVES TRAIT_1    // Allow conforming primitives
-#define CONFORM_MODE_INTFLOAT   TRAIT_2    // Allow conforming between integers and floats
-#define CONFORM_MODE_POINTERS   TRAIT_3    // Allow conforming any pointer types
-#define CONFORM_MODE_INTPTR     TRAIT_4    // Allow conforming between integers and pointers
-#define CONFORM_MODE_ALL        TRAIT_ALL  // Allow all conformation methods
+#define CONFORM_MODE_STANDARD      TRAIT_NONE // Basic conforming rules
+#define CONFORM_MODE_PRIMITIVES    TRAIT_1    // Allow conforming primitives
+#define CONFORM_MODE_INTFLOAT      TRAIT_2    // Allow conforming between integers and floats
+#define CONFORM_MODE_POINTERS      TRAIT_3    // Allow conforming any pointer types
+#define CONFORM_MODE_INTPTR        TRAIT_4    // Allow conforming between integers and pointers
+#define CONFORM_MODE_ALL           TRAIT_ALL  // Allow all conformation methods
 
 // ---------------- assemble_type_mappings ----------------
 // Generates IR type mappings for all standard and

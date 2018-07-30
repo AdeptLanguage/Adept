@@ -73,7 +73,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    unsigned int size;
+    length_t length;
 } ast_elem_fixed_array_t;
 
 // ---------------- ast_elem_func_t ----------------

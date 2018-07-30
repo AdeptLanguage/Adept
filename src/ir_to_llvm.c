@@ -76,6 +76,13 @@ LLVMTypeRef ir_to_llvm_type(ir_type_t *ir_type){
             return type_ref_tmp;
         }
         break;
+    case TYPE_KIND_FIXED_ARRAY:{
+            ir_type_extra_fixed_array_t *fixed_array = (ir_type_extra_fixed_array_t*) ir_type->extra;
+            type_ref_tmp = ir_to_llvm_type(fixed_array->subtype);
+            if(type_ref_tmp == NULL) return NULL;
+            return LLVMArrayType(type_ref_tmp, fixed_array->length);
+        }
+        break;
     default: return NULL; // No suitable llvm type
     }
 }
@@ -775,7 +782,7 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMDisposePassManager(pass_manager);
 
     if(system(link_command) != 0){
-        redprintf("EXTERNAL ERROR: gcc link command failed\n%s\n", link_command);
+        redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);
         free(object_filename);
         free(link_command);
         return 1;

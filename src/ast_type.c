@@ -36,7 +36,7 @@ ast_type_t ast_type_clone(const ast_type_t *original){
             new.elements[i] = malloc(sizeof(ast_elem_fixed_array_t));
             ((ast_elem_fixed_array_t*) new.elements[i])->id = AST_ELEM_FIXED_ARRAY;
             ((ast_elem_fixed_array_t*) new.elements[i])->source = original->elements[i]->source;
-            ((ast_elem_fixed_array_t*) new.elements[i])->size = ((ast_elem_fixed_array_t*) original->elements[i])->size;
+            ((ast_elem_fixed_array_t*) new.elements[i])->length = ((ast_elem_fixed_array_t*) original->elements[i])->length;
             break;
         case AST_ELEM_GENERIC_INT:
             new.elements[i] = malloc(sizeof(ast_elem_t));
@@ -271,7 +271,15 @@ char* ast_type_str(const ast_type_t *type){
             break;
         case AST_ELEM_ARRAY:
             break;
-        case AST_ELEM_FIXED_ARRAY:
+        case AST_ELEM_FIXED_ARRAY: {
+                char fixed_array_length_buffer[32];
+                length_t fixed_array_length = ((ast_elem_fixed_array_t*) type->elements[i])->length;
+                sprintf(fixed_array_length_buffer, "%d ", (int) fixed_array_length);
+                length_t fixed_array_length_buffer_length = strlen(fixed_array_length_buffer);
+                EXTEND_NAME_MACRO(fixed_array_length_buffer_length);
+                memcpy(&name[name_length], fixed_array_length_buffer, fixed_array_length_buffer_length + 1);
+                name_length += fixed_array_length_buffer_length;
+            }
             break;
         case AST_ELEM_GENERIC_INT:
             EXTEND_NAME_MACRO(3);
@@ -368,7 +376,7 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
             if(strcmp(((ast_elem_base_t*) a->elements[i])->base, ((ast_elem_base_t*) b->elements[i])->base) != 0) return false;
             break;
         case AST_ELEM_FIXED_ARRAY:
-            if(((ast_elem_fixed_array_t*) a->elements[i])->size != ((ast_elem_fixed_array_t*) b->elements[i])->size) return false;
+            if(((ast_elem_fixed_array_t*) a->elements[i])->length != ((ast_elem_fixed_array_t*) b->elements[i])->length) return false;
             break;
         case AST_ELEM_FUNC: {
                 ast_elem_func_t *func_elem_a = (ast_elem_func_t*) a->elements[i];

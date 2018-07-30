@@ -611,36 +611,59 @@ int parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
     // 'out_type' is not guaranteed to be in the same state
 
     length_t *i = ctx->i;
-    length_t pointers = 0;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
     length_t start = *i;
 
-    while(tokens[*i].id == TOKEN_MULTIPLY) { pointers++; (*i)++; }
+    out_type->elements = NULL;
+    out_type->elements_length = 0;
 
-    out_type->elements = malloc(sizeof(ast_elem_t*) * (pointers + 1));
-    out_type->elements_length = pointers;
+    length_t elements_capacity = 0;
+    tokenid_t id = tokens[*i].id;
 
-    for(length_t p = 0; p != pointers; p++){
-        out_type->elements[p] = malloc(sizeof(ast_elem_pointer_t));
-        out_type->elements[p]->id = AST_ELEM_POINTER;
-        out_type->elements[p]->source = sources[start + p];
+    while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT){
+        expand((void**) &out_type->elements, sizeof(ast_elem_t*), out_type->elements_length, &elements_capacity, 1, 2);
+
+        if(id == TOKEN_MULTIPLY){
+            out_type->elements[out_type->elements_length] = malloc(sizeof(ast_elem_pointer_t));
+            out_type->elements[out_type->elements_length]->id = AST_ELEM_POINTER;
+            out_type->elements[out_type->elements_length]->source = sources[*i];
+            out_type->elements_length++;
+            id = tokens[++(*i)].id;
+            continue;
+        }
+
+        if(id == TOKEN_GENERIC_INT){
+            ast_elem_fixed_array_t *fixed_array = malloc(sizeof(ast_elem_fixed_array_t));
+            source_t fixed_array_source = sources[*i];
+
+            fixed_array->length = *((long long*) tokens[*i].data);
+
+            out_type->elements[out_type->elements_length] = (ast_elem_t*) fixed_array;
+            out_type->elements[out_type->elements_length]->id = AST_ELEM_FIXED_ARRAY;
+            out_type->elements[out_type->elements_length]->source = fixed_array_source;
+            out_type->elements_length++;
+            id = tokens[++(*i)].id;
+            continue;
+        }
     }
 
-    switch(tokens[*i].id){
+    expand((void**) &out_type->elements, sizeof(ast_elem_t*), out_type->elements_length, &elements_capacity, 1, 1);
+
+    switch(id){
     case TOKEN_WORD: {
             ast_elem_base_t *base_elem = malloc(sizeof(ast_elem_base_t));
             base_elem->id = AST_ELEM_BASE;
-            base_elem->base = tokens[(*i)].data;
-            base_elem->source = sources[start + pointers];
+            base_elem->base = tokens[*i].data;
+            base_elem->source = sources[*i];
             tokens[(*i)++].data = NULL; // Take ownership
-            out_type->elements[pointers] = (ast_elem_t*) base_elem;
+            out_type->elements[out_type->elements_length] = (ast_elem_t*) base_elem;
         }
         break;
     case TOKEN_FUNC: case TOKEN_STDCALL: {
             ast_elem_func_t *func_elem = malloc(sizeof(ast_elem_func_t));
             func_elem->id = AST_ELEM_FUNC;
-            func_elem->source = sources[start + pointers];
+            func_elem->source = sources[*i];
 
             if(parse_type_func(ctx, func_elem)){
                 ast_type_free(out_type);
@@ -648,7 +671,7 @@ int parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 return 1;
             }
 
-            out_type->elements[pointers] = (ast_elem_t*) func_elem;
+            out_type->elements[out_type->elements_length] = (ast_elem_t*) func_elem;
         }
         break;
     default:
@@ -1297,8 +1320,9 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 case TOKEN_OPEN:
                     (*i)++; if(parse_stmt_call(ctx, stmt_list)) return 1;
                     break;
-                case TOKEN_WORD: case TOKEN_MULTIPLY: case TOKEN_FUNC:
+                case TOKEN_WORD: case TOKEN_FUNC:
                 case TOKEN_STDCALL: case TOKEN_NEXT:
+                case TOKEN_GENERIC_INT: /*fixed array*/ case TOKEN_MULTIPLY: /*pointer*/
                     (*i)--; if(parse_stmt_declare(ctx, stmt_list)) return 1;
                     break;
                 default: { // Assume assign statement if not one of the above

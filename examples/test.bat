@@ -33,6 +33,8 @@ call :compile deprecated
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile fixed_array
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcptr
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile functions

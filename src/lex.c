@@ -187,7 +187,7 @@ int lex(compiler_t *compiler, object_t *object){
                     "packed", "pragma", "private", "public", "return", "sizeof", "static", "stdcall", "struct", "switch",
                     "true", "undef", "unless", "until", "while"
                 };
-                
+
                 const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
 
                 // Terminate string buildup buffer

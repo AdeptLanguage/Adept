@@ -39,6 +39,14 @@ char* ir_type_str(ir_type_t *type){
     case TYPE_KIND_BOOLEAN: RET_CLONE_STR_MACRO("bool", 5);
     case TYPE_KIND_VOID:    RET_CLONE_STR_MACRO("void", 5);
     case TYPE_KIND_FUNCPTR: RET_CLONE_STR_MACRO("__funcptr_type_kind", 20);
+    case TYPE_KIND_FIXED_ARRAY: {
+        ir_type_extra_fixed_array_t *fixed = (ir_type_extra_fixed_array_t*) type->extra;
+        chained = ir_type_str(fixed->subtype);
+        memory = malloc(strlen(chained) + 24);
+        sprintf(memory, "[%d] %s", (int) fixed->length, chained);
+        free(chained);
+        return memory;
+    }
     default: RET_CLONE_STR_MACRO("__unk_type_kind", 16);
     }
 
@@ -705,6 +713,7 @@ unsigned int global_type_kind_sizes_64[] = {
      0, // TYPE_KIND_STRUCTURE
      0, // TYPE_KIND_VOID
     64, // TYPE_KIND_FUNCPTR
+     0, // TYPE_KIND_FIXED_ARRAY
 };
 
 bool global_type_kind_signs[] = { // (0 == unsigned, 1 == signed)
@@ -726,4 +735,5 @@ bool global_type_kind_signs[] = { // (0 == unsigned, 1 == signed)
     0, // TYPE_KIND_STRUCTURE
     0, // TYPE_KIND_VOID
     0, // TYPE_KIND_FUNCPTR
+    0, // TYPE_KIND_FIXED_ARRAY
 };

@@ -98,10 +98,10 @@ int assemble_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *un
     //       everything that is allocated is allocated inside the memory pool 'object->ir_module->pool'
     // NOTE: Therefore, don't call this function if you expect it to fail, because it will pollute the pool
     //       will inactive and unused memory.
-    // TODO: Add ability to handle cases with arrays and fixed arrays etc.
+    // TODO: Add ability to handle cases with dynamic arrays etc.
 
     ir_module_t *ir_module = &object->ir_module;
-    length_t pointer_layers;
+    length_t non_concrete_layers;
     ir_type_map_t *type_map = &ir_module->type_map;
 
     if(unresolved_type->elements_length == 1 && unresolved_type->elements[0]->id == AST_ELEM_BASE && strcmp(((ast_elem_base_t*) unresolved_type->elements[0])->base, "void") == 0){
@@ -112,15 +112,15 @@ int assemble_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *un
     }
 
     // Peel back pointer layers
-    for(pointer_layers = 0; pointer_layers != unresolved_type->elements_length; pointer_layers++){
-        unsigned int element_id = unresolved_type->elements[pointer_layers]->id;
+    for(non_concrete_layers = 0; non_concrete_layers != unresolved_type->elements_length; non_concrete_layers++){
+        unsigned int element_id = unresolved_type->elements[non_concrete_layers]->id;
         if(element_id == AST_ELEM_BASE || element_id == AST_ELEM_FUNC) break;
     }
 
-    switch(unresolved_type->elements[pointer_layers]->id){
+    switch(unresolved_type->elements[non_concrete_layers]->id){
     case AST_ELEM_BASE: {
             // Apply pointers to resolved base
-            char *base_name = ((ast_elem_base_t*) unresolved_type->elements[pointer_layers])->base;
+            char *base_name = ((ast_elem_base_t*) unresolved_type->elements[non_concrete_layers])->base;
 
             // Resolve type from type map
             if(ir_type_map_find(type_map, base_name, resolved_type)){
@@ -130,7 +130,7 @@ int assemble_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *un
         }
         break;
     case AST_ELEM_FUNC: {
-            ast_elem_func_t *function = (ast_elem_func_t*) unresolved_type->elements[pointer_layers];
+            ast_elem_func_t *function = (ast_elem_func_t*) unresolved_type->elements[non_concrete_layers];
             ir_type_extra_function_t *extra = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_function_t));
 
             *resolved_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
@@ -159,11 +159,25 @@ int assemble_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *un
         }
     }
 
-    // Reapply pointer layers
-    for(length_t i = 0; i != pointer_layers; i++){
+    for(length_t i = 0; i != non_concrete_layers; i++){
         ir_type_t *wrapped_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-        wrapped_type->kind = TYPE_KIND_POINTER;
-        wrapped_type->extra = *resolved_type;
+        unsigned int non_concrete_element_id = unresolved_type->elements[i]->id;
+
+        if(non_concrete_element_id == AST_ELEM_POINTER){
+            wrapped_type->kind = TYPE_KIND_POINTER;
+            wrapped_type->extra = *resolved_type;
+        } else if(non_concrete_element_id == AST_ELEM_FIXED_ARRAY){
+            ir_type_extra_fixed_array_t *fixed_array = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_fixed_array_t));
+            fixed_array->subtype = *resolved_type;
+            fixed_array->length = ((ast_elem_fixed_array_t*) unresolved_type->elements[i])->length;
+            wrapped_type->kind = TYPE_KIND_FIXED_ARRAY;
+            wrapped_type->extra = fixed_array;
+        } else {
+            char *unresolved_str_rep = ast_type_str(unresolved_type);
+            compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown non-concrete type element id in type '%s'", unresolved_str_rep);
+            free(unresolved_str_rep);
+        }
+
         *resolved_type = wrapped_type;
     }
 
@@ -189,6 +203,8 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
 
     // Macro to determine whether a type is a '*something'
     #define MACRO_TYPE_IS_POINTER(ast_type) (ast_type->elements_length > 1 && ast_type->elements[0]->id == AST_ELEM_POINTER)
+
+    #define MACRO_TYPE_IS_FIXED_ARRAY(ast_type) (ast_type->elements_length > 1 && ast_type->elements[0]->id == AST_ELEM_FIXED_ARRAY)
 
     // Traits to keep track of what properties each type has
     trait_t to_traits = TRAIT_NONE, from_traits = TRAIT_NONE;
