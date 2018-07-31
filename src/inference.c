@@ -1,4 +1,5 @@
 
+#include "util.h"
 #include "search.h"
 #include "ast_expr.h"
 #include "inference.h"
@@ -501,19 +502,9 @@ int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type)
     ast_alias_t *aliases = object->ast.aliases;
     length_t aliases_length = object->ast.aliases_length;
 
-    ast_elem_t **new_elements = malloc(sizeof(ast_elem_t*) * 4);
+    ast_elem_t **new_elements = NULL;
     length_t length = 0;
-    length_t capacity = 4;
-
-    #define MACRO_EXPAND_NEW_ELEMENTS_IF_NEEDED(amount) { \
-        while(length + amount > capacity){ \
-            capacity *= 2; \
-            ast_elem_t **new_new_elements = malloc(sizeof(ast_elem_t*) * capacity); \
-            memcpy(new_new_elements, new_elements, sizeof(ast_elem_t*) * length); \
-            free(new_elements); \
-            new_elements = new_new_elements; \
-        } \
-    }
+    length_t capacity = 0;
 
     for(length_t e = 0; e != type->elements_length; e++){
         if(type->elements[e]->id == AST_ELEM_BASE){
@@ -522,7 +513,7 @@ int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type)
                 // NOTE: The alias target type was already resolved of any aliases,
                 //       so we don't have to scan the new elements
                 ast_type_t cloned = ast_type_clone(&aliases[alias_index].type);
-                MACRO_EXPAND_NEW_ELEMENTS_IF_NEEDED(cloned.elements_length);
+                expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, cloned.elements_length, 4);
 
                 // Move all the elements from the cloned type to this type
                 for(length_t m = 0; m != cloned.elements_length; m++){
@@ -546,7 +537,7 @@ int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type)
         }
 
         // If not an alias, continue on as usual
-        MACRO_EXPAND_NEW_ELEMENTS_IF_NEEDED(1);
+        expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, 1, 4);
         new_elements[length++] = type->elements[e];
     }
 
@@ -555,6 +546,5 @@ int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type)
     type->elements = new_elements;
     type->elements_length = length;
 
-    #undef MACRO_EXPAND_NEW_ELEMENTS_IF_NEEDED
     return 0;
 }

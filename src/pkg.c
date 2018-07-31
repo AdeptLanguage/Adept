@@ -33,17 +33,29 @@ int pkg_write(const char *filename, tokenlist_t *tokenlist){
     fwrite(&pkg_version, sizeof(pkg_version_t), 1, file);
     fwrite(&pkg_header, sizeof(pkg_header_t), 1, file);
 
-    char *buffer = malloc(1024);
+    char buffer[1024];
+    length_t extra_data_length;
 
     for(length_t t = 0; t != length; t++){
         char id = tokens[t].id;
 
         if(tokens[t].id == TOKEN_WORD){
-            pkg_compress_word(file, &tokens[t]);
+            if(pkg_compress_word(file, &tokens[t])){
+                fclose(file);
+                return 1;
+            }
         }
         else if(tokens[t].id == TOKEN_STRING || tokens[t].id == TOKEN_CSTRING){
+            extra_data_length = strlen(tokens[t].data);
+
+            if(extra_data_length == 1024){
+                redprintf("Failed to create package because string exceeded max length of 1024 bytes!");
+                fclose(file);
+                return 1;
+            }
+
             fwrite(&id, sizeof(char), 1, file);
-            fwrite(tokens[t].data, strlen(tokens[t].data) + 1, 1, file);
+            fwrite(tokens[t].data, extra_data_length + 1, 1, file);
         }
         else if(tokens[t].id == TOKEN_GENERIC_INT){
             fwrite(&id, sizeof(char), 1, file);
@@ -61,7 +73,6 @@ int pkg_write(const char *filename, tokenlist_t *tokenlist){
     }
 
     fclose(file);
-    free(buffer);
     return 0;
 }
 
@@ -82,16 +93,19 @@ int pkg_read(compiler_t *compiler, object_t *object){
 
     if(pkg_version.magic_number != 0x74706461){
         fprintf(stderr, "INTERNAL ERROR: Tried to read a package file '%s' that isn't a package\n", object->filename);
+        fclose(file);
         return 1;
     }
 
     if(pkg_version.endianness != 0x00EF){
         fprintf(stderr, "INTERNAL ERROR: Failed to read package '%s' because of mismatched endianness\n", object->filename);
+        fclose(file);
         return 1;
     }
 
     if(pkg_version.iteration_version != TOKEN_ITERATION_VERSION){
         fprintf(stderr, "INTERNAL ERROR: Incompatible package iteration version for package '%s'\n", object->filename);
+        fclose(file);
         return 1;
     }
 
@@ -99,6 +113,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
     tokenlist->length = pkg_header.length;
     // tokenlist->capacity; ignored
     tokenlist->sources = malloc(sizeof(source_t) * pkg_header.length);
+    object->compilation_stage = COMPILATION_STAGE_TOKENLIST;
 
     source_t *sources = tokenlist->sources;
     length_t sources_length = pkg_header.length;
@@ -111,7 +126,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
         sources[s].object_index = target_object_index;
     }
 
-    char *buildup = malloc(1024);
+    char buildup[1024];
     length_t buildup_length;
 
     for(length_t t = 0; t != pkg_header.length; t++){
@@ -124,8 +139,11 @@ int pkg_read(compiler_t *compiler, object_t *object){
             fread(&read, sizeof(char), 1, file);
             for(buildup_length = 0; read != '\0'; buildup_length++){
                 if(buildup_length == 1024) {
-                    fprintf(stderr, "Token extra datain '%s' exceeded 1024 which is currently unsupported\n", object->filename);
-                    free(buildup);
+                    fprintf(stderr, "Token extra data in '%s' exceeded 1024 which is currently unsupported\n", object->filename);
+                    fclose(file);
+
+                    // Override tokenlist length for safe recovery deletion
+                    tokenlist->length = t;
                     return 1;
                 }
                 buildup[buildup_length] = read;
@@ -140,8 +158,11 @@ int pkg_read(compiler_t *compiler, object_t *object){
             fread(&read, sizeof(char), 1, file);
             for(buildup_length = 0; read != '\0'; buildup_length++){
                 if(buildup_length + 1 == 1024) {
-                    fprintf(stderr, "Token extra datain '%s' exceeded 1024 which is currently unsupported\n", object->filename);
-                    free(buildup);
+                    fprintf(stderr, "Token extra data in '%s' exceeded 1024 which is currently unsupported\n", object->filename);
+                    fclose(file);
+
+                    // Override tokenlist length for safe recovery deletion
+                    tokenlist->length = t;
                     return 1;
                 }
                 buildup[buildup_length] = read;
@@ -156,8 +177,11 @@ int pkg_read(compiler_t *compiler, object_t *object){
             fread(&read, sizeof(char), 1, file);
             for(buildup_length = 0; read != '\0'; buildup_length++){
                 if(buildup_length + 1 == 1024) {
-                    fprintf(stderr, "Token extra datain '%s' exceeded 1024 which is currently unsupported\n", object->filename);
-                    free(buildup);
+                    fprintf(stderr, "Token extra data in '%s' exceeded 1024 which is currently unsupported\n", object->filename);
+                    fclose(file);
+
+                    // Override tokenlist length for safe recovery deletion
+                    tokenlist->length = t;
                     return 1;
                 }
                 buildup[buildup_length] = read;
@@ -228,11 +252,10 @@ int pkg_read(compiler_t *compiler, object_t *object){
     }
 
     fclose(file);
-    free(buildup);
     return 0;
 }
 
-void pkg_compress_word(FILE *file, token_t *token){
+int pkg_compress_word(FILE *file, token_t *token){
     const length_t compressible_words_length = 12;
 
     const char * const compressible_words[] = {
@@ -243,10 +266,20 @@ void pkg_compress_word(FILE *file, token_t *token){
 
     if(index == -1){
         char id = token->id;
+        length_t word_length = strlen(token->data);
         fwrite(&id, sizeof(char), 1, file);
-        fwrite(token->data, strlen(token->data) + 1, 1, file);
+
+        if(word_length > 1024){
+            redprintf("Failed to create package because identifier exceeded max length of 1024 bytes!");
+            fclose(file);
+            return 1;
+        }
+
+        fwrite(token->data, word_length + 1, 1, file);
     } else {
         char shorthand_token = TOKEN_PKG_MIN + index;
         fwrite(&shorthand_token, sizeof(char), 1, file);
     }
+
+    return 0;
 }

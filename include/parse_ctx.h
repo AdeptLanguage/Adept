@@ -27,6 +27,7 @@ typedef struct {
     ast_t *ast;
     length_t *i;
     ast_func_t *func;
+    ast_var_scope_t *var_scope;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------
@@ -37,6 +38,13 @@ void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object);
 // Forks an existing parse context for parsing
 void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx_fork);
 
+// ------------------ parse_ctx_open_var_scope ------------------
+// Creates a variable scope and pushes it back
+void parse_ctx_open_var_scope(parse_ctx_t *ctx);
+
+// ------------------ parse_ctx_close_var_scope ------------------
+// Reverts back to the parent variable scope
+void parse_ctx_close_var_scope(parse_ctx_t *ctx);
 
 // ==================================================
 //                    PARSE_EAT_*

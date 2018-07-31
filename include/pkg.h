@@ -37,6 +37,6 @@ int pkg_read(compiler_t *compiler, object_t *object);
 
 // ---------------- pkg_compress_word ----------------
 // Attempts to compress a word, then writes it to disk
-void pkg_compress_word(FILE *file, token_t *token);
+int pkg_compress_word(FILE *file, token_t *token);
 
 #endif // PKG_H

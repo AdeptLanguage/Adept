@@ -25,7 +25,12 @@ typedef struct {
     length_t arity;
     ast_type_t return_type;
     trait_t traits;
+
+    ast_var_scope_t var_scope;
+
+    // TEMP: This remains just to ensure we don't break everything yet
     ast_var_list_t var_list;
+
     ast_expr_t **statements;
     length_t statements_length;
     length_t statements_capacity;
@@ -130,34 +135,28 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
 void ast_dump_structs(FILE *file, ast_struct_t *structs, length_t structs_length);
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length);
 
-// ---------------- ast_struct_find----------------
+// ---------------- ast_struct_find ----------------
 // Finds a structure by name
 ast_struct_t *ast_struct_find(ast_t *ast, char *name);
 
-// ---------------- ast_struct_find_field----------------
+// ---------------- ast_struct_find_field ----------------
 // Finds a field by name within a structure
 bool ast_struct_find_field(ast_struct_t *ast_struct, char *name, length_t *out_index);
 
-// ---------------- ast_var_list_nearest----------------
-// Returns the variable in the list with the name closest
-// to the name supplied. If none are found within
-// a reasonable amount, NULL is returned.
-const char* ast_var_list_nearest(ast_var_list_t *var_list, char* name);
-
-// ---------------- find_alias----------------
+// ---------------- find_alias ----------------
 // Finds an alias by name
 int find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias);
 
-// ---------------- find_constant----------------
+// ---------------- find_constant ----------------
 // Finds a global constant expression by name
 int find_constant(ast_constant_t *constants, length_t constants_length, const char *constant);
 
-// ---------------- ast_aliases_cmp----------------
+// ---------------- ast_aliases_cmp ----------------
 // Compares two 'ast_alias_t' structures.
 // Used for qsort()
 int ast_aliases_cmp(const void *a, const void *b);
 
-// ---------------- ast_constants_cmp----------------
+// ---------------- ast_constants_cmp ----------------
 // Compares two 'ast_constant_t' structures.
 // Used for qsort()
 int ast_constants_cmp(const void *a, const void *b);

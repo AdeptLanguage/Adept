@@ -1,4 +1,5 @@
 
+#include "color.h"
 #include "parse_ctx.h"
 
 void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object){
@@ -14,6 +15,20 @@ void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx
     *out_ctx_fork = *ctx;
     out_ctx_fork->object = new_object;
     out_ctx_fork->tokenlist = &new_object->tokenlist;
+}
+
+void parse_ctx_open_var_scope(parse_ctx_t *ctx){
+    ast_var_scope_t *scope = malloc(sizeof(ast_var_scope_t));
+    ast_var_scope_init(scope, ctx->var_scope);
+    ctx->var_scope = scope;
+}
+
+void parse_ctx_close_var_scope(parse_ctx_t *ctx){
+    if(ctx->var_scope->parent == NULL) redprintf("INTERNAL ERROR: TRIED TO CLOSE VARIABLE SCOPE WITH NO PARENT, probably will crash...\n");
+
+    ast_var_scope_t *old_scope = ctx->var_scope;
+    ctx->var_scope = old_scope->parent;
+    free(old_scope);
 }
 
 

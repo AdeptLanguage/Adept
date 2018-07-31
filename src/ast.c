@@ -1,6 +1,5 @@
 
 #include "ast.h"
-#include "levenshtein.h"
 
 void ast_init(ast_t *ast){
     ast->funcs = malloc(sizeof(ast_func_t) * 8);
@@ -67,6 +66,7 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
         free(func->arg_flows);
         free(func->var_list.names);
         free(func->var_list.types);
+        ast_var_scope_free(&func->var_scope);
         ast_free_statements(func->statements, func->statements_length);
         free(func->statements);
         ast_type_free(&func->return_type);
@@ -404,27 +404,6 @@ bool ast_struct_find_field(ast_struct_t *ast_struct, char *name, length_t *out_i
         }
     }
     return true; // Error: didn't find
-}
-
-const char* ast_var_list_nearest(ast_var_list_t *var_list, char* name){
-    length_t list_length = var_list->length;
-    int distances[list_length];
-
-    for(length_t i = 0; i != list_length; i++){
-        distances[i] = levenshtein(name, var_list->names[i]);
-    }
-
-    const char *nearest = NULL;
-    length_t minimum = 3; // Minimum number of changes to override NULL
-
-    for(length_t i = 0; i != list_length; i++){
-        if(distances[i] < minimum){
-            minimum = distances[i];
-            nearest = var_list->names[i];
-        }
-    }
-
-    return nearest;
 }
 
 int find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias){

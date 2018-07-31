@@ -450,6 +450,9 @@ void ast_expr_free(ast_expr_t *expr){
             ast_expr_free_fully(((ast_expr_declare_t*) expr)->value);
         }
         break;
+    case EXPR_DECLAREUNDEF:
+        ast_type_free(&((ast_expr_declare_t*) expr)->type);
+        break;
     case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
     case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN:
         ast_expr_free_fully(((ast_expr_assign_t*) expr)->destination);

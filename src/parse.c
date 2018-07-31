@@ -171,6 +171,8 @@ int parse_tokens(parse_ctx_t *ctx){
                 func->var_list.types = NULL;
                 func->var_list.length = 0;
                 func->var_list.capacity = 0;
+                ast_var_scope_init(&func->var_scope, NULL);
+                ctx->var_scope = &func->var_scope;
 
                 if(strcmp(func->name, "main") == 0) func->traits |= AST_FUNC_MAIN;
                 if(is_stdcall) func->traits |= AST_FUNC_STDCALL;
@@ -1255,7 +1257,6 @@ int parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t** inout_left, boo
         }
 
         #undef BUILD_MATH_EXPR_MACRO
-        #undef BUILD_MEMBER_EXPR_MACRO
     }
 
     return 0;
@@ -1873,10 +1874,15 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         return 1;
     }
 
-    // Parse the initial value for the variable(s)
+    // Parse the initial value for the variable(s) (if an initial value is given)
     if(tokens[*i].id == TOKEN_ASSIGN){
-        (*i)++; if(tokens[*i].id == TOKEN_UNDEF){
-            declare_stmt_type = EXPR_DECLAREUNDEF; (*i)++;
+        // Skip over 'assign' token
+        (*i)++;
+
+        // Handle either 'undef' or an expression
+        if(tokens[*i].id == TOKEN_UNDEF){
+            declare_stmt_type = EXPR_DECLAREUNDEF;
+            (*i)++;
         } else if(parse_expr(ctx, &decl_value)){
             ast_type_free(&decl_type);
             free(decl_names);
@@ -1904,6 +1910,7 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
             stmt->value = decl_value == NULL ? NULL : ast_expr_clone(decl_value);
         }
 
+        // Append the created declare statement
         stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     }
 
