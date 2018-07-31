@@ -1,6 +1,12 @@
 
 pragma compiler_version '2.0'
+
+// Old prama 'options' directive testing
 pragma options '-n pragma -O3'
+
+// Modern pragma directives
+pragma project_name 'pragma'
+pragma optimization aggressive
 
 import 'sys/cstdio.adept'
 

@@ -171,13 +171,10 @@ int assemble_functions_body(compiler_t *compiler, object_t *object){
 
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
-    ast_func_t *ast_funcs;
-    ir_func_t *module_funcs;
-    length_t ast_funcs_length;
 
-    ast_funcs = ast->funcs;
-    module_funcs = module->funcs;
-    ast_funcs_length = ast->funcs_length;
+    ast_func_t *ast_funcs = ast->funcs;
+    ir_func_t *module_funcs = module->funcs;
+    length_t ast_funcs_length = ast->funcs_length;
 
     for(length_t f = 0; f != ast_funcs_length; f++){
         if(ast_funcs[f].traits & AST_FUNC_FOREIGN) continue;

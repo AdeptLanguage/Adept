@@ -10,19 +10,9 @@
 
 #include "trait.h"
 #include "ground.h"
+#include "ast_var.h"
 #include "ast_type.h"
 #include "ast_expr.h"
-
-// ---------------- ast_var_list_t ----------------
-// A list containing all the variables declared
-// within a function
-typedef struct {
-    // Each name and each type are references to existing values
-    const char **names;
-    ast_type_t **types; // NOTE: Var list does not have owenership of types
-    length_t length;
-    length_t capacity;
-} ast_var_list_t;
 
 // ---------------- ast_func_t ----------------
 // A function within the root AST

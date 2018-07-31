@@ -166,6 +166,8 @@ typedef struct {
     length_t mappings_length;
 } ir_type_map_t;
 
+////////////////////////////////////////////////////////////////////////////////
+
 // ---------------- ir_var_t ----------------
 // An intermediate representation variable
 typedef struct {
@@ -190,6 +192,10 @@ typedef struct {
     length_t mappings_length;
     length_t mappings_capacity;
 } ir_var_map_t;
+
+////////////////////////////////////////////////////////////////////////////////
+
+
 
 // ---------------- ir_value_t ----------------
 // An intermediate representation value

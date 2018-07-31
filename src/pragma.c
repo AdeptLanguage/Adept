@@ -2,6 +2,7 @@
 #include "pragma.h"
 #include "search.h"
 #include "filename.h"
+#include "parse_ctx.h"
 
 int parse_pragma(parse_ctx_t *ctx){
     // pragma <directive> ...
@@ -18,20 +19,16 @@ int parse_pragma(parse_ctx_t *ctx){
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
 
-    if(tokens[++(*i)].id != TOKEN_WORD){
-        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected pragma option after 'pragma' keyword");
-        return 1;
-    }
+    char *directive_string = parse_grab_word(ctx, "Expected pragma option after 'pragma' keyword");
+    if(directive_string == NULL) return 1;
 
-    char *directive_string = (char*) tokens[*i].data;
     int directive = binary_string_search(directives, directives_length, directive_string);
 
     switch(directive){
     case 0: // 'compiler_version' directive
-        read = parse_pragma_string(tokens, i);
+        read = parse_grab_string(ctx, "Expected compiler version string after 'pragma compiler_version'");
 
         if(read == NULL){
-            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected compiler version string after 'pragma compiler_version'");
             puts("\nDid you mean: pragma compiler_version '2.0'?");
             return 1;
         }
@@ -44,7 +41,7 @@ int parse_pragma(parse_ctx_t *ctx){
         }
         return 0;
     case 1: // 'deprecated' directive
-        read = parse_pragma_string(tokens, i);
+        read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
             if(tokens[*i].id != TOKEN_NEWLINE){
@@ -63,10 +60,9 @@ int parse_pragma(parse_ctx_t *ctx){
         show_help();
         return 1;
     case 3: // 'optimization' directive
-        read = parse_pragma_string(tokens, i);
+        read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
-            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected optimization level after 'pragma optimization'");
             printf("Possible levels are: none, less, normal or aggressive\n");
             return 1;
         }
@@ -86,18 +82,14 @@ int parse_pragma(parse_ctx_t *ctx){
     case 4: // 'options' directive
         return parse_pragma_cloptions(ctx);
     case 5: // 'project_name' directive
-        read = parse_pragma_string(tokens, i);
-
-        if(read == NULL){
-            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected string containing project name after 'pragma project_name'");
-            return 1;
-        }
+        read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
+        if(read == NULL) return 1;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return 0;
     case 6: // 'unsupported' directive
-        read = parse_pragma_string(tokens, i);
+        read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
             if(tokens[*i].id != TOKEN_NEWLINE){
@@ -126,27 +118,12 @@ int parse_pragma(parse_ctx_t *ctx){
     return 0;
 }
 
-char* parse_pragma_string(token_t *tokens, length_t *i){
-    // pragma <directive> 'a string'
-    //             ^
-
-    if(tokens[++(*i)].id != TOKEN_CSTRING && tokens[*i].id != TOKEN_STRING) return NULL;
-    return (char*) tokens[*i].data;
-}
-
 int parse_pragma_cloptions(parse_ctx_t *ctx){
     // pragma options 'some arguments'
     //           ^
 
-    length_t *i = ctx->i;
-    token_t *tokens = ctx->tokenlist->tokens;
-
-    char *options = parse_pragma_string(tokens, i);
-
-    if(options == NULL){
-        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected string containing compiler options after 'pragma options'");
-        return 1;
-    }
+    char *options = parse_grab_string(ctx, "Expected string containing compiler options after 'pragma options'");
+    if(options == NULL) return 1;
 
     int options_argc; char **options_argv;
     break_into_arguments(options, &options_argc, &options_argv);
@@ -168,5 +145,6 @@ int parse_pragma_cloptions(parse_ctx_t *ctx){
         if(compiler_create_package(ctx->compiler, ctx->object) == 0) ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         return 1;
     }
+
     return 0;
 }

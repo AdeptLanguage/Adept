@@ -15,12 +15,7 @@ int parse(compiler_t *compiler, object_t *object){
     object->compilation_stage = COMPILATION_STAGE_AST;
 
     parse_ctx_t ctx;
-    ctx.compiler = compiler;
-    ctx.object = object;
-    ctx.tokenlist = &object->tokenlist;
-    ctx.ast = &object->ast;
-    ctx.i = NULL;
-    ctx.func = NULL;
+    parse_ctx_init(&ctx, compiler, object);
 
     return parse_tokens(&ctx);
 }
@@ -28,15 +23,15 @@ int parse(compiler_t *compiler, object_t *object){
 int parse_tokens(parse_ctx_t *ctx){
     // Expects from 'ctx': compiler, object, tokenlist, ast
 
+    length_t i = 0;
+    ast_func_t *func = NULL;
     unsigned int state = PARSE_STATE_IDLE;
 
-    length_t i = 0;
     ast_t *ast = ctx->ast;
-    ast_func_t *func = NULL;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
-    source_t source;
 
+    source_t source;
     ctx->i = &i;
     source.index = 0;
     source.object_index = ctx->object->index;
@@ -45,63 +40,73 @@ int parse_tokens(parse_ctx_t *ctx){
         switch(state){
         case PARSE_STATE_IDLE:
             switch(tokens[i].id){
-            case TOKEN_NEWLINE: break;
+            case TOKEN_NEWLINE:
+                break;
             case TOKEN_FUNC: case TOKEN_STDCALL:
-                state = PARSE_STATE_FUNC; break;
-            case TOKEN_FOREIGN: state = PARSE_STATE_FOREIGN;  break;
+                state = PARSE_STATE_FUNC;
+                break;
+            case TOKEN_FOREIGN:
+                state = PARSE_STATE_FOREIGN;
+                break;
             case TOKEN_STRUCT: case TOKEN_PACKED:
-                state = PARSE_STATE_STRUCT; break;
-            case TOKEN_WORD:    state = PARSE_STATE_GLOBAL;   break;
-            case TOKEN_ALIAS:   state = PARSE_STATE_ALIAS;    break;
+                state = PARSE_STATE_STRUCT;
+                break;
+            case TOKEN_WORD:
+                state = PARSE_STATE_GLOBAL;
+                break;
+            case TOKEN_ALIAS:
+                state = PARSE_STATE_ALIAS;
+                break;
             case TOKEN_IMPORT: {
-                    if(tokens[++i].id != TOKEN_CSTRING && tokens[i].id != TOKEN_STRING){
-                        compiler_panic(ctx->compiler, sources[i - 1], "Expected filename string after 'import' keyword");
-                        return 1;
-                    }
+                    const char *import_filename = parse_grab_string(ctx, "Expected filename string after 'import' keyword");
+                    if(import_filename == NULL) return 1;
 
-                    char *target_filename = filename_local(ctx->object->filename, tokens[i].data);
+                    char *test_filename = filename_local(ctx->object->filename, import_filename);
 
-                    if(access(target_filename, F_OK) == -1){
-                        // Doesn't exist locally
-                        free(target_filename);
-                        target_filename = filename_adept_import(tokens[i].data);
+                    if(access(test_filename, F_OK) == -1){
+                        // TEST FAILED: The file doesn't exist locally
+                        free(test_filename);
+                        test_filename = filename_adept_import(import_filename);
 
-                        if(access(target_filename, F_OK) == -1){
-                            // Can't find the file
-                            compiler_panicf(ctx->compiler, sources[i], "The file '%s' doesn't exist", tokens[i].data);
-                            free(target_filename);
+                        if(access(test_filename, F_OK) == -1){
+                            // ERROR: Can't find the file
+                            compiler_panicf(ctx->compiler, sources[i], "The file '%s' doesn't exist", import_filename);
+                            free(test_filename);
                             return 1;
                         }
                     }
 
                     bool already_imported = false; i++;
-                    char *full_target_filename = filename_absolute(target_filename);
+                    char *target_filename = filename_absolute(test_filename);
 
-                    if(full_target_filename == NULL){
-                        redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", target_filename);
-                        free(target_filename);
+                    if(target_filename == NULL){
+                        redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", test_filename);
+                        free(test_filename);
                         return 1;
                     }
 
                     for(length_t o = 0; o != ctx->compiler->objects_length; o++){
-                        if(strcmp(ctx->compiler->objects[o]->full_filename, full_target_filename) == 0) { already_imported = true; break; }
+                        if(strcmp(ctx->compiler->objects[o]->full_filename, target_filename) == 0){
+                            // DUPLICATE: This file has already been imported
+                            already_imported = true;
+                            break;
+                        }
                     }
 
                     if(!already_imported){
+                        parse_ctx_t ctx_fork;
                         object_t *new_object = compiler_new_object(ctx->compiler);
-                        new_object->filename = target_filename;
-                        new_object->full_filename = full_target_filename;
+
+                        new_object->filename = test_filename;
+                        new_object->full_filename = target_filename;
 
                         if(compiler_read_file(ctx->compiler, new_object)) return 1;
 
-                        parse_ctx_t ctx_fork = *ctx;
-                        ctx_fork.object = new_object;
-                        ctx_fork.tokenlist = &new_object->tokenlist;
-
+                        parse_ctx_fork(ctx, new_object, &ctx_fork);
                         if(parse_tokens(&ctx_fork)) return 1;
                     } else {
+                        free(test_filename);
                         free(target_filename);
-                        free(full_target_filename);
                     }
                 }
                 break;
@@ -128,7 +133,7 @@ int parse_tokens(parse_ctx_t *ctx){
             // Fall through to PARSE_STATE_FUNC if not caught
         case PARSE_STATE_FUNC: {
                 bool is_stdcall = false;
-                if(tokens[i - 1].id == TOKEN_STDCALL){ i++; is_stdcall = true; }
+                if(tokens[i - 1].id == TOKEN_STDCALL) { i++; is_stdcall = true; }
 
                 bool is_foreign = (tokens[i - 1].id == TOKEN_FOREIGN);
                 bool is_vararg = false;
@@ -242,6 +247,7 @@ int parse_tokens(parse_ctx_t *ctx){
                         func->traits |= AST_FUNC_VARARG;
                         i++;
                     } else {
+                        // Parse argument names (assumming not a foreign declaration)
                         if(!is_foreign){
                             char *arg_name = parse_take_word(ctx, "Expected argument name before argument type");
 
@@ -253,7 +259,9 @@ int parse_tokens(parse_ctx_t *ctx){
 
                             func->arg_names[func->arity + arg_backfill] = arg_name;
 
+                            // Continue parsing argument names if 'next' operator is after argument name
                             if(tokens[i].id == TOKEN_NEXT){
+                                // Ensure that the argument list doesn't end after that 'next' operator
                                 if(tokens[++i].id == TOKEN_CLOSE){
                                     compiler_panic(ctx->compiler, sources[i], "Expected type after ',' in argument list");
 
@@ -270,6 +278,7 @@ int parse_tokens(parse_ctx_t *ctx){
                             }
                         }
 
+                        // Parse the type for the argument(s)
                         if(parse_type(ctx, &func->arg_types[func->arity + arg_backfill])){
                             // Free name of current argument that never became a proper argument
                             free(func->arg_names[func->arity + arg_backfill]);
@@ -279,6 +288,7 @@ int parse_tokens(parse_ctx_t *ctx){
                             return 1;
                         }
 
+                        // Backfill any arguments that were waiting on a type
                         for(length_t i = 0; arg_backfill != 0; i++){
                             func->arg_types[func->arity + arg_backfill - i - 1] = ast_type_clone(&func->arg_types[func->arity + arg_backfill - i]);
                             arg_backfill -= 1;
@@ -288,6 +298,7 @@ int parse_tokens(parse_ctx_t *ctx){
 
                     if(!is_vararg) func->arity++;
 
+                    // Ensure the argument list continues correctly or exits correctly
                     if(tokens[i].id == TOKEN_NEXT){
                         if(tokens[++i].id == TOKEN_CLOSE){
                             compiler_panic(ctx->compiler, sources[i], "Expected type after ',' in argument list");
@@ -306,6 +317,7 @@ int parse_tokens(parse_ctx_t *ctx){
                     }
                 }
 
+                // Ensure that no arguments were waiting to be backfilled
                 if(arg_backfill != 0){
                     compiler_panic(ctx->compiler, sources[i], "Expected argument type before end of argument list");
 
@@ -314,9 +326,11 @@ int parse_tokens(parse_ctx_t *ctx){
                     return 1;
                 }
 
+                // Parse function return value
                 i++;
                 if(parse_type(ctx, &func->return_type)) return 1;
 
+                // Parse function body (assuming it's not a foreign declaration)
                 if(!is_foreign){
                     length_t initial_capacity = func->arity != 0 ? func->arity : 4;
                     func->var_list.names = malloc(sizeof(char*) * initial_capacity);
@@ -370,8 +384,7 @@ int parse_tokens(parse_ctx_t *ctx){
                 char *struct_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
                 if(struct_name == NULL) return 1;
 
-                while(tokens[i].id == TOKEN_NEWLINE) if(i++ == ctx->tokenlist->length){
-                    compiler_panic(ctx->compiler, sources[i], "Expected '(' after name of struct");
+                if(parse_ignore_newlines(ctx, "Expected '(' after name of struct")){
                     free(struct_name);
                     return 1;
                 }
@@ -400,12 +413,12 @@ int parse_tokens(parse_ctx_t *ctx){
                         field_types = new_field_types;
                     }
 
-                    while(tokens[i].id == TOKEN_NEWLINE) if(i++ == ctx->tokenlist->length){
-                        compiler_panic(ctx->compiler, sources[i], "Expected name of field");
+                    if(parse_ignore_newlines(ctx, "Expected name of field")){
                         for(length_t n = 0; n != field_count; n++) free(field_names[n]);
                         ast_types_free_fully(field_types, field_count - field_backfill);
                         free(struct_name);
                         free(field_names);
+                        return 1;
                         return 1;
                     }
 
@@ -441,8 +454,7 @@ int parse_tokens(parse_ctx_t *ctx){
                         field_backfill -= 1;
                     }
 
-                    while(tokens[i].id == TOKEN_NEWLINE) if(i++ == ctx->tokenlist->length){
-                        compiler_panic(ctx->compiler, sources[i], "Expected ')' or ',' after struct field");
+                    if(parse_ignore_newlines(ctx, "Expected ')' or ',' after struct field")){
                         for(length_t n = 0; n != field_count + 1; n++) free(field_names[n]);
                         ast_types_free_fully(field_types, field_count - field_backfill);
                         free(struct_name);
@@ -1613,6 +1625,72 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 }
             }
             break;
+        case TOKEN_EACH: {
+                source = sources[(*i)++];
+                ast_expr_t *length_limit = NULL;
+                ast_expr_t *low_array = NULL;
+                trait_t stmts_mode;
+                char *label = NULL;
+
+                if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
+                    label = tokens[*i].data; *i += 2;
+                }
+
+                if(parse_expr(ctx, &length_limit)) return 1;
+
+                if(tokens[*i].id != TOKEN_FOR){
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected 'for' after length expression in 'each for' loop");
+                    ast_expr_free_fully(length_limit);
+                    return 1;
+                }
+
+                if(parse_expr(ctx, &low_array)){
+                    ast_expr_free_fully(length_limit);
+                    return 1;
+                }
+
+                switch(tokens[(*i)++].id){
+                case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
+                case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
+                default:
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'each for' expression");
+                    ast_expr_free_fully(length_limit);
+                    ast_expr_free_fully(low_array);
+                    return 1;
+                }
+
+                ast_expr_list_t each_for_stmt_list;
+                each_for_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
+                each_for_stmt_list.length = 0;
+                each_for_stmt_list.capacity = 4;
+
+                length_t defer_unravel_length = defer_list->length;
+
+                if(parse_stmts(ctx, &each_for_stmt_list, defer_list, stmts_mode)){
+                    ast_free_statements_fully(each_for_stmt_list.statements, each_for_stmt_list.length);
+                    ast_expr_free_fully(length_limit);
+                    ast_expr_free_fully(low_array);
+                    return 1;
+                }
+
+                // Unravel all defer statements added in the block
+                parse_unravel_defer_stmts(&each_for_stmt_list, defer_list, defer_unravel_length);
+
+                if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
+                else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
+
+                ast_expr_each_for_t *stmt = malloc(sizeof(ast_expr_each_for_t));
+                stmt->id = EXPR_EACH_FOR;
+                stmt->source = source;
+                stmt->label = label;
+                stmt->length = length_limit;
+                stmt->low_array = low_array;
+                stmt->statements = each_for_stmt_list.statements;
+                stmt->statements_length = each_for_stmt_list.length;
+                stmt->statements_capacity = each_for_stmt_list.capacity;
+                stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+            }
+            break;
         case TOKEN_DEFER: {
                 (*i)++; // Skip over 'defer' keyword
                 if(parse_stmts(ctx, defer_list, defer_list, PARSE_STMTS_SINGLE)) return 1;
@@ -1730,7 +1808,8 @@ int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         }
 
         stmt->args[stmt->arity++] = arg_expr;
-        while(tokens[*i].id == TOKEN_NEWLINE) (*i)++;
+
+        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")) return 1;
 
         if(tokens[*i].id == TOKEN_NEXT) (*i)++;
         else if(tokens[*i].id != TOKEN_CLOSE){
@@ -1757,27 +1836,20 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     source_t *sources = ctx->tokenlist->sources;
     ast_func_t *func = ctx->func;
 
-    const char **decl_names = malloc(sizeof(const char*) * 4);
-    source_t *decl_sources = malloc(sizeof(source_t) * 4);
+    const char **decl_names = NULL;
+    source_t *decl_sources = NULL;
     length_t length = 0;
-    length_t capacity = 4;
+    length_t capacity = 0;
+
     ast_expr_t *decl_value = NULL;
     ast_type_t decl_type;
+
     unsigned int declare_stmt_type = EXPR_DECLARE;
 
     // Collect all variable names & sources into arrays
     while(true){
-        if(length == capacity){
-            capacity *= 2;
-            const char **new_decl_names = malloc(sizeof(const char*) * capacity);
-            source_t *new_decl_sources = malloc(sizeof(source_t) * capacity);
-            memcpy(new_decl_names, decl_names, sizeof(const char*) * length);
-            memcpy(new_decl_sources, decl_sources, sizeof(source_t) * length);
-            free(decl_names);
-            free(decl_sources);
-            decl_names = new_decl_names;
-            decl_sources = new_decl_sources;
-        }
+        coexpand((void**) &decl_names, sizeof(const char*), (void**) &decl_sources,
+            sizeof(source_t), length, &capacity, 1, 4);
 
         if(tokens[*i].id != TOKEN_WORD){
             compiler_panic(ctx->compiler, sources[*i], "Expected variable name");
@@ -1813,17 +1885,8 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         }
     }
 
-    while(func->var_list.length + length > func->var_list.capacity){
-        func->var_list.capacity *= 2;
-        const char **new_names = malloc(sizeof(char*) * func->var_list.capacity);
-        ast_type_t **new_types = malloc(sizeof(ast_type_t*) * func->var_list.capacity);
-        memcpy(new_names, func->var_list.names, sizeof(char*) * func->var_list.length);
-        memcpy(new_types, func->var_list.types, sizeof(ast_type_t*) * func->var_list.length);
-        free(func->var_list.names);
-        free(func->var_list.types);
-        func->var_list.names = new_names;
-        func->var_list.types = new_types;
-    }
+    // Parasite pointer used for variable list
+    ast_type_t *parasite_type_pointer = NULL;
 
     // Add each variable to the necessary data sets
     for(length_t v = 0; v != length; v++){
@@ -1835,16 +1898,16 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         if(v + 1 == length){
             stmt->type = decl_type;
             stmt->value = decl_value;
+            parasite_type_pointer = &stmt->type;
         } else {
             stmt->type = ast_type_clone(&decl_type);
             stmt->value = decl_value == NULL ? NULL : ast_expr_clone(decl_value);
         }
 
         stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
-
-        func->var_list.names[func->var_list.length] = decl_names[v];
-        func->var_list.types[func->var_list.length++] = &stmt->type;
     }
+
+    ast_var_list_add_variables(&func->var_list, decl_names, parasite_type_pointer, length);
 
     free(decl_names);
     free(decl_sources);
