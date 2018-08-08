@@ -44,8 +44,10 @@ bridge_var_t* bridge_var_scope_find_var_by_id(bridge_var_scope_t *scope, length_
     length_t ending_id = scope->following_var_id;
     length_t count = scope->list.length;
 
-    if(count != 0 && id >= starting_id && id < starting_id + count){
-        return &scope->list.variables[id - starting_id];
+    if(id >= starting_id && id < ending_id) for(length_t i = 0; i != count; i++){
+        if(scope->list.variables[i].id == id){
+            return &scope->list.variables[i];
+        }
     }
 
     if(id < ending_id) for(length_t i = 0; i != scope->children_length; i++){
