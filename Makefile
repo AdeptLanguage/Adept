@@ -35,10 +35,12 @@ LLVM_LIBS=-lLLVMCoverage -lgtest_main -lgtest -lLLVMDlltoolDriver -lLLVMLibDrive
 CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O3 -fmax-errors=5 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 LDFLAGS=$(LLVM_LINKER_FLAGS)
-SOURCES=src/assemble_expr.c src/assemble_find.c src/assemble_stmt.c src/assemble_type.c src/assemble.c src/ast_expr.c src/ast_type.c src/ast_var.c src/ast.c src/backend.c src/color.c \
-src/compiler.c src/filename.c src/inference.c src/ir_to_llvm.c src/ir.c src/irbuilder.c src/levenshtein.c src/lex.c src/main.c src/memory.c src/parse.c src/parse_ctx.c src/pkg.c \
-src/pragma.c src/search.c src/token.c src/util.c
-ADDITIONAL_DEBUG_SOURCES=src/debug.c
+SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/bridge.c \
+	src/DRVR/compiler.c src/DRVR/main.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir.c src/IRGEN/ir_builder.c \
+	src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
+	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_ctx.c src/PARSE/parse_pragma.c src/PARSE/parse.c src/UTIL/color.c \
+	src/UTIL/filename.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
+ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj
 OBJECTS=$(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
@@ -52,19 +54,41 @@ debug: $(SOURCES) $(ADDITIONAL_DEBUG_SOURCES) $(DEBUG_EXECUTABLE)
 
 ifeq ($(OS), Windows_NT)
 $(EXECUTABLE): $(OBJECTS) $(WIN_ICON)
+	@if not exist bin mkdir bin
 	$(LINKER) $(LDFLAGS) $(OBJECTS) $(WIN_ICON) $(LLVM_LIBS) -o $@
 else
 $(EXECUTABLE): $(OBJECTS)
+	@mkdir -p bin
 	$(LINKER) $(LDFLAGS) $(OBJECTS) $(LLVM_LIBS) -o $@
 endif
 
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
+ifeq ($(OS), Windows_NT)
+	@if not exist obj mkdir obj
+	@if not exist "$(@D)" mkdir "$(@D)"
+else
+	@mkdir -p "$(@D)"
+endif
 	$(CC) $(CFLAGS) $< -o $@
 
+ifeq ($(OS), Windows_NT)
+$(DEBUG_EXECUTABLE): $(DEBUG_OBJECTS) $(WIN_ICON)
+	@if not exist bin mkdir bin
+	$(LINKER) $(LDFLAGS) $(DEBUG_OBJECTS) $(WIN_ICON) $(LLVM_LIBS) -o $@
+else
 $(DEBUG_EXECUTABLE): $(DEBUG_OBJECTS)
+	@mkdir -p bin
 	$(LINKER) $(LDFLAGS) $(DEBUG_OBJECTS) $(LLVM_LIBS) -o $@
+endif
 
 $(DEBUG_OBJECTS): $(OBJDIR)/debug/%.o : $(SRCDIR)/%.c
+ifeq ($(OS), Windows_NT)
+	@if not exist obj mkdir obj
+	@if not exist obj\debug mkdir obj\debug
+	@if not exist "$(@D)" mkdir "$(@D)"
+else
+	@mkdir -p "$(@D)"
+endif
 	$(CC) $(CFLAGS) $(ADDITIONAL_DEBUG_CFLAGS) $< -o $@
 
 $(WIN_ICON):
@@ -72,11 +96,11 @@ $(WIN_ICON):
 
 clean:
 ifeq ($(OS), Windows_NT)
-	del obj\debug\*.* /Q
-	del obj\*.* /Q
-	del bin\*.* /Q
+	@del obj\debug\*.* /Q /S 1> nul 2>&1
+	@del obj\*.* /S /Q 1> nul 2>&1
+	@del bin\*.* /S /Q 1> nul 2>&1
 else
-	rm -f 2> /dev/null obj/debug/*.*
-	rm -f 2> /dev/null obj/*.*
-	rm -f 2> /dev/null bin/*.*
+	@rm -rf 2> /dev/null obj/debug/*.*
+	@rm -rf 2> /dev/null obj/*.*
+	@rm -rf 2> /dev/null bin/*.*
 endif

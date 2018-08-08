@@ -128,6 +128,6 @@ exit /b 0
 
 :compile
 echo ^=^> Compiling Test Program^: ^'%~1^'
-adept %~1/main.adept %~2
+adept_debug %~1/main.adept %~2
 exit /b %errorlevel%
 GOTO:EOF
