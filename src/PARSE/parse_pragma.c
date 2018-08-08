@@ -35,7 +35,9 @@ int parse_pragma(parse_ctx_t *ctx){
         }
 
         // Check to make sure we support the target version
-        if(strcmp(read, "2.0") != 0 && strcmp(read, "2.1") != 0){
+        if(strcmp(read, "2.0") == 0){
+            compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read);
+        } else if(strcmp(read, "2.1") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
             puts("\nSupported Versions: '2.0', '2.1'");
             return 1;
