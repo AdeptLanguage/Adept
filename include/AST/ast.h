@@ -97,6 +97,7 @@ typedef struct {
     length_t globals_capacity;
     char** libraries;
     length_t libraries_length;
+    length_t libraries_capacity;
 } ast_t;
 
 // ---------------- ast_init ----------------
@@ -128,6 +129,10 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
 void ast_dump_structs(FILE *file, ast_struct_t *structs, length_t structs_length);
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length);
 
+// ---------------- ast_func_create_template ----------------
+// Fills out a blank template for a new function
+void ast_func_create_template(ast_func_t *func, char *name, bool is_stdcall, bool is_foreign, source_t source);
+
 // ---------------- ast_struct_find ----------------
 // Finds a structure by name
 ast_struct_t *ast_struct_find(ast_t *ast, char *name);
@@ -143,6 +148,11 @@ int find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias)
 // ---------------- find_constant ----------------
 // Finds a global constant expression by name
 int find_constant(ast_constant_t *constants, length_t constants_length, const char *constant);
+
+// ---------------- ast_add_foreign_library ----------------
+// Adds a library to the list of foreign libraries
+// NOTE: Does not have ownership of library string
+void ast_add_foreign_library(ast_t *ast, char *library);
 
 // ---------------- ast_aliases_cmp ----------------
 // Compares two 'ast_alias_t' structures.

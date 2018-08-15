@@ -633,6 +633,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     return clone;
 }
 
+void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
+    if(capacity == 0){
+        list->statements = NULL;
+    } else {
+        list->statements = malloc(sizeof(ast_expr_t*) * capacity);
+    }
+    list->length = 0;
+    list->capacity = capacity;
+}
+
 const char *global_expression_rep_table[] = {
     "<none>",                  // 0x00000000
     "<byte literal>",          // 0x00000001

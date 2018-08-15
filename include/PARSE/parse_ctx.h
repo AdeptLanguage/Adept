@@ -11,8 +11,7 @@
 // Internal parse states that determine what to do
 #define PARSE_STATE_NONE         0x00000000
 #define PARSE_STATE_IDLE         0x00000001
-#define PARSE_STATE_FUNC         0x00000002
-#define PARSE_STATE_FOREIGN      0x00000003
+
 #define PARSE_STATE_STRUCT       0x00000004
 #define PARSE_STATE_GLOBAL       0x00000005
 #define PARSE_STATE_ALIAS        0x00000006

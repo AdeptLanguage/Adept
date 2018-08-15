@@ -39,4 +39,6 @@ typedef struct {
 #define OBJECT_NONE    TRAIT_NONE
 #define OBJECT_PACKAGE TRAIT_1    // Is an imported package
 
+void object_init_ast(object_t *object);
+
 #endif // OBJECT_H

@@ -41,6 +41,13 @@ void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, l
     }
 }
 
+void grow(void **inout_memory, length_t unit_size, length_t old_length, length_t new_length){
+    void *memory = malloc(unit_size * new_length);
+    memcpy(memory, *inout_memory, unit_size * old_length);
+    free(*inout_memory);
+    *inout_memory = memory;
+}
+
 char* strclone(const char *src){
     length_t src_length = strlen(src);
     char *clone = malloc(src_length + 1);

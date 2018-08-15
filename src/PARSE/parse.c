@@ -4,30 +4,32 @@
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
 #include "PARSE/parse.h"
+#include "PARSE/parse_func.h"
 #include "PARSE/parse_pragma.h"
+#include "PARSE/parse_dependency.h"
 
 int parse(compiler_t *compiler, object_t *object){
-    ast_init(&object->ast);
-    object->compilation_stage = COMPILATION_STAGE_AST;
-
     parse_ctx_t ctx;
+
+    object_init_ast(object);
     parse_ctx_init(&ctx, compiler, object);
 
-    return parse_tokens(&ctx);
+    if(parse_tokens(&ctx)) return 1;
+
+    return 0;
 }
 
 int parse_tokens(parse_ctx_t *ctx){
     // Expects from 'ctx': compiler, object, tokenlist, ast
 
-    length_t i = 0;
-    ast_func_t *func = NULL;
-    unsigned int state = PARSE_STATE_IDLE;
-
     ast_t *ast = ctx->ast;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
+    unsigned int state = PARSE_STATE_IDLE;
     source_t source;
+
+    length_t i = 0;
     ctx->i = &i;
     source.index = 0;
     source.object_index = ctx->object->index;
@@ -39,10 +41,15 @@ int parse_tokens(parse_ctx_t *ctx){
             case TOKEN_NEWLINE:
                 break;
             case TOKEN_FUNC: case TOKEN_STDCALL:
-                state = PARSE_STATE_FUNC;
+                if(parse_func(ctx)) return 1;
                 break;
             case TOKEN_FOREIGN:
-                state = PARSE_STATE_FOREIGN;
+                if(tokens[i + 1].id == TOKEN_STRING || tokens[i + 1].id == TOKEN_CSTRING){
+                    parse_foreign_library(ctx);
+                    state = PARSE_STATE_IDLE;
+                    break;
+                }
+                if(parse_func(ctx)) return 1;
                 break;
             case TOKEN_STRUCT: case TOKEN_PACKED:
                 state = PARSE_STATE_STRUCT;
@@ -53,58 +60,8 @@ int parse_tokens(parse_ctx_t *ctx){
             case TOKEN_ALIAS:
                 state = PARSE_STATE_ALIAS;
                 break;
-            case TOKEN_IMPORT: {
-                    const char *import_filename = parse_grab_string(ctx, "Expected filename string after 'import' keyword");
-                    if(import_filename == NULL) return 1;
-
-                    char *test_filename = filename_local(ctx->object->filename, import_filename);
-
-                    if(access(test_filename, F_OK) == -1){
-                        // TEST FAILED: The file doesn't exist locally
-                        free(test_filename);
-                        test_filename = filename_adept_import(import_filename);
-
-                        if(access(test_filename, F_OK) == -1){
-                            // ERROR: Can't find the file
-                            compiler_panicf(ctx->compiler, sources[i], "The file '%s' doesn't exist", import_filename);
-                            free(test_filename);
-                            return 1;
-                        }
-                    }
-
-                    bool already_imported = false; i++;
-                    char *target_filename = filename_absolute(test_filename);
-
-                    if(target_filename == NULL){
-                        redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", test_filename);
-                        free(test_filename);
-                        return 1;
-                    }
-
-                    for(length_t o = 0; o != ctx->compiler->objects_length; o++){
-                        if(strcmp(ctx->compiler->objects[o]->full_filename, target_filename) == 0){
-                            // DUPLICATE: This file has already been imported
-                            already_imported = true;
-                            break;
-                        }
-                    }
-
-                    if(!already_imported){
-                        parse_ctx_t ctx_fork;
-                        object_t *new_object = compiler_new_object(ctx->compiler);
-
-                        new_object->filename = test_filename;
-                        new_object->full_filename = target_filename;
-
-                        if(compiler_read_file(ctx->compiler, new_object)) return 1;
-
-                        parse_ctx_fork(ctx, new_object, &ctx_fork);
-                        if(parse_tokens(&ctx_fork)) return 1;
-                    } else {
-                        free(test_filename);
-                        free(target_filename);
-                    }
-                }
+            case TOKEN_IMPORT:
+                if(parse_import(ctx)) return 1;
                 break;
             case TOKEN_PRAGMA:
                 if(parse_pragma(ctx)) return 1;
@@ -112,248 +69,6 @@ int parse_tokens(parse_ctx_t *ctx){
             default:
                 parse_panic_token(ctx, sources[i], tokens[i].id, "Encountered unexpected token '%s' in global scope");
                 return 1;
-            }
-            break;
-        case PARSE_STATE_FOREIGN:
-            if(tokens[i].id == TOKEN_STRING || tokens[i].id == TOKEN_CSTRING){
-                // Add a foreign library
-                char **new_libraries = malloc(sizeof(char*) * (ast->libraries_length + 1));
-                memcpy(new_libraries, ast->libraries, sizeof(char*) * ast->libraries_length);
-                free(ast->libraries);
-                new_libraries[ast->libraries_length++] = filename_local(ctx->object->filename, (char*) tokens[i].data);
-                ast->libraries = new_libraries;
-                state = PARSE_STATE_IDLE;
-                break;
-            }
-
-            // Fall through to PARSE_STATE_FUNC if not caught
-        case PARSE_STATE_FUNC: {
-                bool is_stdcall = false;
-                if(tokens[i - 1].id == TOKEN_STDCALL) { i++; is_stdcall = true; }
-
-                bool is_foreign = (tokens[i - 1].id == TOKEN_FOREIGN);
-                bool is_vararg = false;
-                length_t arg_backfill = 0;
-                source = sources[i - 1];
-
-                if(tokens[i].id != TOKEN_WORD){
-                    compiler_panicf(ctx->compiler, sources[i], "Expected function name after '%s' keyword", is_foreign ? "foreign" : "func");
-                    return 1;
-                }
-
-                if(ast->funcs_length == ast->funcs_capacity){
-                    ast_func_t *new_funcs = malloc(sizeof(ast_func_t) * ast->funcs_length * 2);
-                    memcpy(new_funcs, ast->funcs, sizeof(ast_func_t) * ast->funcs_length);
-                    ast->funcs_capacity *= 2;
-                    free(ast->funcs);
-                    ast->funcs = new_funcs;
-                }
-
-                func = &ast->funcs[ast->funcs_length++];
-                func->name = (char*) tokens[i].data;
-                tokens[i++].data = NULL; // Take ownership
-
-                func->arg_names = NULL;
-                func->arg_types = NULL;
-                func->arg_sources = NULL;
-                func->arg_flows = NULL;
-                func->arity = 0;
-                func->return_type.elements = NULL;
-                func->return_type.elements_length = 0;
-                func->return_type.source.index = 0;
-                func->return_type.source.object_index = ctx->object->index;
-                func->traits = TRAIT_NONE;
-
-                if(strcmp(func->name, "main") == 0) func->traits |= AST_FUNC_MAIN;
-                if(is_stdcall) func->traits |= AST_FUNC_STDCALL;
-                if(is_foreign) func->traits |= AST_FUNC_FOREIGN;
-
-                func->statements = NULL;
-                func->statements_length = 0;
-                func->statements_capacity = 0;
-                func->source = source;
-
-                length_t args_capacity = 0;
-                if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after function name")) return 1;
-
-                while(tokens[i].id != TOKEN_CLOSE){
-                    if(parse_ignore_newlines(ctx, "Expected function argument")){
-                        // Free arguments that haven't been backfilled into proper arguments yet
-                        for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                        return 1;
-                    }
-
-                    if(args_capacity == 0){
-                        if(!is_foreign) func->arg_names = malloc(sizeof(char*) * 4);
-
-                        func->arg_types = malloc(sizeof(ast_type_t) * 4);
-                        func->arg_sources = malloc(sizeof(source_t) * 4);
-                        func->arg_flows = malloc(sizeof(char) * 4);
-                        args_capacity = 4;
-                    } else if(func->arity + arg_backfill == args_capacity){
-                        args_capacity *= 2;
-
-                        if(!is_foreign){ // Expand names list if not a foreign func
-                            char **new_arg_names  = malloc(sizeof(char*) * args_capacity);
-                            memcpy(new_arg_names, func->arg_names, sizeof(char*) * (func->arity + arg_backfill));
-                            free(func->arg_names);
-                            func->arg_names = new_arg_names;
-                        }
-
-                        ast_type_t *new_arg_types  = malloc(sizeof(ast_type_t) * args_capacity);
-                        source_t *new_arg_sources = malloc(sizeof(source_t) * args_capacity);
-                        char *new_arg_flows  = malloc(sizeof(char) * args_capacity);
-
-                        memcpy(new_arg_types, func->arg_types, sizeof(ast_type_t) * func->arity); // Don't copy types of to-be-backfilled arguments
-                        memcpy(new_arg_sources, func->arg_sources, sizeof(source_t) * (func->arity + arg_backfill));
-                        memcpy(new_arg_flows, func->arg_flows, sizeof(char) * (func->arity + arg_backfill));
-
-                        free(func->arg_types);
-                        free(func->arg_sources);
-                        free(func->arg_flows);
-                        func->arg_types = new_arg_types;
-                        func->arg_sources = new_arg_sources;
-                        func->arg_flows = new_arg_flows;
-                    }
-
-                    // Set argument flow
-                    switch(tokens[i].id){
-                    case TOKEN_IN:    func->arg_flows[func->arity + arg_backfill] = FLOW_IN;    i++; break;
-                    case TOKEN_OUT:   func->arg_flows[func->arity + arg_backfill] = FLOW_OUT;   i++; break;
-                    case TOKEN_INOUT: func->arg_flows[func->arity + arg_backfill] = FLOW_INOUT; i++; break;
-                    default:          func->arg_flows[func->arity + arg_backfill] = FLOW_IN;    break;
-                    }
-
-                    func->arg_sources[func->arity + arg_backfill] = sources[i];
-
-                    if(tokens[i].id == TOKEN_ELLIPSIS){
-                        if(arg_backfill != 0){
-                            compiler_panic(ctx->compiler, sources[i], "Expected type for previous arguments before ellipsis");
-
-                            // Free arguments that haven't been backfilled into proper arguments yet
-                            for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                            return 1;
-                        }
-
-                        is_vararg = true;
-                        func->traits |= AST_FUNC_VARARG;
-                        i++;
-                    } else {
-                        // Parse argument names (assumming not a foreign declaration)
-                        if(!is_foreign){
-                            char *arg_name = parse_take_word(ctx, "Expected argument name before argument type");
-
-                            if(arg_name == NULL){
-                                // Free arguments that haven't been backfilled into proper arguments yet
-                                for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                                return 1;
-                            }
-
-                            func->arg_names[func->arity + arg_backfill] = arg_name;
-
-                            // Continue parsing argument names if 'next' operator is after argument name
-                            if(tokens[i].id == TOKEN_NEXT){
-                                // Ensure that the argument list doesn't end after that 'next' operator
-                                if(tokens[++i].id == TOKEN_CLOSE){
-                                    compiler_panic(ctx->compiler, sources[i], "Expected type after ',' in argument list");
-
-                                    // Free name of current argument that never became a proper argument
-                                    free(arg_name);
-
-                                    // Free arguments that haven't been backfilled into proper arguments yet
-                                    for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                                    return 1;
-                                }
-
-                                arg_backfill += 1;
-                                continue;
-                            }
-                        }
-
-                        // Parse the type for the argument(s)
-                        if(parse_type(ctx, &func->arg_types[func->arity + arg_backfill])){
-                            // Free name of current argument that never became a proper argument
-                            free(func->arg_names[func->arity + arg_backfill]);
-
-                            // Free arguments that haven't been backfilled into proper arguments yet
-                            for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                            return 1;
-                        }
-
-                        // Backfill any arguments that were waiting on a type
-                        for(length_t i = 0; arg_backfill != 0; i++){
-                            func->arg_types[func->arity + arg_backfill - i - 1] = ast_type_clone(&func->arg_types[func->arity + arg_backfill - i]);
-                            arg_backfill -= 1;
-                            func->arity++;
-                        }
-                    }
-
-                    if(!is_vararg) func->arity++;
-
-                    // Ensure the argument list continues correctly or exits correctly
-                    if(tokens[i].id == TOKEN_NEXT){
-                        if(tokens[++i].id == TOKEN_CLOSE){
-                            compiler_panic(ctx->compiler, sources[i], "Expected type after ',' in argument list");
-
-                            // Free arguments that haven't been backfilled into proper arguments yet
-                            for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                            return 1;
-                        }
-                    } else if(tokens[i].id != TOKEN_CLOSE){
-                        if(is_vararg) compiler_panic(ctx->compiler, sources[i], "Expected ')' after variadic argument");
-                        else compiler_panic(ctx->compiler, sources[i], "Expected ',' after argument type");
-
-                        // Free arguments that haven't been backfilled into proper arguments yet
-                        for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                        return 1;
-                    }
-                }
-
-                // Ensure that no arguments were waiting to be backfilled
-                if(arg_backfill != 0){
-                    compiler_panic(ctx->compiler, sources[i], "Expected argument type before end of argument list");
-
-                    // Free arguments that haven't been backfilled into proper arguments yet
-                    for(length_t b = 0; b != arg_backfill; b++) free(func->arg_names[func->arity + arg_backfill - b - 1]);
-                    return 1;
-                }
-
-                // Parse function return value
-                i++;
-                if(parse_type(ctx, &func->return_type)) return 1;
-
-                // Parse function body (assuming it's not a foreign declaration)
-                if(!is_foreign){
-                    if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return 1;
-
-                    ast_expr_list_t func_stmt_list;
-                    func_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 16);
-                    func_stmt_list.length = 0;
-                    func_stmt_list.capacity = 16;
-
-                    ast_expr_list_t defer_stmt_list;
-                    defer_stmt_list.statements = NULL;
-                    defer_stmt_list.length = 0;
-                    defer_stmt_list.capacity = 0;
-
-                    ctx->func = func;
-
-                    if(parse_stmts(ctx, &func_stmt_list, &defer_stmt_list, PARSE_STMTS_STANDARD)){
-                        ast_free_statements_fully(func_stmt_list.statements, func_stmt_list.length);
-                        ast_free_statements_fully(defer_stmt_list.statements, defer_stmt_list.length);
-                        return 1;
-                    }
-
-                    // Unravel all remaining defer statements
-                    parse_unravel_defer_stmts(&func_stmt_list, &defer_stmt_list, 0);
-                    free(defer_stmt_list.statements);
-
-                    func->statements = func_stmt_list.statements;
-                    func->statements_length = func_stmt_list.length;
-                    func->statements_capacity = func_stmt_list.capacity;
-                }
-
-                state = PARSE_STATE_IDLE;
             }
             break;
         case PARSE_STATE_STRUCT: {
@@ -399,7 +114,6 @@ int parse_tokens(parse_ctx_t *ctx){
                         ast_types_free_fully(field_types, field_count - field_backfill);
                         free(struct_name);
                         free(field_names);
-                        return 1;
                         return 1;
                     }
 
@@ -589,7 +303,7 @@ int parse_tokens(parse_ctx_t *ctx){
     }
 
     if(state != PARSE_STATE_IDLE){
-        compiler_panic(ctx->compiler, sources[i-1], "Unfinished code formation (Could be result of mismatched brackets)");
+        compiler_panic(ctx->compiler, sources[i - 1], "Unfinished code formation (Could be result of mismatched brackets)");
         return 1;
     }
 
@@ -683,9 +397,7 @@ int parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
 }
 
 int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
-    // Expects from 'ctx': compiler, object, tokenlist, i
-
-    // NOTE: Parses the func pointer type part of a type into an ast_elem_func_t
+    // Parses the func pointer type element of a type into an ast_elem_func_t
     // func (int, int) int
     //  ^
 
@@ -786,8 +498,6 @@ int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
 }
 
 int parse_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
-    // Expects from 'ctx': compiler, object, tokenlist, i
-
     // NOTE: Expects first token of expression to be pointed to by 'i'
     // NOTE: 'out_expr' is not guaranteed to be in the same state
     // NOTE: If successful, 'i' will point to the first token after the expression parsed
@@ -798,8 +508,6 @@ int parse_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
 }
 
 int parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
-    // Expects from 'ctx': compiler, object, tokenlist, i
-
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
@@ -1179,8 +887,6 @@ int parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
 }
 
 int parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t** inout_left, bool keep_mutable){
-    // Expects from 'ctx': compiler, object, tokenlist, i
-
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
@@ -1254,7 +960,6 @@ int parse_rhs_expr(parse_ctx_t *ctx, ast_expr_t **left, ast_expr_t **out_right, 
 
     (*i)++; // Skip over operator token
 
-    // Skip over newlines
     if(parse_ignore_newlines(ctx, "Unexpected expression termination")) return 1;
 
     if(parse_primary_expr(ctx, out_right) || (op_prec < parse_get_precedence(tokens[*i].id) && parse_op_expr(ctx, op_prec + 1, out_right, false))){
@@ -1265,11 +970,9 @@ int parse_rhs_expr(parse_ctx_t *ctx, ast_expr_t **left, ast_expr_t **out_right, 
 }
 
 int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *defer_list, trait_t mode){
-    // Expects from 'ctx': compiler, object, tokenlist, i, func
-
     // NOTE: Outputs statements to stmt_list
     // NOTE: Ends on 'i' pointing to a '}' token
-    // NOTE: Even if this function returns 1, statements appended to stmt_list must still be freed
+    // NOTE: Even if this function returns 1, statements appended to stmt_list still must be freed
 
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
@@ -1854,8 +1557,7 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     // Parse the initial value for the variable(s) (if an initial value is given)
     if(tokens[*i].id == TOKEN_ASSIGN){
-        // Skip over 'assign' token
-        (*i)++;
+        (*i)++; // Skip over 'assign' token
 
         // Handle either 'undef' or an expression
         if(tokens[*i].id == TOKEN_UNDEF){

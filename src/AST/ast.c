@@ -1,5 +1,6 @@
 
 #include "AST/ast.h"
+#include "UTIL/util.h"
 
 void ast_init(ast_t *ast){
     ast->funcs = malloc(sizeof(ast_func_t) * 8);
@@ -19,6 +20,7 @@ void ast_init(ast_t *ast){
     ast->globals_capacity = 0;
     ast->libraries = NULL;
     ast->libraries_length = 0;
+    ast->libraries_capacity = 0;
 }
 
 void ast_free(ast_t *ast){
@@ -382,6 +384,28 @@ void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length
     }
 }
 
+void ast_func_create_template(ast_func_t *func, char *name, bool is_stdcall, bool is_foreign, source_t source){
+    func->name = name;
+    func->arg_names = NULL;
+    func->arg_types = NULL;
+    func->arg_sources = NULL;
+    func->arg_flows = NULL;
+    func->arity = 0;
+    func->return_type.elements = NULL;
+    func->return_type.elements_length = 0;
+    func->return_type.source.index = 0;
+    func->return_type.source.object_index = source.object_index;
+    func->traits = TRAIT_NONE;
+    func->statements = NULL;
+    func->statements_length = 0;
+    func->statements_capacity = 0;
+    func->source = source;
+
+    if(strcmp(name, "main") == 0) func->traits |= AST_FUNC_MAIN;
+    if(is_stdcall)                func->traits |= AST_FUNC_STDCALL;
+    if(is_foreign)                func->traits |= AST_FUNC_FOREIGN;
+}
+
 ast_struct_t *ast_struct_find(ast_t *ast, char *name){
     // TODO: Maybe sort and do a binary serach or something
     for(length_t i = 0; i != ast->structs_length; i++){
@@ -439,6 +463,11 @@ int find_constant(ast_constant_t *constants, length_t constants_length, const ch
     }
 
     return -1;
+}
+
+void ast_add_foreign_library(ast_t *ast, char *library){
+    expand((void**) &ast->libraries, sizeof(char*), ast->libraries_length, &ast->libraries_capacity, 1, 4);
+    ast->libraries[ast->libraries_length++] = library;
 }
 
 int ast_aliases_cmp(const void *a, const void *b){

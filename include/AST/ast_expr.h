@@ -474,4 +474,8 @@ void ast_exprs_free_fully(ast_expr_t **expr, length_t length);
 // Clones an expression, producing a duplicate
 ast_expr_t *ast_expr_clone(ast_expr_t* expr);
 
+// ---------------- ast_expr_list_init ----------------
+// Initializes an ast_expr_list_t with a given capacity
+void ast_expr_list_init(ast_expr_list_t *list, length_t capacity);
+
 #endif // AST_EXPR_H

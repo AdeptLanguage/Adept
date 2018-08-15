@@ -36,10 +36,10 @@ CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O0 -fmax-errors=5 -W
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 LDFLAGS=$(LLVM_LINKER_FLAGS)
 SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/bridge.c \
-	src/DRVR/compiler.c src/DRVR/main.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir.c src/IRGEN/ir_builder.c \
+	src/DRVR/compiler.c src/DRVR/main.c src/DRVR/object.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir.c src/IRGEN/ir_builder.c \
 	src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
-	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_ctx.c src/PARSE/parse_pragma.c src/PARSE/parse.c src/UTIL/color.c \
-	src/UTIL/filename.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
+	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_ctx.c src/PARSE/parse_dependency.c src/PARSE/parse_func.c src/PARSE/parse_pragma.c \
+	src/PARSE/parse.c src/UTIL/color.c src/UTIL/filename.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj
