@@ -133,6 +133,11 @@ void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length
 // Fills out a blank template for a new function
 void ast_func_create_template(ast_func_t *func, char *name, bool is_stdcall, bool is_foreign, source_t source);
 
+// ---------------- ast_struct_init ----------------
+// Initializes an AST struct
+void ast_struct_init(ast_struct_t *structure, char *name, char **names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source);
+
 // ---------------- ast_struct_find ----------------
 // Finds a structure by name
 ast_struct_t *ast_struct_find(ast_t *ast, char *name);

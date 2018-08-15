@@ -406,6 +406,16 @@ void ast_func_create_template(ast_func_t *func, char *name, bool is_stdcall, boo
     if(is_foreign)                func->traits |= AST_FUNC_FOREIGN;
 }
 
+void ast_struct_init(ast_struct_t *structure, char *name, char **names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source){
+    structure->name = name;
+    structure->field_names = names;
+    structure->field_types = types;
+    structure->field_count = length;
+    structure->traits = traits;
+    structure->source = source;
+}
+
 ast_struct_t *ast_struct_find(ast_t *ast, char *name){
     // TODO: Maybe sort and do a binary serach or something
     for(length_t i = 0; i != ast->structs_length; i++){

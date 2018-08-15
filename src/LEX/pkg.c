@@ -77,6 +77,8 @@ int pkg_write(const char *filename, tokenlist_t *tokenlist){
 }
 
 int pkg_read(compiler_t *compiler, object_t *object){
+    object->buffer = NULL;
+    
     tokenlist_t *tokenlist = &object->tokenlist;
     FILE *file = fopen(object->filename, "rb");
 

@@ -6,6 +6,7 @@
 #include "PARSE/parse.h"
 #include "PARSE/parse_func.h"
 #include "PARSE/parse_pragma.h"
+#include "PARSE/parse_struct.h"
 #include "PARSE/parse_dependency.h"
 
 int parse(compiler_t *compiler, object_t *object){
@@ -52,7 +53,7 @@ int parse_tokens(parse_ctx_t *ctx){
                 if(parse_func(ctx)) return 1;
                 break;
             case TOKEN_STRUCT: case TOKEN_PACKED:
-                state = PARSE_STATE_STRUCT;
+                if(parse_struct(ctx)) return 1;
                 break;
             case TOKEN_WORD:
                 state = PARSE_STATE_GLOBAL;
@@ -69,140 +70,6 @@ int parse_tokens(parse_ctx_t *ctx){
             default:
                 parse_panic_token(ctx, sources[i], tokens[i].id, "Encountered unexpected token '%s' in global scope");
                 return 1;
-            }
-            break;
-        case PARSE_STATE_STRUCT: {
-                source = sources[i - 1];
-
-                bool is_packed = false;
-                if(tokens[i - 1].id == TOKEN_PACKED){ i++; is_packed = true; }
-
-                char *struct_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
-                if(struct_name == NULL) return 1;
-
-                if(parse_ignore_newlines(ctx, "Expected '(' after name of struct")){
-                    free(struct_name);
-                    return 1;
-                }
-
-                if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after structure name")){
-                    free(struct_name);
-                    return 1;
-                }
-
-                char **field_names = malloc(sizeof(char*) * 2);
-                ast_type_t *field_types = malloc(sizeof(ast_type_t) * 2);
-                length_t field_count = 0;
-                length_t field_capacity = 2;
-                length_t field_backfill = 0;
-
-                while(tokens[i].id != TOKEN_CLOSE){
-                    if(field_count == field_capacity){
-                        field_capacity *= 2;
-                        char **new_field_names = malloc(sizeof(char*) * field_capacity);
-                        ast_type_t *new_field_types = malloc(sizeof(ast_type_t) * field_capacity);
-                        memcpy(new_field_names, field_names, sizeof(char*) * field_count);
-                        memcpy(new_field_types, field_types, sizeof(ast_type_t) * (field_count  - field_backfill));
-                        free(field_names);
-                        free(field_types);
-                        field_names = new_field_names;
-                        field_types = new_field_types;
-                    }
-
-                    if(parse_ignore_newlines(ctx, "Expected name of field")){
-                        for(length_t n = 0; n != field_count; n++) free(field_names[n]);
-                        ast_types_free_fully(field_types, field_count - field_backfill);
-                        free(struct_name);
-                        free(field_names);
-                        return 1;
-                    }
-
-                    if(tokens[i].id != TOKEN_WORD){
-                        compiler_panic(ctx->compiler, sources[i], "Expected name of field");
-                        for(length_t n = 0; n != field_count; n++) free(field_names[n]);
-                        ast_types_free_fully(field_types, field_count - field_backfill);
-                        free(struct_name);
-                        free(field_names);
-                        return 1;
-                    }
-
-                    field_names[field_count] = (char*) tokens[i].data;
-                    tokens[i++].data = NULL; // Take ownership
-                    field_count++;
-
-                    if(tokens[i].id == TOKEN_NEXT){
-                        // This field has the type of the next field
-                        field_backfill += 1;
-                        i++; continue;
-                    }
-
-                    if(parse_type(ctx, &field_types[field_count - 1])){
-                        for(length_t n = 0; n != field_count; n++) free(field_names[n]);
-                        ast_types_free_fully(field_types, field_count - field_backfill - 1);
-                        free(struct_name);
-                        free(field_names);
-                        return 1;
-                    }
-
-                    while(field_backfill != 0){
-                        field_types[field_count - field_backfill - 1] = ast_type_clone(&field_types[field_count - 1]);
-                        field_backfill -= 1;
-                    }
-
-                    if(parse_ignore_newlines(ctx, "Expected ')' or ',' after struct field")){
-                        for(length_t n = 0; n != field_count + 1; n++) free(field_names[n]);
-                        ast_types_free_fully(field_types, field_count - field_backfill);
-                        free(struct_name);
-                        free(field_names);
-                        return 1;
-                    }
-
-                    if(tokens[i].id == TOKEN_NEXT){
-                        if(tokens[++i].id == TOKEN_CLOSE){
-                            compiler_panic(ctx->compiler, sources[i], "Expected field name and type after ',' in field list");
-                            for(length_t n = 0; n != field_count; n++) free(field_names[n]);
-                            ast_types_free_fully(field_types, field_count - field_backfill);
-                            free(struct_name);
-                            free(field_names);
-                            return 1;
-                        }
-                    } else if(tokens[i].id != TOKEN_CLOSE){
-                        compiler_panic(ctx->compiler, sources[i], "Expected ',' after field name and type");
-                        for(length_t n = 0; n != field_count; n++) free(field_names[n]);
-                        ast_types_free_fully(field_types, field_count - field_backfill);
-                        free(struct_name);
-                        free(field_names);
-                        return 1;
-                    }
-                }
-
-                if(field_backfill != 0){
-                    compiler_panic(ctx->compiler, sources[i], "Expected field type before end of struct");
-                    for(length_t n = 0; n != field_count; n++) free(field_names[n]);
-                    ast_types_free_fully(field_types, field_count - field_backfill);
-                    free(struct_name);
-                    free(field_names);
-                    return 1;
-                }
-
-                if(ast->structs_length == ast->structs_capacity){
-                    ast->structs_capacity *= 2;
-                    ast_struct_t *new_structs = malloc(sizeof(ast_struct_t) * ast->structs_capacity);
-                    memcpy(new_structs, ast->structs, sizeof(ast_struct_t) * ast->structs_length);
-                    free(ast->structs);
-                    ast->structs = new_structs;
-                }
-
-                ast_struct_t *structure = &ast->structs[ast->structs_length++];
-
-                structure->name = struct_name;
-                structure->field_names = field_names;
-                structure->field_types = field_types;
-                structure->field_count = field_count;
-                structure->traits = is_packed ? AST_STRUCT_PACKED : TRAIT_NONE;
-                structure->source = source;
-
-                state = PARSE_STATE_IDLE;
             }
             break;
         case PARSE_STATE_GLOBAL: {
