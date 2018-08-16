@@ -30,10 +30,9 @@ int parse_tokens(parse_ctx_t *ctx){
 
     length_t i = 0;
     token_t *tokens = ctx->tokenlist->tokens;
+    length_t tokens_length = ctx->tokenlist->length;
 
-    ctx->i = &i;
-
-    for(; i != ctx->tokenlist->length; i++){
+    for(ctx->i = &i; i != tokens_length; i++){
         switch(tokens[i].id){
         case TOKEN_NEWLINE:
             break;
