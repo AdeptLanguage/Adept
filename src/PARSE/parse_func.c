@@ -2,6 +2,9 @@
 #include "UTIL/util.h"
 #include "PARSE/parse.h"
 #include "PARSE/parse_func.h"
+#include "PARSE/parse_stmt.h"
+#include "PARSE/parse_type.h"
+#include "PARSE/parse_util.h"
 
 int parse_func(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;

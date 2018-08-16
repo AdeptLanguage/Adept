@@ -416,6 +416,13 @@ void ast_struct_init(ast_struct_t *structure, char *name, char **names, ast_type
     structure->source = source;
 }
 
+void ast_alias_init(ast_alias_t *alias, char *name, ast_type_t type, trait_t traits, source_t source){
+    alias->name = name;
+    alias->type = type;
+    alias->traits = TRAIT_NONE;
+    alias->source = source;
+}
+
 ast_struct_t *ast_struct_find(ast_t *ast, char *name){
     // TODO: Maybe sort and do a binary serach or something
     for(length_t i = 0; i != ast->structs_length; i++){

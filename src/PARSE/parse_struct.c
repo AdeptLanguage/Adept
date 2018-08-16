@@ -1,6 +1,8 @@
 
 #include "UTIL/util.h"
 #include "PARSE/parse.h"
+#include "PARSE/parse_type.h"
+#include "PARSE/parse_util.h"
 #include "PARSE/parse_struct.h"
 
 int parse_struct(parse_ctx_t *ctx){
