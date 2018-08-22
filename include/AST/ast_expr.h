@@ -474,6 +474,26 @@ void ast_exprs_free_fully(ast_expr_t **expr, length_t length);
 // Clones an expression, producing a duplicate
 ast_expr_t *ast_expr_clone(ast_expr_t* expr);
 
+// ---------------- ast_expr_create_bool ----------------
+// Creates a boolean expression
+void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source);
+
+// ---------------- ast_expr_create_cstring ----------------
+// Creates a cstring expression
+void ast_expr_create_cstring(ast_expr_t **out_expr, char *value, source_t source);
+
+// ---------------- ast_expr_create_null ----------------
+// Creates a null expression
+void ast_expr_create_null(ast_expr_t **out_expr, source_t source);
+
+// ---------------- ast_expr_create_call ----------------
+// Creates a call expression
+void ast_expr_create_call(ast_expr_t **out_expr, char *name, length_t arity, ast_expr_t **args, source_t source);
+
+// ---------------- ast_expr_create_variable ----------------
+// Creates a variable expression
+void ast_expr_create_variable(ast_expr_t **out_expr, char *name, source_t source);
+
 // ---------------- ast_expr_list_init ----------------
 // Initializes an ast_expr_list_t with a given capacity
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity);

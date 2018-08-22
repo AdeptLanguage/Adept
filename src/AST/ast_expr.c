@@ -633,6 +633,42 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     return clone;
 }
 
+void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_boolean_t));
+    ((ast_expr_boolean_t*) *out_expr)->id = EXPR_BOOLEAN;
+    ((ast_expr_boolean_t*) *out_expr)->value = value;
+    ((ast_expr_boolean_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_cstring(ast_expr_t **out_expr, char *value, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_cstr_t));
+    ((ast_expr_cstr_t*) *out_expr)->id = EXPR_CSTR;
+    ((ast_expr_cstr_t*) *out_expr)->value = value;
+    ((ast_expr_cstr_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_null(ast_expr_t **out_expr, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_null_t));
+    ((ast_expr_null_t*) *out_expr)->id = EXPR_NULL;
+    ((ast_expr_null_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_variable(ast_expr_t **out_expr, char *name, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_variable_t));
+    ((ast_expr_variable_t*) *out_expr)->id = EXPR_VARIABLE;
+    ((ast_expr_variable_t*) *out_expr)->name = name;
+    ((ast_expr_variable_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_call(ast_expr_t **out_expr, char *name, length_t arity, ast_expr_t **args, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_call_t));
+    ((ast_expr_call_t*) *out_expr)->id = EXPR_CALL;
+    ((ast_expr_call_t*) *out_expr)->name = name;
+    ((ast_expr_call_t*) *out_expr)->arity = arity;
+    ((ast_expr_call_t*) *out_expr)->args = args;
+    ((ast_expr_call_t*) *out_expr)->source = source;
+}
+
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
     if(capacity == 0){
         list->statements = NULL;

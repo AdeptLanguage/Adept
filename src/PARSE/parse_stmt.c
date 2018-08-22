@@ -530,8 +530,9 @@ int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
         if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")) return 1;
 
-        if(tokens[*i].id == TOKEN_NEXT) (*i)++;
-        else if(tokens[*i].id != TOKEN_CLOSE){
+        if(tokens[*i].id == TOKEN_NEXT){
+            (*i)++;
+        } else if(tokens[*i].id != TOKEN_CLOSE){
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
             ast_exprs_free_fully(stmt->args, stmt->arity);
             free(stmt);
