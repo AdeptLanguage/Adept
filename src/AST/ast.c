@@ -21,6 +21,7 @@ void ast_init(ast_t *ast){
     ast->libraries = NULL;
     ast->libraries_length = 0;
     ast->libraries_capacity = 0;
+    ast->common.ast_usize_type = NULL;
 }
 
 void ast_free(ast_t *ast){
@@ -44,6 +45,10 @@ void ast_free(ast_t *ast){
     free(ast->globals);
     free(ast->aliases);
     free(ast->libraries);
+
+    if(ast->common.ast_usize_type != NULL){
+        ast_type_free_fully(ast->common.ast_usize_type);
+    }
 }
 
 void ast_free_functions(ast_func_t *functions, length_t functions_length){
@@ -489,6 +494,26 @@ void ast_add_foreign_library(ast_t *ast, char *library){
 
 int ast_aliases_cmp(const void *a, const void *b){
     return strcmp(((ast_alias_t*) a)->name, ((ast_alias_t*) b)->name);
+}
+
+ast_type_t* ast_get_usize(ast_t *ast){
+    ast_type_t *usize_type = ast->common.ast_usize_type;
+
+    if(usize_type == NULL){
+        usize_type = malloc(sizeof(ast_type_t));
+        usize_type->elements = malloc(sizeof(ast_elem_t*));
+        usize_type->elements[0] = malloc(sizeof(ast_elem_base_t));
+        ((ast_elem_base_t*) usize_type->elements[0])->id = AST_ELEM_BASE;
+        ((ast_elem_base_t*) usize_type->elements[0])->base = strclone("usize");
+        ((ast_elem_base_t*) usize_type->elements[0])->source.index = 0;
+        ((ast_elem_base_t*) usize_type->elements[0])->source.object_index = 0;
+        usize_type->elements_length = 1;
+        usize_type->source.index = 0;
+        usize_type->source.object_index = 0;
+        ast->common.ast_usize_type = usize_type;
+    }
+
+    return usize_type;
 }
 
 int ast_constants_cmp(const void *a, const void *b){

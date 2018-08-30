@@ -1,4 +1,5 @@
 
+#include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
@@ -549,7 +550,10 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 open_var_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_statements(builder, if_stmts, if_stmts_length)) return 1;
+                if(ir_gen_statements(builder, if_stmts, if_stmts_length)){
+                    close_var_scope(builder);
+                    return 1;
+                }
 
                 if(!terminated){
                     built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
@@ -614,7 +618,11 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 open_var_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_statements(builder, if_stmts, if_stmts_length)) return 1;
+
+                if(ir_gen_statements(builder, if_stmts, if_stmts_length)){
+                    close_var_scope(builder);
+                    return 1;
+                }
 
                 if(!terminated){
                     built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
@@ -630,7 +638,10 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 close_var_scope(builder);
                 open_var_scope(builder);
                 build_using_basicblock(builder, else_basicblock_id);
-                if(ir_gen_statements(builder, else_stmts, else_stmts_length)) return 1;
+                if(ir_gen_statements(builder, else_stmts, else_stmts_length)){
+                    close_var_scope(builder);
+                    return 1;
+                }
 
                 if(!terminated){
                     built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
@@ -715,7 +726,10 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 open_var_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_statements(builder, while_stmts, while_stmts_length)) return 1;
+                if(ir_gen_statements(builder, while_stmts, while_stmts_length)){
+                    close_var_scope(builder);
+                    return 1;
+                }
 
                 if(!terminated){
                     built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
@@ -761,7 +775,10 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 open_var_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_statements(builder, loop_stmts, loop_stmts_length)) return 1;
+                if(ir_gen_statements(builder, loop_stmts, loop_stmts_length)){
+                    close_var_scope(builder);
+                    return 1;
+                }
 
                 if(!terminated){
                     built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
@@ -937,6 +954,214 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 ((ir_instr_break_t*) built_instr)->id = INSTRUCTION_BREAK;
                 ((ir_instr_break_t*) built_instr)->result_type = NULL;
                 ((ir_instr_break_t*) built_instr)->block_id = target_block_id;
+            }
+            break;
+        case EXPR_EACH_IN: {
+                compiler_warn(builder->compiler, statements[s]->source, "'each in' loop is experimental and may be removed in the future");
+                ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) statements[s];
+
+                length_t prep_basicblock_id = build_basicblock(builder);
+                length_t new_basicblock_id  = build_basicblock(builder);
+                length_t inc_basicblock_id  = build_basicblock(builder);
+                length_t end_basicblock_id  = build_basicblock(builder);
+                
+                if(each_in->label != NULL){
+                    prepare_for_new_label(builder);
+                    builder->block_stack_labels[builder->block_stack_length] = each_in->label;
+                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
+                    builder->block_stack_continue_ids[builder->block_stack_length] = inc_basicblock_id;
+                    builder->block_stack_length++;
+                }
+
+                length_t prev_break_block_id = builder->break_block_id;
+                length_t prev_continue_block_id = builder->continue_block_id;
+
+                builder->break_block_id = end_basicblock_id;
+                builder->continue_block_id = inc_basicblock_id;
+
+                ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
+
+                ir_type_t *idx_ir_type = builder->object->ir_module.common.ir_usize_type;
+                ir_type_t *idx_ir_type_ptr = builder->object->ir_module.common.ir_usize_ptr_type;
+                ir_type_t *ir_bool_type = builder->object->ir_module.common.ir_bool_type;
+
+                if(idx_ir_type == NULL){
+                    idx_ir_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                    idx_ir_type->kind = TYPE_KIND_U64;
+                    builder->object->ir_module.common.ir_usize_type = idx_ir_type;                    
+                }
+
+                if(idx_ir_type_ptr == NULL){
+                    idx_ir_type_ptr = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                    idx_ir_type_ptr->kind = TYPE_KIND_POINTER;
+                    idx_ir_type_ptr->extra = idx_ir_type;
+                    builder->object->ir_module.common.ir_usize_ptr_type = idx_ir_type_ptr;
+                }
+
+                if(ir_bool_type == NULL){
+                    ir_bool_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                    ir_bool_type->kind = TYPE_KIND_BOOLEAN;
+                    builder->object->ir_module.common.ir_bool_type = ir_bool_type;
+                }
+
+                built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
+                ((ir_instr_break_t*) built_instr)->id = INSTRUCTION_BREAK;
+                ((ir_instr_break_t*) built_instr)->result_type = NULL;
+                ((ir_instr_break_t*) built_instr)->block_id = prep_basicblock_id;
+                build_using_basicblock(builder, prep_basicblock_id);
+
+                // Generate length
+                ir_value_t *array_length;
+
+                if(ir_gen_expression(builder, each_in->length, &array_length, false, &temporary_type)){
+                    return 1;
+                }
+
+                if(ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_STANDARD) ){
+                    char *a_type_str = ast_type_str(&temporary_type);
+                    compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type 'bool'", a_type_str);
+                    free(a_type_str);
+                    ast_type_free(&temporary_type);
+                    return 1;
+                }
+
+                ast_type_free(&temporary_type);
+                open_var_scope(builder);
+
+                // Generate (idx == length)
+                length_t idx_var_id = builder->next_var_id;
+                add_variable(builder, "idx", idx_ast_type, idx_ir_type, TRAIT_NONE);
+                
+                ir_value_t *idx_ptr = build_varptr(builder, idx_ir_type_ptr, idx_var_id);
+                ir_value_t *idx_value = build_load(builder, idx_ptr);
+
+                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
+                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_EQUALS;
+                ((ir_instr_math_t*) built_instr)->a = idx_value;
+                ((ir_instr_math_t*) built_instr)->b = array_length;
+                ((ir_instr_math_t*) built_instr)->result_type = ir_bool_type;
+                ir_value_t *is_done_value = build_value_from_prev_instruction(builder);
+
+                // Generate conditional break
+                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
+                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
+                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
+                ((ir_instr_cond_break_t*) built_instr)->value = is_done_value;
+                ((ir_instr_cond_break_t*) built_instr)->true_block_id = end_basicblock_id;
+                ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
+
+                build_using_basicblock(builder, new_basicblock_id);
+
+                // Generate new_block statements to update 'it' variable
+                ir_value_t *array;
+
+                if(ir_gen_expression(builder, each_in->low_array, &array, false, &temporary_type)){
+                    ast_type_free(&temporary_type);
+                    close_var_scope(builder);
+                    return 1;
+                }
+
+                if(temporary_type.elements_length == 0 || temporary_type.elements[0]->id != AST_ELEM_POINTER){
+                    compiler_panic(builder->compiler, each_in->low_array->source,
+                        "Low-level array type for 'each in' statement must be a pointer");
+                    ast_type_free(&temporary_type);
+                    close_var_scope(builder);
+                    return 1;
+                }
+
+                // Modify ast_type_t to remove a pointer element from the front
+                // DANGEROUS: Manually deleting ast_elem_pointer_t
+                free(temporary_type.elements[0]);
+                memmove(temporary_type.elements, &temporary_type.elements[1], sizeof(ast_elem_t*) * (temporary_type.elements_length - 1));
+                temporary_type.elements_length--; // Reduce length accordingly
+
+                if(!ast_types_identical(&temporary_type, each_in->it_type)){
+                    compiler_panic(builder->compiler, each_in->it_type->source,
+                        "Element type doesn't match given array's element type");
+                    ast_type_free(&temporary_type);
+                    close_var_scope(builder);
+                    return 1;
+                }
+
+                ast_type_free(&temporary_type);
+
+                length_t it_var_id = builder->next_var_id;
+                char *it_name = each_in->it_name ? each_in->it_name : "it";
+
+                add_variable(builder, it_name, each_in->it_type, ir_type_pointer_to(builder->pool, array->type), BRIDGE_VAR_REFERENCE);
+                
+                ir_value_t *it_ptr = build_varptr(builder, array->type, it_var_id);
+                ir_value_t *it_idx = build_load(builder, idx_ptr);
+
+                built_instr = build_instruction(builder, sizeof(ir_instr_array_access_t));
+                ((ir_instr_array_access_t*) built_instr)->id = INSTRUCTION_ARRAY_ACCESS;
+                ((ir_instr_array_access_t*) built_instr)->result_type = array->type;
+                ((ir_instr_array_access_t*) built_instr)->index = it_idx;
+                ((ir_instr_array_access_t*) built_instr)->value = array;
+                ir_value_t *current_it = build_value_from_prev_instruction(builder);
+
+                built_instr = build_instruction(builder, sizeof(ir_instr_store_t));
+                ((ir_instr_store_t*) built_instr)->id = INSTRUCTION_STORE;
+                ((ir_instr_store_t*) built_instr)->result_type = NULL;
+                ((ir_instr_store_t*) built_instr)->destination = it_ptr;
+                ((ir_instr_store_t*) built_instr)->value = current_it;
+
+                // Generate new_block user-defined statements
+                bool terminated = each_in->statements_length == 0
+                    ? false
+                    : EXPR_IS_TERMINATION(each_in->statements[each_in->statements_length - 1]->id);
+
+                build_using_basicblock(builder, new_basicblock_id);
+                if(ir_gen_statements(builder, each_in->statements, each_in->statements_length)){
+                    close_var_scope(builder);
+                    return 1;
+                }
+
+                if(!terminated){
+                    built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
+                    ((ir_instr_break_t*) built_instr)->id = INSTRUCTION_BREAK;
+                    ((ir_instr_break_t*) built_instr)->result_type = NULL;
+                    ((ir_instr_break_t*) built_instr)->block_id = inc_basicblock_id;
+                }
+
+                // Generate jump inc_block
+                build_using_basicblock(builder, inc_basicblock_id);
+
+                ir_value_t *current_idx = build_load(builder, idx_ptr);
+                ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+                ir_one_value->value_type = VALUE_TYPE_LITERAL;
+                ir_type_map_find(builder->type_map, "usize", &(ir_one_value->type));
+                ir_one_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
+                *((unsigned long long*) ir_one_value->extra) = 1;
+
+                // Increament
+                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
+                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ADD;
+                ((ir_instr_math_t*) built_instr)->result_type = current_idx->type;
+                ((ir_instr_math_t*) built_instr)->a = current_idx;
+                ((ir_instr_math_t*) built_instr)->b = ir_one_value;
+                ir_value_t *increamented = build_value_from_prev_instruction(builder);
+
+                // Store
+                built_instr = build_instruction(builder, sizeof(ir_instr_store_t));
+                ((ir_instr_store_t*) built_instr)->id = INSTRUCTION_STORE;
+                ((ir_instr_store_t*) built_instr)->result_type = NULL;
+                ((ir_instr_store_t*) built_instr)->destination = idx_ptr;
+                ((ir_instr_store_t*) built_instr)->value = increamented;
+
+                // Jump Prep
+                built_instr = build_instruction(builder, sizeof(ir_instr_break_t));
+                ((ir_instr_break_t*) built_instr)->id = INSTRUCTION_BREAK;
+                ((ir_instr_break_t*) built_instr)->result_type = NULL;
+                ((ir_instr_break_t*) built_instr)->block_id = prep_basicblock_id;
+
+                close_var_scope(builder);
+                build_using_basicblock(builder, end_basicblock_id);
+
+                if(each_in->label != NULL) builder->block_stack_length--;
+
+                builder->break_block_id = prev_break_block_id;
+                builder->continue_block_id = prev_continue_block_id;
             }
             break;
         default:

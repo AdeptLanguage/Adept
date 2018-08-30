@@ -24,6 +24,9 @@ int ir_gen(compiler_t *compiler, object_t *object){
 
     // Initialize common data
     module->common.ir_funcptr_type = NULL;
+    module->common.ir_usize_type = NULL;
+    module->common.ir_usize_ptr_type = NULL;
+    module->common.ir_bool_type = NULL;
 
     object->compilation_stage = COMPILATION_STAGE_IR_MODULE;
     if(ir_gen_type_mappings(compiler, object)) return 1; // Generate type mappings

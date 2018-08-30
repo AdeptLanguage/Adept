@@ -33,6 +33,8 @@ call :compile deprecated
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile each_in
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcptr
@@ -84,6 +86,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile repeat_fields
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile return_ten
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile scoped_variables
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile sizeof
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

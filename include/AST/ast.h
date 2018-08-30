@@ -77,6 +77,10 @@ typedef struct {
     source_t source;
 } ast_global_t;
 
+typedef struct {
+    ast_type_t *ast_usize_type;
+} ast_shared_common_t;
+
 // ---------------- ast_t ----------------
 // The root AST
 typedef struct {
@@ -98,6 +102,7 @@ typedef struct {
     char** libraries;
     length_t libraries_length;
     length_t libraries_capacity;
+    ast_shared_common_t common;
 } ast_t;
 
 // ---------------- ast_init ----------------
@@ -167,6 +172,8 @@ void ast_add_foreign_library(ast_t *ast, char *library);
 // Compares two 'ast_alias_t' structures.
 // Used for qsort()
 int ast_aliases_cmp(const void *a, const void *b);
+
+ast_type_t* ast_get_usize(ast_t *ast);
 
 // ---------------- ast_constants_cmp ----------------
 // Compares two 'ast_constant_t' structures.

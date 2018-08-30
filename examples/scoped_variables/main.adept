@@ -1,0 +1,19 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    x int = 3
+
+    if true {
+        x int = 1
+        printf('%d\n', x)
+
+        if true {
+            x int = 2
+            printf('%d\n', x)
+        }
+    }
+
+    printf('%d\n', x)
+    return 0
+}

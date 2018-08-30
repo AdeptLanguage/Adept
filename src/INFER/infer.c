@@ -55,7 +55,10 @@ int infer_in_funcs(compiler_t *compiler, object_t *object, ast_func_t *funcs, le
         }
 
         // Infer expressions in statements
-        if(infer_in_stmts(compiler, object, &funcs[f], funcs[f].statements, funcs[f].statements_length, &func_scope)) return 1;
+        if(infer_in_stmts(compiler, object, &funcs[f], funcs[f].statements, funcs[f].statements_length, &func_scope)){
+            infer_var_scope_free(&func_scope);
+            return 1;
+        }
         infer_var_scope_free(&func_scope);
     }
     return 0;
@@ -98,25 +101,39 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
                 if(infer_expr(compiler, object, func, &conditional->value, EXPR_NONE, scope)) return 1;
 
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, conditional->statements, conditional->statements_length, scope)) return 1;
+                if(infer_in_stmts(compiler, object, func, conditional->statements, conditional->statements_length, scope)){
+                    infer_var_scope_pop(&scope);
+                    return 1;
+                }
                 infer_var_scope_pop(&scope);
             }
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
                 ast_expr_ifelse_t *complex_conditional = (ast_expr_ifelse_t*) statements[s];
                 if(infer_expr(compiler, object, func, &complex_conditional->value, EXPR_NONE, scope)) return 1;
+
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, complex_conditional->statements, complex_conditional->statements_length, scope)) return 1;
+                if(infer_in_stmts(compiler, object, func, complex_conditional->statements, complex_conditional->statements_length, scope)){
+                    infer_var_scope_pop(&scope);
+                    return 1;
+                }
+                
                 infer_var_scope_pop(&scope);
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, complex_conditional->else_statements, complex_conditional->else_statements_length, scope)) return 1;
+                if(infer_in_stmts(compiler, object, func, complex_conditional->else_statements, complex_conditional->else_statements_length, scope)){
+                    infer_var_scope_pop(&scope);
+                    return 1;
+                }
                 infer_var_scope_pop(&scope);
             }
             break;
         case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK: {
                 ast_expr_whilecontinue_t *conditional = (ast_expr_whilecontinue_t*) statements[s];
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, conditional->statements, conditional->statements_length, scope)) return 1;
+                if(infer_in_stmts(compiler, object, func, conditional->statements, conditional->statements_length, scope)){
+                    infer_var_scope_pop(&scope);
+                    return 1;
+                }
                 infer_var_scope_pop(&scope);
             }
             break;
@@ -131,6 +148,22 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
         case EXPR_DELETE: {
                 ast_expr_delete_t *delete_stmt = (ast_expr_delete_t*) statements[s];
                 if(infer_expr(compiler, object, func, &delete_stmt->value, EXPR_NONE, scope)) return 1;
+            }
+            break;
+        case EXPR_EACH_IN: {
+                ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
+                if(infer_expr(compiler, object, func, &loop->low_array, EXPR_NONE, scope)) return 1;
+                if(infer_expr(compiler, object, func, &loop->length, EXPR_NONE, scope)) return 1;
+ 
+                infer_var_scope_push(&scope);
+                infer_var_scope_add_variable(scope, "idx", ast_get_usize(&object->ast));
+                infer_var_scope_add_variable(scope, loop->it_name ? loop->it_name : "it", loop->it_type);
+
+                if(infer_in_stmts(compiler, object, func, loop->statements, loop->statements_length, scope)){
+                    infer_var_scope_pop(&scope);
+                    return 1;
+                }
+                infer_var_scope_pop(&scope);
             }
             break;
         default: break;
@@ -578,11 +611,11 @@ void infer_var_scope_push(infer_var_scope_t **scope){
     infer_var_scope_t *new_scope = malloc(sizeof(infer_var_scope_t));
     infer_var_scope_init(new_scope, *scope);
     *scope = new_scope;
-}
+} 
 
 void infer_var_scope_pop(infer_var_scope_t **scope){
     if((*scope)->parent == NULL){
-        redprintf("INTERNAL ERROR: TRIED TO POP VARIABLE SCOPE WITH NO PARENT\n");
+        redprintf("INTERNAL ERROR: TRIED TO POP INFER VARIABLE SCOPE WITH NO PARENT\n");
         return;
     }
 

@@ -355,6 +355,9 @@ typedef struct {
 // 'ir_funcptr_type' -> type used for function pointer implementation
 typedef struct {
     ir_type_t *ir_funcptr_type;
+    ir_type_t *ir_usize_type;
+    ir_type_t *ir_usize_ptr_type;
+    ir_type_t *ir_bool_type;
 } ir_shared_common_t;
 
 // ---------------- ir_module_t ----------------

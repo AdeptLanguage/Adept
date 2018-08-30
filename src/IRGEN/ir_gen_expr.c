@@ -119,6 +119,9 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 // Variable-Pointer instruction to get pointer to stack variable
                 *ir_value = build_varptr(builder, ir_ptr_type, variable->id);
 
+                // Load if the variable is a reference
+                if(variable->traits & BRIDGE_VAR_REFERENCE) *ir_value = build_load(builder, *ir_value);
+
                 // Unless requested to leave the expression mutable, dereference it
                 if(!leave_mutable) *ir_value = build_load(builder, *ir_value);
                 break;

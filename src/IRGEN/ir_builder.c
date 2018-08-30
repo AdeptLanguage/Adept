@@ -134,7 +134,7 @@ void open_var_scope(ir_builder_t *builder){
 }
 
 void close_var_scope(ir_builder_t *builder){
-    if(builder->var_scope->parent == NULL) redprintf("INTERNAL ERROR: TRIED TO CLOSE VARIABLE SCOPE WITH NO PARENT, probably will crash...\n");
+    if(builder->var_scope->parent == NULL) redprintf("INTERNAL ERROR: TRIED TO CLOSE BRIDGE VARIABLE SCOPE WITH NO PARENT, probably will crash...\n");
 
     bridge_var_scope_t *old_scope = builder->var_scope;
     old_scope->following_var_id = builder->next_var_id;

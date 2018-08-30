@@ -387,6 +387,8 @@ char* ast_expr_str(ast_expr_t *expr){
 }
 
 void ast_expr_free(ast_expr_t *expr){
+    if(!expr) return;
+
     switch(expr->id){
     case EXPR_ADD:
     case EXPR_SUBTRACT:
@@ -473,10 +475,21 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_DELETE:
         ast_expr_free_fully( ((ast_expr_delete_t*) expr)->value );
         break;
+    case EXPR_EACH_IN:
+        free(((ast_expr_each_in_t*) expr)->it_name);
+        if(((ast_expr_each_in_t*) expr)->it_type){
+            ast_type_free_fully(((ast_expr_each_in_t*) expr)->it_type);
+        }
+        ast_expr_free_fully(((ast_expr_each_in_t*) expr)->low_array);
+        ast_expr_free_fully(((ast_expr_each_in_t*) expr)->length);
+        ast_free_statements_fully(((ast_expr_each_in_t*) expr)->statements, ((ast_expr_each_in_t*) expr)->statements_length);
+        break;
     }
 }
 
 void ast_expr_free_fully(ast_expr_t *expr){
+    if(!expr) return;
+
     ast_expr_free(expr);
     free(expr);
 }

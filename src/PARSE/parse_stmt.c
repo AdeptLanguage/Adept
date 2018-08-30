@@ -348,23 +348,68 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 source = sources[(*i)++];
                 ast_expr_t *length_limit = NULL;
                 ast_expr_t *low_array = NULL;
+                char *it_name = NULL;
+                ast_type_t *it_type = NULL;
                 trait_t stmts_mode;
                 char *label = NULL;
 
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
                     label = tokens[*i].data; *i += 2;
                 }
+                
+                if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id != TOKEN_IN){
+                    it_name = parse_take_word(ctx, "Expected name for 'it' variable");
 
-                if(parse_expr(ctx, &length_limit)) return 1;
+                    if(!it_name){
+                        // Should only reach this point when syntax is incorrect
+                        return 1;
+                    }
+                }
 
-                if(tokens[*i].id != TOKEN_FOR){
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected 'for' after length expression in 'each for' loop");
-                    ast_expr_free_fully(length_limit);
+                it_type = malloc(sizeof(ast_type_t));
+
+                if(parse_type(ctx, it_type)
+                || parse_eat(ctx, TOKEN_IN, "Expected 'in' keyword")){
+                    free(it_name);
+                    free(it_type);
                     return 1;
                 }
 
-                if(parse_expr(ctx, &low_array)){
-                    ast_expr_free_fully(length_limit);
+                if(tokens[*i].id == TOKEN_BRACKET_OPEN){
+                    (*i)++;
+
+                    if(parse_expr(ctx, &low_array)){
+                        ast_type_free_fully(it_type);
+                        free(it_name);
+                        return 1;
+                    }
+
+                    if(tokens[(*i)++].id != TOKEN_NEXT){
+                        compiler_panic(ctx->compiler, sources[*i - 1], "Expected ',' after low-level array data in 'each in' statement");
+                        ast_type_free_fully(it_type);
+                        free(it_name);
+                        return 1;
+                    }
+
+                    if(parse_expr(ctx, &length_limit)){
+                        ast_type_free_fully(it_type);
+                        ast_expr_free_fully(low_array);
+                        free(it_name);
+                        return 1;
+                    }
+
+                    if(tokens[(*i)++].id != TOKEN_BRACKET_CLOSE){
+                        compiler_panic(ctx->compiler, sources[*i - 1], "Expected ']' after low-level array data and length in 'each in' statement");
+                        ast_type_free_fully(it_type);
+                        ast_expr_free_fully(low_array);
+                        ast_expr_free_fully(length_limit);
+                        free(it_name);
+                        return 1;
+                    }
+                } else {
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected [<data>, <length>] after 'in' keyword in 'each in' statement");
+                    ast_type_free_fully(it_type);
+                    free(it_name);
                     return 1;
                 }
 
@@ -373,40 +418,46 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
                 default:
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'each for' expression");
-                    ast_expr_free_fully(length_limit);
+                    ast_type_free_fully(it_type);
                     ast_expr_free_fully(low_array);
+                    ast_expr_free_fully(length_limit);
+                    free(it_name);
                     return 1;
                 }
 
-                ast_expr_list_t each_for_stmt_list;
-                each_for_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
-                each_for_stmt_list.length = 0;
-                each_for_stmt_list.capacity = 4;
+                ast_expr_list_t each_in_stmt_list;
+                each_in_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
+                each_in_stmt_list.length = 0;
+                each_in_stmt_list.capacity = 4;
 
                 length_t defer_unravel_length = defer_list->length;
 
-                if(parse_stmts(ctx, &each_for_stmt_list, defer_list, stmts_mode)){
-                    ast_free_statements_fully(each_for_stmt_list.statements, each_for_stmt_list.length);
-                    ast_expr_free_fully(length_limit);
+                if(parse_stmts(ctx, &each_in_stmt_list, defer_list, stmts_mode)){
+                    ast_free_statements_fully(each_in_stmt_list.statements, each_in_stmt_list.length);
+                    ast_type_free_fully(it_type);
                     ast_expr_free_fully(low_array);
+                    ast_expr_free_fully(length_limit);
+                    free(it_name);
                     return 1;
                 }
 
                 // Unravel all defer statements added in the block
-                parse_unravel_defer_stmts(&each_for_stmt_list, defer_list, defer_unravel_length);
+                parse_unravel_defer_stmts(&each_in_stmt_list, defer_list, defer_unravel_length);
 
                 if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
                 else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
 
-                ast_expr_each_for_t *stmt = malloc(sizeof(ast_expr_each_for_t));
-                stmt->id = EXPR_EACH_FOR;
+                ast_expr_each_in_t *stmt = malloc(sizeof(ast_expr_each_in_t));
+                stmt->id = EXPR_EACH_IN;
                 stmt->source = source;
                 stmt->label = label;
+                stmt->it_name = it_name;
+                stmt->it_type = it_type;
                 stmt->length = length_limit;
                 stmt->low_array = low_array;
-                stmt->statements = each_for_stmt_list.statements;
-                stmt->statements_length = each_for_stmt_list.length;
-                stmt->statements_capacity = each_for_stmt_list.capacity;
+                stmt->statements = each_in_stmt_list.statements;
+                stmt->statements_length = each_in_stmt_list.length;
+                stmt->statements_capacity = each_in_stmt_list.capacity;
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;
@@ -425,6 +476,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                     free(stmt);
                     return 1;
                 }
+
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;
@@ -513,18 +565,7 @@ int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         }
 
         // Allocate room for more arguments if necessary
-        if(stmt->arity == args_capacity){
-            if(args_capacity == 0){
-                stmt->args = malloc(sizeof(ast_expr_t*) * 4);
-                args_capacity = 4;
-            } else {
-                args_capacity *= 2;
-                ast_expr_t **new_args = malloc(sizeof(ast_expr_t*) * args_capacity);
-                memcpy(new_args, stmt->args, sizeof(ast_expr_t*) * stmt->arity);
-                free(stmt->args);
-                stmt->args = new_args;
-            }
-        }
+        expand((void**) &stmt->args, sizeof(ast_expr_t*), stmt->arity, &args_capacity, 1, 4);
 
         stmt->args[stmt->arity++] = arg_expr;
 

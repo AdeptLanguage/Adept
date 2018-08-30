@@ -228,40 +228,40 @@ const char *global_token_name_table[] = {
     "defer keyword",          // 0x00000049
     "delete keyword",         // 0x0000004A
     "dynamic keyword",        // 0x0000004B
-    "else keyword",           // 0x0000004C
-    "enum keyword",           // 0x0000004D
-    "external keyword",       // 0x0000004E
-    "false keyword",          // 0x0000005F
-    "for keyword",            // 0x00000050
-    "foreign keyword",        // 0x00000051
-    "func keyword",           // 0x00000052
-    "funcptr keyword",        // 0x00000053
-    "global keyword",         // 0x00000054
-    "if keyword",             // 0x00000055
-    "import keyword",         // 0x00000056
-    "in keyword",             // 0x00000057
-    "inout keyword",          // 0x00000058
-    "link keyword",           // 0x00000059
-    "new keyword",            // 0x0000005A
-    "null keyword",           // 0x0000005B
-    "or keyword",             // 0x0000005C
-    "out keyword",            // 0x0000005D
-    "packed keyword",         // 0x0000005E
-    "pragma keyword",         // 0x0000005F
-    "private keyword",        // 0x00000060
-    "public keyword",         // 0x00000061
-    "return keyword",         // 0x00000062
-    "sizeof keyword",         // 0x00000063
-    "static keyword",         // 0x00000064
-    "stdcall keyword",        // 0x00000065
-    "struct keyword",         // 0x00000066
-    "switch keyword",         // 0x00000067
-    "true keyword",           // 0x00000068
-    "undef keyword",          // 0x00000069
-    "unless keyword",         // 0x0000006A
-    "until keyword",          // 0x0000006B
-    "while keyword",          // 0x0000006C
-    "reserved",               // 0x0000006D
+    "each keyword",           // 0x0000004C
+    "else keyword",           // 0x0000004D
+    "enum keyword",           // 0x0000004E
+    "external keyword",       // 0x0000004F
+    "false keyword",          // 0x00000050
+    "for keyword",            // 0x00000051
+    "foreign keyword",        // 0x00000052
+    "func keyword",           // 0x00000053
+    "funcptr keyword",        // 0x00000054
+    "global keyword",         // 0x00000055
+    "if keyword",             // 0x00000056
+    "import keyword",         // 0x00000057
+    "in keyword",             // 0x00000058
+    "inout keyword",          // 0x00000059
+    "link keyword",           // 0x0000005A
+    "new keyword",            // 0x0000005B
+    "null keyword",           // 0x0000005C
+    "or keyword",             // 0x0000005D
+    "out keyword",            // 0x0000005E
+    "packed keyword",         // 0x0000005F
+    "pragma keyword",         // 0x00000060
+    "private keyword",        // 0x00000061
+    "public keyword",         // 0x00000062
+    "return keyword",         // 0x00000063
+    "sizeof keyword",         // 0x00000064
+    "static keyword",         // 0x00000065
+    "stdcall keyword",        // 0x00000066
+    "struct keyword",         // 0x00000067
+    "switch keyword",         // 0x00000068
+    "true keyword",           // 0x00000069
+    "undef keyword",          // 0x0000006A
+    "unless keyword",         // 0x0000006B
+    "until keyword",          // 0x0000006C
+    "while keyword",          // 0x0000006D
     "reserved",               // 0x0000006E
     "reserved",               // 0x0000006F
 };

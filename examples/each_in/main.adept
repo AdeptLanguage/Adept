@@ -1,0 +1,27 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstring.adept'
+
+func main(in argc int, in argv **ubyte) int {
+	names **ubyte = getFourNames()
+    defer delete names
+
+	each name *ubyte in [names, 4] {
+		puts(name)
+	}
+
+    each name *ubyte in [names, 4] {
+		name = 'James'
+	}
+	
+    return 0
+}
+
+func getFourNames() **ubyte {
+    names **ubyte = new *ubyte * 4
+    names[0] = 'Isaac'
+    names[1] = 'John'
+    names[2] = 'Peter'
+    names[3] = 'Luke'
+    return names
+}
