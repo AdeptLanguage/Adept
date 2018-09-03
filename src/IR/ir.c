@@ -429,6 +429,9 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                         free(typename);
                     }
                     break;
+                case INSTRUCTION_VARZEROINIT:
+                    fprintf(file, "    0x%08X varzi 0x%08X\n", (int) i, (int) ((ir_instr_varptr_t*) functions[f].basicblocks[b].instructions[i])->index);
+                    break;
                 default:
                     printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) functions[f].basicblocks[b].instructions[i]->id);
                     fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);
@@ -515,6 +518,8 @@ void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instr
 }
 
 void ir_dump_var_scope_layout(FILE *file, bridge_var_scope_t *scope){
+    if(!scope) return;
+
     for(length_t v = 0; v != scope->list.length; v++){
         char *type_str = ir_type_str(scope->list.variables[v].ir_type);
         fprintf(file, "    [0x%08X %s]\n", (int) v, type_str);

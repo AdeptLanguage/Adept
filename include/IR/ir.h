@@ -79,6 +79,7 @@
 #define INSTRUCTION_AND           0x00000040 // ir_instr_math_t
 #define INSTRUCTION_OR            0x00000041 // ir_instr_math_t
 #define INSTRUCTION_SIZEOF        0x00000042
+#define INSTRUCTION_VARZEROINIT   0x00000043
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -284,6 +285,15 @@ typedef struct {
     ir_type_t *result_type;
     ir_type_t *type;
 } ir_instr_sizeof_t;
+
+// ---------------- ir_instr_varzeroinit_t ----------------
+// An IR pseudo-instruction for zero-initializing a
+// stack allocated variable
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    length_t index;
+} ir_instr_varzeroinit_t;
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block

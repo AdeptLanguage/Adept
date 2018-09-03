@@ -388,6 +388,14 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 } else {
                     // Variable declaration without default value
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, TRAIT_NONE);
+
+                    // Zero initialize the variable
+                    ir_basicblock_new_instructions(builder->current_block, 1);
+                    instr = &builder->current_block->instructions[builder->current_block->instructions_length++];
+                    *instr = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
+                    ((ir_instr_varzeroinit_t*) *instr)->id = INSTRUCTION_VARZEROINIT;
+                    ((ir_instr_varzeroinit_t*) *instr)->result_type = NULL;
+                    ((ir_instr_varzeroinit_t*) *instr)->index = builder->next_var_id - 1;
                 }
             }
             break;

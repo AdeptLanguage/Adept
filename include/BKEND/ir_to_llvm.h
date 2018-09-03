@@ -23,7 +23,7 @@ typedef struct { value_catalog_block_t *blocks; length_t blocks_length; } value_
 
 // ---------------- stack_t ----------------
 // A list of stack variables for a function
-typedef struct { LLVMValueRef *values; length_t length; } stack_t;
+typedef struct { LLVMValueRef *values; LLVMTypeRef *types; length_t length; } stack_t;
 
 // ---------------- llvm_context_t ----------------
 // A general container for the LLVM exporting context

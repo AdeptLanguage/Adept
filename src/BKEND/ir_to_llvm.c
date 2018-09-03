@@ -4,6 +4,7 @@
 #include <llvm-c/Target.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/BitWriter.h>
+#include <llvm-c/BitWriter.h>
 
 #include "IR/ir.h"
 #include "UTIL/color.h"
@@ -208,6 +209,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 
         stack_t stack;
         stack.values = malloc(sizeof(LLVMValueRef) * funcs[f].variable_count);
+        stack.types = malloc(sizeof(LLVMTypeRef) * funcs[f].variable_count);
         stack.length = funcs[f].variable_count;
 
         llvm->module = llvm_module;
@@ -235,6 +237,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
                         free(catalog.blocks);
                         free(stack.values);
+                        free(stack.types);
                         free(llvm_blocks);
                         LLVMDisposeBuilder(builder);
                         return 1;
@@ -246,19 +249,20 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
                         free(catalog.blocks);
                         free(stack.values);
+                        free(stack.types);
                         free(llvm_blocks);
                         LLVMDisposeBuilder(builder);
                         return 1;
                     }
 
                     stack.values[s] = LLVMBuildAlloca(builder, alloca_type, "");
+                    stack.types[s] = alloca_type;
 
                     if(s < funcs[f].arity){
                         // Function argument that needs passed argument value
                         LLVMBuildStore(builder, LLVMGetParam(func_skeletons[f], s), stack.values[s]);
-                    } else if(!(var->traits & BRIDGE_VAR_UNDEF)){
-                        // User declared variable that needs to be auto-initalized
-                        LLVMBuildStore(builder, LLVMConstNull(alloca_type), stack.values[s]);
+                    } else if(var->traits & BRIDGE_VAR_UNDEF){
+                        LLVMBuildStore(builder, LLVMGetUndef(alloca_type), stack.values[s]);
                     }
                 }
             }
@@ -588,6 +592,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                             for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
                             free(catalog.blocks);
                             free(stack.values);
+                            free(stack.types);
                             free(llvm_blocks);
                             LLVMDisposeBuilder(builder);
                             return 1;
@@ -625,6 +630,13 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         catalog.blocks[b].value_references[i] = LLVMConstInt(LLVMInt64Type(), type_size, false);
                     }
                     break;
+                case INSTRUCTION_VARZEROINIT: {
+                        instr = basicblock->instructions[i];
+                        LLVMValueRef var_to_init = llvm->stack->values[((ir_instr_varzeroinit_t*) instr)->index];
+                        LLVMTypeRef var_type = llvm->stack->types[((ir_instr_varzeroinit_t*) instr)->index];
+                        LLVMBuildStore(builder, LLVMConstNull(var_type), var_to_init);
+                    }
+                    break;
                 case INSTRUCTION_MALLOC: {
                         instr = basicblock->instructions[i];
                         if( ((ir_instr_malloc_t*) instr)->amount == NULL ){
@@ -645,6 +657,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
                     free(catalog.blocks);
                     free(stack.values);
+                    free(stack.types);
                     free(llvm_blocks);
                     LLVMDisposeBuilder(builder);
                     return 1;
@@ -655,6 +668,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
         free(catalog.blocks);
         free(stack.values);
+        free(stack.types);
         free(llvm_blocks);
         LLVMDisposeBuilder(builder);
     }
