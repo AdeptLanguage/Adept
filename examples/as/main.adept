@@ -1,0 +1,150 @@
+
+import 'sys/cstdio.adept'
+
+struct Person (age int)
+
+func main(in argc int, in argv **ubyte) int {
+    // ========== to 'bool' ==========
+    //bool2bool   bool = true as bool
+    byte2bool   bool = 21sb as bool
+    ubyte2bool  bool = 21ub as bool
+    short2bool  bool = 21ss as bool
+    ushort2bool bool = 21us as bool
+    int2bool    bool = 21si as bool
+    uint2bool   bool = 21ui as bool
+    long2bool   bool = 21sl as bool
+    ulong2bool  bool = 21ul as bool
+    float2bool  bool = 21.0f as bool
+    double2bool bool = 21.0d as bool
+
+    // ========== to 'byte' ==========
+    bool2byte   byte = true as byte
+    //byte2byte   byte = 21sb as byte
+    ubyte2byte  byte = 21ub as byte
+    short2byte  byte = 21ss as byte
+    ushort2byte byte = 21us as byte
+    int2byte    byte = 21si as byte
+    uint2byte   byte = 21ui as byte
+    long2byte   byte = 21sl as byte
+    ulong2byte  byte = 21ul as byte
+    float2byte  byte = 21.0f as byte
+    double2byte byte = 21.0d as byte
+
+    // ========== to 'ubyte' ==========
+    bool2ubyte   ubyte = true as ubyte
+    byte2ubyte   ubyte = 21sb as ubyte
+    //ubyte2ubyte  ubyte = 21ub as ubyte
+    short2ubyte  ubyte = 21ss as ubyte
+    ushort2ubyte ubyte = 21us as ubyte
+    int2ubyte    ubyte = 21si as ubyte
+    uint2ubyte   ubyte = 21ui as ubyte
+    long2ubyte   ubyte = 21sl as ubyte
+    ulong2ubyte  ubyte = 21ul as ubyte
+    float2ubyte  ubyte = 21.0f as ubyte
+    double2ubyte ubyte = 21.0d as ubyte
+
+    // ========== to 'short' ==========
+    bool2short   short = true as short
+    byte2short   short = 21sb as short
+    ubyte2short  short = 21ub as short
+    //short2short  short = 21ss as short
+    ushort2short short = 21us as short
+    int2short    short = 21si as short
+    uint2short   short = 21ui as short
+    long2short   short = 21sl as short
+    ulong2short  short = 21ul as short
+    float2short  short = 21.0f as short
+    double2short short = 21.0d as short
+
+    // ========== to 'ushort' ==========
+    bool2ushort   ushort = true as ushort
+    byte2ushort   ushort = 21sb as ushort
+    ubyte2ushort  ushort = 21ub as ushort
+    short2ushort  ushort = 21ss as ushort
+    //ushort2ushort ushort = 21us as ushort
+    int2ushort    ushort = 21si as ushort
+    uint2ushort   ushort = 21ui as ushort
+    long2ushort   ushort = 21sl as ushort
+    ulong2ushort  ushort = 21ul as ushort
+    float2ushort  ushort = 21.0f as ushort
+    double2ushort ushort = 21.0d as ushort
+
+    // ========== to 'int' ==========
+    bool2int   int = true as int
+    byte2int   int = 21sb as int
+    ubyte2int  int = 21ub as int
+    short2int  int = 21ss as int
+    ushort2int int = 21us as int
+    //int2int    int = 21si as int
+    uint2int   int = 21ui as int
+    long2int   int = 21sl as int
+    ulong2int  int = 21ul as int
+    float2int  int = 21.0f as int
+    double2int int = 21.0d as int
+
+    // ========== to 'uint' ==========
+    bool2uint   uint = true as uint
+    byte2uint   uint = 21sb as uint
+    ubyte2uint  uint = 21ub as uint
+    short2uint  uint = 21ss as uint
+    ushort2uint uint = 21us as uint
+    int2uint    uint = 21si as uint
+    //uint2uint uint = 21ui as uint
+    long2uint   uint = 21sl as uint
+    ulong2uint  uint = 21ul as uint
+    float2uint  uint = 21.0f as uint
+    double2uint uint = 21.0d as uint
+
+    // ========== to 'long' ==========
+    bool2long   long = true as long
+    byte2long   long = 21sb as long
+    ubyte2long  long = 21ub as long
+    short2long  long = 21ss as long
+    ushort2long long = 21us as long
+    int2long    long = 21si as long
+    uint2long   long = 21ui as long
+    //long2long   long = 21sl as long
+    ulong2long  long = 21ul as long
+    float2long  long = 21.0f as long
+    double2long long = 21.0d as long
+
+    // ========== to 'ulong' ==========
+    bool2ulong   ulong = true as ulong
+    byte2ulong   ulong = 21sb as ulong
+    ubyte2ulong  ulong = 21ub as ulong
+    short2ulong  ulong = 21ss as ulong
+    ushort2ulong ulong = 21us as ulong
+    int2ulong    ulong = 21si as ulong
+    uint2ulong   ulong = 21ui as ulong
+    long2ulong   ulong = 21sl as ulong
+    //ulong2ulong  ulong = 21ul as ulong
+    float2ulong  ulong = 21.0f as ulong
+    double2ulong ulong = 21.0d as ulong
+
+    // ========== to 'float' ==========
+    bool2float   float = true as float
+    byte2float   float = 21sb as float
+    ubyte2float  float = 21ub as float
+    short2float  float = 21ss as float
+    ushort2float float = 21us as float
+    int2float    float = 21si as float
+    uint2float   float = 21ui as float
+    long2float   float = 21sl as float
+    ulong2float  float = 21ul as float
+    //float2float  float = 21.0f as float
+    double2float float = 21.0d as float
+
+    // ========== to 'double' ==========
+    bool2double   double = true as double
+    byte2double   double = 21sb as double
+    ubyte2double  double = 21ub as double
+    short2double  double = 21ss as double
+    ushort2double double = 21us as double
+    int2double    double = 21si as double
+    uint2double   double = 21ui as double
+    long2double   double = 21sl as double
+    ulong2double  double = 21ul as double
+    float2double  double = 21.0f as double
+    //double2double double = 21.0d as double
+    return 0
+}

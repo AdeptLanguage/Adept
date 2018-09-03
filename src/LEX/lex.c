@@ -182,7 +182,7 @@ int lex(compiler_t *compiler, object_t *object){
                 //         Make sure to update values inside token.h and token.c after modifying this list
 
                 const char * const keywords[] = {
-                    "alias", "and", "break", "case", "cast", "continue", "dangerous", "def", "default", "defer",
+                    "alias", "and", "as", "break", "case", "cast", "continue", "dangerous", "def", "default", "defer",
                     "delete", "dynamic", "each", "else", "enum", "external", "false", "for", "foreign", "func", "funcptr",
                     "global", "if", "import", "in", "inout", "link", "new", "null", "or", "out",
                     "packed", "pragma", "private", "public", "return", "sizeof", "static", "stdcall", "struct", "switch",

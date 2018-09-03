@@ -120,7 +120,7 @@ int parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
 }
 
 int parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
-    // Handle [] and '.' operators
+    // Handle [] and '.' operators etc.
 
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
@@ -230,6 +230,8 @@ int parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 }
             }
             break;
+        case TOKEN_AS:
+            if(parse_expr_as(ctx, inout_expr)) return 1;
         default:
             return 0;
         }
@@ -478,6 +480,29 @@ int parse_expr_cast(parse_ctx_t *ctx, ast_expr_t **out_expr){
     cast_expr->to = to;
     cast_expr->from = from;
     *out_expr = (ast_expr_t*) cast_expr;
+    return 0;
+}
+
+int parse_expr_as(parse_ctx_t *ctx, ast_expr_t **inout_expr){
+    // (value) as <type>
+    //         ^
+
+    length_t *i = ctx->i;
+
+    ast_type_t to;
+
+    // Assume that expression starts with 'as' keyword
+    source_t source = ctx->tokenlist->sources[(*i)++];
+
+    if(parse_type(ctx, &to)) return 1;
+
+    ast_expr_cast_t *cast_expr = malloc(sizeof(ast_expr_cast_t));
+    cast_expr->id = EXPR_CAST;
+    cast_expr->source = source;
+
+    cast_expr->to = to;
+    cast_expr->from = *inout_expr;
+    *inout_expr = (ast_expr_t*) cast_expr;
     return 0;
 }
 
