@@ -4,9 +4,11 @@ import 'sys/cstdlib.adept'
 
 MY_CONSTANT == 7 * 3
 APPLICATION_NAME == 'Constants Example Program'
+SOLVED_GENERIC_CONSTANT == 3
 
 func main(in argc int, in argv **ubyte) int {
     printf('MY_CONSTANT = %d\n', MY_CONSTANT)
     printf('APPLICATION_NAME = %s\n', APPLICATION_NAME)
+    printf('3.1415d + SOLVED_GENERIC_CONSTANT = %f\n', 3.1415d + SOLVED_GENERIC_CONSTANT)
     return 0
 }

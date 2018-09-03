@@ -35,17 +35,16 @@ typedef struct infer_var_scope_t {
     infer_var_list_t list;
 } infer_var_scope_t;
 
-// ---------------- undetermined_type_list_t ----------------
-// A data structure for containing expressions that have the
-// possiblity of being determined by a non-generic expression
-// (used on the local expression level)
+// ---------------- undetermined_expr_list_t ----------------
+// A data structure for containing generic expressions that
+// haven't been assigned a type yet.
+// NOTE: Used on the local expression level
 typedef struct {
     ast_expr_t **expressions;
     length_t expressions_length;
     length_t expressions_capacity;
-    unsigned int determined;
-    bool prevent_more_generics;
-} undetermined_type_list_t;
+    unsigned int solution;
+} undetermined_expr_list_t;
 
 // ---------------- infer ----------------
 // Entry point to inference module
@@ -65,11 +64,16 @@ int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast
 
 // ---------------- infer_expr_inner ----------------
 // Infers an inner expression within the root
-int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast_expr_t **expr, undetermined_type_list_t *undetermined, infer_var_scope_t *scope);
+int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope);
 
-// ---------------- determine_undetermined ----------------
-// Determines generics for an 'undetermined_type_list_t'
-int determine_undetermined(compiler_t *compiler, object_t *object, undetermined_type_list_t *undetermined, unsigned int assigned_type);
+// ---------------- undetermined_expr_list_give ----------------
+// Gives a potential solution for an undetermined list
+int undetermined_expr_list_give_solution(compiler_t *compiler, object_t *object, undetermined_expr_list_t *undetermined, unsigned int potential_solution_primitive);
+
+// ---------------- undetermined_expr_list_give_generic ----------------
+// Resolves the generic if the solution is already known,
+// otherwise adds it to the list of undetermined generics
+int undetermined_expr_list_give_generic(compiler_t *compiler, object_t *object, undetermined_expr_list_t *undetermined, ast_expr_t **expr);
 
 // ---------------- resolve_generics ----------------
 // Attempts to convert a list of generic expressions

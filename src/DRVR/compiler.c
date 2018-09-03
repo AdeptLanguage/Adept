@@ -68,7 +68,7 @@ void compiler_init(compiler_t *compiler){
     compiler->objects_capacity = 4;
     compiler->traits = TRAIT_NONE;
     compiler->output_filename = NULL;
-    compiler->optimization = OPTIMIZATION_DEFAULT;
+    compiler->optimization = OPTIMIZATION_NONE;
 
     #ifdef ENABLE_DEBUG_FEATURES
     compiler->debug_traits = TRAIT_NONE;

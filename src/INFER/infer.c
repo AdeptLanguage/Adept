@@ -179,11 +179,11 @@ int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast
     // NOTE: if 'default_assigned_type' is EXPR_NONE, then the most suitable type for the given generics is chosen
     // NOTE: 'ast_func' can be NULL
 
-    undetermined_type_list_t undetermined;
+    undetermined_expr_list_t undetermined;
     undetermined.expressions = malloc(sizeof(ast_expr_t*) * 4);
     undetermined.expressions_length = 0;
     undetermined.expressions_capacity = 4;
-    undetermined.determined = EXPR_NONE;
+    undetermined.solution = EXPR_NONE;
 
     if(infer_expr_inner(compiler, object, ast_func, root, &undetermined, scope)){
         free(undetermined.expressions);
@@ -191,14 +191,16 @@ int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast
     }
 
     // Determine all of the undetermined types
-    if(undetermined.determined == EXPR_NONE){
+    if(undetermined.solution == EXPR_NONE){
         if(default_assigned_type == EXPR_NONE){
             default_assigned_type = generics_primitive_type(undetermined.expressions,  undetermined.expressions_length);
         }
 
-        if(determine_undetermined(compiler, object, &undetermined, default_assigned_type)){
-            free(undetermined.expressions);
-            return 1;
+        if(default_assigned_type != EXPR_NONE){
+            if(undetermined_expr_list_give_solution(compiler, object, &undetermined, default_assigned_type)){
+                free(undetermined.expressions);
+                return 1;
+            }
         }
     }
 
@@ -207,20 +209,15 @@ int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast
     return 0;
 }
 
-int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast_expr_t **expr, undetermined_type_list_t *undetermined, infer_var_scope_t *scope){
+int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope){
     // NOTE: 'ast_func' can be NULL
     // NOTE: The 'ast_expr_t*' pointed to by 'expr' may be written to
 
     ast_expr_t **a, **b;
 
     // Expand list if needed
-    if(undetermined->expressions_length == undetermined->expressions_capacity){
-        undetermined->expressions_capacity *= 2;
-        ast_expr_t **new_expressions = malloc(sizeof(ast_expr_t*) * undetermined->expressions_capacity);
-        memcpy(new_expressions, undetermined->expressions, sizeof(ast_expr_t*) * undetermined->expressions_length);
-        free(undetermined->expressions);
-        undetermined->expressions = new_expressions;
-    }
+    expand((void**) &undetermined->expressions, sizeof(ast_expr_t*), undetermined->expressions_length,
+        &undetermined->expressions_capacity, 1, 2);
 
     switch((*expr)->id){
     case EXPR_NONE: break;
@@ -235,17 +232,9 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
     case EXPR_FLOAT:
     case EXPR_DOUBLE:
     case EXPR_BOOLEAN:
-        if(undetermined->determined != EXPR_NONE){
-            if(resolve_generics(compiler, object, expr, 1, undetermined->determined)) return 1;
-        }
-        else if(determine_undetermined(compiler, object, undetermined, (*expr)->id)) return 1;
+        if(undetermined_expr_list_give_solution(compiler, object, undetermined, (*expr)->id)) return 1;
         break;
-    case EXPR_VARIABLE:
-        if(undetermined->determined != EXPR_NONE){
-            if(resolve_generics(compiler, object, expr, 1, undetermined->determined)) return 1;
-        }
-        else {
-            unsigned int var_expr_id;
+    case EXPR_VARIABLE: {
             bool found_variable = false;
             char *variable_name = ((ast_expr_variable_t*) *expr)->name;
             ast_type_t *variable_type;
@@ -287,6 +276,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
 
                     *expr = ast_expr_clone(ast->constants[constant_index].expression); // Clone constant expression
                     if(infer_expr_inner(compiler, object, ast_func, expr, undetermined, scope)) return 1;
+
                     break; // The identifier has been resovled, so break
                 }
             }
@@ -298,14 +288,11 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
                 return 1;
             }
 
-            unsigned int primitive = generics_primitive_type(undetermined->expressions, undetermined->expressions_length);
+            // Return if we already know the solution primitive
+            if(undetermined->solution == EXPR_NONE) return 0;
 
-            if(primitive == EXPR_NONE) return 0; // Don't determine if there aren't any generics to determine
-            var_expr_id = ast_primitive_from_ast_type(variable_type);
-
-            if(var_expr_id != EXPR_NONE){
-                if(determine_undetermined(compiler, object, undetermined, var_expr_id)) return 1;
-            }
+            unsigned int var_expr_primitive = ast_primitive_from_ast_type(variable_type);
+            if(undetermined_expr_list_give_solution(compiler, object, undetermined, var_expr_primitive)) return 1;
         }
         break;
     case EXPR_STR: break;
@@ -340,10 +327,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
         break;
     case EXPR_GENERIC_INT:
     case EXPR_GENERIC_FLOAT:
-        if(undetermined->determined != EXPR_NONE){
-            if(resolve_generics(compiler, object, expr, 1, undetermined->determined)) return 1;
-        }
-        else undetermined->expressions[undetermined->expressions_length++] = *expr;
+        if(undetermined_expr_list_give_generic(compiler, object, undetermined, expr)) return 1;
         break;
     case EXPR_MEMBER:
         if(infer_expr(compiler, object, ast_func, &((ast_expr_member_t*) *expr)->value, EXPR_NONE, scope)) return 1;
@@ -393,19 +377,41 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
     return 0;
 }
 
-int determine_undetermined(compiler_t *compiler, object_t *object, undetermined_type_list_t *undetermined, unsigned int target_primitive){
-    assert(undetermined->determined == EXPR_NONE); // Shouldn't have already been determined
-    undetermined->determined = target_primitive;
-    if(resolve_generics(compiler, object, undetermined->expressions, undetermined->expressions_length, target_primitive)) return 1;
+int undetermined_expr_list_give_solution(compiler_t *compiler, object_t *object, undetermined_expr_list_t *undetermined, unsigned int solution_primitive){
+    // Ensure solution is real
+    if(solution_primitive == EXPR_NONE) return 0;
+
+    // Ensure we don't already have a solution
+    if(undetermined->solution != EXPR_NONE) return 0;
+    
+    // Remember the solution
+    undetermined->solution = solution_primitive;
+
+    // Resolve any generics already in the list
+    if(resolve_generics(compiler, object, undetermined->expressions, undetermined->expressions_length, solution_primitive)){
+        return 1;
+    }
+
     undetermined->expressions_length = 0;
+    return 0;
+}
+
+int undetermined_expr_list_give_generic(compiler_t *compiler, object_t *object, undetermined_expr_list_t *undetermined, ast_expr_t **expr){
+    if(undetermined->solution != EXPR_NONE){
+        // Resolve the generic if we already know what type it should be
+        if(resolve_generics(compiler, object, expr, 1, undetermined->solution)) return 1;
+    } else {
+        // Otherwise, add it to the list of undetermined expressions
+        undetermined->expressions[undetermined->expressions_length++] = *expr;
+    }
     return 0;
 }
 
 int resolve_generics(compiler_t *compiler, object_t *object, ast_expr_t **expressions, length_t expressions_length, unsigned int target_primitive){
     // NOTE: Some dangerous memory stuff goes on in this function
     //           This may break on certain platforms if they use unconventional type sizes that break the C standards
-    // NOTE: This function takes all of the generic expressions in the list 'expressions' and attempts to
-    //           convert them to the primitive type of 'target_primitive'
+    // NOTE: This function attempts to convert generics expressions into the 'target_primitive'
+    // NOTE: Shouldn't be called outside of resolve_undetermined_expressions
 
     for(length_t e = 0; e != expressions_length; e++){
         ast_expr_t *expr = expressions[e];
