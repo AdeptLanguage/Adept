@@ -153,11 +153,25 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
         case EXPR_EACH_IN: {
                 ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
                 if(infer_expr(compiler, object, func, &loop->low_array, EXPR_NONE, scope)) return 1;
-                if(infer_expr(compiler, object, func, &loop->length, EXPR_NONE, scope)) return 1;
+                if(infer_expr(compiler, object, func, &loop->length, EXPR_ULONG, scope)) return 1;
  
                 infer_var_scope_push(&scope);
                 infer_var_scope_add_variable(scope, "idx", ast_get_usize(&object->ast));
                 infer_var_scope_add_variable(scope, loop->it_name ? loop->it_name : "it", loop->it_type);
+
+                if(infer_in_stmts(compiler, object, func, loop->statements, loop->statements_length, scope)){
+                    infer_var_scope_pop(&scope);
+                    return 1;
+                }
+                infer_var_scope_pop(&scope);
+            }
+            break;
+        case EXPR_REPEAT: {
+                ast_expr_repeat_t *loop = (ast_expr_repeat_t*) statements[s];
+                if(infer_expr(compiler, object, func, &loop->limit, EXPR_ULONG, scope)) return 1;
+ 
+                infer_var_scope_push(&scope);
+                infer_var_scope_add_variable(scope, "idx", ast_get_usize(&object->ast));
 
                 if(infer_in_stmts(compiler, object, func, loop->statements, loop->statements_length, scope)){
                     infer_var_scope_pop(&scope);

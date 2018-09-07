@@ -78,11 +78,12 @@
 #define EXPR_WHILECONTINUE  0x00000039
 #define EXPR_UNTILBREAK     0x0000003A
 #define EXPR_EACH_IN        0x0000003B
-#define EXPR_DELETE         0x0000003C
-#define EXPR_BREAK          0x0000003D
-#define EXPR_CONTINUE       0x0000003E
-#define EXPR_BREAK_TO       0x0000003F
-#define EXPR_CONTINUE_TO    0x00000040
+#define EXPR_REPEAT         0x0000003C
+#define EXPR_DELETE         0x0000003D
+#define EXPR_BREAK          0x0000003E
+#define EXPR_CONTINUE       0x0000003F
+#define EXPR_BREAK_TO       0x00000040
+#define EXPR_CONTINUE_TO    0x00000041
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -403,7 +404,7 @@ typedef struct {
 } ast_expr_ifelse_t, ast_expr_unlesselse_t, ast_expr_ifwhileelse_t, ast_expr_unlessuntilelse_t;
 
 // ---------------- ast_expr_each_in_t ----------------
-// Expression for 'each for' loop. Used for iterating
+// Expression for 'each in' loop. Used for iterating
 // over a low-level array given a length.
 typedef struct {
     unsigned int id;
@@ -417,6 +418,19 @@ typedef struct {
     length_t statements_length;
     length_t statements_capacity;
 } ast_expr_each_in_t;
+
+// ---------------- ast_expr_repeat_t ----------------
+// Expression for 'repeat' loop. Used for iterating
+// upto a given limit (which is excluded)
+typedef struct {
+    unsigned int id;
+    source_t source;
+    char *label;
+    ast_expr_t *limit;
+    ast_expr_t **statements;
+    length_t statements_length;
+    length_t statements_capacity;
+} ast_expr_repeat_t;
 
 // ---------------- ast_expr_delete_t ----------------
 // Expression for 'delete' keyword. Frees dynamically

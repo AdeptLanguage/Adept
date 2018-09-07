@@ -484,6 +484,10 @@ void ast_expr_free(ast_expr_t *expr){
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->length);
         ast_free_statements_fully(((ast_expr_each_in_t*) expr)->statements, ((ast_expr_each_in_t*) expr)->statements_length);
         break;
+    case EXPR_REPEAT:
+        ast_expr_free_fully(((ast_expr_repeat_t*) expr)->limit);
+        ast_free_statements_fully(((ast_expr_repeat_t*) expr)->statements, ((ast_expr_repeat_t*) expr)->statements_length);
+        break;
     }
 }
 

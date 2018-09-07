@@ -417,7 +417,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
                 case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
                 default:
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'each for' expression");
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'each in' expression");
                     ast_type_free_fully(it_type);
                     ast_expr_free_fully(low_array);
                     ast_expr_free_fully(length_limit);
@@ -455,6 +455,57 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 stmt->it_type = it_type;
                 stmt->length = length_limit;
                 stmt->low_array = low_array;
+                stmt->statements = each_in_stmt_list.statements;
+                stmt->statements_length = each_in_stmt_list.length;
+                stmt->statements_capacity = each_in_stmt_list.capacity;
+                stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+            }
+            break;
+        case TOKEN_REPEAT: {
+                source = sources[(*i)++];
+                ast_expr_t *limit = NULL;
+                trait_t stmts_mode;
+                char *label = NULL;
+
+                if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
+                    label = tokens[*i].data; *i += 2;
+                }
+                
+                if(parse_expr(ctx, &limit)) return 1;
+
+                switch(tokens[(*i)++].id){
+                case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
+                case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
+                default:
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'repeat' expression");
+                    ast_expr_free_fully(limit);
+                    return 1;
+                }
+
+                ast_expr_list_t each_in_stmt_list;
+                each_in_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
+                each_in_stmt_list.length = 0;
+                each_in_stmt_list.capacity = 4;
+
+                length_t defer_unravel_length = defer_list->length;
+
+                if(parse_stmts(ctx, &each_in_stmt_list, defer_list, stmts_mode)){
+                    ast_free_statements_fully(each_in_stmt_list.statements, each_in_stmt_list.length);
+                    ast_expr_free_fully(limit);
+                    return 1;
+                }
+
+                // Unravel all defer statements added in the block
+                parse_unravel_defer_stmts(&each_in_stmt_list, defer_list, defer_unravel_length);
+
+                if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
+                else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
+
+                ast_expr_repeat_t *stmt = malloc(sizeof(ast_expr_repeat_t));
+                stmt->id = EXPR_REPEAT;
+                stmt->source = source;
+                stmt->label = label;
+                stmt->limit = limit;
                 stmt->statements = each_in_stmt_list.statements;
                 stmt->statements_length = each_in_stmt_list.length;
                 stmt->statements_capacity = each_in_stmt_list.capacity;

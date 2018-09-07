@@ -531,6 +531,26 @@ void ir_dump_var_scope_layout(FILE *file, bridge_var_scope_t *scope){
     }
 }
 
+void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t globals_length){
+    ir_pool_init(&ir_module->pool);
+
+    ir_module->funcs = malloc(sizeof(ir_func_t) * funcs_length);
+    ir_module->funcs_length = 0;
+    ir_module->func_mappings = NULL;
+    ir_module->methods = NULL;
+    ir_module->methods_length = 0;
+    ir_module->methods_capacity = 0;
+    ir_module->type_map.mappings = NULL;
+    ir_module->globals = malloc(sizeof(ir_global_t) * globals_length);
+    ir_module->globals_length = 0;
+
+    // Initialize common data
+    ir_module->common.ir_funcptr = NULL;
+    ir_module->common.ir_usize = NULL;
+    ir_module->common.ir_usize_ptr = NULL;
+    ir_module->common.ir_bool = NULL;
+}
+
 void ir_module_free(ir_module_t *ir_module){
     ir_module_free_funcs(ir_module->funcs, ir_module->funcs_length);
     free(ir_module->funcs);

@@ -85,6 +85,16 @@ ir_value_t* build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t va
     return build_value_from_prev_instruction(builder);
 }
 
+ir_value_t* build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
+    ir_basicblock_new_instructions(builder->current_block, 1);
+    ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
+    instruction->id = INSTRUCTION_GLOBALVARPTR;
+    instruction->result_type = ptr_type;
+    instruction->index = variable_id;
+    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+    return build_value_from_prev_instruction(builder);
+}
+
 ir_value_t* build_load(ir_builder_t *builder, ir_value_t *value){
     ir_type_t *dereferenced_type = ir_type_dereference(value->type);
     if(dereferenced_type == NULL) return NULL;
@@ -96,6 +106,67 @@ ir_value_t* build_load(ir_builder_t *builder, ir_value_t *value){
     instruction->value = value;
     builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
     return build_value_from_prev_instruction(builder);
+}
+
+void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination){
+    ir_instr_store_t *built_instr = (ir_instr_store_t*) build_instruction(builder, sizeof(ir_instr_store_t));
+    built_instr->id = INSTRUCTION_STORE;
+    built_instr->result_type = NULL;
+    built_instr->value = value;
+    built_instr->destination = destination;
+}
+
+void build_break(ir_builder_t *builder, length_t basicblock_id){
+    ir_instr_break_t *built_instr = (ir_instr_break_t*) build_instruction(builder, sizeof(ir_instr_break_t));
+    built_instr->id = INSTRUCTION_BREAK;
+    built_instr->result_type = NULL;
+    built_instr->block_id = basicblock_id;
+}
+
+ir_type_t* ir_builder_funcptr(ir_builder_t *builder){
+    ir_type_t **shared_type = &builder->object->ir_module.common.ir_funcptr;
+
+    if(*shared_type == NULL){
+        (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        (*shared_type)->kind = TYPE_KIND_FUNCPTR;
+        // 'ir_funcptr_type->extra' not set because never used
+    }
+    
+    return *shared_type;
+}
+
+ir_type_t* ir_builder_usize(ir_builder_t *builder){
+    ir_type_t **shared_type = &builder->object->ir_module.common.ir_usize;
+
+    if(*shared_type == NULL){
+        (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        (*shared_type)->kind = TYPE_KIND_U64;
+    }
+
+    return *shared_type;
+}
+
+ir_type_t* ir_builder_usize_ptr(ir_builder_t *builder){
+    ir_type_t **shared_type = &builder->object->ir_module.common.ir_usize_ptr;
+
+    if(*shared_type == NULL){
+        (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        (*shared_type)->kind = TYPE_KIND_POINTER;
+        (*shared_type)->extra = ir_builder_usize(builder);
+    }
+
+    return *shared_type;
+}
+
+ir_type_t* ir_builder_bool(ir_builder_t *builder){
+    ir_type_t **shared_type = &builder->object->ir_module.common.ir_bool;
+
+    if(*shared_type == NULL){
+        (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        (*shared_type)->kind = TYPE_KIND_U64;
+    }
+
+    return *shared_type;
 }
 
 void prepare_for_new_label(ir_builder_t *builder){

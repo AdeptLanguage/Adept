@@ -1,0 +1,12 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+
+    repeat argc {
+        if idx == 0, continue
+        printf('arg[%d] is %s\n', idx as int, argv[idx])
+    }
+		
+    return 0
+}

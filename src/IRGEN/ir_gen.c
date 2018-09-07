@@ -11,22 +11,7 @@ int ir_gen(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_t *ast = &object->ast;
 
-    ir_pool_init(&module->pool);
-    module->funcs = malloc(sizeof(ir_func_t) * ast->funcs_length);
-    module->funcs_length = 0;
-    module->func_mappings = NULL;
-    module->methods = NULL;
-    module->methods_length = 0;
-    module->methods_capacity = 0;
-    module->type_map.mappings = NULL;
-    module->globals = malloc(sizeof(ir_global_t) * ast->globals_length);
-    module->globals_length = 0;
-
-    // Initialize common data
-    module->common.ir_funcptr_type = NULL;
-    module->common.ir_usize_type = NULL;
-    module->common.ir_usize_ptr_type = NULL;
-    module->common.ir_bool_type = NULL;
+    ir_module_init(module, ast->funcs_length, ast->globals_length);
 
     object->compilation_stage = COMPILATION_STAGE_IR_MODULE;
     if(ir_gen_type_mappings(compiler, object)) return 1; // Generate type mappings
@@ -147,12 +132,9 @@ int ir_gen_functions(compiler_t *compiler, object_t *object){
 int ir_gen_functions_body(compiler_t *compiler, object_t *object){
     // NOTE: Only ir_gens function body; assumes skeleton already exists
 
-    ast_t *ast = &object->ast;
-    ir_module_t *module = &object->ir_module;
-
-    ast_func_t *ast_funcs = ast->funcs;
-    ir_func_t *module_funcs = module->funcs;
-    length_t ast_funcs_length = ast->funcs_length;
+    ast_func_t *ast_funcs = object->ast.funcs;
+    ir_func_t *module_funcs = object->ir_module.funcs;
+    length_t ast_funcs_length = object->ast.funcs_length;
 
     for(length_t f = 0; f != ast_funcs_length; f++){
         if(ast_funcs[f].traits & AST_FUNC_FOREIGN) continue;
@@ -168,7 +150,11 @@ int ir_gen_globals(compiler_t *compiler, object_t *object){
 
     for(length_t g = 0; g != ast->globals_length; g++){
         module->globals[g].name = ast->globals[g].name;
-        if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &module->globals[g].type)) return 1;
+
+        if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &module->globals[g].type)){
+            return 1;
+        }
+
         module->globals_length++;
     }
 
@@ -182,10 +168,9 @@ int ir_gen_globals_init(ir_builder_t *builder){
 
     for(length_t g = 0; g != globals_length; g++){
         ast_global_t *ast_global = &globals[g];
-        ir_value_t *destination;
+
         ir_value_t *value;
         ast_type_t value_ast_type;
-        ir_instr_t* instruction;
 
         if(ast_global->initial == NULL) continue;
         if(ir_gen_expression(builder, ast_global->initial, &value, false, &value_ast_type)) return 1;
@@ -202,26 +187,12 @@ int ir_gen_globals_init(ir_builder_t *builder){
 
         ast_type_free(&value_ast_type);
 
-        ir_global_t *ir_global = &builder->object->ir_module.globals[g];
-        ir_type_t *global_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        global_pointer_type->kind = TYPE_KIND_POINTER;
-        global_pointer_type->extra = ir_global->type;
+        ir_type_t *ptr_to_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        ptr_to_type->kind = TYPE_KIND_POINTER;
+        ptr_to_type->extra = builder->object->ir_module.globals[g].type;
 
-        ir_basicblock_new_instructions(builder->current_block, 1);
-        instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
-        ((ir_instr_varptr_t*) instruction)->id = INSTRUCTION_GLOBALVARPTR;
-        ((ir_instr_varptr_t*) instruction)->result_type = global_pointer_type;
-        ((ir_instr_varptr_t*) instruction)->index = g;
-        builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-        destination = build_value_from_prev_instruction(builder);
-
-        ir_basicblock_new_instructions(builder->current_block, 1);
-        instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_store_t));
-        ((ir_instr_store_t*) instruction)->id = INSTRUCTION_STORE;
-        ((ir_instr_store_t*) instruction)->result_type = NULL; // For safety
-        ((ir_instr_store_t*) instruction)->value = value;
-        ((ir_instr_store_t*) instruction)->destination = destination;
-        builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+        ir_value_t *destination = build_gvarptr(builder, ptr_to_type, g);
+        build_store(builder, value, destination);
     }
     return 0;
 }

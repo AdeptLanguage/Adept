@@ -66,10 +66,37 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
 // Builds a varptr instruction
 ir_value_t* build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
+// ---------------- build_varptr ----------------
+// Builds a globalvarptr instruction
+ir_value_t* build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
+
 // ---------------- build_load ----------------
 // Builds a load instruction
 ir_value_t* build_load(ir_builder_t *builder, ir_value_t *value);
 
+// ---------------- build_store ----------------
+// Builds a store instruction
+void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination);
+
+// ---------------- build_break ----------------
+// Builds a break instruction
+void build_break(ir_builder_t *builder, length_t basicblock_id);
+
+// ---------------- ir_builder_funcptr ----------------
+// Gets a shared IR function pointer type
+ir_type_t* ir_builder_funcptr(ir_builder_t *builder);
+
+// ---------------- ir_builder_usize ----------------
+// Gets a shared IR usize type
+ir_type_t* ir_builder_usize(ir_builder_t *builder);
+
+// ---------------- ir_builder_usize_ptr ----------------
+// Gets a shared IR usize pointer type
+ir_type_t* ir_builder_usize_ptr(ir_builder_t *builder);
+
+// ---------------- ir_builder_bool ----------------
+// Gets a shared IR boolean type
+ir_type_t* ir_builder_bool(ir_builder_t *builder);
 
 // ---------------- prepare_for_new_label ----------------
 // Ensures there's enough room for another label

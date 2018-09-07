@@ -364,10 +364,10 @@ typedef struct {
 // entire IR module
 // 'ir_funcptr_type' -> type used for function pointer implementation
 typedef struct {
-    ir_type_t *ir_funcptr_type;
-    ir_type_t *ir_usize_type;
-    ir_type_t *ir_usize_ptr_type;
-    ir_type_t *ir_bool_type;
+    ir_type_t *ir_funcptr;
+    ir_type_t *ir_usize;
+    ir_type_t *ir_usize_ptr;
+    ir_type_t *ir_bool;
 } ir_shared_common_t;
 
 // ---------------- ir_module_t ----------------
@@ -412,6 +412,10 @@ void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, c
 void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i);
 void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instruction, int i);
 void ir_dump_var_scope_layout(FILE *file, bridge_var_scope_t *scope);
+
+// ---------------- ir_module_free ----------------
+// Initializes an IR module for use
+void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t globals_length);
 
 // ---------------- ir_module_free ----------------
 // Frees data within an IR module

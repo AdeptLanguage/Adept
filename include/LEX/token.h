@@ -145,17 +145,18 @@ extern const char *global_token_name_table[];
 #define TOKEN_PRAGMA           0x00000061
 #define TOKEN_PRIVATE          0x00000062
 #define TOKEN_PUBLIC           0x00000063
-#define TOKEN_RETURN           0x00000064
-#define TOKEN_SIZEOF           0x00000065
-#define TOKEN_STATIC           0x00000066
-#define TOKEN_STDCALL          0x00000067
-#define TOKEN_STRUCT           0x00000068
-#define TOKEN_SWITCH           0x00000069
-#define TOKEN_TRUE             0x0000006A
-#define TOKEN_UNDEF            0x0000006B
-#define TOKEN_UNLESS           0x0000006C
-#define TOKEN_UNTIL            0x0000006D
-#define TOKEN_WHILE            0x0000006E
+#define TOKEN_REPEAT           0x00000064
+#define TOKEN_RETURN           0x00000065
+#define TOKEN_SIZEOF           0x00000066
+#define TOKEN_STATIC           0x00000067
+#define TOKEN_STDCALL          0x00000068
+#define TOKEN_STRUCT           0x00000069
+#define TOKEN_SWITCH           0x0000006A
+#define TOKEN_TRUE             0x0000006B
+#define TOKEN_UNDEF            0x0000006C
+#define TOKEN_UNLESS           0x0000006D
+#define TOKEN_UNTIL            0x0000006E
+#define TOKEN_WHILE            0x0000006F
 // 6D..6F
 #define MAX_LEX_TOKEN          TOKEN_WHILE
 
@@ -174,6 +175,6 @@ extern const char *global_token_name_table[];
 #define TOKEN_PKG_WUSHORT     0x00000007A
 #define TOKEN_PKG_WUSIZE      0x00000007B
 #define TOKEN_PKG_MAX         TOKEN_PKG_WUSIZE
-// 70..7F
+// 80..8F
 
 #endif // TOKEN_H

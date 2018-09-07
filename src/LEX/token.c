@@ -127,6 +127,7 @@ void tokenlist_print(tokenlist_t *tokenlist, char *buffer){
         case TOKEN_PRAGMA:         printf("Keyword: pragma\n"); break;
         case TOKEN_PRIVATE:        printf("Keyword: private\n"); break;
         case TOKEN_PUBLIC:         printf("Keyword: public\n"); break;
+        case TOKEN_REPEAT:         printf("Keyword: repeat\n"); break;
         case TOKEN_RETURN:         printf("Keyword: return\n"); break;
         case TOKEN_SIZEOF:         printf("Keyword: sizeof\n"); break;
         case TOKEN_STATIC:         printf("Keyword: sizeof\n"); break;
@@ -253,16 +254,32 @@ const char *global_token_name_table[] = {
     "pragma keyword",         // 0x00000061
     "private keyword",        // 0x00000062
     "public keyword",         // 0x00000063
-    "return keyword",         // 0x00000064
-    "sizeof keyword",         // 0x00000065
-    "static keyword",         // 0x00000066
-    "stdcall keyword",        // 0x00000067
-    "struct keyword",         // 0x00000068
-    "switch keyword",         // 0x00000069
-    "true keyword",           // 0x0000006A
-    "undef keyword",          // 0x0000006B
-    "unless keyword",         // 0x0000006C
-    "until keyword",          // 0x0000006D
-    "while keyword",          // 0x0000006E
-    "reserved",               // 0x0000006F
+    "repeat keyword",         // 0x00000064
+    "return keyword",         // 0x00000065
+    "sizeof keyword",         // 0x00000066
+    "static keyword",         // 0x00000067
+    "stdcall keyword",        // 0x00000068
+    "struct keyword",         // 0x00000069
+    "switch keyword",         // 0x0000006A
+    "true keyword",           // 0x0000006B
+    "undef keyword",          // 0x0000006C
+    "unless keyword",         // 0x0000006D
+    "until keyword",          // 0x0000006E
+    "while keyword",          // 0x0000006F
+    "reserved",               // 0x00000070
+    "reserved",               // 0x00000071
+    "reserved",               // 0x00000072
+    "reserved",               // 0x00000073
+    "reserved",               // 0x00000074
+    "reserved",               // 0x00000075
+    "reserved",               // 0x00000076
+    "reserved",               // 0x00000077
+    "reserved",               // 0x00000078
+    "reserved",               // 0x00000079
+    "reserved",               // 0x0000007A
+    "reserved",               // 0x0000007B
+    "reserved",               // 0x0000007C
+    "reserved",               // 0x0000007D
+    "reserved",               // 0x0000007E
+    "reserved",               // 0x0000007F
 };

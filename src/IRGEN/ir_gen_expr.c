@@ -152,23 +152,11 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 global_pointer_type->kind = TYPE_KIND_POINTER;
                 global_pointer_type->extra = global->type;
 
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
-                ((ir_instr_varptr_t*) instruction)->id = INSTRUCTION_GLOBALVARPTR;
-                ((ir_instr_varptr_t*) instruction)->result_type = global_pointer_type;
-                ((ir_instr_varptr_t*) instruction)->index = var_index;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
+                *ir_value = build_gvarptr(builder, global_pointer_type, var_index);
 
                 // If not requested to leave the expression mutable, dereference it
                 if(!leave_mutable){
-                    ir_basicblock_new_instructions(builder->current_block, 1);
-                    instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                    ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                    ((ir_instr_load_t*) instruction)->result_type = global->type;
-                    ((ir_instr_load_t*) instruction)->value = *ir_value;
-                    builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                    *ir_value = build_value_from_prev_instruction(builder);
+                    *ir_value = build_load(builder, *ir_value);
                 }
                 break;
             }
@@ -222,20 +210,8 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 }
 
                 if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
-                    ir_basicblock_new_instructions(builder->current_block, 2);
-                    instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
-                    ((ir_instr_varptr_t*) instruction)->id = INSTRUCTION_VARPTR;
-                    ((ir_instr_varptr_t*) instruction)->result_type = ir_var_type;
-                    ((ir_instr_varptr_t*) instruction)->index = var->id;
-                    builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                    *ir_value = build_value_from_prev_instruction(builder);
-
-                    instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                    ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                    ((ir_instr_load_t*) instruction)->result_type = (ir_type_t*) ir_var_type->extra;
-                    ((ir_instr_load_t*) instruction)->value = *ir_value;
-                    builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                    *ir_value = build_value_from_prev_instruction(builder);
+                    *ir_value = build_varptr(builder, ir_var_type, var->id);
+                    *ir_value = build_load(builder, *ir_value);
                 }
 
                 found_variable = true;
@@ -272,21 +248,8 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     }
 
                     if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
-                        ir_basicblock_new_instructions(builder->current_block, 2);
-                        instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
-                        ((ir_instr_varptr_t*) instruction)->id = INSTRUCTION_GLOBALVARPTR;
-                        ((ir_instr_varptr_t*) instruction)->result_type = ir_var_type;
-                        ((ir_instr_varptr_t*) instruction)->index = g;
-                        builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                        *ir_value = build_value_from_prev_instruction(builder);
-
-                        instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                        ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                        ((ir_instr_load_t*) instruction)->result_type = (ir_type_t*) ir_var_type->extra;
-                        ((ir_instr_load_t*) instruction)->value = *ir_value;
-                        builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                        *ir_value = build_value_from_prev_instruction(builder);
-
+                        *ir_value = build_gvarptr(builder, ir_var_type, g);
+                        *ir_value = build_load(builder, *ir_value);
                         found_variable = true;
                     }
                     break;
@@ -377,13 +340,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 struct_value_ast_type.elements_length--; // Reduce length accordingly
 
                 if(EXPR_IS_MUTABLE(member_expr->value->id)){
-                    ir_basicblock_new_instructions(builder->current_block, 1);
-                    instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                    ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                    ((ir_instr_load_t*) instruction)->result_type = ((ir_type_t*) struct_value->type->extra);
-                    ((ir_instr_load_t*) instruction)->value = struct_value;
-                    builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                    struct_value = build_value_from_prev_instruction(builder);
+                    struct_value = build_load(builder, struct_value);
                 }
             }
 
@@ -431,13 +388,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
 
             // If not requested to leave the expression mutable, dereference it
             if(!leave_mutable){
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                ((ir_instr_load_t*) instruction)->result_type = field_type;
-                ((ir_instr_load_t*) instruction)->value = *ir_value;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
+                *ir_value = build_load(builder, *ir_value);
             }
 
             ast_type_free(&struct_value_ast_type);
@@ -459,13 +410,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 return 1;
             }
 
-            ir_type_t *ir_funcptr_type = builder->object->ir_module.common.ir_funcptr_type;
-            if(ir_funcptr_type == NULL){
-                ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
-                // 'ir_funcptr_type->extra' not set because never used
-                builder->object->ir_module.common.ir_funcptr_type = ir_funcptr_type;
-            }
+            ir_type_t *ir_funcptr_type = ir_builder_funcptr(builder);
 
             const char *maybe_name = pair.ast_func->traits & AST_FUNC_FOREIGN ||
                 pair.ast_func->traits & AST_FUNC_MAIN ? func_addr_expr->name : NULL;
@@ -530,13 +475,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 }
 
                 // Build and append a load instruction
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                ((ir_instr_load_t*) instruction)->result_type = (ir_type_t*) expr_value->type->extra;
-                ((ir_instr_load_t*) instruction)->value = expr_value;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
+                *ir_value = build_load(builder, expr_value);
 
                 // ir_type_t is expected to be of kind pointer
                 if(expr_value->type->kind != TYPE_KIND_POINTER){
@@ -598,13 +537,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
 
             // If not requested to leave the expression mutable, dereference it
             if(!leave_mutable){
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                ((ir_instr_load_t*) instruction)->id = INSTRUCTION_LOAD;
-                ((ir_instr_load_t*) instruction)->result_type = (ir_type_t*) array_value->type->extra;
-                ((ir_instr_load_t*) instruction)->value = *ir_value;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
+                *ir_value = build_load(builder, *ir_value);
             }
 
             ast_type_free(&index_type);
@@ -676,13 +609,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             } else if(type_elems_length == 2 && type_elems[0]->id == AST_ELEM_POINTER && type_elems[1]->id == AST_ELEM_BASE){
                 // Load the value that's being called on if the expression is mutable
                 if(EXPR_IS_MUTABLE(call_expr->value->id)){
-                    ir_basicblock_new_instructions(builder->current_block, 1);
-                    ir_instr_load_t *load_mutable = (ir_instr_load_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-                    load_mutable->id = INSTRUCTION_LOAD;
-                    load_mutable->result_type = (ir_type_t*) arg_values[0]->type->extra;
-                    load_mutable->value = arg_values[0];
-                    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) load_mutable;
-                    arg_values[0] = build_value_from_prev_instruction(builder);
+                    arg_values[0] = build_load(builder, arg_values[0]);
                 }
             } else {
                 char *s = ast_type_str(&arg_types[0]);
@@ -731,7 +658,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
 
             if(ir_gen_expression(builder, not_expr->value, &expr_value, false, &expr_type)) return 1;
 
-            if(ir_type_get_catagory(expr_value->type) == 0){
+            if(ir_type_get_catagory(expr_value->type) == PRIMITIVE_NA){
                 char *s = ast_type_str(&expr_type);
                 compiler_panicf(builder->compiler, expr->source, "Can't use '!' operator on type '%s'", s);
                 ast_type_free(&expr_type);
@@ -743,8 +670,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ir_basicblock_new_instructions(builder->current_block, 1);
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_cast_t));
             ((ir_instr_cast_t*) instruction)->id = INSTRUCTION_ISZERO;
-            ((ir_instr_cast_t*) instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ((ir_instr_cast_t*) instruction)->result_type->kind = TYPE_KIND_BOOLEAN;
+            ((ir_instr_cast_t*) instruction)->result_type = ir_builder_bool(builder);
             ((ir_instr_cast_t*) instruction)->value = expr_value;
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -759,7 +685,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ir_value_t *amount = NULL;
             if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_new_t*) expr)->type, &ir_type)) return 1;
 
-            if( ((ast_expr_new_t*) expr)->amount != NULL){
+            if( ((ast_expr_new_t*) expr)->amount != NULL ){
                 if(ir_gen_expression(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return 1;
                 unsigned int multiplier_typekind = amount->type->kind;
 
@@ -861,12 +787,14 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
         compiler_panicf(builder->compiler, expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
         free(a_type_str);
         free(b_type_str);
+
         if(op_res != MATH_OP_ALL_BOOL){
             ast_type_free(&ast_type_a);
             ast_type_free(&ast_type_b);
         } else {
             ast_type_free(out_expr_type);
         }
+
         return NULL;
     }
 

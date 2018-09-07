@@ -50,15 +50,16 @@ int i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int int_instr, uns
 // 'float_instr' if it operates on floating point values.
 int u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr);
 
-// ---------------- ir_type_get_catagory ----------------
-// Returns a general catagory for an IR type.
-// (either signed, unsigned, or float)
-char ir_type_get_catagory(ir_type_t *type);
-
 // Primitive catagory indicators returned by 'ir_type_get_catagory'
 #define PRIMITIVE_NA 0x00 // N/A
 #define PRIMITIVE_SI 0x01 // Signed Integer
 #define PRIMITIVE_UI 0x02 // Unsigned Integer
 #define PRIMITIVE_FP 0x03 // FLoating Point Value
+
+// ---------------- ir_type_get_catagory ----------------
+// Returns a general catagory for an IR type.
+// (either signed, unsigned, or float)
+char ir_type_get_catagory(ir_type_t *type);
+
 
 #endif // IR_GEN_EXPR_H

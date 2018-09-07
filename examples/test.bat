@@ -1,6 +1,8 @@
 @echo off
 pushd "%~dp0"
 
+names[0] = new 'James'
+
 call :compile address
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile aliases
@@ -82,6 +84,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile pragma
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile primitives
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile repeat
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile repeat_args
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
