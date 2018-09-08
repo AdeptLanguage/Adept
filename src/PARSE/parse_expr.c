@@ -230,8 +230,6 @@ int parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 }
             }
             break;
-        case TOKEN_AS:
-            if(parse_expr_as(ctx, inout_expr)) return 1;
         default:
             return 0;
         }
@@ -290,6 +288,7 @@ int parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_left, boo
         case TOKEN_UBERAND:       BUILD_MATH_EXPR_MACRO(EXPR_AND);       break;
         case TOKEN_OR:
         case TOKEN_UBEROR:        BUILD_MATH_EXPR_MACRO(EXPR_OR);        break;
+        case TOKEN_AS: if(parse_expr_as(ctx, inout_left)) return 1;      break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unrecognized operator '%s' in expression");
             ast_expr_free_fully(*inout_left);
@@ -591,6 +590,8 @@ int parse_get_precedence(unsigned int id){
         return 4;
     case TOKEN_MULTIPLY: case TOKEN_DIVIDE: case TOKEN_MODULUS:
         return 5;
+    case TOKEN_AS:
+        return 6;
     default:
         return 0;
     }

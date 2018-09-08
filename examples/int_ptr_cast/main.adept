@@ -1,0 +1,9 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) void {
+    argv_int usize = cast usize argv
+    argv_ptr **ubyte = cast **ubyte argv_int
+
+    each *ubyte in [argv_ptr, argc as usize], puts(it)
+}

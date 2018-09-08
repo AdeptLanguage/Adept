@@ -204,31 +204,26 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
     // Macro to determine whether a type is a '*something'
     #define MACRO_TYPE_IS_POINTER(ast_type) (ast_type->elements_length > 1 && ast_type->elements[0]->id == AST_ELEM_POINTER)
 
+    // Macro to determine whether a type is a 'n something'
     #define MACRO_TYPE_IS_FIXED_ARRAY(ast_type) (ast_type->elements_length > 1 && ast_type->elements[0]->id == AST_ELEM_FIXED_ARRAY)
 
     // Traits to keep track of what properties each type has
     trait_t to_traits = TRAIT_NONE, from_traits = TRAIT_NONE;
-    #define TYPE_TRAIT_POINTER  TRAIT_1 // *something
-    #define TYPE_TRAIT_BASE_PTR TRAIT_2 // ptr
-    #define TYPE_TRAIT_FUNC_PTR TRAIT_3 // function pointer
-    #define TYPE_TRAIT_INTEGER  TRAIT_4 // integer
+    #define TYPE_TRAIT_POINTER     TRAIT_1 // *something
+    #define TYPE_TRAIT_BASE_PTR    TRAIT_2 // ptr
+    #define TYPE_TRAIT_FUNC_PTR    TRAIT_3 // function pointer
+    #define TYPE_TRAIT_INTEGER     TRAIT_4 // integer
+    #define TYPE_TRAIT_FIXED_ARRAY TRAIT_5 // fixed array
 
     unsigned int from_type_kind = ir_primitive_from_ast_type(ast_from_type);
     unsigned int to_type_kind = ir_primitive_from_ast_type(ast_to_type);
     if(from_type_kind == to_type_kind && from_type_kind != TYPE_KIND_NONE) return true;
 
-    if(from_type_kind != TYPE_KIND_FLOAT &&
-       from_type_kind != TYPE_KIND_DOUBLE &&
-       from_type_kind != TYPE_KIND_POINTER) from_traits |= TYPE_TRAIT_INTEGER;
-
-    if(to_type_kind != TYPE_KIND_FLOAT &&
-       to_type_kind != TYPE_KIND_DOUBLE &&
-       to_type_kind != TYPE_KIND_POINTER) to_traits |= TYPE_TRAIT_INTEGER;
-
     // Mark 'to_traits' depending on the contents of 'ast_to_type'
     if(MACRO_TYPE_IS_POINTER(ast_to_type)) to_traits |= TYPE_TRAIT_POINTER;
     else if(MACRO_TYPE_IS_BASE_PTR(ast_to_type)) to_traits |= TYPE_TRAIT_BASE_PTR;
     else if(MACRO_TYPE_IS_FUNC_PTR(ast_to_type)) to_traits |= TYPE_TRAIT_FUNC_PTR;
+    else if(MACRO_TYPE_IS_FIXED_ARRAY(ast_to_type)) to_traits |= TYPE_TRAIT_FIXED_ARRAY;
     else {
         if(to_type_kind != TYPE_KIND_NONE && to_type_kind != TYPE_KIND_FLOAT
         && to_type_kind != TYPE_KIND_DOUBLE){
@@ -240,10 +235,11 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
     if(MACRO_TYPE_IS_POINTER(ast_from_type)) from_traits |= TYPE_TRAIT_POINTER;
     else if(MACRO_TYPE_IS_BASE_PTR(ast_from_type)) from_traits |= TYPE_TRAIT_BASE_PTR;
     else if(MACRO_TYPE_IS_FUNC_PTR(ast_from_type)) from_traits |= TYPE_TRAIT_FUNC_PTR;
+    else if(MACRO_TYPE_IS_FIXED_ARRAY(ast_from_type)) from_traits |= TYPE_TRAIT_FIXED_ARRAY;
     else {
         if(from_type_kind != TYPE_KIND_NONE && from_type_kind != TYPE_KIND_FLOAT
         && from_type_kind != TYPE_KIND_DOUBLE){
-            to_traits |= TYPE_TRAIT_INTEGER;
+            from_traits |= TYPE_TRAIT_INTEGER;
         }
     }
 

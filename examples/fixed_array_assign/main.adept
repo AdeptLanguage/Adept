@@ -1,0 +1,13 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstring.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    original_name 6 ubyte
+    copied_name 6 ubyte
+
+    memcpy(&original_name as *ubyte, 'Isaac', 6)
+    copied_name = original_name
+    puts(&copied_name as *ubyte)
+    return 0
+}
