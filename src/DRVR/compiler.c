@@ -12,6 +12,7 @@
 #include "PARSE/parse.h"
 #include "INFER/infer.h"
 #include "IRGEN/ir_gen.h"
+#include "IRGEN/ir_gen_find.h"
 #include "BKEND/backend.h"
 
 int compiler_run(compiler_t *compiler, int argc, char **argv){
@@ -480,6 +481,71 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 
     va_end(args);
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
+}
+
+void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, source_t source,
+        char *name, ast_type_t *types, length_t arity){
+
+    int original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
+    
+    if(original_index == -1){
+        // No other function with that name exists
+        compiler_panicf(compiler, source, "Undeclared function '%s'", name);
+        return;
+    } else {
+        // Other functions have the same name
+        char *args_string = make_args_string(types, arity);
+        compiler_panicf(compiler, source, "Undeclared function %s(%s)", name, args_string ? args_string : "");
+        free(args_string);
+
+        printf("\nPotential Candidates:\n");
+    }
+
+    int index = original_index;
+
+    do {
+        ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
+
+        if(mapping->is_beginning_of_group == -1){
+            mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
+        }
+        if(mapping->is_beginning_of_group == 1 && index != original_index) return;
+
+        char *return_type_string = ast_type_str(&mapping->ast_func->return_type);
+        char *args_string = make_args_string(mapping->ast_func->arg_types, mapping->ast_func->arity);
+
+        printf("    %s(%s) %s\n", mapping->ast_func->name, args_string, return_type_string);
+
+        free(args_string);
+        free(return_type_string);
+    } while(++index != ir_module->funcs_length);
+}
+
+char* make_args_string(ast_type_t *types, length_t arity){
+    char *args_string = NULL;
+    length_t args_string_length = 0;
+    length_t args_string_capacity = 0;
+
+    for(length_t i = 0; i != arity; i++){
+        char *type_string = ast_type_str(&types[i]);
+        length_t type_string_length = strlen(type_string);
+
+        expand((void**) &args_string, sizeof(char), args_string_length, &args_string_capacity, type_string_length + 3, 256);
+
+        memcpy(&args_string[args_string_length], type_string, type_string_length);
+        args_string_length += type_string_length;
+
+        if(i + 1 != arity){
+            memcpy(&args_string[args_string_length], ", ", 2);
+            args_string_length += 2;
+        }
+
+        args_string[args_string_length] = '\0';
+        free(type_string);
+    }
+
+    if(args_string == NULL) args_string = strclone("");
+    return args_string;
 }
 
 void object_panic_plain(object_t *object, const char *message){

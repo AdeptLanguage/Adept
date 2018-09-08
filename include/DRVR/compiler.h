@@ -111,6 +111,15 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_warn(compiler_t *compiler, source_t source, const char *message);
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...);
 
+// ---------------- compiler_undeclared_function ----------------
+// Prints an error message for an undeclared function
+void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, source_t source,
+    char *name, ast_type_t *types, length_t arity);
+
+// ---------------- make_args_string ----------------
+// Helper function for generating a string for function arguments
+char* make_args_string(ast_type_t *types, length_t arity);
+
 // ---------------- object_panic_plain ----------------
 // Prints a plain compiler error given an object
 void object_panic_plain(object_t *object, const char *message);

@@ -299,7 +299,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 // Find function that fits given name and arguments
                 funcpair_t pair;
                 if(ir_gen_find_func_conforming(builder, call_expr->name, arg_values, arg_types, call_expr->arity, &pair)){
-                    compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", call_expr->name);
+                    compiler_undeclared_function(builder->compiler, &builder->object->ir_module, expr->source, call_expr->name, arg_types, call_expr->arity);
                     for(length_t t = 0; t != call_expr->arity; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
                     return 1;
