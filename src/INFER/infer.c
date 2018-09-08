@@ -383,6 +383,8 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
     case EXPR_NEW:
         if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(compiler, object, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, scope)) return 1;
         break;
+    case EXPR_NEW_CSTRING:
+        break;
     default:
         compiler_panic(compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
         return 1;

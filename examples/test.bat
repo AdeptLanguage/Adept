@@ -1,8 +1,6 @@
 @echo off
 pushd "%~dp0"
 
-names[0] = new 'James'
-
 call :compile address
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile aliases
@@ -66,6 +64,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile multiple_declaration
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile native_linking
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile new_cstring
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile new_delete
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

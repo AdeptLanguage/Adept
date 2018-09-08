@@ -989,7 +989,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 length_t it_var_id = builder->next_var_id;
                 char *it_name = each_in->it_name ? each_in->it_name : "it";
 
-                add_variable(builder, it_name, each_in->it_type, ir_type_pointer_to(builder->pool, array->type), BRIDGE_VAR_REFERENCE);
+                add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_REFERENCE);
                 
                 ir_value_t *it_ptr = build_varptr(builder, array->type, it_var_id);
                 ir_value_t *it_idx = build_load(builder, idx_ptr);

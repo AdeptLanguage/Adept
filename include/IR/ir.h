@@ -80,6 +80,7 @@
 #define INSTRUCTION_OR            0x00000041 // ir_instr_math_t
 #define INSTRUCTION_SIZEOF        0x00000042
 #define INSTRUCTION_VARZEROINIT   0x00000043
+#define INSTRUCTION_MEMCPY        0x00000044
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -294,6 +295,18 @@ typedef struct {
     ir_type_t *result_type;
     length_t index;
 } ir_instr_varzeroinit_t;
+
+// ---------------- ir_instr_memcpy_t ----------------
+// An IR pseudo-instruction for copying chunks of memory
+// from one place to another
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_value_t *destination;
+    ir_value_t *value;
+    ir_value_t *bytes;
+    bool is_volatile;
+} ir_instr_memcpy_t;
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block

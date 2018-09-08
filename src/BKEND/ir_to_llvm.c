@@ -652,6 +652,34 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         catalog.blocks[b].value_references[i] = LLVMBuildFree(builder, ir_to_llvm_value(llvm, ((ir_instr_free_t*) instr)->value));
                     }
                     break;
+                case INSTRUCTION_MEMCPY: {
+                        instr = basicblock->instructions[i];
+
+                        LLVMValueRef *memcpy_intrinsic = &llvm->memcpy_intrinsic;
+
+                        if(*memcpy_intrinsic == NULL){
+                            LLVMTypeRef arg_types[5];
+                            arg_types[0] = LLVMPointerType(LLVMInt8Type(), 0);
+                            arg_types[1] = LLVMPointerType(LLVMInt8Type(), 0);
+                            arg_types[2] = LLVMInt64Type();
+                            arg_types[3] = LLVMInt32Type();
+                            arg_types[4] = LLVMInt1Type();
+
+                            LLVMTypeRef memcpy_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 5, 0);
+                            *memcpy_intrinsic = LLVMAddFunction(llvm->module, "llvm.memcpy.p0i8.p0i8.i64", memcpy_intrinsic_type);
+                        }
+
+                        LLVMValueRef args[5];
+                        args[0] = ir_to_llvm_value(llvm, ((ir_instr_memcpy_t*) instr)->destination);
+                        args[1] = ir_to_llvm_value(llvm, ((ir_instr_memcpy_t*) instr)->value);
+                        args[2] = ir_to_llvm_value(llvm, ((ir_instr_memcpy_t*) instr)->bytes);
+                        args[3] = LLVMConstInt(LLVMInt32Type(), 0, false);
+                        args[4] = LLVMConstInt(LLVMInt1Type(), ((ir_instr_memcpy_t*) instr)->is_volatile, false);
+
+                        LLVMBuildCall(builder, *memcpy_intrinsic, args, 5, "");
+                        catalog.blocks[b].value_references[i] = NULL;
+                    }
+                    break;
                 default:
                     redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", basicblocks[b].instructions[i]->id);
                     for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
@@ -706,7 +734,7 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm_context_t llvm;
 
     llvm.module = LLVMModuleCreateWithName(filename_name_const(object->filename));
-    LLVMVerifyModule(llvm.module, LLVMAbortProcessAction, NULL);
+    llvm.memcpy_intrinsic = NULL;
 
     char *triple = "x86_64-pc-windows-gnu";
     LLVMSetTarget(llvm.module, triple);
@@ -791,6 +819,10 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     sprintf(link_command, "%s C:/Adept/2.1/crt2.o C:/Adept/2.1/crtbegin.o %s%s \"%s\" C:/Adept/2.1/libdep.a C:/Windows/System32/msvcrt.dll -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename);
 
     if(linker_additional_length != 0) free(linker_additional);
+
+    #ifdef ENABLE_DEBUG_FEATURES
+    LLVMVerifyModule(llvm.module, LLVMAbortProcessAction, NULL);
+    #endif
 
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();
     LLVMCodeGenFileType codegen = LLVMObjectFile;

@@ -59,31 +59,32 @@
 #define EXPR_SIZEOF         0x00000027
 #define EXPR_CALL_METHOD    0x00000028
 #define EXPR_NEW            0x00000029
+#define EXPR_NEW_CSTRING    0x0000002A
 // Exclusive statements --------------
-#define EXPR_DECLARE        0x0000002A
-#define EXPR_DECLAREUNDEF   0x0000002B
-#define EXPR_ASSIGN         0x0000002C
-#define EXPR_ADDASSIGN      0x0000002D
-#define EXPR_SUBTRACTASSIGN 0x0000002E
-#define EXPR_MULTIPLYASSIGN 0x0000002F
-#define EXPR_DIVIDEASSIGN   0x00000030
-#define EXPR_MODULUSASSIGN  0x00000031
-#define EXPR_RETURN         0x00000032
-#define EXPR_IF             0x00000033
-#define EXPR_UNLESS         0x00000034
-#define EXPR_IFELSE         0x00000035
-#define EXPR_UNLESSELSE     0x00000036
-#define EXPR_WHILE          0x00000037
-#define EXPR_UNTIL          0x00000038
-#define EXPR_WHILECONTINUE  0x00000039
-#define EXPR_UNTILBREAK     0x0000003A
-#define EXPR_EACH_IN        0x0000003B
-#define EXPR_REPEAT         0x0000003C
-#define EXPR_DELETE         0x0000003D
-#define EXPR_BREAK          0x0000003E
-#define EXPR_CONTINUE       0x0000003F
-#define EXPR_BREAK_TO       0x00000040
-#define EXPR_CONTINUE_TO    0x00000041
+#define EXPR_DECLARE        0x0000002B
+#define EXPR_DECLAREUNDEF   0x0000002C
+#define EXPR_ASSIGN         0x0000002D
+#define EXPR_ADDASSIGN      0x0000002E
+#define EXPR_SUBTRACTASSIGN 0x0000002F
+#define EXPR_MULTIPLYASSIGN 0x00000030
+#define EXPR_DIVIDEASSIGN   0x00000031
+#define EXPR_MODULUSASSIGN  0x00000032
+#define EXPR_RETURN         0x00000033
+#define EXPR_IF             0x00000034
+#define EXPR_UNLESS         0x00000035
+#define EXPR_IFELSE         0x00000036
+#define EXPR_UNLESSELSE     0x00000037
+#define EXPR_WHILE          0x00000038
+#define EXPR_UNTIL          0x00000039
+#define EXPR_WHILECONTINUE  0x0000003A
+#define EXPR_UNTILBREAK     0x0000003B
+#define EXPR_EACH_IN        0x0000003C
+#define EXPR_REPEAT         0x0000003D
+#define EXPR_DELETE         0x0000003E
+#define EXPR_BREAK          0x0000003F
+#define EXPR_CONTINUE       0x00000040
+#define EXPR_BREAK_TO       0x00000041
+#define EXPR_CONTINUE_TO    0x00000042
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -257,6 +258,14 @@ typedef struct {
     ast_type_t type;
     ast_expr_t *amount; // Can be NULL to indicate single element
 } ast_expr_new_t;
+
+// ---------------- ast_expr_new_cstring_t ----------------
+// Dynamically allocates a null-terminated string on the heap
+typedef struct {
+    unsigned int id;
+    source_t source;
+    char *value; /* unowned */
+} ast_expr_new_cstring_t;
 
 // ---------------- ast_expr_call_t ----------------
 // Expression for calling a function

@@ -18,7 +18,7 @@
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x00000007
+#define TOKEN_ITERATION_VERSION 0x00000008
 
 typedef unsigned int tokenid_t;
 

@@ -718,6 +718,53 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             }
         }
         break;
+    case EXPR_NEW_CSTRING: {
+            ast_expr_new_cstring_t *new_cstring_expr = (ast_expr_new_cstring_t*) expr;
+            
+            ir_type_t *ubyte = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+            ubyte->kind = TYPE_KIND_U8;
+
+            ir_type_t *ubyte_ptr = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+            ubyte_ptr->kind = TYPE_KIND_POINTER;
+            ubyte_ptr->extra = ubyte;
+
+            length_t value_length = strlen(new_cstring_expr->value);
+
+            ir_value_t *bytes_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+            bytes_value->value_type = VALUE_TYPE_LITERAL;
+            bytes_value->type = ir_builder_usize(builder);
+            bytes_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
+            *((unsigned long long*) bytes_value->extra) = value_length + 1;
+
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_malloc_t));
+            ((ir_instr_malloc_t*) instruction)->id = INSTRUCTION_MALLOC;
+            ((ir_instr_malloc_t*) instruction)->result_type = ubyte_ptr;
+            ((ir_instr_malloc_t*) instruction)->type = ubyte;
+            ((ir_instr_malloc_t*) instruction)->amount = bytes_value;
+
+            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+            ir_value_t *heap_memory = build_value_from_prev_instruction(builder);
+
+            ir_value_t *cstring_value;
+            build_string_literal(builder, new_cstring_expr->value, &cstring_value);
+
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_memcpy_t));
+            ((ir_instr_memcpy_t*) instruction)->id = INSTRUCTION_MEMCPY;
+            ((ir_instr_memcpy_t*) instruction)->result_type = NULL;
+            ((ir_instr_memcpy_t*) instruction)->destination = heap_memory;
+            ((ir_instr_memcpy_t*) instruction)->value = cstring_value;
+            ((ir_instr_memcpy_t*) instruction)->bytes = bytes_value;
+            ((ir_instr_memcpy_t*) instruction)->is_volatile = false;
+            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+
+            *ir_value = heap_memory;
+            if(out_expr_type != NULL){
+                ast_type_make_baseptr_newstr(out_expr_type, "ubyte");
+            }
+        }
+        break;
     default:
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
         return 1;

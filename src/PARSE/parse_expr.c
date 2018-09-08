@@ -535,9 +535,23 @@ int parse_expr_not(parse_ctx_t *ctx, ast_expr_t **out_expr){
 }
 
 int parse_expr_new(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    // NOTE: Assumes current token is 'new' keyword
+
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
+
+    if(tokens[*i + 1].id == TOKEN_CSTRING){
+        // This is actually an 'ast_expr_new_cstring_t' expression,
+        // instead of a 'ast_expr_new_t' expression
+
+        ast_expr_new_cstring_t *new_cstring_expr = malloc(sizeof(ast_expr_new_cstring_t));
+        new_cstring_expr->id = EXPR_NEW_CSTRING;
+        new_cstring_expr->source = sources[(*i)++];
+        new_cstring_expr->value = (char*) tokens[(*i)++].data;
+        *out_expr = (ast_expr_t*) new_cstring_expr;
+        return 0;
+    }
 
     ast_expr_new_t *new_expr = malloc(sizeof(ast_expr_new_t));
     new_expr->id = EXPR_NEW;

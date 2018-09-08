@@ -35,6 +35,7 @@ typedef struct {
     LLVMValueRef *func_skeletons;
     LLVMValueRef *global_variables;
     LLVMTargetDataRef data_layout;
+    LLVMValueRef memcpy_intrinsic;
 } llvm_context_t;
 
 // ---------------- ir_to_llvm_type ----------------

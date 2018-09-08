@@ -1,0 +1,10 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    name *ubyte = new 'Hello World!'
+    defer delete name
+
+    puts(name)
+    return 0
+}

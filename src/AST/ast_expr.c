@@ -377,6 +377,12 @@ char* ast_expr_str(ast_expr_t *expr){
             free(type_str);
             return representation;
         }
+    case EXPR_NEW_CSTRING: {
+            char *value = ((ast_expr_new_cstring_t*) expr)->value;
+            representation = malloc(strlen(value) + 5);
+            sprintf(representation, "new '%s'", value);
+            return representation;
+        }
     default:
         representation = malloc(21);
         memcpy(representation, "<unknown expression>", 21);
@@ -638,6 +644,10 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         if(((ast_expr_new_t*) expr)->amount == NULL) ((ast_expr_new_t*) clone)->amount = NULL;
         else ((ast_expr_new_t*) clone)->amount = ast_expr_clone(((ast_expr_new_t*) expr)->amount);
+        break;
+    case EXPR_NEW_CSTRING:
+        clone = malloc(sizeof(ast_expr_new_cstring_t));
+        ((ast_expr_new_cstring_t*) clone)->value = ((ast_expr_new_cstring_t*) expr)->value;
         break;
     default:
         redprintf("INTERNAL ERROR: ast_expr_clone received unimplemented expression id 0x%08X\n", expr->id);
