@@ -925,7 +925,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_STANDARD)){
                     char *a_type_str = ast_type_str(&temporary_type);
-                    compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when array length should be 'usize'", a_type_str);
+                    compiler_panicf(builder->compiler, each_in->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
                     ast_type_free(&temporary_type);
                     return 1;
@@ -981,6 +981,13 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                         "Element type doesn't match given array's element type");
                     ast_type_free(&temporary_type);
                     close_var_scope(builder);
+
+                    char *s1 = ast_type_str(&temporary_type);
+                    char *s2 = ast_type_str(each_in->it_type);
+                    printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
+                    free(s1);
+                    free(s2);
+
                     return 1;
                 }
 

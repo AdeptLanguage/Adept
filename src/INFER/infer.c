@@ -152,6 +152,7 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
             break;
         case EXPR_EACH_IN: {
                 ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
+                if(infer_type_aliases(compiler, object, loop->it_type)) return 1;
                 if(infer_expr(compiler, object, func, &loop->low_array, EXPR_NONE, scope)) return 1;
                 if(infer_expr(compiler, object, func, &loop->length, EXPR_ULONG, scope)) return 1;
  
@@ -381,6 +382,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
         if(infer_expr_inner(compiler, object, ast_func, &((ast_expr_not_t*) *expr)->value, undetermined, scope)) return 1;
         break;
     case EXPR_NEW:
+        if(infer_type_aliases(compiler, object, &((ast_expr_new_t*) *expr)->type)) return 1;
         if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(compiler, object, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, scope)) return 1;
         break;
     case EXPR_NEW_CSTRING:
