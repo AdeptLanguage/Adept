@@ -129,6 +129,13 @@ char* ast_expr_str(ast_expr_t *expr){
     case EXPR_LESSEREQ:
     case EXPR_AND:
     case EXPR_OR:
+    case EXPR_BIT_AND:
+    case EXPR_BIT_OR:
+    case EXPR_BIT_XOR:
+    case EXPR_BIT_LSHIFT:
+    case EXPR_BIT_RSHIFT:
+    case EXPR_BIT_LGC_LSHIFT:
+    case EXPR_BIT_LGC_RSHIFT:
         a = ast_expr_str(((ast_expr_math_t*) expr)->a);
         b = ast_expr_str(((ast_expr_math_t*) expr)->b);
         a_len = strlen(a);
@@ -137,77 +144,134 @@ char* ast_expr_str(ast_expr_t *expr){
         // No optimal for speed, but reduces code redundancy
         switch(expr->id){
         case EXPR_ADD:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " + ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " + ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
             break;
         case EXPR_SUBTRACT:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " - ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " - ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
             break;
         case EXPR_MULTIPLY:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " * ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " * ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
             break;
         case EXPR_DIVIDE:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " / ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " / ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
             break;
         case EXPR_MODULUS:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " % ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " % ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
             break;
         case EXPR_EQUALS:
-            representation = malloc(a_len + b_len + 5);
-            memcpy(&representation[a_len], " == ", 4);
-            memcpy(&representation[a_len + 4], b, b_len + 1);
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " == ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
             break;
         case EXPR_NOTEQUALS:
-            representation = malloc(a_len + b_len + 5);
-            memcpy(&representation[a_len], " != ", 4);
-            memcpy(&representation[a_len + 4], b, b_len + 1);
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " != ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
             break;
         case EXPR_GREATER:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " > ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " > ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
             break;
         case EXPR_LESSER:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " < ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " < ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
             break;
         case EXPR_GREATEREQ:
-            representation = malloc(a_len + b_len + 5);
-            memcpy(&representation[a_len], " >= ", 4);
-            memcpy(&representation[a_len + 4], b, b_len + 1);
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " >= ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
             break;
         case EXPR_LESSEREQ:
-            representation = malloc(a_len + b_len + 5);
-            memcpy(&representation[a_len], " <= ", 4);
-            memcpy(&representation[a_len + 4], b, b_len + 1);
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " <= ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
             break;
         case EXPR_AND:
-            representation = malloc(a_len + b_len + 5);
-            memcpy(&representation[a_len], " && ", 4);
-            memcpy(&representation[a_len + 4], b, b_len + 1);
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " && ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
             break;
         case EXPR_OR:
-            representation = malloc(a_len + b_len + 5);
-            memcpy(&representation[a_len], " || ", 4);
-            memcpy(&representation[a_len + 4], b, b_len + 1);
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " || ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            break;
+        case EXPR_BIT_AND:
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " & ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            break;
+        case EXPR_BIT_OR:
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " | ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            break;
+        case EXPR_BIT_XOR:
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " ^ ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            break;
+        case EXPR_BIT_LSHIFT:
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " << ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            break;
+        case EXPR_BIT_RSHIFT:
+            representation = malloc(a_len + b_len + 7);
+            memcpy(&representation[a_len + 1], " >> ", 4);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            break;
+        case EXPR_BIT_LGC_LSHIFT:
+            representation = malloc(a_len + b_len + 8);
+            memcpy(&representation[a_len + 1], " <<< ", 5);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 6], ")", 2);
+            break;
+        case EXPR_BIT_LGC_RSHIFT:
+            representation = malloc(a_len + b_len + 8);
+            memcpy(&representation[a_len + 1], " >>> ", 5);
+            memcpy(&representation[a_len + 5], b, b_len);
+            memcpy(&representation[a_len + b_len + 6], ")", 2);
             break;
         default:
-            representation = malloc(a_len + b_len + 4);
-            memcpy(&representation[a_len], " ¿ ", 3);
-            memcpy(&representation[a_len + 3], b, b_len + 1);
+            representation = malloc(a_len + b_len + 6);
+            memcpy(&representation[a_len + 1], " ¿ ", 3);
+            memcpy(&representation[a_len + 4], b, b_len);
+            memcpy(&representation[a_len + b_len + 4], ")", 2);
         }
 
-        memcpy(representation, a, a_len);
+        representation[0] = '(';
+        memcpy(&representation[1], a, a_len);
         free(a);
         free(b);
         return representation;
@@ -264,7 +328,7 @@ char* ast_expr_str(ast_expr_t *expr){
             return representation;
         }
     case EXPR_ADDRESS: {
-            char *value_str = ast_expr_str(((ast_expr_member_t*) expr)->value);
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
             representation = malloc(strlen(value_str) + 2);
             sprintf(representation, "&%s", value_str);
             free(value_str);
@@ -278,7 +342,7 @@ char* ast_expr_str(ast_expr_t *expr){
         }
         break;
     case EXPR_DEREFERENCE: {
-            char *value_str = ast_expr_str(((ast_expr_deref_t*) expr)->value);
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
             representation = malloc(strlen(value_str) + 4);
             sprintf(representation, "*(%s)", value_str);
             free(value_str);
@@ -355,7 +419,7 @@ char* ast_expr_str(ast_expr_t *expr){
             return representation;
         }
     case EXPR_NOT: {
-            char *value_str = ast_expr_str(((ast_expr_not_t*) expr)->value);
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
             representation = malloc(strlen(value_str) + 4);
             sprintf(representation, "!(%s)", value_str);
             free(value_str);
@@ -381,6 +445,20 @@ char* ast_expr_str(ast_expr_t *expr){
             char *value = ((ast_expr_new_cstring_t*) expr)->value;
             representation = malloc(strlen(value) + 5);
             sprintf(representation, "new '%s'", value);
+            return representation;
+        }
+    case EXPR_BIT_COMPLEMENT: {
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
+            representation = malloc(strlen(value_str) + 4);
+            sprintf(representation, "~(%s)", value_str);
+            free(value_str);
+            return representation;
+        }
+    case EXPR_NEGATE: {
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
+            representation = malloc(strlen(value_str) + 4);
+            sprintf(representation, "-(%s)", value_str);
+            free(value_str);
             return representation;
         }
     default:
@@ -409,6 +487,13 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_LESSEREQ:
     case EXPR_AND:
     case EXPR_OR:
+    case EXPR_BIT_AND:
+    case EXPR_BIT_OR:
+    case EXPR_BIT_XOR:
+    case EXPR_BIT_LSHIFT:
+    case EXPR_BIT_RSHIFT:
+    case EXPR_BIT_LGC_LSHIFT:
+    case EXPR_BIT_LGC_RSHIFT:
         ast_expr_free_fully( ((ast_expr_math_t*) expr)->a );
         ast_expr_free_fully( ((ast_expr_math_t*) expr)->b );
         break;
@@ -418,12 +503,6 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_MEMBER:
         ast_expr_free_fully( ((ast_expr_member_t*) expr)->value );
         free(((ast_expr_member_t*) expr)->member);
-        break;
-    case EXPR_ADDRESS:
-        ast_expr_free_fully( ((ast_expr_address_t*) expr)->value );
-        break;
-    case EXPR_DEREFERENCE:
-        ast_expr_free_fully( ((ast_expr_deref_t*) expr)->value );
         break;
     case EXPR_ARRAY_ACCESS:
         ast_expr_free_fully( ((ast_expr_array_access_t*) expr)->value );
@@ -440,8 +519,13 @@ void ast_expr_free(ast_expr_t *expr){
         ast_expr_free_fully( ((ast_expr_call_method_t*) expr)->value );
         ast_exprs_free_fully(((ast_expr_call_method_t*) expr)->args, ((ast_expr_call_method_t*) expr)->arity);
         break;
+    case EXPR_ADDRESS:
+    case EXPR_DEREFERENCE:
+    case EXPR_BIT_COMPLEMENT:
     case EXPR_NOT:
-        ast_expr_free_fully( ((ast_expr_not_t*) expr)->value );
+    case EXPR_NEGATE:
+    case EXPR_DELETE:
+        ast_expr_free_fully( ((ast_expr_unary_t*) expr)->value );
         break;
     case EXPR_NEW:
         ast_type_free( &((ast_expr_new_t*) expr)->type );
@@ -477,9 +561,6 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK:
         ast_free_statements_fully(((ast_expr_whilecontinue_t*) expr)->statements, ((ast_expr_whilecontinue_t*) expr)->statements_length);
-        break;
-    case EXPR_DELETE:
-        ast_expr_free_fully( ((ast_expr_delete_t*) expr)->value );
         break;
     case EXPR_EACH_IN:
         free(((ast_expr_each_in_t*) expr)->it_name);
@@ -556,6 +637,13 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_LESSEREQ:
     case EXPR_AND:
     case EXPR_OR:
+    case EXPR_BIT_AND:
+    case EXPR_BIT_OR:
+    case EXPR_BIT_XOR:
+    case EXPR_BIT_LSHIFT:
+    case EXPR_BIT_RSHIFT:
+    case EXPR_BIT_LGC_LSHIFT:
+    case EXPR_BIT_LGC_RSHIFT:
         clone = malloc(sizeof(ast_expr_math_t));
         ((ast_expr_math_t*) clone)->a = ast_expr_clone(((ast_expr_math_t*) expr)->a);
         ((ast_expr_math_t*) clone)->b = ast_expr_clone(((ast_expr_math_t*) expr)->b);
@@ -580,8 +668,12 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         strcpy(((ast_expr_member_t*) clone)->member, ((ast_expr_member_t*) clone)->member);
         break;
     case EXPR_ADDRESS:
-        clone = malloc(sizeof(ast_expr_address_t));
-        ((ast_expr_address_t*) clone)->value = ast_expr_clone(((ast_expr_address_t*) expr)->value);
+    case EXPR_DEREFERENCE:
+    case EXPR_BIT_COMPLEMENT:
+    case EXPR_NOT:
+    case EXPR_NEGATE:
+        clone = malloc(sizeof(ast_expr_unary_t));
+        ((ast_expr_unary_t*) clone)->value = ast_expr_clone(((ast_expr_unary_t*) expr)->value);
         break;
     case EXPR_FUNC_ADDR: {
             clone = malloc(sizeof(ast_expr_func_addr_t));
@@ -608,10 +700,6 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
             #undef macro_clone_ref
             #undef macro_expr_ref
         }
-        break;
-    case EXPR_DEREFERENCE:
-        clone = malloc(sizeof(ast_expr_deref_t));
-        ((ast_expr_deref_t*) clone)->value = ast_expr_clone(((ast_expr_deref_t*) expr)->value);
         break;
     case EXPR_ARRAY_ACCESS:
         clone = malloc(sizeof(ast_expr_array_access_t));
@@ -738,32 +826,49 @@ const char *global_expression_rep_table[] = {
     "&&",                      // 0x0000001C
     "||",                      // 0x0000001D
     "!",                       // 0x0000001E
-    "<call>",                  // 0x0000001F
-    "<variable>",              // 0x00000020
-    ".",                       // 0x00000021
-    "&",                       // 0x00000022
-    "func&",                   // 0x00000023
-    "*",                       // 0x00000024
-    "[]",                      // 0x00000025
-    "<cast>",                  // 0x00000026
-    "<sizeof>",                // 0x00000027
-    "<call method>",           // 0x00000028
-    "<new>",                   // 0x00000029
-    "<declaration>",           // 0x0000002A
-    "=",                       // 0x0000002B
-    "+=",                      // 0x0000002C
-    "-=",                      // 0x0000002D
-    "*=",                      // 0x0000002E
-    "/=",                      // 0x0000002F
-    "%=",                      // 0x00000020
-    "<return>",                // 0x00000031
-    "<if>",                    // 0x00000032
-    "<unless>",                // 0x00000033
-    "<if else>",               // 0x00000034
-    "<unless else>",           // 0x00000035
-    "<while>",                 // 0x00000036
-    "<until>",                 // 0x00000037
-    "<delete>",                // 0x00000038
-    "<break>",                 // 0x00000039
-    "<continue>",              // 0x0000003A
+    "&",                       // 0x0000001F
+    "|",                       // 0x00000020
+    "^",                       // 0x00000021
+    "~",                       // 0x00000022
+    "<<",                      // 0x00000023
+    ">>",                      // 0x00000024
+    "<<<",                     // 0x00000025
+    ">>>",                     // 0x00000026
+    "-",                       // 0x00000027
+    "<call>",                  // 0x00000028
+    "<variable>",              // 0x00000029
+    ".",                       // 0x0000002A
+    "&",                       // 0x0000002B
+    "func&",                   // 0x0000002C
+    "*",                       // 0x0000002D
+    "[]",                      // 0x0000002E
+    "<cast>",                  // 0x0000002F
+    "<sizeof>",                // 0x00000030
+    "<call method>",           // 0x00000031
+    "<new>",                   // 0x00000032
+    "<new cstring>",           // 0x00000033
+    "<declaration>",           // 0x00000034
+    "<undef declaration>",     // 0x00000035
+    "=",                       // 0x00000036
+    "+=",                      // 0x00000037
+    "-=",                      // 0x00000038
+    "*=",                      // 0x00000039
+    "/=",                      // 0x0000003A
+    "%=",                      // 0x0000003B
+    "<return>",                // 0x0000003C
+    "<if>",                    // 0x0000003D
+    "<unless>",                // 0x0000003E
+    "<if else>",               // 0x0000003F
+    "<unless else>",           // 0x00000040
+    "<while>",                 // 0x00000041
+    "<until>",                 // 0x00000042
+    "<while continue>",        // 0x00000043
+    "<until break>",           // 0x00000044
+    "<each in>",               // 0x00000045
+    "<repeat>",                // 0x00000046
+    "<delete>",                // 0x00000047
+    "<break>",                 // 0x00000048
+    "<continue>",              // 0x00000049
+    "<break to>",              // 0x0000004A
+    "<continue to>",           // 0x0000004B
 };

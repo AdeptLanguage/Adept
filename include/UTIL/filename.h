@@ -11,14 +11,19 @@
 #include "UTIL/ground.h"
 
 // ---------------- filename_name ----------------
-// Gets the string in a filename before a slash
+// Gets the string in a filename after a slash
 // (or a backslash) as a new c-string
 char* filename_name(const char *filename);
 
-// ---------------- filename_local ----------------
-// Gets the string in a filename before a slash
+// ---------------- filename_name_const ----------------
+// Gets the string in a filename after a slash
 // (or a backslash) as a constant c-string
 const char* filename_name_const(const char *filename);
+
+// ---------------- filename_path ----------------
+// Gets the path in a filename after as a new c-string
+// (includes slash)
+char* filename_path(const char *filename);
 
 // ---------------- filename_local ----------------
 // Creates a path to a local filename of a file
@@ -27,7 +32,7 @@ char* filename_local(const char *current_filename, const char *local_filename);
 
 // ---------------- filename_adept_import ----------------
 // Prepends the adept import directory to a filename
-char* filename_adept_import(const char *filename);
+char* filename_adept_import(const char *root, const char *filename);
 
 // ---------------- filename_ext ----------------
 // Changes the extension of a filename

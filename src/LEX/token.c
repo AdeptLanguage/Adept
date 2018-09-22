@@ -99,12 +99,10 @@ void tokenlist_print(tokenlist_t *tokenlist, char *buffer){
         case TOKEN_CASE:           printf("Keyword: case\n"); break;
         case TOKEN_CAST:           printf("Keyword: cast\n"); break;
         case TOKEN_CONTINUE:       printf("Keyword: continue\n"); break;
-        case TOKEN_DANGEROUS:      printf("Keyword: dangerous\n"); break;
         case TOKEN_DEF:            printf("Keyword: def\n"); break;
         case TOKEN_DEFAULT:        printf("Keyword: default\n"); break;
         case TOKEN_DEFER:          printf("Keyword: defer\n"); break;
         case TOKEN_DELETE:         printf("Keyword: delete\n"); break;
-        case TOKEN_DYNAMIC:        printf("Keyword: dynamic\n"); break;
         case TOKEN_ELSE:           printf("Keyword: else\n"); break;
         case TOKEN_ENUM:           printf("Keyword: enum\n"); break;
         case TOKEN_EXTERNAL:       printf("Keyword: external\n"); break;
@@ -203,11 +201,11 @@ const char *global_token_name_table[] = {
     "uber or",                // 0x0000002E
     "terminate join",         // 0x0000002F
     "colon",                  // 0x00000030
-    "reserved",               // 0x00000031
-    "reserved",               // 0x00000032
-    "reserved",               // 0x00000033
-    "reserved",               // 0x00000034
-    "reserved",               // 0x00000035
+    "bit or",                 // 0x00000031
+    "bit and",                // 0x00000032
+    "left shift",             // 0x00000033
+    "right shift",            // 0x00000034
+    "complement",             // 0x00000035
     "reserved",               // 0x00000036
     "reserved",               // 0x00000037
     "reserved",               // 0x00000038
@@ -225,47 +223,47 @@ const char *global_token_name_table[] = {
     "case keyword",           // 0x00000044
     "cast keyword",           // 0x00000045
     "continue keyword",       // 0x00000046
-    "dangerous keyword",      // 0x00000047
-    "def keyword",            // 0x00000048
-    "default keyword",        // 0x00000049
-    "defer keyword",          // 0x0000004A
-    "delete keyword",         // 0x0000004B
-    "dynamic keyword",        // 0x0000004C
-    "each keyword",           // 0x0000004D
-    "else keyword",           // 0x0000004E
-    "enum keyword",           // 0x0000004F
-    "external keyword",       // 0x00000050
-    "false keyword",          // 0x00000051
-    "for keyword",            // 0x00000052
-    "foreign keyword",        // 0x00000053
-    "func keyword",           // 0x00000054
-    "funcptr keyword",        // 0x00000055
-    "global keyword",         // 0x00000056
-    "if keyword",             // 0x00000057
-    "import keyword",         // 0x00000058
-    "in keyword",             // 0x00000059
-    "inout keyword",          // 0x0000005A
-    "link keyword",           // 0x0000005B
-    "new keyword",            // 0x0000005C
-    "null keyword",           // 0x0000005D
-    "or keyword",             // 0x0000005E
-    "out keyword",            // 0x0000005F
-    "packed keyword",         // 0x00000060
-    "pragma keyword",         // 0x00000061
-    "private keyword",        // 0x00000062
-    "public keyword",         // 0x00000063
-    "repeat keyword",         // 0x00000064
-    "return keyword",         // 0x00000065
-    "sizeof keyword",         // 0x00000066
-    "static keyword",         // 0x00000067
-    "stdcall keyword",        // 0x00000068
-    "struct keyword",         // 0x00000069
-    "switch keyword",         // 0x0000006A
-    "true keyword",           // 0x0000006B
-    "undef keyword",          // 0x0000006C
-    "unless keyword",         // 0x0000006D
-    "until keyword",          // 0x0000006E
-    "while keyword",          // 0x0000006F
+    "def keyword",            // 0x00000047
+    "default keyword",        // 0x00000048
+    "defer keyword",          // 0x00000049
+    "delete keyword",         // 0x0000004A
+    "each keyword",           // 0x0000004B
+    "else keyword",           // 0x0000004C
+    "enum keyword",           // 0x0000004D
+    "external keyword",       // 0x0000004E
+    "false keyword",          // 0x0000004F
+    "for keyword",            // 0x00000050
+    "foreign keyword",        // 0x00000051
+    "func keyword",           // 0x00000052
+    "funcptr keyword",        // 0x00000053
+    "global keyword",         // 0x00000054
+    "if keyword",             // 0x00000055
+    "import keyword",         // 0x00000056
+    "in keyword",             // 0x00000057
+    "inout keyword",          // 0x00000058
+    "link keyword",           // 0x00000059
+    "new keyword",            // 0x0000005A
+    "null keyword",           // 0x0000005B
+    "or keyword",             // 0x0000005C
+    "out keyword",            // 0x0000005D
+    "packed keyword",         // 0x0000005E
+    "pragma keyword",         // 0x0000005F
+    "private keyword",        // 0x00000060
+    "public keyword",         // 0x00000061
+    "repeat keyword",         // 0x00000062
+    "return keyword",         // 0x00000063
+    "sizeof keyword",         // 0x00000064
+    "static keyword",         // 0x00000065
+    "stdcall keyword",        // 0x00000066
+    "struct keyword",         // 0x00000067
+    "switch keyword",         // 0x00000068
+    "true keyword",           // 0x00000069
+    "undef keyword",          // 0x0000006A
+    "unless keyword",         // 0x0000006B
+    "until keyword",          // 0x0000006C
+    "while keyword",          // 0x0000006D
+    "reserved",               // 0x0000006E
+    "reserved",               // 0x0000006F
     "reserved",               // 0x00000070
     "reserved",               // 0x00000071
     "reserved",               // 0x00000072

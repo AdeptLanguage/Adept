@@ -93,6 +93,15 @@ int lex(compiler_t *compiler, object_t *object){
             else { t->id = if_mod_absent; i--; } \
         }
 
+        #define LEX_OPTIONAL_2MODS_TOKEN_MAPPING(optional_character1, if_mod1_present, optional_character2, if_mod2_present, if_mods_absent) { \
+            t = &(tokens[tokenlist->length++]); \
+            lex_state.state = LEX_STATE_IDLE; \
+            t->data = NULL; \
+            if(buffer[i] == optional_character1) t->id = if_mod1_present; \
+            else if(buffer[i] == optional_character2) t->id = if_mod2_present; \
+            else { t->id = if_mods_absent; i--; } \
+        }
+
         switch(lex_state.state){
         case LEX_STATE_IDLE:
             switch(buffer[i]){
@@ -118,6 +127,8 @@ int lex(compiler_t *compiler, object_t *object){
             case ']': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_CLOSE);  break;
             case ';': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_TERMINATE_JOIN); break;
             case ':': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_COLON);          break;
+            case '^': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_XOR);        break;
+            case '~': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_COMPLEMENT); break;
             case '\n': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEWLINE);       break;
             case '.':
                 sources[tokenlist->length].index = i;
@@ -182,8 +193,8 @@ int lex(compiler_t *compiler, object_t *object){
                 //         Make sure to update values inside token.h and token.c after modifying this list
 
                 const char * const keywords[] = {
-                    "alias", "and", "as", "break", "case", "cast", "continue", "dangerous", "def", "default", "defer",
-                    "delete", "dynamic", "each", "else", "enum", "external", "false", "for", "foreign", "func", "funcptr",
+                    "alias", "and", "as", "break", "case", "cast", "continue", "def", "default", "defer",
+                    "delete", "each", "else", "enum", "external", "false", "for", "foreign", "func", "funcptr",
                     "global", "if", "import", "in", "inout", "link", "new", "null", "or", "out",
                     "packed", "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch",
                     "true", "undef", "unless", "until", "while"
@@ -302,9 +313,42 @@ int lex(compiler_t *compiler, object_t *object){
         case LEX_STATE_ADD:      LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_ADDASSIGN, TOKEN_ADD);             break;
         case LEX_STATE_MULTIPLY: LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MULTIPLYASSIGN, TOKEN_MULTIPLY);   break;
         case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUSASSIGN, TOKEN_MODULUS);     break;
-        case LEX_STATE_LESS:     LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_LESSTHANEQ, TOKEN_LESSTHAN);       break;
-        case LEX_STATE_GREATER:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_GREATERTHANEQ, TOKEN_GREATERTHAN); break;
+        case LEX_STATE_LESS:
+            if(buffer[i] == '<'){
+                if(buffer[i + 1] == '<'){
+                    // Logical Left Shift
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_LSHIFT);
+                    i++;
+                } else {
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LSHIFT);
+                }
+            } else if(buffer[i] == '='){
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_LESSTHANEQ);
+            } else {
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_LESSTHAN);
+                i--;
+            }
+            lex_state.state = LEX_STATE_IDLE;
+            break;
+        case LEX_STATE_GREATER:
+            if(buffer[i] == '>'){
+                if(buffer[i + 1] == '>'){
+                    // Logical Left Shift
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_RSHIFT);
+                    i++;
+                } else {
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_RSHIFT);
+                }
+            } else if(buffer[i] == '='){
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_GREATERTHANEQ);
+            } else {
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_GREATERTHAN);
+                i--;
+            }
+            lex_state.state = LEX_STATE_IDLE;
+            break;
         case LEX_STATE_UBERAND:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('&', TOKEN_UBERAND, TOKEN_ADDRESS);           break;
+        case LEX_STATE_UBEROR:   LEX_OPTIONAL_MOD_TOKEN_MAPPING('|', TOKEN_UBEROR, TOKEN_BIT_OR);             break;
         case LEX_STATE_NUMBER:
             expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
 
@@ -518,26 +562,12 @@ int lex(compiler_t *compiler, object_t *object){
             if(buffer[i] == '/') { lex_state.state = LEX_STATE_IDLE; }
             else lex_state.state = LEX_STATE_LONGCOMMENT;
             break;
-        case LEX_STATE_UBEROR:
-            t = &(tokens[tokenlist->length++]);
-            lex_state.state = LEX_STATE_IDLE;
-            t->data = NULL;
-            if(buffer[i] == '|'){ t->id = TOKEN_UBEROR; }
-            else {
-                lex_get_location(buffer, --i, &line, &column);
-                redprintf("%s:%d:%d: Unrecognized symbol '%c' (0x%02X)\n", filename_name_const(object->filename), line, column, buffer[i], (int) buffer[i]);
-
-                source_t here;
-                here.index = i;
-                here.object_index = object->index;
-                compiler_print_source(compiler, line, column, here);
-                lex_state_free(&lex_state);
-            }
-            break;
         }
 
         #undef LEX_SINGLE_TOKEN_MAPPING_MACRO
         #undef LEX_SINGLE_STATE_MAPPING_MACRO
+        #undef LEX_OPTIONAL_MOD_TOKEN_MAPPING
+        #undef LEX_OPTIONAL_2MODS_TOKEN_MAPPING
     }
 
     lex_state_free(&lex_state);

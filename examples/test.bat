@@ -69,6 +69,8 @@ call :compile multiple_declaration
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile native_linking
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile negate
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile new_cstring
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile new_delete

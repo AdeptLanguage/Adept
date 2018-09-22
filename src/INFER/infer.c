@@ -146,7 +146,7 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
             }
             break;
         case EXPR_DELETE: {
-                ast_expr_delete_t *delete_stmt = (ast_expr_delete_t*) statements[s];
+                ast_expr_unary_t *delete_stmt = (ast_expr_unary_t*) statements[s];
                 if(infer_expr(compiler, object, func, &delete_stmt->value, EXPR_NONE, scope)) return 1;
             }
             break;
@@ -323,6 +323,11 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
     case EXPR_LESSER:
     case EXPR_GREATEREQ:
     case EXPR_LESSEREQ:
+    case EXPR_BIT_AND:
+    case EXPR_BIT_OR:
+    case EXPR_BIT_XOR:
+    case EXPR_BIT_LSHIFT:
+    case EXPR_BIT_RSHIFT:
         a = &((ast_expr_math_t*) *expr)->a;
         b = &((ast_expr_math_t*) *expr)->b;
         if(infer_expr_inner(compiler, object, ast_func, a, undetermined, scope)) return 1;
@@ -355,10 +360,10 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
         }
         break;
     case EXPR_ADDRESS:
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_address_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(compiler, object, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_DEREFERENCE:
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_deref_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(compiler, object, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_NULL:
         break;
@@ -379,7 +384,9 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
         }
         break;
     case EXPR_NOT:
-        if(infer_expr_inner(compiler, object, ast_func, &((ast_expr_not_t*) *expr)->value, undetermined, scope)) return 1;
+    case EXPR_BIT_COMPLEMENT:
+    case EXPR_NEGATE:
+        if(infer_expr_inner(compiler, object, ast_func, &((ast_expr_unary_t*) *expr)->value, undetermined, scope)) return 1;
         break;
     case EXPR_NEW:
         if(infer_type_aliases(compiler, object, &((ast_expr_new_t*) *expr)->type)) return 1;

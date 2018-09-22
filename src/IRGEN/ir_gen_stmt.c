@@ -794,7 +794,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
             }
             break;
         case EXPR_DELETE: {
-                ast_expr_delete_t *delete_expr = (ast_expr_delete_t*) statements[s];
+                ast_expr_unary_t *delete_expr = (ast_expr_unary_t*) statements[s];
                 if(ir_gen_expression(builder, delete_expr->value, &expression_value, false, &temporary_type)) return 1;
 
                 if(temporary_type.elements_length == 0 || ( temporary_type.elements[0]->id != AST_ELEM_POINTER &&

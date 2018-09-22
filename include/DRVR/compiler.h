@@ -39,6 +39,9 @@
 // ---------------- compiler_t ----------------
 // Structure that encapsulates the compiler
 typedef struct {
+    char *location;      // Compiler Filename
+    char *root;          // Compiler Root Directory (with /)
+
     object_t **objects;
     length_t objects_length;
     length_t objects_capacity;

@@ -519,7 +519,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
             }
             break;
         case TOKEN_DELETE: {
-                ast_expr_delete_t *stmt = malloc(sizeof(ast_expr_delete_t));
+                ast_expr_unary_t *stmt = malloc(sizeof(ast_expr_unary_t));
                 stmt->id = EXPR_DELETE;
                 stmt->source = sources[(*i)++];
 

@@ -100,7 +100,13 @@ int parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
         if(parse_expr_sizeof(ctx, out_expr)) return 1;
         break;
     case TOKEN_NOT:
-        if(parse_expr_not(ctx, out_expr)) return 1;
+        if(parse_expr_unary(ctx, EXPR_NOT, out_expr)) return 1;
+        break;
+    case TOKEN_BIT_COMPLEMENT:
+        if(parse_expr_unary(ctx, EXPR_BIT_COMPLEMENT, out_expr)) return 1;
+        break;
+    case TOKEN_SUBTRACT:
+        if(parse_expr_unary(ctx, EXPR_NEGATE, out_expr)) return 1;
         break;
     case TOKEN_NEW:
         if(parse_expr_new(ctx, out_expr)) return 1;
@@ -273,22 +279,27 @@ int parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_left, boo
         }
 
         switch(operator){
-        case TOKEN_ADD:           BUILD_MATH_EXPR_MACRO(EXPR_ADD);       break;
-        case TOKEN_SUBTRACT:      BUILD_MATH_EXPR_MACRO(EXPR_SUBTRACT);  break;
-        case TOKEN_MULTIPLY:      BUILD_MATH_EXPR_MACRO(EXPR_MULTIPLY);  break;
-        case TOKEN_DIVIDE:        BUILD_MATH_EXPR_MACRO(EXPR_DIVIDE);    break;
-        case TOKEN_MODULUS:       BUILD_MATH_EXPR_MACRO(EXPR_MODULUS);   break;
-        case TOKEN_EQUALS:        BUILD_MATH_EXPR_MACRO(EXPR_EQUALS);    break;
-        case TOKEN_NOTEQUALS:     BUILD_MATH_EXPR_MACRO(EXPR_NOTEQUALS); break;
-        case TOKEN_GREATERTHAN:   BUILD_MATH_EXPR_MACRO(EXPR_GREATER);   break;
-        case TOKEN_LESSTHAN:      BUILD_MATH_EXPR_MACRO(EXPR_LESSER);    break;
-        case TOKEN_GREATERTHANEQ: BUILD_MATH_EXPR_MACRO(EXPR_GREATEREQ); break;
-        case TOKEN_LESSTHANEQ:    BUILD_MATH_EXPR_MACRO(EXPR_LESSEREQ);  break;
+        case TOKEN_ADD:           BUILD_MATH_EXPR_MACRO(EXPR_ADD);        break;
+        case TOKEN_SUBTRACT:      BUILD_MATH_EXPR_MACRO(EXPR_SUBTRACT);   break;
+        case TOKEN_MULTIPLY:      BUILD_MATH_EXPR_MACRO(EXPR_MULTIPLY);   break;
+        case TOKEN_DIVIDE:        BUILD_MATH_EXPR_MACRO(EXPR_DIVIDE);     break;
+        case TOKEN_MODULUS:       BUILD_MATH_EXPR_MACRO(EXPR_MODULUS);    break;
+        case TOKEN_EQUALS:        BUILD_MATH_EXPR_MACRO(EXPR_EQUALS);     break;
+        case TOKEN_NOTEQUALS:     BUILD_MATH_EXPR_MACRO(EXPR_NOTEQUALS);  break;
+        case TOKEN_GREATERTHAN:   BUILD_MATH_EXPR_MACRO(EXPR_GREATER);    break;
+        case TOKEN_LESSTHAN:      BUILD_MATH_EXPR_MACRO(EXPR_LESSER);     break;
+        case TOKEN_GREATERTHANEQ: BUILD_MATH_EXPR_MACRO(EXPR_GREATEREQ);  break;
+        case TOKEN_LESSTHANEQ:    BUILD_MATH_EXPR_MACRO(EXPR_LESSEREQ);   break;
+        case TOKEN_BIT_AND:       BUILD_MATH_EXPR_MACRO(EXPR_BIT_AND);    break;
+        case TOKEN_BIT_OR:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_OR);     break;
+        case TOKEN_BIT_XOR:       BUILD_MATH_EXPR_MACRO(EXPR_BIT_XOR);    break;
+        case TOKEN_BIT_LSHIFT:    BUILD_MATH_EXPR_MACRO(EXPR_BIT_LSHIFT); break;
+        case TOKEN_BIT_RSHIFT:    BUILD_MATH_EXPR_MACRO(EXPR_BIT_RSHIFT); break;
         case TOKEN_AND:
-        case TOKEN_UBERAND:       BUILD_MATH_EXPR_MACRO(EXPR_AND);       break;
+        case TOKEN_UBERAND:       BUILD_MATH_EXPR_MACRO(EXPR_AND);        break;
         case TOKEN_OR:
-        case TOKEN_UBEROR:        BUILD_MATH_EXPR_MACRO(EXPR_OR);        break;
-        case TOKEN_AS: if(parse_expr_as(ctx, inout_left)) return 1;      break;
+        case TOKEN_UBEROR:        BUILD_MATH_EXPR_MACRO(EXPR_OR);         break;
+        case TOKEN_AS: if(parse_expr_as(ctx, inout_left)) return 1;       break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unrecognized operator '%s' in expression");
             ast_expr_free_fully(*inout_left);
@@ -381,7 +392,7 @@ int parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
 }
 
 int parse_expr_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
-    ast_expr_address_t *addr_expr = malloc(sizeof(ast_expr_address_t));
+    ast_expr_unary_t *addr_expr = malloc(sizeof(ast_expr_unary_t));
     addr_expr->id = EXPR_ADDRESS;
     addr_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
 
@@ -428,7 +439,7 @@ int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
 }
 
 int parse_expr_dereference(parse_ctx_t *ctx, ast_expr_t **out_expr){
-    ast_expr_deref_t *deref_expr = malloc(sizeof(ast_expr_deref_t));
+    ast_expr_unary_t *deref_expr = malloc(sizeof(ast_expr_unary_t));
     deref_expr->id = EXPR_DEREFERENCE;
     deref_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
     
@@ -519,17 +530,17 @@ int parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr){
     return 0;
 }
 
-int parse_expr_not(parse_ctx_t *ctx, ast_expr_t **out_expr){
-    ast_expr_not_t *not_expr = malloc(sizeof(ast_expr_not_t));
-    not_expr->id = EXPR_NOT;
-    not_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
+int parse_expr_unary(parse_ctx_t *ctx, unsigned int expr_id, ast_expr_t **out_expr){
+    ast_expr_unary_t *unary_expr = malloc(sizeof(ast_expr_unary_t));
+    unary_expr->id = expr_id;
+    unary_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
 
-    if(parse_primary_expr(ctx, &not_expr->value) != 0){
-        free(not_expr);
+    if(parse_primary_expr(ctx, &unary_expr->value)){
+        free(unary_expr);
         return 1;
     }
 
-    *out_expr = (ast_expr_t*) not_expr;
+    *out_expr = (ast_expr_t*) unary_expr;
     return 0;
 }
 

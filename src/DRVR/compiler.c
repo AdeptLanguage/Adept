@@ -1,4 +1,9 @@
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include <stdarg.h>
 
 #include "IR/ir.h"
@@ -24,6 +29,17 @@ int compiler_run(compiler_t *compiler, int argc, char **argv){
 void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     object_t *object = compiler_new_object(compiler);
     compiler->result_flags = TRAIT_NONE;
+    compiler->location = malloc(512);
+
+    #ifdef _WIN32
+    GetModuleFileNameA(NULL, compiler->location, 512);
+    #else
+    #error "compiler_invoke doesn't have GetModuleFileNameA for this platform"
+    #endif
+
+    char *absolute_compiler_filename = filename_absolute(compiler->location);
+    compiler->root = filename_path(absolute_compiler_filename);
+    free(absolute_compiler_filename);
 
     if(parse_arguments(compiler, object, argc, argv)) return;
     debug_signal(compiler, DEBUG_SIGNAL_AT_STAGE_ARGS_AND_LEX, NULL);
@@ -64,6 +80,7 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
 }
 
 void compiler_init(compiler_t *compiler){
+    compiler->location = NULL;
     compiler->objects = malloc(sizeof(object_t*) * 4);
     compiler->objects_length = 0;
     compiler->objects_capacity = 4;
@@ -81,6 +98,8 @@ void compiler_free(compiler_t *compiler){
     memory_sort();
     #endif // TRACK_MEMORY_USAGE
 
+    free(compiler->location);
+    free(compiler->root);
     free(compiler->output_filename);
 
     for(length_t i = 0; i != compiler->objects_length; i++){

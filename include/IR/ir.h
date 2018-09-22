@@ -18,69 +18,78 @@
 // =============================================================
 // ---------------- Possible IR instruction IDs ----------------
 // =============================================================
-#define INSTRUCTION_NONE          0x00000000
-#define INSTRUCTION_ADD           0x00000001 // ir_instr_math_t
-#define INSTRUCTION_FADD          0x00000002 // ir_instr_math_t
-#define INSTRUCTION_SUBTRACT      0x00000003 // ir_instr_math_t
-#define INSTRUCTION_FSUBTRACT     0x00000004 // ir_instr_math_t
-#define INSTRUCTION_MULTIPLY      0x00000005 // ir_instr_math_t
-#define INSTRUCTION_FMULTIPLY     0x00000006 // ir_instr_math_t
-#define INSTRUCTION_UDIVIDE       0x00000007 // ir_instr_math_t
-#define INSTRUCTION_SDIVIDE       0x00000008 // ir_instr_math_t
-#define INSTRUCTION_FDIVIDE       0x00000009 // ir_instr_math_t
-#define INSTRUCTION_UMODULUS      0x0000000A // ir_instr_math_t
-#define INSTRUCTION_SMODULUS      0x0000000B // ir_instr_math_t
-#define INSTRUCTION_FMODULUS      0x0000000C // ir_instr_math_t
-#define INSTRUCTION_RET           0x0000000D
-#define INSTRUCTION_CALL          0x0000000E
-#define INSTRUCTION_CALL_ADDRESS  0x0000000F
-#define INSTRUCTION_ALLOC         0x00000010 // [UNUSED AND OBSOLETE]
-#define INSTRUCTION_MALLOC        0x00000011
-#define INSTRUCTION_FREE          0x00000012
-#define INSTRUCTION_STORE         0x00000013
-#define INSTRUCTION_LOAD          0x00000014
-#define INSTRUCTION_VARPTR        0x00000015
-#define INSTRUCTION_GLOBALVARPTR  0x00000016
-#define INSTRUCTION_BREAK         0x00000017
-#define INSTRUCTION_CONDBREAK     0x00000018
-#define INSTRUCTION_EQUALS        0x00000019 // ir_instr_math_t
-#define INSTRUCTION_FEQUALS       0x0000001A // ir_instr_math_t
-#define INSTRUCTION_NOTEQUALS     0x0000001B // ir_instr_math_t
-#define INSTRUCTION_FNOTEQUALS    0x0000001C // ir_instr_math_t
-#define INSTRUCTION_UGREATER      0x0000001D // ir_instr_math_t
-#define INSTRUCTION_SGREATER      0x0000001E // ir_instr_math_t
-#define INSTRUCTION_FGREATER      0x0000001F // ir_instr_math_t
-#define INSTRUCTION_ULESSER       0x00000020 // ir_instr_math_t
-#define INSTRUCTION_SLESSER       0x00000021 // ir_instr_math_t
-#define INSTRUCTION_FLESSER       0x00000022 // ir_instr_math_t
-#define INSTRUCTION_UGREATEREQ    0x00000023 // ir_instr_math_t
-#define INSTRUCTION_SGREATEREQ    0x00000024 // ir_instr_math_t
-#define INSTRUCTION_FGREATEREQ    0x00000025 // ir_instr_math_t
-#define INSTRUCTION_ULESSEREQ     0x00000026 // ir_instr_math_t
-#define INSTRUCTION_SLESSEREQ     0x00000027 // ir_instr_math_t
-#define INSTRUCTION_FLESSEREQ     0x00000028 // ir_instr_math_t
-#define INSTRUCTION_MEMBER        0x00000029
-#define INSTRUCTION_ARRAY_ACCESS  0x0000002A
-#define INSTRUCTION_FUNC_ADDRESS  0x0000002B // ir_instr_cast_t
-#define INSTRUCTION_BITCAST       0x0000002C // ir_instr_cast_t
-#define INSTRUCTION_ZEXT          0x0000002D // ir_instr_cast_t
-#define INSTRUCTION_TRUNC         0x0000002E // ir_instr_cast_t
-#define INSTRUCTION_FEXT          0x0000002F // ir_instr_cast_t
-#define INSTRUCTION_FTRUNC        0x00000030 // ir_instr_cast_t
-#define INSTRUCTION_INTTOPTR      0x00000031 // ir_instr_cast_t
-#define INSTRUCTION_PTRTOINT      0x00000032 // ir_instr_cast_t
-#define INSTRUCTION_FPTOUI        0x00000033 // ir_instr_cast_t
-#define INSTRUCTION_FPTOSI        0x00000034 // ir_instr_cast_t
-#define INSTRUCTION_UITOFP        0x00000035 // ir_instr_cast_t
-#define INSTRUCTION_SITOFP        0x00000036 // ir_instr_cast_t
-#define INSTRUCTION_ISZERO        0x00000037 // ir_instr_cast_t
-#define INSTRUCTION_ISNTZERO      0x00000038 // ir_instr_cast_t
-#define INSTRUCTION_REINTERPRET   0x00000039 // ir_instr_cast_t
-#define INSTRUCTION_AND           0x00000040 // ir_instr_math_t
-#define INSTRUCTION_OR            0x00000041 // ir_instr_math_t
-#define INSTRUCTION_SIZEOF        0x00000042
-#define INSTRUCTION_VARZEROINIT   0x00000043
-#define INSTRUCTION_MEMCPY        0x00000044
+#define INSTRUCTION_NONE           0x00000000
+#define INSTRUCTION_ADD            0x00000001 // ir_instr_math_t
+#define INSTRUCTION_FADD           0x00000002 // ir_instr_math_t
+#define INSTRUCTION_SUBTRACT       0x00000003 // ir_instr_math_t
+#define INSTRUCTION_FSUBTRACT      0x00000004 // ir_instr_math_t
+#define INSTRUCTION_MULTIPLY       0x00000005 // ir_instr_math_t
+#define INSTRUCTION_FMULTIPLY      0x00000006 // ir_instr_math_t
+#define INSTRUCTION_UDIVIDE        0x00000007 // ir_instr_math_t
+#define INSTRUCTION_SDIVIDE        0x00000008 // ir_instr_math_t
+#define INSTRUCTION_FDIVIDE        0x00000009 // ir_instr_math_t
+#define INSTRUCTION_UMODULUS       0x0000000A // ir_instr_math_t
+#define INSTRUCTION_SMODULUS       0x0000000B // ir_instr_math_t
+#define INSTRUCTION_FMODULUS       0x0000000C // ir_instr_math_t
+#define INSTRUCTION_RET            0x0000000D
+#define INSTRUCTION_CALL           0x0000000E
+#define INSTRUCTION_CALL_ADDRESS   0x0000000F
+#define INSTRUCTION_ALLOC          0x00000010 // [UNUSED AND OBSOLETE]
+#define INSTRUCTION_MALLOC         0x00000011
+#define INSTRUCTION_FREE           0x00000012
+#define INSTRUCTION_STORE          0x00000013
+#define INSTRUCTION_LOAD           0x00000014
+#define INSTRUCTION_VARPTR         0x00000015
+#define INSTRUCTION_GLOBALVARPTR   0x00000016
+#define INSTRUCTION_BREAK          0x00000017
+#define INSTRUCTION_CONDBREAK      0x00000018
+#define INSTRUCTION_EQUALS         0x00000019 // ir_instr_math_t
+#define INSTRUCTION_FEQUALS        0x0000001A // ir_instr_math_t
+#define INSTRUCTION_NOTEQUALS      0x0000001B // ir_instr_math_t
+#define INSTRUCTION_FNOTEQUALS     0x0000001C // ir_instr_math_t
+#define INSTRUCTION_UGREATER       0x0000001D // ir_instr_math_t
+#define INSTRUCTION_SGREATER       0x0000001E // ir_instr_math_t
+#define INSTRUCTION_FGREATER       0x0000001F // ir_instr_math_t
+#define INSTRUCTION_ULESSER        0x00000020 // ir_instr_math_t
+#define INSTRUCTION_SLESSER        0x00000021 // ir_instr_math_t
+#define INSTRUCTION_FLESSER        0x00000022 // ir_instr_math_t
+#define INSTRUCTION_UGREATEREQ     0x00000023 // ir_instr_math_t
+#define INSTRUCTION_SGREATEREQ     0x00000024 // ir_instr_math_t
+#define INSTRUCTION_FGREATEREQ     0x00000025 // ir_instr_math_t
+#define INSTRUCTION_ULESSEREQ      0x00000026 // ir_instr_math_t
+#define INSTRUCTION_SLESSEREQ      0x00000027 // ir_instr_math_t
+#define INSTRUCTION_FLESSEREQ      0x00000028 // ir_instr_math_t
+#define INSTRUCTION_MEMBER         0x00000029
+#define INSTRUCTION_ARRAY_ACCESS   0x0000002A
+#define INSTRUCTION_FUNC_ADDRESS   0x0000002B // ir_instr_cast_t
+#define INSTRUCTION_BITCAST        0x0000002C // ir_instr_cast_t
+#define INSTRUCTION_ZEXT           0x0000002D // ir_instr_cast_t
+#define INSTRUCTION_TRUNC          0x0000002E // ir_instr_cast_t
+#define INSTRUCTION_FEXT           0x0000002F // ir_instr_cast_t
+#define INSTRUCTION_FTRUNC         0x00000030 // ir_instr_cast_t
+#define INSTRUCTION_INTTOPTR       0x00000031 // ir_instr_cast_t
+#define INSTRUCTION_PTRTOINT       0x00000032 // ir_instr_cast_t
+#define INSTRUCTION_FPTOUI         0x00000033 // ir_instr_cast_t
+#define INSTRUCTION_FPTOSI         0x00000034 // ir_instr_cast_t
+#define INSTRUCTION_UITOFP         0x00000035 // ir_instr_cast_t
+#define INSTRUCTION_SITOFP         0x00000036 // ir_instr_cast_t
+#define INSTRUCTION_ISZERO         0x00000037 // ir_unary_t
+#define INSTRUCTION_ISNTZERO       0x00000038 // ir_unary_t
+#define INSTRUCTION_REINTERPRET    0x00000039 // ir_instr_cast_t
+#define INSTRUCTION_AND            0x00000040 // ir_instr_math_t
+#define INSTRUCTION_OR             0x00000041 // ir_instr_math_t
+#define INSTRUCTION_SIZEOF         0x00000042
+#define INSTRUCTION_VARZEROINIT    0x00000043
+#define INSTRUCTION_MEMCPY         0x00000044
+#define INSTRUCTION_BIT_AND        0x00000045 // ir_instr_math_t
+#define INSTRUCTION_BIT_OR         0x00000046 // ir_instr_math_t
+#define INSTRUCTION_BIT_XOR        0x00000047 // ir_instr_math_t
+#define INSTRUCTION_BIT_COMPLEMENT 0x00000048 // ir_instr_unary_t
+#define INSTRUCTION_BIT_LSHIFT     0x00000049 // ir_instr_math_t
+#define INSTRUCTION_BIT_RSHIFT     0x0000004A // ir_instr_math_t
+#define INSTRUCTION_BIT_LGC_RSHIFT 0x0000004B // ir_instr_math_t
+#define INSTRUCTION_NEGATE         0x0000004C // ir_instr_unary_t
+#define INSTRUCTION_FNEGATE        0x0000004D // ir_instr_unary_t
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -137,6 +146,16 @@ typedef struct {
     ir_type_t *result_type;
     ir_value_t *a, *b;
 } ir_instr_math_t;
+
+// ---------------- ir_instr_unary_t ----------------
+// General structure for an IR instruction that
+// takes two operands
+// (Used for: bit complement, negate, fnegate, iszero, isntzero)
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_value_t *value;
+} ir_instr_unary_t;
 
 // ---------------- ir_instr_ret_t ----------------
 // An IR return instruction

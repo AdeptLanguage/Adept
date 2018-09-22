@@ -1,0 +1,10 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    x int = 412
+    y int = -x
+    printf(' x ==  %d\n', x)
+    printf('-x == %d\n', y)
+    return 0
+}

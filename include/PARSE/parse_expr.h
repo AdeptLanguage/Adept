@@ -65,9 +65,9 @@ int parse_expr_as(parse_ctx_t *ctx, ast_expr_t **inout_expr);
 // Parses a 'sizeof' expression
 int parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr);
 
-// ------------------ parse_expr_not ------------------
-// Parses a 'not' expression
-int parse_expr_not(parse_ctx_t *ctx, ast_expr_t **out_expr);
+// ------------------ parse_expr_unary ------------------
+// Parses an unary expression
+int parse_expr_unary(parse_ctx_t *ctx, unsigned int expr_id, ast_expr_t **out_expr);
 
 // ------------------ parse_expr_new ------------------
 // Parses a 'new' expression

@@ -315,7 +315,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
             }
             break;
         case EXPR_DELETE:{
-                ast_expr_t *delete_value = ((ast_expr_delete_t*) statements[s])->value;
+                ast_expr_t *delete_value = ((ast_expr_unary_t*) statements[s])->value;
                 char *delete_value_str = ast_expr_str(delete_value);
                 fprintf(file, "delete %s\n", delete_value_str);
                 free(delete_value_str);

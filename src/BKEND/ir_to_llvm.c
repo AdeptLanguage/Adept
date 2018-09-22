@@ -615,11 +615,13 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     catalog.blocks[b].value_references[i] = ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value);
                     break;
                 case INSTRUCTION_AND:
+                case INSTRUCTION_BIT_AND:
                     instr = basicblock->instructions[i];
                     llvm_result = LLVMBuildAnd(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
                     break;
                 case INSTRUCTION_OR:
+                case INSTRUCTION_BIT_OR:
                     instr = basicblock->instructions[i];
                     llvm_result = LLVMBuildOr(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
@@ -679,6 +681,45 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         LLVMBuildCall(builder, *memcpy_intrinsic, args, 5, "");
                         catalog.blocks[b].value_references[i] = NULL;
                     }
+                    break;
+                case INSTRUCTION_BIT_XOR:
+                    instr = basicblock->instructions[i];
+                    llvm_result = LLVMBuildXor(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
+                    catalog.blocks[b].value_references[i] = llvm_result;
+                    break;
+                case INSTRUCTION_BIT_LSHIFT:
+                    instr = basicblock->instructions[i];
+                    llvm_result = LLVMBuildShl(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
+                    catalog.blocks[b].value_references[i] = llvm_result;
+                    break;
+                case INSTRUCTION_BIT_RSHIFT:
+                    instr = basicblock->instructions[i];
+                    llvm_result = LLVMBuildAShr(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
+                    catalog.blocks[b].value_references[i] = llvm_result;
+                    break;
+                case INSTRUCTION_BIT_LGC_RSHIFT:
+                    instr = basicblock->instructions[i];
+                    llvm_result = LLVMBuildLShr(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
+                    catalog.blocks[b].value_references[i] = llvm_result;
+                    break;
+                case INSTRUCTION_BIT_COMPLEMENT:
+                    // todo use XOR
+                    redprintf("INSTRUCTION_BIT_COMPLEMENT is unimplemented");
+                    return 1;
+                    break;
+                case INSTRUCTION_NEGATE: {
+                        instr = basicblock->instructions[i];
+                        LLVMValueRef base = ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value);
+                        LLVMValueRef zero = LLVMConstNull(LLVMTypeOf(base));
+                        instr = basicblock->instructions[i];
+                        llvm_result = LLVMBuildSub(builder, zero, base, "");
+                        catalog.blocks[b].value_references[i] = llvm_result;
+                    }
+                    break;
+                case INSTRUCTION_FNEGATE:
+                    instr = basicblock->instructions[i];
+                    llvm_result = LLVMBuildFNeg(builder, ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value), "");
+                    catalog.blocks[b].value_references[i] = llvm_result;
                     break;
                 default:
                     redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", basicblocks[b].instructions[i]->id);
@@ -787,8 +828,11 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     free(llvm.func_skeletons);
     free(llvm.global_variables);
 
+    const char *root = compiler->root;
+    length_t root_length = strlen(root);
+
     // TODO: SECURITY: Stop using system(1) call to invoke linker
-    const char *linker = "C:/Adept/2.1/ld"; // May need to change depending on system etc.
+    const char *linker = "ld.exe"; // May need to change depending on system etc.
     length_t linker_length = strlen(linker);
 
     const char *linker_options = "--start-group";
@@ -815,8 +859,8 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 
     // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
-    char *link_command = malloc(linker_length + 45 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
-    sprintf(link_command, "%s C:/Adept/2.1/crt2.o C:/Adept/2.1/crtbegin.o %s%s \"%s\" C:/Adept/2.1/libdep.a C:/Windows/System32/msvcrt.dll -o \"%s\"", linker, linker_options, linker_additional, object_filename, compiler->output_filename);
+    char *link_command = malloc(linker_length + root_length * 18 + 6 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
+    sprintf(link_command, "\"\"%s%s\" \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
 
     if(linker_additional_length != 0) free(linker_additional);
 

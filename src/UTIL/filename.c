@@ -13,7 +13,13 @@ char* filename_name(const char *filename){
     char *stub;
     length_t filename_length = strlen(filename);
 
-    for(i = filename_length - 1 ; i != 0; i--){
+    if(filename_length == 0){
+        stub = malloc(filename_length + 1);
+        memcpy(stub, filename, filename_length + 1);
+        return stub;
+    }
+
+    for(i = filename_length - 1; i != 0; i--){
         if(filename[i] == '/' || filename[i] == '\\'){
             length_t stub_size = filename_length - i; // Includes null character
             stub = malloc(stub_size);
@@ -31,6 +37,8 @@ const char* filename_name_const(const char *filename){
     length_t i;
     length_t filename_length = strlen(filename);
 
+    if(filename_length == 0) return "";
+
     for(i = filename_length - 1 ; i != 0; i--){
         if(filename[i] == '/' || filename[i] == '\\'){
             return &filename[i+1];
@@ -38,6 +46,31 @@ const char* filename_name_const(const char *filename){
     }
 
     return filename;
+}
+
+char* filename_path(const char *filename){
+    length_t i;
+    length_t filename_length = strlen(filename);
+    char *path;
+
+    if(filename_length == 0){
+        path = malloc(1);
+        path[0] = '\0';
+        return path;
+    }
+
+    for(i = filename_length - 1 ; i != 0; i--){
+        if(filename[i] == '/' || filename[i] == '\\'){
+            path = malloc(i + 2);
+            memcpy(path, filename, i + 1);
+            path[i + 1] = '\0';
+            return path;
+        }
+    }
+
+    path = malloc(1);
+    path[0] = '\0';
+    return path;
 }
 
 char* filename_local(const char *current_filename, const char *local_filename){
@@ -70,23 +103,15 @@ char* filename_local(const char *current_filename, const char *local_filename){
     return NULL; // Should never be reached
 }
 
-char* filename_adept_import(const char *filename){
+char* filename_adept_import(const char *root, const char *filename){
     // NOTE: Returns string that must be freed by caller
 
-    #ifdef _WIN32
+    length_t root_len = strlen(root);
 
     length_t filename_len = strlen(filename);
-    char *result = malloc(filename_len + 21); // "C:/Adept/2.1/import/..."
-    memcpy(result, "C:/Adept/2.1/import/", 20);
-    memcpy(&result[20], filename, filename_len + 1);
+    char *result = malloc(root_len + filename_len + 8);
+    sprintf(result, "%simport/%s", root, filename);
     return result;
-
-    #else
-    #error "Adept import folder not specified for this platform"
-	// return "todo";
-    #endif
-
-    return NULL;
 }
 
 char* filename_ext(const char *filename, const char *ext_without_dot){

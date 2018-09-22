@@ -62,7 +62,7 @@ char* parse_find_import(parse_ctx_t *ctx, char *file){
     if(access(test, F_OK) != -1) return test;
 
     free(test);
-    test = filename_adept_import(file);
+    test = filename_adept_import(ctx->compiler->root, file);
     if(access(test, F_OK) != -1) return test;
 
     compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "The file '%s' doesn't exist", file);

@@ -397,7 +397,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
         break;
     case EXPR_ADDRESS: {
             // This expression should be able to be mutable (Checked during parsing)
-            if(ir_gen_expression(builder, ((ast_expr_address_t*) expr)->value, ir_value, true, out_expr_type)) return 1;
+            if(ir_gen_expression(builder, ((ast_expr_unary_t*) expr)->value, ir_value, true, out_expr_type)) return 1;
             if(out_expr_type != NULL) ast_type_prepend_ptr(out_expr_type);
         }
         break;
@@ -444,7 +444,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
         }
         break;
     case EXPR_DEREFERENCE: {
-            ast_expr_deref_t *dereference_expr = (ast_expr_deref_t*) expr;
+            ast_expr_unary_t *dereference_expr = (ast_expr_unary_t*) expr;
             ast_type_t expr_type;
             ir_value_t *expr_value;
 
@@ -651,32 +651,66 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&pair.ast_func->return_type);
         }
         break;
-    case EXPR_NOT: {
-            ast_expr_not_t *not_expr = (ast_expr_not_t*) expr;
+    case EXPR_NOT: case EXPR_NEGATE: {
+            ast_expr_unary_t *unary_expr = (ast_expr_unary_t*) expr;
             ast_type_t expr_type;
             ir_value_t *expr_value;
 
-            if(ir_gen_expression(builder, not_expr->value, &expr_value, false, &expr_type)) return 1;
+            if(ir_gen_expression(builder, unary_expr->value, &expr_value, false, &expr_type)) return 1;
 
             if(ir_type_get_catagory(expr_value->type) == PRIMITIVE_NA){
                 char *s = ast_type_str(&expr_type);
-                compiler_panicf(builder->compiler, expr->source, "Can't use '!' operator on type '%s'", s);
+                compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", expr->id == EXPR_NOT ? '!' : '-', s);
                 ast_type_free(&expr_type);
                 free(s);
                 return 1;
             }
 
-            // Build and append a load instruction
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_cast_t));
-            ((ir_instr_cast_t*) instruction)->id = INSTRUCTION_ISZERO;
-            ((ir_instr_cast_t*) instruction)->result_type = ir_builder_bool(builder);
-            ((ir_instr_cast_t*) instruction)->value = expr_value;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
+            if(expr->id == EXPR_NOT){
+                // Build and append an 'iszero' instruction
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_unary_t));
+                ((ir_instr_unary_t*) instruction)->id = INSTRUCTION_ISZERO;
+                ((ir_instr_unary_t*) instruction)->result_type = ir_builder_bool(builder);
+                ((ir_instr_unary_t*) instruction)->value = expr_value;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                *ir_value = build_value_from_prev_instruction(builder);
+            } else {
+                // Build and append an 'negate' instruction
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_unary_t));
+                ((ir_instr_unary_t*) instruction)->result_type = expr_value->type;
+                ((ir_instr_unary_t*) instruction)->value = expr_value;
+
+                switch(((ir_instr_unary_t*) instruction)->value->type->kind){
+                case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
+                case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
+                case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
+                    instruction->id = INSTRUCTION_NEGATE; break;
+                case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
+                    instruction->id = INSTRUCTION_FNEGATE; break;
+                default: {
+                        char *s = ast_type_str(&expr_type);
+                        compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", expr->id == EXPR_NOT ? '!' : '-', s);
+                        ast_type_free(&expr_type);
+                        free(s);
+                        return 1;
+                    }
+                }
+
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                *ir_value = build_value_from_prev_instruction(builder);
+            }
+
+            if(out_expr_type != NULL){
+                if(expr->id == EXPR_NOT){
+                    ast_type_make_base_newstr(out_expr_type, "bool");
+                } else {
+                    *out_expr_type = ast_type_clone(&expr_type);
+                }
+            }
 
             ast_type_free(&expr_type);
-            if(out_expr_type != NULL) ast_type_make_base_newstr(out_expr_type, "bool");
         }
         break;
     case EXPR_NEW: {
@@ -765,6 +799,19 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             }
         }
         break;
+    case EXPR_BIT_AND:
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_AND, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'and' on those types"); break;
+    case EXPR_BIT_OR:
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_OR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types"); break;
+    case EXPR_BIT_XOR:
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_XOR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types"); break;
+    case EXPR_BIT_COMPLEMENT:
+        compiler_panic(builder->compiler, expr->source, "Bitwise 'complement' operator unimplemented!");
+        return 1;
+    case EXPR_BIT_LSHIFT:
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
+    case EXPR_BIT_RSHIFT:
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
     default:
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
         return 1;

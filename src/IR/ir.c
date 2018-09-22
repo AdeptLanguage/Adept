@@ -432,6 +432,21 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                 case INSTRUCTION_VARZEROINIT:
                     fprintf(file, "    0x%08X varzi 0x%08X\n", (int) i, (int) ((ir_instr_varptr_t*) functions[f].basicblocks[b].instructions[i])->index);
                     break;
+                case INSTRUCTION_BIT_COMPLEMENT:
+                    val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X compl %s\n", (int) i, val_str);
+                    free(val_str);
+                    break;
+                case INSTRUCTION_NEGATE:
+                    val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X neg %s\n", (int) i, val_str);
+                    free(val_str);
+                    break;
+                case INSTRUCTION_FNEGATE:
+                    val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X fneg %s\n", (int) i, val_str);
+                    free(val_str);
+                    break;
                 default:
                     printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) functions[f].basicblocks[b].instructions[i]->id);
                     fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);
