@@ -1,0 +1,12 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    unless doSomething(), printf('Failed\n'); return 1
+    printf('Succeeded\n')
+    return 0
+}
+
+func doSomething() successful {
+    return true
+}

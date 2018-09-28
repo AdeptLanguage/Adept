@@ -328,6 +328,8 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
     case EXPR_BIT_XOR:
     case EXPR_BIT_LSHIFT:
     case EXPR_BIT_RSHIFT:
+    case EXPR_BIT_LGC_LSHIFT:
+    case EXPR_BIT_LGC_RSHIFT:
         a = &((ast_expr_math_t*) *expr)->a;
         b = &((ast_expr_math_t*) *expr)->b;
         if(infer_expr_inner(compiler, object, ast_func, a, undetermined, scope)) return 1;
@@ -548,9 +550,9 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
     if(type->elements[0]->id != AST_ELEM_BASE) return EXPR_NONE;
 
     char *base = ((ast_elem_base_t*) type->elements[0])->base;
-    const length_t primitives_length = 12;
+    const length_t primitives_length = 13;
     const char * const primitives[] = {
-        "bool", "byte", "double", "float", "int", "long", "short", "ubyte", "uint", "ulong", "ushort", "usize"
+        "bool", "byte", "double", "float", "int", "long", "short", "successful", "ubyte", "uint", "ulong", "ushort", "usize"
     };
 
     int array_index = binary_string_search(primitives, primitives_length, base);
@@ -563,11 +565,12 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
     case  4: return EXPR_INT;
     case  5: return EXPR_LONG;
     case  6: return EXPR_SHORT;
-    case  7: return EXPR_UBYTE;
-    case  8: return EXPR_UINT;
-    case  9: return EXPR_ULONG;
-    case 10: return EXPR_USHORT;
-    case 11: return EXPR_ULONG;
+    case  7: return EXPR_BOOLEAN;
+    case  8: return EXPR_UBYTE;
+    case  9: return EXPR_UINT;
+    case 10: return EXPR_ULONG;
+    case 11: return EXPR_USHORT;
+    case 12: return EXPR_ULONG;
     case -1: return EXPR_NONE;
     }
 

@@ -373,6 +373,12 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 if(strcmp(((ast_elem_base_t*) b->elements[i])->base, "usize") == 0 || strcmp(((ast_elem_base_t*) b->elements[i])->base, "ulong") == 0)
                     break;
             }
+            if(strcmp(((ast_elem_base_t*) a->elements[i])->base, "successful") == 0 || strcmp(((ast_elem_base_t*) a->elements[i])->base, "bool") == 0){
+                // Cheap little hack to get 'successful' to be treated the same as 'bool'
+                // TODO: Create special function func non-identical comparison, or modify the name of this function
+                if(strcmp(((ast_elem_base_t*) b->elements[i])->base, "successful") == 0 || strcmp(((ast_elem_base_t*) b->elements[i])->base, "bool") == 0)
+                    break;
+            }
             if(strcmp(((ast_elem_base_t*) a->elements[i])->base, ((ast_elem_base_t*) b->elements[i])->base) != 0) return false;
             break;
         case AST_ELEM_FIXED_ARRAY:

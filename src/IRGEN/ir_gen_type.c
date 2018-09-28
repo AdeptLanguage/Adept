@@ -13,8 +13,8 @@ int ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     ir_pool_t *pool = &module->pool;
 
     // Base types:
-    // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize
-    #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 14
+    // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize, successful
+    #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 15
 
     ir_type_t *tmp_type;
     ir_type_map_t *type_map = &module->type_map;
@@ -50,9 +50,11 @@ int ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     mappings[12].type.kind = TYPE_KIND_POINTER;
     tmp_type = ir_pool_alloc(pool, sizeof(ir_type_t*));
     tmp_type->kind = TYPE_KIND_S8;
-    mappings[12].type.extra = tmp_type;
+    mappings[12].type.extra = tmp_type; 
     mappings[13].name = "usize";
     mappings[13].type.kind = TYPE_KIND_U64;
+    mappings[14].name = "successful";
+    mappings[14].type.kind = TYPE_KIND_BOOLEAN;
 
     for(length_t i = IR_GEN_BASE_TYPE_MAPPINGS_COUNT; i != type_map->mappings_length; i++){
         // Create skeletons for struct type maps
@@ -386,9 +388,9 @@ unsigned int ir_primitive_from_ast_type(const ast_type_t *type){
     if(type->elements[0]->id != AST_ELEM_BASE) return TYPE_KIND_NONE;
 
     char *base = ((ast_elem_base_t*) type->elements[0])->base;
-    const length_t primitives_length = 12;
+    const length_t primitives_length = 13;
     const char * const primitives[] = {
-        "bool", "byte", "double", "float", "int", "long", "short", "ubyte", "uint", "ulong", "ushort", "usize"
+        "bool", "byte", "double", "float", "int", "long", "short", "successful", "ubyte", "uint", "ulong", "ushort", "usize"
     };
 
     int array_index = binary_string_search(primitives, primitives_length, base);
@@ -401,11 +403,12 @@ unsigned int ir_primitive_from_ast_type(const ast_type_t *type){
     case  4: return TYPE_KIND_S32;
     case  5: return TYPE_KIND_S64;
     case  6: return TYPE_KIND_S16;
-    case  7: return TYPE_KIND_U8;
-    case  8: return TYPE_KIND_U32;
-    case  9: return TYPE_KIND_U64;
-    case 10: return TYPE_KIND_U16;
-    case 11: return TYPE_KIND_U64;
+    case  7: return TYPE_KIND_BOOLEAN;
+    case  8: return TYPE_KIND_U8;
+    case  9: return TYPE_KIND_U32;
+    case 10: return TYPE_KIND_U64;
+    case 11: return TYPE_KIND_U16;
+    case 12: return TYPE_KIND_U64;
     case -1: return TYPE_KIND_NONE;
     }
 

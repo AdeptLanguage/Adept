@@ -1,0 +1,17 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    a int = 100
+    b int = 73
+
+    printf('Bitwise AND : 100 & 73 = %d\n', a & b)
+    printf('Bitwise OR  : 100 | 73 = %d\n', a | b)
+    printf('Bitwise XOR : 100 ^ 73 = %d\n', a ^ b)
+    printf('Left Shift  : -100 <<  2 = %d\n', -a << 2)
+    printf('Right Shift : -100 >>  2 = %d\n', -a >> 2)
+    printf('Logical Left Shift  : -100 <<< 2 = %d\n', -a <<< 2)
+    printf('Logical Right Shift : -100 >>> 2 = %d\n', -a >>> 2)
+    printf('Bitwise Complement  : ~100 = %d\n', ~a)
+    return 0
+}

@@ -702,10 +702,18 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     llvm_result = LLVMBuildLShr(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
                     break;
-                case INSTRUCTION_BIT_COMPLEMENT:
-                    // todo use XOR
-                    redprintf("INSTRUCTION_BIT_COMPLEMENT is unimplemented");
-                    return 1;
+                case INSTRUCTION_BIT_COMPLEMENT: {
+                        instr = basicblock->instructions[i];
+
+                        unsigned int type_kind = ((ir_instr_unary_t*) instr)->value->type->kind;
+                        LLVMValueRef base = ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value);
+                        
+                        unsigned int bits = global_type_kind_sizes_64[type_kind];
+                        LLVMValueRef transform = LLVMConstInt(LLVMIntType(bits), ~0, global_type_kind_signs[type_kind]);
+
+                        llvm_result = LLVMBuildXor(builder, base, transform, "");
+                        catalog.blocks[b].value_references[i] = llvm_result;
+                    }
                     break;
                 case INSTRUCTION_NEGATE: {
                         instr = basicblock->instructions[i];

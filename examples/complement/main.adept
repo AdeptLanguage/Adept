@@ -1,0 +1,15 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('~0   = %llX\n', ~0)
+    printf('~0ub = %2X\n', ~0ub)
+    printf('~0sb = %2X\n', ~0sb)
+    printf('~0us = %4X\n', ~0us)
+    printf('~0ss = %4X\n', ~0ss)
+    printf('~0ui = %8X\n', ~0ui)
+    printf('~0si = %8X\n', ~0si)
+    printf('~0ul = %llX\n', ~0ul)
+    printf('~0sl = %llX\n', ~0sl)
+    return 0
+}

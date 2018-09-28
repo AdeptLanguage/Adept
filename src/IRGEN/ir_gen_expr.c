@@ -651,16 +651,20 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&pair.ast_func->return_type);
         }
         break;
-    case EXPR_NOT: case EXPR_NEGATE: {
+    case EXPR_NOT: case EXPR_NEGATE: case EXPR_BIT_COMPLEMENT: {
+            // TODO: CLEANUP: Cleanup this code for unary operators
+
             ast_expr_unary_t *unary_expr = (ast_expr_unary_t*) expr;
             ast_type_t expr_type;
             ir_value_t *expr_value;
+
+            #define MACRO_UNARY_OPERATOR_CHARCTER (expr->id == EXPR_NOT ? '!' : (expr->id == EXPR_NEGATE ? '-' : '~'))
 
             if(ir_gen_expression(builder, unary_expr->value, &expr_value, false, &expr_type)) return 1;
 
             if(ir_type_get_catagory(expr_value->type) == PRIMITIVE_NA){
                 char *s = ast_type_str(&expr_type);
-                compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", expr->id == EXPR_NOT ? '!' : '-', s);
+                compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
                 ast_type_free(&expr_type);
                 free(s);
                 return 1;
@@ -686,12 +690,19 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
                 case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
                 case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-                    instruction->id = INSTRUCTION_NEGATE; break;
+                    instruction->id = (expr->id == EXPR_NEGATE ? INSTRUCTION_NEGATE : INSTRUCTION_BIT_COMPLEMENT); break;
                 case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
+                    if(expr->id == EXPR_BIT_COMPLEMENT){
+                        char *s = ast_type_str(&expr_type);
+                        compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
+                        ast_type_free(&expr_type);
+                        free(s);
+                        return 1;
+                    }
                     instruction->id = INSTRUCTION_FNEGATE; break;
                 default: {
                         char *s = ast_type_str(&expr_type);
-                        compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", expr->id == EXPR_NOT ? '!' : '-', s);
+                        compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
                         ast_type_free(&expr_type);
                         free(s);
                         return 1;
@@ -805,13 +816,14 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_OR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types"); break;
     case EXPR_BIT_XOR:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_XOR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types"); break;
-    case EXPR_BIT_COMPLEMENT:
-        compiler_panic(builder->compiler, expr->source, "Bitwise 'complement' operator unimplemented!");
-        return 1;
     case EXPR_BIT_LSHIFT:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
     case EXPR_BIT_RSHIFT:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
+    case EXPR_BIT_LGC_LSHIFT:
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
+    case EXPR_BIT_LGC_RSHIFT:
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
     default:
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
         return 1;

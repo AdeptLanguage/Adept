@@ -98,9 +98,11 @@ clean:
 ifeq ($(OS), Windows_NT)
 	@del obj\debug\*.* /Q /S 1> nul 2>&1
 	@del obj\*.* /S /Q 1> nul 2>&1
-	@del bin\*.* /S /Q 1> nul 2>&1
+	@del bin\adept.exe /S /Q 1> nul 2>&1
+	@del bin\adept_debug.exe /S /Q 1> nul 2>&1
 else
 	@rm -rf 2> /dev/null obj/debug/*.*
 	@rm -rf 2> /dev/null obj/*.*
-	@rm -rf 2> /dev/null bin/*.*
+	@rm -rf 2> /dev/null bin/adept.exe
+	@rm -rf 2> /dev/null bin/adept_debug.exe
 endif

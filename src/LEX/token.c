@@ -206,8 +206,8 @@ const char *global_token_name_table[] = {
     "left shift",             // 0x00000033
     "right shift",            // 0x00000034
     "complement",             // 0x00000035
-    "reserved",               // 0x00000036
-    "reserved",               // 0x00000037
+    "logical left shift",     // 0x00000036
+    "logical right shift",    // 0x00000037
     "reserved",               // 0x00000038
     "reserved",               // 0x00000039
     "reserved",               // 0x0000003A

@@ -279,26 +279,28 @@ int parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_left, boo
         }
 
         switch(operator){
-        case TOKEN_ADD:           BUILD_MATH_EXPR_MACRO(EXPR_ADD);        break;
-        case TOKEN_SUBTRACT:      BUILD_MATH_EXPR_MACRO(EXPR_SUBTRACT);   break;
-        case TOKEN_MULTIPLY:      BUILD_MATH_EXPR_MACRO(EXPR_MULTIPLY);   break;
-        case TOKEN_DIVIDE:        BUILD_MATH_EXPR_MACRO(EXPR_DIVIDE);     break;
-        case TOKEN_MODULUS:       BUILD_MATH_EXPR_MACRO(EXPR_MODULUS);    break;
-        case TOKEN_EQUALS:        BUILD_MATH_EXPR_MACRO(EXPR_EQUALS);     break;
-        case TOKEN_NOTEQUALS:     BUILD_MATH_EXPR_MACRO(EXPR_NOTEQUALS);  break;
-        case TOKEN_GREATERTHAN:   BUILD_MATH_EXPR_MACRO(EXPR_GREATER);    break;
-        case TOKEN_LESSTHAN:      BUILD_MATH_EXPR_MACRO(EXPR_LESSER);     break;
-        case TOKEN_GREATERTHANEQ: BUILD_MATH_EXPR_MACRO(EXPR_GREATEREQ);  break;
-        case TOKEN_LESSTHANEQ:    BUILD_MATH_EXPR_MACRO(EXPR_LESSEREQ);   break;
-        case TOKEN_BIT_AND:       BUILD_MATH_EXPR_MACRO(EXPR_BIT_AND);    break;
-        case TOKEN_BIT_OR:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_OR);     break;
-        case TOKEN_BIT_XOR:       BUILD_MATH_EXPR_MACRO(EXPR_BIT_XOR);    break;
-        case TOKEN_BIT_LSHIFT:    BUILD_MATH_EXPR_MACRO(EXPR_BIT_LSHIFT); break;
-        case TOKEN_BIT_RSHIFT:    BUILD_MATH_EXPR_MACRO(EXPR_BIT_RSHIFT); break;
+        case TOKEN_ADD:            BUILD_MATH_EXPR_MACRO(EXPR_ADD);        break;
+        case TOKEN_SUBTRACT:       BUILD_MATH_EXPR_MACRO(EXPR_SUBTRACT);   break;
+        case TOKEN_MULTIPLY:       BUILD_MATH_EXPR_MACRO(EXPR_MULTIPLY);   break;
+        case TOKEN_DIVIDE:         BUILD_MATH_EXPR_MACRO(EXPR_DIVIDE);     break;
+        case TOKEN_MODULUS:        BUILD_MATH_EXPR_MACRO(EXPR_MODULUS);    break;
+        case TOKEN_EQUALS:         BUILD_MATH_EXPR_MACRO(EXPR_EQUALS);     break;
+        case TOKEN_NOTEQUALS:      BUILD_MATH_EXPR_MACRO(EXPR_NOTEQUALS);  break;
+        case TOKEN_GREATERTHAN:    BUILD_MATH_EXPR_MACRO(EXPR_GREATER);    break;
+        case TOKEN_LESSTHAN:       BUILD_MATH_EXPR_MACRO(EXPR_LESSER);     break;
+        case TOKEN_GREATERTHANEQ:  BUILD_MATH_EXPR_MACRO(EXPR_GREATEREQ);  break;
+        case TOKEN_LESSTHANEQ:     BUILD_MATH_EXPR_MACRO(EXPR_LESSEREQ);   break;
+        case TOKEN_BIT_AND:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_AND);    break;
+        case TOKEN_BIT_OR:         BUILD_MATH_EXPR_MACRO(EXPR_BIT_OR);     break;
+        case TOKEN_BIT_XOR:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_XOR);    break;
+        case TOKEN_BIT_LSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_LSHIFT); break;
+        case TOKEN_BIT_RSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_RSHIFT); break;
+        case TOKEN_BIT_LGC_LSHIFT: BUILD_MATH_EXPR_MACRO(EXPR_BIT_LGC_LSHIFT); break;
+        case TOKEN_BIT_LGC_RSHIFT: BUILD_MATH_EXPR_MACRO(EXPR_BIT_LGC_RSHIFT); break;
         case TOKEN_AND:
-        case TOKEN_UBERAND:       BUILD_MATH_EXPR_MACRO(EXPR_AND);        break;
+        case TOKEN_UBERAND:        BUILD_MATH_EXPR_MACRO(EXPR_AND);        break;
         case TOKEN_OR:
-        case TOKEN_UBEROR:        BUILD_MATH_EXPR_MACRO(EXPR_OR);         break;
+        case TOKEN_UBEROR:         BUILD_MATH_EXPR_MACRO(EXPR_OR);         break;
         case TOKEN_AS: if(parse_expr_as(ctx, inout_left)) return 1;       break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unrecognized operator '%s' in expression");

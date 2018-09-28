@@ -13,6 +13,8 @@ call :compile as
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile assignment
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile bitwise
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile break
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile break_to
@@ -20,6 +22,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile cast
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile character_literals
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile complement
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile conditionless_break_label
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
@@ -106,6 +110,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile stdcall
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile structs
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile successful
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile terminate_join
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

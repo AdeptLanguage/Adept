@@ -75,9 +75,9 @@ int ir_gen_functions(compiler_t *compiler, object_t *object){
                 }
 
                 // Check that the base isn't a primitive
-                const length_t primitives_length = 12;
+                const length_t primitives_length = 13;
                 const char * const primitives[] = {
-                    "bool", "byte", "double", "float", "int", "long", "short", "ubyte", "uint", "ulong", "ushort", "usize"
+                    "bool", "byte", "double", "float", "int", "long", "short", "successful", "ubyte", "uint", "ulong", "ushort", "usize"
                 };
 
                 int array_index = binary_string_search(primitives, primitives_length, ((ast_elem_base_t*) this_type->elements[1])->base);
