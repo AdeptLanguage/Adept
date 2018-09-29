@@ -87,6 +87,10 @@ call :compile not
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile null
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile null_checks --null-checks
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+null_checks\main.exe
+if %errorlevel% neq 1 popd & exit /b %errorlevel%
 call :compile order
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile package

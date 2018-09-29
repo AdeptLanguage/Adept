@@ -352,10 +352,10 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     build_store(builder, initial, destination);
 
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, TRAIT_NONE);
-                } else if(statements[s]->id == EXPR_DECLAREUNDEF){
+                } else if(statements[s]->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
                     // Mark the variable as undefined memory so it isn't auto-initialized later on
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, BRIDGE_VAR_UNDEF);
-                } else {
+                } else /* plain DECLARE or --no-undef DECLAREUNDEF */ {
                     // Variable declaration without default value
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, TRAIT_NONE);
 

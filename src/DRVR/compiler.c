@@ -87,6 +87,7 @@ void compiler_init(compiler_t *compiler){
     compiler->traits = TRAIT_NONE;
     compiler->output_filename = NULL;
     compiler->optimization = OPTIMIZATION_NONE;
+    compiler->checks = TRAIT_NONE;
 
     #ifdef ENABLE_DEBUG_FEATURES
     compiler->debug_traits = TRAIT_NONE;
@@ -206,6 +207,10 @@ int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **arg
                 compiler->optimization = OPTIMIZATION_DEFAULT;
             } else if(strcmp(argv[arg_index], "-O3") == 0){
                 compiler->optimization = OPTIMIZATION_AGGRESSIVE;
+            } else if(strcmp(argv[arg_index], "--no-undef") == 0){
+                compiler->traits |= COMPILER_NO_UNDEF;
+            } else if(strcmp(argv[arg_index], "--null-checks") == 0){
+                compiler->checks |= COMPILER_NULL_CHECKS;
             }
 
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
@@ -492,7 +497,7 @@ void compiler_warn(compiler_t *compiler, source_t source, const char *message){
 
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){
     if(compiler->traits & COMPILER_NO_WARN) return;
-    
+
     object_t *object = compiler->objects[source.object_index];
     va_list args;
     int line, column;

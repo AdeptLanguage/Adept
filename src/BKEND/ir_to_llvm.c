@@ -197,6 +197,10 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
     length_t funcs_length = object->ir_module.funcs_length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
+    if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
+        //llvm->null_check_on_fail_func = create_null_check_on_fail_func(llvm);
+    }
+
     for(length_t f = 0; f != funcs_length; f++){
         LLVMBuilderRef builder = LLVMCreateBuilder();
         ir_basicblock_t *basicblocks = funcs[f].basicblocks;
@@ -222,6 +226,56 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         LLVMValueRef llvm_result;
 
         for(length_t b = 0; b != basicblocks_length; b++) llvm_blocks[b] = LLVMAppendBasicBlock(func_skeletons[f], "");
+
+        if(llvm->compiler->checks & COMPILER_NULL_CHECKS && basicblocks_length != 0){
+            llvm->null_check_on_fail_block = LLVMAppendBasicBlock(func_skeletons[f], "");
+            LLVMPositionBuilderAtEnd(builder, llvm->null_check_on_fail_block);
+
+            LLVMValueRef printf_fn = LLVMGetNamedFunction(llvm->module, "printf");
+            LLVMValueRef exit_fn = LLVMGetNamedFunction(llvm->module, "exit");
+
+            if(exit_fn == NULL){
+                LLVMTypeRef int32 = LLVMInt32Type();
+                LLVMTypeRef exit_fn_type = LLVMFunctionType(int32, &int32, 1, false);
+                exit_fn = LLVMAddFunction(llvm->module, "exit", exit_fn_type);
+            }
+
+            if(printf_fn == NULL){
+                LLVMTypeRef int32 = LLVMInt32Type();
+                LLVMTypeRef charptr = LLVMPointerType(LLVMInt8Type(), 0);
+                LLVMTypeRef printf_fn_type = LLVMFunctionType(int32, &charptr, 1, true);
+                printf_fn = LLVMAddFunction(llvm->module, "printf", printf_fn_type);
+            }
+
+            const char *error_msg = "===== RUNTIME ERROR: DEREFERENCED NULL POINTER IN FUNCTION '%s'! =====\n";
+            length_t error_msg_length = strlen(error_msg) + 1;
+            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), error_msg_length), ".str");
+            LLVMSetLinkage(global_data, LLVMInternalLinkage);
+            LLVMSetGlobalConstant(global_data, true);
+            LLVMSetInitializer(global_data, LLVMConstString(error_msg, error_msg_length, true));
+            LLVMValueRef indices[2];
+            indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            LLVMValueRef arg = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+
+            const char *func_name = funcs[f].name;
+            length_t func_name_len = strlen(func_name) + 1;
+            global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), func_name_len), ".str");
+            LLVMSetLinkage(global_data, LLVMInternalLinkage);
+            LLVMSetGlobalConstant(global_data, true);
+            LLVMSetInitializer(global_data, LLVMConstString(func_name, func_name_len, true));
+            indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            LLVMValueRef func_name_str = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+
+            LLVMValueRef args[] = {arg, func_name_str};
+
+            LLVMBuildCall(builder, printf_fn, args, 2, "");
+
+            arg = LLVMConstInt(LLVMInt32Type(), 1, true);
+            LLVMBuildCall(builder, exit_fn, &arg, 1, "");
+            LLVMBuildUnreachable(builder);
+        }
 
         for(length_t b = 0; b != basicblocks_length; b++){
             LLVMPositionBuilderAtEnd(builder, llvm_blocks[b]);
@@ -261,8 +315,6 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     if(s < funcs[f].arity){
                         // Function argument that needs passed argument value
                         LLVMBuildStore(builder, LLVMGetParam(func_skeletons[f], s), stack.values[s]);
-                    } else if(var->traits & BRIDGE_VAR_UNDEF){
-                        LLVMBuildStore(builder, LLVMGetUndef(alloca_type), stack.values[s]);
                     }
                 }
             }
@@ -382,10 +434,22 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     llvm_result = LLVMBuildStore(builder, ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->value), ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->destination));
                     catalog.blocks[b].value_references[i] = llvm_result;
                     break;
-                case INSTRUCTION_LOAD:
-                    instr = basicblock->instructions[i];
-                    llvm_result = LLVMBuildLoad(builder, ir_to_llvm_value(llvm, ((ir_instr_load_t*) instr)->value), "");
-                    catalog.blocks[b].value_references[i] = llvm_result;
+                case INSTRUCTION_LOAD: {
+                        instr = basicblock->instructions[i];
+
+                        LLVMValueRef pointer = ir_to_llvm_value(llvm, ((ir_instr_load_t*) instr)->value);
+
+                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
+                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
+
+                            LLVMValueRef if_null = LLVMConstInt(LLVMInt1Type(), 1, false);
+                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
+                            LLVMPositionBuilderAtEnd(builder, not_null_block);
+                        }
+
+                        llvm_result = LLVMBuildLoad(builder, pointer, "");
+                        catalog.blocks[b].value_references[i] = llvm_result;
+                    }
                     break;
                 case INSTRUCTION_VARPTR:
                     catalog.blocks[b].value_references[i] = llvm->stack->values[((ir_instr_varptr_t*) basicblock->instructions[i])->index];
@@ -749,6 +813,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         free(llvm_blocks);
         LLVMDisposeBuilder(builder);
     }
+
     return 0;
 }
 
@@ -784,6 +849,7 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
 
     llvm.module = LLVMModuleCreateWithName(filename_name_const(object->filename));
     llvm.memcpy_intrinsic = NULL;
+    llvm.compiler = compiler;
 
     char *triple = "x86_64-pc-windows-gnu";
     LLVMSetTarget(llvm.module, triple);

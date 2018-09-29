@@ -19,6 +19,12 @@
 #define COMPILER_EXECUTE_RESULT  TRAIT_4
 #define COMPILER_DEBUG_SYMBOLS   TRAIT_5
 #define COMPILER_NO_WARN         TRAIT_6
+#define COMPILER_NO_UNDEF        TRAIT_7
+
+// Possible compiler trait checks
+#define COMPILER_NULL_CHECKS     TRAIT_1
+#define COMPILER_LEAK_CHECKS     TRAIT_2
+#define COMPILER_BOUNDS_CHECKS   TRAIT_3
 
 // Possible optimization levels
 #define OPTIMIZATION_NONE       0x00
@@ -52,6 +58,7 @@ typedef struct {
     char *output_filename;     // owned c-string
     unsigned int optimization; // 0 - 3 using OPTIMIZATION_* constants
     trait_t result_flags;      // Results flag (for internal use)
+    trait_t checks;
 
     #ifdef ENABLE_DEBUG_FEATURES
     trait_t debug_traits;      // COMPILER_DEBUG_* options

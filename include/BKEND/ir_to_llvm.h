@@ -36,6 +36,10 @@ typedef struct {
     LLVMValueRef *global_variables;
     LLVMTargetDataRef data_layout;
     LLVMValueRef memcpy_intrinsic;
+    compiler_t *compiler;
+
+    LLVMValueRef null_check_on_fail_func;
+    LLVMBasicBlockRef null_check_on_fail_block;
 } llvm_context_t;
 
 // ---------------- ir_to_llvm_type ----------------
