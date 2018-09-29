@@ -504,7 +504,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             else ast_type_free(&expr_type);
         }
         break;
-    case EXPR_ARRAY_ACCESS: {
+    case EXPR_ARRAY_ACCESS: case EXPR_AT: {
             ast_expr_array_access_t *array_access_expr = (ast_expr_array_access_t*) expr;
             ast_type_t index_type, array_type;
             ir_value_t *index_value, *array_value;
@@ -517,7 +517,10 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
 
             if(array_value->type->kind != TYPE_KIND_POINTER){
                 char *given_type = ast_type_str(&array_type);
-                compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator [] on temporary value of type '%s'", given_type);
+
+                compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on temporary value of type '%s'",
+                    expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", given_type);
+
                 free(given_type);
                 ast_type_free(&array_type);
                 ast_type_free(&index_type);
@@ -557,32 +560,46 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             // Ensure array type is a pointer
             if(array_value->type->kind != TYPE_KIND_POINTER || array_type.elements_length < 2 || array_type.elements[0]->id != AST_ELEM_POINTER){
                 char *given_type = ast_type_str(&array_type);
-                compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator [] on non-array type '%s'", given_type);
+
+                compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on non-array type '%s'",
+                    expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", given_type);
+
                 free(given_type);
                 ast_type_free(&array_type);
                 ast_type_free(&index_type);
                 return 1;
             }
 
-            // Change 'array_type' to be the type of an element instead of the whole array
-            // Modify ast_type_t to remove a pointer element from the front
-            // DANGEROUS: Manually deleting ast_elem_pointer_t
-            free(array_type.elements[0]);
-            memmove(array_type.elements, &array_type.elements[1], sizeof(ast_elem_t*) * (array_type.elements_length - 1));
-            array_type.elements_length--; // Reduce length accordingly
+            if(expr->id == EXPR_ARRAY_ACCESS){
+                // Change 'array_type' to be the type of an element instead of the whole array
+                // Modify ast_type_t to remove a pointer element from the front
+                // DANGEROUS: Manually deleting ast_elem_pointer_t
+                free(array_type.elements[0]);
+                memmove(array_type.elements, &array_type.elements[1], sizeof(ast_elem_t*) * (array_type.elements_length - 1));
+                array_type.elements_length--; // Reduce length accordingly
 
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_array_access_t));
-            ((ir_instr_array_access_t*) instruction)->id = INSTRUCTION_ARRAY_ACCESS;
-            ((ir_instr_array_access_t*) instruction)->result_type = array_value->type;
-            ((ir_instr_array_access_t*) instruction)->value = array_value;
-            ((ir_instr_array_access_t*) instruction)->index = index_value;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_array_access_t));
+                ((ir_instr_array_access_t*) instruction)->id = INSTRUCTION_ARRAY_ACCESS;
+                ((ir_instr_array_access_t*) instruction)->result_type = array_value->type;
+                ((ir_instr_array_access_t*) instruction)->value = array_value;
+                ((ir_instr_array_access_t*) instruction)->index = index_value;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                *ir_value = build_value_from_prev_instruction(builder);
 
-            // If not requested to leave the expression mutable, dereference it
-            if(!leave_mutable){
-                *ir_value = build_load(builder, *ir_value);
+                // If not requested to leave the expression mutable, dereference it
+                if(!leave_mutable){
+                    *ir_value = build_load(builder, *ir_value);
+                }
+            } else /* EXPR_AT */ {
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_array_access_t));
+                ((ir_instr_array_access_t*) instruction)->id = INSTRUCTION_ARRAY_ACCESS;
+                ((ir_instr_array_access_t*) instruction)->result_type = array_value->type;
+                ((ir_instr_array_access_t*) instruction)->value = array_value;
+                ((ir_instr_array_access_t*) instruction)->index = index_value;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                *ir_value = build_value_from_prev_instruction(builder);
             }
 
             ast_type_free(&index_type);

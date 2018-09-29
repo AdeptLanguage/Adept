@@ -357,6 +357,15 @@ char* ast_expr_str(ast_expr_t *expr){
             free(value_str2);
             return representation;
         }
+    case EXPR_AT: {
+            char *value_str1 = ast_expr_str(((ast_expr_array_access_t*) expr)->value);
+            char *value_str2 = ast_expr_str(((ast_expr_array_access_t*) expr)->index);
+            representation = malloc(strlen(value_str1) + strlen(value_str2) + 3);
+            sprintf(representation, "%s at (%s)", value_str1, value_str2);
+            free(value_str1);
+            free(value_str2);
+            return representation;
+        }
     case EXPR_CAST: {
             char *type_str = ast_type_str(&((ast_expr_cast_t*) expr)->to);
             char *value_str = ast_expr_str(((ast_expr_cast_t*) expr)->from);
@@ -505,6 +514,10 @@ void ast_expr_free(ast_expr_t *expr){
         free(((ast_expr_member_t*) expr)->member);
         break;
     case EXPR_ARRAY_ACCESS:
+        ast_expr_free_fully( ((ast_expr_array_access_t*) expr)->value );
+        ast_expr_free_fully( ((ast_expr_array_access_t*) expr)->index );
+        break;
+    case EXPR_AT:
         ast_expr_free_fully( ((ast_expr_array_access_t*) expr)->value );
         ast_expr_free_fully( ((ast_expr_array_access_t*) expr)->index );
         break;
@@ -702,6 +715,11 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         }
         break;
     case EXPR_ARRAY_ACCESS:
+        clone = malloc(sizeof(ast_expr_array_access_t));
+        ((ast_expr_array_access_t*) clone)->value = ast_expr_clone(((ast_expr_array_access_t*) expr)->value);
+        ((ast_expr_array_access_t*) clone)->index = ast_expr_clone(((ast_expr_array_access_t*) expr)->index);
+        break;
+    case EXPR_AT:
         clone = malloc(sizeof(ast_expr_array_access_t));
         ((ast_expr_array_access_t*) clone)->value = ast_expr_clone(((ast_expr_array_access_t*) expr)->value);
         ((ast_expr_array_access_t*) clone)->index = ast_expr_clone(((ast_expr_array_access_t*) expr)->index);

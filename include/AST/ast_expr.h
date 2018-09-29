@@ -56,44 +56,45 @@
 #define EXPR_BIT_LGC_LSHIFT 0x00000025
 #define EXPR_BIT_LGC_RSHIFT 0x00000026
 #define EXPR_NEGATE         0x00000027
+#define EXPR_AT             0x00000028
 // Complex operators -----------------
-#define EXPR_CALL           0x00000028
-#define EXPR_VARIABLE       0x00000029
-#define EXPR_MEMBER         0x0000002A
-#define EXPR_ADDRESS        0x0000002B
-#define EXPR_FUNC_ADDR      0x0000002C
-#define EXPR_DEREFERENCE    0x0000002D
-#define EXPR_ARRAY_ACCESS   0x0000002E
-#define EXPR_CAST           0x0000002F
-#define EXPR_SIZEOF         0x00000030
-#define EXPR_CALL_METHOD    0x00000031
-#define EXPR_NEW            0x00000032
-#define EXPR_NEW_CSTRING    0x00000033
+#define EXPR_CALL           0x00000029
+#define EXPR_VARIABLE       0x0000002A
+#define EXPR_MEMBER         0x0000002B
+#define EXPR_ADDRESS        0x0000002C
+#define EXPR_FUNC_ADDR      0x0000002D
+#define EXPR_DEREFERENCE    0x0000002E
+#define EXPR_ARRAY_ACCESS   0x0000002F
+#define EXPR_CAST           0x00000030
+#define EXPR_SIZEOF         0x00000031
+#define EXPR_CALL_METHOD    0x00000032
+#define EXPR_NEW            0x00000033
+#define EXPR_NEW_CSTRING    0x00000034
 // Exclusive statements --------------
-#define EXPR_DECLARE        0x00000034
-#define EXPR_DECLAREUNDEF   0x00000035
-#define EXPR_ASSIGN         0x00000036
-#define EXPR_ADDASSIGN      0x00000037
-#define EXPR_SUBTRACTASSIGN 0x00000038
-#define EXPR_MULTIPLYASSIGN 0x00000039
-#define EXPR_DIVIDEASSIGN   0x0000003A
-#define EXPR_MODULUSASSIGN  0x0000003B
-#define EXPR_RETURN         0x0000003C
-#define EXPR_IF             0x0000003D
-#define EXPR_UNLESS         0x0000003E
-#define EXPR_IFELSE         0x0000003F
-#define EXPR_UNLESSELSE     0x00000040
-#define EXPR_WHILE          0x00000041
-#define EXPR_UNTIL          0x00000042
-#define EXPR_WHILECONTINUE  0x00000043
-#define EXPR_UNTILBREAK     0x00000044
-#define EXPR_EACH_IN        0x00000045
-#define EXPR_REPEAT         0x00000046
-#define EXPR_DELETE         0x00000047
-#define EXPR_BREAK          0x00000048
-#define EXPR_CONTINUE       0x00000049
-#define EXPR_BREAK_TO       0x0000004A
-#define EXPR_CONTINUE_TO    0x0000004B
+#define EXPR_DECLARE        0x00000035
+#define EXPR_DECLAREUNDEF   0x00000036
+#define EXPR_ASSIGN         0x00000037
+#define EXPR_ADDASSIGN      0x00000038
+#define EXPR_SUBTRACTASSIGN 0x00000039
+#define EXPR_MULTIPLYASSIGN 0x0000003A
+#define EXPR_DIVIDEASSIGN   0x0000003B
+#define EXPR_MODULUSASSIGN  0x0000003C
+#define EXPR_RETURN         0x0000003D
+#define EXPR_IF             0x0000003E
+#define EXPR_UNLESS         0x0000003F
+#define EXPR_IFELSE         0x00000040
+#define EXPR_UNLESSELSE     0x00000041
+#define EXPR_WHILE          0x00000042
+#define EXPR_UNTIL          0x00000043
+#define EXPR_WHILECONTINUE  0x00000044
+#define EXPR_UNTILBREAK     0x00000045
+#define EXPR_EACH_IN        0x00000046
+#define EXPR_REPEAT         0x00000047
+#define EXPR_DELETE         0x00000048
+#define EXPR_BREAK          0x00000049
+#define EXPR_CONTINUE       0x0000004A
+#define EXPR_BREAK_TO       0x0000004B
+#define EXPR_CONTINUE_TO    0x0000004C
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -315,9 +316,9 @@ typedef struct {
     trait_t traits;
 } ast_expr_func_addr_t;
 
-
 // ---------------- ast_expr_array_access_t ----------------
 // Expression for accessing an element in an array
+// (Used for: EXPR_ARRAY_ACCESS and EXPR_AT)
 typedef struct {
     unsigned int id;
     source_t source;

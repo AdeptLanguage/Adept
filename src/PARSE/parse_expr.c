@@ -236,6 +236,22 @@ int parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 }
             }
             break;
+        case TOKEN_AT: {
+                ast_expr_t *index_expr;
+                ast_expr_array_access_t *at_expr = malloc(sizeof(ast_expr_array_access_t));
+                at_expr->source = sources[(*i)++];
+
+                if(parse_primary_expr(ctx, &index_expr)){
+                    free(at_expr);
+                    return 1;
+                }
+
+                at_expr->id = EXPR_AT;
+                at_expr->value = *inout_expr;
+                at_expr->index = index_expr;
+                *inout_expr = (ast_expr_t*) at_expr;
+            }
+            break;
         default:
             return 0;
         }

@@ -13,6 +13,8 @@ call :compile as
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile assignment
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile at
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile bitwise
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile break
