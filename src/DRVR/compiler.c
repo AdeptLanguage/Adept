@@ -196,6 +196,8 @@ int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **arg
                 compiler->traits |= COMPILER_DEBUG_SYMBOLS;
             } else if(strcmp(argv[arg_index], "-e") == 0){
                 compiler->traits |= COMPILER_EXECUTE_RESULT;
+            } else if(strcmp(argv[arg_index], "-w") == 0){
+                compiler->traits |= COMPILER_NO_WARN;
             } else if(strcmp(argv[arg_index], "-O0") == 0){
                 compiler->optimization = OPTIMIZATION_NONE;
             } else if(strcmp(argv[arg_index], "-O1") == 0){
@@ -361,6 +363,7 @@ void show_help(){
     printf("    -e               Execute resulting executable\n");
     printf("    -p, --package    Output a package\n");
     printf("    -d               Include debugging symbols\n");
+    printf("    -w               Disable all compiler warnings\n");
     printf("    -O               Set optimization level\n");
 
     printf("\nLanguage Options:\n");
@@ -477,6 +480,8 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
 }
 
 void compiler_warn(compiler_t *compiler, source_t source, const char *message){
+    if(compiler->traits & COMPILER_NO_WARN) return;
+
     object_t *object = compiler->objects[source.object_index];
     int line, column;
     lex_get_location(object->buffer, source.index, &line, &column);
@@ -486,6 +491,8 @@ void compiler_warn(compiler_t *compiler, source_t source, const char *message){
 }
 
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){
+    if(compiler->traits & COMPILER_NO_WARN) return;
+    
     object_t *object = compiler->objects[source.object_index];
     va_list args;
     int line, column;

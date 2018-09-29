@@ -2,6 +2,7 @@
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
 #include "UTIL/filename.h"
+#include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_stmt.h"
@@ -75,14 +76,9 @@ int ir_gen_functions(compiler_t *compiler, object_t *object){
                 }
 
                 // Check that the base isn't a primitive
-                const length_t primitives_length = 13;
-                const char * const primitives[] = {
-                    "bool", "byte", "double", "float", "int", "long", "short", "successful", "ubyte", "uint", "ulong", "ushort", "usize"
-                };
-
-                int array_index = binary_string_search(primitives, primitives_length, ((ast_elem_base_t*) this_type->elements[1])->base);
-                if(array_index != -1){
-                    compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", primitives[array_index]);
+                char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
+                if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
+                    compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
                     return 1;
                 }
 

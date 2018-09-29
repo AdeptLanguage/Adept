@@ -2,6 +2,7 @@
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
 #include "UTIL/filename.h"
+#include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_type.h"
 
@@ -388,28 +389,24 @@ unsigned int ir_primitive_from_ast_type(const ast_type_t *type){
     if(type->elements[0]->id != AST_ELEM_BASE) return TYPE_KIND_NONE;
 
     char *base = ((ast_elem_base_t*) type->elements[0])->base;
-    const length_t primitives_length = 13;
-    const char * const primitives[] = {
-        "bool", "byte", "double", "float", "int", "long", "short", "successful", "ubyte", "uint", "ulong", "ushort", "usize"
-    };
 
-    int array_index = binary_string_search(primitives, primitives_length, base);
+    int builtin = typename_builtin_type(base);
 
-    switch(array_index){
-    case  0: return TYPE_KIND_BOOLEAN;
-    case  1: return TYPE_KIND_S8;
-    case  2: return TYPE_KIND_DOUBLE;
-    case  3: return TYPE_KIND_FLOAT;
-    case  4: return TYPE_KIND_S32;
-    case  5: return TYPE_KIND_S64;
-    case  6: return TYPE_KIND_S16;
-    case  7: return TYPE_KIND_BOOLEAN;
-    case  8: return TYPE_KIND_U8;
-    case  9: return TYPE_KIND_U32;
-    case 10: return TYPE_KIND_U64;
-    case 11: return TYPE_KIND_U16;
-    case 12: return TYPE_KIND_U64;
-    case -1: return TYPE_KIND_NONE;
+    switch(builtin){
+    case BUILTIN_TYPE_BOOL:       return TYPE_KIND_BOOLEAN;
+    case BUILTIN_TYPE_BYTE:       return TYPE_KIND_S8;
+    case BUILTIN_TYPE_DOUBLE:     return TYPE_KIND_DOUBLE;
+    case BUILTIN_TYPE_FLOAT:      return TYPE_KIND_FLOAT;
+    case BUILTIN_TYPE_INT:        return TYPE_KIND_S32;
+    case BUILTIN_TYPE_LONG:       return TYPE_KIND_S64;
+    case BUILTIN_TYPE_SHORT:      return TYPE_KIND_S16;
+    case BUILTIN_TYPE_SUCCESSFUL: return TYPE_KIND_BOOLEAN;
+    case BUILTIN_TYPE_UBYTE:      return TYPE_KIND_U8;
+    case BUILTIN_TYPE_UINT:       return TYPE_KIND_U32;
+    case BUILTIN_TYPE_ULONG:      return TYPE_KIND_U64;
+    case BUILTIN_TYPE_USHORT:     return TYPE_KIND_U16;
+    case BUILTIN_TYPE_USIZE:      return TYPE_KIND_U64;
+    case BUILTIN_TYPE_NONE:       return TYPE_KIND_NONE;
     }
 
     return TYPE_KIND_NONE; // Should never be reached

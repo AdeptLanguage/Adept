@@ -5,6 +5,7 @@
 #include "UTIL/color.h"
 #include "UTIL/search.h"
 #include "UTIL/levenshtein.h"
+#include "UTIL/builtin_type.h"
 
 int infer(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
@@ -550,28 +551,23 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
     if(type->elements[0]->id != AST_ELEM_BASE) return EXPR_NONE;
 
     char *base = ((ast_elem_base_t*) type->elements[0])->base;
-    const length_t primitives_length = 13;
-    const char * const primitives[] = {
-        "bool", "byte", "double", "float", "int", "long", "short", "successful", "ubyte", "uint", "ulong", "ushort", "usize"
-    };
+    int builtin = typename_builtin_type(base);
 
-    int array_index = binary_string_search(primitives, primitives_length, base);
-
-    switch(array_index){
-    case  0: return EXPR_BOOLEAN;
-    case  1: return EXPR_BYTE;
-    case  2: return EXPR_DOUBLE;
-    case  3: return EXPR_FLOAT;
-    case  4: return EXPR_INT;
-    case  5: return EXPR_LONG;
-    case  6: return EXPR_SHORT;
-    case  7: return EXPR_BOOLEAN;
-    case  8: return EXPR_UBYTE;
-    case  9: return EXPR_UINT;
-    case 10: return EXPR_ULONG;
-    case 11: return EXPR_USHORT;
-    case 12: return EXPR_ULONG;
-    case -1: return EXPR_NONE;
+    switch(builtin){
+    case BUILTIN_TYPE_BOOL:       return EXPR_BOOLEAN;
+    case BUILTIN_TYPE_BYTE:       return EXPR_BYTE;
+    case BUILTIN_TYPE_DOUBLE:     return EXPR_DOUBLE;
+    case BUILTIN_TYPE_FLOAT:      return EXPR_FLOAT;
+    case BUILTIN_TYPE_INT:        return EXPR_INT;
+    case BUILTIN_TYPE_LONG:       return EXPR_LONG;
+    case BUILTIN_TYPE_SHORT:      return EXPR_SHORT;
+    case BUILTIN_TYPE_SUCCESSFUL: return EXPR_BOOLEAN;
+    case BUILTIN_TYPE_UBYTE:      return EXPR_UBYTE;
+    case BUILTIN_TYPE_UINT:       return EXPR_UINT;
+    case BUILTIN_TYPE_ULONG:      return EXPR_ULONG;
+    case BUILTIN_TYPE_USHORT:     return EXPR_USHORT;
+    case BUILTIN_TYPE_USIZE:      return EXPR_ULONG;
+    case BUILTIN_TYPE_NONE:       return EXPR_NONE;
     }
 
     return EXPR_NONE; // Should never be reached

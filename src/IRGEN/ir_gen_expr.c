@@ -2,6 +2,7 @@
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
+#include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
@@ -356,7 +357,11 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ast_struct_t *target = ast_struct_find(&builder->object->ast, struct_name);
 
             if(target == NULL){
-                compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", struct_name);
+                if(typename_builtin_type(struct_name) != BUILTIN_TYPE_NONE){
+                    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on built-in type '%s'", struct_name);
+                } else {
+                    compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", struct_name);
+                }
                 ast_type_free(&struct_value_ast_type);
                 return 1;
             }

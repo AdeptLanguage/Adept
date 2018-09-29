@@ -18,6 +18,7 @@
 #define COMPILER_INFLATE_PACKAGE TRAIT_3
 #define COMPILER_EXECUTE_RESULT  TRAIT_4
 #define COMPILER_DEBUG_SYMBOLS   TRAIT_5
+#define COMPILER_NO_WARN         TRAIT_6
 
 // Possible optimization levels
 #define OPTIMIZATION_NONE       0x00
