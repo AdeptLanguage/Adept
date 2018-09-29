@@ -331,6 +331,14 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             // This expression should be able to be mutable (Checked during parsing)
             if(ir_gen_expression(builder, member_expr->value, &struct_value, true, &struct_value_ast_type)) return 1;
 
+            if(struct_value->type->kind != TYPE_KIND_POINTER){
+                char *given_type = ast_type_str(&struct_value_ast_type);
+                compiler_panicf(builder->compiler, member_expr->source, "Can't use member operator '.' on temporary value of type '%s'", given_type);
+                free(given_type);
+                ast_type_free(&struct_value_ast_type);
+                return 1;
+            }
+
             // Auto-derefernce '*something' types
             if(struct_value_ast_type.elements_length > 1 && struct_value_ast_type.elements[0]->id == AST_ELEM_POINTER
                 && struct_value_ast_type.elements[1]->id != AST_ELEM_POINTER){
