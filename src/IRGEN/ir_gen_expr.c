@@ -501,10 +501,33 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ast_type_t index_type, array_type;
             ir_value_t *index_value, *array_value;
 
-            if(ir_gen_expression(builder, array_access_expr->value, &array_value, false, &array_type)) return 1;
+            if(ir_gen_expression(builder, array_access_expr->value, &array_value, true, &array_type)) return 1;
             if(ir_gen_expression(builder, array_access_expr->index, &index_value, false, &index_type)){
                 ast_type_free(&array_type);
                 return 1;
+            }
+
+            if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY){
+                // Bitcast reference (that's to a fixed array of element) to pointer of element
+                // (*)  [10] int -> *int
+
+                assert(array_type.elements_length != 0);
+
+                ir_type_t *casted_ir_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                casted_ir_type->kind = TYPE_KIND_POINTER;
+                casted_ir_type->extra = ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype;
+
+                array_type.elements[0]->id = AST_ELEM_POINTER;
+
+                ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+                instr->id = INSTRUCTION_BITCAST;
+                instr->result_type = casted_ir_type;
+                instr->value = array_value;
+                array_value = build_value_from_prev_instruction(builder);
+            } else {
+                // Load value reference
+                // (*)  int -> int
+                array_value = build_load(builder, array_value);
             }
 
             if(index_value->type->kind < TYPE_KIND_S8 || index_value->type->kind > TYPE_KIND_U64){
@@ -513,7 +536,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 ast_type_free(&index_type);
                 return 1;
             }
-
+            
             // Ensure array type is a pointer
             if(array_value->type->kind != TYPE_KIND_POINTER || array_type.elements_length < 2 || array_type.elements[0]->id != AST_ELEM_POINTER){
                 char *given_type = ast_type_str(&array_type);

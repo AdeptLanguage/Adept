@@ -6,12 +6,26 @@ struct Human (name 256 ubyte)
 
 func main(in argc int, in argv **ubyte) int {
     human Human
-    memcpy(&human.name, 'Billy', 6)
-    printf('human.name : %s %d\n', &human.name)
+    memcpy(&human.name as *ubyte, 'Billy', 6)
+    printf('human.name : %s\n', &human.name as *ubyte)
 
     buffer 512 ubyte
     message *ubyte = 'Hello World! This is a test message in a static buffer'
-    memcpy(&buffer, message, strlen(message) + 1)
-    printf('%s\n', &buffer)
+    memcpy(&buffer as *ubyte, message, strlen(message) + 1)
+    printf('%s\n', &buffer as *ubyte)
+	print512ubyte(getHelloWorldAgain())
     return 0
+}
+
+func getHelloWorldAgain() 512 ubyte {
+	buf 512 ubyte = undef
+	msg *ubyte = 'Hello World Again!'
+	memcpy(&buf as *ubyte, msg, strlen(msg) + 1)
+	return buf
+}
+
+func print512ubyte(msg 512 ubyte) void {
+	len usize = strlen(&msg as *ubyte) + 1
+	repeat len, putchar(msg[idx])
+	putchar('\n'ub)
 }

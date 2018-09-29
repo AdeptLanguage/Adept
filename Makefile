@@ -32,7 +32,7 @@ LLVM_LIBS=-lLLVMCoverage -lgtest_main -lgtest -lLLVMDlltoolDriver -lLLVMLibDrive
 -lLLVMX86Utils -lLLVMMCJIT -lLLVMExecutionEngine -lLLVMTarget -lLLVMAnalysis -lLLVMProfileData -lLLVMRuntimeDyld -lLLVMObject -lLLVMMCParser -lLLVMBitReader -lLLVMMC -lLLVMCore \
 -lLLVMBinaryFormat -lLLVMSupport -lLLVMDemangle -lpsapi -lshell32 -lole32 -luuid
 
-CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O3 -fmax-errors=5 -Werror
+CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O0 -fmax-errors=5 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 LDFLAGS=$(LLVM_LINKER_FLAGS)
 SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/bridge.c \
