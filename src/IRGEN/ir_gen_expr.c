@@ -507,6 +507,15 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 return 1;
             }
 
+            if(array_value->type->kind != TYPE_KIND_POINTER){
+                char *given_type = ast_type_str(&array_type);
+                compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator [] on temporary value of type '%s'", given_type);
+                free(given_type);
+                ast_type_free(&array_type);
+                ast_type_free(&index_type);
+                return 1;
+            }
+
             if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY){
                 // Bitcast reference (that's to a fixed array of element) to pointer of element
                 // (*)  [10] int -> *int

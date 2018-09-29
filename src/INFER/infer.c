@@ -372,6 +372,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
         break;
     case EXPR_ARRAY_ACCESS:
         if(infer_expr(compiler, object, ast_func, &((ast_expr_array_access_t*) *expr)->index, EXPR_NONE, scope)) return 1;
+        if(infer_expr(compiler, object, ast_func, &((ast_expr_array_access_t*) *expr)->value, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_CAST:
         if(infer_type_aliases(compiler, object, &((ast_expr_cast_t*) *expr)->to)) return 1;

@@ -2,7 +2,7 @@
 import 'sys/cstdio.adept'
 import 'sys/cstring.adept'
 
-struct Human (name 256 ubyte)
+struct Human (name 256 ubyte, real *ubyte)
 
 func main(in argc int, in argv **ubyte) int {
     human Human
