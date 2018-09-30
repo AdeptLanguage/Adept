@@ -1,0 +1,25 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+	ints 10 int = undef
+	
+	// Set to some numbers
+	repeat 10, ints[idx] = idx + 1
+	print(ints)
+	
+	// Zero some numbers
+	repeat 10, zero(ints at idx)
+	print(ints)
+	
+	return 0
+}
+
+func zero(out ref *int) void {
+	*ref = 0
+}
+
+func print(in ints 10 int) void {
+	repeat 10, printf('%d ', ints[idx])
+	putchar('\n'ub)
+}
