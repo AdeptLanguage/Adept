@@ -11,10 +11,15 @@ void expand(void **inout_memory, length_t unit_size, length_t length, length_t *
 
     while(length + amount > *inout_capacity){
         *inout_capacity *= 2;
+        
+        #ifdef UTIL_USE_REALLOC
+        *inout_memory = realloc(*inout_memory, unit_size * *inout_capacity);
+        #else
         void *new_memory = malloc(unit_size * *inout_capacity);
         memcpy(new_memory, *inout_memory, unit_size * length);
         free(*inout_memory);
         *inout_memory = new_memory;
+        #endif
     }
 }
 
@@ -29,6 +34,11 @@ void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, l
 
     while(length + amount > *inout_capacity){
         *inout_capacity *= 2;
+
+        #ifdef UTIL_USE_REALLOC
+        *inout_memory1 = realloc(*inout_memory1, unit_size1 * *inout_capacity);
+        *inout_memory2 = realloc(*inout_memory2, unit_size2 * *inout_capacity);
+        #else
         void *new_memory = malloc(unit_size1 * *inout_capacity);
         memcpy(new_memory, *inout_memory1, unit_size1 * length);
         free(*inout_memory1);
@@ -38,14 +48,23 @@ void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, l
         memcpy(new_memory, *inout_memory2, unit_size2 * length);
         free(*inout_memory2);
         *inout_memory2 = new_memory;
+        #endif
     }
 }
 
-void grow(void **inout_memory, length_t unit_size, length_t old_length, length_t new_length){
+#ifdef UTIL_USE_REALLOC
+void grow_impl(void **inout_memory, length_t unit_size, length_t new_length){
+#else
+void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, length_t new_length){
+#endif
+    #ifdef UTIL_USE_REALLOC
+    *inout_memory = realloc(*inout_memory, unit_size * new_length);
+    #else
     void *memory = malloc(unit_size * new_length);
     memcpy(memory, *inout_memory, unit_size * old_length);
     free(*inout_memory);
     *inout_memory = memory;
+    #endif
 }
 
 strong_cstr_t strclone(const char *src){

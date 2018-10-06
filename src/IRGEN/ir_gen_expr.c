@@ -544,7 +544,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 instr->result_type = casted_ir_type;
                 instr->value = array_value;
                 array_value = build_value_from_prev_instruction(builder);
-            } else {
+            } else if(EXPR_IS_MUTABLE(array_access_expr->value->id)){
                 // Load value reference
                 // (*)  int -> int
                 array_value = build_load(builder, array_value);
@@ -560,6 +560,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             // Ensure array type is a pointer
             if(array_value->type->kind != TYPE_KIND_POINTER || array_type.elements_length < 2 || array_type.elements[0]->id != AST_ELEM_POINTER){
                 char *given_type = ast_type_str(&array_type);
+
+                char *s = ir_type_str(array_value->type);
+                puts(s);
+                free(s);
 
                 compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on non-array type '%s'",
                     expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", given_type);
