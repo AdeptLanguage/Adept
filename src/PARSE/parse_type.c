@@ -3,7 +3,7 @@
 #include "PARSE/parse_type.h"
 #include "UTIL/util.h"
 
-int parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
+errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
     // Expects from 'ctx': compiler, object, tokenlist, i
 
     // Expects first token of type to be pointed to by 'i'
@@ -68,7 +68,7 @@ int parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             if(parse_type_func(ctx, func_elem)){
                 ast_type_free(out_type);
                 free(func_elem);
-                return 1;
+                return FAILURE;
             }
 
             out_type->elements[out_type->elements_length] = (ast_elem_t*) func_elem;
@@ -81,15 +81,15 @@ int parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         out_type->elements_length = 0;
         out_type->source.index = 0;
         out_type->source.object_index = ctx->object->index;
-        return 1;
+        return FAILURE;
     }
 
     out_type->source = sources[start];
     out_type->elements_length++;
-    return 0;
+    return SUCCESS;
 }
 
-int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
+errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
     // Parses the func pointer type element of a type into an ast_elem_func_t
     // func (int, int) int
     //  ^
@@ -111,13 +111,13 @@ int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
     bool is_vararg = false;
     length_t args_capacity = 0;
 
-    if(parse_eat(ctx, TOKEN_FUNC, "Expected 'func' keyword in function type")) return 1;
-    if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after 'func' keyword in type")) return 1;
+    if(parse_eat(ctx, TOKEN_FUNC, "Expected 'func' keyword in function type")) return FAILURE;
+    if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after 'func' keyword in type")) return FAILURE;
 
     while(tokens[*i].id != TOKEN_CLOSE){
         if(is_vararg){
             compiler_panic(ctx->compiler, sources[*i], "Expected ')' after variadic argument");
-            return 1;
+            return FAILURE;
         }
 
         if(args_capacity == 0){
@@ -152,7 +152,7 @@ int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
                 ast_types_free(out_func_elem->arg_types, out_func_elem->arity);
                 free(out_func_elem->arg_types);
                 free(out_func_elem->arg_flows);
-                return 1;
+                return FAILURE;
             }
             out_func_elem->arity++;
         }
@@ -163,7 +163,7 @@ int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
                 ast_types_free(out_func_elem->arg_types, out_func_elem->arity);
                 free(out_func_elem->arg_types);
                 free(out_func_elem->arg_flows);
-                return 1;
+                return FAILURE;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
             if(is_vararg) compiler_panic(ctx->compiler, sources[*i], "Expected ')' after variadic argument");
@@ -171,7 +171,7 @@ int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
             ast_types_free(out_func_elem->arg_types, out_func_elem->arity);
             free(out_func_elem->arg_types);
             free(out_func_elem->arg_flows);
-            return 1;
+            return FAILURE;
         }
     }
 
@@ -185,7 +185,8 @@ int parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
         ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
         ast_type_free_fully(out_func_elem->return_type);
         free(out_func_elem->arg_flows);
-        return 1;
+        return FAILURE;
     }
-    return 0;
+
+    return SUCCESS;
 }

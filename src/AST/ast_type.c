@@ -234,7 +234,7 @@ void ast_type_make_generic_float(ast_type_t *type){
     type->source.object_index = 0;
 }
 
-char* ast_type_str(const ast_type_t *type){
+strong_cstr_t ast_type_str(const ast_type_t *type){
     // NOTE: Returns allocated string containing string representation of type
     // NOTE: Returns NULL on error
 

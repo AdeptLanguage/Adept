@@ -43,6 +43,8 @@ call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile each_in
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile enums
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array_assign

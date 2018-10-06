@@ -18,6 +18,9 @@ void ast_init(ast_t *ast){
     ast->globals = NULL;
     ast->globals_length = 0;
     ast->globals_capacity = 0;
+    ast->enums = NULL;
+    ast->enums_length = 0;
+    ast->enums_capacity = 0;
     ast->libraries = NULL;
     ast->libraries_length = 0;
     ast->libraries_capacity = 0;
@@ -27,6 +30,7 @@ void ast_init(ast_t *ast){
 void ast_free(ast_t *ast){
     length_t i;
 
+    ast_free_enums(ast->enums, ast->enums_length);
     ast_free_functions(ast->funcs, ast->funcs_length);
     ast_free_structs(ast->structs, ast->structs_length);
     ast_free_globals(ast->globals, ast->globals_length);
@@ -39,6 +43,7 @@ void ast_free(ast_t *ast){
 
     for(length_t l = 0; l != ast->libraries_length; l++) free(ast->libraries[l]);
 
+    free(ast->enums);
     free(ast->funcs);
     free(ast->structs);
     free(ast->constants);
@@ -55,7 +60,7 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
     for(length_t i = 0; i != functions_length; i++){
         ast_func_t *func = &functions[i];
         free(func->name);
-
+ 
         if(func->traits & AST_FUNC_FOREIGN){
             for(length_t a = 0; a != func->arity; a++){
                 ast_type_free(&func->arg_types[a]);
@@ -104,8 +109,7 @@ void ast_free_structs(ast_struct_t *structs, length_t structs_length){
 void ast_free_constants(ast_constant_t *constants, length_t constants_length){
     for(length_t i = 0; i != constants_length; i++){
         ast_constant_t *constant = &constants[i];
-        ast_expr_free(constant->expression);
-        free(constant->expression);
+        ast_expr_free_fully(constant->expression);
     }
 }
 
@@ -114,9 +118,15 @@ void ast_free_globals(ast_global_t *globals, length_t globals_length){
         ast_global_t *global = &globals[i];
         ast_type_free(&global->type);
         if(global->initial != NULL){
-            ast_expr_free(global->initial);
-            free(global->initial);
+            ast_expr_free_fully(global->initial);
         }
+    }
+}
+
+void ast_free_enums(ast_enum_t *enums, length_t enums_length){
+    for(length_t i = 0; i != enums_length; i++){
+        ast_enum_t *inum = &enums[i];
+        free(inum->kinds);
     }
 }
 
@@ -129,6 +139,7 @@ void ast_dump(ast_t *ast, const char *filename){
         return;
     }
 
+    ast_dump_enums(file, ast->enums, ast->enums_length);
     ast_dump_structs(file, ast->structs, ast->structs_length);
     ast_dump_globals(file, ast->globals, ast->globals_length);
     ast_dump_functions(file, ast->funcs, ast->funcs_length);
@@ -389,7 +400,37 @@ void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length
     }
 }
 
-void ast_func_create_template(ast_func_t *func, char *name, bool is_stdcall, bool is_foreign, source_t source){
+void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length){
+    for(length_t i = 0; i != enums_length; i++){
+        ast_enum_t *inum = &enums[i];
+
+        char *kinds_string = NULL;
+        length_t kinds_string_length = 0;
+        length_t kinds_string_capacity = 0;
+
+        for(length_t i = 0; i != inum->length; i++){
+            const char *kind_name = inum->kinds[i];
+            length_t kind_name_length = strlen(kind_name);
+            expand((void**) &kinds_string, sizeof(char), kinds_string_length, &kinds_string_capacity, kind_name_length + 2, 64);
+
+            memcpy(&kinds_string[kinds_string_length], kind_name, kind_name_length);
+            kinds_string_length += kind_name_length;
+
+            if(i + 1 == inum->length){
+                kinds_string[kinds_string_length] = '\0';
+            } else {
+                memcpy(&kinds_string[kinds_string_length], ", ", 2);
+                kinds_string_length += 2;
+            }
+        }
+
+
+        fprintf(file, "%s (%s)\n", inum->name, kinds_string ? kinds_string : "");
+        free(kinds_string);
+    }
+}
+
+void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, source_t source){
     func->name = name;
     func->arg_names = NULL;
     func->arg_types = NULL;
@@ -411,7 +452,7 @@ void ast_func_create_template(ast_func_t *func, char *name, bool is_stdcall, boo
     if(is_foreign)                func->traits |= AST_FUNC_FOREIGN;
 }
 
-void ast_struct_init(ast_struct_t *structure, char *name, char **names, ast_type_t *types,
+void ast_struct_init(ast_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source){
     structure->name = name;
     structure->field_names = names;
@@ -421,14 +462,21 @@ void ast_struct_init(ast_struct_t *structure, char *name, char **names, ast_type
     structure->source = source;
 }
 
-void ast_alias_init(ast_alias_t *alias, char *name, ast_type_t type, trait_t traits, source_t source){
+void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source){
     alias->name = name;
     alias->type = type;
     alias->traits = TRAIT_NONE;
     alias->source = source;
 }
 
-ast_struct_t *ast_struct_find(ast_t *ast, char *name){
+void ast_enum_init(ast_enum_t *inum,  weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
+    inum->name = name;
+    inum->kinds = kinds;
+    inum->length = length;
+    inum->source = source;
+}
+
+ast_struct_t *ast_struct_find(ast_t *ast, const char *name){
     // TODO: Maybe sort and do a binary serach or something
     for(length_t i = 0; i != ast->structs_length; i++){
         if(strcmp(ast->structs[i].name, name) == 0){
@@ -438,22 +486,30 @@ ast_struct_t *ast_struct_find(ast_t *ast, char *name){
     return NULL;
 }
 
-bool ast_struct_find_field(ast_struct_t *ast_struct, char *name, length_t *out_index){
-    // NOTE: Finds index of field in struct; returns true if error
+successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, length_t *out_index){
     for(length_t i = 0; i != ast_struct->field_count; i++){
         if(strcmp(ast_struct->field_names[i], name) == 0){
             *out_index = i;
-            return false;
+            return true;
         }
     }
-    return true; // Error: didn't find
+    return false;
 }
 
-int find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias){
-    // Searches for 'target' inside 'strings'
+successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t *out_index){
+    for(length_t i = 0; i != ast_enum->length; i++){
+        if(strcmp(ast_enum->kinds[i], name) == 0){
+            *out_index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+maybe_index_t find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias){
     // If not found returns -1 else returns index inside array
 
-    int first, middle, last, comparison;
+    maybe_index_t first, middle, last, comparison;
     first = 0; last = aliases_length - 1;
 
     while(first <= last){
@@ -468,11 +524,10 @@ int find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias)
     return -1;
 }
 
-int find_constant(ast_constant_t *constants, length_t constants_length, const char *constant){
-    // Searches for 'target' inside 'strings'
+maybe_index_t find_constant(ast_constant_t *constants, length_t constants_length, const char *constant){
     // If not found returns -1 else returns index inside array
 
-    int first, middle, last, comparison;
+    maybe_index_t first, middle, last, comparison;
     first = 0; last = constants_length - 1;
 
     while(first <= last){
@@ -487,13 +542,32 @@ int find_constant(ast_constant_t *constants, length_t constants_length, const ch
     return -1;
 }
 
-void ast_add_foreign_library(ast_t *ast, char *library){
-    expand((void**) &ast->libraries, sizeof(char*), ast->libraries_length, &ast->libraries_capacity, 1, 4);
-    ast->libraries[ast->libraries_length++] = library;
+maybe_index_t find_enum(ast_enum_t *enums, length_t enums_length, const char *inum){
+    // If not found returns -1 else returns index inside array
+
+    maybe_index_t first, middle, last, comparison;
+    first = 0; last = enums_length - 1;
+
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = strcmp(enums[middle].name, inum);
+
+        if(comparison == 0) return middle;
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
+    }
+
+    return -1;
 }
 
-int ast_aliases_cmp(const void *a, const void *b){
-    return strcmp(((ast_alias_t*) a)->name, ((ast_alias_t*) b)->name);
+void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
+    expand((void**) &ast->enums, sizeof(ast_enum_t), ast->enums_length, &ast->enums_capacity, 1, 4);
+    ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
+}
+
+void ast_add_foreign_library(ast_t *ast, strong_cstr_t library){
+    expand((void**) &ast->libraries, sizeof(char*), ast->libraries_length, &ast->libraries_capacity, 1, 4);
+    ast->libraries[ast->libraries_length++] = library;
 }
 
 ast_type_t* ast_get_usize(ast_t *ast){
@@ -516,6 +590,14 @@ ast_type_t* ast_get_usize(ast_t *ast){
     return usize_type;
 }
 
+int ast_aliases_cmp(const void *a, const void *b){
+    return strcmp(((ast_alias_t*) a)->name, ((ast_alias_t*) b)->name);
+}
+
 int ast_constants_cmp(const void *a, const void *b){
     return strcmp(((ast_constant_t*) a)->name, ((ast_constant_t*) b)->name);
+}
+
+int ast_enums_cmp(const void *a, const void *b){
+    return strcmp(((ast_enum_t*) a)->name, ((ast_enum_t*) b)->name);
 }

@@ -40,7 +40,7 @@ typedef struct {
 
 // ---------------- tokenlist_print ----------------
 // Prints a tokenlist to the terminal
-void tokenlist_print(tokenlist_t *tokenlist, char *buffer);
+void tokenlist_print(tokenlist_t *tokenlist, const char *buffer);
 
 // ---------------- tokenlist_free ----------------
 // Frees a tokenlist completely
@@ -111,7 +111,8 @@ extern const char *global_token_name_table[];
 #define TOKEN_BIT_COMPLEMENT   0x00000035
 #define TOKEN_BIT_LGC_LSHIFT   0x00000036
 #define TOKEN_BIT_LGC_RSHIFT   0x00000037
-// 37..3F
+#define TOKEN_NAMESPACE        0x00000038
+// 38..3F
 
 // NOTE: 0x00000040 .. 0x0000006F reserved for keywords
 // Keywords are organized as such that 0x00000040 + the id of

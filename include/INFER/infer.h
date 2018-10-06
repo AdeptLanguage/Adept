@@ -16,7 +16,7 @@
 // ---------------- infer_var_t ----------------
 // Variable mapping used for inference stage
 typedef struct {
-    char *name;
+    weak_cstr_t name;
     ast_type_t *type;
 } infer_var_t;
 
@@ -113,26 +113,26 @@ void infer_var_scope_free(infer_var_scope_t *scope);
 
 // ---------------- infer_var_scope_find ----------------
 // Finds a variable mapping within an inference variable scope
-infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, char *name);
+infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name);
 
 // ---------------- infer_var_scope_add_variable ----------------
 // Adds a variables to an inference variable scope
-void infer_var_scope_add_variable(infer_var_scope_t *scope, char *name, ast_type_t *type);
+void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type);
 
 // ---------------- infer_var_scope_nearest ----------------
 // Finds the nearest variable name to the given variable name
 // within the scope.
 // (NOTE: Minimum distance of 3 to count as near enough)
-const char* infer_var_scope_nearest(infer_var_scope_t *scope, char *name);
+const char* infer_var_scope_nearest(infer_var_scope_t *scope, const char *name);
 
 // ---------------- infer_var_scope_nearest_inner ----------------
 // Inner recursive implementation of infer_var_scope_nearest
-void infer_var_scope_nearest_inner(infer_var_scope_t *scope, char *name, char **out_nearest_name, int *out_distance);
+void infer_var_scope_nearest_inner(infer_var_scope_t *scope, const char *name, char **out_nearest_name, int *out_distance);
 
 // ---------------- infer_var_list_nearest ----------------
 // Finds the nearest variable name to the given variable name
 // within the inference variable list.
 // (NOTE: Minimum distance of 3 to count as near enough)
-void infer_var_list_nearest(infer_var_list_t *list, char *name, char **out_nearest_name, int *out_distance);
+void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out_nearest_name, int *out_distance);
 
 #endif // INFER_H

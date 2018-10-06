@@ -16,24 +16,24 @@
 #include "IRGEN/ir_builder.h"
 
 // ---------------- ir_gen_type_mappings ----------------
-int ir_gen(compiler_t *compiler, object_t *object);
+errorcode_t ir_gen(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_functions_body ----------------
 // Generates IR function skeletons for AST functions.
-int ir_gen_functions(compiler_t *compiler, object_t *object);
+errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_functions_body ----------------
 // Generates IR function bodies for AST functions.
 // Assumes IR function skeletons were already generated.
-int ir_gen_functions_body(compiler_t *compiler, object_t *object);
+errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_globals ----------------
 // Generates IR globals from AST globals
-int ir_gen_globals(compiler_t *compiler, object_t *object);
+errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_globals_init ----------------
 // Generates IR instructions for initializing global variables
-int ir_gen_globals_init(ir_builder_t *builder);
+errorcode_t ir_gen_globals_init(ir_builder_t *builder);
 
 // ---------------- ir_func_mapping_cmp ----------------
 // Compares two 'ir_func_mapping_t' structures.

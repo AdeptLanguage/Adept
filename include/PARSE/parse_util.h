@@ -7,7 +7,7 @@
 
 // ------------------ parse_ignore_newlines ------------------
 // Passes over newlines until something else is encountered
-int parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message);
+errorcode_t parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message);
 
 // ------------------ parse_panic_token ------------------
 // Will print an error message with general information

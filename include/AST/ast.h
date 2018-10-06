@@ -16,8 +16,8 @@
 // ---------------- ast_func_t ----------------
 // A function within the root AST
 typedef struct {
-    char *name;
-    char **arg_names;
+    strong_cstr_t name;
+    weak_cstr_t *arg_names;
     ast_type_t *arg_types;
     source_t *arg_sources;
     char *arg_flows; // in | out | inout
@@ -39,8 +39,8 @@ typedef struct {
 // ---------------- ast_struct_t ----------------
 // A structure within the root AST
 typedef struct {
-    char *name;
-    char **field_names;
+    strong_cstr_t name;
+    strong_cstr_t *field_names;
     ast_type_t *field_types;
     length_t field_count;
     trait_t traits;
@@ -53,7 +53,7 @@ typedef struct {
 // ---------------- ast_alias_t ----------------
 // A type alias within the root AST
 typedef struct {
-    const char *name;
+    weak_cstr_t name;
     ast_type_t type;
     trait_t traits;
     source_t source;
@@ -62,7 +62,7 @@ typedef struct {
 // ---------------- ast_constant_t ----------------
 // A global constant expression within the root AST
 typedef struct {
-    const char *name;
+    weak_cstr_t name;
     ast_expr_t *expression;
     trait_t traits;
     source_t source;
@@ -76,6 +76,15 @@ typedef struct {
     ast_expr_t *initial;
     source_t source;
 } ast_global_t;
+
+// ---------------- ast_enum_t ----------------
+// An enum AST node
+typedef struct {
+    weak_cstr_t name;
+    weak_cstr_t *kinds;
+    length_t length;
+    source_t source;
+} ast_enum_t;
 
 typedef struct {
     ast_type_t *ast_usize_type;
@@ -99,7 +108,10 @@ typedef struct {
     ast_global_t *globals;
     length_t globals_length;
     length_t globals_capacity;
-    char** libraries;
+    ast_enum_t *enums;
+    length_t enums_length;
+    length_t enums_capacity;
+    strong_cstr_t *libraries;
     length_t libraries_length;
     length_t libraries_capacity;
     ast_shared_common_t common;
@@ -121,6 +133,7 @@ void ast_free_statements_fully(ast_expr_t **statements, length_t length);
 void ast_free_structs(ast_struct_t *structs, length_t structs_length);
 void ast_free_constants(ast_constant_t *constants, length_t constants_length);
 void ast_free_globals(ast_global_t *globals, length_t globals_length);
+void ast_free_enums(ast_enum_t *enums, length_t enums_length);
 
 // ---------------- ast_dump ----------------
 // Converts an AST to a string representation
@@ -133,51 +146,75 @@ void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_le
 void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, length_t indentation);
 void ast_dump_structs(FILE *file, ast_struct_t *structs, length_t structs_length);
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length);
+void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
 
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function
-void ast_func_create_template(ast_func_t *func, char *name, bool is_stdcall, bool is_foreign, source_t source);
+void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, source_t source);
 
 // ---------------- ast_struct_init ----------------
 // Initializes an AST struct
-void ast_struct_init(ast_struct_t *structure, char *name, char **names, ast_type_t *types,
+void ast_struct_init(ast_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source);
 
 // ---------------- ast_alias_init ----------------
 // Initializes an AST alias
-void ast_alias_init(ast_alias_t *alias, char *name, ast_type_t type, trait_t traits, source_t source);
+void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source);
+
+// ---------------- ast_enum_init ----------------
+// Initializes an AST enum
+void ast_enum_init(ast_enum_t *inum, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
 
 // ---------------- ast_struct_find ----------------
 // Finds a structure by name
-ast_struct_t *ast_struct_find(ast_t *ast, char *name);
+ast_struct_t *ast_struct_find(ast_t *ast, const char *name);
 
 // ---------------- ast_struct_find_field ----------------
 // Finds a field by name within a structure
-bool ast_struct_find_field(ast_struct_t *ast_struct, char *name, length_t *out_index);
+successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, length_t *out_index);
+
+// ---------------- ast_enum_find_kind ----------------
+// Finds a kind by name within an enum
+successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t *out_index);
 
 // ---------------- find_alias ----------------
 // Finds an alias by name
-int find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias);
+maybe_index_t find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias);
 
 // ---------------- find_constant ----------------
 // Finds a global constant expression by name
-int find_constant(ast_constant_t *constants, length_t constants_length, const char *constant);
+maybe_index_t find_constant(ast_constant_t *constants, length_t constants_length, const char *constant);
+
+// ---------------- find_enum ----------------
+// Finds a enum expression by name
+maybe_index_t find_enum(ast_enum_t *enums, length_t enums_length, const char *inum);
+
+// ---------------- ast_add_enum ----------------
+// Adds an enum to the global scope of an AST
+void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
 
 // ---------------- ast_add_foreign_library ----------------
 // Adds a library to the list of foreign libraries
 // NOTE: Does not have ownership of library string
-void ast_add_foreign_library(ast_t *ast, char *library);
+void ast_add_foreign_library(ast_t *ast, strong_cstr_t library);
+
+// ---------------- ast_get_usize ----------------
+// Gets constant AST type for type 'usize'
+ast_type_t* ast_get_usize(ast_t *ast);
 
 // ---------------- ast_aliases_cmp ----------------
 // Compares two 'ast_alias_t' structures.
 // Used for qsort()
 int ast_aliases_cmp(const void *a, const void *b);
 
-ast_type_t* ast_get_usize(ast_t *ast);
-
 // ---------------- ast_constants_cmp ----------------
 // Compares two 'ast_constant_t' structures.
 // Used for qsort()
 int ast_constants_cmp(const void *a, const void *b);
+
+// ---------------- ast_enums_cmp ----------------
+// Compares two 'ast_enum_t' structures.
+// Used for qsort()
+int ast_enums_cmp(const void *a, const void *b);
 
 #endif // AST_H

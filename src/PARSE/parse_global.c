@@ -5,14 +5,14 @@
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_global.h"
 
-int parse_global(parse_ctx_t *ctx){
+errorcode_t parse_global(parse_ctx_t *ctx){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t source = ctx->tokenlist->sources[*i];
     ast_t *ast = ctx->ast;
 
-    char *name = parse_eat_word(ctx, "INTERNAL ERROR: Expected word");
-    if(name == NULL) return 1;
+    weak_cstr_t name = parse_eat_word(ctx, "INTERNAL ERROR: Expected word");
+    if(name == NULL) return FAILURE;
 
     if(tokens[*i].id == TOKEN_EQUALS){
         return parse_constant_global(ctx, name, source);
@@ -21,7 +21,7 @@ int parse_global(parse_ctx_t *ctx){
     ast_expr_t *initial_value = NULL;
 
     ast_type_t type;
-    if(parse_type(ctx, &type)) return 1;
+    if(parse_type(ctx, &type)) return FAILURE;
 
     if(tokens[*i].id == TOKEN_ASSIGN){
         (*i)++;
@@ -30,7 +30,7 @@ int parse_global(parse_ctx_t *ctx){
             (*i)++;
         } else if(parse_expr(ctx, &initial_value)){
             ast_type_free(&type);
-            return 1;
+            return FAILURE;
         }
     }
 
@@ -42,10 +42,10 @@ int parse_global(parse_ctx_t *ctx){
     global->initial = initial_value;
     global->source = source;
 
-    return 0;
+    return SUCCESS;
 }
 
-int parse_constant_global(parse_ctx_t *ctx, char *name, source_t source){
+errorcode_t parse_constant_global(parse_ctx_t *ctx, char *name, source_t source){
     // SOME_CONSTANT == value
     //               ^
 
@@ -53,7 +53,7 @@ int parse_constant_global(parse_ctx_t *ctx, char *name, source_t source){
     *(ctx->i) += 1;
 
     ast_expr_t *value;
-    if(parse_expr(ctx, &value)) return 1;
+    if(parse_expr(ctx, &value)) return FAILURE;
 
     expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
 
@@ -63,5 +63,5 @@ int parse_constant_global(parse_ctx_t *ctx, char *name, source_t source){
     constant->traits = TRAIT_NONE;
     constant->source = source;
 
-    return 0;
+    return SUCCESS;
 }

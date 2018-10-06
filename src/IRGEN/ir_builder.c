@@ -40,7 +40,7 @@ ir_instr_t* build_instruction(ir_builder_t *builder, length_t size){
     return builder->current_block->instructions[builder->current_block->instructions_length - 1];
 }
 
-void build_string_literal(ir_builder_t *builder, char *value, ir_value_t **ir_value){
+void build_string_literal(ir_builder_t *builder, weak_cstr_t value, ir_value_t **ir_value){
     // NOTE: Builds a null-terminated string literal value
     *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
     (*ir_value)->value_type = VALUE_TYPE_LITERAL;
@@ -212,7 +212,7 @@ void close_var_scope(ir_builder_t *builder){
     builder->var_scope = old_scope->parent;
 }
 
-int add_variable(ir_builder_t *builder, char *name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
+void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->var_scope->list;
     expand((void**) &list->variables, sizeof(bridge_var_t), list->length, &list->capacity, 1, 4);
 
@@ -223,5 +223,4 @@ int add_variable(ir_builder_t *builder, char *name, ast_type_t *ast_type, ir_typ
     list->variables[list->length].traits = traits;
     builder->next_var_id++;
     list->length++;
-    return 0;
 }

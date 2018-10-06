@@ -67,7 +67,7 @@ typedef struct {
 
 // ---------------- compiler_run ----------------
 // Runs a compiler with the given arguments.
-int compiler_run(compiler_t *compiler, int argc, char **argv);
+errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv);
 
 // ---------------- compiler_invoke ----------------
 // Invokes a compiler with arguments.
@@ -89,7 +89,7 @@ object_t* compiler_new_object(compiler_t *compiler);
 // ---------------- parse_arguments ----------------
 // Configures a compiler based on program arguments.
 // argv[0] is ignored
-int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv);
+errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv);
 
 // ---------------- break_into_arguments ----------------
 // Breaks a string into pseudo program arguments
@@ -102,11 +102,11 @@ void show_help();
 
 // ---------------- compiler_create_package ----------------
 // Creates and exports a package
-int compiler_create_package(compiler_t *compiler, object_t *object);
+errorcode_t compiler_create_package(compiler_t *compiler, object_t *object);
 
 // ---------------- compiler_read_file ----------------
 // Reads either a package or adept code file into tokens for an object
-int compiler_read_file(compiler_t *compiler, object_t *object);
+errorcode_t compiler_read_file(compiler_t *compiler, object_t *object);
 
 // ---------------- compiler_print_source ----------------
 // Prints the source code at a given 'source_t'
@@ -125,11 +125,11 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 // ---------------- compiler_undeclared_function ----------------
 // Prints an error message for an undeclared function
 void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, source_t source,
-    char *name, ast_type_t *types, length_t arity);
+    const char *name, ast_type_t *types, length_t arity);
 
 // ---------------- make_args_string ----------------
 // Helper function for generating a string for function arguments
-char* make_args_string(ast_type_t *types, length_t arity);
+strong_cstr_t make_args_string(ast_type_t *types, length_t arity);
 
 // ---------------- object_panic_plain ----------------
 // Prints a plain compiler error given an object

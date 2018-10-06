@@ -10,7 +10,7 @@
 // Parses one or more statements into two lists.
 // 'expr_list' for standard statements
 // 'defer_list' for defered statements
-int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *expr_list, ast_expr_list_t *defer_list, trait_t mode);
+errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *expr_list, ast_expr_list_t *defer_list, trait_t mode);
 
 // Possible modes for 'parse_stmts'
 #define PARSE_STMTS_STANDARD TRAIT_NONE // Standard mode (will parse multiple statements)
@@ -18,11 +18,11 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *expr_list, ast_expr_list_t *d
 
 // ------------------ parse_stmt_call ------------------
 // Parses a function call statement
-int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
+errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
 
 // ------------------ parse_stmt_declare ------------------
 // Parses a variable declaration statement
-int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
+errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
 
 // ------------------ parse_unravel_defer_stmts ------------------
 // Unravels a list of defered statements into another list of

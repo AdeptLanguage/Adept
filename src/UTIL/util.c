@@ -48,7 +48,7 @@ void grow(void **inout_memory, length_t unit_size, length_t old_length, length_t
     *inout_memory = memory;
 }
 
-char* strclone(const char *src){
+strong_cstr_t strclone(const char *src){
     length_t src_length = strlen(src);
     char *clone = malloc(src_length + 1);
     memcpy(clone, src, src_length + 1);

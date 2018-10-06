@@ -3,17 +3,17 @@
 #include "UTIL/filename.h"
 #include "PARSE/parse_util.h"
 
-int parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message){
+errorcode_t parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     length_t length = ctx->tokenlist->length;
 
     while(tokens[*i].id == TOKEN_NEWLINE) if(length == (*i)++){
         compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], error_message);
-        return 1;
+        return FAILURE;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
 void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id, const char *message){

@@ -9,7 +9,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "BRIDGE/bridge.h"
 
-int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
     // NOTE: Generates an ir_value_t from an ast_expr_t
     // NOTE: Will write determined ast_type_t to 'out_expr_type' (Can use NULL to ignore)
 
@@ -17,27 +17,27 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
 
     #define BUILD_MATH_OP_IvF_MACRO(i, f, o, E) { \
         instruction = ir_gen_math_operands(builder, expr, ir_value, o, out_expr_type); \
-        if(instruction == NULL) return 1; \
+        if(instruction == NULL) return FAILURE; \
         if(i_vs_f_instruction((ir_instr_math_t*) instruction, i, f)){ \
             compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, E); \
             ast_type_free(out_expr_type); \
-            return 1; \
+            return FAILURE; \
         } \
     }
 
     #define BUILD_MATH_OP_UvSvF_MACRO(u, s, f, o, E) { \
         instruction = ir_gen_math_operands(builder, expr, ir_value, o, out_expr_type); \
-        if(instruction == NULL) return 1; \
+        if(instruction == NULL) return FAILURE; \
         if(u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, u, s, f)){ \
             compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, E); \
             ast_type_free(out_expr_type); \
-            return 1; \
+            return FAILURE; \
         } \
     }
 
     #define BUILD_MATH_OP_BOOL_MACRO(i, E) { \
         instruction = ir_gen_math_operands(builder, expr, ir_value, MATH_OP_ALL_BOOL, out_expr_type); \
-        if(instruction == NULL) return 1; \
+        if(instruction == NULL) return FAILURE; \
         instruction->id = i; \
     }
 
@@ -166,7 +166,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             compiler_panicf(builder->compiler, ((ast_expr_variable_t*) expr)->source, "Undeclared variable '%s'", variable_name);
             const char *nearest = bridge_var_scope_nearest(builder->var_scope, variable_name);
             if(nearest) printf("\nDid you mean '%s'?\n", nearest);
-            return 1;
+            return FAILURE;
         }
         break;
     case EXPR_CALL: {
@@ -185,7 +185,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 if(ir_gen_expression(builder, call_expr->args[a], &arg_values[a], false, &arg_types[a])){
                     for(length_t t = 0; t != a; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
-                    return 1;
+                    return FAILURE;
                 }
             }
 
@@ -199,7 +199,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     char *s = ast_type_str(ast_var_type);
                     compiler_panicf(builder->compiler, call_expr->source, "Can't call value of non function type '%s'", s);
                     free(s);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_t *ast_function_return_type = ((ast_elem_func_t*) ast_var_type->elements[0])->return_type;
@@ -207,7 +207,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type)){
                     for(length_t t = 0; t != call_expr->arity; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
@@ -230,14 +230,14 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     if(ir_gen_resolve_type(builder->compiler, builder->object, ast_var_type, (ir_type_t**) &ir_var_type->extra)){
                         for(length_t t = 0; t != call_expr->arity; t++) ast_type_free(&arg_types[t]);
                         free(arg_types);
-                        return 1;
+                        return FAILURE;
                     }
 
                     if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
                         char *s = ast_type_str(ast_var_type);
                         compiler_panicf(builder->compiler, call_expr->source, "Can't call value of non function type '%s'", s);
                         free(s);
-                        return 1;
+                        return FAILURE;
                     }
 
                     ast_type_t *ast_function_return_type = ((ast_elem_func_t*) ast_var_type->elements[0])->return_type;
@@ -245,7 +245,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type)){
                         for(length_t t = 0; t != call_expr->arity; t++) ast_type_free(&arg_types[t]);
                         free(arg_types);
-                        return 1;
+                        return FAILURE;
                     }
 
                     if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
@@ -264,11 +264,11 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 if(function_elem->traits & AST_FUNC_VARARG){
                     if(function_elem->arity > call_expr->arity){
                         compiler_panicf(builder->compiler, call_expr->source, "Incorrect argument count (at least %d expected, %d given)", (int) function_elem->arity, (int) call_expr->arity);
-                        return 1;
+                        return FAILURE;
                     }
                 } else if(function_elem->arity != call_expr->arity){
                     compiler_panicf(builder->compiler, call_expr->source, "Incorrect argument count (%d expected, %d given)", (int) function_elem->arity, (int) call_expr->arity);
-                    return 1;
+                    return FAILURE;
                 }
 
                 for(length_t a = 0; a != function_elem->arity; a++){
@@ -278,7 +278,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                         compiler_panicf(builder->compiler, call_expr->args[a]->source, "Required argument type '%s' is incompatible with type '%s'", s1, s2);
                         free(s1);
                         free(s2);
-                        return 1;
+                        return FAILURE;
                     }
                 }
 
@@ -303,7 +303,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     compiler_undeclared_function(builder->compiler, &builder->object->ir_module, expr->source, call_expr->name, arg_types, call_expr->arity);
                     for(length_t t = 0; t != call_expr->arity; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ir_basicblock_new_instructions(builder->current_block, 1);
@@ -329,14 +329,14 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ast_type_t struct_value_ast_type;
 
             // This expression should be able to be mutable (Checked during parsing)
-            if(ir_gen_expression(builder, member_expr->value, &struct_value, true, &struct_value_ast_type)) return 1;
+            if(ir_gen_expression(builder, member_expr->value, &struct_value, true, &struct_value_ast_type)) return FAILURE;
 
             if(struct_value->type->kind != TYPE_KIND_POINTER){
                 char *given_type = ast_type_str(&struct_value_ast_type);
                 compiler_panicf(builder->compiler, member_expr->source, "Can't use member operator '.' on temporary value of type '%s'", given_type);
                 free(given_type);
                 ast_type_free(&struct_value_ast_type);
-                return 1;
+                return FAILURE;
             }
 
             // Auto-derefernce '*something' types
@@ -358,7 +358,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-struct type '%s'", nonstruct_typename);
                 ast_type_free(&struct_value_ast_type);
                 free(nonstruct_typename);
-                return 1;
+                return FAILURE;
             }
 
             char *struct_name = ((ast_elem_base_t*) struct_value_ast_type.elements[0])->base;
@@ -371,20 +371,20 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", struct_name);
                 }
                 ast_type_free(&struct_value_ast_type);
-                return 1;
+                return FAILURE;
             }
 
             length_t field_index;
-            if(ast_struct_find_field(target, member_expr->member, &field_index)){
+            if(!ast_struct_find_field(target, member_expr->member, &field_index)){
                 char *struct_typename = ast_type_str(&struct_value_ast_type);
                 compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "Field '%s' doesn't exist in struct '%s'", member_expr->member, struct_typename);
                 ast_type_free(&struct_value_ast_type);
                 free(struct_typename);
-                return 1;
+                return FAILURE;
             }
 
             ir_type_t *field_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[field_index], &field_type)) return 1;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[field_index], &field_type)) return FAILURE;
 
             ir_type_t *field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
             field_ptr_type->kind = TYPE_KIND_POINTER;
@@ -410,7 +410,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
         break;
     case EXPR_ADDRESS: {
             // This expression should be able to be mutable (Checked during parsing)
-            if(ir_gen_expression(builder, ((ast_expr_unary_t*) expr)->value, ir_value, true, out_expr_type)) return 1;
+            if(ir_gen_expression(builder, ((ast_expr_unary_t*) expr)->value, ir_value, true, out_expr_type)) return FAILURE;
             if(out_expr_type != NULL) ast_type_prepend_ptr(out_expr_type);
         }
         break;
@@ -420,7 +420,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             funcpair_t pair;
             if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &pair)){
                 compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", func_addr_expr->name);
-                return 1;
+                return FAILURE;
             }
 
             ir_type_t *ir_funcptr_type = ir_builder_funcptr(builder);
@@ -461,7 +461,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ast_type_t expr_type;
             ir_value_t *expr_value;
 
-            if(ir_gen_expression(builder, dereference_expr->value, &expr_value, false, &expr_type)) return 1;
+            if(ir_gen_expression(builder, dereference_expr->value, &expr_value, false, &expr_type)) return FAILURE;
 
             // Ensure that the result ast_type_t is a pointer type
             if(expr_type.elements_length < 2 || expr_type.elements[0]->id != AST_ELEM_POINTER){
@@ -469,7 +469,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 compiler_panicf(builder->compiler, dereference_expr->source, "Can't dereference non-pointer type '%s'", expr_type_str);
                 ast_type_free(&expr_type);
                 free(expr_type_str);
-                return 1;
+                return FAILURE;
             }
 
             // Modify ast_type_t to remove a pointer element from the front
@@ -484,7 +484,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 if(expr_value->type->kind != TYPE_KIND_POINTER){
                     compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expression()");
                     ast_type_free(&expr_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Build and append a load instruction
@@ -494,7 +494,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 if(expr_value->type->kind != TYPE_KIND_POINTER){
                     compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expression()");
                     ast_type_free(&expr_type);
-                    return 1;
+                    return FAILURE;
                 }
             } else {
                 *ir_value = expr_value;
@@ -509,10 +509,10 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ast_type_t index_type, array_type;
             ir_value_t *index_value, *array_value;
 
-            if(ir_gen_expression(builder, array_access_expr->value, &array_value, true, &array_type)) return 1;
+            if(ir_gen_expression(builder, array_access_expr->value, &array_value, true, &array_type)) return FAILURE;
             if(ir_gen_expression(builder, array_access_expr->index, &index_value, false, &index_type)){
                 ast_type_free(&array_type);
-                return 1;
+                return FAILURE;
             }
 
             if(array_value->type->kind != TYPE_KIND_POINTER){
@@ -524,7 +524,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 free(given_type);
                 ast_type_free(&array_type);
                 ast_type_free(&index_type);
-                return 1;
+                return FAILURE;
             }
 
             if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY){
@@ -554,7 +554,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 compiler_panic(builder->compiler, array_access_expr->index->source, "Array index value must be an integer type");
                 ast_type_free(&array_type);
                 ast_type_free(&index_type);
-                return 1;
+                return FAILURE;
             }
             
             // Ensure array type is a pointer
@@ -567,7 +567,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 free(given_type);
                 ast_type_free(&array_type);
                 ast_type_free(&index_type);
-                return 1;
+                return FAILURE;
             }
 
             if(expr->id == EXPR_ARRAY_ACCESS){
@@ -612,7 +612,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ast_expr_cast_t *cast_expr = (ast_expr_cast_t*) expr;
             ast_type_t from_type;
 
-            if(ir_gen_expression(builder, cast_expr->from, ir_value, false, &from_type)) return 1;
+            if(ir_gen_expression(builder, cast_expr->from, ir_value, false, &from_type)) return FAILURE;
 
             if(!ast_types_conform(builder, ir_value, &from_type, &cast_expr->to, CONFORM_MODE_ALL)){
                 char *a_type_str = ast_type_str(&from_type);
@@ -621,7 +621,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 free(a_type_str);
                 free(b_type_str);
                 ast_type_free(&from_type);
-                return 1;
+                return FAILURE;
             }
 
             ast_type_free(&from_type);
@@ -637,7 +637,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             // result_type->extra should never be accessed
 
             if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_sizeof_t*) expr)->type,
-                    &((ir_instr_sizeof_t*) instruction)->type)) return 1;
+                    &((ir_instr_sizeof_t*) instruction)->type)) return FAILURE;
 
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -653,7 +653,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             // Resolve & ir_gen function arguments
             if(ir_gen_expression(builder, call_expr->value, &arg_values[0], true, &arg_types[0])){
                 free(arg_types);
-                return 1;
+                return FAILURE;
             }
 
             ast_elem_t **type_elems = arg_types[0].elements;
@@ -664,7 +664,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     compiler_panic(builder->compiler, call_expr->source, "Can't access field of immutable value");
                     ast_type_free(&arg_types[0]);
                     free(arg_types);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_prepend_ptr(&arg_types[0]);
@@ -679,7 +679,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                 ast_type_free(&arg_types[0]);
                 free(arg_types);
                 free(s);
-                return 1;
+                return FAILURE;
             }
 
             const char *struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
@@ -687,7 +687,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             for(length_t a = 0; a != call_expr->arity; a++){
                 if(ir_gen_expression(builder, call_expr->args[a], &arg_values[a + 1], false, &arg_types[a + 1])){
                     ast_types_free_fully(arg_types, a + 1);
-                    return 1;
+                    return FAILURE;
                 }
             }
 
@@ -696,7 +696,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             if(ir_gen_find_method_conforming(builder, struct_name, call_expr->name, arg_values, arg_types, call_expr->arity + 1, &pair)){
                 compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
                 ast_types_free_fully(arg_types, call_expr->arity + 1);
-                return 1;
+                return FAILURE;
             }
 
             ir_basicblock_new_instructions(builder->current_block, 1);
@@ -722,14 +722,14 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
 
             #define MACRO_UNARY_OPERATOR_CHARCTER (expr->id == EXPR_NOT ? '!' : (expr->id == EXPR_NEGATE ? '-' : '~'))
 
-            if(ir_gen_expression(builder, unary_expr->value, &expr_value, false, &expr_type)) return 1;
+            if(ir_gen_expression(builder, unary_expr->value, &expr_value, false, &expr_type)) return FAILURE;
 
             if(ir_type_get_catagory(expr_value->type) == PRIMITIVE_NA){
                 char *s = ast_type_str(&expr_type);
                 compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
                 ast_type_free(&expr_type);
                 free(s);
-                return 1;
+                return FAILURE;
             }
 
             if(expr->id == EXPR_NOT){
@@ -759,7 +759,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                         compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
                         ast_type_free(&expr_type);
                         free(s);
-                        return 1;
+                        return FAILURE;
                     }
                     instruction->id = INSTRUCTION_FNEGATE; break;
                 default: {
@@ -767,7 +767,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                         compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
                         ast_type_free(&expr_type);
                         free(s);
-                        return 1;
+                        return FAILURE;
                     }
                 }
 
@@ -790,10 +790,10 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             ir_type_t *ir_type;
             ast_type_t multiplier_type;
             ir_value_t *amount = NULL;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_new_t*) expr)->type, &ir_type)) return 1;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_new_t*) expr)->type, &ir_type)) return FAILURE;
 
             if( ((ast_expr_new_t*) expr)->amount != NULL ){
-                if(ir_gen_expression(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return 1;
+                if(ir_gen_expression(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return FAILURE;
                 unsigned int multiplier_typekind = amount->type->kind;
 
                 if(multiplier_typekind < TYPE_KIND_S8 || multiplier_typekind > TYPE_KIND_U64){
@@ -801,7 +801,7 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
                     compiler_panicf(builder->compiler, expr->source, "Can't specify length using non-integer type '%s'", typename);
                     ast_type_free(&multiplier_type);
                     free(typename);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&multiplier_type);
@@ -872,6 +872,33 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
             }
         }
         break;
+    case EXPR_ENUM_VALUE: {
+            ast_expr_enum_value_t *enum_value_expr = (ast_expr_enum_value_t*) expr;
+            length_t enum_kind_id;
+
+            maybe_index_t enum_index = find_enum(builder->object->ast.enums, builder->object->ast.enums_length, enum_value_expr->enum_name);
+
+            if(enum_index == -1){
+                compiler_panicf(builder->compiler, enum_value_expr->source, "Failed to enum '%s'", enum_value_expr->enum_name);
+                return FAILURE;
+            }
+
+            ast_enum_t *inum = &builder->object->ast.enums[enum_index];
+
+            if(!ast_enum_find_kind(inum, enum_value_expr->kind_name, &enum_kind_id)){
+                compiler_panicf(builder->compiler, enum_value_expr->source, "Failed to find member '%s' of enum '%s'", enum_value_expr->kind_name, enum_value_expr->enum_name);
+                return FAILURE;
+            }
+
+            *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+            (*ir_value)->value_type = VALUE_TYPE_LITERAL;
+            ir_type_map_find(builder->type_map, enum_value_expr->enum_name, &((*ir_value)->type));
+            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long)); \
+            *((unsigned long long*) (*ir_value)->extra) = enum_kind_id; \
+
+            if(out_expr_type != NULL) ast_type_make_base_newstr(out_expr_type, enum_value_expr->enum_name);
+        }
+        break;
     case EXPR_BIT_AND:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_AND, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'and' on those types"); break;
     case EXPR_BIT_OR:
@@ -888,14 +915,14 @@ int ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_v
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
     default:
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
-        return 1;
+        return FAILURE;
     }
 
     #undef BUILD_LITERAL_IR_VALUE
     #undef BUILD_MATH_OP_IvF_MACRO
     #undef BUILD_MATH_OP_UvSvF_MACRO
 
-    return 0;
+    return SUCCESS;
 }
 
 ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, unsigned int op_res, ast_type_t *out_expr_type){
@@ -1022,14 +1049,14 @@ int i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsig
     case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
     case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-        if(i_instr == INSTRUCTION_NONE) return 1;
+        if(i_instr == INSTRUCTION_NONE) return FAILURE;
         instruction->id = i_instr; break;
     case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
-        if(f_instr == INSTRUCTION_NONE) return 1;
+        if(f_instr == INSTRUCTION_NONE) return FAILURE;
         instruction->id = f_instr; break;
-    default: return 1;
+    default: return FAILURE;
     }
-    return 0;
+    return SUCCESS;
 }
 
 int u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
@@ -1042,17 +1069,17 @@ int u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_ins
     switch(instruction->a->type->kind){
     case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
-        if(u_instr == INSTRUCTION_NONE) return 1;
+        if(u_instr == INSTRUCTION_NONE) return FAILURE;
         instruction->id = u_instr; break;
     case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-        if(s_instr == INSTRUCTION_NONE) return 1;
+        if(s_instr == INSTRUCTION_NONE) return FAILURE;
         instruction->id = s_instr; break;
     case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
-        if(f_instr == INSTRUCTION_NONE) return 1;
+        if(f_instr == INSTRUCTION_NONE) return FAILURE;
         instruction->id = f_instr; break;
-    default: return 1;
+    default: return FAILURE;
     }
-    return 0;
+    return SUCCESS;
 }
 
 char ir_type_get_catagory(ir_type_t *type){

@@ -26,6 +26,6 @@ void grow(void **inout_memory, length_t unit_size, length_t old_length, length_t
 
 // ---------------- strclone ----------------
 // Clones a string, producing a duplicate
-char* strclone(const char *src);
+strong_cstr_t strclone(const char *src);
 
 #endif // UTIL_H

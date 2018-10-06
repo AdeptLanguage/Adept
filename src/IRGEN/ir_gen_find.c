@@ -2,12 +2,12 @@
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
 
-int ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
+errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
         ast_type_t *arg_types, length_t arg_types_length, funcpair_t *result){
     ir_module_t *ir_module = &object->ir_module;
 
-    int index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
-    if(index == -1) return 1;
+    maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
+    if(index == -1) return FAILURE;
 
     ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
 
@@ -15,7 +15,7 @@ int ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
         result->ast_func = mapping->ast_func;
         result->ir_func = mapping->module_func;
         result->func_id = mapping->func_id;
-        return 0;
+        return SUCCESS;
     }
 
     while(++index != ir_module->funcs_length){
@@ -24,39 +24,39 @@ int ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
         if(mapping->is_beginning_of_group == -1){
             mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
         }
-        if(mapping->is_beginning_of_group == 1) return 1;
+        if(mapping->is_beginning_of_group == 1) return FAILURE;
 
         if(func_args_match(mapping->ast_func, arg_types, arg_types_length)){
             result->ast_func = mapping->ast_func;
             result->ir_func = mapping->module_func;
             result->func_id = mapping->func_id;
-            return 0;
+            return SUCCESS;
         }
     }
 
-    return 1; // No function with that definition found
+    return FAILURE; // No function with that definition found
 }
 
-int ir_gen_find_func_named(compiler_t *compiler, object_t *object,
+errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
         const char *name, funcpair_t *result){
     ir_module_t *ir_module = &object->ir_module;
 
-    int index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
-    if(index == -1) return 1;
+    maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
+    if(index == -1) return FAILURE;
 
     ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
     result->ast_func = mapping->ast_func;
     result->ir_func = mapping->module_func;
     result->func_id = mapping->func_id;
-    return 0;
+    return SUCCESS;
 }
 
-int ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
+errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
     ir_module_t *ir_module = &builder->object->ir_module;
 
-    int index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
-    if(index == -1) return 1;
+    maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
+    if(index == -1) return FAILURE;
 
     ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
 
@@ -64,7 +64,7 @@ int ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_valu
         result->ast_func = mapping->ast_func;
         result->ir_func = mapping->module_func;
         result->func_id = mapping->func_id;
-        return 0;
+        return SUCCESS;
     }
 
     while(++index != ir_module->funcs_length){
@@ -73,20 +73,20 @@ int ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_valu
         if(mapping->is_beginning_of_group == -1){
             mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
         }
-        if(mapping->is_beginning_of_group == 1) return 1;
+        if(mapping->is_beginning_of_group == 1) return FAILURE;
 
         if(func_args_conform(builder, mapping->ast_func, arg_values, arg_types, type_list_length)){
             result->ast_func = mapping->ast_func;
             result->ir_func = mapping->module_func;
             result->func_id = mapping->func_id;
-            return 0;
+            return SUCCESS;
         }
     }
 
-    return 1; // No function with that definition found
+    return FAILURE; // No function with that definition found
 }
 
-int ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
+errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
         const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result){
 
@@ -94,8 +94,8 @@ int ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name
     //           argument for the object being called on
     ir_module_t *ir_module = &builder->object->ir_module;
 
-    int index = find_beginning_of_method_group(ir_module->methods, ir_module->methods_length, struct_name, name);
-    if(index == -1) return 1;
+    maybe_index_t index = find_beginning_of_method_group(ir_module->methods, ir_module->methods_length, struct_name, name);
+    if(index == -1) return FAILURE;
 
     ir_method_t *method = &ir_module->methods[index];
 
@@ -103,7 +103,7 @@ int ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name
         result->ast_func = method->ast_func;
         result->ir_func = method->module_func;
         result->func_id = method->func_id;
-        return 0;
+        return SUCCESS;
     }
 
     while(++index != ir_module->methods_length){
@@ -112,25 +112,25 @@ int ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name
         if(method->is_beginning_of_group == -1){
             method->is_beginning_of_group = (strcmp(method->name, ir_module->methods[index - 1].name) != 0);
         }
-        if(method->is_beginning_of_group == 1) return 1;
+        if(method->is_beginning_of_group == 1) return FAILURE;
 
         if(func_args_conform(builder, method->ast_func, arg_values, arg_types, type_list_length)){
             result->ast_func = method->ast_func;
             result->ir_func = method->module_func;
             result->func_id = method->func_id;
-            return 0;
+            return SUCCESS;
         }
     }
 
-    return 1; // No method with that definition found
+    return FAILURE; // No method with that definition found
 }
 
-int find_beginning_of_func_group(ir_func_mapping_t *mappings, length_t length, const char *name){
+maybe_index_t find_beginning_of_func_group(ir_func_mapping_t *mappings, length_t length, const char *name){
     // Searches for beginning of function group in a list of mappings
     // If not found returns -1 else returns mapping index
     // (Where a function group is a group of all the functions with the same name)
 
-    int first, middle, last, comparison;
+    maybe_index_t first, middle, last, comparison;
     first = 0; last = length - 1;
 
     while(first <= last){
@@ -158,13 +158,13 @@ int find_beginning_of_func_group(ir_func_mapping_t *mappings, length_t length, c
     return -1;
 }
 
-int find_beginning_of_method_group(ir_method_t *methods, length_t length,
+maybe_index_t find_beginning_of_method_group(ir_method_t *methods, length_t length,
     const char *struct_name, const char *name){
     // Searches for beginning of method group in a list of methods
     // If not found returns -1 else returns mapping index
     // (Where a function group is a group of all the functions with the same name)
 
-    int first, middle, last, comparison;
+    maybe_index_t first, middle, last, comparison;
     first = 0; last = length - 1;
 
     while(first <= last){
@@ -200,7 +200,7 @@ int find_beginning_of_method_group(ir_method_t *methods, length_t length,
     return -1;
 }
 
-bool func_args_match(ast_func_t *func, ast_type_t *type_list, length_t type_list_length){
+successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t type_list_length){
     ast_type_t *arg_types = func->arg_types;
     length_t args_count = func->arity;
 
@@ -217,7 +217,7 @@ bool func_args_match(ast_func_t *func, ast_type_t *type_list, length_t type_list
     return true;
 }
 
-bool func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
+successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
         ast_type_t *arg_type_list, length_t type_list_length){
     ast_type_t *arg_types = func->arg_types;
     length_t args_count = func->arity;

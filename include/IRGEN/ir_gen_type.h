@@ -22,28 +22,29 @@
 #define CONFORM_MODE_INTFLOAT      TRAIT_2    // Allow conforming between integers and floats
 #define CONFORM_MODE_POINTERS      TRAIT_3    // Allow conforming any pointer types
 #define CONFORM_MODE_INTPTR        TRAIT_4    // Allow conforming between integers and pointers
+#define CONFORM_MODE_INTENUM       TRAIT_5    // Allow conforming between integers and enums
 #define CONFORM_MODE_ALL           TRAIT_ALL  // Allow all conformation methods
 
 // ---------------- ir_gen_type_mappings ----------------
 // Generates IR type mappings for all standard and
 // user-defined AST types. (Excludes type modifies)
-int ir_gen_type_mappings(compiler_t *compiler, object_t *object);
+errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_resolve_type ----------------
 // Resolves an AST type to an IR type
-int ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type);
+errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type);
 
 // ---------------- ast_types_conform ----------------
 // Attempts to conform an IR value from an AST type to
 // a different AST type. Returns true if successfully
 // conformed the value to the new type.
-bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t *ast_from_type, ast_type_t *ast_to_type, trait_t mode);
+successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t *ast_from_type, ast_type_t *ast_to_type, trait_t mode);
 
 // ---------------- ast_types_merge ----------------
 // Attempts to find a common AST type for two IR values
 // and merge them into a common AST type. Returns true
 // if successfully merged them to a common AST type.
-bool ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b);
+successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b);
 
 // ---------------- ir_type_mapping_cmp ----------------
 // Compares two 'ir_type_mapping_t' structures.

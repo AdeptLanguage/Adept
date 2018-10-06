@@ -24,15 +24,15 @@
 // Struct that contains data associated with a
 // a file that has been processed by the compiler
 typedef struct {
-    char *filename;            // Filename
-    char *full_filename;       // Absolute filename (used for testing duplicate imports)
-    char *buffer;              // Text buffer
-    tokenlist_t tokenlist;     // Token list
-    ast_t ast;                 // Abstract syntax tree
-    ir_module_t ir_module;     // Intermediate-Representation module
-    int compilation_stage;     // Compilation stage
-    length_t index;            // Index in object array (in compiler_t)
-    trait_t traits;            // Object traits
+    strong_cstr_t filename;      // Filename
+    strong_cstr_t full_filename; // Absolute filename (used for testing duplicate imports)
+    strong_cstr_t buffer;        // Text buffer
+    tokenlist_t tokenlist;       // Token list
+    ast_t ast;                   // Abstract syntax tree
+    ir_module_t ir_module;       // Intermediate-Representation module
+    int compilation_stage;       // Compilation stage
+    length_t index;              // Index in object array (in compiler_t)
+    trait_t traits;              // Object traits
 } object_t;
 
 // Possible traits for object_t

@@ -70,31 +70,32 @@
 #define EXPR_CALL_METHOD    0x00000032
 #define EXPR_NEW            0x00000033
 #define EXPR_NEW_CSTRING    0x00000034
+#define EXPR_ENUM_VALUE     0x00000035
 // Exclusive statements --------------
-#define EXPR_DECLARE        0x00000035
-#define EXPR_DECLAREUNDEF   0x00000036
-#define EXPR_ASSIGN         0x00000037
-#define EXPR_ADDASSIGN      0x00000038
-#define EXPR_SUBTRACTASSIGN 0x00000039
-#define EXPR_MULTIPLYASSIGN 0x0000003A
-#define EXPR_DIVIDEASSIGN   0x0000003B
-#define EXPR_MODULUSASSIGN  0x0000003C
-#define EXPR_RETURN         0x0000003D
-#define EXPR_IF             0x0000003E
-#define EXPR_UNLESS         0x0000003F
-#define EXPR_IFELSE         0x00000040
-#define EXPR_UNLESSELSE     0x00000041
-#define EXPR_WHILE          0x00000042
-#define EXPR_UNTIL          0x00000043
-#define EXPR_WHILECONTINUE  0x00000044
-#define EXPR_UNTILBREAK     0x00000045
-#define EXPR_EACH_IN        0x00000046
-#define EXPR_REPEAT         0x00000047
-#define EXPR_DELETE         0x00000048
-#define EXPR_BREAK          0x00000049
-#define EXPR_CONTINUE       0x0000004A
-#define EXPR_BREAK_TO       0x0000004B
-#define EXPR_CONTINUE_TO    0x0000004C
+#define EXPR_DECLARE        0x00000036
+#define EXPR_DECLAREUNDEF   0x00000037
+#define EXPR_ASSIGN         0x00000038
+#define EXPR_ADDASSIGN      0x00000039
+#define EXPR_SUBTRACTASSIGN 0x0000003A
+#define EXPR_MULTIPLYASSIGN 0x0000003B
+#define EXPR_DIVIDEASSIGN   0x0000003C
+#define EXPR_MODULUSASSIGN  0x0000003D
+#define EXPR_RETURN         0x0000003E
+#define EXPR_IF             0x0000003F
+#define EXPR_UNLESS         0x00000040
+#define EXPR_IFELSE         0x00000041
+#define EXPR_UNLESSELSE     0x00000042
+#define EXPR_WHILE          0x00000043
+#define EXPR_UNTIL          0x00000044
+#define EXPR_WHILECONTINUE  0x00000045
+#define EXPR_UNTILBREAK     0x00000046
+#define EXPR_EACH_IN        0x00000047
+#define EXPR_REPEAT         0x00000048
+#define EXPR_DELETE         0x00000049
+#define EXPR_BREAK          0x0000004A
+#define EXPR_CONTINUE       0x0000004B
+#define EXPR_BREAK_TO       0x0000004C
+#define EXPR_CONTINUE_TO    0x0000004D
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -209,7 +210,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *value;
+    weak_cstr_t value;
 } ast_expr_str_t;
 
 // ---------------- ast_expr_cstr_t ----------------
@@ -217,7 +218,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *value;
+    weak_cstr_t value;
 } ast_expr_cstr_t;
 
 // ---------------- ast_expr_null_t ----------------
@@ -275,15 +276,24 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *value; /* unowned */
+    weak_cstr_t value;
 } ast_expr_new_cstring_t;
+
+// ---------------- ast_expr_enum_value_t ----------------
+// Gets the constant value of an enum kind
+typedef struct {
+    unsigned int id;
+    source_t source;
+    weak_cstr_t enum_name;
+    weak_cstr_t kind_name;
+} ast_expr_enum_value_t;
 
 // ---------------- ast_expr_call_t ----------------
 // Expression for calling a function
 typedef struct {
     unsigned int id;
     source_t source;
-    char *name;
+    weak_cstr_t name;
     ast_expr_t **args;
     length_t arity;
 } ast_expr_call_t;
@@ -293,7 +303,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *name;
+    weak_cstr_t name;
 } ast_expr_variable_t;
 
 // ---------------- ast_expr_member_t ----------------
@@ -302,7 +312,7 @@ typedef struct {
     unsigned int id;
     source_t source;
     ast_expr_t *value;
-    char *member;
+    strong_cstr_t member;
 } ast_expr_member_t;
 
 // ---------------- ast_expr_func_addr_t ----------------
@@ -310,7 +320,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *name;
+    weak_cstr_t name;
     ast_unnamed_arg_t *match_args; // Can be NULL to indicate name-only
     length_t match_args_length;
     trait_t traits;
@@ -348,7 +358,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *name;
+    weak_cstr_t name;
     ast_expr_t *value;
     ast_expr_t **args;
     length_t arity;
@@ -359,7 +369,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *name;
+    weak_cstr_t name;
     ast_type_t type;
     ast_expr_t *value;
 } ast_expr_declare_t;
@@ -386,7 +396,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *label;
+    weak_cstr_t label;
     ast_expr_t *value;
     ast_expr_t **statements;
     length_t statements_length;
@@ -398,7 +408,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *label;
+    weak_cstr_t label;
     ast_expr_t *value;
     ast_expr_t **statements;
     length_t statements_length;
@@ -414,8 +424,8 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *label;
-    char *it_name;
+    weak_cstr_t label;
+    strong_cstr_t it_name;
     ast_type_t *it_type;
     ast_expr_t *length;
     ast_expr_t *low_array;
@@ -430,7 +440,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *label;
+    weak_cstr_t label;
     ast_expr_t *limit;
     ast_expr_t **statements;
     length_t statements_length;
@@ -451,7 +461,7 @@ typedef struct {
     unsigned int id;
     source_t source;
     source_t label_source;
-    char *label;
+    weak_cstr_t label;
 } ast_expr_break_to_t, ast_expr_continue_to_t;
 
 // ---------------- ast_expr_list_t ----------------
@@ -464,7 +474,7 @@ typedef struct {
 
 // ---------------- ast_expr_str ----------------
 // Generates a c-string given an AST expression
-char* ast_expr_str(ast_expr_t *expr);
+strong_cstr_t ast_expr_str(ast_expr_t *expr);
 
 // ---------------- ast_expr_free ----------------
 // Frees data within an AST expression
@@ -500,11 +510,19 @@ void ast_expr_create_null(ast_expr_t **out_expr, source_t source);
 
 // ---------------- ast_expr_create_call ----------------
 // Creates a call expression
-void ast_expr_create_call(ast_expr_t **out_expr, char *name, length_t arity, ast_expr_t **args, source_t source);
+void ast_expr_create_call(ast_expr_t **out_expr, weak_cstr_t name, length_t arity, ast_expr_t **args, source_t source);
 
 // ---------------- ast_expr_create_variable ----------------
 // Creates a variable expression
-void ast_expr_create_variable(ast_expr_t **out_expr, char *name, source_t source);
+void ast_expr_create_variable(ast_expr_t **out_expr, weak_cstr_t name, source_t source);
+
+// ---------------- ast_expr_create_enum_value ----------------
+// Creates an enum value expression
+void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cstr_t kind, source_t source);
+
+// ---------------- ast_expr_create_cast ----------------
+// Creates a cast expression
+void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from, source_t source);
 
 // ---------------- ast_expr_list_init ----------------
 // Initializes an ast_expr_list_t with a given capacity

@@ -21,19 +21,19 @@ void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx
 //                   parse_eat_*
 // =================================================
 
-int parse_eat(parse_ctx_t *ctx, tokenid_t id, const char *error){
+errorcode_t parse_eat(parse_ctx_t *ctx, tokenid_t id, const char *error){
     length_t i = (*ctx->i)++;
 
     if(ctx->tokenlist->tokens[i].id != id){
         // ERROR: That token isn't what it's expected to be
         if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[i], error);
-        return 1;
+        return FAILURE;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-char* parse_eat_word(parse_ctx_t *ctx, const char *error){
+maybe_null_weak_cstr_t parse_eat_word(parse_ctx_t *ctx, const char *error){
     length_t i = *ctx->i;
 
     if(ctx->tokenlist->tokens[i].id != TOKEN_WORD){
@@ -49,7 +49,7 @@ char* parse_eat_word(parse_ctx_t *ctx, const char *error){
 //                   parse_take_*
 // =================================================
 
-char* parse_take_word(parse_ctx_t *ctx, const char *error){
+maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error){
     length_t i = *ctx->i;
 
     if(ctx->tokenlist->tokens[i].id != TOKEN_WORD){
@@ -67,7 +67,7 @@ char* parse_take_word(parse_ctx_t *ctx, const char *error){
 //                   parse_grab_*
 // =================================================
 
-char* parse_grab_word(parse_ctx_t *ctx, const char *error){
+maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error){
     tokenid_t id = ctx->tokenlist->tokens[++(*ctx->i)].id;
 
     if(id != TOKEN_WORD){
@@ -79,7 +79,7 @@ char* parse_grab_word(parse_ctx_t *ctx, const char *error){
     return (char*) ctx->tokenlist->tokens[(*ctx->i)].data;
 }
 
-char* parse_grab_string(parse_ctx_t *ctx, const char *error){
+maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error){
     tokenid_t id = ctx->tokenlist->tokens[++(*ctx->i)].id;
 
     if(id != TOKEN_CSTRING && id != TOKEN_STRING){

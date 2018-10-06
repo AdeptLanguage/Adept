@@ -25,7 +25,7 @@ void bridge_var_scope_free(bridge_var_scope_t *scope){
     free(scope->children);
 
 }
-bridge_var_t* bridge_var_scope_find_var(bridge_var_scope_t *scope, char *name){
+bridge_var_t* bridge_var_scope_find_var(bridge_var_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
         if(strcmp(scope->list.variables[i].name, name) == 0){
             return &scope->list.variables[i];
@@ -58,20 +58,20 @@ bridge_var_t* bridge_var_scope_find_var_by_id(bridge_var_scope_t *scope, length_
     return NULL;
 }
 
-bool bridge_var_scope_already_in_list(bridge_var_scope_t *scope, char *name){
+bool bridge_var_scope_already_in_list(bridge_var_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
         if(strcmp(scope->list.variables[i].name, name) == 0) return true;
     }
     return false;
 }
 
-const char* bridge_var_scope_nearest(bridge_var_scope_t *scope, char *name){
+const char* bridge_var_scope_nearest(bridge_var_scope_t *scope, const char *name){
     char *nearest_name = NULL;
     bridge_var_scope_nearest_inner(scope, name, &nearest_name, NULL);
     return nearest_name;
 }
 
-void bridge_var_scope_nearest_inner(bridge_var_scope_t *scope, char *name, char **out_nearest_name, int *out_distance){
+void bridge_var_scope_nearest_inner(bridge_var_scope_t *scope, const char *name, char **out_nearest_name, int *out_distance){
     // NOTE: out_nearest_name must be a valid pointer
     // NOTE: out_distance may be NULL
 
@@ -97,7 +97,7 @@ void bridge_var_scope_nearest_inner(bridge_var_scope_t *scope, char *name, char 
     }
 }
 
-void bridge_var_list_nearest(bridge_var_list_t *list, char *name, char **out_nearest_name, int *out_distance){
+void bridge_var_list_nearest(bridge_var_list_t *list, const char *name, char **out_nearest_name, int *out_distance){
     // NOTE: out_nearest_name must be a valid pointer
     // NOTE: out_distance may be NULL
 

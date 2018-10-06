@@ -16,7 +16,7 @@
 #define BRIDGE_VAR_REFERENCE TRAIT_2 // Variable is to be treated as a mutable reference
 
 typedef struct {
-    char *name;           // name of the variable
+    weak_cstr_t name;     // name of the variable
     ast_type_t *ast_type; // AST type of the variable
     ir_type_t *ir_type;   // IR type of the variable
     length_t id;          // ID of the variable within the function stack
@@ -63,7 +63,7 @@ void bridge_var_scope_free(bridge_var_scope_t *scope);
 
 // ---------------- bridge_var_scope_find_var ----------------
 // Finds a variable within a bridge variable scope
-bridge_var_t* bridge_var_scope_find_var(bridge_var_scope_t *scope, char *name);
+bridge_var_t* bridge_var_scope_find_var(bridge_var_scope_t *scope, const char *name);
 
 // ---------------- bridge_var_scope_find_var_by_id ----------------
 // Finds a variable within a bridge variable scope by id
@@ -73,22 +73,22 @@ bridge_var_t *bridge_var_scope_find_var_by_id(bridge_var_scope_t *scope, length_
 // Checks to see if a variable with that name was already declared
 // within the variable list of the given scope.
 // NOTE: THIS DOESN'T CHCEK PARENT SCOPES, ONLY THE SCOPE GIVEN IS CHECKED
-bool bridge_var_scope_already_in_list(bridge_var_scope_t *scope, char *name);
+bool bridge_var_scope_already_in_list(bridge_var_scope_t *scope, const char *name);
 
 // ---------------- bridge_var_scope_nearest ----------------
 // Finds the nearest variable name to the given variable name
 // within the scope.
 // (NOTE: Minimum distance of 3 to count as near enough)
-const char* bridge_var_scope_nearest(bridge_var_scope_t *scope, char *name);
+const char* bridge_var_scope_nearest(bridge_var_scope_t *scope, const char *name);
 
 // ---------------- bridge_var_scope_nearest_inner ----------------
 // Inner recursive implementation of bridge_var_scope_nearest
-void bridge_var_scope_nearest_inner(bridge_var_scope_t *scope, char *name, char **out_nearest_name, int *out_distance);
+void bridge_var_scope_nearest_inner(bridge_var_scope_t *scope, const char *name, char **out_nearest_name, int *out_distance);
 
 // ---------------- bridge_var_list_nearest ----------------
 // Finds the nearest variable name to the given variable name
 // within the bridge variable list.
 // (NOTE: Minimum distance of 3 to count as near enough)
-void bridge_var_list_nearest(bridge_var_list_t *list, char *name, char **out_nearest_name, int *out_distance);
+void bridge_var_list_nearest(bridge_var_list_t *list, const char *name, char **out_nearest_name, int *out_distance);
 
 #endif // BRIDGE_H

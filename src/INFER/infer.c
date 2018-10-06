@@ -13,6 +13,7 @@ int infer(compiler_t *compiler, object_t *object){
     // Sort aliases and constants so we can binary search on them later
     qsort(ast->aliases, ast->aliases_length, sizeof(ast_alias_t), ast_aliases_cmp);
     qsort(ast->constants, ast->constants_length, sizeof(ast_constant_t), ast_constants_cmp);
+    qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
 
     for(length_t a = 0; a != ast->aliases_length; a++){
         if(infer_type_aliases(compiler, object, &ast->aliases[a].type)) return 1;
@@ -305,7 +306,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
             }
 
             // Return if we already know the solution primitive
-            if(undetermined->solution == EXPR_NONE) return 0;
+            if(undetermined->solution != EXPR_NONE) return 0;
 
             unsigned int var_expr_primitive = ast_primitive_from_ast_type(variable_type);
             if(undetermined_expr_list_give_solution(compiler, object, undetermined, var_expr_primitive)) return 1;
@@ -398,6 +399,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
         if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(compiler, object, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, scope)) return 1;
         break;
     case EXPR_NEW_CSTRING:
+    case EXPR_ENUM_VALUE:
         break;
     default:
         compiler_panic(compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
@@ -553,7 +555,7 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
     if(type->elements[0]->id != AST_ELEM_BASE) return EXPR_NONE;
 
     char *base = ((ast_elem_base_t*) type->elements[0])->base;
-    int builtin = typename_builtin_type(base);
+    maybe_index_t builtin = typename_builtin_type(base);
 
     switch(builtin){
     case BUILTIN_TYPE_BOOL:       return EXPR_BOOLEAN;
@@ -658,7 +660,7 @@ void infer_var_scope_pop(infer_var_scope_t **scope){
     *scope = parent;
 }
 
-infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, char *name){
+infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
         if(strcmp(scope->list.variables[i].name, name) == 0){
             return &scope->list.variables[i];
@@ -672,7 +674,7 @@ infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, char *name){
     }
 }
 
-void infer_var_scope_add_variable(infer_var_scope_t *scope, char *name, ast_type_t *type){
+void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type){
     infer_var_list_t *list = &scope->list;
     expand((void**) &list->variables, sizeof(infer_var_t), list->length, &list->capacity, 1, 4);
 
@@ -681,13 +683,13 @@ void infer_var_scope_add_variable(infer_var_scope_t *scope, char *name, ast_type
     var->type = type;
 }
 
-const char* infer_var_scope_nearest(infer_var_scope_t *scope, char *name){
+const char* infer_var_scope_nearest(infer_var_scope_t *scope, const char *name){
     char *nearest_name = NULL;
     infer_var_scope_nearest_inner(scope, name, &nearest_name, NULL);
     return nearest_name;
 }
 
-void infer_var_scope_nearest_inner(infer_var_scope_t *scope, char *name, char **out_nearest_name, int *out_distance){
+void infer_var_scope_nearest_inner(infer_var_scope_t *scope, const char *name, char **out_nearest_name, int *out_distance){
     // NOTE: out_nearest_name must be a valid pointer
     // NOTE: out_distance may be NULL
 
@@ -713,7 +715,7 @@ void infer_var_scope_nearest_inner(infer_var_scope_t *scope, char *name, char **
     }
 }
 
-void infer_var_list_nearest(infer_var_list_t *list, char *name, char **out_nearest_name, int *out_distance){
+void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out_nearest_name, int *out_distance){
     // NOTE: out_nearest_name must be a valid pointer
     // NOTE: out_distance may be NULL
 

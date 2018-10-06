@@ -149,7 +149,7 @@ void ast_type_make_generic_float(ast_type_t *type);
 
 // ---------------- ast_type_str ----------------
 // Generates a c-string given an AST type
-char* ast_type_str(const ast_type_t *type);
+strong_cstr_t ast_type_str(const ast_type_t *type);
 
 // ---------------- ast_types_identical ----------------
 // Returns whether or not two AST types are identical

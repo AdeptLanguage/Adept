@@ -45,10 +45,11 @@ typedef struct {
 #define LEX_STATE_GREATER      0x00000011
 #define LEX_STATE_UBERAND      0x00000012
 #define LEX_STATE_UBEROR       0x00000013
+#define LEX_STATE_COLON        0x00000014
 
 // ---------------- lex ----------------
 // Entry point for lexical analysis
-int lex(compiler_t *compiler, object_t *object);
+errorcode_t lex(compiler_t *compiler, object_t *object);
 
 // ---------------- lex_state_init ----------------
 // Initializes lexical analysis state

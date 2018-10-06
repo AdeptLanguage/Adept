@@ -76,7 +76,7 @@ typedef struct {
 // ---------------- ir_type_str ----------------
 // Generates a c-string representation from
 // an intermediate representation type
-char* ir_type_str(ir_type_t *type);
+strong_cstr_t ir_type_str(ir_type_t *type);
 
 // ---------------- ir_types_identical ----------------
 // Returns whether two IR types are identical

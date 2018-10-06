@@ -145,7 +145,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
     return NULL;
 }
 
-int ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
+errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
     // Generates llvm function skeletons from ir function data
 
     LLVMModuleRef llvm_module = llvm->module;
@@ -160,7 +160,7 @@ int ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
             parameters[a] = ir_to_llvm_type(funcs[f].argument_types[a]);
             if(parameters[a] == NULL){
                 free(parameters);
-                return 1;
+                return FAILURE;
             }
         }
 
@@ -185,10 +185,10 @@ int ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
         free(parameters);
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
+errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
     // Generates llvm function bodies from ir function data
     // NOTE: Expects function skeltons to already be present
 
@@ -294,7 +294,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         free(stack.types);
                         free(llvm_blocks);
                         LLVMDisposeBuilder(builder);
-                        return 1;
+                        return FAILURE;
                     }
 
                     LLVMTypeRef alloca_type = ir_to_llvm_type(var->ir_type);
@@ -306,7 +306,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         free(stack.types);
                         free(llvm_blocks);
                         LLVMDisposeBuilder(builder);
-                        return 1;
+                        return FAILURE;
                     }
 
                     stack.values[s] = LLVMBuildAlloca(builder, alloca_type, "");
@@ -659,7 +659,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                             free(stack.types);
                             free(llvm_blocks);
                             LLVMDisposeBuilder(builder);
-                            return 1;
+                            return FAILURE;
                         }
 
                         bool isz = (basicblock->instructions[i]->id == INSTRUCTION_ISZERO);
@@ -801,7 +801,7 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     free(stack.types);
                     free(llvm_blocks);
                     LLVMDisposeBuilder(builder);
-                    return 1;
+                    return FAILURE;
                 }
             }
         }
@@ -814,10 +814,10 @@ int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         LLVMDisposeBuilder(builder);
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
+errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
     ir_global_t *globals = object->ir_module.globals;
     length_t globals_length = object->ir_module.globals_length;
 
@@ -834,10 +834,10 @@ int ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
         LLVMSetInitializer(llvm->global_variables[i], LLVMGetUndef(global_llvm_type));
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int ir_to_llvm(compiler_t *compiler, object_t *object){
+errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMInitializeAllTargetInfos();
     LLVMInitializeAllTargets();
     LLVMInitializeAllTargetMCs();
@@ -858,7 +858,7 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
     if(LLVMGetTargetFromTriple(triple, &target, &error_message)){
         redprintf("INTERNAL ERROR: LLVMGetTargetFromTriple failed: %s\n", error_message);
         LLVMDisposeMessage(error_message);
-        return 1;
+        return FAILURE;
     }
 
     if(compiler->output_filename == NULL){
@@ -891,7 +891,7 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
         free(llvm.func_skeletons);
         free(llvm.global_variables);
         LLVMDisposeTargetMachine(target_machine);
-        return 1;
+        return FAILURE;
     }
 
     #ifdef ENABLE_DEBUG_FEATURES
@@ -960,14 +960,14 @@ int ir_to_llvm(compiler_t *compiler, object_t *object){
         redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);
         free(object_filename);
         free(link_command);
-        return 1;
+        return FAILURE;
     }
 
     if(compiler->traits & COMPILER_EXECUTE_RESULT) system(compiler->output_filename);
 
     free(object_filename);
     free(link_command);
-    return 0;
+    return SUCCESS;
 }
 
 LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler){

@@ -15,6 +15,6 @@
 
 // ---------------- ir_to_llvm ----------------
 // Invokes the LLVM backend
-int ir_to_llvm(compiler_t *compiler, object_t *object);
+errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object);
 
 #endif // BACKEND_LLVM_H

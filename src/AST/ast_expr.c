@@ -3,7 +3,7 @@
 #include "AST/ast_expr.h"
 #include "UTIL/color.h"
 
-char* ast_expr_str(ast_expr_t *expr){
+strong_cstr_t ast_expr_str(ast_expr_t *expr){
     // NOTE: Returns an allocated string representation of the expression
 
     char *representation, *a, *b;
@@ -452,8 +452,17 @@ char* ast_expr_str(ast_expr_t *expr){
         }
     case EXPR_NEW_CSTRING: {
             char *value = ((ast_expr_new_cstring_t*) expr)->value;
-            representation = malloc(strlen(value) + 5);
+            representation = malloc(strlen(value) + 7);
             sprintf(representation, "new '%s'", value);
+            return representation;
+        }
+    case EXPR_ENUM_VALUE: {
+            const char *enum_name = ((ast_expr_enum_value_t*) expr)->enum_name;
+            const char *kind_name = ((ast_expr_enum_value_t*) expr)->kind_name;
+            if(enum_name == NULL) enum_name = "<contextual>";
+
+            representation = malloc(strlen(enum_name) + strlen(kind_name) + 3);
+            sprintf(representation, "%s::%s", enum_name, kind_name);
             return representation;
         }
     case EXPR_BIT_COMPLEMENT: {
@@ -786,20 +795,36 @@ void ast_expr_create_null(ast_expr_t **out_expr, source_t source){
     ((ast_expr_null_t*) *out_expr)->source = source;
 }
 
-void ast_expr_create_variable(ast_expr_t **out_expr, char *name, source_t source){
+void ast_expr_create_variable(ast_expr_t **out_expr, weak_cstr_t name, source_t source){
     *out_expr = malloc(sizeof(ast_expr_variable_t));
     ((ast_expr_variable_t*) *out_expr)->id = EXPR_VARIABLE;
     ((ast_expr_variable_t*) *out_expr)->name = name;
     ((ast_expr_variable_t*) *out_expr)->source = source;
 }
 
-void ast_expr_create_call(ast_expr_t **out_expr, char *name, length_t arity, ast_expr_t **args, source_t source){
+void ast_expr_create_call(ast_expr_t **out_expr, weak_cstr_t name, length_t arity, ast_expr_t **args, source_t source){
     *out_expr = malloc(sizeof(ast_expr_call_t));
     ((ast_expr_call_t*) *out_expr)->id = EXPR_CALL;
     ((ast_expr_call_t*) *out_expr)->name = name;
     ((ast_expr_call_t*) *out_expr)->arity = arity;
     ((ast_expr_call_t*) *out_expr)->args = args;
     ((ast_expr_call_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cstr_t kind, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_enum_value_t));
+    ((ast_expr_enum_value_t*) *out_expr)->id = EXPR_ENUM_VALUE;
+    ((ast_expr_enum_value_t*) *out_expr)->enum_name = name;
+    ((ast_expr_enum_value_t*) *out_expr)->kind_name = kind;
+    ((ast_expr_enum_value_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_cast_t));
+    ((ast_expr_cast_t*) *out_expr)->id = EXPR_CAST;
+    ((ast_expr_cast_t*) *out_expr)->to = to;
+    ((ast_expr_cast_t*) *out_expr)->from = from;
+    ((ast_expr_cast_t*) *out_expr)->source = source;
 }
 
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
@@ -865,28 +890,29 @@ const char *global_expression_rep_table[] = {
     "<call method>",           // 0x00000031
     "<new>",                   // 0x00000032
     "<new cstring>",           // 0x00000033
-    "<declaration>",           // 0x00000034
-    "<undef declaration>",     // 0x00000035
-    "=",                       // 0x00000036
-    "+=",                      // 0x00000037
-    "-=",                      // 0x00000038
-    "*=",                      // 0x00000039
-    "/=",                      // 0x0000003A
-    "%=",                      // 0x0000003B
-    "<return>",                // 0x0000003C
-    "<if>",                    // 0x0000003D
-    "<unless>",                // 0x0000003E
-    "<if else>",               // 0x0000003F
-    "<unless else>",           // 0x00000040
-    "<while>",                 // 0x00000041
-    "<until>",                 // 0x00000042
-    "<while continue>",        // 0x00000043
-    "<until break>",           // 0x00000044
-    "<each in>",               // 0x00000045
-    "<repeat>",                // 0x00000046
-    "<delete>",                // 0x00000047
-    "<break>",                 // 0x00000048
-    "<continue>",              // 0x00000049
-    "<break to>",              // 0x0000004A
-    "<continue to>",           // 0x0000004B
+    "<enum value>",            // 0x00000034
+    "<declaration>",           // 0x00000035
+    "<undef declaration>",     // 0x00000036
+    "=",                       // 0x00000037
+    "+=",                      // 0x00000038
+    "-=",                      // 0x00000039
+    "*=",                      // 0x0000003A
+    "/=",                      // 0x0000003B
+    "%=",                      // 0x0000003C
+    "<return>",                // 0x0000003D
+    "<if>",                    // 0x0000003E
+    "<unless>",                // 0x0000003F
+    "<if else>",               // 0x00000040
+    "<unless else>",           // 0x00000041
+    "<while>",                 // 0x00000042
+    "<until>",                 // 0x00000043
+    "<while continue>",        // 0x00000044
+    "<until break>",           // 0x00000045
+    "<each in>",               // 0x00000046
+    "<repeat>",                // 0x00000047
+    "<delete>",                // 0x00000048
+    "<break>",                 // 0x00000049
+    "<continue>",              // 0x0000004A
+    "<break to>",              // 0x0000004B
+    "<continue to>",           // 0x0000004C
 };

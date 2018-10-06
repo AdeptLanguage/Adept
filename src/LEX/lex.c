@@ -6,7 +6,7 @@
 #include "UTIL/search.h"
 #include "UTIL/filename.h"
 
-int lex(compiler_t *compiler, object_t *object){
+errorcode_t lex(compiler_t *compiler, object_t *object){
     FILE *file = fopen(object->filename, "r");
 
     token_t *t;
@@ -18,7 +18,7 @@ int lex(compiler_t *compiler, object_t *object){
 
     if(file == NULL){
         redprintf("The file '%s' doesn't exist or can't be accessed\n", object->filename);
-        return 1;
+        return FAILURE;
     }
 
     fseek(file, 0, SEEK_END);
@@ -117,6 +117,7 @@ int lex(compiler_t *compiler, object_t *object){
             case '<': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_LESS);       break;
             case '>': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_GREATER);    break;
             case '!': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_NOT);        break;
+            case ':': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_COLON);      break;
             //--------------------------------------------------------------------
             case '(': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_OPEN);           break;
             case ')': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_CLOSE);          break;
@@ -126,7 +127,6 @@ int lex(compiler_t *compiler, object_t *object){
             case '[': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_OPEN);   break;
             case ']': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_CLOSE);  break;
             case ';': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_TERMINATE_JOIN); break;
-            case ':': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_COLON);          break;
             case '^': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_XOR);        break;
             case '~': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_COMPLEMENT); break;
             case '\n': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEWLINE);       break;
@@ -180,7 +180,7 @@ int lex(compiler_t *compiler, object_t *object){
                 here.object_index = object->index;
                 compiler_print_source(compiler, line, column, here);
                 lex_state_free(&lex_state);
-                return 1;
+                return FAILURE;
             }
             break;
         case LEX_STATE_WORD:
@@ -207,7 +207,7 @@ int lex(compiler_t *compiler, object_t *object){
                 lex_state.buildup[lex_state.buildup_length] = '\0';
 
                 // Search for string inside keyword list
-                int array_index = binary_string_search(keywords, keywords_length, lex_state.buildup);
+                maybe_index_t array_index = binary_string_search(keywords, keywords_length, lex_state.buildup);
 
                 if(array_index == -1){
                     // Isn't a keyword, just an identifier
@@ -243,7 +243,7 @@ int lex(compiler_t *compiler, object_t *object){
                 lex_get_location(buffer, i, &line, &column);
                 redprintf("%s:%d:%d: Raw null character found in string\n", filename_name_const(object->filename), line, column);
                 lex_state_free(&lex_state);
-                return 1;
+                return FAILURE;
             }
 
             // Add the character to the string
@@ -294,7 +294,7 @@ int lex(compiler_t *compiler, object_t *object){
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Unknown string escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
                     lex_state_free(&lex_state);
-                    return 1;
+                    return FAILURE;
                 }
             } else {
                 // Check for cheeky null character
@@ -302,14 +302,15 @@ int lex(compiler_t *compiler, object_t *object){
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Raw null character found in string\n", filename_name_const(object->filename), line, column);
                     lex_state_free(&lex_state);
-                    return 1;
+                    return FAILURE;
                 }
-
+                
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
             }
             break;
         case LEX_STATE_EQUALS:   LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_EQUALS, TOKEN_ASSIGN);             break;
         case LEX_STATE_NOT:      LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_NOTEQUALS, TOKEN_NOT);             break;
+        case LEX_STATE_COLON:    LEX_OPTIONAL_MOD_TOKEN_MAPPING(':', TOKEN_NAMESPACE, TOKEN_COLON);           break;
         case LEX_STATE_ADD:      LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_ADDASSIGN, TOKEN_ADD);             break;
         case LEX_STATE_MULTIPLY: LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MULTIPLYASSIGN, TOKEN_MULTIPLY);   break;
         case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUSASSIGN, TOKEN_MODULUS);     break;
@@ -374,7 +375,7 @@ int lex(compiler_t *compiler, object_t *object){
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Hexadecimal numbers cannot contain dots\n", filename_name_const(object->filename), line, column);
                     lex_state_free(&lex_state);
-                    return 1;
+                    return FAILURE;
                 }
 
                 switch(buffer[i]){
@@ -410,13 +411,13 @@ int lex(compiler_t *compiler, object_t *object){
                             lex_get_location(buffer, i, &line, &column);
                             redprintf("%s:%d:%d: Expected valid number suffix after 'u' base suffix\n", filename_name_const(object->filename), line, column);
                             lex_state_free(&lex_state);
-                            return 1;
+                            return FAILURE;
                         }
                     } else {
                         lex_get_location(buffer, i, &line, &column);
                         redprintf("%s:%d:%d: Expected valid number suffix after 'u' base suffix\n", filename_name_const(object->filename), line, column);
                         lex_state_free(&lex_state);
-                        return 1;
+                        return FAILURE;
                     }
                     break;
                 case 's':
@@ -489,7 +490,7 @@ int lex(compiler_t *compiler, object_t *object){
                                 lex_get_location(buffer, i, &line, &column);
                                 redprintf("%s:%d:%d: Numbers cannot contain multiple dots\n", filename_name_const(object->filename), line, column);
                                 lex_state_free(&lex_state);
-                                return 1;
+                                return FAILURE;
                             }
                             contains_dot = true;
                         }
@@ -576,7 +577,7 @@ int lex(compiler_t *compiler, object_t *object){
         if(compiler_create_package(compiler, object) == 0){
             compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         }
-        return 1;
+        return FAILURE;
     }
 
     return 0;

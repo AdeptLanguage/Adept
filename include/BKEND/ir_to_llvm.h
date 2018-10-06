@@ -52,15 +52,15 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value);
 
 // ---------------- ir_to_llvm_functions ----------------
 // Generates LLVM function skeletons for IR functions
-int ir_to_llvm_functions(llvm_context_t *llvm, object_t *object);
+errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object);
 
 // ---------------- ir_to_llvm_function_bodies ----------------
 // Generates LLVM function bodies for IR functions
-int ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object);
+errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object);
 
 // ---------------- ir_to_llvm_globals ----------------
 // Generates LLVM globals for IR globals
-int ir_to_llvm_globals(llvm_context_t *llvm, object_t *object);
+errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object);
 
 // ---------------- ir_to_llvm_config_optlvl ----------------
 // Converts optimization level to LLVM optimization constant

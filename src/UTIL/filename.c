@@ -8,7 +8,7 @@
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
 
-char* filename_name(const char *filename){
+strong_cstr_t filename_name(const char *filename){
     length_t i;
     char *stub;
     length_t filename_length = strlen(filename);
@@ -33,7 +33,7 @@ char* filename_name(const char *filename){
     return stub;
 }
 
-const char* filename_name_const(const char *filename){
+weak_cstr_t filename_name_const(weak_cstr_t filename){
     length_t i;
     length_t filename_length = strlen(filename);
 
@@ -48,7 +48,7 @@ const char* filename_name_const(const char *filename){
     return filename;
 }
 
-char* filename_path(const char *filename){
+strong_cstr_t filename_path(const char *filename){
     length_t i;
     length_t filename_length = strlen(filename);
     char *path;
@@ -73,7 +73,7 @@ char* filename_path(const char *filename){
     return path;
 }
 
-char* filename_local(const char *current_filename, const char *local_filename){
+strong_cstr_t filename_local(const char *current_filename, const char *local_filename){
     // NOTE: Returns string that must be freed by caller
     // NOTE: Appends 'local_filename' to the path of 'current_filename' and returns result
 
@@ -103,7 +103,7 @@ char* filename_local(const char *current_filename, const char *local_filename){
     return NULL; // Should never be reached
 }
 
-char* filename_adept_import(const char *root, const char *filename){
+strong_cstr_t filename_adept_import(const char *root, const char *filename){
     // NOTE: Returns string that must be freed by caller
 
     length_t root_len = strlen(root);
@@ -114,7 +114,7 @@ char* filename_adept_import(const char *root, const char *filename){
     return result;
 }
 
-char* filename_ext(const char *filename, const char *ext_without_dot){
+strong_cstr_t filename_ext(const char *filename, const char *ext_without_dot){
     // NOTE: Returns a newly allocated string with replaced file extension
 
     length_t i;
@@ -149,7 +149,7 @@ char* filename_ext(const char *filename, const char *ext_without_dot){
     return with_ext;
 }
 
-char *filename_absolute(const char *filename){
+strong_cstr_t filename_absolute(const char *filename){
     #if defined(_WIN32) || defined(_WIN64)
 
     char *buffer = malloc(512);

@@ -5,7 +5,7 @@
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
 
-int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *defer_list, trait_t mode){
+errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *defer_list, trait_t mode){
     // NOTE: Outputs statements to stmt_list
     // NOTE: Ends on 'i' pointing to a '}' token
     // NOTE: Even if this function returns 1, statements appended to stmt_list still must be freed
@@ -19,19 +19,19 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
     source.object_index = ctx->object->index;
 
     while(tokens[*i].id != TOKEN_END){
-        if(parse_ignore_newlines(ctx, "Unexpected expression termination")) return 1;
+        if(parse_ignore_newlines(ctx, "Unexpected expression termination")) return FAILURE;
         expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, 1, 8);
 
         // Parse a statement into the statement list
         switch(tokens[*i].id){
         case TOKEN_END:
-            return 0;
+            return SUCCESS;
         case TOKEN_RETURN: {
                 ast_expr_t *return_expression;
                 source = sources[(*i)++]; // Pass over return keyword
 
                 if(tokens[*i].id == TOKEN_NEWLINE) return_expression = NULL;
-                else if(parse_expr(ctx, &return_expression)) return 1;
+                else if(parse_expr(ctx, &return_expression)) return FAILURE;
 
                 ast_expr_return_t *stmt = malloc(sizeof(ast_expr_return_t));
                 stmt->id = EXPR_RETURN;
@@ -49,17 +49,17 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
 
                 switch(tokens[*i].id){
                 case TOKEN_OPEN:
-                    (*i)++; if(parse_stmt_call(ctx, stmt_list)) return 1;
+                    (*i)++; if(parse_stmt_call(ctx, stmt_list)) return FAILURE;
                     break;
                 case TOKEN_WORD: case TOKEN_FUNC:
                 case TOKEN_STDCALL: case TOKEN_NEXT:
                 case TOKEN_GENERIC_INT: /*fixed array*/ case TOKEN_MULTIPLY: /*pointer*/
-                    (*i)--; if(parse_stmt_declare(ctx, stmt_list)) return 1;
+                    (*i)--; if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
                     break;
                 default: { // Assume assign statement if not one of the above
                         (*i)--;
                         ast_expr_t *mutable_expression;
-                        if(parse_expr(ctx, &mutable_expression)) return 1;
+                        if(parse_expr(ctx, &mutable_expression)) return FAILURE;
 
                         // If it's a call method expression, bypass and treat as statement
                         if(mutable_expression->id == EXPR_CALL_METHOD){
@@ -73,19 +73,19 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                         && id != TOKEN_DIVIDEASSIGN && id != TOKEN_MODULUSASSIGN){
                             compiler_panic(ctx->compiler, sources[(*i) - 1], "Expected assignment operator after expression");
                             ast_expr_free_fully(mutable_expression);
-                            return 1;
+                            return FAILURE;
                         }
 
                         if(!EXPR_IS_MUTABLE(mutable_expression->id)){
                             compiler_panic(ctx->compiler, sources[*i], "Can't modify expression because it is immutable");
                             ast_expr_free_fully(mutable_expression);
-                            return 1;
+                            return FAILURE;
                         }
 
                         ast_expr_t *value_expression;
                         if(parse_expr(ctx, &value_expression)){
                             ast_expr_free_fully(mutable_expression);
-                            return 1;
+                            return FAILURE;
                         }
 
                         unsigned int stmt_id;
@@ -100,7 +100,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                             compiler_panic(ctx->compiler, sources[*i], "INTERNAL ERROR: parse_stmts() came across unknown assignment operator");
                             ast_expr_free_fully(mutable_expression);
                             ast_expr_free_fully(value_expression);
-                            return 1;
+                            return FAILURE;
                         }
 
                         ast_expr_assign_t *stmt = malloc(sizeof(ast_expr_assign_t));
@@ -117,26 +117,26 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
         case TOKEN_MULTIPLY: case TOKEN_OPEN: {
                 source = sources[*i];
                 ast_expr_t *mutable_expression;
-                if(parse_expr(ctx, &mutable_expression)) return 1;
+                if(parse_expr(ctx, &mutable_expression)) return FAILURE;
 
                 unsigned int id = tokens[(*i)++].id;
                 if(id != TOKEN_ASSIGN && id != TOKEN_ADDASSIGN && id != TOKEN_SUBTRACTASSIGN &&
                         id != TOKEN_MULTIPLYASSIGN && id != TOKEN_DIVIDEASSIGN && id != TOKEN_MODULUSASSIGN){
                     compiler_panic(ctx->compiler, sources[(*i) - 1], "Expected assignment operator after expression");
                     ast_expr_free_fully(mutable_expression);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!EXPR_IS_MUTABLE(mutable_expression->id)){
                     compiler_panic(ctx->compiler, sources[*i], "Can't modify expression because it is immutable");
                     ast_expr_free_fully(mutable_expression);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_expr_t *value_expression;
                 if(parse_expr(ctx, &value_expression)){
                     ast_expr_free_fully(mutable_expression);
-                    return 1;
+                    return FAILURE;
                 }
 
                 unsigned int stmt_id;
@@ -150,7 +150,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 default:
                     compiler_panic(ctx->compiler, sources[*i], "INTERNAL ERROR: parse_stmts() came across unknown assignment operator");
                     ast_expr_free_fully(mutable_expression);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_expr_assign_t *stmt = malloc(sizeof(ast_expr_assign_t));
@@ -167,7 +167,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 ast_expr_t *conditional;
                 trait_t stmts_mode;
 
-                if(parse_expr(ctx, &conditional)) return 1;
+                if(parse_expr(ctx, &conditional)) return FAILURE;
 
                 switch(tokens[(*i)++].id){
                 case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
@@ -175,7 +175,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 default:
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after conditional expression");
                     ast_expr_free_fully(conditional);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_expr_list_t if_stmt_list;
@@ -188,7 +188,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 if(parse_stmts(ctx, &if_stmt_list, defer_list, stmts_mode)){
                     ast_free_statements_fully(if_stmt_list.statements, if_stmt_list.length);
                     ast_expr_free_fully(conditional);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Unravel all defer statements added in the block
@@ -225,7 +225,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                         ast_free_statements_fully(else_stmt_list.statements, else_stmt_list.length);
                         ast_free_statements_fully(if_stmt_list.statements, if_stmt_list.length);
                         ast_expr_free_fully(conditional);
-                        return 1;
+                        return FAILURE;
                     }
 
                     // Unravel all defer statements added in the block
@@ -273,10 +273,10 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
 
                     if(conditional_type == TOKEN_WHILE && condition_break_or_continue != TOKEN_CONTINUE){
                         compiler_panic(ctx->compiler, sources[*i - 1], "Did you mean to use 'while continue'? There is no such conditional as 'while break'");
-                        return 1;
+                        return FAILURE;
                     } else if(conditional_type == TOKEN_UNTIL && condition_break_or_continue != TOKEN_BREAK){
                         compiler_panic(ctx->compiler, sources[*i - 1], "Did you mean to use 'until break'? There is no such conditional as 'until continue'");
-                        return 1;
+                        return FAILURE;
                     }
 
                     if(tokens[++(*i)].id == TOKEN_WORD){
@@ -288,7 +288,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                         label = tokens[*i].data; *i += 2;
                     }
 
-                    if(parse_expr(ctx, &conditional)) return 1;
+                    if(parse_expr(ctx, &conditional)) return FAILURE;
                 }
 
 
@@ -298,7 +298,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 default:
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after conditional expression");
                     ast_expr_free_fully(conditional);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_expr_list_t while_stmt_list;
@@ -311,7 +311,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 if(parse_stmts(ctx, &while_stmt_list, defer_list, stmts_mode)){
                     ast_free_statements_fully(while_stmt_list.statements, while_stmt_list.length);
                     ast_expr_free_fully(conditional);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Unravel all defer statements added in the block
@@ -362,7 +362,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
 
                     if(!it_name){
                         // Should only reach this point when syntax is incorrect
-                        return 1;
+                        return FAILURE;
                     }
                 }
 
@@ -372,7 +372,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 || parse_eat(ctx, TOKEN_IN, "Expected 'in' keyword")){
                     free(it_name);
                     free(it_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(tokens[*i].id == TOKEN_BRACKET_OPEN){
@@ -381,21 +381,21 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                     if(parse_expr(ctx, &low_array)){
                         ast_type_free_fully(it_type);
                         free(it_name);
-                        return 1;
+                        return FAILURE;
                     }
 
                     if(tokens[(*i)++].id != TOKEN_NEXT){
                         compiler_panic(ctx->compiler, sources[*i - 1], "Expected ',' after low-level array data in 'each in' statement");
                         ast_type_free_fully(it_type);
                         free(it_name);
-                        return 1;
+                        return FAILURE;
                     }
 
                     if(parse_expr(ctx, &length_limit)){
                         ast_type_free_fully(it_type);
                         ast_expr_free_fully(low_array);
                         free(it_name);
-                        return 1;
+                        return FAILURE;
                     }
 
                     if(tokens[(*i)++].id != TOKEN_BRACKET_CLOSE){
@@ -404,13 +404,13 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                         ast_expr_free_fully(low_array);
                         ast_expr_free_fully(length_limit);
                         free(it_name);
-                        return 1;
+                        return FAILURE;
                     }
                 } else {
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected [<data>, <length>] after 'in' keyword in 'each in' statement");
                     ast_type_free_fully(it_type);
                     free(it_name);
-                    return 1;
+                    return FAILURE;
                 }
 
                 switch(tokens[(*i)++].id){
@@ -422,7 +422,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                     ast_expr_free_fully(low_array);
                     ast_expr_free_fully(length_limit);
                     free(it_name);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_expr_list_t each_in_stmt_list;
@@ -438,7 +438,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                     ast_expr_free_fully(low_array);
                     ast_expr_free_fully(length_limit);
                     free(it_name);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Unravel all defer statements added in the block
@@ -471,7 +471,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                     label = tokens[*i].data; *i += 2;
                 }
                 
-                if(parse_expr(ctx, &limit)) return 1;
+                if(parse_expr(ctx, &limit)) return FAILURE;
 
                 switch(tokens[(*i)++].id){
                 case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
@@ -479,7 +479,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 default:
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'repeat' expression");
                     ast_expr_free_fully(limit);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_expr_list_t each_in_stmt_list;
@@ -492,7 +492,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
                 if(parse_stmts(ctx, &each_in_stmt_list, defer_list, stmts_mode)){
                     ast_free_statements_fully(each_in_stmt_list.statements, each_in_stmt_list.length);
                     ast_expr_free_fully(limit);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Unravel all defer statements added in the block
@@ -514,7 +514,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
             break;
         case TOKEN_DEFER: {
                 (*i)++; // Skip over 'defer' keyword
-                if(parse_stmts(ctx, defer_list, defer_list, PARSE_STMTS_SINGLE)) return 1;
+                if(parse_stmts(ctx, defer_list, defer_list, PARSE_STMTS_SINGLE)) return FAILURE;
                 (*i)--; // Go back to newline because we used PARSE_STMTS_SINGLE
             }
             break;
@@ -525,7 +525,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
 
                 if(parse_primary_expr(ctx, &stmt->value) != 0){
                     free(stmt);
-                    return 1;
+                    return FAILURE;
                 }
 
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
@@ -565,7 +565,7 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
             break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
-            return 1;
+            return FAILURE;
         }
 
         if(tokens[*i].id == TOKEN_TERMINATE_JOIN){
@@ -576,16 +576,16 @@ int parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *d
         // Continue over newline token
         if(tokens[*i].id != TOKEN_ELSE && tokens[(*i)++].id != TOKEN_NEWLINE){
             parse_panic_token(ctx, sources[*i - 1], tokens[*i - 1].id, "Encountered unexpected token '%s' at end of statement");
-            return 1;
+            return FAILURE;
         }
 
-        if(mode & PARSE_STMTS_SINGLE) return 0;
+        if(mode & PARSE_STMTS_SINGLE) return SUCCESS;
     }
 
-    return 0; // '}' was reached
+    return SUCCESS; // '}' was reached
 }
 
-int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
+errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     // Expects from 'ctx': compiler, object, tokenlist, i
 
     // <function_name>( <arguments> )
@@ -607,12 +607,12 @@ int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     stmt->args = NULL;
 
     while(tokens[*i].id != TOKEN_CLOSE){
-        if(parse_ignore_newlines(ctx, "Expected function argument")) return 1;
+        if(parse_ignore_newlines(ctx, "Expected function argument")) return FAILURE;
 
         if(parse_expr(ctx, &arg_expr)){
             ast_exprs_free_fully(stmt->args, stmt->arity);
             free(stmt);
-            return 1;
+            return FAILURE;
         }
 
         // Allocate room for more arguments if necessary
@@ -620,7 +620,7 @@ int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
         stmt->args[stmt->arity++] = arg_expr;
 
-        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")) return 1;
+        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")) return FAILURE;
 
         if(tokens[*i].id == TOKEN_NEXT){
             (*i)++;
@@ -628,16 +628,16 @@ int parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
             ast_exprs_free_fully(stmt->args, stmt->arity);
             free(stmt);
-            return 1;
+            return FAILURE;
         }
     }
 
     (*i)++;
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
-    return 0;
+    return SUCCESS;
 }
 
-int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
+errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     // Expects from 'ctx': compiler, object, tokenlist, i, func
 
     // <variable_name> <variable_type> [ = expression ]
@@ -666,7 +666,7 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
             compiler_panic(ctx->compiler, sources[*i], "Expected variable name");
             free(decl_names);
             free(decl_sources);
-            return 1;
+            return FAILURE;
         }
 
         decl_names[length] = tokens[*i].data;
@@ -681,7 +681,7 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     if(parse_type(ctx, &decl_type)){
         free(decl_names);
         free(decl_sources);
-        return 1;
+        return FAILURE;
     }
 
     // Parse the initial value for the variable(s) (if an initial value is given)
@@ -696,7 +696,7 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
             ast_type_free(&decl_type);
             free(decl_names);
             free(decl_sources);
-            return 1;
+            return FAILURE;
         }
     }
 
@@ -721,7 +721,7 @@ int parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     free(decl_names);
     free(decl_sources);
-    return 0;
+    return SUCCESS;
 }
 
 void parse_unravel_defer_stmts(ast_expr_list_t *stmts, ast_expr_list_t *defer_list, length_t unravel_length){

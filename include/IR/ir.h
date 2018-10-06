@@ -102,7 +102,7 @@
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type
 typedef struct {
-    char *name;
+    weak_cstr_t name;
     ir_type_t type;
 } ir_type_mapping_t;
 
@@ -422,11 +422,11 @@ typedef struct {
 // ---------------- ir_value_str ----------------
 // Generates a c-string representation from
 // an intermediate representation value
-char* ir_value_str(ir_value_t *value);
+strong_cstr_t ir_value_str(ir_value_t *value);
 
 // ---------------- ir_type_map_find ----------------
 // Finds a type inside an IR type map by name
-bool ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr);
+successful_t ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr);
 
 // ---------------- ir_basicblock_new_instructions ----------------
 // Ensures that there is enough room for 'amount' more instructions

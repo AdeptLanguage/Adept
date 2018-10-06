@@ -25,7 +25,7 @@ typedef struct {
     length_t current_block_id;
     length_t break_block_id; // 0 == none
     length_t continue_block_id; // 0 == none
-    char **block_stack_labels;
+    strong_cstr_t *block_stack_labels;
     length_t *block_stack_break_ids;
     length_t *block_stack_continue_ids;
     length_t block_stack_length;
@@ -56,7 +56,7 @@ ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
 
 // ---------------- build_string_literal ----------------
 // Builds a null-terminated string literal IR value
-void build_string_literal(ir_builder_t *builder, char *value, ir_value_t **ir_value);
+void build_string_literal(ir_builder_t *builder, weak_cstr_t value, ir_value_t **ir_value);
 
 // ---------------- build_value_from_prev_instruction ----------------
 // Builds an IR value from the result of the previsous instruction
@@ -112,6 +112,6 @@ void close_var_scope(ir_builder_t *builder);
 
 // ---------------- add_variable ----------------
 // Adds a variable to the current bridge_var_scope_t
-int add_variable(ir_builder_t *builder, char *name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
+void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
 
 #endif // IR_BUILDER_H

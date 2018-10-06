@@ -20,7 +20,7 @@
 #include "IRGEN/ir_gen_find.h"
 #include "BKEND/backend.h"
 
-int compiler_run(compiler_t *compiler, int argc, char **argv){
+errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv){
     // A wrapper function around 'compiler_execute'
     compiler_invoke(compiler, argc, argv);
     return !(compiler->result_flags & COMPILER_RESULT_SUCCESS);
@@ -166,27 +166,27 @@ object_t* compiler_new_object(compiler_t *compiler){
     return *object_reference;
 }
 
-int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){
+errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){
     int arg_index = 1;
 
     while(arg_index != argc){
         if(argv[arg_index][0] == '-'){
             if(strcmp(argv[arg_index], "-h") == 0 || strcmp(argv[arg_index], "--help") == 0){
                 show_help();
-                return 1;
+                return FAILURE;
             } else if(strcmp(argv[arg_index], "-p") == 0 || strcmp(argv[arg_index], "--package") == 0){
                 compiler->traits |= COMPILER_MAKE_PACKAGE;
             } else if(strcmp(argv[arg_index], "-o") == 0){
                 if(arg_index + 1 == argc){
                     redprintf("Expected output filename after '-o' flag\n");
-                    return 1;
+                    return FAILURE;
                 }
                 free(compiler->output_filename);
                 compiler->output_filename = strclone(argv[++arg_index]);
             } else if(strcmp(argv[arg_index], "-n") == 0){
                 if(arg_index + 1 == argc){
                     redprintf("Expected output name after '-n' flag\n");
-                    return 1;
+                    return FAILURE;
                 }
 
                 free(compiler->output_filename);
@@ -228,7 +228,7 @@ int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **arg
 
             else {
                 redprintf("Invalid argument: %s\n", argv[arg_index]);
-                return 1;
+                return FAILURE;
             }
         } else if(object->filename == NULL){
             object->compilation_stage = COMPILATION_STAGE_FILENAME;
@@ -240,7 +240,7 @@ int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **arg
             for(length_t c = 0; c != filename_length; c++){
                 if(object->filename[c] == ' '){
                     redprintf("Filename cannot contain spaces! :\\\n");
-                    return 1;
+                    return FAILURE;
                 }
             }
 
@@ -250,11 +250,11 @@ int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **arg
             if(object->full_filename == NULL){
                 redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", object->filename);
                 free(object->filename);
-                return 1;
+                return FAILURE;
             }
         } else {
             redprintf("Multiple filenames given\n");
-            return 1;
+            return FAILURE;
         }
 
         arg_index++;
@@ -274,15 +274,15 @@ int parse_arguments(compiler_t *compiler, object_t *object, int argc, char **arg
             if(object->full_filename == NULL){
                 redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", object->filename);
                 free(object->filename);
-                return 1;
+                return FAILURE;
             }
         } else {
             show_help();
-            return 1;
+            return FAILURE;
         }
     }
 
-    return 0;
+    return SUCCESS;
 }
 
 void break_into_arguments(const char *s, int *out_argc, char ***out_argv){
@@ -384,7 +384,7 @@ void show_help(){
     #endif // ENABLE_DEBUG_FEATURES
 }
 
-int compiler_create_package(compiler_t *compiler, object_t *object){
+errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){
     char *package_filename;
 
     if(compiler->output_filename != NULL){
@@ -397,13 +397,13 @@ int compiler_create_package(compiler_t *compiler, object_t *object){
     if(pkg_write(package_filename, &object->tokenlist)){
         object_panic_plain(object, "Failed to export to package");
         if(compiler->output_filename == NULL) free(package_filename);
-        return 1;
+        return FAILURE;
     }
     if(compiler->output_filename == NULL) free(package_filename);
-    return 0;
+    return SUCCESS;
 }
 
-int compiler_read_file(compiler_t *compiler, object_t *object){
+errorcode_t compiler_read_file(compiler_t *compiler, object_t *object){
     length_t filename_length = strlen(object->filename);
 
     if(filename_length >= 4 && strcmp(&object->filename[filename_length - 4], ".dep") == 0){
@@ -515,9 +515,9 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 }
 
 void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, source_t source,
-        char *name, ast_type_t *types, length_t arity){
+        const char *name, ast_type_t *types, length_t arity){
 
-    int original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
+    maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
     
     if(original_index == -1){
         // No other function with that name exists
@@ -532,7 +532,7 @@ void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, 
         printf("\nPotential Candidates:\n");
     }
 
-    int index = original_index;
+    maybe_index_t index = original_index;
 
     do {
         ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
@@ -552,7 +552,7 @@ void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, 
     } while(++index != ir_module->funcs_length);
 }
 
-char* make_args_string(ast_type_t *types, length_t arity){
+strong_cstr_t make_args_string(ast_type_t *types, length_t arity){
     char *args_string = NULL;
     length_t args_string_length = 0;
     length_t args_string_capacity = 0;

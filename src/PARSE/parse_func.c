@@ -6,31 +6,52 @@
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
 
-int parse_func(parse_ctx_t *ctx){
+errorcode_t parse_func(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
     source_t source = ctx->tokenlist->sources[*ctx->i - 1];
 
-    char *name;
+    strong_cstr_t name;
     bool is_stdcall, is_foreign;
 
-    if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign)) return 1;
+    if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign)) return FAILURE;
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, name, is_stdcall, is_foreign, source);
 
-    if(parse_func_arguments(ctx, func)) return 1;
-    if(parse_type(ctx, &func->return_type)) return 1;
-    if(parse_func_body(ctx, func)) return 1;
+    if(parse_func_arguments(ctx, func)) return FAILURE;
+    if(parse_type(ctx, &func->return_type)) return FAILURE;
+    if(parse_func_body(ctx, func)) return FAILURE;
 
-    return 0;
+    return SUCCESS;
 }
 
-int parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
-    if(func->traits & AST_FUNC_FOREIGN) return 0;
+errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_stdcall, bool *out_is_foreign){
+    *out_is_stdcall = parse_func_is_stdcall(ctx);
 
-    if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return 1;
+    tokenid_t id = ctx->tokenlist->tokens[(*ctx->i)++].id;
+    *out_is_foreign = (id == TOKEN_FOREIGN);
+
+    if(*out_is_foreign || id == TOKEN_FUNC){
+        if(*out_is_foreign){
+            *out_name = parse_take_word(ctx, "Expected function name after 'foreign' keyword");
+        } else {
+            *out_name = parse_take_word(ctx, "Expected function name after 'func' keyword");
+        }
+
+        if(*out_name == NULL) return FAILURE;
+        return SUCCESS;
+    }
+
+    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Expected 'func' or 'foreign' keyword after 'stdcall' keyword");
+    return FAILURE;
+}
+
+errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
+    if(func->traits & AST_FUNC_FOREIGN) return SUCCESS;
+
+    if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return FAILURE;
 
     ast_expr_list_t stmts;
     ast_expr_list_t defer_stmts;
@@ -43,7 +64,7 @@ int parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     if(parse_stmts(ctx, &stmts, &defer_stmts, PARSE_STMTS_STANDARD)){
         ast_free_statements_fully(stmts.statements, stmts.length);
         ast_free_statements_fully(defer_stmts.statements, defer_stmts.length);
-        return 1;
+        return FAILURE;
     }
 
     parse_unravel_defer_stmts(&stmts, &defer_stmts, 0);
@@ -52,10 +73,10 @@ int parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     func->statements = stmts.statements;
     func->statements_length = stmts.length;
     func->statements_capacity = stmts.capacity;
-    return 0;
+    return SUCCESS;
 }
 
-int parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
+errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
@@ -65,24 +86,24 @@ int parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     length_t capacity = 0;
 
     if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after function name")){
-        return 1;
+        return FAILURE;
     }
 
     while(tokens[*i].id != TOKEN_CLOSE){
         if(parse_ignore_newlines(ctx, "Expected function argument")){
             parse_free_unbackfilled_arguments(func, backfill);
-            return 1;
+            return FAILURE;
         }
 
         parse_func_grow_arguments(func, backfill, &capacity);
-        if(parse_func_argument(ctx, func, &backfill, &is_solid)) return 1;
+        if(parse_func_argument(ctx, func, &backfill, &is_solid)) return FAILURE;
         if(!is_solid) continue;
 
         if(tokens[*i].id == TOKEN_NEXT){
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
                 parse_free_unbackfilled_arguments(func, backfill);
-                return 1;
+                return FAILURE;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
             const char *error_message = func->traits & AST_FUNC_VARARG
@@ -90,21 +111,21 @@ int parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
                     : "Expected ',' after argument type";
             compiler_panic(ctx->compiler, sources[*i], error_message);
             parse_free_unbackfilled_arguments(func, backfill);
-            return 1;
+            return FAILURE;
         }
     }
-
+    
     if(backfill != 0){
         compiler_panic(ctx->compiler, sources[*i], "Expected argument type before end of argument list");
         parse_free_unbackfilled_arguments(func, backfill);
-        return 1;
+        return FAILURE;
     }
 
     (*i)++; // skip over ')'
-    return 0;
+    return SUCCESS;
 }
 
-int parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, bool *out_is_solid){
+errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, bool *out_is_solid){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
@@ -122,13 +143,13 @@ int parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, 
         if(*backfill != 0){
             compiler_panic(ctx->compiler, sources[*i], "Expected type for previous arguments before ellipsis");
             parse_free_unbackfilled_arguments(func, *backfill);
-            return 1;
+            return FAILURE;
         }
 
         (*i)++;
         func->traits |= AST_FUNC_VARARG;
         *out_is_solid = false;
-        return 0;
+        return SUCCESS;
     }
 
     if(!(func->traits & AST_FUNC_FOREIGN)){
@@ -136,7 +157,7 @@ int parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, 
 
         if(name == NULL){
             parse_free_unbackfilled_arguments(func, *backfill);
-            return 1;
+            return FAILURE;
         }
 
         func->arg_names[func->arity + *backfill] = name;
@@ -146,12 +167,12 @@ int parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, 
                 compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
                 parse_free_unbackfilled_arguments(func, *backfill);
                 free(name);
-                return 1;
+                return FAILURE;
             }
 
             *backfill += 1;
             *out_is_solid = false;
-            return 0;
+            return SUCCESS;
         }
 
     }
@@ -159,14 +180,14 @@ int parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, 
     if(parse_type(ctx, &func->arg_types[func->arity + *backfill])){
         free(func->arg_names[func->arity + *backfill]);
         parse_free_unbackfilled_arguments(func, *backfill);
-        return 1;
+        return FAILURE;
     }
 
     parse_func_backfill_arguments(func, backfill);
     func->arity++;
 
     *out_is_solid = true;
-    return 0;
+    return SUCCESS;
 }
 
 void parse_func_backfill_arguments(ast_func_t *func, length_t *backfill){
@@ -202,27 +223,6 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
     grow((void**) &func->arg_types,   sizeof(ast_type_t), func->arity, *capacity);
     grow((void**) &func->arg_sources, sizeof(source_t),   func->arity + backfill, *capacity);
     grow((void**) &func->arg_flows,   sizeof(char),       func->arity + backfill, *capacity);
-}
-
-int parse_func_head(parse_ctx_t *ctx, char **out_name, bool *out_is_stdcall, bool *out_is_foreign){
-    *out_is_stdcall = parse_func_is_stdcall(ctx);
-
-    tokenid_t id = ctx->tokenlist->tokens[(*ctx->i)++].id;
-    *out_is_foreign = (id == TOKEN_FOREIGN);
-
-    if(*out_is_foreign || id == TOKEN_FUNC){
-        if(*out_is_foreign){
-            *out_name = parse_take_word(ctx, "Expected function name after 'foreign' keyword");
-        } else {
-            *out_name = parse_take_word(ctx, "Expected function name after 'func' keyword");
-        }
-
-        if(*out_name == NULL) return 1;
-        return 0;
-    }
-
-    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Expected 'func' or 'foreign' keyword after 'stdcall' keyword");
-    return 1;
 }
 
 bool parse_func_is_stdcall(parse_ctx_t *ctx){

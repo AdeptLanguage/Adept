@@ -3,9 +3,9 @@
 #include "UTIL/color.h"
 #include "UTIL/search.h"
 
-int pkg_write(const char *filename, tokenlist_t *tokenlist){
+errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
     FILE *file = fopen(filename, "wb");
-    if(file == NULL) return 1;
+    if(file == NULL) return FAILURE;
 
     /*
         FILE STRUCTURE:
@@ -42,7 +42,7 @@ int pkg_write(const char *filename, tokenlist_t *tokenlist){
         if(tokens[t].id == TOKEN_WORD){
             if(pkg_compress_word(file, &tokens[t])){
                 fclose(file);
-                return 1;
+                return FAILURE;
             }
         }
         else if(tokens[t].id == TOKEN_STRING || tokens[t].id == TOKEN_CSTRING){
@@ -51,7 +51,7 @@ int pkg_write(const char *filename, tokenlist_t *tokenlist){
             if(extra_data_length == 1024){
                 redprintf("Failed to create package because string exceeded max length of 1024 bytes!");
                 fclose(file);
-                return 1;
+                return FAILURE;
             }
 
             fwrite(&id, sizeof(char), 1, file);
@@ -73,10 +73,10 @@ int pkg_write(const char *filename, tokenlist_t *tokenlist){
     }
 
     fclose(file);
-    return 0;
+    return SUCCESS;
 }
 
-int pkg_read(compiler_t *compiler, object_t *object){
+errorcode_t pkg_read(compiler_t *compiler, object_t *object){
     object->buffer = NULL;
     
     tokenlist_t *tokenlist = &object->tokenlist;
@@ -84,7 +84,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
 
     if(file == NULL){
         redprintf("The file '%s' doesn't exist or can't be accessed\n", object->filename);
-        return 1;
+        return FAILURE;
     }
 
     pkg_version_t pkg_version;
@@ -96,19 +96,19 @@ int pkg_read(compiler_t *compiler, object_t *object){
     if(pkg_version.magic_number != 0x74706461){
         fprintf(stderr, "INTERNAL ERROR: Tried to read a package file '%s' that isn't a package\n", object->filename);
         fclose(file);
-        return 1;
+        return FAILURE;
     }
 
     if(pkg_version.endianness != 0x00EF){
         fprintf(stderr, "INTERNAL ERROR: Failed to read package '%s' because of mismatched endianness\n", object->filename);
         fclose(file);
-        return 1;
+        return FAILURE;
     }
 
     if(pkg_version.iteration_version != TOKEN_ITERATION_VERSION){
         fprintf(stderr, "INTERNAL ERROR: Incompatible package iteration version for package '%s'\n", object->filename);
         fclose(file);
-        return 1;
+        return FAILURE;
     }
 
     tokenlist->tokens = malloc(sizeof(token_t) * pkg_header.length);
@@ -146,7 +146,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
 
                     // Override tokenlist length for safe recovery deletion
                     tokenlist->length = t;
-                    return 1;
+                    return FAILURE;
                 }
                 buildup[buildup_length] = read;
                 fread(&read, sizeof(char), 1, file);
@@ -165,7 +165,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
 
                     // Override tokenlist length for safe recovery deletion
                     tokenlist->length = t;
-                    return 1;
+                    return FAILURE;
                 }
                 buildup[buildup_length] = read;
                 fread(&read, sizeof(char), 1, file);
@@ -184,7 +184,7 @@ int pkg_read(compiler_t *compiler, object_t *object){
 
                     // Override tokenlist length for safe recovery deletion
                     tokenlist->length = t;
-                    return 1;
+                    return FAILURE;
                 }
                 buildup[buildup_length] = read;
                 fread(&read, sizeof(char), 1, file);
@@ -254,17 +254,17 @@ int pkg_read(compiler_t *compiler, object_t *object){
     }
 
     fclose(file);
-    return 0;
+    return SUCCESS;
 }
 
-int pkg_compress_word(FILE *file, token_t *token){
+errorcode_t pkg_compress_word(FILE *file, token_t *token){
     const length_t compressible_words_length = 12;
 
     const char * const compressible_words[] = {
         "bool", "byte", "double", "float", "int", "long", "short", "ubyte", "uint", "ulong", "ushort", "usize"
     };
 
-    int index = binary_string_search(compressible_words, compressible_words_length, token->data);
+    maybe_index_t index = binary_string_search(compressible_words, compressible_words_length, token->data);
 
     if(index == -1){
         char id = token->id;
@@ -274,7 +274,7 @@ int pkg_compress_word(FILE *file, token_t *token){
         if(word_length > 1024){
             redprintf("Failed to create package because identifier exceeded max length of 1024 bytes!");
             fclose(file);
-            return 1;
+            return FAILURE;
         }
 
         fwrite(token->data, word_length + 1, 1, file);
@@ -283,5 +283,5 @@ int pkg_compress_word(FILE *file, token_t *token){
         fwrite(&shorthand_token, sizeof(char), 1, file);
     }
 
-    return 0;
+    return SUCCESS;
 }

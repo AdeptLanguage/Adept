@@ -42,14 +42,14 @@ void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx
 // doesn't match the given id, 'error' will be spit out
 // and 1 will be returned.
 // (NOTE: error can be NULL to indicate no error should be printed)
-int parse_eat(parse_ctx_t *ctx, tokenid_t id, const char *error);
+errorcode_t parse_eat(parse_ctx_t *ctx, tokenid_t id, const char *error);
 
 // ------------------ parse_eat_word ------------------
 // Returns the string held by a word at the current
 // token index. If the current token isn't a word, 'error'
 // will be spit out and NULL will be returned.
 // (NOTE: error can be NULL to indicate no error should be printed)
-char* parse_eat_word(parse_ctx_t *ctx, const char *error);
+maybe_null_weak_cstr_t parse_eat_word(parse_ctx_t *ctx, const char *error);
 
 // ==================================================
 //                   PARSE_TAKE_*
@@ -62,7 +62,7 @@ char* parse_eat_word(parse_ctx_t *ctx, const char *error);
 // at the current token index. If the current token isn't
 // a word, 'error' will be spit out and NULL will be returned.
 // (NOTE: error can be NULL to indicate no error should be printed)
-char* parse_take_word(parse_ctx_t *ctx, const char *error);
+maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error);
 
 // ==================================================
 //                    PARSE_GRAB_*
@@ -79,7 +79,7 @@ char* parse_take_word(parse_ctx_t *ctx, const char *error);
 // and NULL will be returned.
 // (NOTE: error can be NULL to indicate no error should be printed)
 // (NOTE: ownership isn't taken)
-char* parse_grab_word(parse_ctx_t *ctx, const char *error);
+maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error);
 
 // ------------------ parse_grab_string ------------------
 // Returns the string held by the token after current token.
@@ -87,6 +87,6 @@ char* parse_grab_word(parse_ctx_t *ctx, const char *error);
 // and NULL will be returned.
 // (NOTE: error can be NULL to indicate no error should be printed)
 // (NOTE: ownership isn't taken)
-char* parse_grab_string(parse_ctx_t *ctx, const char *error);
+maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error);
 
 #endif // PARSE_CTX_H

@@ -7,7 +7,7 @@
 
 // ------------------ parse_import ------------------
 // Parses an 'import' statement
-int parse_import(parse_ctx_t* ctx);
+errorcode_t parse_import(parse_ctx_t* ctx);
 
 // ------------------ parse_foreign_library ------------------
 // Parses a foreign library (ex: foreign 'libcustom.a')
@@ -15,20 +15,20 @@ void parse_foreign_library(parse_ctx_t* ctx);
 
 // ------------------ parse_import_object ------------------
 // Imports an object given the relative and absolute filenames
-int parse_import_object(parse_ctx_t *ctx, char *relative_filename, char *absolute_filename);
+errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filename, strong_cstr_t absolute_filename);
 
 // ------------------ parse_find_import ------------------
 // Finds the best file to use given a filename
 // NOTE: Returns NULL on error
-char* parse_find_import(parse_ctx_t *ctx, char *file);
+maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename);
 
 // ------------------ parse_resolve_import ------------------
 // Attempts to create an absolute filename for a file
 // NOTE: Returns NULL on error
-char* parse_resolve_import(parse_ctx_t *ctx, char *file);
+maybe_null_strong_cstr_t parse_resolve_import(parse_ctx_t *ctx, weak_cstr_t filename);
 
 // ------------------ already_imported ------------------
 // Returns whether or not the file has already been imported
-bool already_imported(parse_ctx_t *ctx, char *file);
+bool already_imported(parse_ctx_t *ctx, weak_cstr_t filename);
 
 #endif // PARSE_DEPENDENCY_H

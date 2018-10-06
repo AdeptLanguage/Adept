@@ -10,7 +10,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "BRIDGE/bridge.h"
 
-int ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ir_func_t *module_func){
+errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ir_func_t *module_func){
     // ir_gens statements into basicblocks with instructions and sets in 'module_func'
 
     if(ast_func->statements_length == 0){
@@ -61,7 +61,7 @@ int ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *a
     builder.var_scope = module_func->var_scope;
 
     while(module_func->arity != ast_func->arity){
-        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return 1;
+        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
         add_variable(&builder, ast_func->arg_names[module_func->arity], &ast_func->arg_types[module_func->arity], module_func->argument_types[module_func->arity], BRIDGE_VAR_UNDEF);
         module_func->arity++;
     }
@@ -71,13 +71,13 @@ int ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *a
 
     if(ast_func->traits & AST_FUNC_MAIN){
         // Initialize all global variables
-        if(ir_gen_globals_init(&builder)) return 1;
+        if(ir_gen_globals_init(&builder)) return FAILURE;
     }
 
     if(ir_gen_statements(&builder, statements, statements_length)){
         module_func->basicblocks = builder.basicblocks;
         module_func->basicblocks_length = builder.basicblocks_length;
-        return 1;
+        return FAILURE;
     }
 
     // Append return instr for functions that return void
@@ -93,7 +93,7 @@ int ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *a
             free(return_typename);
             module_func->basicblocks = builder.basicblocks;
             module_func->basicblocks_length = builder.basicblocks_length;
-            return 1;
+            return FAILURE;
         }
     }
 
@@ -106,10 +106,10 @@ int ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *a
 
     module_func->basicblocks = builder.basicblocks;
     module_func->basicblocks_length = builder.basicblocks_length;
-    return 0;
+    return SUCCESS;
 }
 
-int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length){
+errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length){
     ir_instr_t *built_instr;
     ir_instr_t **instr = NULL;
     ir_value_t *expression_value = NULL;
@@ -120,7 +120,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
         case EXPR_RETURN:
             if(((ast_expr_return_t*) statements[s])->value != NULL){
                 // Return non-void value
-                if(ir_gen_expression(builder, ((ast_expr_return_t*) statements[s])->value, &expression_value, false, &temporary_type)) return 1;
+                if(ir_gen_expression(builder, ((ast_expr_return_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->ast_func->return_type, CONFORM_MODE_STANDARD)){
                     char *a_type_str = ast_type_str(&temporary_type);
@@ -129,7 +129,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     free(a_type_str);
                     free(b_type_str);
                     ast_type_free(&temporary_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&temporary_type);
@@ -143,7 +143,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     char *a_type_str = ast_type_str(&builder->ast_func->return_type);
                     compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return void when function expects type '%s'", a_type_str);
                     free(a_type_str);
-                    return 1;
+                    return FAILURE;
                 }
             }
 
@@ -154,9 +154,9 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
             if(s + 1 != statements_length){
                 compiler_panicf(builder->compiler, statements[s + 1]->source, "Statements after 'return' statement in function '%s'", builder->ast_func->name);
-                return 1;
+                return FAILURE;
             }
-            return 0; // Return because no other statements can be after this one
+            return SUCCESS; // Return because no other statements can be after this one
         case EXPR_CALL: {
                 ast_expr_call_t *call_stmt = ((ast_expr_call_t*) statements[s]);
                 ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * call_stmt->arity);
@@ -173,7 +173,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     if(ir_gen_expression(builder, call_stmt->args[a], &arg_values[a], false, &arg_types[a])){
                         for(length_t t = 0; t != a; t++) ast_type_free(&arg_types[t]);
                         free(arg_types);
-                        return 1;
+                        return FAILURE;
                     }
                 }
 
@@ -187,7 +187,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                         char *s = ast_type_str(ast_var_type);
                         compiler_panicf(builder->compiler, call_stmt->source, "Can't call value of non function type '%s'", s);
                         free(s);
-                        return 1;
+                        return FAILURE;
                     }
 
                     ast_type_t *ast_function_return_type = ((ast_elem_func_t*) ast_var_type->elements[0])->return_type;
@@ -195,7 +195,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type)){
                         for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
                         free(arg_types);
-                        return 1;
+                        return FAILURE;
                     }
 
                     if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
@@ -218,14 +218,14 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                         if(ir_gen_resolve_type(builder->compiler, builder->object, ast_var_type, (ir_type_t**) &ir_var_type->extra)){
                             for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
                             free(arg_types);
-                            return 1;
+                            return FAILURE;
                         }
 
                         if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
                             char *s = ast_type_str(ast_var_type);
                             compiler_panicf(builder->compiler, call_stmt->source, "Can't call value of non function type '%s'", s);
                             free(s);
-                            return 1;
+                            return FAILURE;
                         }
 
                         ast_type_t *ast_function_return_type = ((ast_elem_func_t*) ast_var_type->elements[0])->return_type;
@@ -233,7 +233,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                         if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type)){
                             for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
                             free(arg_types);
-                            return 1;
+                            return FAILURE;
                         }
 
                         if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
@@ -252,11 +252,11 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     if(function_elem->traits & AST_FUNC_VARARG){
                         if(function_elem->arity > call_stmt->arity){
                             compiler_panicf(builder->compiler, call_stmt->source, "Incorrect argument count (at least %d expected, %d given)", (int) function_elem->arity, (int) call_stmt->arity);
-                            return 1;
+                            return FAILURE;
                         }
                     } else if(function_elem->arity != call_stmt->arity){
                         compiler_panicf(builder->compiler, call_stmt->source, "Incorrect argument count (%d expected, %d given)", (int) function_elem->arity, (int) call_stmt->arity);
-                        return 1;
+                        return FAILURE;
                     }
 
                     for(length_t a = 0; a != function_elem->arity; a++){
@@ -266,7 +266,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                             compiler_panicf(builder->compiler, call_stmt->args[a]->source, "Required argument type '%s' is incompatible with type '%s'", s1, s2);
                             free(s1);
                             free(s2);
-                            return 1;
+                            return FAILURE;
                         }
                     }
 
@@ -287,7 +287,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                         compiler_undeclared_function(builder->compiler, &builder->object->ir_module, statements[s]->source, call_stmt->name, arg_types, call_stmt->arity);
                         for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
                         free(arg_types);
-                        return 1;
+                        return FAILURE;
                     }
 
                     built_instr = build_instruction(builder, sizeof(ir_instr_call_t));
@@ -308,11 +308,11 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 // Search for existing variable named that
                 if(bridge_var_scope_already_in_list(builder->var_scope, declare_stmt->name)){
                     compiler_panicf(builder->compiler, statements[s]->source, "Variable '%s' already declared", declare_stmt->name);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                if(ir_gen_resolve_type(builder->compiler, builder->object, &declare_stmt->type, &ir_decl_type)) return 1;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, &declare_stmt->type, &ir_decl_type)) return FAILURE;
 
                 if(declare_stmt->value != NULL){
                     // Regular declare statement initial assign value
@@ -322,7 +322,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     var_pointer_type->kind = TYPE_KIND_POINTER;
                     var_pointer_type->extra = ir_decl_type;
 
-                    if(ir_gen_expression(builder, declare_stmt->value, &initial, false, &temporary_type)) return 1;
+                    if(ir_gen_expression(builder, declare_stmt->value, &initial, false, &temporary_type)) return FAILURE;
 
                     if(!ast_types_conform(builder, &initial, &temporary_type, &declare_stmt->type, CONFORM_MODE_PRIMITIVES)){
                         char *a_type_str = ast_type_str(&temporary_type);
@@ -331,7 +331,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                         free(a_type_str);
                         free(b_type_str);
                         ast_type_free(&temporary_type);
-                        return 1;
+                        return FAILURE;
                     }
 
                     ast_type_free(&temporary_type);
@@ -375,10 +375,10 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 ast_expr_assign_t *assign_stmt = ((ast_expr_assign_t*) statements[s]);
                 ir_value_t *destination;
                 ast_type_t destination_type, expression_value_type;
-                if(ir_gen_expression(builder, assign_stmt->value, &expression_value, false, &expression_value_type)) return 1;
+                if(ir_gen_expression(builder, assign_stmt->value, &expression_value, false, &expression_value_type)) return FAILURE;
                 if(ir_gen_expression(builder, assign_stmt->destination, &destination, true, &destination_type)){
                     ast_type_free(&expression_value_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!ast_types_conform(builder, &expression_value, &expression_value_type, &destination_type, CONFORM_MODE_PRIMITIVES)){
@@ -389,7 +389,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     free(b_type_str);
                     ast_type_free(&destination_type);
                     ast_type_free(&expression_value_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&destination_type);
@@ -416,36 +416,36 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     case EXPR_ADDASSIGN:
                         if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_ADD, INSTRUCTION_FADD)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't add those types");
-                            return 1;
+                            return FAILURE;
                         }
                         break;
                     case EXPR_SUBTRACTASSIGN:
                         if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't subtract those types");
-                            return 1;
+                            return FAILURE;
                         }
                         break;
                     case EXPR_MULTIPLYASSIGN:
                         if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't multiply those types");
-                            return 1;
+                            return FAILURE;
                         }
                         break;
                     case EXPR_DIVIDEASSIGN:
                         if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't divide those types");
-                            return 1;
+                            return FAILURE;
                         }
                         break;
                     case EXPR_MODULUSASSIGN:
                         if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't take the modulus of those types");
-                            return 1;
+                            return FAILURE;
                         }
                         break;
                     default:
                         compiler_panic(builder->compiler, assign_stmt->source, "INTERNAL ERROR: ir_gen_statements() got unknown assignment operator id");
-                        return 1;
+                        return FAILURE;
                     }
 
                     instr_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
@@ -459,7 +459,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
             break;
         case EXPR_IF: case EXPR_UNLESS: {
                 unsigned int conditional_type = statements[s]->id;
-                if(ir_gen_expression(builder, ((ast_expr_if_t*) statements[s])->value, &expression_value, false, &temporary_type)) return 1;
+                if(ir_gen_expression(builder, ((ast_expr_if_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
@@ -481,7 +481,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     free(a_type_str);
                     free(b_type_str);
                     ast_type_free(&temporary_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&temporary_type);
@@ -510,7 +510,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, if_stmts, if_stmts_length)){
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!terminated) build_break(builder, end_basicblock_id);
@@ -521,7 +521,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
                 unsigned int conditional_type = statements[s]->id;
-                if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) statements[s])->value, &expression_value, false, &temporary_type)) return 1;
+                if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
@@ -543,7 +543,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     free(a_type_str);
                     free(b_type_str);
                     ast_type_free(&temporary_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&temporary_type);
@@ -574,7 +574,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 if(ir_gen_statements(builder, if_stmts, if_stmts_length)){
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!terminated) build_break(builder, end_basicblock_id);
@@ -588,7 +588,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 build_using_basicblock(builder, else_basicblock_id);
                 if(ir_gen_statements(builder, else_stmts, else_stmts_length)){
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!terminated) build_break(builder, end_basicblock_id);
@@ -620,7 +620,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 build_using_basicblock(builder, test_basicblock_id);
 
                 unsigned int conditional_type = statements[s]->id;
-                if(ir_gen_expression(builder, ((ast_expr_while_t*) statements[s])->value, &expression_value, false, &temporary_type)) return 1;
+                if(ir_gen_expression(builder, ((ast_expr_while_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
@@ -642,7 +642,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     free(a_type_str);
                     free(b_type_str);
                     ast_type_free(&temporary_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&temporary_type);
@@ -668,7 +668,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, while_stmts, while_stmts_length)){
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!terminated) build_break(builder, test_basicblock_id);
@@ -710,7 +710,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, loop_stmts, loop_stmts_length)){
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!terminated){
@@ -739,7 +739,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 // Resolve & ir_gen function arguments
                 if(ir_gen_expression(builder, call_stmt->value, &arg_values[0], true, &arg_types[0])){
                     free(arg_types);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_elem_t **type_elems = arg_types[0].elements;
@@ -757,7 +757,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     ast_type_free(&arg_types[0]);
                     free(arg_types);
                     free(s);
-                    return 1;
+                    return FAILURE;
                 }
 
                 const char *struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
@@ -766,7 +766,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     if(ir_gen_expression(builder, call_stmt->args[a], &arg_values[a + 1], false, &arg_types[a + 1])){
                         for(length_t t = 0; t != a + 1; t++) ast_type_free(&arg_types[t]);
                         free(arg_types);
-                        return 1;
+                        return FAILURE;
                     }
                 }
 
@@ -777,7 +777,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     compiler_panicf(builder->compiler, call_stmt->source, "Undeclared method '%s'", call_stmt->name);
                     for(length_t t = 0; t != call_stmt->arity + 1; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ir_basicblock_new_instructions(builder->current_block, 1);
@@ -795,7 +795,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
             break;
         case EXPR_DELETE: {
                 ast_expr_unary_t *delete_expr = (ast_expr_unary_t*) statements[s];
-                if(ir_gen_expression(builder, delete_expr->value, &expression_value, false, &temporary_type)) return 1;
+                if(ir_gen_expression(builder, delete_expr->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(temporary_type.elements_length == 0 || ( temporary_type.elements[0]->id != AST_ELEM_POINTER &&
                     !(temporary_type.elements[0]->id == AST_ELEM_BASE && strcmp(((ast_elem_base_t*) temporary_type.elements[0])->base, "ptr") == 0)
@@ -804,7 +804,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     compiler_panicf(builder->compiler, delete_expr->source, "Can't pass non-pointer type '%s' to delete", t);
                     ast_type_free(&temporary_type);
                     free(t);
-                    return 1;
+                    return FAILURE;
                 }
 
                 built_instr = build_instruction(builder, sizeof(ir_instr_free_t));
@@ -817,7 +817,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
         case EXPR_BREAK: {
                 if(builder->break_block_id == 0){
                     compiler_panicf(builder->compiler, statements[s]->source, "Nowhere to break to");
-                    return 1;
+                    return FAILURE;
                 }
 
                 build_break(builder, builder->break_block_id);
@@ -826,7 +826,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
         case EXPR_CONTINUE: {
                 if(builder->continue_block_id == 0){
                     compiler_panicf(builder->compiler, statements[s]->source, "Nowhere to continue to");
-                    return 1;
+                    return FAILURE;
                 }
 
                 build_break(builder, builder->continue_block_id);
@@ -845,7 +845,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 if(target_block_id == 0){
                     compiler_panicf(builder->compiler, ((ast_expr_break_to_t*) statements[s])->label_source, "Undeclared label '%s'", target_label);
-                    return 1;
+                    return FAILURE;
                 }
 
                 build_break(builder, target_block_id);
@@ -864,7 +864,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
 
                 if(target_block_id == 0){
                     compiler_panicf(builder->compiler, ((ast_expr_continue_to_t*) statements[s])->label_source, "Undeclared label '%s'", target_label);
-                    return 1;
+                    return FAILURE;
                 }
 
                 build_break(builder, target_block_id);
@@ -920,7 +920,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 ir_value_t *array_length;
 
                 if(ir_gen_expression(builder, each_in->length, &array_length, false, &temporary_type)){
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_STANDARD)){
@@ -928,7 +928,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     compiler_panicf(builder->compiler, each_in->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
                     ast_type_free(&temporary_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&temporary_type);
@@ -959,7 +959,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 if(ir_gen_expression(builder, each_in->low_array, &array, false, &temporary_type)){
                     ast_type_free(&temporary_type);
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(temporary_type.elements_length == 0 || temporary_type.elements[0]->id != AST_ELEM_POINTER){
@@ -967,7 +967,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                         "Low-level array type for 'each in' statement must be a pointer");
                     ast_type_free(&temporary_type);
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Modify ast_type_t to remove a pointer element from the front
@@ -988,7 +988,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     free(s1);
                     free(s2);
 
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&temporary_type);
@@ -1018,7 +1018,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, each_in->statements, each_in->statements_length)){
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!terminated) build_break(builder, inc_basicblock_id);
@@ -1106,7 +1106,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 ir_value_t *limit;
 
                 if(ir_gen_expression(builder, repeat->limit, &limit, false, &temporary_type)){
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!ast_types_conform(builder, &limit, &temporary_type, idx_ast_type, CONFORM_MODE_PRIMITIVES)){
@@ -1114,7 +1114,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
                     ast_type_free(&temporary_type);
-                    return 1;
+                    return FAILURE;
                 }
 
                 ast_type_free(&temporary_type);
@@ -1147,7 +1147,7 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, repeat->statements, repeat->statements_length)){
                     close_var_scope(builder);
-                    return 1;
+                    return FAILURE;
                 }
 
                 if(!terminated) build_break(builder, inc_basicblock_id);
@@ -1187,9 +1187,9 @@ int ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t s
             break;
         default:
             compiler_panic(builder->compiler, statements[s]->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_statements()");
-            return 1;
+            return FAILURE;
         }
     }
 
-    return 0;
+    return SUCCESS;
 }

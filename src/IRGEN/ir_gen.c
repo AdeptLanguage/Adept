@@ -8,22 +8,22 @@
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
 
-int ir_gen(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_t *ast = &object->ast;
 
     ir_module_init(module, ast->funcs_length, ast->globals_length);
-
     object->compilation_stage = COMPILATION_STAGE_IR_MODULE;
-    if(ir_gen_type_mappings(compiler, object)) return 1; // Generate type mappings
 
-    if(ir_gen_globals(compiler, object)) return 1; // ir_gen global variables
-    if(ir_gen_functions(compiler, object)) return 1; // ir_gen function skeltons
-    if(ir_gen_functions_body(compiler, object)) return 1; // ir_gen function bodies
-    return 0;
+    if(ir_gen_type_mappings(compiler, object)
+    || ir_gen_globals(compiler, object)
+    || ir_gen_functions(compiler, object)
+    || ir_gen_functions_body(compiler, object)) return FAILURE;
+
+    return SUCCESS;
 }
 
-int ir_gen_functions(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     // NOTE: Only ir_gens function skeletons
 
     ast_t *ast = &object->ast;
@@ -72,21 +72,21 @@ int ir_gen_functions(compiler_t *compiler, object_t *object){
                 if(this_type->elements_length != 2 || this_type->elements[0]->id != AST_ELEM_POINTER
                         || this_type->elements[1]->id != AST_ELEM_BASE){
                     compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Check that the base isn't a primitive
                 char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
                 if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
                     compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Find the target structure
                 ast_struct_t *target = ast_struct_find(ast, ((ast_elem_base_t*) this_type->elements[1])->base);
                 if(target == NULL){
                     compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base);
-                    return 1;
+                    return FAILURE;
                 }
 
                 // Append the method to the struct's method list
@@ -112,20 +112,20 @@ int ir_gen_functions(compiler_t *compiler, object_t *object){
             }
         } else {
             while(module_func->arity != ast_func->arity){
-                if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return 1;
+                if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
                 module_func->arity++;
             }
         }
 
-        if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return 1;
+        if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
     }
 
     qsort(module->func_mappings, ast->funcs_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
-    return 0;
+    return SUCCESS;
 }
 
-int ir_gen_functions_body(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
     // NOTE: Only ir_gens function body; assumes skeleton already exists
 
     ast_func_t *ast_funcs = object->ast.funcs;
@@ -134,13 +134,13 @@ int ir_gen_functions_body(compiler_t *compiler, object_t *object){
 
     for(length_t f = 0; f != ast_funcs_length; f++){
         if(ast_funcs[f].traits & AST_FUNC_FOREIGN) continue;
-        if(ir_gen_func_statements(compiler, object, &ast_funcs[f], &module_funcs[f])) return 1;
+        if(ir_gen_func_statements(compiler, object, &ast_funcs[f], &module_funcs[f])) return FAILURE;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int ir_gen_globals(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
 
@@ -148,16 +148,16 @@ int ir_gen_globals(compiler_t *compiler, object_t *object){
         module->globals[g].name = ast->globals[g].name;
 
         if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &module->globals[g].type)){
-            return 1;
+            return FAILURE;
         }
 
         module->globals_length++;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int ir_gen_globals_init(ir_builder_t *builder){
+errorcode_t ir_gen_globals_init(ir_builder_t *builder){
     // Generates instructions for initializing global variables
     ast_global_t *globals = builder->object->ast.globals;
     length_t globals_length = builder->object->ast.globals_length;
@@ -169,7 +169,7 @@ int ir_gen_globals_init(ir_builder_t *builder){
         ast_type_t value_ast_type;
 
         if(ast_global->initial == NULL) continue;
-        if(ir_gen_expression(builder, ast_global->initial, &value, false, &value_ast_type)) return 1;
+        if(ir_gen_expression(builder, ast_global->initial, &value, false, &value_ast_type)) return FAILURE;
 
         if(!ast_types_conform(builder, &value, &value_ast_type, &ast_global->type, CONFORM_MODE_PRIMITIVES)){
             char *a_type_str = ast_type_str(&value_ast_type);
@@ -178,7 +178,7 @@ int ir_gen_globals_init(ir_builder_t *builder){
             free(a_type_str);
             free(b_type_str);
             ast_type_free(&value_ast_type);
-            return 1;
+            return FAILURE;
         }
 
         ast_type_free(&value_ast_type);
@@ -190,7 +190,7 @@ int ir_gen_globals_init(ir_builder_t *builder){
         ir_value_t *destination = build_gvarptr(builder, ptr_to_type, g);
         build_store(builder, value, destination);
     }
-    return 0;
+    return SUCCESS;
 }
 
 int ir_func_mapping_cmp(const void *a, const void *b){

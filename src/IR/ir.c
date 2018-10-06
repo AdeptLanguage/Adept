@@ -2,7 +2,7 @@
 #include "IR/ir.h"
 #include "UTIL/color.h"
 
-char* ir_value_str(ir_value_t *value){
+strong_cstr_t ir_value_str(ir_value_t *value){
     if(value->type == NULL){
         terminal_set_color(TERMINAL_COLOR_RED);
         printf("INTERNAL ERROR: The value passed to ir_value_str has a type pointer to NULL, a crash will probably follow...\n");
@@ -143,9 +143,8 @@ char* ir_value_str(ir_value_t *value){
     return NULL; // Should never get here
 }
 
-bool ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr){
+successful_t ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr){
     // Does a binary search on the type map to find the requested type by name
-    // NOTE: Returns whether or not an error occured (false == success)
 
     ir_type_mapping_t *mappings = type_map->mappings;
     length_t mappings_length = type_map->mappings_length;
@@ -157,13 +156,13 @@ bool ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr)
 
         if(comparison == 0){
             *type_ptr = &mappings[middle].type;
-            return false;
+            return true;
         }
         else if(comparison > 0) last = middle - 1;
         else first = middle + 1;
     }
 
-    return true; // Error occured
+    return false;
 }
 
 void ir_basicblock_new_instructions(ir_basicblock_t *block, length_t amount){

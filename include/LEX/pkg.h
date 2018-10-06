@@ -29,14 +29,14 @@ typedef struct {
 
 // ---------------- pkg_write ----------------
 // Creates and writes a package to disk
-int pkg_write(const char *filename, tokenlist_t *tokenlist);
+errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist);
 
 // ---------------- pkg_read ----------------
 // Reads a package from disk
-int pkg_read(compiler_t *compiler, object_t *object);
+errorcode_t pkg_read(compiler_t *compiler, object_t *object);
 
 // ---------------- pkg_compress_word ----------------
 // Attempts to compress a word, then writes it to disk
-int pkg_compress_word(FILE *file, token_t *token);
+errorcode_t pkg_compress_word(FILE *file, token_t *token);
 
 #endif // PKG_H

@@ -1,11 +1,11 @@
 
 #include "UTIL/search.h"
 
-int binary_string_search(const char * const strings[], length_t string_count, const char *target){
+maybe_index_t binary_string_search(const char * const strings[], length_t string_count, const char *target){
     // Searches for 'target' inside 'strings'
     // If not found returns -1 else returns index inside array
 
-    int first, middle, last, comparison;
+    maybe_index_t first, middle, last, comparison;
     first = 0; last = string_count - 1;
 
     while(first <= last){

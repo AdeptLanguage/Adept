@@ -2,7 +2,7 @@
 #include "LEX/lex.h"
 #include "LEX/token.h"
 
-void tokenlist_print(tokenlist_t *tokenlist, char *buffer){
+void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
     // Prints detailed information contained in tokenlist
     // NOTE: This probably should only be in like debug builds or something
     // NOTE: If buffer is NULL, line numbers and columns won't be printed
@@ -39,6 +39,7 @@ void tokenlist_print(tokenlist_t *tokenlist, char *buffer){
         case TOKEN_LESSTHANEQ:    printf("Less Than Or Equal\n"); break;
         case TOKEN_GREATERTHANEQ: printf("Greater Than Or Equal\n"); break;
         case TOKEN_NOT:           printf("Not\n"); break;
+        case TOKEN_NAMESPACE:     printf("Namespace\n"); break;
         case TOKEN_OPEN:          printf("Open\n"); break;
         case TOKEN_CLOSE:         printf("Close\n"); break;
         case TOKEN_BEGIN:         printf("Begin\n"); break;
@@ -208,7 +209,7 @@ const char *global_token_name_table[] = {
     "complement",             // 0x00000035
     "logical left shift",     // 0x00000036
     "logical right shift",    // 0x00000037
-    "reserved",               // 0x00000038
+    "namespace",              // 0x00000038
     "reserved",               // 0x00000039
     "reserved",               // 0x0000003A
     "reserved",               // 0x0000003B

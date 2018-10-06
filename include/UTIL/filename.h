@@ -13,34 +13,34 @@
 // ---------------- filename_name ----------------
 // Gets the string in a filename after a slash
 // (or a backslash) as a new c-string
-char* filename_name(const char *filename);
+strong_cstr_t filename_name(const char *filename);
 
 // ---------------- filename_name_const ----------------
 // Gets the string in a filename after a slash
-// (or a backslash) as a constant c-string
-const char* filename_name_const(const char *filename);
+// (or a backslash) as a weak c-string
+weak_cstr_t filename_name_const(weak_cstr_t filename);
 
 // ---------------- filename_path ----------------
 // Gets the path in a filename after as a new c-string
 // (includes slash)
-char* filename_path(const char *filename);
+strong_cstr_t filename_path(const char *filename);
 
 // ---------------- filename_local ----------------
 // Creates a path to a local filename of a file
 // in terms of the current filename's path
-char* filename_local(const char *current_filename, const char *local_filename);
+strong_cstr_t filename_local(const char *current_filename, const char *local_filename);
 
 // ---------------- filename_adept_import ----------------
 // Prepends the adept import directory to a filename
-char* filename_adept_import(const char *root, const char *filename);
+strong_cstr_t filename_adept_import(const char *root, const char *filename);
 
 // ---------------- filename_ext ----------------
 // Changes the extension of a filename
-char* filename_ext(const char *filename, const char *ext_without_dot);
+strong_cstr_t filename_ext(const char *filename, const char *ext_without_dot);
 
 // ---------------- filename_absolute ----------------
 // Gets the absolute filename for a filename
-char* filename_absolute(const char *filename);
+strong_cstr_t filename_absolute(const char *filename);
 
 // ---------------- filename_auto_ext ----------------
 // Append the correct file extension for the given

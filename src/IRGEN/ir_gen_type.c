@@ -6,7 +6,7 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_type.h"
 
-int ir_gen_type_mappings(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     // NOTE: Maps all accessible types in the program
 
     ast_t *ast = &object->ast;
@@ -19,7 +19,7 @@ int ir_gen_type_mappings(compiler_t *compiler, object_t *object){
 
     ir_type_t *tmp_type;
     ir_type_map_t *type_map = &module->type_map;
-    type_map->mappings_length = ast->structs_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
+    type_map->mappings_length = ast->structs_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
     ir_type_mapping_t *mappings = malloc(sizeof(ir_type_mapping_t) * type_map->mappings_length);
 
     mappings[0].name = "byte";
@@ -57,7 +57,10 @@ int ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     mappings[14].name = "successful";
     mappings[14].type.kind = TYPE_KIND_BOOLEAN;
 
-    for(length_t i = IR_GEN_BASE_TYPE_MAPPINGS_COUNT; i != type_map->mappings_length; i++){
+    length_t beginning_of_structs = IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
+    length_t beginning_of_enums = type_map->mappings_length - ast->enums_length;
+
+    for(length_t i = beginning_of_structs; i != beginning_of_enums; i++){
         // Create skeletons for struct type maps
         ast_struct_t *structure = &ast->structs[i - IR_GEN_BASE_TYPE_MAPPINGS_COUNT];
         mappings[i].name = structure->name; // Will live on
@@ -66,6 +69,12 @@ int ir_gen_type_mappings(compiler_t *compiler, object_t *object){
         // Temporary use mappings[i].type.extra as a pointer to reference the ast_struct_t used
         // It will later be changed to the required composite data after this mappings have been sorted
         mappings[i].type.extra = structure;
+    }
+
+    for(length_t i = beginning_of_enums; i != type_map->mappings_length; i++){
+        ast_enum_t *inum = &ast->enums[i - beginning_of_enums];
+        mappings[i].name = inum->name;
+        mappings[i].type.kind = TYPE_KIND_U64;
     }
 
     qsort(mappings, type_map->mappings_length, sizeof(ir_type_mapping_t), (void*) ir_type_mapping_cmp);
@@ -87,14 +96,14 @@ int ir_gen_type_mappings(compiler_t *compiler, object_t *object){
 
         // Resolve composite subtypes
         for(length_t s = 0; s != structure->field_count; s++){
-            if(ir_gen_resolve_type(compiler, object, &structure->field_types[s], &composite->subtypes[s])) return 1;
+            if(ir_gen_resolve_type(compiler, object, &structure->field_types[s], &composite->subtypes[s])) return FAILURE;
         }
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type){
+errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type){
     // NOTE: Stores resolved type into 'resolved_type'
     // NOTE: If this function fails, 'resolved_type' is not guaranteed to be the same.
     //       However, no memory will have to be manually freed after this call since
@@ -111,7 +120,7 @@ int ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unre
         // Special void type
         *resolved_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
         (*resolved_type)->kind = TYPE_KIND_VOID;
-        return 0;
+        return SUCCESS;
     }
 
     // Peel back pointer layers
@@ -126,9 +135,9 @@ int ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unre
             char *base_name = ((ast_elem_base_t*) unresolved_type->elements[non_concrete_layers])->base;
 
             // Resolve type from type map
-            if(ir_type_map_find(type_map, base_name, resolved_type)){
+            if(!ir_type_map_find(type_map, base_name, resolved_type)){
                 compiler_panicf(compiler, unresolved_type->source, "Undeclared type '%s'", base_name);
-                return 1;
+                return FAILURE;
             }
         }
         break;
@@ -148,23 +157,23 @@ int ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unre
             extra->arg_types = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t*) * extra->arity);
 
             for(length_t a = 0; a != function->arity; a++){
-                if(ir_gen_resolve_type(compiler, object, &function->arg_types[a], &extra->arg_types[a])) return 1;
+                if(ir_gen_resolve_type(compiler, object, &function->arg_types[a], &extra->arg_types[a])) return FAILURE;
             }
 
-            if(ir_gen_resolve_type(compiler, object, function->return_type, &extra->return_type)) return 1;
+            if(ir_gen_resolve_type(compiler, object, function->return_type, &extra->return_type)) return FAILURE;
         }
         break;
     default: {
             char *unresolved_str_rep = ast_type_str(unresolved_type);
             compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown type element id in type '%s'", unresolved_str_rep);
             free(unresolved_str_rep);
-            return 1;
+            return FAILURE;
         }
     }
 
-    for(length_t i = 0; i != non_concrete_layers; i++){
+    for(length_t i = non_concrete_layers; i != 0; i--){
         ir_type_t *wrapped_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-        unsigned int non_concrete_element_id = unresolved_type->elements[i]->id;
+        unsigned int non_concrete_element_id = unresolved_type->elements[i - 1]->id;
 
         if(non_concrete_element_id == AST_ELEM_POINTER){
             wrapped_type->kind = TYPE_KIND_POINTER;
@@ -172,7 +181,7 @@ int ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unre
         } else if(non_concrete_element_id == AST_ELEM_FIXED_ARRAY){
             ir_type_extra_fixed_array_t *fixed_array = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_fixed_array_t));
             fixed_array->subtype = *resolved_type;
-            fixed_array->length = ((ast_elem_fixed_array_t*) unresolved_type->elements[i])->length;
+            fixed_array->length = ((ast_elem_fixed_array_t*) unresolved_type->elements[i - 1])->length;
             wrapped_type->kind = TYPE_KIND_FIXED_ARRAY;
             wrapped_type->extra = fixed_array;
         } else {
@@ -184,10 +193,10 @@ int ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unre
         *resolved_type = wrapped_type;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t *ast_from_type, ast_type_t *ast_to_type, trait_t mode){
+successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t *ast_from_type, ast_type_t *ast_to_type, trait_t mode){
     // NOTE: _____RETURNS TRUE ON SUCCESSFUL MERGE_____
     // NOTE: If the types are not identical, then this function will attempt to make
     //           a value of one type conform to another type (via casting)
@@ -249,7 +258,7 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
     if(to_type_kind == TYPE_KIND_BOOLEAN && (from_type_kind != TYPE_KIND_NONE || (from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_POINTER))){
         ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         instr->id = INSTRUCTION_ISNTZERO;
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return 1;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
         instr->result_type = ir_to_type;
         instr->value = *ir_value;
         *ir_value = build_value_from_prev_instruction(builder);
@@ -266,7 +275,7 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
         ){
 
         // Casting ptr -> *something
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return 1;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
 
         ir_instr_cast_t *bitcast_instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         bitcast_instr->id = INSTRUCTION_BITCAST;
@@ -282,7 +291,7 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
         || to_traits & TYPE_TRAIT_BASE_PTR)){
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
             instr->id = INSTRUCTION_INTTOPTR;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return 1;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -292,7 +301,7 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
         || from_traits & TYPE_TRAIT_BASE_PTR)){
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
             instr->id = INSTRUCTION_PTRTOINT;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return 1;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -314,7 +323,7 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
 
             if(global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind]){
                 instr->id = INSTRUCTION_REINTERPRET; // They are the same size
-                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return 1;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
                 instr->result_type = ir_to_type;
                 instr->value = *ir_value;
                 *ir_value = build_value_from_prev_instruction(builder);
@@ -326,7 +335,7 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
                 (from_is_float ? INSTRUCTION_FEXT   : INSTRUCTION_ZEXT) :
                 (from_is_float ? INSTRUCTION_FTRUNC : INSTRUCTION_TRUNC);
 
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return 1;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -345,9 +354,34 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
                 (to_is_signed   ? INSTRUCTION_FPTOSI : INSTRUCTION_FPTOUI):
                 (from_is_signed ? INSTRUCTION_SITOFP : INSTRUCTION_UITOFP);
 
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return 1;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
+            *ir_value = build_value_from_prev_instruction(builder);
+            return true;
+        }
+    }
+
+    if(mode & CONFORM_MODE_INTENUM){
+        if((*ir_value)->type->kind == TYPE_KIND_U64 && to_traits & TYPE_TRAIT_INTEGER){
+            // Don't bother casting the value when they are the same underlying type
+            if(to_type_kind == TYPE_KIND_U64) return true;
+
+            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+
+            // Set result type of instruction
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &instr->result_type)) return FAILURE;
+
+            // Set 'from' value for instruction
+            instr->value = *ir_value;
+
+            if(global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind]){
+                instr->id = INSTRUCTION_REINTERPRET; // They are the same size
+                *ir_value = build_value_from_prev_instruction(builder);
+                return true;
+            }
+
+            instr->id = INSTRUCTION_TRUNC;
             *ir_value = build_value_from_prev_instruction(builder);
             return true;
         }
@@ -365,7 +399,7 @@ bool ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t 
     return ast_types_identical(ast_from_type, ast_to_type);
 }
 
-bool ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b){
+successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b){
     // NOTE: _____RETURNS TRUE ON SUCCESSFUL MERGE_____
     // NOTE: If the types are not identical, then this function will attempt to make
     //           the two values have a common type
@@ -373,9 +407,9 @@ bool ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t 
     // NOTE: This function can be used as a substitute for ast_types_identical if the desired
     //           behavior is to make two values conform to each other, for one-way casting use ast_types_conform()
 
-    if(ast_types_conform(builder, ir_value_a, ast_type_a, ast_type_b, CONFORM_MODE_STANDARD)) return true;
-    if(ast_types_conform(builder, ir_value_b, ast_type_b, ast_type_a, CONFORM_MODE_STANDARD)) return true;
-    return false;
+    if(ast_types_conform(builder, ir_value_a, ast_type_a, ast_type_b, CONFORM_MODE_STANDARD)) return false;
+    if(ast_types_conform(builder, ir_value_b, ast_type_b, ast_type_a, CONFORM_MODE_STANDARD)) return false;
+    return true;
 }
 
 int ir_type_mapping_cmp(const void *a, const void *b){
@@ -390,7 +424,7 @@ unsigned int ir_primitive_from_ast_type(const ast_type_t *type){
 
     char *base = ((ast_elem_base_t*) type->elements[0])->base;
 
-    int builtin = typename_builtin_type(base);
+    maybe_index_t builtin = typename_builtin_type(base);
 
     switch(builtin){
     case BUILTIN_TYPE_BOOL:       return TYPE_KIND_BOOLEAN;

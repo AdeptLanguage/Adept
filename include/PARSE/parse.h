@@ -16,11 +16,11 @@
 // Returns 0 on conventional success (parse completed)
 // Returns 1 on error
 // Returns 2 on unconventional success (parse incomplete)
-int parse(compiler_t *compiler, object_t *object);
+errorcode_t parse(compiler_t *compiler, object_t *object);
 
 // ------------------ parse_tokens ------------------
 // Indirect entry point of the parser. Takes in a
 // parsing context that has already been created.
-int parse_tokens(parse_ctx_t *ctx);
+errorcode_t parse_tokens(parse_ctx_t *ctx);
 
 #endif // PARSE_H

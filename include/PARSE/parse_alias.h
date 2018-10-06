@@ -5,6 +5,6 @@
 #include "UTIL/ground.h"
 #include "PARSE/parse_ctx.h"
 
-int parse_alias(parse_ctx_t *ctx);
+errorcode_t parse_alias(parse_ctx_t *ctx);
 
 #endif // PARSE_ALIAS_H

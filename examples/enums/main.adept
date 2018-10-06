@@ -1,0 +1,18 @@
+
+import 'sys/cstdio.adept'
+
+enum EyeColor (GREEN, BLUE, BROWN, HAZEL, OTHER)
+
+func main(in argc int, in argv **ubyte) int {
+    eyecolor EyeColor = EyeColor::BLUE
+
+    names 5 *ubyte = undef
+    names[0] = 'Green'
+    names[1] = 'Blue'
+    names[2] = 'Brown'
+    names[3] = 'Hazel'
+    names[4] = 'Other'
+
+    printf('%s\n', names[eyecolor])
+    return 0
+}

@@ -5,13 +5,13 @@
 #include "PARSE/parse_pragma.h"
 #include "PARSE/parse_ctx.h"
 
-int parse_pragma(parse_ctx_t *ctx){
+errorcode_t parse_pragma(parse_ctx_t *ctx){
     // pragma <directive> ...
     //   ^
 
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
-    const char *read = NULL;
+    maybe_null_weak_cstr_t read = NULL;
 
     const char * const directives[] = {
         "compiler_version", "deprecated", "help", "optimization", "options",
@@ -20,10 +20,10 @@ int parse_pragma(parse_ctx_t *ctx){
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
 
-    char *directive_string = parse_grab_word(ctx, "Expected pragma option after 'pragma' keyword");
-    if(directive_string == NULL) return 1;
+    weak_cstr_t directive_string = parse_grab_word(ctx, "Expected pragma option after 'pragma' keyword");
+    if(directive_string == NULL) return FAILURE;
 
-    int directive = binary_string_search(directives, directives_length, directive_string);
+    maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
     switch(directive){
     case 0: // 'compiler_version' directive
@@ -31,7 +31,7 @@ int parse_pragma(parse_ctx_t *ctx){
 
         if(read == NULL){
             puts("\nDid you mean: pragma compiler_version '2.0'?");
-            return 1;
+            return FAILURE;
         }
 
         // Check to make sure we support the target version
@@ -40,16 +40,16 @@ int parse_pragma(parse_ctx_t *ctx){
         } else if(strcmp(read, "2.1") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
             puts("\nSupported Versions: '2.0', '2.1'");
-            return 1;
+            return FAILURE;
         }
-        return 0;
+        return SUCCESS;
     case 1: // 'deprecated' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
             if(tokens[*i].id != TOKEN_NEWLINE){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected message after 'pragma deprecated'");
-                return 1;
+                return FAILURE;
             } else (*i)--;
         }
 
@@ -58,16 +58,16 @@ int parse_pragma(parse_ctx_t *ctx){
         } else {
             compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "This file is deprecated and may be removed in the future");
         }
-        return 0;
+        return SUCCESS;
     case 2: // 'help' directive
         show_help();
-        return 1;
+        return FAILURE;
     case 3: // 'optimization' directive
         read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
             printf("Possible levels are: none, less, normal or aggressive\n");
-            return 1;
+            return FAILURE;
         }
 
         // Change the optimization level accordingly
@@ -79,25 +79,25 @@ int parse_pragma(parse_ctx_t *ctx){
             // Invalid optimiztaion level
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Invalid optimization level after 'pragma optimization'");
             printf("Possible levels are: none, less, normal or aggressive\n");
-            return 1;
+            return FAILURE;
         }
-        return 0;
+        return SUCCESS;
     case 4: // 'options' directive
         return parse_pragma_cloptions(ctx);
     case 5: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
-        if(read == NULL) return 1;
+        if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
-        return 0;
+        return SUCCESS;
     case 6: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
             if(tokens[*i].id != TOKEN_NEWLINE){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Expected message after 'pragma unsupported'");
-                return 1;
+                return FAILURE;
             } else (*i)--;
         }
 
@@ -107,26 +107,26 @@ int parse_pragma(parse_ctx_t *ctx){
         } else {
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
-        return 1;
+        return FAILURE;
     case 7: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
-        return 1;
+        return FAILURE;
         #endif
     default:
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Unrecognized pragma option '%s'", directive_string);
-        return 1;
+        return FAILURE;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int parse_pragma_cloptions(parse_ctx_t *ctx){
+errorcode_t parse_pragma_cloptions(parse_ctx_t *ctx){
     // pragma options 'some arguments'
     //           ^
 
-    char *options = parse_grab_string(ctx, "Expected string containing compiler options after 'pragma options'");
-    if(options == NULL) return 1;
+    weak_cstr_t options = parse_grab_string(ctx, "Expected string containing compiler options after 'pragma options'");
+    if(options == NULL) return FAILURE;
 
     int options_argc; char **options_argv;
     break_into_arguments(options, &options_argc, &options_argv);
@@ -135,7 +135,7 @@ int parse_pragma_cloptions(parse_ctx_t *ctx){
     if(parse_arguments(ctx->compiler, ctx->object, options_argc, options_argv)){
         for(length_t a = 1; a != options_argc; a++) free(options_argv[a]);
         free(options_argv);
-        return 1;
+        return FAILURE;
     }
 
     // Free allocated options array
@@ -146,8 +146,8 @@ int parse_pragma_cloptions(parse_ctx_t *ctx){
     // Export as a package if the flag was set, because we missed the time to do it earlier
     if(ctx->compiler->traits & COMPILER_MAKE_PACKAGE){
         if(compiler_create_package(ctx->compiler, ctx->object) == 0) ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
-        return 1;
+        return FAILURE;
     }
 
-    return 0;
+    return SUCCESS;
 }
