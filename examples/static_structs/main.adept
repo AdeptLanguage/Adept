@@ -1,0 +1,51 @@
+
+import 'sys/cstdio.adept'
+
+struct Person (name *ubyte, age int, parent_name *ubyte)
+
+func main(in argc int, in argv **ubyte) int {
+    isaac *Person = static Person ('Isaac', 16, 'Brett')
+    josh *Person = static Person ('Josh', 44, 'Jill')
+    isaac.print()
+    josh.print()
+
+    people **Person = static *Person {
+        static Person ('John', 32, 'James'),
+        static Person ('James', 26, 'Luke'),
+        static Person ('Luke', 27, 'Bob')
+    }
+
+    groups ***Person = static **Person {
+        static *Person {
+            static Person ('Red', 39, 'Green'),
+            static Person ('Green', 11, 'Blue'),
+            static Person ('Blue', 24, 'Red')
+        },
+        static *Person {
+            static Person ('Fire', 63, 'Nature'),
+            static Person ('Water', 76, 'Water'),
+            static Person ('Nature', 87, 'Fire')
+        },
+        static *Person {
+            static Person ('Alpha', 1, 'Omega'),
+            static Person ('Beta', 2, 'Alpha'),
+            static Person ('Gamma', 3, 'Beta')
+        }
+    }
+
+    each *Person in [people, 3] {
+        it.print()
+    }
+
+    each **Person in [groups, 3],
+        each *Person in [it, 3],
+            it.print()
+
+    elliot Person = *static Person ('Elliot', 12, 'George')
+    elliot.print()
+    return 0
+}
+
+func print(this *Person) void {
+    printf('Person (\'%s\', %d, \'%s\')\n', this.name, this.age, this.parent_name)
+}

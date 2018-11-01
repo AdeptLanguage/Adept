@@ -479,6 +479,20 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(value_str);
             return representation;
         }
+    case EXPR_STATIC_ARRAY: {
+            char *type_str = ast_type_str( &(((ast_expr_static_data_t*) expr)->type) );
+            representation = malloc(strlen(type_str) + 14);
+            sprintf(representation, "static %s {...}", type_str);
+            free(type_str);
+            return representation;
+        }
+    case EXPR_STATIC_STRUCT: {
+            char *type_str = ast_type_str( &(((ast_expr_static_data_t*) expr)->type) );
+            representation = malloc(strlen(type_str) + 14);
+            sprintf(representation, "static %s (...)", type_str);
+            free(type_str);
+            return representation;
+        }
     default:
         representation = malloc(21);
         memcpy(representation, "<unknown expression>", 21);
@@ -552,6 +566,11 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_NEW:
         ast_type_free( &((ast_expr_new_t*) expr)->type );
         if(((ast_expr_new_t*) expr)->amount != NULL) ast_expr_free_fully( ((ast_expr_new_t*) expr)->amount );
+        break;
+    case EXPR_STATIC_ARRAY: case EXPR_STATIC_STRUCT: {
+            ast_type_free( &((ast_expr_static_data_t*) expr)->type );
+            ast_exprs_free_fully(((ast_expr_static_data_t*) expr)->values, ((ast_expr_static_data_t*) expr)->length);
+        }
         break;
     case EXPR_RETURN:
         if(((ast_expr_return_t*) expr)->value != NULL){
@@ -764,6 +783,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone = malloc(sizeof(ast_expr_new_cstring_t));
         ((ast_expr_new_cstring_t*) clone)->value = ((ast_expr_new_cstring_t*) expr)->value;
         break;
+    case EXPR_STATIC_ARRAY: case EXPR_STATIC_STRUCT:
+        clone = malloc(sizeof(ast_expr_static_data_t));
+        ((ast_expr_static_data_t*) clone)->type = ast_type_clone(&((ast_expr_static_data_t*) expr)->type);
+        ((ast_expr_static_data_t*) clone)->values = malloc(sizeof(ast_expr_t*) * ((ast_expr_static_data_t*) expr)->length);
+        ((ast_expr_static_data_t*) clone)->length = ((ast_expr_static_data_t*) expr)->length;
+
+        for(length_t i = 0; i != ((ast_expr_static_data_t*) expr)->length; i++){
+            ((ast_expr_static_data_t*) clone)->values[i] = ast_expr_clone(((ast_expr_static_data_t*) expr)->values[i]);
+        }
+        break;
     default:
         redprintf("INTERNAL ERROR: ast_expr_clone received unimplemented expression id 0x%08X\n", expr->id);
         redprintf("Returning NULL... a crash will probably follow\n");
@@ -878,41 +907,43 @@ const char *global_expression_rep_table[] = {
     "<<<",                     // 0x00000025
     ">>>",                     // 0x00000026
     "-",                       // 0x00000027
-    "<call>",                  // 0x00000028
-    "<variable>",              // 0x00000029
-    ".",                       // 0x0000002A
-    "&",                       // 0x0000002B
-    "func&",                   // 0x0000002C
-    "*",                       // 0x0000002D
-    "[]",                      // 0x0000002E
-    "<cast>",                  // 0x0000002F
-    "<sizeof>",                // 0x00000030
-    "<call method>",           // 0x00000031
-    "<new>",                   // 0x00000032
-    "<new cstring>",           // 0x00000033
-    "<enum value>",            // 0x00000034
-    "<declaration>",           // 0x00000035
-    "<undef declaration>",     // 0x00000036
-    "=",                       // 0x00000037
-    "+=",                      // 0x00000038
-    "-=",                      // 0x00000039
-    "*=",                      // 0x0000003A
-    "/=",                      // 0x0000003B
-    "%=",                      // 0x0000003C
-    "<return>",                // 0x0000003D
-    "<if>",                    // 0x0000003E
-    "<unless>",                // 0x0000003F
-    "<if else>",               // 0x00000040
-    "<unless else>",           // 0x00000041
-    "<while>",                 // 0x00000042
-    "<until>",                 // 0x00000043
-    "<while continue>",        // 0x00000044
-    "<until break>",           // 0x00000045
-    "<each in>",               // 0x00000046
-    "<repeat>",                // 0x00000047
-    "<delete>",                // 0x00000048
-    "<break>",                 // 0x00000049
-    "<continue>",              // 0x0000004A
-    "<break to>",              // 0x0000004B
-    "<continue to>",           // 0x0000004C
+    "<at>",                    // 0x00000028
+    "<call>",                  // 0x00000029
+    "<variable>",              // 0x0000002A
+    ".",                       // 0x0000002B
+    "&",                       // 0x0000002C
+    "func&",                   // 0x0000002D
+    "*",                       // 0x0000002E
+    "[]",                      // 0x0000002F
+    "<cast>",                  // 0x00000030
+    "<sizeof>",                // 0x00000031
+    "<call method>",           // 0x00000032
+    "<new>",                   // 0x00000033
+    "<new cstring>",           // 0x00000034
+    "<enum value>",            // 0x00000035
+    "<enum value>",            // 0x00000036
+    "<static array>",          // 0x00000037
+    "<undef declaration>",     // 0x00000038
+    "=",                       // 0x00000039
+    "+=",                      // 0x0000003A
+    "-=",                      // 0x0000003B
+    "*=",                      // 0x0000003C
+    "/=",                      // 0x0000003D
+    "%=",                      // 0x0000003E
+    "<return>",                // 0x0000003F
+    "<if>",                    // 0x00000040
+    "<unless>",                // 0x00000041
+    "<if else>",               // 0x00000042
+    "<unless else>",           // 0x00000043
+    "<while>",                 // 0x00000044
+    "<until>",                 // 0x00000045
+    "<while continue>",        // 0x00000046
+    "<until break>",           // 0x00000047
+    "<each in>",               // 0x00000048
+    "<repeat>",                // 0x00000049
+    "<delete>",                // 0x0000004A
+    "<break>",                 // 0x0000004B
+    "<continue>",              // 0x0000004C
+    "<break to>",              // 0x0000004D
+    "<continue to>",           // 0x0000004E
 };

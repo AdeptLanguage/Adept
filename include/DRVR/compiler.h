@@ -20,6 +20,7 @@
 #define COMPILER_DEBUG_SYMBOLS   TRAIT_5
 #define COMPILER_NO_WARN         TRAIT_6
 #define COMPILER_NO_UNDEF        TRAIT_7
+#define COMPILER_NO_TYPE_INFO    TRAIT_8
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS     TRAIT_1
@@ -34,9 +35,10 @@
 
 // Possible compiler debug trait options
 #ifdef ENABLE_DEBUG_FEATURES
-#define COMPILER_DEBUG_STAGES    TRAIT_1
-#define COMPILER_DEBUG_DUMP      TRAIT_2
-#define COMPILER_DEBUG_LLVMIR    TRAIT_3
+#define COMPILER_DEBUG_STAGES          TRAIT_1
+#define COMPILER_DEBUG_DUMP            TRAIT_2
+#define COMPILER_DEBUG_LLVMIR          TRAIT_3
+#define COMPILER_DEBUG_NO_VERIFICATION TRAIT_4
 #endif // ENABLE_DEBUG_FEATURES
 
 // Possible compiler result flags (for internal use)

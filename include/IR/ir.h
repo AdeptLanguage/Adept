@@ -79,25 +79,33 @@
 #define INSTRUCTION_AND            0x00000040 // ir_instr_math_t
 #define INSTRUCTION_OR             0x00000041 // ir_instr_math_t
 #define INSTRUCTION_SIZEOF         0x00000042
-#define INSTRUCTION_VARZEROINIT    0x00000043
-#define INSTRUCTION_MEMCPY         0x00000044
-#define INSTRUCTION_BIT_AND        0x00000045 // ir_instr_math_t
-#define INSTRUCTION_BIT_OR         0x00000046 // ir_instr_math_t
-#define INSTRUCTION_BIT_XOR        0x00000047 // ir_instr_math_t
-#define INSTRUCTION_BIT_COMPLEMENT 0x00000048 // ir_instr_unary_t
-#define INSTRUCTION_BIT_LSHIFT     0x00000049 // ir_instr_math_t
-#define INSTRUCTION_BIT_RSHIFT     0x0000004A // ir_instr_math_t
-#define INSTRUCTION_BIT_LGC_RSHIFT 0x0000004B // ir_instr_math_t
-#define INSTRUCTION_NEGATE         0x0000004C // ir_instr_unary_t
-#define INSTRUCTION_FNEGATE        0x0000004D // ir_instr_unary_t
+#define INSTRUCTION_OFFSETOF       0x00000043
+#define INSTRUCTION_VARZEROINIT    0x00000044
+#define INSTRUCTION_MEMCPY         0x00000045
+#define INSTRUCTION_BIT_AND        0x00000046 // ir_instr_math_t
+#define INSTRUCTION_BIT_OR         0x00000047 // ir_instr_math_t
+#define INSTRUCTION_BIT_XOR        0x00000048 // ir_instr_math_t
+#define INSTRUCTION_BIT_COMPLEMENT 0x00000049 // ir_instr_unary_t
+#define INSTRUCTION_BIT_LSHIFT     0x0000004A // ir_instr_math_t
+#define INSTRUCTION_BIT_RSHIFT     0x0000004B // ir_instr_math_t
+#define INSTRUCTION_BIT_LGC_RSHIFT 0x0000004C // ir_instr_math_t
+#define INSTRUCTION_NEGATE         0x0000004D // ir_instr_unary_t
+#define INSTRUCTION_FNEGATE        0x0000004E // ir_instr_unary_t
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
 // =============================================================
-#define VALUE_TYPE_NONE    0x00000000
-#define VALUE_TYPE_LITERAL 0x00000001 // data = pointer to literal value
-#define VALUE_TYPE_RESULT  0x00000002 // data = pointer to an 'ir_value_result_t'
-#define VALUE_TYPE_NULLPTR 0x00000003
+#define VALUE_TYPE_NONE              0x00000000
+#define VALUE_TYPE_LITERAL           0x00000001 // data = pointer to literal value
+#define VALUE_TYPE_RESULT            0x00000002 // data = pointer to an 'ir_value_result_t'
+#define VALUE_TYPE_NULLPTR           0x00000003
+#define VALUE_TYPE_NULLPTR_OF_TYPE   0x00000004
+#define VALUE_TYPE_ARRAY_LITERAL     0x00000005 // data = pointer to an 'ir_value_array_literal_t'
+#define VALUE_TYPE_STRUCT_LITERAL    0x00000006 // data = pointer to an 'ir_value_struct_literal_t'
+#define VALUE_TYPE_ANON_GLOBAL       0x00000007 // data = pointer to an 'ir_value_anon_global_t'
+#define VALUE_TYPE_CONST_ANON_GLOBAL 0x00000008 // data = pointer to an 'ir_value_anon_global_t'
+
+#define VALUE_TYPE_IS_CONSTANT(a) (a & VALUE_TYPE_LITERAL || a & VALUE_TYPE_NULLPTR || a & VALUE_TYPE_ARRAY_LITERAL || a & VALUE_TYPE_STRUCT_LITERAL || a & VALUE_TYPE_CONST_ANON_GLOBAL)
 
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type
@@ -128,6 +136,31 @@ typedef struct {
     length_t block_id;
     length_t instruction_id;
 } ir_value_result_t;
+
+// ---------------- ir_value_array_literal_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if
+// the value is an array literal
+// NOTE: Type should be a pointer to the element type (since *element_type is the result type)
+typedef struct {
+    ir_value_t **values;
+    length_t length;
+} ir_value_array_literal_t;
+
+// ---------------- ir_value_struct_literal_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if
+// the value is a struct literal
+// NOTE: Type should be a pointer to the struct type (since *struct is the result type)
+typedef struct {
+    ir_value_t **values;
+    length_t length;
+} ir_value_struct_literal_t;
+
+// ---------------- ir_value_anon_global_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if
+// the value is a reference to an anonymous global variable
+typedef struct {
+    length_t anon_global_id;;
+} ir_value_anon_global_t;
 
 // ---------------- ir_instr_t ----------------
 // General structure for intermediate
@@ -306,6 +339,15 @@ typedef struct {
     ir_type_t *type;
 } ir_instr_sizeof_t;
 
+// ---------------- ir_instr_offsetof_t ----------------
+// An IR instruction for getting the offset of an element within an IR struct
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_type_t *type;
+    length_t index;
+} ir_instr_offsetof_t;
+
 // ---------------- ir_instr_varzeroinit_t ----------------
 // An IR pseudo-instruction for zero-initializing a
 // stack allocated variable
@@ -385,6 +427,17 @@ typedef struct {
     ir_type_t *type;
 } ir_global_t;
 
+// ---------------- ir_anon_global_t ----------------
+// An intermediate representation anonymous global variable
+typedef struct {
+    ir_type_t *type;
+    ir_value_t *initializer;
+    trait_t traits;
+} ir_anon_global_t;
+
+// Possible traits for 'ir_anon_global_t'
+#define IR_ANON_GLOBAL_CONSTANT TRAIT_1
+
 // ---------------- ir_metadata_t ----------------
 // General global IR metadata
 typedef struct {
@@ -417,6 +470,9 @@ typedef struct {
     length_t methods_capacity;
     ir_global_t *globals;
     length_t globals_length;
+    ir_anon_global_t *anon_globals;
+    length_t anon_globals_length;
+    length_t anon_globals_capacity;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------

@@ -20,7 +20,7 @@ typedef struct {
     ast_type_t *ast_type; // AST type of the variable
     ir_type_t *ir_type;   // IR type of the variable
     length_t id;          // ID of the variable within the function stack
-    trait_t traits;       // traits of the variables
+    trait_t traits;       // traits of the variable
 } bridge_var_t;
 
 // ---------------- bridge_var_list_t ----------------

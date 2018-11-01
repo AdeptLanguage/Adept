@@ -34,14 +34,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         }
     }
 
-    expand((void**) &ast->globals, sizeof(ast_global_t), ast->globals_length, &ast->globals_capacity, 1, 8);
-
-    ast_global_t *global = &ast->globals[ast->globals_length++];
-    global->name = name;
-    global->type = type;
-    global->initial = initial_value;
-    global->source = source;
-
+    ast_add_global(ast, name, type, initial_value, TRAIT_NONE, source);
     return SUCCESS;
 }
 

@@ -209,6 +209,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->optimization = OPTIMIZATION_AGGRESSIVE;
             } else if(strcmp(argv[arg_index], "--no-undef") == 0){
                 compiler->traits |= COMPILER_NO_UNDEF;
+            } else if(strcmp(argv[arg_index], "--no-type-info") == 0){
+                compiler->traits |= COMPILER_NO_TYPE_INFO;
             } else if(strcmp(argv[arg_index], "--null-checks") == 0){
                 compiler->checks |= COMPILER_NULL_CHECKS;
             }
@@ -223,6 +225,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->debug_traits |= COMPILER_DEBUG_DUMP;
             } else if(strcmp(argv[arg_index], "--llvmir") == 0){
                 compiler->debug_traits |= COMPILER_DEBUG_LLVMIR;
+            } else if(strcmp(argv[arg_index], "--no-verification") == 0){
+                compiler->debug_traits |= COMPILER_DEBUG_NO_VERIFICATION;
             }
             #endif // ENABLE_DEBUG_FEATURES ///////////////////////////////
 
@@ -362,25 +366,28 @@ void show_help(){
     printf("The Adept Compiler v2.1 - (c) 2016-2018 Isaac Shelton\n\n");
     printf("Usage: adept [options] <filename>\n\n");
     printf("Options:\n");
-    printf("    -h, --help       Display this message\n");
-    printf("    -n FILENAME      Write output to FILENAME (relative to file)\n");
-    printf("    -b FILENAME      Write output to FILENAME (relative to working directory)\n");
-    printf("    -e               Execute resulting executable\n");
-    printf("    -p, --package    Output a package\n");
-    printf("    -d               Include debugging symbols\n");
-    printf("    -w               Disable all compiler warnings\n");
-    printf("    -O               Set optimization level\n");
+    printf("    -h, --help        Display this message\n");
+    printf("    -n FILENAME       Write output to FILENAME (relative to file)\n");
+    printf("    -o FILENAME       Write output to FILENAME (relative to working directory)\n");
+    printf("    -e                Execute resulting executable\n");
+    printf("    -p, --package     Output a package\n");
+    printf("    -d                Include debugging symbols\n");
+    printf("    -w                Disable all compiler warnings\n");
+    printf("    -O                Set optimization level\n");
 
     printf("\nLanguage Options:\n");
-    printf("    --no-undef       Force initialize for 'undef'\n");
+    printf("    --no-undef        Force initialize for 'undef'\n");
+    printf("    --no-type-info    Disable runtime type information\n");
+    printf("    --null-checks     Enable runtime null-checks\n");
 
     #ifdef ENABLE_DEBUG_FEATURES
     printf("--------------------------------------------------\n");
     printf("Debug Exclusive Options:\n");
-    printf("    --run-tests      Test compiler infrastructure\n");
-    printf("    --stages         Announce major compilation stages\n");
-    printf("    --dump           Dump AST, IAST, & IR to files\n");
-    printf("    --llvmir         Show generated LLVM representation\n");
+    printf("    --run-tests       Test compiler infrastructure\n");
+    printf("    --stages          Announce major compilation stages\n");
+    printf("    --dump            Dump AST, IAST, & IR to files\n");
+    printf("    --llvmir          Show generated LLVM representation\n");
+    printf("    --no-verification Don't verify backend output\n");
     #endif // ENABLE_DEBUG_FEATURES
 }
 

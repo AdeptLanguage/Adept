@@ -120,21 +120,8 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
             return FAILURE;
         }
 
-        if(args_capacity == 0){
-            out_func_elem->arg_types = malloc(sizeof(ast_type_t) * 4);
-            out_func_elem->arg_flows = malloc(sizeof(char) * 4);
-            args_capacity = 4;
-        } else if(out_func_elem->arity == args_capacity){
-            args_capacity *= 2;
-            ast_type_t *new_arg_types = malloc(sizeof(ast_type_t) * args_capacity);
-            char *new_arg_flows = malloc(sizeof(char) * args_capacity);
-            memcpy(new_arg_types, out_func_elem->arg_types, sizeof(ast_type_t) * out_func_elem->arity);
-            memcpy(new_arg_flows, out_func_elem->arg_flows, sizeof(char) * out_func_elem->arity);
-            free(out_func_elem->arg_types);
-            free(out_func_elem->arg_flows);
-            out_func_elem->arg_types = new_arg_types;
-            out_func_elem->arg_flows = new_arg_flows;
-        }
+        coexpand((void**) &out_func_elem->arg_types, sizeof(ast_type_t), (void**) &out_func_elem->arg_flows,
+                sizeof(char), out_func_elem->arity, &args_capacity, 1, 4);
 
         // Set argument flow
         switch(tokens[*i].id){

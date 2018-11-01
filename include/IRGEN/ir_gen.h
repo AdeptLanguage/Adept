@@ -35,6 +35,10 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object);
 // Generates IR instructions for initializing global variables
 errorcode_t ir_gen_globals_init(ir_builder_t *builder);
 
+// ---------------- ir_gen_special_global ----------------
+// Generates IR instructions for initializing special global variables
+errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_global, length_t global_variable_id);
+
 // ---------------- ir_func_mapping_cmp ----------------
 // Compares two 'ir_func_mapping_t' structures.
 // Used for qsort()

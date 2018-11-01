@@ -111,6 +111,9 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_NEW:
         if(parse_expr_new(ctx, out_expr)) return FAILURE;
         break;
+    case TOKEN_STATIC:
+        if(parse_expr_static(ctx, out_expr)) return FAILURE;
+        break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
         return FAILURE;
@@ -389,7 +392,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     *i += 2;
 
     while(tokens[*i].id != TOKEN_CLOSE){
-        if (parse_expr(ctx, &arg)){
+        if(parse_expr(ctx, &arg)){
             ast_exprs_free_fully(args, arity);
             return FAILURE;
         }
@@ -444,7 +447,7 @@ errorcode_t parse_expr_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
 
     if(!EXPR_IS_MUTABLE(addr_expr->value->id)){
         compiler_panic(ctx->compiler, addr_expr->value->source, "The '&' operator requires the operand to be mutable");
-        free(addr_expr);
+        ast_expr_free_fully((ast_expr_t*) addr_expr);
         return FAILURE;
     }
     
@@ -616,6 +619,81 @@ errorcode_t parse_expr_new(parse_ctx_t *ctx, ast_expr_t **out_expr){
     }
 
     *out_expr = (ast_expr_t*) new_expr;
+    return SUCCESS;
+}
+
+errorcode_t parse_expr_static(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    // NOTE: Assumes current token is 'static' keyword
+
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist->tokens;
+    source_t *sources = ctx->tokenlist->sources;
+
+    ast_expr_static_data_t *static_array = malloc(sizeof(ast_expr_static_data_t));
+    static_array->source = sources[(*i)++];
+
+    if(parse_type(ctx, &static_array->type)){
+        free(static_array);
+        return FAILURE;
+    }
+
+    ast_expr_t *member;
+    ast_expr_t **members = NULL;
+    length_t members_length = 0;
+    length_t members_capacity = 0;
+
+    tokenid_t finish_token;
+    tokenid_t static_kind = tokens[*i].id;
+
+    if(static_kind != TOKEN_BEGIN && static_kind != TOKEN_OPEN){
+        compiler_panic(ctx->compiler, sources[*i], "Expected '(' or '{' after given type");
+        return FAILURE;
+    }
+
+    if(static_kind == TOKEN_BEGIN){
+        static_array->id = EXPR_STATIC_ARRAY;
+        finish_token = TOKEN_END;
+    } else {
+        static_array->id = EXPR_STATIC_STRUCT;
+        finish_token = TOKEN_CLOSE;
+    }
+
+    (*i)++;
+
+    while(tokens[*i].id != finish_token){
+        if(parse_ignore_newlines(ctx, "Expected expression")){
+            ast_exprs_free_fully(members, members_length);
+            return FAILURE;
+        }
+
+        if(parse_expr(ctx, &member)){
+            ast_exprs_free_fully(members, members_length);
+            return FAILURE;
+        }
+
+        // Allocate room for more arguments if necessary
+        expand((void**) &members, sizeof(ast_expr_t*), members_length, &members_capacity, 1, 4);
+        members[members_length++] = member;
+        
+        if(parse_ignore_newlines(ctx, finish_token == TOKEN_END ? "Expected ',' or '}' after expression" : "Expected ',' or ')' after expression")){
+            ast_exprs_free_fully(members, members_length);
+            return FAILURE;
+        }
+
+        if(tokens[*i].id == TOKEN_NEXT){
+            (*i)++;
+        } else if(tokens[*i].id != finish_token){
+            compiler_panic(ctx->compiler, sources[*i], finish_token == TOKEN_END ? "Expected ',' or '}' after expression" : "Expected ',' or ')' after expression");
+            ast_exprs_free_fully(members, members_length);
+            return FAILURE;
+        }
+    }
+
+    static_array->values = members;
+    static_array->length = members_length;
+
+    *i += 1;
+    *out_expr = (ast_expr_t*) static_array;
     return SUCCESS;
 }
 

@@ -61,7 +61,12 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_f
     builder.var_scope = module_func->var_scope;
 
     while(module_func->arity != ast_func->arity){
-        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
+        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
+            module_func->basicblocks = builder.basicblocks;
+            module_func->basicblocks_length = builder.basicblocks_length;
+            return FAILURE;
+        }
+        
         add_variable(&builder, ast_func->arg_names[module_func->arity], &ast_func->arg_types[module_func->arity], module_func->argument_types[module_func->arity], BRIDGE_VAR_UNDEF);
         module_func->arity++;
     }
@@ -71,7 +76,11 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_f
 
     if(ast_func->traits & AST_FUNC_MAIN){
         // Initialize all global variables
-        if(ir_gen_globals_init(&builder)) return FAILURE;
+        if(ir_gen_globals_init(&builder)){
+            module_func->basicblocks = builder.basicblocks;
+            module_func->basicblocks_length = builder.basicblocks_length;
+            return FAILURE;
+        }
     }
 
     if(ir_gen_statements(&builder, statements, statements_length)){
@@ -957,7 +966,6 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *array;
 
                 if(ir_gen_expression(builder, each_in->low_array, &array, false, &temporary_type)){
-                    ast_type_free(&temporary_type);
                     close_var_scope(builder);
                     return FAILURE;
                 }
@@ -982,8 +990,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ast_type_free(&temporary_type);
                     close_var_scope(builder);
 
-                    char *s1 = ast_type_str(&temporary_type);
-                    char *s2 = ast_type_str(each_in->it_type);
+                    char *s1 = ast_type_str(each_in->it_type);
+                    char *s2 = ast_type_str(&temporary_type);
                     printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
                     free(s1);
                     free(s2);
@@ -1106,6 +1114,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *limit;
 
                 if(ir_gen_expression(builder, repeat->limit, &limit, false, &temporary_type)){
+                    close_var_scope(builder);
                     return FAILURE;
                 }
 
@@ -1114,6 +1123,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
                     ast_type_free(&temporary_type);
+                    close_var_scope(builder);
                     return FAILURE;
                 }
 

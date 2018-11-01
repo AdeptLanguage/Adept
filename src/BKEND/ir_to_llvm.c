@@ -41,40 +41,32 @@ LLVMTypeRef ir_to_llvm_type(ir_type_t *ir_type){
             //           remade into LLVM types every time we use them.
 
             ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) ir_type->extra;
-            LLVMTypeRef *fields = malloc(sizeof(LLVMTypeRef) * composite->subtypes_length);
+            LLVMTypeRef fields[composite->subtypes_length];
 
             for(length_t i = 0; i != composite->subtypes_length; i++){
                 fields[i] = ir_to_llvm_type(composite->subtypes[i]);
-                if(fields[i] == NULL){ // Escape if error
-                    free(fields);
-                    return NULL;
-                }
+                if(fields[i] == NULL) return NULL;
             }
 
             LLVMTypeRef type_ref_tmp = LLVMStructType(fields, composite->subtypes_length,
                 composite->traits & TYPE_KIND_COMPOSITE_PACKED);
 
-            free(fields);
             return type_ref_tmp;
         }
     case TYPE_KIND_VOID: return LLVMVoidType();
     case TYPE_KIND_FUNCPTR: {
             ir_type_extra_function_t *function = (ir_type_extra_function_t*) ir_type->extra;
-            LLVMTypeRef *args = malloc(sizeof(LLVMTypeRef) * function->arity);
+            LLVMTypeRef args[function->arity];
 
             for(length_t i = 0; i != function->arity; i++){
                 args[i] = ir_to_llvm_type(function->arg_types[i]);
-                if(args[i] == NULL){ // Escape if error
-                    free(args);
-                    return NULL;
-                }
+                if(args[i] == NULL) return NULL;
             }
 
             LLVMTypeRef type_ref_tmp = LLVMFunctionType(ir_to_llvm_type(function->return_type),
                 args, function->arity, function->traits & TYPE_KIND_FUNC_VARARG);
             type_ref_tmp = LLVMPointerType(type_ref_tmp, 0);
 
-            free(args);
             return type_ref_tmp;
         }
         break;
@@ -137,6 +129,52 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
         }
     case VALUE_TYPE_NULLPTR:
         return LLVMConstNull(LLVMPointerType(LLVMInt8Type(), 0));
+    case VALUE_TYPE_NULLPTR_OF_TYPE:
+        return LLVMConstNull(ir_to_llvm_type(value->type));
+    case VALUE_TYPE_ARRAY_LITERAL: {
+            ir_value_array_literal_t *array_literal = value->extra;
+
+            // Assume that value->type is a pointer to array element type
+            LLVMTypeRef type = ir_to_llvm_type((ir_type_t*) value->type->extra);
+            
+            LLVMValueRef values[array_literal->length];
+
+            for(length_t i = 0; i != array_literal->length; i++){
+                // Assumes ir_value_t values are constants (should have been checked earlier)
+                values[i] = ir_to_llvm_value(llvm, array_literal->values[i]);
+            }
+
+            LLVMValueRef static_array = LLVMConstArray(type, values, array_literal->length);
+            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(type, array_literal->length), "");
+            LLVMSetLinkage(global_data, LLVMInternalLinkage);
+            LLVMSetGlobalConstant(global_data, true);
+            LLVMSetInitializer(global_data, static_array);
+
+            LLVMValueRef indices[2];
+            indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
+
+            return LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+        }
+    case VALUE_TYPE_STRUCT_LITERAL: {
+            ir_value_struct_literal_t *struct_literal = value->extra;
+
+            // Assume that value->type is a pointer to a struct
+            LLVMTypeRef type = ir_to_llvm_type(value->type);
+            
+            LLVMValueRef values[struct_literal->length];
+
+            for(length_t i = 0; i != struct_literal->length; i++){
+                // Assumes ir_value_t values are constants (should have been checked earlier)
+                values[i] = ir_to_llvm_value(llvm, struct_literal->values[i]);
+            }
+
+            return LLVMConstNamedStruct(type, values, struct_literal->length);
+        }
+    case VALUE_TYPE_ANON_GLOBAL: case VALUE_TYPE_CONST_ANON_GLOBAL: {
+            ir_value_anon_global_t *extra = (ir_value_anon_global_t*) value->extra;
+            return llvm->anon_global_variables[extra->anon_global_id];
+        }
     default:
         redprintf("INTERNAL ERROR: Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
         return NULL;
@@ -154,14 +192,11 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
     for(length_t f = 0; f != funcs_length; f++){
-        LLVMTypeRef *parameters = malloc(sizeof(LLVMTypeRef) * funcs[f].arity);
+        LLVMTypeRef parameters[funcs[f].arity];
 
         for(length_t a = 0; a != funcs[f].arity; a++){
             parameters[a] = ir_to_llvm_type(funcs[f].argument_types[a]);
-            if(parameters[a] == NULL){
-                free(parameters);
-                return FAILURE;
-            }
+            if(parameters[a] == NULL) return FAILURE;
         }
 
         LLVMTypeRef return_type = ir_to_llvm_type(funcs[f].return_type);
@@ -181,8 +216,6 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
 
         LLVMCallConv call_conv = funcs[f].traits & IR_FUNC_STDCALL ? LLVMX86StdcallCallConv : LLVMCCallConv;
         LLVMSetFunctionCallConv(func_skeletons[f], call_conv);
-
-        free(parameters);
     }
 
     return SUCCESS;
@@ -196,10 +229,6 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
     ir_func_t *funcs = object->ir_module.funcs;
     length_t funcs_length = object->ir_module.funcs_length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
-
-    if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
-        //llvm->null_check_on_fail_func = create_null_check_on_fail_func(llvm);
-    }
 
     for(length_t f = 0; f != funcs_length; f++){
         LLVMBuilderRef builder = LLVMCreateBuilder();
@@ -326,9 +355,27 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     LLVMBuildRet(builder, ((ir_instr_ret_t*) instr)->value == NULL ? NULL : ir_to_llvm_value(llvm, ((ir_instr_ret_t*) instr)->value));
                     break;
                 case INSTRUCTION_ADD:
+                    #ifdef ENABLE_DEBUG_FEATURES
+                    instr = basicblock->instructions[i];
+
+                    // Do excess instructions to get llvm to shut up
+                    if(((ir_instr_math_t*) instr)->a->type->kind == TYPE_KIND_POINTER){
+                        LLVMValueRef val_a = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
+                        LLVMValueRef val_b = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b);
+                        val_a = LLVMBuildPtrToInt(builder, val_a, LLVMInt64Type(), "");
+                        val_b = LLVMBuildPtrToInt(builder, val_b, LLVMInt64Type(), "");
+                        llvm_result = LLVMBuildAdd(builder, val_a, val_b, "");
+                        llvm_result = LLVMBuildIntToPtr(builder, llvm_result, ir_to_llvm_type(((ir_instr_math_t*) instr)->a->type), "");
+                        catalog.blocks[b].value_references[i] = llvm_result;
+                    } else {
+                        llvm_result = LLVMBuildAdd(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
+                        catalog.blocks[b].value_references[i] = llvm_result;    
+                    }
+                    #else
                     instr = basicblock->instructions[i];
                     llvm_result = LLVMBuildAdd(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
+                    #endif
                     break;
                 case INSTRUCTION_FADD:
                     instr = basicblock->instructions[i];
@@ -339,7 +386,6 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     instr = basicblock->instructions[i];
                     llvm_result = LLVMBuildSub(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
-                    break;
                     break;
                 case INSTRUCTION_FSUBTRACT:
                     instr = basicblock->instructions[i];
@@ -389,7 +435,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     break;
                 case INSTRUCTION_CALL: {
                         instr = basicblocks[b].instructions[i];
-                        LLVMValueRef *arguments = malloc(sizeof(LLVMValueRef) * ((ir_instr_call_t*) instr)->values_length);
+                        LLVMValueRef arguments[((ir_instr_call_t*) instr)->values_length];
 
                         for(length_t v = 0; v != ((ir_instr_call_t*) instr)->values_length; v++){
                             arguments[v] = ir_to_llvm_value(llvm, ((ir_instr_call_t*) instr)->values[v]);
@@ -411,12 +457,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 
                         llvm_result = LLVMBuildCall(builder, named_func, arguments, ((ir_instr_call_t*) instr)->values_length, "");
                         catalog.blocks[b].value_references[i] = llvm_result;
-                        free(arguments);
                     }
                     break;
                 case INSTRUCTION_CALL_ADDRESS: {
                         instr = basicblocks[b].instructions[i];
-                        LLVMValueRef *arguments = malloc(sizeof(LLVMValueRef) * ((ir_instr_call_address_t*) instr)->values_length);
+                        LLVMValueRef arguments[((ir_instr_call_address_t*) instr)->values_length];
 
                         for(length_t v = 0; v != ((ir_instr_call_address_t*) instr)->values_length; v++){
                             arguments[v] = ir_to_llvm_value(llvm, ((ir_instr_call_address_t*) instr)->values[v]);
@@ -426,13 +471,24 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 
                         llvm_result = LLVMBuildCall(builder, target_func, arguments, ((ir_instr_call_address_t*) instr)->values_length, "");
                         catalog.blocks[b].value_references[i] = llvm_result;
-                        free(arguments);
                     }
                     break;
-                case INSTRUCTION_STORE:
-                    instr = basicblock->instructions[i];
-                    llvm_result = LLVMBuildStore(builder, ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->value), ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->destination));
-                    catalog.blocks[b].value_references[i] = llvm_result;
+                case INSTRUCTION_STORE: {
+                        instr = basicblock->instructions[i];
+
+                        LLVMValueRef destination = ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->destination);
+
+                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
+                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
+
+                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, destination, "");
+                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
+                            LLVMPositionBuilderAtEnd(builder, not_null_block);
+                        }
+
+                        llvm_result = LLVMBuildStore(builder, ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->value), destination);
+                        catalog.blocks[b].value_references[i] = llvm_result;
+                    }
                     break;
                 case INSTRUCTION_LOAD: {
                         instr = basicblock->instructions[i];
@@ -442,7 +498,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
                             LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
 
-                            LLVMValueRef if_null = LLVMConstInt(LLVMInt1Type(), 1, false);
+                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, pointer, "");
                             LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
                             LLVMPositionBuilderAtEnd(builder, not_null_block);
                         }
@@ -696,6 +752,12 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         catalog.blocks[b].value_references[i] = LLVMConstInt(LLVMInt64Type(), type_size, false);
                     }
                     break;
+                case INSTRUCTION_OFFSETOF: {
+                    instr = basicblock->instructions[i];
+                    unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(((ir_instr_offsetof_t*) instr)->type), ((ir_instr_offsetof_t*) instr)->index);
+                    catalog.blocks[b].value_references[i] = LLVMConstInt(LLVMInt64Type(), offset, false);;
+                    break;
+                }
                 case INSTRUCTION_VARZEROINIT: {
                         instr = basicblock->instructions[i];
                         LLVMValueRef var_to_init = llvm->stack->values[((ir_instr_varzeroinit_t*) instr)->index];
@@ -820,18 +882,31 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
     ir_global_t *globals = object->ir_module.globals;
     length_t globals_length = object->ir_module.globals_length;
+    ir_anon_global_t *anon_globals = object->ir_module.anon_globals;
+    length_t anon_globals_length = object->ir_module.anon_globals_length;
 
     LLVMModuleRef module = llvm->module;
     char global_implementation_name[256];
 
     for(length_t i = 0; i != globals_length; i++){
         LLVMTypeRef global_llvm_type = ir_to_llvm_type(globals[i].type);
-
         sprintf(global_implementation_name, "adeptglob_%X", (int) i);
 
         llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, global_implementation_name);
         LLVMSetLinkage(llvm->global_variables[i], LLVMExternalLinkage);
         LLVMSetInitializer(llvm->global_variables[i], LLVMGetUndef(global_llvm_type));
+    }
+
+    for(length_t i = 0; i != anon_globals_length; i++){
+        LLVMTypeRef anon_global_llvm_type = ir_to_llvm_type(anon_globals[i].type);
+        llvm->anon_global_variables[i] = LLVMAddGlobal(module, anon_global_llvm_type, "");
+        LLVMSetLinkage(llvm->anon_global_variables[i], LLVMInternalLinkage);
+        LLVMSetGlobalConstant(llvm->anon_global_variables[i], anon_globals[i].traits & IR_ANON_GLOBAL_CONSTANT);
+    }
+
+    for(length_t i = 0; i != anon_globals_length; i++){
+        if(anon_globals[i].initializer == NULL) continue;
+        LLVMSetInitializer(llvm->anon_global_variables[i], ir_to_llvm_value(llvm, anon_globals[i].initializer));
     }
 
     return SUCCESS;
@@ -884,12 +959,14 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     llvm.func_skeletons = malloc(sizeof(LLVMValueRef) * module->funcs_length);
     llvm.global_variables = malloc(sizeof(LLVMValueRef) * module->globals_length);
+    llvm.anon_global_variables = malloc(sizeof(LLVMValueRef) * module->anon_globals_length);
 
     if(ir_to_llvm_globals(&llvm, object) || ir_to_llvm_functions(&llvm, object)
     || ir_to_llvm_function_bodies(&llvm, object)){
         free(object_filename);
         free(llvm.func_skeletons);
         free(llvm.global_variables);
+        free(llvm.anon_global_variables);
         LLVMDisposeTargetMachine(target_machine);
         return FAILURE;
     }
@@ -901,6 +978,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     // Free reference arrays
     free(llvm.func_skeletons);
     free(llvm.global_variables);
+    free(llvm.anon_global_variables);
 
     const char *root = compiler->root;
     length_t root_length = strlen(root);
@@ -933,13 +1011,15 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 
     // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
-    char *link_command = malloc(linker_length + root_length * 18 + 6 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
-    sprintf(link_command, "\"\"%s%s\" \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
+    char *link_command = malloc(linker_length + root_length * 18 + 14 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
+    sprintf(link_command, "\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
 
     if(linker_additional_length != 0) free(linker_additional);
 
     #ifdef ENABLE_DEBUG_FEATURES
-    LLVMVerifyModule(llvm.module, LLVMAbortProcessAction, NULL);
+    if(!(llvm.compiler->debug_traits & COMPILER_DEBUG_NO_VERIFICATION) && LLVMVerifyModule(llvm.module, LLVMPrintMessageAction, NULL) == 1){
+        yellowprintf("\n========== LLVM Verification Failed! ==========\n");
+    }
     #endif
 
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();

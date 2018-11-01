@@ -1,9 +1,11 @@
 
+import 'sys/cstdio.adept'
+
 func main(in argc int, in argv **ubyte) int {
-	triggerNullCheck(null)
-	return 0
+    triggerNullCheck(null)
+    return 0
 }
 
 func triggerNullCheck(out value *int) void {
-	*value = 1234567
+    *value = 1234567
 }

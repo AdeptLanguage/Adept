@@ -1,0 +1,26 @@
+
+import 'sys/cstdio.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    names_length usize = 3
+    names **ubyte = static *ubyte {
+        'Isaac', 'Andy', 'Alex'
+    }
+    
+    counting_length usize = 10
+    counting *int = static int {
+        10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+    }
+
+    each *ubyte in [names, names_length] {
+        printf('%s', it)
+        if idx + 1 == names_length, putchar('\n'ub) else printf(', ')
+    }
+    
+    each int in [counting, counting_length] {
+        printf('%d', it)
+        if idx + 1 == counting_length, putchar('\n'ub) else printf(', ')
+    }
+
+    return 0
+}

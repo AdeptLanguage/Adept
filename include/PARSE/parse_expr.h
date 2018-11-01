@@ -77,6 +77,10 @@ errorcode_t parse_expr_unary(parse_ctx_t *ctx, unsigned int expr_id, ast_expr_t 
 // Parses a 'new' expression
 errorcode_t parse_expr_new(parse_ctx_t *ctx, ast_expr_t **out_expr);
 
+// ------------------ parse_expr_static ------------------
+// Parses a 'static' expression
+errorcode_t parse_expr_static(parse_ctx_t *ctx, ast_expr_t **out_expr);
+
 // ------------------ parse_get_precedence ------------------
 // Returns the precedence of the expression that will
 // be created by a given token id.

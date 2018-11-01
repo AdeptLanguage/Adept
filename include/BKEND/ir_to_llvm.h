@@ -34,6 +34,7 @@ typedef struct {
     stack_t *stack;
     LLVMValueRef *func_skeletons;
     LLVMValueRef *global_variables;
+    LLVMValueRef *anon_global_variables;
     LLVMTargetDataRef data_layout;
     LLVMValueRef memcpy_intrinsic;
     compiler_t *compiler;

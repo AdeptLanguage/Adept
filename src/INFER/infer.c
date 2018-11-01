@@ -6,9 +6,19 @@
 #include "UTIL/search.h"
 #include "UTIL/levenshtein.h"
 #include "UTIL/builtin_type.h"
+#include "BRIDGE/type_table.h"
 
 int infer(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
+
+    infer_ctx_t ctx;
+    ctx.compiler = compiler;
+    ctx.object = object;
+    ctx.ast = ast;
+
+    ast->type_table = malloc(sizeof(type_table_t));
+    type_table_init(ast->type_table);
+    ctx.type_table = ast->type_table;
 
     // Sort aliases and constants so we can binary search on them later
     qsort(ast->aliases, ast->aliases_length, sizeof(ast_alias_t), ast_aliases_cmp);
@@ -16,40 +26,49 @@ int infer(compiler_t *compiler, object_t *object){
     qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
 
     for(length_t a = 0; a != ast->aliases_length; a++){
-        if(infer_type_aliases(compiler, object, &ast->aliases[a].type)) return 1;
+        if(infer_type(&ctx, &ast->aliases[a].type)) return 1;
+
+        // Ensure we have the alias type info at runtime
+        type_table_give(ctx.type_table, &ast->aliases[a].type, strclone(ast->aliases[a].name));
     }
 
     for(length_t s = 0; s != ast->structs_length; s++){
         ast_struct_t *st = &ast->structs[s];
         for(length_t f = 0; f != st->field_count; f++){
-            if(infer_type_aliases(compiler, object, &st->field_types[f])) return 1;
+            if(infer_type(&ctx, &st->field_types[f])) return 1;
         }
+
+        type_table_give_base(ctx.type_table, st->name);
     }
 
     for(length_t g = 0; g != ast->globals_length; g++){
-        if(infer_type_aliases(compiler, object, &ast->globals[g].type)) return 1;
+        if(infer_type(&ctx, &ast->globals[g].type)) return 1;
         ast_expr_t **global_initial = &ast->globals[g].initial;
         if(*global_initial != NULL){
             unsigned int default_primitive = ast_primitive_from_ast_type(&ast->globals[g].type);
-            if(infer_expr(compiler, object, NULL, global_initial, default_primitive, NULL)) return 1;
+            if(infer_expr(&ctx, NULL, global_initial, default_primitive, NULL)) return 1;
         }
     }
 
-    if(infer_in_funcs(compiler, object, ast->funcs, ast->funcs_length)) return 1;
+    if(infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)) return 1;
+
+    ast->type_table = ctx.type_table;
     return 0;
 }
 
-int infer_in_funcs(compiler_t *compiler, object_t *object, ast_func_t *funcs, length_t funcs_length){
+int infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length){
     for(length_t f = 0; f != funcs_length; f++){
         infer_var_scope_t func_scope;
         infer_var_scope_init(&func_scope, NULL);
 
         // Resolve aliases in function return type
-        if(infer_type_aliases(compiler, object, &funcs[f].return_type)) return 1;
+        if(infer_type(ctx, &funcs[f].return_type)) return 1;
 
         // Resolve aliases in function arguments
         for(length_t a = 0; a != funcs[f].arity; a++){
-            if(infer_type_aliases(compiler, object, &funcs[f].arg_types[a])) return 1;
+            if(infer_type(ctx, &funcs[f].arg_types[a])) {
+                return 1;
+            }
 
             if(!(funcs[f].traits & AST_FUNC_FOREIGN)){
                 infer_var_scope_add_variable(&func_scope, funcs[f].arg_names[a], &funcs[f].arg_types[a]);
@@ -57,7 +76,7 @@ int infer_in_funcs(compiler_t *compiler, object_t *object, ast_func_t *funcs, le
         }
 
         // Infer expressions in statements
-        if(infer_in_stmts(compiler, object, &funcs[f], funcs[f].statements, funcs[f].statements_length, &func_scope)){
+        if(infer_in_stmts(ctx, &funcs[f], funcs[f].statements, funcs[f].statements_length, &func_scope)){
             infer_var_scope_free(&func_scope);
             return 1;
         }
@@ -66,26 +85,26 @@ int infer_in_funcs(compiler_t *compiler, object_t *object, ast_func_t *funcs, le
     return 0;
 }
 
-int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast_expr_t **statements, length_t statements_length, infer_var_scope_t *scope){
+int infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length, infer_var_scope_t *scope){
     for(length_t s = 0; s != statements_length; s++){
         switch(statements[s]->id){
         case EXPR_RETURN: {
                 ast_expr_return_t *return_stmt = (ast_expr_return_t*) statements[s];
-                if(return_stmt->value != NULL && infer_expr(compiler, object, func, &return_stmt->value, ast_primitive_from_ast_type(&func->return_type), scope)) return 1;
+                if(return_stmt->value != NULL && infer_expr(ctx, func, &return_stmt->value, ast_primitive_from_ast_type(&func->return_type), scope)) return 1;
             }
             break;
         case EXPR_CALL: {
                 ast_expr_call_t *call_stmt = (ast_expr_call_t*) statements[s];
                 for(length_t a = 0; a != call_stmt->arity; a++){
-                    if(infer_expr(compiler, object, func, &call_stmt->args[a], EXPR_NONE, scope)) return 1;
+                    if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return 1;
                 }
             }
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
                 ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) statements[s];
-                if(infer_type_aliases(compiler, object, &declare_stmt->type)) return 1;
+                if(infer_type(ctx, &declare_stmt->type)) return 1;
                 if(declare_stmt->value != NULL){
-                    if(infer_expr(compiler, object, func, &declare_stmt->value, ast_primitive_from_ast_type(&declare_stmt->type), scope)) return 1;
+                    if(infer_expr(ctx, func, &declare_stmt->value, ast_primitive_from_ast_type(&declare_stmt->type), scope)) return 1;
                 }
 
                 infer_var_scope_add_variable(scope, declare_stmt->name, &declare_stmt->type);
@@ -94,16 +113,16 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
         case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
         case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN: {
                 ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) statements[s];
-                if(infer_expr(compiler, object, func, &assign_stmt->destination, EXPR_NONE, scope)) return 1;
-                if(infer_expr(compiler, object, func, &assign_stmt->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &assign_stmt->destination, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &assign_stmt->value, EXPR_NONE, scope)) return 1;
             }
             break;
         case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {
                 ast_expr_if_t *conditional = (ast_expr_if_t*) statements[s];
-                if(infer_expr(compiler, object, func, &conditional->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &conditional->value, EXPR_NONE, scope)) return 1;
 
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, conditional->statements, conditional->statements_length, scope)){
+                if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length, scope)){
                     infer_var_scope_pop(&scope);
                     return 1;
                 }
@@ -112,17 +131,17 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
                 ast_expr_ifelse_t *complex_conditional = (ast_expr_ifelse_t*) statements[s];
-                if(infer_expr(compiler, object, func, &complex_conditional->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &complex_conditional->value, EXPR_NONE, scope)) return 1;
 
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, complex_conditional->statements, complex_conditional->statements_length, scope)){
+                if(infer_in_stmts(ctx, func, complex_conditional->statements, complex_conditional->statements_length, scope)){
                     infer_var_scope_pop(&scope);
                     return 1;
                 }
                 
                 infer_var_scope_pop(&scope);
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, complex_conditional->else_statements, complex_conditional->else_statements_length, scope)){
+                if(infer_in_stmts(ctx, func, complex_conditional->else_statements, complex_conditional->else_statements_length, scope)){
                     infer_var_scope_pop(&scope);
                     return 1;
                 }
@@ -132,7 +151,7 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
         case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK: {
                 ast_expr_whilecontinue_t *conditional = (ast_expr_whilecontinue_t*) statements[s];
                 infer_var_scope_push(&scope);
-                if(infer_in_stmts(compiler, object, func, conditional->statements, conditional->statements_length, scope)){
+                if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length, scope)){
                     infer_var_scope_pop(&scope);
                     return 1;
                 }
@@ -141,28 +160,28 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
             break;
         case EXPR_CALL_METHOD: {
                 ast_expr_call_method_t *call_stmt = (ast_expr_call_method_t*) statements[s];
-                if(infer_expr(compiler, object, func, &call_stmt->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &call_stmt->value, EXPR_NONE, scope)) return 1;
                 for(length_t a = 0; a != call_stmt->arity; a++){
-                    if(infer_expr(compiler, object, func, &call_stmt->args[a], EXPR_NONE, scope)) return 1;
+                    if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return 1;
                 }
             }
             break;
         case EXPR_DELETE: {
                 ast_expr_unary_t *delete_stmt = (ast_expr_unary_t*) statements[s];
-                if(infer_expr(compiler, object, func, &delete_stmt->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &delete_stmt->value, EXPR_NONE, scope)) return 1;
             }
             break;
         case EXPR_EACH_IN: {
                 ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
-                if(infer_type_aliases(compiler, object, loop->it_type)) return 1;
-                if(infer_expr(compiler, object, func, &loop->low_array, EXPR_NONE, scope)) return 1;
-                if(infer_expr(compiler, object, func, &loop->length, EXPR_ULONG, scope)) return 1;
+                if(infer_type(ctx, loop->it_type)) return 1;
+                if(infer_expr(ctx, func, &loop->low_array, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &loop->length, EXPR_ULONG, scope)) return 1;
  
                 infer_var_scope_push(&scope);
-                infer_var_scope_add_variable(scope, "idx", ast_get_usize(&object->ast));
+                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
                 infer_var_scope_add_variable(scope, loop->it_name ? loop->it_name : "it", loop->it_type);
 
-                if(infer_in_stmts(compiler, object, func, loop->statements, loop->statements_length, scope)){
+                if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
                     infer_var_scope_pop(&scope);
                     return 1;
                 }
@@ -171,12 +190,12 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
             break;
         case EXPR_REPEAT: {
                 ast_expr_repeat_t *loop = (ast_expr_repeat_t*) statements[s];
-                if(infer_expr(compiler, object, func, &loop->limit, EXPR_ULONG, scope)) return 1;
+                if(infer_expr(ctx, func, &loop->limit, EXPR_ULONG, scope)) return 1;
  
                 infer_var_scope_push(&scope);
-                infer_var_scope_add_variable(scope, "idx", ast_get_usize(&object->ast));
+                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
 
-                if(infer_in_stmts(compiler, object, func, loop->statements, loop->statements_length, scope)){
+                if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
                     infer_var_scope_pop(&scope);
                     return 1;
                 }
@@ -190,7 +209,7 @@ int infer_in_stmts(compiler_t *compiler, object_t *object, ast_func_t *func, ast
     return 0;
 }
 
-int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope){
+int infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope){
     // NOTE: The 'ast_expr_t*' pointed to by 'root' may be written to
     // NOTE: 'default_assigned_type' is used as a default assigned type if generics aren't resolved within the expression
     // NOTE: if 'default_assigned_type' is EXPR_NONE, then the most suitable type for the given generics is chosen
@@ -202,7 +221,7 @@ int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast
     undetermined.expressions_capacity = 4;
     undetermined.solution = EXPR_NONE;
 
-    if(infer_expr_inner(compiler, object, ast_func, root, &undetermined, scope)){
+    if(infer_expr_inner(ctx, ast_func, root, &undetermined, scope)){
         free(undetermined.expressions);
         return 1;
     }
@@ -214,7 +233,7 @@ int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast
         }
 
         if(default_assigned_type != EXPR_NONE){
-            if(undetermined_expr_list_give_solution(compiler, object, &undetermined, default_assigned_type)){
+            if(undetermined_expr_list_give_solution(ctx, &undetermined, default_assigned_type)){
                 free(undetermined.expressions);
                 return 1;
             }
@@ -226,7 +245,7 @@ int infer_expr(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast
     return 0;
 }
 
-int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope){
+int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope){
     // NOTE: 'ast_func' can be NULL
     // NOTE: The 'ast_expr_t*' pointed to by 'expr' may be written to
 
@@ -249,7 +268,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
     case EXPR_FLOAT:
     case EXPR_DOUBLE:
     case EXPR_BOOLEAN:
-        if(undetermined_expr_list_give_solution(compiler, object, undetermined, (*expr)->id)) return 1;
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return 1;
         break;
     case EXPR_VARIABLE: {
             bool found_variable = false;
@@ -257,7 +276,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
             ast_type_t *variable_type;
 
             if(ast_func == NULL || scope == NULL){
-                compiler_panicf(compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
+                compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
                 return 1;
             }
 
@@ -268,7 +287,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
                 found_variable = true;
             }
 
-            ast_t *ast = &object->ast;
+            ast_t *ast = ctx->ast;
 
             // Search in globals if local one couldn't be found
             if(!found_variable){
@@ -292,14 +311,14 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
                     free(*expr);
 
                     *expr = ast_expr_clone(ast->constants[constant_index].expression); // Clone constant expression
-                    if(infer_expr_inner(compiler, object, ast_func, expr, undetermined, scope)) return 1;
+                    if(infer_expr_inner(ctx, ast_func, expr, undetermined, scope)) return 1;
 
                     break; // The identifier has been resovled, so break
                 }
             }
 
             if(!found_variable){
-                compiler_panicf(compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
+                compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
                 const char *nearest = infer_var_scope_nearest(scope, variable_name);
                 if(nearest) printf("\nDid you mean '%s'?\n", nearest);
                 return 1;
@@ -309,7 +328,7 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
             if(undetermined->solution != EXPR_NONE) return 0;
 
             unsigned int var_expr_primitive = ast_primitive_from_ast_type(variable_type);
-            if(undetermined_expr_list_give_solution(compiler, object, undetermined, var_expr_primitive)) return 1;
+            if(undetermined_expr_list_give_solution(ctx, undetermined, var_expr_primitive)) return 1;
         }
         break;
     case EXPR_STR: break;
@@ -334,82 +353,130 @@ int infer_expr_inner(compiler_t *compiler, object_t *object, ast_func_t *ast_fun
     case EXPR_BIT_LGC_RSHIFT:
         a = &((ast_expr_math_t*) *expr)->a;
         b = &((ast_expr_math_t*) *expr)->b;
-        if(infer_expr_inner(compiler, object, ast_func, a, undetermined, scope)) return 1;
-        if(infer_expr_inner(compiler, object, ast_func, b, undetermined, scope)) return 1;
+        if(infer_expr_inner(ctx, ast_func, a, undetermined, scope)) return 1;
+        if(infer_expr_inner(ctx, ast_func, b, undetermined, scope)) return 1;
         break;
     case EXPR_AND:
     case EXPR_OR:
         a = &((ast_expr_math_t*) *expr)->a;
         b = &((ast_expr_math_t*) *expr)->b;
-        if(infer_expr(compiler, object, ast_func, a, EXPR_NONE, scope)) return 1;
-        if(infer_expr(compiler, object, ast_func, b, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, a, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, b, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_CALL:
         for(length_t i = 0; i != ((ast_expr_call_t*) *expr)->arity; i++){
-            if(infer_expr(compiler, object, ast_func, &((ast_expr_call_t*) *expr)->args[i], EXPR_NONE, scope)) return 1;
+            if(infer_expr(ctx, ast_func, &((ast_expr_call_t*) *expr)->args[i], EXPR_NONE, scope)) return 1;
         }
         break;
     case EXPR_GENERIC_INT:
     case EXPR_GENERIC_FLOAT:
-        if(undetermined_expr_list_give_generic(compiler, object, undetermined, expr)) return 1;
+        if(undetermined_expr_list_give_generic(ctx, undetermined, expr)) return 1;
         break;
     case EXPR_MEMBER:
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_member_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_member_t*) *expr)->value, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr = (ast_expr_func_addr_t*) *expr;
             if(func_addr->match_args != NULL) for(length_t a = 0; a != func_addr->match_args_length; a++){
-                if(infer_type_aliases(compiler, object, &func_addr->match_args[a].type)) return 1;
+                if(infer_type(ctx, &func_addr->match_args[a].type)) return 1;
             }
         }
         break;
     case EXPR_ADDRESS:
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_DEREFERENCE:
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_NULL:
         break;
     case EXPR_AT:
     case EXPR_ARRAY_ACCESS:
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_array_access_t*) *expr)->index, EXPR_NONE, scope)) return 1;
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_array_access_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_array_access_t*) *expr)->index, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_array_access_t*) *expr)->value, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_CAST:
-        if(infer_type_aliases(compiler, object, &((ast_expr_cast_t*) *expr)->to)) return 1;
-        if(infer_expr(compiler, object, ast_func, &((ast_expr_cast_t*) *expr)->from, EXPR_NONE, scope)) return 1;
+        if(infer_type(ctx, &((ast_expr_cast_t*) *expr)->to)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_cast_t*) *expr)->from, EXPR_NONE, scope)) return 1;
         break;
     case EXPR_SIZEOF:
-        if(infer_type_aliases(compiler, object, &((ast_expr_sizeof_t*) *expr)->type)) return 1;
+        if(infer_type(ctx, &((ast_expr_sizeof_t*) *expr)->type)) return 1;
         break;
     case EXPR_CALL_METHOD:
-        if(infer_expr_inner(compiler, object, ast_func, &((ast_expr_call_method_t*) *expr)->value, undetermined, scope)) return 1;
+        if(infer_expr_inner(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->value, undetermined, scope)) return 1;
         for(length_t i = 0; i != ((ast_expr_call_method_t*) *expr)->arity; i++){
-            if(infer_expr(compiler, object, ast_func, &((ast_expr_call_method_t*) *expr)->args[i], EXPR_NONE, scope)) return 1;
+            if(infer_expr(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->args[i], EXPR_NONE, scope)) return 1;
         }
         break;
     case EXPR_NOT:
     case EXPR_BIT_COMPLEMENT:
     case EXPR_NEGATE:
-        if(infer_expr_inner(compiler, object, ast_func, &((ast_expr_unary_t*) *expr)->value, undetermined, scope)) return 1;
+        if(infer_expr_inner(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, undetermined, scope)) return 1;
         break;
     case EXPR_NEW:
-        if(infer_type_aliases(compiler, object, &((ast_expr_new_t*) *expr)->type)) return 1;
-        if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(compiler, object, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, scope)) return 1;
+        if(infer_type(ctx, &((ast_expr_new_t*) *expr)->type)) return 1;
+        if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(ctx, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, scope)) return 1;
         break;
     case EXPR_NEW_CSTRING:
     case EXPR_ENUM_VALUE:
         break;
+    case EXPR_STATIC_ARRAY: {
+            if(infer_type(ctx, &((ast_expr_static_data_t*) *expr)->type)) return 1;
+
+            unsigned int default_primitive = ast_primitive_from_ast_type(&((ast_expr_static_data_t*) *expr)->type);
+
+            for(length_t i = 0; i != ((ast_expr_static_data_t*) *expr)->length; i++){
+                if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope)) return 1;
+            }
+        }
+        break;
+    case EXPR_STATIC_STRUCT: {
+            ast_expr_static_data_t *static_data = (ast_expr_static_data_t*) *expr;
+            if(infer_type(ctx, &static_data->type)) return 1;
+
+            if(static_data->type.elements_length != 1 || static_data->type.elements[0]->id != AST_ELEM_BASE){
+                char *s = ast_type_str(&static_data->type);
+                compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for non-struct type '%s'\n", s);
+                free(s);
+                return 1;
+            }
+
+            const char *base = ((ast_elem_base_t*) static_data->type.elements[0])->base;
+            ast_struct_t *structure = ast_struct_find(ctx->ast, base);
+
+            if(structure == NULL){
+                if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
+                    compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for built-in type '%s'", base);
+                } else {
+                    compiler_panicf(ctx->compiler, static_data->type.source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", base);
+                }
+                return 1;
+            }
+
+            if(static_data->length != structure->field_count){
+                if(static_data->length > structure->field_count){
+                    compiler_panicf(ctx->compiler, static_data->type.source, "Too many fields specified for struct '%s' (expected %d, got %d)", base, structure->field_count, static_data->length);
+                } else {
+                    compiler_panicf(ctx->compiler, static_data->type.source, "Not enough fields specified for struct '%s' (expected %d, got %d)", base, structure->field_count, static_data->length);
+                }
+                return 1;
+            }
+
+            for(length_t i = 0; i != ((ast_expr_static_data_t*) *expr)->length; i++){
+                unsigned int default_primitive = ast_primitive_from_ast_type(&structure->field_types[i]);
+                if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope)) return 1;
+            }
+        }
+        break;
     default:
-        compiler_panic(compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
+        compiler_panic(ctx->compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
         return 1;
     }
 
     return 0;
 }
 
-int undetermined_expr_list_give_solution(compiler_t *compiler, object_t *object, undetermined_expr_list_t *undetermined, unsigned int solution_primitive){
+int undetermined_expr_list_give_solution(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, unsigned int solution_primitive){
     // Ensure solution is real
     if(solution_primitive == EXPR_NONE) return 0;
 
@@ -420,7 +487,7 @@ int undetermined_expr_list_give_solution(compiler_t *compiler, object_t *object,
     undetermined->solution = solution_primitive;
 
     // Resolve any generics already in the list
-    if(resolve_generics(compiler, object, undetermined->expressions, undetermined->expressions_length, solution_primitive)){
+    if(resolve_generics(ctx, undetermined->expressions, undetermined->expressions_length, solution_primitive)){
         return 1;
     }
 
@@ -428,10 +495,10 @@ int undetermined_expr_list_give_solution(compiler_t *compiler, object_t *object,
     return 0;
 }
 
-int undetermined_expr_list_give_generic(compiler_t *compiler, object_t *object, undetermined_expr_list_t *undetermined, ast_expr_t **expr){
+int undetermined_expr_list_give_generic(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, ast_expr_t **expr){
     if(undetermined->solution != EXPR_NONE){
         // Resolve the generic if we already know what type it should be
-        if(resolve_generics(compiler, object, expr, 1, undetermined->solution)) return 1;
+        if(resolve_generics(ctx, expr, 1, undetermined->solution)) return 1;
     } else {
         // Otherwise, add it to the list of undetermined expressions
         undetermined->expressions[undetermined->expressions_length++] = *expr;
@@ -439,7 +506,7 @@ int undetermined_expr_list_give_generic(compiler_t *compiler, object_t *object, 
     return 0;
 }
 
-int resolve_generics(compiler_t *compiler, object_t *object, ast_expr_t **expressions, length_t expressions_length, unsigned int target_primitive){
+int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expressions_length, unsigned int target_primitive){
     // NOTE: Some dangerous memory stuff goes on in this function
     //           This may break on certain platforms if they use unconventional type sizes that break the C standards
     // NOTE: This function attempts to convert generics expressions into the 'target_primitive'
@@ -474,7 +541,7 @@ int resolve_generics(compiler_t *compiler, object_t *object, ast_expr_t **expres
                 }
                 break;
             default:
-                compiler_panic(compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
+                compiler_panic(ctx->compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
                 return 1; // Unknown assigned type
             }
             expr->id = target_primitive;
@@ -484,19 +551,19 @@ int resolve_generics(compiler_t *compiler, object_t *object, ast_expr_t **expres
             case EXPR_BOOLEAN: {
                      // This is ok because the memory that was allocated is larger than needed
                     ((ast_expr_boolean_t*) expr)->value = (((ast_expr_generic_float_t*) expr)->value != 0);
-                    compiler_warnf(compiler, expr->source, "Implicitly converting generic float value to a bool");
+                    compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a bool");
                 }
                 break;
             case EXPR_BYTE: case EXPR_UBYTE: {
                     char tmp = (char) ((ast_expr_generic_float_t*) expr)->value;
                     ((ast_expr_byte_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
-                    compiler_warnf(compiler, expr->source, "Implicitly converting generic float value to a %s", target_primitive == EXPR_BYTE ? "byte" : "ubyte");
+                    compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a %s", target_primitive == EXPR_BYTE ? "byte" : "ubyte");
                 }
                 break;
             case EXPR_SHORT: case EXPR_USHORT: {
                     short tmp = (short) ((ast_expr_generic_float_t*) expr)->value;
                     ((ast_expr_short_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
-                    compiler_warnf(compiler, expr->source, "Implicitly converting generic float value to a %s", target_primitive == EXPR_SHORT ? "short" : "ushort");
+                    compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a %s", target_primitive == EXPR_SHORT ? "short" : "ushort");
                 }
                 break;
             case EXPR_INT: case EXPR_UINT: case EXPR_LONG: case EXPR_ULONG: {
@@ -507,7 +574,7 @@ int resolve_generics(compiler_t *compiler, object_t *object, ast_expr_t **expres
             case EXPR_FLOAT: case EXPR_DOUBLE:
                 break; // No changes special changes necessary
             default:
-                compiler_panic(compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
+                compiler_panic(ctx->compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
                 return 1; // Unknown assigned type
             }
             expr->id = target_primitive;
@@ -577,20 +644,23 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
     return EXPR_NONE; // Should never be reached
 }
 
-int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type){
+int infer_type(infer_ctx_t *ctx, ast_type_t *type){
     // NOTE: Expands 'type' by resolving any aliases
 
-    ast_alias_t *aliases = object->ast.aliases;
-    length_t aliases_length = object->ast.aliases_length;
+    ast_alias_t *aliases = ctx->ast->aliases;
+    length_t aliases_length = ctx->ast->aliases_length;
 
     ast_elem_t **new_elements = NULL;
     length_t length = 0;
     length_t capacity = 0;
 
+    maybe_null_strong_cstr_t maybe_alias_name = NULL;
+
     for(length_t e = 0; e != type->elements_length; e++){
         if(type->elements[e]->id == AST_ELEM_BASE){
             int alias_index = find_alias(aliases, aliases_length, ((ast_elem_base_t*) type->elements[e])->base);
             if(alias_index != -1){
+
                 // NOTE: The alias target type was already resolved of any aliases,
                 //       so we don't have to scan the new elements
                 ast_type_t cloned = ast_type_clone(&aliases[alias_index].type);
@@ -601,8 +671,8 @@ int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type)
                     new_elements[length++] = cloned.elements[m];
                 }
 
-                // DANGEROUS: Manually deleting ast_elem_base_t
-                free(((ast_elem_base_t*) type->elements[e])->base);
+                // DANGEROUS: Manually (partially) deleting ast_elem_base_t
+                maybe_alias_name = ((ast_elem_base_t*) type->elements[e])->base;
                 free(type->elements[e]);
 
                 free(cloned.elements);
@@ -611,10 +681,10 @@ int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type)
         }
         else if(type->elements[e]->id == AST_ELEM_FUNC){
             for(length_t a = 0; a != ((ast_elem_func_t*) type->elements[e])->arity; a++){
-                if(infer_type_aliases(compiler, object, &((ast_elem_func_t*) type->elements[e])->arg_types[a])) return 1;
+                if(infer_type(ctx, &((ast_elem_func_t*) type->elements[e])->arg_types[a])) return 1;
             }
 
-            if(infer_type_aliases(compiler, object, ((ast_elem_func_t*) type->elements[e])->return_type)) return 1;
+            if(infer_type(ctx, ((ast_elem_func_t*) type->elements[e])->return_type)) return 1;
         }
 
         // If not an alias, continue on as usual
@@ -626,7 +696,7 @@ int infer_type_aliases(compiler_t *compiler, object_t *object, ast_type_t *type)
     free(type->elements);
     type->elements = new_elements;
     type->elements_length = length;
-
+    type_table_give(ctx->type_table, type, maybe_alias_name);
     return 0;
 }
 

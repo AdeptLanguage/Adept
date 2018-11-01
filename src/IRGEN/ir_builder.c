@@ -1,5 +1,4 @@
 
-
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "IRGEN/ir_builder.h"
@@ -38,18 +37,6 @@ ir_instr_t* build_instruction(ir_builder_t *builder, length_t size){
     ir_basicblock_new_instructions(builder->current_block, 1);
     builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) ir_pool_alloc(builder->pool, size);
     return builder->current_block->instructions[builder->current_block->instructions_length - 1];
-}
-
-void build_string_literal(ir_builder_t *builder, weak_cstr_t value, ir_value_t **ir_value){
-    // NOTE: Builds a null-terminated string literal value
-    *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-    (*ir_value)->value_type = VALUE_TYPE_LITERAL;
-    ir_type_t *ubyte_type;
-    ir_type_map_find(builder->type_map, "ubyte", &ubyte_type);
-    (*ir_value)->type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    (*ir_value)->type->kind = TYPE_KIND_POINTER;
-    (*ir_value)->type->extra = ubyte_type;
-    (*ir_value)->extra = value;
 }
 
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
@@ -123,6 +110,62 @@ void build_break(ir_builder_t *builder, length_t basicblock_id){
     built_instr->block_id = basicblock_id;
 }
 
+ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable){
+    ir_value_t *value = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_STRUCT_LITERAL;
+    value->type = type;
+    ir_value_struct_literal_t *extra = ir_pool_alloc(&module->pool, sizeof(ir_value_struct_literal_t));
+    extra->values = values;
+    extra->length = length;
+    value->extra = extra;
+
+    if(make_mutable){
+        ir_value_t *anon_global = build_anon_global(module, type, true);
+        build_anon_global_initializer(module, anon_global, value);
+        value = anon_global;
+    }
+
+    return value;
+}
+
+ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_ARRAY_LITERAL;
+    value->type = ir_type_pointer_to(pool, type);
+    ir_value_array_literal_t *extra = ir_pool_alloc(pool, sizeof(ir_value_array_literal_t));
+    extra->values = values;
+    extra->length = length;
+    value->extra = extra;
+    return value;
+}
+
+ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
+    expand((void**) &module->anon_globals, sizeof(ir_anon_global_t), module->anon_globals_length, &module->anon_globals_capacity, 1, 4);
+
+    ir_anon_global_t *anon_global = &module->anon_globals[module->anon_globals_length++];
+    anon_global->type = type;
+    anon_global->traits = is_constant ? IR_ANON_GLOBAL_CONSTANT : TRAIT_NONE;
+    anon_global->initializer = NULL;
+
+    ir_value_t *reference = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
+    reference->value_type = is_constant ? VALUE_TYPE_CONST_ANON_GLOBAL : VALUE_TYPE_ANON_GLOBAL;
+    reference->type = ir_type_pointer_to(&module->pool, type);
+
+    reference->extra = ir_pool_alloc(&module->pool, sizeof(ir_value_anon_global_t));
+    ((ir_value_anon_global_t*) reference->extra)->anon_global_id = module->anon_globals_length - 1;
+    return reference;
+}
+
+void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer){
+    if(anon_global->value_type != VALUE_TYPE_ANON_GLOBAL && anon_global->value_type != VALUE_TYPE_CONST_ANON_GLOBAL){
+        redprintf("INTERNAL ERROR: Failed to set initializer on value that isn't an anonymous global reference\n");
+        return;
+    }
+
+    length_t index = ((ir_value_anon_global_t*) anon_global->extra)->anon_global_id;
+    module->anon_globals[index].initializer = initializer;
+}
+
 ir_type_t* ir_builder_funcptr(ir_builder_t *builder){
     ir_type_t **shared_type = &builder->object->ir_module.common.ir_funcptr;
 
@@ -167,6 +210,67 @@ ir_type_t* ir_builder_bool(ir_builder_t *builder){
     }
 
     return *shared_type;
+}
+
+ir_value_t* build_literal_usize(ir_pool_t *pool, length_t literal_value){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+
+    value->value_type = VALUE_TYPE_LITERAL;
+    value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    value->type->kind = TYPE_KIND_U64;
+    // neglect ir_value->type->extra
+    
+    value->extra = ir_pool_alloc(pool, sizeof(unsigned long long));
+    *((unsigned long long*) value->extra) = literal_value;
+    return value;
+}
+
+ir_value_t* build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
+    // NOTE: Builds a null-terminated string literal value
+    ir_value_t *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+    ir_value->value_type = VALUE_TYPE_LITERAL;
+    ir_type_t *ubyte_type;
+    ir_type_map_find(builder->type_map, "ubyte", &ubyte_type);
+    ir_value->type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    ir_value->type->kind = TYPE_KIND_POINTER;
+    ir_value->type->extra = ubyte_type;
+    ir_value->extra = value;
+    return ir_value;
+}
+
+ir_value_t* build_null_pointer(ir_pool_t *pool){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_NULLPTR;
+    // neglect value->extra
+
+    value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    value->type->kind = TYPE_KIND_POINTER;
+    value->type->extra = ir_pool_alloc(pool, sizeof(ir_type_t));
+    ((ir_type_t*) value->type->extra)->kind = TYPE_KIND_S8;
+    // neglect ((ir_type_t*) value->type->extra)->extra
+
+    return value;
+}
+
+ir_value_t* build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_NULLPTR_OF_TYPE;
+    value->type = type;
+    // neglect value->extra
+    return value;
+}
+
+ir_value_t *build_bool(ir_pool_t *pool, bool value){
+    ir_value_t *ir_value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    ir_value->value_type = VALUE_TYPE_LITERAL;
+
+    ir_value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    ir_value->type->kind = TYPE_KIND_BOOLEAN;
+    // neglect ir_value->type->extra
+
+    ir_value->extra = ir_pool_alloc(pool, sizeof(bool));
+    *((bool*) ir_value->extra) = value;
+    return ir_value;
 }
 
 void prepare_for_new_label(ir_builder_t *builder){

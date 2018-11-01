@@ -14,12 +14,14 @@
 #include "PARSE/parse_pragma.h"
 #include "PARSE/parse_struct.h"
 #include "PARSE/parse_dependency.h"
+#include "BRIDGE/any.h"
 
 errorcode_t parse(compiler_t *compiler, object_t *object){
     parse_ctx_t ctx;
 
     object_init_ast(object);
     parse_ctx_init(&ctx, compiler, object);
+    any_inject_ast(ctx.ast);
 
     if(parse_tokens(&ctx)) return FAILURE;
 

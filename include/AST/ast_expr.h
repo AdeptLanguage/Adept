@@ -71,31 +71,33 @@
 #define EXPR_NEW            0x00000033
 #define EXPR_NEW_CSTRING    0x00000034
 #define EXPR_ENUM_VALUE     0x00000035
+#define EXPR_STATIC_ARRAY   0x00000036
+#define EXPR_STATIC_STRUCT  0x00000037
 // Exclusive statements --------------
-#define EXPR_DECLARE        0x00000036
-#define EXPR_DECLAREUNDEF   0x00000037
-#define EXPR_ASSIGN         0x00000038
-#define EXPR_ADDASSIGN      0x00000039
-#define EXPR_SUBTRACTASSIGN 0x0000003A
-#define EXPR_MULTIPLYASSIGN 0x0000003B
-#define EXPR_DIVIDEASSIGN   0x0000003C
-#define EXPR_MODULUSASSIGN  0x0000003D
-#define EXPR_RETURN         0x0000003E
-#define EXPR_IF             0x0000003F
-#define EXPR_UNLESS         0x00000040
-#define EXPR_IFELSE         0x00000041
-#define EXPR_UNLESSELSE     0x00000042
-#define EXPR_WHILE          0x00000043
-#define EXPR_UNTIL          0x00000044
-#define EXPR_WHILECONTINUE  0x00000045
-#define EXPR_UNTILBREAK     0x00000046
-#define EXPR_EACH_IN        0x00000047
-#define EXPR_REPEAT         0x00000048
-#define EXPR_DELETE         0x00000049
-#define EXPR_BREAK          0x0000004A
-#define EXPR_CONTINUE       0x0000004B
-#define EXPR_BREAK_TO       0x0000004C
-#define EXPR_CONTINUE_TO    0x0000004D
+#define EXPR_DECLARE        0x00000038
+#define EXPR_DECLAREUNDEF   0x00000039
+#define EXPR_ASSIGN         0x0000003A
+#define EXPR_ADDASSIGN      0x0000003B
+#define EXPR_SUBTRACTASSIGN 0x0000003C
+#define EXPR_MULTIPLYASSIGN 0x0000003D
+#define EXPR_DIVIDEASSIGN   0x0000003E
+#define EXPR_MODULUSASSIGN  0x0000003F
+#define EXPR_RETURN         0x00000040
+#define EXPR_IF             0x00000041
+#define EXPR_UNLESS         0x00000042
+#define EXPR_IFELSE         0x00000043
+#define EXPR_UNLESSELSE     0x00000044
+#define EXPR_WHILE          0x00000045
+#define EXPR_UNTIL          0x00000046
+#define EXPR_WHILECONTINUE  0x00000047
+#define EXPR_UNTILBREAK     0x00000048
+#define EXPR_EACH_IN        0x00000049
+#define EXPR_REPEAT         0x0000004A
+#define EXPR_DELETE         0x0000004B
+#define EXPR_BREAK          0x0000004C
+#define EXPR_CONTINUE       0x0000004D
+#define EXPR_BREAK_TO       0x0000004E
+#define EXPR_CONTINUE_TO    0x0000004F
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -287,6 +289,17 @@ typedef struct {
     weak_cstr_t enum_name;
     weak_cstr_t kind_name;
 } ast_expr_enum_value_t;
+
+// ---------------- ast_expr_static_data_t ----------------
+// Represents a static array value
+// (Used for EXPR_STATIC_ARRAY and EXPR_STATIC_STRUCT)
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_type_t type;
+    ast_expr_t **values;
+    length_t length;
+} ast_expr_static_data_t;
 
 // ---------------- ast_expr_call_t ----------------
 // Expression for calling a function

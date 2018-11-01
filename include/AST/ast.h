@@ -12,6 +12,7 @@
 #include "UTIL/ground.h"
 #include "AST/ast_type.h"
 #include "AST/ast_expr.h"
+#include "BRIDGE/type_table.h"
 
 // ---------------- ast_func_t ----------------
 // A function within the root AST
@@ -70,12 +71,19 @@ typedef struct {
 
 // ---------------- ast_global_t ----------------
 // A global variable within the root AST
+
 typedef struct {
     const char *name;
     ast_type_t type;
     ast_expr_t *initial;
+    trait_t traits;
     source_t source;
 } ast_global_t;
+
+// Possible ast_global_t traits
+#define AST_GLOBAL_SPECIAL          TRAIT_1
+#define AST_GLOBAL___TYPES__        TRAIT_2 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL___TYPES_LENGTH__ TRAIT_3 // Sub-trait of AST_GLOBAL_SPECIAL
 
 // ---------------- ast_enum_t ----------------
 // An enum AST node
@@ -115,6 +123,9 @@ typedef struct {
     length_t libraries_length;
     length_t libraries_capacity;
     ast_shared_common_t common;
+
+    // Data members for bridging
+    type_table_t *type_table;
 } ast_t;
 
 // ---------------- ast_init ----------------
@@ -192,6 +203,15 @@ maybe_index_t find_enum(ast_enum_t *enums, length_t enums_length, const char *in
 // ---------------- ast_add_enum ----------------
 // Adds an enum to the global scope of an AST
 void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
+
+// ---------------- ast_add_struct ----------------
+// Adds a struct to the global scope of an AST
+void ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source);
+
+// ---------------- ast_add_global ----------------
+// Adds a global variable to the global scope of an AST
+void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *initial_value, trait_t traits, source_t source);
 
 // ---------------- ast_add_foreign_library ----------------
 // Adds a library to the list of foreign libraries

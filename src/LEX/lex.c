@@ -46,47 +46,35 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
     lex_state.buildup = malloc(256);
     lex_state.buildup_capacity = 256;
 
-    token_t *tokens = tokenlist->tokens;
-    source_t *sources = tokenlist->sources;
+    token_t **tokens = &tokenlist->tokens;
+    source_t **sources = &tokenlist->sources;
     length_t object_index = object->index;
     char tmp;
 
     for(length_t i = 0; i != buffer_size; i++){
-        if(tokenlist->length == tokenlist->capacity){
-            token_t* new_tokens = malloc(sizeof(token_t) * tokenlist->capacity * 2);
-            source_t *new_sources = malloc(sizeof(source_t) * tokenlist->capacity * 2);
-            memcpy(new_tokens, tokenlist->tokens, sizeof(token_t) * tokenlist->capacity);
-            memcpy(new_sources, tokenlist->sources, sizeof(source_t) * tokenlist->capacity);
-            free(tokenlist->tokens);
-            free(tokenlist->sources);
-
-            tokenlist->tokens = new_tokens;
-            tokenlist->sources = new_sources;
-            tokenlist->capacity *= 2;
-            tokens = tokenlist->tokens;
-            sources = tokenlist->sources;
-        }
+        coexpand((void**) &tokenlist->tokens, sizeof(token_t), (void**) &tokenlist->sources,
+                sizeof(source_t), tokenlist->length, &tokenlist->capacity, 1, 1024);
 
         // Macro to map a character to a single token
         #define LEX_SINGLE_TOKEN_MAPPING_MACRO(token_id_mapping) { \
-            sources[tokenlist->length].index = i; \
-            sources[tokenlist->length].object_index = object_index; \
-            t = &(tokens[tokenlist->length++]); \
+            (*sources)[tokenlist->length].index = i; \
+            (*sources)[tokenlist->length].object_index = object_index; \
+            t = &((*tokens)[tokenlist->length++]); \
             t->id = token_id_mapping; \
             t->data = NULL; \
         }
 
         // Macro to map a character to a single lex state
         #define LEX_SINGLE_STATE_MAPPING_MACRO(state_mapping) { \
-            sources[tokenlist->length].index = i; \
-            sources[tokenlist->length].object_index = object_index; \
+            (*sources)[tokenlist->length].index = i; \
+            (*sources)[tokenlist->length].object_index = object_index; \
             lex_state.state = state_mapping; \
         }
 
         // Macro to add a token depending on whether an optional character is present
         // (can be used in non LEX_STATE_IDLE states)
         #define LEX_OPTIONAL_MOD_TOKEN_MAPPING(optional_character, if_mod_present, if_mod_absent) { \
-            t = &(tokens[tokenlist->length++]); \
+            t = &((*tokens)[tokenlist->length++]); \
             lex_state.state = LEX_STATE_IDLE; \
             t->data = NULL; \
             if(buffer[i] == optional_character) t->id = if_mod_present; \
@@ -94,7 +82,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
         }
 
         #define LEX_OPTIONAL_2MODS_TOKEN_MAPPING(optional_character1, if_mod1_present, optional_character2, if_mod2_present, if_mods_absent) { \
-            t = &(tokens[tokenlist->length++]); \
+            t = &((*tokens)[tokenlist->length++]); \
             lex_state.state = LEX_STATE_IDLE; \
             t->data = NULL; \
             if(buffer[i] == optional_character1) t->id = if_mod1_present; \
@@ -131,9 +119,9 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
             case '~': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_COMPLEMENT); break;
             case '\n': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEWLINE);       break;
             case '.':
-                sources[tokenlist->length].index = i;
-                sources[tokenlist->length].object_index = object_index;
-                t = &(tokens[tokenlist->length++]);
+                (*sources)[tokenlist->length].index = i;
+                (*sources)[tokenlist->length].object_index = object_index;
+                t = &((*tokens)[tokenlist->length++]);
                 t->data = NULL;
                 if(buffer[i + 1] == '.' && buffer[i + 2] == '.'){
                     t->id = TOKEN_ELLIPSIS; i += 2;
@@ -150,8 +138,8 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
             default:
                 // Test for word
                 if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122)){
-                    sources[tokenlist->length].index = i;
-                    sources[tokenlist->length].object_index = object_index;
+                    (*sources)[tokenlist->length].index = i;
+                    (*sources)[tokenlist->length].object_index = object_index;
                     lex_state.buildup_length = 1;
                     lex_state.buildup[0] = buffer[i];
                     lex_state.state = LEX_STATE_WORD;
@@ -164,8 +152,8 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                         lex_state.buildup = malloc(256);
                         lex_state.buildup_capacity = 256;
                     }
-                    sources[tokenlist->length].index = i;
-                    sources[tokenlist->length].object_index = object_index;
+                    (*sources)[tokenlist->length].index = i;
+                    (*sources)[tokenlist->length].object_index = object_index;
                     lex_state.buildup_length = 1;
                     lex_state.buildup[0] = buffer[i];
                     lex_state.state = LEX_STATE_NUMBER;
@@ -211,14 +199,14 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
 
                 if(array_index == -1){
                     // Isn't a keyword, just an identifier
-                    t = &(tokens[tokenlist->length++]);
+                    t = &((*tokens)[tokenlist->length++]);
                     t->id = TOKEN_WORD;
                     t->data = malloc(lex_state.buildup_length + 1);
                     memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
                     ((char*) t->data)[lex_state.buildup_length] = '\0';
                 } else {
                     // Is a keyword, figure out token index from array index
-                    t = &(tokens[tokenlist->length++]);
+                    t = &((*tokens)[tokenlist->length++]);
                     t->id = 0x00000040 + (unsigned int) array_index; // Values 0x00000040..0x0000005F are reserved for keywords
                     t->data = NULL;
                 }
@@ -229,7 +217,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
         case LEX_STATE_STRING:
             if(buffer[i] == '\"' && !(lex_state.buildup_length != 0 && lex_state.buildup[lex_state.buildup_length-1] == '\\')){
                 // End of string literal
-                t = &(tokens[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length++]);
                 t->id = TOKEN_STRING;
                 t->data = malloc(lex_state.buildup_length + 1);
                 memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
@@ -252,7 +240,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
         case LEX_STATE_CSTRING:
             if(buffer[i] == '\''){
                 // End of string literal
-                t = &(tokens[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length++]);
 
                 // Character literals
                 if(lex_state.buildup_length == 1){
@@ -365,7 +353,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
             } else {
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length] = '\0';
-                t = &(tokens[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length++]);
                 lex_state.state = LEX_STATE_IDLE;
 
                 bool contains_dot = false;
@@ -517,8 +505,8 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                     lex_state.buildup = malloc(256);
                     lex_state.buildup_capacity = 256;
                 }
-                sources[tokenlist->length].index = i;
-                sources[tokenlist->length].object_index = object_index;
+                (*sources)[tokenlist->length].index = i;
+                (*sources)[tokenlist->length].object_index = object_index;
                 lex_state.buildup_length = 2;
                 lex_state.buildup[0] = '-';
                 lex_state.buildup[1] = buffer[i];
@@ -527,7 +515,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                 break;
             }
 
-            t = &(tokens[tokenlist->length++]);
+            t = &((*tokens)[tokenlist->length++]);
             lex_state.state = LEX_STATE_IDLE;
             t->data = NULL;
             if(buffer[i] == '=') t->id = TOKEN_SUBTRACTASSIGN;
@@ -541,13 +529,13 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                 lex_state.state = LEX_STATE_LONGCOMMENT; break;
             case '=':
                 lex_state.state = LEX_STATE_IDLE;
-                t = &(tokens[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length++]);
                 t->id = TOKEN_DIVIDEASSIGN;
                 t->data = NULL;
                 break;
             default:
                 lex_state.state = LEX_STATE_IDLE;
-                t = &(tokens[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length++]);
                 t->id = TOKEN_DIVIDE;
                 t->data = NULL;
                 i--;

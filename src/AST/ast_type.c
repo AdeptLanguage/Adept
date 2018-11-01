@@ -113,9 +113,7 @@ void ast_types_free_fully(ast_type_t *types, length_t length){
     free(types);
 }
 
-void ast_type_make_base(ast_type_t *type, char *base){
-    // NOTE: Takes ownership of 'base'
-
+void ast_type_make_base(ast_type_t *type, strong_cstr_t base){
     ast_elem_base_t *elem = malloc(sizeof(ast_elem_base_t));
     elem->id = AST_ELEM_BASE;
     elem->base = base;
@@ -129,9 +127,7 @@ void ast_type_make_base(ast_type_t *type, char *base){
     type->source.object_index = 0;
 }
 
-void ast_type_make_baseptr(ast_type_t *type, char *base){
-    // NOTE: Takes ownership of 'base'
-
+void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base){
     ast_elem_base_t *elem = malloc(sizeof(ast_elem_base_t));
     ast_elem_pointer_t *ptr = malloc(sizeof(ast_elem_pointer_t));
     elem->id = AST_ELEM_BASE;
@@ -151,42 +147,28 @@ void ast_type_make_baseptr(ast_type_t *type, char *base){
     type->source.object_index = 0;
 }
 
-void ast_type_make_base_newstr(ast_type_t *type, char *base){
-    // NOTE: Creates clone of string 'base'
-
+void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base){
     ast_elem_base_t *elem = malloc(sizeof(ast_elem_base_t));
+    ast_elem_pointer_t *ptr1 = malloc(sizeof(ast_elem_pointer_t));
+    ast_elem_pointer_t *ptr2 = malloc(sizeof(ast_elem_pointer_t));
     elem->id = AST_ELEM_BASE;
-    elem->base = malloc(strlen(base) + 1);
-    strcpy(elem->base, base);
+    elem->base = base;
     elem->source.index = 0;
     elem->source.object_index = 0;
 
-    type->elements = malloc(sizeof(ast_elem_t*));
-    type->elements[0] = (ast_elem_t*) elem;
-    type->elements_length = 1;
-    type->source.index = 0;
-    type->source.object_index = 0;
-}
+    ptr1->id = AST_ELEM_POINTER;
+    ptr1->source.index = 0;
+    ptr1->source.object_index = 0;
 
-void ast_type_make_baseptr_newstr(ast_type_t *type, char *base){
-    // NOTE: Creates clone of 'base'
+    ptr2->id = AST_ELEM_POINTER;
+    ptr2->source.index = 0;
+    ptr2->source.object_index = 0;
 
-    ast_elem_base_t *elem = malloc(sizeof(ast_elem_base_t));
-    ast_elem_pointer_t *ptr = malloc(sizeof(ast_elem_pointer_t));
-    elem->id = AST_ELEM_BASE;
-    elem->base = malloc(strlen(base) + 1);
-    strcpy(elem->base, base);
-    elem->source.index = 0;
-    elem->source.object_index = 0;
-
-    ptr->id = AST_ELEM_POINTER;
-    ptr->source.index = 0;
-    ptr->source.object_index = 0;
-
-    type->elements = malloc(sizeof(ast_elem_t*) * 2);
-    type->elements[0] = (ast_elem_t*) ptr;
-    type->elements[1] = (ast_elem_t*) elem;
-    type->elements_length = 2;
+    type->elements = malloc(sizeof(ast_elem_t*) * 3);
+    type->elements[0] = (ast_elem_t*) ptr1;
+    type->elements[1] = (ast_elem_t*) ptr2;
+    type->elements[2] = (ast_elem_t*) elem;
+    type->elements_length = 3;
     type->source.index = 0;
     type->source.object_index = 0;
 }
@@ -298,12 +280,12 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
 
                 if(func_elem->traits & AST_FUNC_STDCALL){
                     EXTEND_NAME_MACRO(8);
-                    memcpy(&name[name_length], "stdcall ", 9);
+                    memcpy(&name[name_length], "stdcall ", 8);
                     name_length += 8;
                 }
 
                 EXTEND_NAME_MACRO(5);
-                memcpy(&name[name_length], "func(", 6);
+                memcpy(&name[name_length], "func(", 5);
                 name_length += 5;
 
                 // do args
@@ -311,25 +293,24 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                     type_str = ast_type_str(&func_elem->arg_types[a]);
                     type_str_length = strlen(type_str);
 
-                    EXTEND_NAME_MACRO(type_str_length + 2);
-                    memcpy(&name[name_length], type_str, type_str_length + 1);
+                    EXTEND_NAME_MACRO(type_str_length);
+                    memcpy(&name[name_length], type_str, type_str_length);
                     name_length += type_str_length;
                     free(type_str);
 
                     if(a != func_elem->arity - 1){
                         memcpy(&name[name_length], ", ", 3);
                         name_length += 2;
-                    } else {
-                        if(func_elem->traits & AST_FUNC_VARARG){
-                            EXTEND_NAME_MACRO(type_str_length + 7);
-                            memcpy(&name[name_length], ", ...) ", 8);
-                            name_length += 7;
-                        } else {
-                            memcpy(&name[name_length], ") ", 3);
-                            name_length += 2;
-                        }
+                    } else if(func_elem->traits & AST_FUNC_VARARG){
+                        EXTEND_NAME_MACRO(5);
+                        memcpy(&name[name_length], ", ...", 5);
+                        name_length += 5;
                     }
                 }
+
+                EXTEND_NAME_MACRO(3);
+                memcpy(&name[name_length], ") ", 3);
+                name_length += 2;
 
                 type_str = ast_type_str(func_elem->return_type);
                 type_str_length = strlen(type_str);

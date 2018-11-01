@@ -14,7 +14,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     maybe_null_weak_cstr_t read = NULL;
 
     const char * const directives[] = {
-        "compiler_version", "deprecated", "help", "optimization", "options",
+        "compiler_version", "deprecated", "help", "no_type_info", "no_undef", "optimization", "options",
         "project_name", "unsupported", "windows_only"
     };
 
@@ -62,7 +62,13 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     case 2: // 'help' directive
         show_help();
         return FAILURE;
-    case 3: // 'optimization' directive
+    case 3: // 'no_type_info' directive
+        ctx->compiler->traits |= COMPILER_NO_TYPE_INFO;
+        return SUCCESS;
+    case 4: // 'no_undef' directive
+        ctx->compiler->traits |= COMPILER_NO_UNDEF;
+        return SUCCESS;
+    case 5: // 'optimization' directive
         read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
@@ -82,16 +88,16 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             return FAILURE;
         }
         return SUCCESS;
-    case 4: // 'options' directive
+    case 6: // 'options' directive
         return parse_pragma_cloptions(ctx);
-    case 5: // 'project_name' directive
+    case 7: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
         if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 6: // 'unsupported' directive
+    case 8: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -108,10 +114,12 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 7: // 'windows_only' directive
+    case 9: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;
+        #else
+        return SUCCESS;
         #endif
     default:
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Unrecognized pragma option '%s'", directive_string);

@@ -38,6 +38,7 @@ typedef struct {
     ir_func_t *module_func;
     bridge_var_scope_t *var_scope;
     length_t next_var_id;
+    length_t *next_reference_id;
 } ir_builder_t;
 
 // ---------------- build_basicblock ----------------
@@ -53,10 +54,6 @@ void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id);
 // ---------------- build_instruction ----------------
 // Builds a new undetermined instruction
 ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
-
-// ---------------- build_string_literal ----------------
-// Builds a null-terminated string literal IR value
-void build_string_literal(ir_builder_t *builder, weak_cstr_t value, ir_value_t **ir_value);
 
 // ---------------- build_value_from_prev_instruction ----------------
 // Builds an IR value from the result of the previsous instruction
@@ -82,6 +79,22 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
 // Builds a break instruction
 void build_break(ir_builder_t *builder, length_t basicblock_id);
 
+// ---------------- build_static_struct ----------------
+// Builds a static struct
+ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable);
+
+// ---------------- build_static_array ----------------
+// Builds a static array
+ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);
+
+// ---------------- build_anon_global ----------------
+// Builds an anonymous global variable
+ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant);
+
+// ---------------- build_anon_global_initializer ----------------
+// Builds an anonymous global variable initializer
+void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer);
+
 // ---------------- ir_builder_funcptr ----------------
 // Gets a shared IR function pointer type
 ir_type_t* ir_builder_funcptr(ir_builder_t *builder);
@@ -97,6 +110,26 @@ ir_type_t* ir_builder_usize_ptr(ir_builder_t *builder);
 // ---------------- ir_builder_bool ----------------
 // Gets a shared IR boolean type
 ir_type_t* ir_builder_bool(ir_builder_t *builder);
+
+// ---------------- build_literal_usize ----------------
+// Builds a literal usize value
+ir_value_t* build_literal_usize(ir_pool_t *pool, length_t value);
+
+// ---------------- build_literal_cstr ----------------
+// Builds a literal c-string value
+ir_value_t* build_literal_cstr(ir_builder_t *builder, weak_cstr_t value);
+
+// ---------------- build_null_pointer ----------------
+// Builds a literal null pointer value
+ir_value_t* build_null_pointer(ir_pool_t *pool);
+
+// ---------------- build_null_pointer_of_type ----------------
+// Builds a literal null pointer value
+ir_value_t* build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type);
+
+// ---------------- build_bool ----------------
+// Builds a literal boolean value
+ir_value_t *build_bool(ir_pool_t *pool, bool value);
 
 // ---------------- prepare_for_new_label ----------------
 // Ensures there's enough room for another label

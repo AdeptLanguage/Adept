@@ -23,10 +23,7 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
     }
 
     trait_t traits = is_packed ? AST_STRUCT_PACKED : TRAIT_NONE;
-    expand((void**) &ast->structs, sizeof(ast_struct_t), ast->structs_length, &ast->structs_capacity, 1, 4);
-
-    ast_struct_t *structure = &ast->structs[ast->structs_length++];
-    ast_struct_init(structure, name, field_names, field_types, field_count, traits, source);
+    ast_add_struct(ast, name, field_names, field_types, field_count, traits, source);
     return SUCCESS;
 }
 

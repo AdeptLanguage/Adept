@@ -3,6 +3,12 @@
 #include "UTIL/color.h"
 
 strong_cstr_t ir_value_str(ir_value_t *value){
+    if(value == NULL){
+        terminal_set_color(TERMINAL_COLOR_RED);
+        printf("INTERNAL ERROR: The value passed to ir_value_str is NULL, a crash will probably follow...\n");
+        terminal_set_color(TERMINAL_COLOR_DEFAULT);
+    }
+
     if(value->type == NULL){
         terminal_set_color(TERMINAL_COLOR_RED);
         printf("INTERNAL ERROR: The value passed to ir_value_str has a type pointer to NULL, a crash will probably follow...\n");
@@ -80,16 +86,18 @@ strong_cstr_t ir_value_str(ir_value_t *value){
                 length_t special_characters = 0;
 
                 for(length_t s = 0; s != string_data_length; s++){
-                    if(string_data[s] > 0x1F || string_data[s] == '\\') special_characters++;
+                    if(string_data[s] <= 0x1F || string_data[s] == '\\' || string_data[s] == '\''){
+                        special_characters++;
+                    }
                 }
 
                 value_str = malloc(string_data_length + special_characters + 3);
                 value_str[0] = '\'';
-                value_str[string_data_length + 2] = '\'';
-                value_str[string_data_length + 3] = '\0';
+                value_str[string_data_length + special_characters + 1] = '\'';
+                value_str[string_data_length + special_characters + 2] = '\0';
 
                 for(length_t c = 0; c != string_data_length; c++){
-                    if(string_data[c] > 0x1F || string_data[c] == '\\') value_str[put_index++] = string_data[c];
+                    if((string_data[c] > 0x1F || string_data[c] == '\\') && string_data[c] != '\'')value_str[put_index++] = string_data[c];
                     else {
                         switch(string_data[c]){
                         case '\n':
@@ -107,6 +115,10 @@ strong_cstr_t ir_value_str(ir_value_t *value){
                         case '\\':
                             value_str[put_index++] = '\\';
                             value_str[put_index++] = '\\';
+                            break;
+                        case '\'':
+                            value_str[put_index++] = '\\';
+                            value_str[put_index++] = '\'';
                             break;
                         default:
                             value_str[put_index++] = '\\';
@@ -133,10 +145,30 @@ strong_cstr_t ir_value_str(ir_value_t *value){
     case VALUE_TYPE_NULLPTR:
         value_str = malloc(5);
         memcpy(value_str, "null", 5);
-        free(typename); // Typename isn't used, because it will always be 'ptr'
+        free(typename);
+        return value_str;
+    case VALUE_TYPE_ARRAY_LITERAL:
+        value_str = malloc(5);
+        memcpy(value_str, "larr", 5);
+        free(typename); 
+        return value_str;
+    case VALUE_TYPE_STRUCT_LITERAL:
+        value_str = malloc(5);
+        memcpy(value_str, "stru", 5);
+        free(typename);
+        return value_str;
+    case VALUE_TYPE_ANON_GLOBAL:
+        value_str = malloc(32);
+        sprintf(value_str, "anonglob %d", (int) ((ir_value_anon_global_t*) value->extra)->anon_global_id);
+        free(typename);
+        return value_str;
+    case VALUE_TYPE_CONST_ANON_GLOBAL:
+        value_str = malloc(32);
+        sprintf(value_str, "constanonglob %d", (int) ((ir_value_anon_global_t*) value->extra)->anon_global_id);
+        free(typename);
         return value_str;
     default:
-        printf("INTERNAL ERROR: Unexpected value type of value in ir_value_str function\n");
+        redprintf("INTERNAL ERROR: Unexpected value type of value in ir_value_str function\n");
         return NULL;
     }
 
@@ -428,6 +460,12 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                         free(typename);
                     }
                     break;
+                case INSTRUCTION_OFFSETOF: {
+                        char *typename = ir_type_str(((ir_instr_offsetof_t*) functions[f].basicblocks[b].instructions[i])->type);
+                        fprintf(file, "    0x%08X offsetof %s\n", (int) i, typename);
+                        free(typename);
+                    }
+                    break;
                 case INSTRUCTION_VARZEROINIT:
                     fprintf(file, "    0x%08X varzi 0x%08X\n", (int) i, (int) ((ir_instr_varptr_t*) functions[f].basicblocks[b].instructions[i])->index);
                     break;
@@ -557,6 +595,9 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t glob
     ir_module->type_map.mappings = NULL;
     ir_module->globals = malloc(sizeof(ir_global_t) * globals_length);
     ir_module->globals_length = 0;
+    ir_module->anon_globals = NULL;
+    ir_module->anon_globals_length = 0;
+    ir_module->anon_globals_capacity = 0;
 
     // Initialize common data
     ir_module->common.ir_funcptr = NULL;
@@ -572,6 +613,7 @@ void ir_module_free(ir_module_t *ir_module){
     free(ir_module->methods);
     free(ir_module->type_map.mappings);
     free(ir_module->globals);
+    free(ir_module->anon_globals);
     ir_pool_free(&ir_module->pool);
 }
 

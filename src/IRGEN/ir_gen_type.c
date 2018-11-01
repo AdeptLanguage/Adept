@@ -206,9 +206,15 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     ir_type_t *ir_to_type;
 
+    // Macro to determine whether a specific base
+    #define MACRO_TYPE_IS_BASE(ast_type, a) (ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE && \
+        strcmp(((ast_elem_base_t*) ast_type->elements[0])->base, a) == 0)
+    
     // Macro to determine whether a type is 'ptr'
-    #define MACRO_TYPE_IS_BASE_PTR(ast_type) (ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE && \
-        strcmp(((ast_elem_base_t*) ast_type->elements[0])->base, "ptr") == 0)
+    #define MACRO_TYPE_IS_BASE_PTR(ast_type) MACRO_TYPE_IS_BASE(ast_type, "ptr")
+
+    // Macro to determine whether a type is 'Any'
+    #define MACRO_TYPE_IS_BASE_ANY(ast_type) MACRO_TYPE_IS_BASE(ast_type, "Any")
 
     // Macro to determine whether a type is a function pointer
     #define MACRO_TYPE_IS_FUNC_PTR(ast_type) (ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_FUNC)
@@ -226,6 +232,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     #define TYPE_TRAIT_FUNC_PTR    TRAIT_3 // function pointer
     #define TYPE_TRAIT_INTEGER     TRAIT_4 // integer
     #define TYPE_TRAIT_FIXED_ARRAY TRAIT_5 // fixed array
+    #define TYPE_TRAIT_BASE_ANY    TRAIT_6 // Any
 
     unsigned int from_type_kind = ir_primitive_from_ast_type(ast_from_type);
     unsigned int to_type_kind = ir_primitive_from_ast_type(ast_to_type);
@@ -236,6 +243,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     else if(MACRO_TYPE_IS_BASE_PTR(ast_to_type)) to_traits |= TYPE_TRAIT_BASE_PTR;
     else if(MACRO_TYPE_IS_FUNC_PTR(ast_to_type)) to_traits |= TYPE_TRAIT_FUNC_PTR;
     else if(MACRO_TYPE_IS_FIXED_ARRAY(ast_to_type)) to_traits |= TYPE_TRAIT_FIXED_ARRAY;
+    else if(MACRO_TYPE_IS_BASE_ANY(ast_to_type)) to_traits |= TYPE_TRAIT_BASE_ANY;
     else {
         if(to_type_kind != TYPE_KIND_NONE && to_type_kind != TYPE_KIND_FLOAT
         && to_type_kind != TYPE_KIND_DOUBLE){
@@ -248,6 +256,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     else if(MACRO_TYPE_IS_BASE_PTR(ast_from_type)) from_traits |= TYPE_TRAIT_BASE_PTR;
     else if(MACRO_TYPE_IS_FUNC_PTR(ast_from_type)) from_traits |= TYPE_TRAIT_FUNC_PTR;
     else if(MACRO_TYPE_IS_FIXED_ARRAY(ast_from_type)) from_traits |= TYPE_TRAIT_FIXED_ARRAY;
+    else if(MACRO_TYPE_IS_BASE_ANY(ast_from_type)) from_traits |= TYPE_TRAIT_BASE_ANY;
     else {
         if(from_type_kind != TYPE_KIND_NONE && from_type_kind != TYPE_KIND_FLOAT
         && from_type_kind != TYPE_KIND_DOUBLE){
@@ -385,6 +394,17 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             *ir_value = build_value_from_prev_instruction(builder);
             return true;
         }
+    }
+
+    if((mode & CONFORM_MODE_FROM_ANY) && (from_traits & TYPE_TRAIT_BASE_ANY)){
+        if(to_traits & TYPE_TRAIT_BASE_ANY) return true;
+    }
+
+    if(to_traits & TYPE_TRAIT_BASE_ANY){
+        if(from_traits & TYPE_TRAIT_BASE_ANY) return true;
+        // TODO: Maybe make into its own expression? That way we
+        // can return a mutable reference
+        printf("casting to any is currently unimplemented!\n");
     }
 
     #undef TYPE_TRAIT_POINTER

@@ -119,21 +119,17 @@ void ast_types_free_fully(ast_type_t *types, length_t length);
 
 // ---------------- ast_type_make_base ----------------
 // Takes ownership of 'base' and creates a type from it
-void ast_type_make_base(ast_type_t *type, char *base);
+void ast_type_make_base(ast_type_t *type, strong_cstr_t base);
 
-// ---------------- ast_type_make_base_newstr ----------------
-// Clones 'base' and creates a type from the cloned string
-void ast_type_make_base_newstr(ast_type_t *type, char *base);
-
-// ---------------- ast_type_make_baseptr ----------------
+// ---------------- ast_type_make_base_ptr ----------------
 // Takes ownership of 'base' and creates a type from it
 // that's preceded by a pointer element
-void ast_type_make_baseptr(ast_type_t *type, char *base);
+void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base);
 
-// ---------------- ast_type_make_base_newstr ----------------
-// Clones 'base' and creates a type from the cloned string
-// that's preceded by a pointer element
-void ast_type_make_baseptr_newstr(ast_type_t *type, char *base);
+// ---------------- ast_type_make_base_ptr_ptr ----------------
+// Takes ownership of 'base' and creates a type from it
+// that's preceded by two pointer elements
+void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base);
 
 // ---------------- ast_type_prepend_ptr ----------------
 // Prepends a pointer to an AST type

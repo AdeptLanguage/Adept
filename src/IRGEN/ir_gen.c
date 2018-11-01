@@ -1,8 +1,10 @@
 
+#include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
 #include "UTIL/filename.h"
 #include "UTIL/builtin_type.h"
+#include "BRIDGE/any.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_stmt.h"
@@ -168,7 +170,14 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
         ir_value_t *value;
         ast_type_t value_ast_type;
 
-        if(ast_global->initial == NULL) continue;
+        if(ast_global->initial == NULL){
+            if(!(ast_global->traits & AST_GLOBAL_SPECIAL)) continue;
+
+            // Special global variable
+            if(ir_gen_special_global(builder, ast_global, g)) return 1;
+            continue;
+        }
+
         if(ir_gen_expression(builder, ast_global->initial, &value, false, &value_ast_type)) return FAILURE;
 
         if(!ast_types_conform(builder, &value, &value_ast_type, &ast_global->type, CONFORM_MODE_PRIMITIVES)){
@@ -191,6 +200,230 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
         build_store(builder, value, destination);
     }
     return SUCCESS;
+}
+
+errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_global, length_t global_variable_id){
+    // NOTE: Assumes (ast_global->traits & AST_GLOBAL_SPECIAL)
+
+    ir_type_t *ptr_to_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    ptr_to_type->kind = TYPE_KIND_POINTER;
+    ptr_to_type->extra = &ast_global->type;
+
+    ir_value_t *destination = build_gvarptr(builder, ptr_to_type, global_variable_id);
+
+    if(ast_global->traits & AST_GLOBAL___TYPES__){
+        ir_type_t *any_type_type, *any_struct_type_type, *any_ptr_type_type,
+            *any_type_ptr_type = NULL, *ubyte_ptr_ptr_type;
+        
+        if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+            if(!ir_type_map_find(builder->type_map, "AnyType", &any_type_type)){
+                redprintf("INTERNAL ERROR: Failed to get 'AnyType' which should've been injected");
+                redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)")
+                return FAILURE;
+            }
+
+            any_type_ptr_type = ir_type_pointer_to(builder->pool, any_type_type);
+            build_store(builder, build_null_pointer_of_type(builder->pool, ir_type_pointer_to(builder->pool, any_type_ptr_type)), destination);
+            return SUCCESS;
+        }
+
+        type_table_t *table = builder->object->ast.type_table;
+        type_table_reduce(table);
+
+        if(!ir_type_map_find(builder->type_map, "AnyType", &any_type_type)
+        || !ir_type_map_find(builder->type_map, "AnyStructType", &any_struct_type_type)
+        || !ir_type_map_find(builder->type_map, "AnyPtrType", &any_ptr_type_type)
+        || !ir_type_map_find(builder->type_map, "ubyte", &ubyte_ptr_ptr_type)){
+            redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
+            return FAILURE;
+        }
+
+
+        ir_type_t *usize_ptr_type = ir_builder_usize_ptr(builder);
+        any_type_ptr_type = ir_type_pointer_to(builder->pool, any_type_type);
+        ubyte_ptr_ptr_type = ir_type_pointer_to(builder->pool, ir_type_pointer_to(builder->pool, ubyte_ptr_ptr_type));
+
+        ir_value_array_literal_t *array_literal = ir_pool_alloc(builder->pool, sizeof(ir_value_array_literal_t));
+        array_literal->values = NULL; // Will be set to array_values
+        array_literal->length = table->length;
+
+        ir_value_t *array_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+        array_value->value_type = VALUE_TYPE_ARRAY_LITERAL;
+        array_value->type = ir_type_pointer_to(builder->pool, any_type_ptr_type);
+        array_value->extra = array_literal;
+        
+        ir_value_t **array_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * table->length);
+
+        for(length_t i = 0; i != table->length; i++){
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &table->records[i].ast_type, &table->records[i].ir_type)){
+                return FAILURE;
+            }
+
+            switch(table->records[i].ir_type->kind){
+            case TYPE_KIND_POINTER:
+                array_values[i] = build_anon_global(&builder->object->ir_module, any_ptr_type_type, true);
+                break;
+            case TYPE_KIND_STRUCTURE:
+                array_values[i] = build_anon_global(&builder->object->ir_module, any_struct_type_type, true);
+                break;
+            default:
+                array_values[i] = build_anon_global(&builder->object->ir_module, any_type_type, true);
+            }
+        }
+
+        for(length_t i = 0; i != table->length; i++){
+            ir_type_t *initializer_type;
+            ir_value_t **initializer_members;
+            length_t initializer_members_length;
+            unsigned int any_type_kind_id = ANY_TYPE_KIND_VOID;
+            unsigned int type_type_kind = table->records[i].ir_type->kind;
+
+            switch(type_type_kind){
+            case TYPE_KIND_POINTER: {
+                    /* struct AnyPtrType(kind AnyTypeKind, name *ubyte, is_alias bool, subtype *AnyType) */
+
+                    initializer_members = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 4);
+                    initializer_members_length = 4;
+
+                    maybe_index_t subtype_index = -1;
+
+                    // HACK: We really shouldn't be doing this
+                    if(table->records[i].ast_type.elements_length > 1){
+                        ast_type_t dereferenced = ast_type_clone(&table->records[i].ast_type);
+
+                        // Modify ast_type_t to remove a pointer element from the front
+                        // DANGEROUS: Manually deleting ast_elem_pointer_t
+                        free(dereferenced.elements[0]);
+                        memmove(dereferenced.elements, &dereferenced.elements[1], sizeof(ast_elem_t*) * (dereferenced.elements_length - 1));
+                        dereferenced.elements_length--; // Reduce length accordingly
+
+                        char *dereferenced_name = ast_type_str(&dereferenced);
+                        subtype_index = type_table_find(table, dereferenced_name);
+                        ast_type_free(&dereferenced);
+                        free(dereferenced_name);
+                    }
+
+                    if(subtype_index == -1){
+                        ir_value_t *null_pointer = build_null_pointer(builder->pool);
+                        initializer_members[3] = null_pointer; // subtype
+                    } else {
+                        initializer_members[3] = array_values[subtype_index]; // subtype
+                    }
+
+                    initializer_type = any_ptr_type_type;
+                }
+                break;
+            case TYPE_KIND_STRUCTURE: {
+                    /* struct AnyStructType (kind AnyTypeKind, name *ubyte, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
+
+                    ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) table->records[i].ir_type->extra;
+                    initializer_members = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 8);
+                    initializer_members_length = 8;
+
+                    ir_value_t **composite_members = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * composite->subtypes_length);
+                    ir_value_t **composite_offsets = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * composite->subtypes_length);
+                    ir_value_t **composite_member_names = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * composite->subtypes_length);
+
+                    const char *struct_name = ((ast_elem_base_t*) table->records[i].ast_type.elements[0])->base;
+                    ast_struct_t *structure = ast_struct_find(&builder->object->ast, struct_name);
+
+                    if(structure == NULL){
+                        redprintf("INTERNAL ERROR: Failed to find struct '%s' that should exist when generating runtime type table!\n", struct_name);
+                        return FAILURE;
+                    }
+
+                    if(structure->field_count != composite->subtypes_length){
+                        redprintf("INTERNAL ERROR: Mismatching member count of IR as AST types for struct '%s' when generating runtime type table!\n", struct_name);
+                        return FAILURE;
+                    }
+
+                    for(length_t s = 0; s != composite->subtypes_length; s++){
+                        char *member_type_name = ast_type_str(&structure->field_types[s]);
+                        maybe_index_t subtype_index = type_table_find(table, member_type_name);
+                        free(member_type_name);
+
+                        if(subtype_index == -1){
+                            composite_members[s] = build_null_pointer(builder->pool); // members[s]
+                        } else {
+                            composite_members[s] = array_values[subtype_index]; // members[s]
+                        }
+
+                        composite_offsets[s] = build_literal_usize(builder->pool, 0);
+                        composite_member_names[s] = build_literal_cstr(builder, structure->field_names[s]);
+                    }
+
+                    ir_value_t *members_array = build_static_array(builder->pool, any_type_ptr_type, composite_members, composite->subtypes_length);
+                    ir_value_t *offsets_array = build_static_array(builder->pool, usize_ptr_type, composite_offsets, composite->subtypes_length);
+                    ir_value_t *member_names_array = build_static_array(builder->pool, ubyte_ptr_ptr_type, composite_member_names, composite->subtypes_length);
+
+                    initializer_members[3] = members_array;
+                    initializer_members[4] = build_literal_usize(builder->pool, composite->subtypes_length); // length
+                    initializer_members[5] = offsets_array;
+                    initializer_members[6] = member_names_array;
+                    initializer_members[7] = build_bool(builder->pool, composite->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
+                    initializer_type = any_struct_type_type;
+                }
+                break;
+            default:
+                initializer_members = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 3);
+                initializer_members_length = 3;
+                initializer_type = any_type_type;
+            }
+
+            switch(type_type_kind){
+            case TYPE_KIND_NONE:        any_type_kind_id = ANY_TYPE_KIND_VOID; break;
+            case TYPE_KIND_POINTER:     any_type_kind_id = ANY_TYPE_KIND_PTR; break;
+            case TYPE_KIND_S8:          any_type_kind_id = ANY_TYPE_KIND_BYTE; break;
+            case TYPE_KIND_S16:         any_type_kind_id = ANY_TYPE_KIND_SHORT; break;
+            case TYPE_KIND_S32:         any_type_kind_id = ANY_TYPE_KIND_INT; break;
+            case TYPE_KIND_S64:         any_type_kind_id = ANY_TYPE_KIND_LONG; break;
+            case TYPE_KIND_U8:          any_type_kind_id = ANY_TYPE_KIND_UBYTE; break;
+            case TYPE_KIND_U16:         any_type_kind_id = ANY_TYPE_KIND_USHORT; break;
+            case TYPE_KIND_U32:         any_type_kind_id = ANY_TYPE_KIND_UINT; break;
+            case TYPE_KIND_U64:         any_type_kind_id = ANY_TYPE_KIND_ULONG; break;
+            case TYPE_KIND_FLOAT:       any_type_kind_id = ANY_TYPE_KIND_FLOAT; break;
+            case TYPE_KIND_DOUBLE:      any_type_kind_id = ANY_TYPE_KIND_DOUBLE; break;
+            case TYPE_KIND_BOOLEAN:     any_type_kind_id = ANY_TYPE_KIND_BOOL; break;
+            case TYPE_KIND_STRUCTURE:   any_type_kind_id = ANY_TYPE_KIND_STRUCT; break;
+            case TYPE_KIND_FUNCPTR:     any_type_kind_id = ANY_TYPE_KIND_FUNC_PTR; break;
+            case TYPE_KIND_FIXED_ARRAY: any_type_kind_id = ANY_TYPE_KIND_FIXED_ARRAY; break;
+
+            // Unsupported Type Kinds
+            case TYPE_KIND_HALF:        any_type_kind_id = ANY_TYPE_KIND_USHORT; break;
+            // case TYPE_KIND_UNION: ignored
+            }
+
+            initializer_members[0] = build_literal_usize(builder->pool, any_type_kind_id); // kind
+            initializer_members[1] = build_literal_cstr(builder, table->records[i].name); // name
+            initializer_members[2] = build_bool(builder->pool, table->records[i].is_alias); // is_alias
+
+            ir_value_t *initializer = build_static_struct(&builder->object->ir_module, initializer_type, initializer_members, initializer_members_length, false);
+            build_anon_global_initializer(&builder->object->ir_module, array_values[i], initializer);
+        }
+
+        array_literal->values = array_values;
+        build_store(builder, array_value, destination);
+        return SUCCESS;
+    }
+
+    if(ast_global->traits & AST_GLOBAL___TYPES_LENGTH__){
+        if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+            build_store(builder, build_literal_usize(builder->pool, 0), destination);
+            return SUCCESS;
+        }
+
+        // Reduce type table if haven't
+        type_table_t *table = builder->object->ast.type_table;
+        type_table_reduce(table);
+
+        ir_value_t *value = build_literal_usize(builder->pool, table->length);
+        build_store(builder, value, destination);
+        return SUCCESS;
+    }
+
+    // Should never reach
+    redprintf("INTERNAL ERROR: Encountered unknown special global variable '%s'!\n", ast_global->name);
+    return FAILURE;
 }
 
 int ir_func_mapping_cmp(const void *a, const void *b){

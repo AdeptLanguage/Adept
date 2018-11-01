@@ -23,6 +23,7 @@
 #define CONFORM_MODE_POINTERS      TRAIT_3    // Allow conforming any pointer types
 #define CONFORM_MODE_INTPTR        TRAIT_4    // Allow conforming between integers and pointers
 #define CONFORM_MODE_INTENUM       TRAIT_5    // Allow conforming between integers and enums
+#define CONFORM_MODE_FROM_ANY      TRAIT_6    // Allow conforming from an Any
 #define CONFORM_MODE_ALL           TRAIT_ALL  // Allow all conformation methods
 
 // ---------------- ir_gen_type_mappings ----------------

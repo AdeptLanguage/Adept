@@ -1,4 +1,5 @@
 
+#include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
@@ -42,7 +43,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     }
 
     #define BUILD_LITERAL_IR_VALUE(ast_expr_type, typename, storage_type) { \
-        if(out_expr_type != NULL) ast_type_make_base_newstr(out_expr_type, typename); \
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(typename)); \
         *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t)); \
         (*ir_value)->value_type = VALUE_TYPE_LITERAL; \
         ir_type_map_find(builder->type_map, typename, &((*ir_value)->type)); \
@@ -74,10 +75,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_BOOLEAN:
         BUILD_LITERAL_IR_VALUE(ast_expr_boolean_t, "bool", bool); break;
     case EXPR_NULL:
-        if(out_expr_type != NULL) ast_type_make_base_newstr(out_expr_type, "ptr");
-        (*ir_value) = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-        (*ir_value)->value_type = VALUE_TYPE_NULLPTR;
-        ir_type_map_find(builder->type_map, "ptr", &((*ir_value)->type));
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
+        *ir_value = build_null_pointer(builder->pool);
         break;
     case EXPR_ADD:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_ADD, INSTRUCTION_FADD, MATH_OP_RESULT_MATCH, "Can't add those types"); break;
@@ -106,8 +105,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_OR:
         BUILD_MATH_OP_BOOL_MACRO(INSTRUCTION_OR, "Can't use operator 'or' on those types"); break;
     case EXPR_CSTR:
-        if(out_expr_type != NULL) ast_type_make_baseptr_newstr(out_expr_type, "ubyte");
-        build_string_literal(builder, ((ast_expr_cstr_t*) expr)->value, ir_value); break;
+        if(out_expr_type != NULL) ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
+        *ir_value = build_literal_cstr(builder, ((ast_expr_cstr_t*) expr)->value); break;
     case EXPR_VARIABLE: {
             char *variable_name = ((ast_expr_variable_t*) expr)->name;
             bridge_var_t *variable = bridge_var_scope_find_var(builder->var_scope, variable_name);
@@ -646,7 +645,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
 
-            if(out_expr_type != NULL) ast_type_make_base_newstr(out_expr_type, "usize");
+            if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("usize"));
         }
         break;
     case EXPR_CALL_METHOD: {
@@ -665,7 +664,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             if(type_elems_length == 1 && type_elems[0]->id == AST_ELEM_BASE){
                 if(!EXPR_IS_MUTABLE(call_expr->value->id)){
-                    compiler_panic(builder->compiler, call_expr->source, "Can't access field of immutable value");
+                    compiler_panic(builder->compiler, call_expr->source, "Can't call method on immutable value");
                     ast_type_free(&arg_types[0]);
                     free(arg_types);
                     return FAILURE;
@@ -781,7 +780,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             if(out_expr_type != NULL){
                 if(expr->id == EXPR_NOT){
-                    ast_type_make_base_newstr(out_expr_type, "bool");
+                    ast_type_make_base(out_expr_type, strclone("bool"));
                 } else {
                     *out_expr_type = ast_type_clone(&expr_type);
                 }
@@ -857,8 +856,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             ir_value_t *heap_memory = build_value_from_prev_instruction(builder);
 
-            ir_value_t *cstring_value;
-            build_string_literal(builder, new_cstring_expr->value, &cstring_value);
+            ir_value_t *cstring_value = build_literal_cstr(builder, new_cstring_expr->value);
 
             ir_basicblock_new_instructions(builder->current_block, 1);
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_memcpy_t));
@@ -872,7 +870,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             *ir_value = heap_memory;
             if(out_expr_type != NULL){
-                ast_type_make_baseptr_newstr(out_expr_type, "ubyte");
+                ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
             }
         }
         break;
@@ -900,7 +898,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long)); \
             *((unsigned long long*) (*ir_value)->extra) = enum_kind_id; \
 
-            if(out_expr_type != NULL) ast_type_make_base_newstr(out_expr_type, enum_value_expr->enum_name);
+            if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(enum_value_expr->enum_name));
         }
         break;
     case EXPR_BIT_AND:
@@ -917,6 +915,104 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
     case EXPR_BIT_LGC_RSHIFT:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
+    case EXPR_STATIC_ARRAY: {
+            ast_expr_static_data_t *static_array_expr = (ast_expr_static_data_t*) expr;
+
+            ir_type_t *array_ir_type;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_array_expr->type, &array_ir_type)){
+                return FAILURE;
+            }
+
+            ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * static_array_expr->length);
+            length_t length = static_array_expr->length;
+            ir_type_t *type = array_ir_type;
+
+            for(length_t i = 0; i != static_array_expr->length; i++){
+                ast_type_t member_type;
+
+                if(ir_gen_expression(builder, static_array_expr->values[i], &values[i], false, &member_type)){
+                    return FAILURE;
+                }
+
+                if(!ast_types_conform(builder, &values[i], &member_type, &static_array_expr->type, CONFORM_MODE_STANDARD)){
+                    char *a_type_str = ast_type_str(&member_type);
+                    char *b_type_str = ast_type_str(&static_array_expr->type);
+                    compiler_panicf(builder->compiler, static_array_expr->type.source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
+                    free(a_type_str);
+                    free(b_type_str);
+                    ast_type_free(&member_type);
+                    return FAILURE;
+                }
+
+                if(!VALUE_TYPE_IS_CONSTANT(values[i]->value_type)){
+                    compiler_panicf(builder->compiler, static_array_expr->values[i]->source, "Can't put non-constant value into constant array");
+                    ast_type_free(&member_type);
+                    return FAILURE;
+                }
+
+                ast_type_free(&member_type);
+            }
+
+            *ir_value = build_static_array(builder->pool, type, values, length);
+
+            if(out_expr_type != NULL){
+                *out_expr_type = ast_type_clone(&static_array_expr->type);
+                ast_type_prepend_ptr(out_expr_type);
+            }
+        }
+        break;
+    case EXPR_STATIC_STRUCT: {
+            // NOTE: Assumes a structure names that exists, cause we already checked in 'infer'
+            // NOTE: Also assumes that lengths of the struct literal and the struct match up (because we already checked)
+
+            ast_expr_static_data_t *static_struct_expr = (ast_expr_static_data_t*) expr;
+
+            ir_type_t *struct_ir_type;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_struct_expr->type, &struct_ir_type)){
+                return FAILURE;
+            }
+
+            const char *base = ((ast_elem_base_t*) static_struct_expr->type.elements[0])->base;
+            ast_struct_t *structure = ast_struct_find(&builder->object->ast, base);
+
+            ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * static_struct_expr->length);
+            length_t length = static_struct_expr->length;
+            ir_type_t *type = struct_ir_type;
+
+            for(length_t i = 0; i != static_struct_expr->length; i++){
+                ast_type_t member_type;
+
+                if(ir_gen_expression(builder, static_struct_expr->values[i], &values[i], false, &member_type)){
+                    return FAILURE;
+                }
+
+                if(!ast_types_conform(builder, &values[i], &member_type, &structure->field_types[i], CONFORM_MODE_STANDARD)){
+                    char *a_type_str = ast_type_str(&member_type);
+                    char *b_type_str = ast_type_str(&static_struct_expr->type);
+                    compiler_panicf(builder->compiler, static_struct_expr->values[i]->source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
+                    free(a_type_str);
+                    free(b_type_str);
+                    ast_type_free(&member_type);
+                    return FAILURE;
+                }
+
+                if(!VALUE_TYPE_IS_CONSTANT(values[i]->value_type)){
+                    compiler_panicf(builder->compiler, static_struct_expr->values[i]->source, "Can't put non-constant value into constant array");
+                    ast_type_free(&member_type);
+                    return FAILURE;
+                }
+
+                ast_type_free(&member_type);
+            }
+
+            *ir_value = build_static_struct(&builder->object->ir_module, type, values, length, true);
+
+            if(out_expr_type != NULL){
+                *out_expr_type = ast_type_clone(&static_struct_expr->type);
+                ast_type_prepend_ptr(out_expr_type);
+            }
+        }
+        break;
     default:
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
         return FAILURE;
@@ -952,7 +1048,7 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
     if(op_res == MATH_OP_ALL_BOOL){
         // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
         // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
-        ast_type_make_base_newstr(out_expr_type, "bool");
+        ast_type_make_base(out_expr_type, strclone("bool"));
 
         if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, &a, &ast_type_a, out_expr_type, CONFORM_MODE_PRIMITIVES)){
             char *a_type_str = ast_type_str(&ast_type_a);
@@ -1015,7 +1111,7 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
         (*ir_value)->type = a->type;
         break;
     case MATH_OP_RESULT_BOOL:
-        if(out_expr_type != NULL) ast_type_make_base_newstr(out_expr_type, "bool");
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("bool"));
         // Fall through to MATH_OP_ALL_BOOL
     case MATH_OP_ALL_BOOL:
         ((ir_instr_math_t*) *instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));

@@ -25,6 +25,8 @@ void ast_init(ast_t *ast){
     ast->libraries_length = 0;
     ast->libraries_capacity = 0;
     ast->common.ast_usize_type = NULL;
+
+    ast->type_table = NULL;
 }
 
 void ast_free(ast_t *ast){
@@ -54,6 +56,9 @@ void ast_free(ast_t *ast){
     if(ast->common.ast_usize_type != NULL){
         ast_type_free_fully(ast->common.ast_usize_type);
     }
+
+    type_table_free(ast->type_table);
+    free(ast->type_table);
 }
 
 void ast_free_functions(ast_func_t *functions, length_t functions_length){
@@ -563,6 +568,24 @@ maybe_index_t find_enum(ast_enum_t *enums, length_t enums_length, const char *in
 void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
     expand((void**) &ast->enums, sizeof(ast_enum_t), ast->enums_length, &ast->enums_capacity, 1, 4);
     ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
+}
+
+void ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source){
+    expand((void**) &ast->structs, sizeof(ast_struct_t), ast->structs_length, &ast->structs_capacity, 1, 4);
+    ast_struct_t *structure = &ast->structs[ast->structs_length++];
+    ast_struct_init(structure, name, names, types, length, traits, source);
+}
+
+void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *initial_value, trait_t traits, source_t source){
+    expand((void**) &ast->globals, sizeof(ast_global_t), ast->globals_length, &ast->globals_capacity, 1, 8);
+
+    ast_global_t *global = &ast->globals[ast->globals_length++];
+    global->name = name;
+    global->type = type;
+    global->initial = initial_value;
+    global->traits = traits;
+    global->source = source;
 }
 
 void ast_add_foreign_library(ast_t *ast, strong_cstr_t library){
