@@ -1,0 +1,41 @@
+
+import 'sys/cstdio.adept'
+
+struct Scoped (name *ubyte)
+
+func __defer__(this *Scoped) void {
+    // __defer__ method gets called whenever a variable
+    // on the stack will become inaccessible
+    
+    printf('Scoped.__defer__ called on %s!\n', this.name)
+}
+
+func main() void {
+    // Scoped.__defer__ should be called for every variable of
+    // type 'Scoped' immediately before the variable is lost
+    
+    a, b, c Scoped
+    a.name = 'a'; b.name = 'b'; c.name = 'c'
+    
+    while continue f {
+        f Scoped
+        f.name = 'f'
+        repeat 100 {
+            z Scoped
+            z.name = 'z'
+            if idx == 1, break f
+        }
+    }
+
+    callRegular(a)
+    callPOD(a)
+}
+
+func callRegular(x Scoped) void {
+    x.name = 'x'
+}
+
+func callPOD(y POD Scoped) void {
+    y.name = 'y'
+    y.__defer__()
+}

@@ -50,4 +50,12 @@ typedef struct {
 // ---------------- source_t ----------------
 typedef long long maybe_index_t;
 
+// ---------------- troolean ----------------
+// 3-state value
+typedef char troolean;
+
+#define TROOLEAN_TRUE 1
+#define TROOLEAN_FALSE 0
+#define TROOLEAN_UNKNOWN 2
+
 #endif // GROUND_H

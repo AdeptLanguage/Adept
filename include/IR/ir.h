@@ -95,15 +95,16 @@
 // =============================================================
 // ------------------ Possible IR value types ------------------
 // =============================================================
-#define VALUE_TYPE_NONE              0x00000000
-#define VALUE_TYPE_LITERAL           0x00000001 // data = pointer to literal value
-#define VALUE_TYPE_RESULT            0x00000002 // data = pointer to an 'ir_value_result_t'
-#define VALUE_TYPE_NULLPTR           0x00000003
-#define VALUE_TYPE_NULLPTR_OF_TYPE   0x00000004
-#define VALUE_TYPE_ARRAY_LITERAL     0x00000005 // data = pointer to an 'ir_value_array_literal_t'
-#define VALUE_TYPE_STRUCT_LITERAL    0x00000006 // data = pointer to an 'ir_value_struct_literal_t'
-#define VALUE_TYPE_ANON_GLOBAL       0x00000007 // data = pointer to an 'ir_value_anon_global_t'
-#define VALUE_TYPE_CONST_ANON_GLOBAL 0x00000008 // data = pointer to an 'ir_value_anon_global_t'
+#define VALUE_TYPE_NONE                0x00000000
+#define VALUE_TYPE_LITERAL             0x00000001 // data = pointer to literal value
+#define VALUE_TYPE_RESULT              0x00000002 // data = pointer to an 'ir_value_result_t'
+#define VALUE_TYPE_NULLPTR             0x00000003
+#define VALUE_TYPE_NULLPTR_OF_TYPE     0x00000004
+#define VALUE_TYPE_ARRAY_LITERAL       0x00000005 // data = pointer to an 'ir_value_array_literal_t'
+#define VALUE_TYPE_STRUCT_LITERAL      0x00000006 // data = pointer to an 'ir_value_struct_literal_t'
+#define VALUE_TYPE_ANON_GLOBAL         0x00000007 // data = pointer to an 'ir_value_anon_global_t'
+#define VALUE_TYPE_CONST_ANON_GLOBAL   0x00000008 // data = pointer to an 'ir_value_anon_global_t'
+#define VALUE_TYPE_CSTR_OF_LEN         0x00000009 // data = pointer to an 'ir_value_cstr_of_len_t'
 
 #define VALUE_TYPE_IS_CONSTANT(a) (a & VALUE_TYPE_LITERAL || a & VALUE_TYPE_NULLPTR || a & VALUE_TYPE_ARRAY_LITERAL || a & VALUE_TYPE_STRUCT_LITERAL || a & VALUE_TYPE_CONST_ANON_GLOBAL)
 
@@ -157,9 +158,17 @@ typedef struct {
 
 // ---------------- ir_value_anon_global_t ----------------
 // Structure for 'extra' field of 'ir_value_t' if
+// the value is a reference to a literal c-string of a length
+typedef struct {
+    char *array;
+    length_t length;
+} ir_value_cstr_of_len_t;
+
+// ---------------- ir_value_cstr_of_len_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if
 // the value is a reference to an anonymous global variable
 typedef struct {
-    length_t anon_global_id;;
+    length_t anon_global_id;
 } ir_value_anon_global_t;
 
 // ---------------- ir_instr_t ----------------
@@ -453,6 +462,7 @@ typedef struct {
     ir_type_t *ir_usize;
     ir_type_t *ir_usize_ptr;
     ir_type_t *ir_bool;
+    ir_type_t *ir_string_struct;
 } ir_shared_common_t;
 
 // ---------------- ir_module_t ----------------

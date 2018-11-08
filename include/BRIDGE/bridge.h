@@ -12,8 +12,9 @@
 #include "IR/ir_type.h"
 #include "AST/ast_type.h"
 
-#define BRIDGE_VAR_UNDEF     TRAIT_1 // Variable is to be uninitialized
-#define BRIDGE_VAR_REFERENCE TRAIT_2 // Variable is to be treated as a mutable reference
+#define BRIDGE_VAR_UNDEF        TRAIT_1 // Variable is to be uninitialized
+#define BRIDGE_VAR_REFERENCE    TRAIT_2 // Variable is to be treated as a mutable reference
+#define BRIDGE_VAR_POD          TRAIT_3 // Variable is to be treated as plain old data
 
 typedef struct {
     weak_cstr_t name;     // name of the variable

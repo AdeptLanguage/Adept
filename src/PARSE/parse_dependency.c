@@ -36,7 +36,9 @@ void parse_foreign_library(parse_ctx_t *ctx){
     //    ^
 
     // Assume the token we're currently on is 'foreign' keyword
-    char *library = filename_local(ctx->object->filename, (char*) ctx->tokenlist->tokens[++(*ctx->i)].data);
+    char *library = parse_grab_string(ctx, "INTERNAL ERROR: Assumption failed that 'foreign' keyword would be proceeded by a string, will probably crash...");
+
+    library = filename_local(ctx->object->filename, library);
     ast_add_foreign_library(ctx->ast, library);
 }
 

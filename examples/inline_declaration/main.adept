@@ -1,0 +1,11 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    // NOTE: Obviously you should shouldn't use 'gets', but this is
+    // a good example of the power this feature has
+    
+    printf('Enter some input: ')
+    gets(undef input 256 ubyte as *ubyte)
+    printf('Got input: %s\n', &input as *ubyte)
+}

@@ -384,3 +384,48 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
 
     return true;
 }
+
+bool ast_type_is_void(const ast_type_t *type){
+    if(type->elements_length != 1 || type->elements[0]->id != AST_ELEM_BASE) return false;
+    if(strcmp(((ast_elem_base_t*) type->elements[0])->base, "void") != 0) return false;
+    return true;
+}
+
+bool ast_type_is_base(const ast_type_t *type){
+    if(type->elements_length != 1) return false;
+    if(type->elements[0]->id != AST_ELEM_BASE) return false;
+    return true;
+}
+
+bool ast_type_is_base_ptr(const ast_type_t *type){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER || type->elements[1]->id != AST_ELEM_BASE) return false;
+    return true;
+}
+
+bool ast_type_is_base_of(const ast_type_t *type, const char *base){
+    if(type->elements_length != 1) return false;
+    if(type->elements[0]->id != AST_ELEM_BASE) return false;
+    if(strcmp(((ast_elem_base_t*) type->elements[0])->base, base) != 0) return false;
+    return true;
+}
+
+bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER || type->elements[1]->id != AST_ELEM_BASE) return false;
+    if(strcmp(((ast_elem_base_t*) type->elements[1])->base, base) != 0) return false;
+    return true;
+}
+
+bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to){
+    if(type->elements_length < 2 || type->elements_length != to->elements_length + 1) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER) return false;
+
+    ast_type_t stripped = *type;
+    ast_elem_t *stripped_elements[to->elements_length];
+    memcpy(stripped_elements, &stripped.elements[1], sizeof(ast_elem_t*) * to->elements_length);
+    stripped.elements = stripped_elements;
+    stripped.elements_length--;
+    
+    return ast_types_identical(&stripped, to);
+}

@@ -78,35 +78,67 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
         *ir_value = build_null_pointer(builder->pool);
         break;
-    case EXPR_ADD:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_ADD, INSTRUCTION_FADD, MATH_OP_RESULT_MATCH, "Can't add those types"); break;
+    case EXPR_ADD: 
+        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ADD, INSTRUCTION_FADD, "add", "__add__", false))
+            return FAILURE;
+        break;
     case EXPR_SUBTRACT:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT, MATH_OP_RESULT_MATCH, "Can't subtract those types"); break;
+        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT, "subtract", "__subtract__", false))
+            return FAILURE;
+        break;
     case EXPR_MULTIPLY:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY, MATH_OP_RESULT_MATCH, "Can't multiply those types"); break;
+        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY, "multiply", "__multiply__", false))
+            return FAILURE;
+        break;
     case EXPR_DIVIDE:
-        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE, MATH_OP_RESULT_MATCH, "Can't divide those types"); break;
+        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE, "divide", "__divide__", false))
+            return FAILURE;
+        break;
     case EXPR_MODULUS:
-        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS, MATH_OP_RESULT_MATCH, "Can't take the modulus of those types"); break;
+        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS, "take the modulus of", "__modulus__", false))
+            return FAILURE;
+        break;
     case EXPR_EQUALS:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS, MATH_OP_RESULT_BOOL, "Can't test equality for those types"); break;
+        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS, "test equality for", "__equals__", true))
+            return FAILURE;
+        break;
     case EXPR_NOTEQUALS:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS, MATH_OP_RESULT_BOOL, "Can't test inequality for those types"); break;
+        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS, "test inequality for", "__not_equals__", true))
+            return FAILURE;
+        break;
     case EXPR_GREATER:
-        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER, MATH_OP_RESULT_BOOL, "Can't compare those types"); break;
+        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER, "compare", "__greater_than__", true))
+            return FAILURE;
+        break;
     case EXPR_LESSER:
-        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER, MATH_OP_RESULT_BOOL, "Can't compare those types"); break;
+        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER, "compare", "__less_than__", true))
+            return FAILURE;
+        break;
     case EXPR_GREATEREQ:
-        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ, MATH_OP_RESULT_BOOL, "Can't compare those types"); break;
+        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ, "compare", "__greater_than_or_equal__", true))
+            return FAILURE;
+        break;
     case EXPR_LESSEREQ:
-        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ, MATH_OP_RESULT_BOOL, "Can't compare those types"); break;
+        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ, "compare", "__less_than_or_equal__", true))
+            return FAILURE;
+        break;
     case EXPR_AND:
         BUILD_MATH_OP_BOOL_MACRO(INSTRUCTION_AND, "Can't use operator 'and' on those types"); break;
     case EXPR_OR:
         BUILD_MATH_OP_BOOL_MACRO(INSTRUCTION_OR, "Can't use operator 'or' on those types"); break;
+    case EXPR_STR:
+        if(builder->object->ir_module.common.ir_string_struct == NULL){
+            compiler_panic(builder->compiler, expr->source, "Can't create string literal without String type present");
+            printf("\nTry importing '2.1/String.adept'\n");
+        }
+        
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("String"));
+        *ir_value = build_literal_str(builder, ((ast_expr_str_t*) expr)->array, ((ast_expr_str_t*) expr)->length);
+        break;
     case EXPR_CSTR:
         if(out_expr_type != NULL) ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
-        *ir_value = build_literal_cstr(builder, ((ast_expr_cstr_t*) expr)->value); break;
+        *ir_value = build_literal_cstr(builder, ((ast_expr_cstr_t*) expr)->value);
+        break;
     case EXPR_VARIABLE: {
             char *variable_name = ((ast_expr_variable_t*) expr)->name;
             bridge_var_t *variable = bridge_var_scope_find_var(builder->var_scope, variable_name);
@@ -281,6 +313,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     }
                 }
 
+                handle_pass_management(builder, arg_values, arg_types, NULL, call_expr->arity);
+
                 ir_basicblock_new_instructions(builder->current_block, 1);
                 instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_call_address_t));
                 ((ir_instr_call_address_t*) instruction)->id = INSTRUCTION_CALL_ADDRESS;
@@ -303,6 +337,15 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     for(length_t t = 0; t != call_expr->arity; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
                     return FAILURE;
+                }
+
+                if(pair.ast_func->traits & AST_FUNC_VARARG){
+                    trait_t arg_type_traits[call_expr->arity];
+                    memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
+                    memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_expr->arity - pair.ast_func->arity));
+                    handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity);
+                } else {
+                    handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity);
                 }
 
                 ir_basicblock_new_instructions(builder->current_block, 1);
@@ -702,6 +745,15 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
+            if(pair.ast_func->traits & AST_FUNC_VARARG){
+                trait_t arg_type_traits[call_expr->arity + 1];
+                memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
+                memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_expr->arity + 1 - pair.ast_func->arity));
+                handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity + 1);
+            } else {
+                handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity + 1);
+            }
+
             ir_basicblock_new_instructions(builder->current_block, 1);
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
             ((ir_instr_call_t*) instruction)->id = INSTRUCTION_CALL;
@@ -1013,6 +1065,71 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
         }
         break;
+    case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
+            ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
+
+            // Search for existing variable named that
+            if(bridge_var_scope_already_in_list(builder->var_scope, def->name)){
+                compiler_panicf(builder->compiler, def->source, "Variable '%s' already declared", def->name);
+                return FAILURE;
+            }
+
+            ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &def->type, &ir_decl_type)) return FAILURE;
+
+            ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
+
+            if(def->value != NULL){
+                // Regular inline declare statement initial assign value
+                ir_value_t *initial;
+                ast_type_t temporary_type;
+                if(ir_gen_expression(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
+
+                if(!ast_types_conform(builder, &initial, &temporary_type, &def->type, CONFORM_MODE_PRIMITIVES)){
+                    char *a_type_str = ast_type_str(&temporary_type);
+                    char *b_type_str = ast_type_str(&def->type);
+                    compiler_panicf(builder->compiler, def->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+                    free(a_type_str);
+                    free(b_type_str);
+                    ast_type_free(&temporary_type);
+                    return FAILURE;
+                }
+
+                ast_type_free(&temporary_type);
+
+                ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
+                add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+
+                if(def->is_assign_pod || !handle_assign_management(builder, initial, destination, &def->type, true)){
+                    build_store(builder, initial, destination);
+                }
+
+                *ir_value = destination;
+            } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
+                // Mark the variable as undefined memory so it isn't auto-initialized later on
+                add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
+
+                *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
+            } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
+                // Variable declaration without default value
+                add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+
+                // Zero initialize the variable
+                instruction = build_instruction(builder, sizeof(ir_instr_varzeroinit_t));
+                ((ir_instr_varzeroinit_t*) instruction)->id = INSTRUCTION_VARZEROINIT;
+                ((ir_instr_varzeroinit_t*) instruction)->result_type = NULL;
+                ((ir_instr_varzeroinit_t*) instruction)->index = builder->next_var_id - 1;
+                
+                *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
+            }
+
+            if(out_expr_type){
+                ast_type_t ast_pointer = ast_type_clone(&def->type);
+                ast_type_prepend_ptr(&ast_pointer);
+                *out_expr_type = ast_pointer;
+            }
+        }
+        break;
     default:
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
         return FAILURE;
@@ -1022,6 +1139,146 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     #undef BUILD_MATH_OP_IvF_MACRO
     #undef BUILD_MATH_OP_UvSvF_MACRO
 
+    return SUCCESS;
+}
+
+errorcode_t build_basic_IvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
+        ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int ints_instr, unsigned int floats_instr,
+        const char *operation_name, const char *overload_name, bool standard_result_is_boolean){
+    ir_pool_snapshot_t tmp_pool_snapshot;
+    ast_type_t ast_type_a, ast_type_b;
+    ir_value_t *lhs, *rhs;
+
+    if(ir_gen_expression(builder, math_expr->a, &lhs, false, &ast_type_a)) return FAILURE;
+    if(ir_gen_expression(builder, math_expr->b, &rhs, false, &ast_type_b)){
+        ast_type_free(&ast_type_a);
+        return FAILURE;
+    }
+
+    if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_PRIMITIVES)){
+        if(overload_name){
+            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
+
+            if(*ir_value != NULL){
+                ast_type_free(&ast_type_a);
+                ast_type_free(&ast_type_b);
+                return SUCCESS;
+            }
+        }
+
+        char *a_type_str = ast_type_str(&ast_type_a);
+        char *b_type_str = ast_type_str(&ast_type_b);
+        compiler_panicf(builder->compiler, math_expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+        free(a_type_str);
+        free(b_type_str);
+        ast_type_free(&ast_type_a);
+        ast_type_free(&ast_type_b);
+        return FAILURE;
+    }
+
+    // Add math instruction template
+    ir_pool_snapshot_capture(builder->pool, &tmp_pool_snapshot);
+    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
+    instruction->a = lhs;
+    instruction->b = rhs;
+    instruction->id = INSTRUCTION_NONE; // For safety
+    instruction->result_type = lhs->type;
+
+    if(i_vs_f_instruction((ir_instr_math_t*) instruction, ints_instr, floats_instr) == FAILURE){
+        // Remove math instruction template
+        ir_pool_snapshot_restore(builder->pool, &tmp_pool_snapshot);
+        builder->current_block->instructions_length--;
+
+        *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
+        ast_type_free(&ast_type_a);
+        ast_type_free(&ast_type_b);
+
+        if(*ir_value == NULL){
+            compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", operation_name);
+            return FAILURE;
+        }
+
+        return SUCCESS;
+    }
+
+    *ir_value = build_value_from_prev_instruction(builder);
+    if(out_expr_type != NULL){
+        if(standard_result_is_boolean) ast_type_make_base(out_expr_type, strclone("bool"));
+        else                           *out_expr_type = ast_type_clone(&ast_type_a);
+    }
+
+    ast_type_free(&ast_type_a);
+    ast_type_free(&ast_type_b);
+    return SUCCESS;
+}
+
+errorcode_t build_basic_UvSvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
+        ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int unsigned_instr, unsigned int signed_instr,
+        unsigned int floats_instr, const char *operation_name, const char *overload_name, bool standard_result_is_boolean){
+    ir_pool_snapshot_t tmp_pool_snapshot;
+    ast_type_t ast_type_a, ast_type_b;
+    ir_value_t *lhs, *rhs;
+
+    if(ir_gen_expression(builder, math_expr->a, &lhs, false, &ast_type_a)) return FAILURE;
+    if(ir_gen_expression(builder, math_expr->b, &rhs, false, &ast_type_b)){
+        ast_type_free(&ast_type_a);
+        return FAILURE;
+    }
+
+    if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_PRIMITIVES)){
+        if(overload_name){
+            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
+
+            if(*ir_value != NULL){
+                ast_type_free(&ast_type_a);
+                ast_type_free(&ast_type_b);
+                return SUCCESS;
+            }
+        }
+
+        char *a_type_str = ast_type_str(&ast_type_a);
+        char *b_type_str = ast_type_str(&ast_type_b);
+        compiler_panicf(builder->compiler, math_expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+        free(a_type_str);
+        free(b_type_str);
+        ast_type_free(&ast_type_a);
+        ast_type_free(&ast_type_b);
+        return FAILURE;
+    }
+
+    // Add math instruction template
+    ir_pool_snapshot_capture(builder->pool, &tmp_pool_snapshot);
+    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
+    instruction->a = lhs;
+    instruction->b = rhs;
+    instruction->id = INSTRUCTION_NONE; // For safety
+    instruction->result_type = lhs->type;
+
+    if(u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, unsigned_instr, signed_instr, floats_instr) == FAILURE){
+        // Remove math instruction template
+        ir_pool_snapshot_restore(builder->pool, &tmp_pool_snapshot);
+        builder->current_block->instructions_length--;
+
+        *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
+        ast_type_free(&ast_type_a);
+        ast_type_free(&ast_type_b);
+
+        if(*ir_value == NULL){
+            compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", operation_name);
+            return FAILURE;
+        }
+
+        return SUCCESS;
+    }
+
+    *ir_value = build_value_from_prev_instruction(builder);
+    if(out_expr_type != NULL){
+        if(standard_result_is_boolean) ast_type_make_base(out_expr_type, strclone("bool"));
+        else                           *out_expr_type = ast_type_clone(&ast_type_a);
+    }
+
+    ast_type_free(&ast_type_a);
+    ast_type_free(&ast_type_b);
     return SUCCESS;
 }
 

@@ -1,0 +1,51 @@
+
+import 'sys/cstdio.adept'
+
+struct Passed (value int)
+
+func __pass__(passed POD Passed) Passed {
+    passed.value = 1234567
+    return passed
+}
+
+func main() void {
+    passed Passed
+    dummy int = undef
+    
+    // Works with foreign declarations as well as var-args
+    printf('Foreign & Varargs : %d\n', passed)
+    dummy = printf('Foreign & Varargs : %d\n\n', passed)
+    
+    // Can disable __pass__ call if function receives POD
+    passRegular(passed)
+    passPOD(passed)
+    dummy = passRegular(passed)
+    dummy = passPOD(passed)
+    
+    // Works with methods as well
+    puts('')
+    passed.intoMethodRegular(passed)
+    passed.intoMethodPOD(passed)
+    dummy = passed.intoMethodRegular(passed)
+    dummy = passed.intoMethodPOD(passed)
+}
+
+func passRegular(passed Passed) int {
+    printf('Regular passed.value : %d\n', passed.value)
+    return 0
+}
+
+func passPOD(passed POD Passed) int {
+    printf('POD     passed.value : %d\n', passed.value)
+    return 0
+}
+
+func intoMethodRegular(this *Passed, passed Passed) int {
+    printf('intoMethodRegular passed.value : %d\n', passed.value)
+    return 0
+}
+
+func intoMethodPOD(this *Passed, passed POD Passed) int {
+    printf('intoMethodPOD     passed.value : %d\n', passed.value)
+    return 0
+}

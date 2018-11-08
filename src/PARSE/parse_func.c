@@ -8,7 +8,7 @@
 
 errorcode_t parse_func(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
-    source_t source = ctx->tokenlist->sources[*ctx->i - 1];
+    source_t source = ctx->tokenlist->sources[*ctx->i];
 
     strong_cstr_t name;
     bool is_stdcall, is_foreign;
@@ -21,9 +21,53 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     ast_func_create_template(func, name, is_stdcall, is_foreign, source);
 
     if(parse_func_arguments(ctx, func)) return FAILURE;
-    if(parse_type(ctx, &func->return_type)) return FAILURE;
-    if(parse_func_body(ctx, func)) return FAILURE;
+    if(parse_ignore_newlines(ctx, "Expected '{' after function head")) return FAILURE;
 
+    if(!is_foreign && ctx->tokenlist->tokens[*ctx->i].id == TOKEN_BEGIN){
+        ast_type_make_base(&func->return_type, strclone("void"));
+    } else {
+        if(parse_type(ctx, &func->return_type)) return FAILURE;
+    }
+    
+    // enforce specific arguements for special functions & methods
+    if(strcmp(func->name, "__defer__") == 0 && (
+        func->traits != TRAIT_NONE
+        || !ast_type_is_void(&func->return_type)
+        || func->arity != 1
+        || strcmp(func->arg_names[0], "this") != 0
+        || !ast_type_is_base_ptr(&func->arg_types[0])
+        || func->arg_type_traits[0] != TRAIT_NONE
+    )){
+        compiler_panic(ctx->compiler, source, "Management method __defer__ must be declared as 'func __defer__(this *T) void'");
+        return FAILURE;
+    }
+
+    if(strcmp(func->name, "__pass__") == 0 && (
+        func->traits != TRAIT_NONE
+        || !ast_type_is_base(&func->return_type)
+        || func->arity != 1
+        || !ast_types_identical(&func->return_type, &func->arg_types[0])
+        || func->arg_type_traits[0] != AST_FUNC_ARG_TYPE_TRAIT_POD
+    )){
+        compiler_panic(ctx->compiler, source, "Management function __pass__ must be declared as 'func __pass__(value POD T) T'");
+        return FAILURE;
+    }
+
+    if(strcmp(func->name, "__assign__") == 0 && (
+        func->traits != TRAIT_NONE
+        || !ast_type_is_void(&func->return_type)
+        || func->arity != 2
+        || strcmp(func->arg_names[0], "this") != 0
+        || !ast_type_is_base_ptr(&func->arg_types[0])
+        || !ast_type_is_pointer_to(&func->arg_types[0], &func->arg_types[1])
+        || func->arg_type_traits[0] != TRAIT_NONE
+        || func->arg_type_traits[1] != AST_FUNC_ARG_TYPE_TRAIT_POD
+    )){
+        compiler_panic(ctx->compiler, source, "Management method __assign__ must be declared as 'func __assign__(this *T, other POD T) void'");
+        return FAILURE;
+    }
+
+    if(parse_func_body(ctx, func)) return FAILURE;
     return SUCCESS;
 }
 
@@ -85,9 +129,10 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     length_t backfill = 0;
     length_t capacity = 0;
 
-    if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after function name")){
-        return FAILURE;
-    }
+    if(parse_ignore_newlines(ctx, "Expected '(' after function name")) return FAILURE;
+
+    if(tokens[*i].id != TOKEN_OPEN) return SUCCESS;
+    (*i)++; // Eat '('
 
     while(tokens[*i].id != TOKEN_CLOSE){
         if(parse_ignore_newlines(ctx, "Expected function argument")){
@@ -177,6 +222,17 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *ba
 
     }
 
+    if(parse_ignore_newlines(ctx, "Expected type")) return FAILURE;
+
+    if(tokens[*i].id == TOKEN_POD){
+        func->arg_type_traits[func->arity + *backfill] = AST_FUNC_ARG_TYPE_TRAIT_POD;
+        (*i)++;
+    } else {
+        func->arg_type_traits[func->arity + *backfill] = TRAIT_NONE;
+    }
+
+    if(parse_ignore_newlines(ctx, "Expected type")) return FAILURE;
+
     if(parse_type(ctx, &func->arg_types[func->arity + *backfill])){
         free(func->arg_names[func->arity + *backfill]);
         parse_free_unbackfilled_arguments(func, *backfill);
@@ -185,16 +241,18 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *ba
 
     parse_func_backfill_arguments(func, backfill);
     func->arity++;
-
     *out_is_solid = true;
+
     return SUCCESS;
 }
 
 void parse_func_backfill_arguments(ast_func_t *func, length_t *backfill){
     ast_type_t *master_type = &func->arg_types[func->arity + *backfill];
+    trait_t master_type_trait = func->arg_type_traits[func->arity + *backfill];
 
     for(length_t i = 0; *backfill != 0; i++){
         func->arg_types[func->arity + *backfill - i - 1] = ast_type_clone(master_type);
+        func->arg_type_traits[func->arity + *backfill - i - 1] = master_type_trait;
         func->arity++;
         *backfill -= 1;
     }
@@ -209,6 +267,7 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
         func->arg_types   = malloc(sizeof(ast_type_t) * 4);
         func->arg_sources = malloc(sizeof(source_t) * 4);
         func->arg_flows   = malloc(sizeof(char) * 4);
+        func->arg_type_traits = malloc(sizeof(trait_t) * 4);
         *capacity = 4;
         return;
     }
@@ -220,9 +279,10 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
         grow((void**) &func->arg_names, sizeof(char*), func->arity + backfill, *capacity);
     }
 
-    grow((void**) &func->arg_types,   sizeof(ast_type_t), func->arity, *capacity);
-    grow((void**) &func->arg_sources, sizeof(source_t),   func->arity + backfill, *capacity);
-    grow((void**) &func->arg_flows,   sizeof(char),       func->arity + backfill, *capacity);
+    grow((void**) &func->arg_types,       sizeof(ast_type_t), func->arity, *capacity);
+    grow((void**) &func->arg_sources,     sizeof(source_t),   func->arity + backfill, *capacity);
+    grow((void**) &func->arg_flows,       sizeof(char),       func->arity + backfill, *capacity);
+    grow((void**) &func->arg_type_traits, sizeof(trait_t),    func->arity + backfill, *capacity);
 }
 
 bool parse_func_is_stdcall(parse_ctx_t *ctx){

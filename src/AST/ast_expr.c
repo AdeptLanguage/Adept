@@ -66,11 +66,60 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         representation = malloc(5);
         memcpy(representation, "null", 5);
         return representation;
-    case EXPR_STR:
-        representation = malloc(strlen(((ast_expr_str_t*) expr)->value) + 3);
-        sprintf(representation, "\"%s\"", ((ast_expr_str_t*) expr)->value);
-        return representation;
-        return representation;
+    case EXPR_STR: {
+            length_t put_index = 1;
+            length_t special_characters = 0;
+
+            for(length_t s = 0; s != ((ast_expr_str_t*) expr)->length; s++){
+                if(((ast_expr_str_t*) expr)->array[s] <= 0x1F || ((ast_expr_str_t*) expr)->array[s] == '\\') special_characters++;
+            }
+
+            representation = malloc(((ast_expr_str_t*) expr)->length + special_characters + 3);
+            representation[0] = '\"';
+
+            for(length_t i = 0; i != ((ast_expr_str_t*) expr)->length; i++){
+                switch(((ast_expr_str_t*) expr)->array[i]){
+                case '\0':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = '0';
+                    break;
+                case '\t':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = 't';
+                    break;
+                case '\n':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = '0';
+                    break;
+                case '\r':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = 'r';
+                    break;
+                case '\b':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = 'b';
+                    break;
+                case '\e':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = 'e';
+                    break;
+                case '\\':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = '\\';
+                    break;
+                case '"':
+                    representation[put_index++] = '\\';
+                    representation[put_index++] = '"';
+                    break;
+                default:
+                    representation[put_index++] = ((ast_expr_str_t*) expr)->array[i];
+                }
+            }
+
+            representation[put_index++] = '"';
+            representation[put_index++] = '\0';
+            return representation;
+        }
     case EXPR_CSTR: {
             char *string_data = ((ast_expr_cstr_t*) expr)->value;
             length_t string_data_length = strlen(string_data);
@@ -99,6 +148,18 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
                     case '\t':
                         representation[put_index++] = '\\';
                         representation[put_index++] = 't';
+                        break;
+                    case '\b':
+                        representation[put_index++] = '\\';
+                        representation[put_index++] = 'b';
+                        break;
+                    case '\e':
+                        representation[put_index++] = '\\';
+                        representation[put_index++] = 'e';
+                        break;
+                    case '\'':
+                        representation[put_index++] = '\\';
+                        representation[put_index++] = '\'';
                         break;
                     case '\\':
                         representation[put_index++] = '\\';
@@ -493,6 +554,29 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(type_str);
             return representation;
         }
+    case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
+            bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
+
+            ast_expr_declare_t *declaration = (ast_expr_declare_t*) expr;
+            char *typename = ast_type_str(&declaration->type);
+            char *value = NULL;
+
+            if(declaration->value){
+                value = ast_expr_str(declaration->value);
+            }
+
+            representation = malloc(strlen(declaration->name) + strlen(typename) + (value ? strlen(value) + 3: 0) + 8);
+
+            if(declaration->value){
+                sprintf(representation, "%s %s %s = %s", is_undef ? "undef" : "def", declaration->name, typename, value);
+                free(value);
+            } else {
+                sprintf(representation, "%s %s %s", is_undef ? "undef" : "def", declaration->name, typename);
+            }
+            
+            free(typename);
+            return representation;
+        }
     default:
         representation = malloc(21);
         memcpy(representation, "<unknown expression>", 21);
@@ -577,13 +661,13 @@ void ast_expr_free(ast_expr_t *expr){
             ast_expr_free_fully( ((ast_expr_return_t*) expr)->value );
         }
         break;
-    case EXPR_DECLARE:
+    case EXPR_DECLARE: case EXPR_ILDECLARE:
         ast_type_free(&((ast_expr_declare_t*) expr)->type);
         if(((ast_expr_declare_t*) expr)->value != NULL){
             ast_expr_free_fully(((ast_expr_declare_t*) expr)->value);
         }
         break;
-    case EXPR_DECLAREUNDEF:
+    case EXPR_DECLAREUNDEF: case EXPR_ILDECLAREUNDEF:
         ast_type_free(&((ast_expr_declare_t*) expr)->type);
         break;
     case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
@@ -809,6 +893,14 @@ void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source){
     ((ast_expr_boolean_t*) *out_expr)->id = EXPR_BOOLEAN;
     ((ast_expr_boolean_t*) *out_expr)->value = value;
     ((ast_expr_boolean_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_string(ast_expr_t **out_expr, char *array, length_t length, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_str_t));
+    ((ast_expr_str_t*) *out_expr)->id = EXPR_STR;
+    ((ast_expr_str_t*) *out_expr)->array = array;
+    ((ast_expr_str_t*) *out_expr)->length = length;
+    ((ast_expr_str_t*) *out_expr)->source = source;
 }
 
 void ast_expr_create_cstring(ast_expr_t **out_expr, char *value, source_t source){

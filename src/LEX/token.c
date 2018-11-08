@@ -21,8 +21,27 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_WORD:
             printf("Word: \"%s\"\n", (char*) tokenlist->tokens[i].data);
             break;
-        case TOKEN_STRING:
-            printf("String: \"%s\"\n", (char*) tokenlist->tokens[i].data);
+        case TOKEN_STRING: {
+                token_string_data_t *string_data = (token_string_data_t*) tokenlist->tokens[i].data;
+                printf("String: \"");
+
+                for(length_t i = 0; i != string_data->length; i++){
+                    switch(string_data->array[i]){
+                    case '\0': putchar('\\'); putchar('0');  break;
+                    case '\t': putchar('\\'); putchar('t');  break;
+                    case '\n': putchar('\\'); putchar('n');  break;
+                    case '\r': putchar('\\'); putchar('r');  break;
+                    case '\b': putchar('\\'); putchar('b');  break;
+                    case '\e': putchar('\\'); putchar('e');  break;
+                    case '\\': putchar('\\'); putchar('\\'); break;
+                    case '"':  putchar('\\'); putchar('"');  break;
+                    default:
+                        putchar(string_data->array[i]);
+                    }
+                }
+
+                printf("\"\n");
+            }
             break;
         case TOKEN_CSTRING:
             printf("C String: \"%s\"\n", (char*) tokenlist->tokens[i].data);
@@ -93,6 +112,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_UBEROR:         printf("Uber or\n"); break;
         case TOKEN_TERMINATE_JOIN: printf("Terminate Join\n"); break;
         case TOKEN_COLON:          printf("Colon\n"); break;
+        case TOKEN_POD:            printf("Keyword: POD\n"); break;
         case TOKEN_ALIAS:          printf("Keyword: alias\n"); break;
         case TOKEN_AND:            printf("Keyword: and\n"); break;
         case TOKEN_AS:             printf("Keyword: as\n"); break;
@@ -146,6 +166,9 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
 
 void tokenlist_free(tokenlist_t *tokenlist){
     for(length_t i = 0; i != tokenlist->length; i++){
+        if(tokenlist->tokens[i].id == TOKEN_STRING){
+            free(((token_string_data_t*) tokenlist->tokens[i].data)->array);
+        }
         free(tokenlist->tokens[i].data);
     }
     free(tokenlist->tokens);
@@ -217,54 +240,54 @@ const char *global_token_name_table[] = {
     "reserved",               // 0x0000003D
     "reserved",               // 0x0000003E
     "reserved",               // 0x0000003F
-    "alias keyword",          // 0x00000040
-    "and keyword",            // 0x00000041
-    "as keyword",             // 0x00000042
-    "at keyword",             // 0x00000043
-    "break keyword",          // 0x00000044
-    "case keyword",           // 0x00000045
-    "cast keyword",           // 0x00000046
-    "continue keyword",       // 0x00000047
-    "def keyword",            // 0x00000048
-    "default keyword",        // 0x00000049
-    "defer keyword",          // 0x0000004A
-    "delete keyword",         // 0x0000004B
-    "each keyword",           // 0x0000004C
-    "else keyword",           // 0x0000004D
-    "enum keyword",           // 0x0000004E
-    "external keyword",       // 0x0000004F
-    "false keyword",          // 0x00000050
-    "for keyword",            // 0x00000051
-    "foreign keyword",        // 0x00000052
-    "func keyword",           // 0x00000053
-    "funcptr keyword",        // 0x00000054
-    "global keyword",         // 0x00000055
-    "if keyword",             // 0x00000056
-    "import keyword",         // 0x00000057
-    "in keyword",             // 0x00000058
-    "inout keyword",          // 0x00000059
-    "link keyword",           // 0x0000005A
-    "new keyword",            // 0x0000005B
-    "null keyword",           // 0x0000005C
-    "or keyword",             // 0x0000005D
-    "out keyword",            // 0x0000005E
-    "packed keyword",         // 0x0000005F
-    "pragma keyword",         // 0x00000060
-    "private keyword",        // 0x00000061
-    "public keyword",         // 0x00000062
-    "repeat keyword",         // 0x00000063
-    "return keyword",         // 0x00000064
-    "sizeof keyword",         // 0x00000065
-    "static keyword",         // 0x00000066
-    "stdcall keyword",        // 0x00000067
-    "struct keyword",         // 0x00000068
-    "switch keyword",         // 0x00000069
-    "true keyword",           // 0x0000006A
-    "undef keyword",          // 0x0000006B
-    "unless keyword",         // 0x0000006C
-    "until keyword",          // 0x0000006D
-    "while keyword",          // 0x0000006E
-    "reserved",               // 0x0000006F
+    "POD keyword",            // 0x00000040
+    "alias keyword",          // 0x00000041
+    "and keyword",            // 0x00000042
+    "as keyword",             // 0x00000043
+    "at keyword",             // 0x00000044
+    "break keyword",          // 0x00000045
+    "case keyword",           // 0x00000046
+    "cast keyword",           // 0x00000047
+    "continue keyword",       // 0x00000048
+    "def keyword",            // 0x00000049
+    "default keyword",        // 0x0000004A
+    "defer keyword",          // 0x0000004B
+    "delete keyword",         // 0x0000004C
+    "each keyword",           // 0x0000004D
+    "else keyword",           // 0x0000004E
+    "enum keyword",           // 0x0000004F
+    "external keyword",       // 0x00000050
+    "false keyword",          // 0x00000051
+    "for keyword",            // 0x00000052
+    "foreign keyword",        // 0x00000053
+    "func keyword",           // 0x00000054
+    "funcptr keyword",        // 0x00000055
+    "global keyword",         // 0x00000056
+    "if keyword",             // 0x00000057
+    "import keyword",         // 0x00000058
+    "in keyword",             // 0x00000059
+    "inout keyword",          // 0x0000005A
+    "link keyword",           // 0x0000005B
+    "new keyword",            // 0x0000005C
+    "null keyword",           // 0x0000005D
+    "or keyword",             // 0x0000005E
+    "out keyword",            // 0x0000005F
+    "packed keyword",         // 0x00000060
+    "pragma keyword",         // 0x00000061
+    "private keyword",        // 0x00000062
+    "public keyword",         // 0x00000063
+    "repeat keyword",         // 0x00000064
+    "return keyword",         // 0x00000065
+    "sizeof keyword",         // 0x00000066
+    "static keyword",         // 0x00000067
+    "stdcall keyword",        // 0x00000068
+    "struct keyword",         // 0x00000069
+    "switch keyword",         // 0x0000006A
+    "true keyword",           // 0x0000006B
+    "undef keyword",          // 0x0000006C
+    "unless keyword",         // 0x0000006D
+    "until keyword",          // 0x0000006E
+    "while keyword",          // 0x0000006F
     "reserved",               // 0x00000070
     "reserved",               // 0x00000071
     "reserved",               // 0x00000072

@@ -1,7 +1,6 @@
 
 #include "UTIL/util.h"
 #include "BRIDGE/type_table.h"
-#include "INFER/infer.h"
 
 void type_table_init(type_table_t *table){
     table->records = NULL;

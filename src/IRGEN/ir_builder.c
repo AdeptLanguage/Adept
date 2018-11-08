@@ -2,6 +2,7 @@
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
 
 length_t build_basicblock(ir_builder_t *builder){
@@ -212,6 +213,19 @@ ir_type_t* ir_builder_bool(ir_builder_t *builder){
     return *shared_type;
 }
 
+ir_value_t* build_literal_int(ir_pool_t *pool, long long literal_value){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+
+    value->value_type = VALUE_TYPE_LITERAL;
+    value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    value->type->kind = TYPE_KIND_S32;
+    // neglect ir_value->type->extra
+    
+    value->extra = ir_pool_alloc(pool, sizeof(long long));
+    *((long long*) value->extra) = literal_value;
+    return value;
+}
+
 ir_value_t* build_literal_usize(ir_pool_t *pool, length_t literal_value){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
 
@@ -225,16 +239,46 @@ ir_value_t* build_literal_usize(ir_pool_t *pool, length_t literal_value){
     return value;
 }
 
+ir_value_t* build_literal_str(ir_builder_t *builder, char *array, length_t length){
+    if(builder->object->ir_module.common.ir_string_struct == NULL){
+        redprintf("Can't create string literal without String type present");
+        printf("\nTry importing '2.1/String.adept'\n");
+    }
+
+    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 4);
+    values[0] = build_literal_cstr_of_length(builder, array, length);
+    values[1] = build_literal_usize(builder->pool, length);
+    values[2] = build_literal_usize(builder->pool, length);
+
+    // DANGEROUS: This is a hack to initialize String.ownership as a reference
+    values[3] = build_literal_usize(builder->pool, 0);
+    
+    ir_value_t *value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_STRUCT_LITERAL;
+    value->type = builder->object->ir_module.common.ir_string_struct;
+    ir_value_struct_literal_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_value_struct_literal_t));
+    extra->values = values;
+    extra->length = 4;
+    value->extra = extra;
+    return value;
+}
+
 ir_value_t* build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
+    return build_literal_cstr_of_length(builder, value, strlen(value) + 1);
+}
+
+ir_value_t* build_literal_cstr_of_length(ir_builder_t *builder, char *array, length_t length){
     // NOTE: Builds a null-terminated string literal value
     ir_value_t *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-    ir_value->value_type = VALUE_TYPE_LITERAL;
+    ir_value->value_type = VALUE_TYPE_CSTR_OF_LEN;
     ir_type_t *ubyte_type;
     ir_type_map_find(builder->type_map, "ubyte", &ubyte_type);
     ir_value->type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
     ir_value->type->kind = TYPE_KIND_POINTER;
     ir_value->type->extra = ubyte_type;
-    ir_value->extra = value;
+    ir_value->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_cstr_of_len_t));
+    ((ir_value_cstr_of_len_t*) ir_value->extra)->array = array;
+    ((ir_value_cstr_of_len_t*) ir_value->extra)->length = length;
     return ir_value;
 }
 
@@ -278,21 +322,26 @@ void prepare_for_new_label(ir_builder_t *builder){
         builder->block_stack_labels = malloc(sizeof(char*) * 4);
         builder->block_stack_break_ids = malloc(sizeof(length_t) * 4);
         builder->block_stack_continue_ids = malloc(sizeof(length_t) * 4);
+        builder->block_stack_scopes = malloc(sizeof(bridge_var_scope_t*) * 4);
         builder->block_stack_capacity = 4;
     } else if(builder->block_stack_length == builder->block_stack_capacity){
         builder->block_stack_capacity *= 2;
         char **new_block_stack_labels = malloc(sizeof(char*) * builder->block_stack_capacity);
         length_t *new_block_stack_break_ids = malloc(sizeof(length_t) * builder->block_stack_capacity);
         length_t *new_block_stack_continue_ids = malloc(sizeof(length_t) * builder->block_stack_capacity);
+        bridge_var_scope_t **new_block_stack_scopes = malloc(sizeof(bridge_var_scope_t*) * builder->block_stack_capacity);
         memcpy(new_block_stack_labels, builder->block_stack_labels, sizeof(char*) * builder->block_stack_length);
         memcpy(new_block_stack_break_ids, builder->block_stack_break_ids, sizeof(length_t) * builder->block_stack_length);
         memcpy(new_block_stack_continue_ids, builder->block_stack_continue_ids, sizeof(length_t) * builder->block_stack_length);
+        memcpy(new_block_stack_scopes, builder->block_stack_scopes, sizeof(bridge_var_scope_t*) * builder->block_stack_length);
         free(builder->block_stack_labels);
         free(builder->block_stack_break_ids);
         free(builder->block_stack_continue_ids);
+        free(builder->block_stack_scopes);
         builder->block_stack_labels = new_block_stack_labels;
         builder->block_stack_break_ids = new_block_stack_break_ids;
         builder->block_stack_continue_ids = new_block_stack_continue_ids;
+        builder->block_stack_scopes = new_block_stack_scopes;
     }
 }
 
@@ -327,4 +376,142 @@ void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type,
     list->variables[list->length].traits = traits;
     builder->next_var_id++;
     list->length++;
+}
+
+void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list){
+    for(length_t i = 0; i != list->length; i++){
+        // Don't perform defer management on POD variables
+        if(list->variables[i].traits & BRIDGE_VAR_POD) continue;
+
+        // Only perform defer management on structures with a __defer__ method
+        if(list->variables[i].ir_type->kind == TYPE_KIND_STRUCTURE){
+            ast_type_t *ast_type = list->variables[i].ast_type;
+
+            if(ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE){
+                // Call __defer__ if that type has one
+
+                weak_cstr_t struct_name = ((ast_elem_base_t*) ast_type->elements[0])->base;
+
+                maybe_index_t index = find_beginning_of_method_group(builder->object->ir_module.methods, builder->object->ir_module.methods_length, struct_name, "__defer__");
+                if(index == -1) continue;
+
+                ir_method_t *method = &builder->object->ir_module.methods[index];
+                ir_value_t *variable_pointer = build_varptr(builder, ir_type_pointer_to(builder->pool, list->variables[i].ir_type), list->variables[i].id);
+                ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t**));
+                arguments[0] = variable_pointer;
+
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+                instruction->id = INSTRUCTION_CALL;
+                instruction->result_type = method->module_func->return_type;
+                instruction->values = arguments;
+                instruction->values_length = 1;
+                instruction->func_id = method->func_id;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+            }
+        }
+    }
+}
+
+void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity){
+    for(length_t i = 0; i != arity; i++){
+        if(arg_type_traits != NULL && arg_type_traits[i] & AST_FUNC_ARG_TYPE_TRAIT_POD) continue;
+
+        if(values[i]->type->kind == TYPE_KIND_STRUCTURE){
+            ast_type_t *ast_type = &types[i];
+
+            if(ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE){
+                funcpair_t result;
+                if(ir_gen_find_func(builder->compiler, builder->object, "__pass__", &types[i], 1, &result) == FAILURE){
+                    continue;
+                }
+
+                ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
+                arguments[0] = values[i];
+                
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+                instruction->id = INSTRUCTION_CALL;
+                instruction->result_type = result.ir_func->return_type;
+                instruction->values = arguments;
+                instruction->values_length = 1;
+                instruction->func_id = result.func_id;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+                values[i] = build_value_from_prev_instruction(builder);
+            }
+        }
+    }
+}
+
+successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, ast_type_t *type, bool zero_initialize){    
+    if(value->type->kind == TYPE_KIND_STRUCTURE){
+        if(type->elements_length == 1 && type->elements[0]->id == AST_ELEM_BASE){
+            weak_cstr_t struct_name = ((ast_elem_base_t*) type->elements[0])->base;
+
+            maybe_index_t index = find_beginning_of_method_group(builder->object->ir_module.methods, builder->object->ir_module.methods_length, struct_name, "__assign__");
+            if(index == -1) return UNSUCCESSFUL;
+
+            if(zero_initialize){
+                // Zero initialize for declaration assignments
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                ir_instr_varzeroinit_t *zero_instr = (ir_instr_varzeroinit_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
+                zero_instr->id = INSTRUCTION_VARZEROINIT;
+                zero_instr->result_type = NULL;
+                zero_instr->index = builder->next_var_id - 1;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) zero_instr;
+            }
+
+            ir_method_t *method = &builder->object->ir_module.methods[index];
+
+            ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
+            arguments[0] = destination;
+            arguments[1] = value;
+            
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+            instruction->id = INSTRUCTION_CALL;
+            instruction->result_type = method->module_func->return_type;
+            instruction->values = arguments;
+            instruction->values_length = 2;
+            instruction->func_id = method->func_id;
+            builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+            return SUCCESSFUL;
+        }
+    }
+
+    return UNSUCCESSFUL;
+}
+
+ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name){
+    if(lhs->type->kind == TYPE_KIND_STRUCTURE){
+        if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
+            funcpair_t result;
+
+            ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
+            arguments[0] = lhs;
+            arguments[1] = rhs;
+
+            ast_type_t types[2] = {*lhs_type, *rhs_type};
+
+            if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, &result) == FAILURE){
+                return NULL;
+            }
+
+            handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2);
+
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+            instruction->id = INSTRUCTION_CALL;
+            instruction->result_type = result.ir_func->return_type;
+            instruction->values = arguments;
+            instruction->values_length = 2;
+            instruction->func_id = result.func_id;
+            builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+
+            if(out_type != NULL) *out_type = ast_type_clone(&result.ast_func->return_type);
+            return build_value_from_prev_instruction(builder);
+        }
+    }
+
+    return NULL;
 }

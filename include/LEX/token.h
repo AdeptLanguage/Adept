@@ -18,9 +18,9 @@
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x00000008
+#define TOKEN_ITERATION_VERSION 0x0000000A
 
-typedef unsigned int tokenid_t;
+typedef unsigned short tokenid_t;
 
 // ---------------- token_t ----------------
 // Structure for an individual token
@@ -28,6 +28,13 @@ typedef struct {
     tokenid_t id;
     void *data;
 } token_t;
+
+// ---------------- token_string_data_t ----------------
+// Structure for TOKEN_STRING
+typedef struct {
+    char *array;
+    length_t length;
+} token_string_data_t;
 
 // ---------------- tokenlist_t ----------------
 // List of tokens and their sources
@@ -118,54 +125,55 @@ extern const char *global_token_name_table[];
 // Keywords are organized as such that 0x00000040 + the id of
 // the keyword in an array of all the keywords sorted alphabetically
 // will equal the token for that keyword.
-#define TOKEN_ALIAS            0x00000040
-#define TOKEN_AND              0x00000041
-#define TOKEN_AS               0x00000042
-#define TOKEN_AT               0x00000043
-#define TOKEN_BREAK            0x00000044
-#define TOKEN_CASE             0x00000045
-#define TOKEN_CAST             0x00000046
-#define TOKEN_CONTINUE         0x00000047
-#define TOKEN_DEF              0x00000048
-#define TOKEN_DEFAULT          0x00000049
-#define TOKEN_DEFER            0x0000004A
-#define TOKEN_DELETE           0x0000004B
-#define TOKEN_EACH             0x0000004C
-#define TOKEN_ELSE             0x0000004D
-#define TOKEN_ENUM             0x0000004E
-#define TOKEN_EXTERNAL         0x0000004F
-#define TOKEN_FALSE            0x00000050
-#define TOKEN_FOR              0x00000051
-#define TOKEN_FOREIGN          0x00000052
-#define TOKEN_FUNC             0x00000053
-#define TOKEN_FUNCPTR          0x00000054
-#define TOKEN_GLOBAL           0x00000055
-#define TOKEN_IF               0x00000056
-#define TOKEN_IMPORT           0x00000057
-#define TOKEN_IN               0x00000058
-#define TOKEN_INOUT            0x00000059
-#define TOKEN_LINK             0x0000005A
-#define TOKEN_NEW              0x0000005B
-#define TOKEN_NULL             0x0000005C
-#define TOKEN_OR               0x0000005D
-#define TOKEN_OUT              0x0000005E
-#define TOKEN_PACKED           0x0000005F
-#define TOKEN_PRAGMA           0x00000060
-#define TOKEN_PRIVATE          0x00000061
-#define TOKEN_PUBLIC           0x00000062
-#define TOKEN_REPEAT           0x00000063
-#define TOKEN_RETURN           0x00000064
-#define TOKEN_SIZEOF           0x00000065
-#define TOKEN_STATIC           0x00000066
-#define TOKEN_STDCALL          0x00000067
-#define TOKEN_STRUCT           0x00000068
-#define TOKEN_SWITCH           0x00000069
-#define TOKEN_TRUE             0x0000006A
-#define TOKEN_UNDEF            0x0000006B
-#define TOKEN_UNLESS           0x0000006C
-#define TOKEN_UNTIL            0x0000006D
-#define TOKEN_WHILE            0x0000006E
-// 6D..6F
+#define TOKEN_POD              0x00000040
+#define TOKEN_ALIAS            0x00000041
+#define TOKEN_AND              0x00000042
+#define TOKEN_AS               0x00000043
+#define TOKEN_AT               0x00000044
+#define TOKEN_BREAK            0x00000045
+#define TOKEN_CASE             0x00000046
+#define TOKEN_CAST             0x00000047
+#define TOKEN_CONTINUE         0x00000048
+#define TOKEN_DEF              0x00000049
+#define TOKEN_DEFAULT          0x0000004A
+#define TOKEN_DEFER            0x0000004B
+#define TOKEN_DELETE           0x0000004C
+#define TOKEN_EACH             0x0000004D
+#define TOKEN_ELSE             0x0000004E
+#define TOKEN_ENUM             0x0000004F
+#define TOKEN_EXTERNAL         0x00000050
+#define TOKEN_FALSE            0x00000051
+#define TOKEN_FOR              0x00000052
+#define TOKEN_FOREIGN          0x00000053
+#define TOKEN_FUNC             0x00000054
+#define TOKEN_FUNCPTR          0x00000055
+#define TOKEN_GLOBAL           0x00000056
+#define TOKEN_IF               0x00000057
+#define TOKEN_IMPORT           0x00000058
+#define TOKEN_IN               0x00000059
+#define TOKEN_INOUT            0x0000005A
+#define TOKEN_LINK             0x0000005B
+#define TOKEN_NEW              0x0000005C
+#define TOKEN_NULL             0x0000005D
+#define TOKEN_OR               0x0000005E
+#define TOKEN_OUT              0x0000005F
+#define TOKEN_PACKED           0x00000060
+#define TOKEN_PRAGMA           0x00000061
+#define TOKEN_PRIVATE          0x00000062
+#define TOKEN_PUBLIC           0x00000063
+#define TOKEN_REPEAT           0x00000064
+#define TOKEN_RETURN           0x00000065
+#define TOKEN_SIZEOF           0x00000066
+#define TOKEN_STATIC           0x00000067
+#define TOKEN_STDCALL          0x00000068
+#define TOKEN_STRUCT           0x00000069
+#define TOKEN_SWITCH           0x0000006A
+#define TOKEN_TRUE             0x0000006B
+#define TOKEN_UNDEF            0x0000006C
+#define TOKEN_UNLESS           0x0000006D
+#define TOKEN_UNTIL            0x0000006E
+#define TOKEN_WHILE            0x0000006F
+// 6F..6F
 #define MAX_LEX_TOKEN          TOKEN_WHILE
 
 // Shorthand tokens for common sequences in packages; Not recognized by parser
@@ -183,6 +191,6 @@ extern const char *global_token_name_table[];
 #define TOKEN_PKG_WUSHORT     0x00000007A
 #define TOKEN_PKG_WUSIZE      0x00000007B
 #define TOKEN_PKG_MAX         TOKEN_PKG_WUSIZE
-// 80..8F
+// 7C..7F
 
 #endif // TOKEN_H

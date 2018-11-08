@@ -37,7 +37,7 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
     length_t extra_data_length;
 
     for(length_t t = 0; t != length; t++){
-        char id = tokens[t].id;
+        tokenid_t id = tokens[t].id;
 
         if(tokens[t].id == TOKEN_WORD){
             if(pkg_compress_word(file, &tokens[t])){
@@ -45,7 +45,7 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
                 return FAILURE;
             }
         }
-        else if(tokens[t].id == TOKEN_STRING || tokens[t].id == TOKEN_CSTRING){
+        else if(tokens[t].id == TOKEN_CSTRING){
             extra_data_length = strlen(tokens[t].data);
 
             if(extra_data_length == 1024){
@@ -54,21 +54,27 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
                 return FAILURE;
             }
 
-            fwrite(&id, sizeof(char), 1, file);
+            fwrite(&id, sizeof(tokenid_t), 1, file);
             fwrite(tokens[t].data, extra_data_length + 1, 1, file);
+        } else if(tokens[t].id == TOKEN_CSTRING){
+            token_string_data_t *string_data = (token_string_data_t*) tokens[t].data;
+
+            fwrite(&id, sizeof(tokenid_t), 1, file);
+            fwrite(&string_data->length, sizeof(length_t), 1, file);
+            fwrite(string_data->array, string_data->length, 1, file);
         }
         else if(tokens[t].id == TOKEN_GENERIC_INT){
-            fwrite(&id, sizeof(char), 1, file);
+            fwrite(&id, sizeof(tokenid_t), 1, file);
             sprintf(buffer, "%ld", (long) *((long long*) tokens[t].data));
             fwrite(buffer, strlen(buffer) + 1, 1, file);
         }
         else if(tokens[t].id == TOKEN_GENERIC_FLOAT){
-            fwrite(&id, sizeof(char), 1, file);
+            fwrite(&id, sizeof(tokenid_t), 1, file);
             sprintf(buffer, "%06.6f", *((double*) tokens[t].data));
             fwrite(buffer, strlen(buffer) + 1, 1, file);
         }
         else {
-            fwrite(&id, sizeof(char), 1, file);
+            fwrite(&id, sizeof(tokenid_t), 1, file);
         }
     }
 
@@ -132,11 +138,11 @@ errorcode_t pkg_read(compiler_t *compiler, object_t *object){
     length_t buildup_length;
 
     for(length_t t = 0; t != pkg_header.length; t++){
-        char id;
-        fread(&id, sizeof(char), 1, file);
+        tokenid_t id;
+        fread(&id, sizeof(tokenid_t), 1, file);
         tokenlist->tokens[t].id = id;
 
-        if(id == TOKEN_WORD || id == TOKEN_STRING || id == TOKEN_CSTRING){
+        if(id == TOKEN_WORD || id == TOKEN_CSTRING){
             char read;
             fread(&read, sizeof(char), 1, file);
             for(buildup_length = 0; read != '\0'; buildup_length++){
@@ -154,6 +160,15 @@ errorcode_t pkg_read(compiler_t *compiler, object_t *object){
             tokenlist->tokens[t].data = malloc(buildup_length + 1);
             memcpy(tokenlist->tokens[t].data, buildup, buildup_length);
             ((char*)tokenlist->tokens[t].data)[buildup_length] = '\0';
+        }
+        else if(id == TOKEN_STRING){
+            length_t length;
+            fread(&length, sizeof(length_t), 1, file);
+
+            tokenlist->tokens[t].data = malloc(sizeof(token_string_data_t));
+            ((token_string_data_t*) tokenlist->tokens[t].data)->array = malloc(buildup_length + 1);
+            fread(((token_string_data_t*) tokenlist->tokens[t].data)->array, sizeof(char), length, file);
+            ((token_string_data_t*) tokenlist->tokens[t].data)->array[length] = '\0'; // For lazy conversion to c-string
         }
         else if(id == TOKEN_GENERIC_INT){
             char read;
@@ -267,9 +282,9 @@ errorcode_t pkg_compress_word(FILE *file, token_t *token){
     maybe_index_t index = binary_string_search(compressible_words, compressible_words_length, token->data);
 
     if(index == -1){
-        char id = token->id;
+        tokenid_t id = token->id;
         length_t word_length = strlen(token->data);
-        fwrite(&id, sizeof(char), 1, file);
+        fwrite(&id, sizeof(tokenid_t), 1, file);
 
         if(word_length > 1024){
             redprintf("Failed to create package because identifier exceeded max length of 1024 bytes!");
@@ -279,8 +294,8 @@ errorcode_t pkg_compress_word(FILE *file, token_t *token){
 
         fwrite(token->data, word_length + 1, 1, file);
     } else {
-        char shorthand_token = TOKEN_PKG_MIN + index;
-        fwrite(&shorthand_token, sizeof(char), 1, file);
+        tokenid_t shorthand_token = TOKEN_PKG_MIN + index;
+        fwrite(&shorthand_token, sizeof(tokenid_t), 1, file);
     }
 
     return SUCCESS;

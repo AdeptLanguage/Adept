@@ -1,0 +1,73 @@
+
+import 'sys/cstdio.adept'
+
+struct Added      (value int)
+struct Subtracted (value int)
+struct Multiplied (value int)
+struct Divided    (value int)
+struct Modulus    (value int)
+struct Compared   (value int)
+
+func __add__(rhs POD Added, lhs POD Added) int {
+    return 12345
+}
+
+func __subtract__(rhs POD Subtracted, lhs POD Subtracted) int {
+    return 123456
+}
+
+func __multiply__(rhs POD Multiplied, lhs POD Multiplied) int {
+    return 1234567
+}
+
+func __divide__(rhs POD Divided, lhs POD Divided) int {
+    return 12345678
+}
+
+func __modulus__(rhs POD Modulus, lhs POD Modulus) int {
+    return 123456789
+}
+
+func __equals__(rhs POD Compared, lhs POD Compared) int {
+    return 1
+}
+
+func __not_equals__(rhs POD Compared, lhs POD Compared) int {
+    return 12
+}
+
+func __greater_than__(rhs POD Compared, lhs POD Compared) int {
+    return 123
+}
+
+func __less_than__(rhs POD Compared, lhs POD Compared) int {
+    return 1234
+}
+
+func __greater_than_or_equal__(rhs POD Compared, lhs POD Compared) int {
+    return 1111
+}
+
+func __less_than_or_equal__(rhs POD Compared, lhs POD Compared) int {
+    return 1001
+}
+
+func main() void {
+    q Compared
+    x Added
+    y Subtracted
+    z Multiplied
+    w Divided
+    v Modulus
+    printf('q == q = %d\n',  q == q)
+    printf('q != q = %d\n',  q != q)
+    printf('q > q  = %d\n',  q > q)
+    printf('q < q  = %d\n',  q < q)
+    printf('q >= q = %d\n',  q >= q)
+    printf('q <= q = %d\n',  q <= q)
+    printf('x + x  = %d\n',  x + x)
+    printf('y - y  = %d\n',  y - y)
+    printf('z * z  = %d\n',  z * z)
+    printf('w / w  = %d\n',  w / w)
+    printf('v %% v  = %d\n', v % v)
+}

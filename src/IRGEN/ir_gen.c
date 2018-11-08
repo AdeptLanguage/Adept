@@ -119,7 +119,14 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
             }
         }
 
-        if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
+        if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&ast_func->return_type)){
+            // If it's the main function and returns void, return int under the hood
+            module_func->return_type = ir_pool_alloc(&module->pool, sizeof(ir_type_t));
+            module_func->return_type->kind = TYPE_KIND_S32;
+            // neglect 'module_func->return_type->extra'
+        } else {
+            if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
+        }
     }
 
     qsort(module->func_mappings, ast->funcs_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);

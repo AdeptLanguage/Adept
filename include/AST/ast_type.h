@@ -151,4 +151,28 @@ strong_cstr_t ast_type_str(const ast_type_t *type);
 // Returns whether or not two AST types are identical
 bool ast_types_identical(const ast_type_t *a, const ast_type_t *b);
 
+// ---------------- ast_type_is_void ----------------
+// Returns whether an AST type is "void"
+bool ast_type_is_void(const ast_type_t *type);
+
+// ---------------- ast_type_is_base ----------------
+// Returns whether an AST type is a base
+bool ast_type_is_base(const ast_type_t *type);
+
+// ---------------- ast_type_is_base_ptr ----------------
+// Returns whether an AST type is a pointer to a base
+bool ast_type_is_base_ptr(const ast_type_t *type);
+
+// ---------------- ast_type_is_base_of ----------------
+// Returns whether an AST type is a particular base
+bool ast_type_is_base_of(const ast_type_t *type, const char *base);
+
+// ---------------- ast_type_is_base_ptr ----------------
+// Returns whether an AST type is a pointer to a particular base
+bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base);
+
+// ---------------- ast_type_is_pointer_to ----------------
+// Returns whether an AST type is a pointer to another AST type
+bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to);
+
 #endif // AST_TYPE_H

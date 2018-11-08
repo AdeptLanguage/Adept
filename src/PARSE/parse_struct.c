@@ -1,5 +1,6 @@
 
 #include "UTIL/util.h"
+#include "UTIL/search.h"
 #include "PARSE/parse.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
@@ -12,6 +13,20 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
     strong_cstr_t name;
     bool is_packed;
     if(parse_struct_head(ctx, &name, &is_packed)) return FAILURE;
+
+    const char *invalid_names[] = {
+        "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
+        "AnyType", "AnyTypeKind", "StringOwnership", "bool", "byte", "double", "float", "int", "long", "ptr",
+        "short", "successful", "ubyte", "uint", "ulong", "ushort", "usize", "void"
+
+        // NOTE: 'String' is allowed
+    };
+    length_t invalid_names_length = sizeof(invalid_names) / sizeof(const char*);
+
+    if(binary_string_search(invalid_names, invalid_names_length, name) != -1){
+        compiler_panicf(ctx->compiler, source, "Reserved type name '%s' can't be used to create a struct", name);
+        return FAILURE;
+    }
 
     strong_cstr_t *field_names = NULL;
     ast_type_t *field_types = NULL;

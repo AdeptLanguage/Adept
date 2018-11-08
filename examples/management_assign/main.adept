@@ -1,0 +1,18 @@
+
+import 'sys/cstdio.adept'
+
+struct Assigned (value int)
+
+func __assign__(this *Assigned, rhs Assigned) void {
+    this.value = 12345
+}
+
+func main() void {
+    x, y Assigned    
+    x = y
+    printf('x.value = %d\ny.value = %d\n', x.value, y.value)
+    
+    y.value = 54321
+    x = POD y
+    printf('x.value = %d\ny.value = %d\n', x.value, y.value)
+}

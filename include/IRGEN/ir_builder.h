@@ -25,9 +25,11 @@ typedef struct {
     length_t current_block_id;
     length_t break_block_id; // 0 == none
     length_t continue_block_id; // 0 == none
+    bridge_var_scope_t *break_continue_scope;
     strong_cstr_t *block_stack_labels;
     length_t *block_stack_break_ids;
     length_t *block_stack_continue_ids;
+    bridge_var_scope_t **block_stack_scopes;
     length_t block_stack_length;
     length_t block_stack_capacity;
     ir_pool_t *pool;
@@ -39,6 +41,7 @@ typedef struct {
     bridge_var_scope_t *var_scope;
     length_t next_var_id;
     length_t *next_reference_id;
+    troolean has_string_struct;
 } ir_builder_t;
 
 // ---------------- build_basicblock ----------------
@@ -111,13 +114,25 @@ ir_type_t* ir_builder_usize_ptr(ir_builder_t *builder);
 // Gets a shared IR boolean type
 ir_type_t* ir_builder_bool(ir_builder_t *builder);
 
+// ---------------- build_literal_int ----------------
+// Builds a literal int value
+ir_value_t* build_literal_int(ir_pool_t *pool, long long value);
+
 // ---------------- build_literal_usize ----------------
 // Builds a literal usize value
 ir_value_t* build_literal_usize(ir_pool_t *pool, length_t value);
 
+// ---------------- build_literal_str ----------------
+// Builds a literal string value
+ir_value_t* build_literal_str(ir_builder_t *builder, char *array, length_t length);
+
 // ---------------- build_literal_cstr ----------------
 // Builds a literal c-string value
 ir_value_t* build_literal_cstr(ir_builder_t *builder, weak_cstr_t value);
+
+// ---------------- build_literal_cstr ----------------
+// Builds a literal c-string value
+ir_value_t* build_literal_cstr_of_length(ir_builder_t *builder, weak_cstr_t value, length_t length);
 
 // ---------------- build_null_pointer ----------------
 // Builds a literal null pointer value
@@ -146,5 +161,23 @@ void close_var_scope(ir_builder_t *builder);
 // ---------------- add_variable ----------------
 // Adds a variable to the current bridge_var_scope_t
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
+
+// ---------------- handle_defer_management ----------------
+// Handles '__defer__' management method calls for stack allocated variables
+void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list);
+
+// ---------------- handle_pass_management ----------------
+// Handles '__pass__' management method calls for passing arguments
+// NOTE: 'arg_type_traits' can be NULL
+void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity);
+
+// ---------------- handle_assign_management ----------------
+// Handles '__assign__' management method calls
+successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, ast_type_t *type, bool zero_initialize);
+
+// ---------------- handle_math_management ----------------
+// Handles basic math management function calls
+ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
+    ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name);
 
 #endif // IR_BUILDER_H

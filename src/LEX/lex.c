@@ -181,11 +181,11 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                 //         Make sure to update values inside token.h and token.c after modifying this list
 
                 const char * const keywords[] = {
-                    "alias", "and", "as", "at", "break", "case", "cast", "continue", "def", "default", "defer",
+                    "POD", "alias", "and", "as", "at", "break", "case", "cast", "continue", "def", "default", "defer",
                     "delete", "each", "else", "enum", "external", "false", "for", "foreign", "func", "funcptr",
                     "global", "if", "import", "in", "inout", "link", "new", "null", "or", "out",
-                    "packed", "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch",
-                    "true", "undef", "unless", "until", "while"
+                    "packed", "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct",
+                    "switch", "true", "undef", "unless", "until", "while"
                 };
 
                 const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
@@ -219,23 +219,40 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                 // End of string literal
                 t = &((*tokens)[tokenlist->length++]);
                 t->id = TOKEN_STRING;
-                t->data = malloc(lex_state.buildup_length + 1);
-                memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
-                ((char*) t->data)[lex_state.buildup_length] = '\0';
+
+                t->data = malloc(sizeof(token_string_data_t));
+                ((token_string_data_t*) t->data)->array = malloc(lex_state.buildup_length + 1);
+                ((token_string_data_t*) t->data)->length = lex_state.buildup_length;
+                memcpy(((token_string_data_t*) t->data)->array, lex_state.buildup, lex_state.buildup_length);
+
+                // Will null terminate for convenience of converting to c-string
+                ((token_string_data_t*) t->data)->array[lex_state.buildup_length] = '\0';
                 lex_state.state = LEX_STATE_IDLE;
                 break;
             }
 
-            // Check for cheeky null character
-            if(buffer[i] == '\0'){
-                lex_get_location(buffer, i, &line, &column);
-                redprintf("%s:%d:%d: Raw null character found in string\n", filename_name_const(object->filename), line, column);
-                lex_state_free(&lex_state);
-                return FAILURE;
-            }
+            expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
 
-            // Add the character to the string
-            lex_state.buildup[lex_state.buildup_length++] = buffer[i];
+            if(buffer[i] == '\\'){
+                switch(buffer[++i]){
+                case 'n': lex_state.buildup[lex_state.buildup_length++] = '\n';  break;
+                case 'r': lex_state.buildup[lex_state.buildup_length++] = '\r';  break;
+                case 't': lex_state.buildup[lex_state.buildup_length++] = '\t';  break;
+                case 'b': lex_state.buildup[lex_state.buildup_length++] = '\b';  break;
+                case 'e': lex_state.buildup[lex_state.buildup_length++] = '\e';  break;
+                case '0': lex_state.buildup[lex_state.buildup_length++] = '\0';  break;
+                case '"': lex_state.buildup[lex_state.buildup_length++] = '"';   break;
+                case '\'': lex_state.buildup[lex_state.buildup_length++] = '\''; break;
+                case '\\': lex_state.buildup[lex_state.buildup_length++] = '\\'; break;
+                default:
+                    lex_get_location(buffer, i, &line, &column);
+                    redprintf("%s:%d:%d: Unknown string escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
+                    lex_state_free(&lex_state);
+                    return FAILURE;
+                }
+            } else {
+                lex_state.buildup[lex_state.buildup_length++] = buffer[i];
+            }
             break;
         case LEX_STATE_CSTRING:
             if(buffer[i] == '\''){
@@ -276,6 +293,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                 case 'r': lex_state.buildup[lex_state.buildup_length++] = '\r'; break;
                 case 't': lex_state.buildup[lex_state.buildup_length++] = '\t'; break;
                 case 'b': lex_state.buildup[lex_state.buildup_length++] = '\b'; break;
+                case 'e': lex_state.buildup[lex_state.buildup_length++] = '\e'; break;
                 case '\'': lex_state.buildup[lex_state.buildup_length++] = '\''; break;
                 case '\\': lex_state.buildup[lex_state.buildup_length++] = '\\'; break;
                 default:

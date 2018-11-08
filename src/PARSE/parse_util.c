@@ -8,7 +8,7 @@ errorcode_t parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message){
     token_t *tokens = ctx->tokenlist->tokens;
     length_t length = ctx->tokenlist->length;
 
-    while(tokens[*i].id == TOKEN_NEWLINE) if(length == (*i)++){
+    while(tokens[*i].id == TOKEN_NEWLINE) if(length == ++(*i)){
         compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], error_message);
         return FAILURE;
     }
@@ -22,7 +22,7 @@ void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id,
 
     int line, column;
     length_t message_length = strlen(message);
-    char *format = malloc(message_length + 11);
+    char *format = malloc(message_length + 13);
 
     if(ctx->object->traits & OBJECT_PACKAGE){
         memcpy(format, "%s: ", 4);

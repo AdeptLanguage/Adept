@@ -76,38 +76,36 @@
 // Exclusive statements --------------
 #define EXPR_DECLARE        0x00000038
 #define EXPR_DECLAREUNDEF   0x00000039
-#define EXPR_ASSIGN         0x0000003A
-#define EXPR_ADDASSIGN      0x0000003B
-#define EXPR_SUBTRACTASSIGN 0x0000003C
-#define EXPR_MULTIPLYASSIGN 0x0000003D
-#define EXPR_DIVIDEASSIGN   0x0000003E
-#define EXPR_MODULUSASSIGN  0x0000003F
-#define EXPR_RETURN         0x00000040
-#define EXPR_IF             0x00000041
-#define EXPR_UNLESS         0x00000042
-#define EXPR_IFELSE         0x00000043
-#define EXPR_UNLESSELSE     0x00000044
-#define EXPR_WHILE          0x00000045
-#define EXPR_UNTIL          0x00000046
-#define EXPR_WHILECONTINUE  0x00000047
-#define EXPR_UNTILBREAK     0x00000048
-#define EXPR_EACH_IN        0x00000049
-#define EXPR_REPEAT         0x0000004A
-#define EXPR_DELETE         0x0000004B
-#define EXPR_BREAK          0x0000004C
-#define EXPR_CONTINUE       0x0000004D
-#define EXPR_BREAK_TO       0x0000004E
-#define EXPR_CONTINUE_TO    0x0000004F
+#define EXPR_ILDECLARE      0x0000003A  
+#define EXPR_ILDECLAREUNDEF 0x0000003B
+#define EXPR_ASSIGN         0x0000003C
+#define EXPR_ADDASSIGN      0x0000003D
+#define EXPR_SUBTRACTASSIGN 0x0000003E
+#define EXPR_MULTIPLYASSIGN 0x0000003F
+#define EXPR_DIVIDEASSIGN   0x00000040
+#define EXPR_MODULUSASSIGN  0x00000041
+#define EXPR_RETURN         0x00000042
+#define EXPR_IF             0x00000043
+#define EXPR_UNLESS         0x00000044
+#define EXPR_IFELSE         0x00000045
+#define EXPR_UNLESSELSE     0x00000046
+#define EXPR_WHILE          0x00000047
+#define EXPR_UNTIL          0x00000048
+#define EXPR_WHILECONTINUE  0x00000049
+#define EXPR_UNTILBREAK     0x0000004A
+#define EXPR_EACH_IN        0x0000004B
+#define EXPR_REPEAT         0x0000004C
+#define EXPR_DELETE         0x0000004D
+#define EXPR_BREAK          0x0000004E
+#define EXPR_CONTINUE       0x0000004F
+#define EXPR_BREAK_TO       0x00000050
+#define EXPR_CONTINUE_TO    0x00000051
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
 // ---------------- EXPR_IS_MUTABLE(expr) ----------------
 // Tests to see if the result of an expression will be mutable
 #define EXPR_IS_MUTABLE(a) (a == EXPR_VARIABLE || a == EXPR_MEMBER || a == EXPR_DEREFERENCE || a == EXPR_ARRAY_ACCESS)
-
-// ---------------- EXPR_IS_TERMINATION(expr) ----------------
-// Tests to see if the expression is a termination statement
-#define EXPR_IS_TERMINATION(a) (a == EXPR_RETURN || a == EXPR_BREAK || a == EXPR_CONTINUE || a == EXPR_BREAK_TO || a == EXPR_CONTINUE_TO)
 
 // Static data that stores general expression syntax representations
 extern const char *global_expression_rep_table[];
@@ -212,7 +210,8 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    weak_cstr_t value;
+    weak_cstr_t array;
+    length_t length;
 } ast_expr_str_t;
 
 // ---------------- ast_expr_cstr_t ----------------
@@ -385,7 +384,21 @@ typedef struct {
     weak_cstr_t name;
     ast_type_t type;
     ast_expr_t *value;
+    bool is_pod;
+    bool is_assign_pod;
 } ast_expr_declare_t;
+
+// ---------------- ast_expr_inline_declare_t ----------------
+// Expression for declaring a variable then getting the address of it
+typedef struct {
+    unsigned int id;
+    source_t source;
+    weak_cstr_t name;
+    ast_type_t type;
+    ast_expr_t *value;
+    bool is_pod;
+    bool is_assign_pod;
+} ast_expr_inline_declare_t;
 
 // ---------------- ast_expr_assign_t ----------------
 // Expression for assigning a value to a variable
@@ -394,6 +407,7 @@ typedef struct {
     source_t source;
     ast_expr_t *destination;
     ast_expr_t *value;
+    bool is_pod;
 } ast_expr_assign_t;
 
 // ---------------- ast_expr_return_t ----------------
@@ -512,6 +526,10 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr);
 // ---------------- ast_expr_create_bool ----------------
 // Creates a boolean expression
 void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source);
+
+// ---------------- ast_expr_create_string ----------------
+// Creates a string expression
+void ast_expr_create_string(ast_expr_t **out_expr, char *array, length_t length, source_t source);
 
 // ---------------- ast_expr_create_cstring ----------------
 // Creates a cstring expression

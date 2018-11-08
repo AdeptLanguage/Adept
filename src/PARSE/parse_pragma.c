@@ -15,7 +15,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
 
     const char * const directives[] = {
         "compiler_version", "deprecated", "help", "no_type_info", "no_undef", "optimization", "options",
-        "project_name", "unsupported", "windows_only"
+        "package", "project_name", "unsupported", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -90,14 +90,20 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return SUCCESS;
     case 6: // 'options' directive
         return parse_pragma_cloptions(ctx);
-    case 7: // 'project_name' directive
+    case 7: // 'package' directive
+        if(ctx->compiler->traits & COMPILER_INFLATE_PACKAGE) return SUCCESS;
+        if(compiler_create_package(ctx->compiler, ctx->object) == 0){
+            ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+        }
+        return FAILURE;
+    case 8: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
         if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 8: // 'unsupported' directive
+    case 9: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -114,7 +120,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 9: // 'windows_only' directive
+    case 10: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;
@@ -122,7 +128,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return SUCCESS;
         #endif
     default:
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "Unrecognized pragma option '%s'", directive_string);
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Unrecognized pragma option '%s'", directive_string);
         return FAILURE;
     }
 
@@ -134,7 +140,7 @@ errorcode_t parse_pragma_cloptions(parse_ctx_t *ctx){
     //           ^
 
     weak_cstr_t options = parse_grab_string(ctx, "Expected string containing compiler options after 'pragma options'");
-    if(options == NULL) return FAILURE;
+    if(options == NULL || ctx->compiler->traits & COMPILER_INFLATE_PACKAGE) return FAILURE;
 
     int options_argc; char **options_argv;
     break_into_arguments(options, &options_argc, &options_argv);

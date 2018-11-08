@@ -8,7 +8,7 @@
 #include "UTIL/builtin_type.h"
 #include "BRIDGE/type_table.h"
 
-int infer(compiler_t *compiler, object_t *object){
+errorcode_t infer(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
 
     infer_ctx_t ctx;
@@ -26,7 +26,7 @@ int infer(compiler_t *compiler, object_t *object){
     qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
 
     for(length_t a = 0; a != ast->aliases_length; a++){
-        if(infer_type(&ctx, &ast->aliases[a].type)) return 1;
+        if(infer_type(&ctx, &ast->aliases[a].type)) return FAILURE;
 
         // Ensure we have the alias type info at runtime
         type_table_give(ctx.type_table, &ast->aliases[a].type, strclone(ast->aliases[a].name));
@@ -35,39 +35,39 @@ int infer(compiler_t *compiler, object_t *object){
     for(length_t s = 0; s != ast->structs_length; s++){
         ast_struct_t *st = &ast->structs[s];
         for(length_t f = 0; f != st->field_count; f++){
-            if(infer_type(&ctx, &st->field_types[f])) return 1;
+            if(infer_type(&ctx, &st->field_types[f])) return FAILURE;
         }
 
         type_table_give_base(ctx.type_table, st->name);
     }
 
     for(length_t g = 0; g != ast->globals_length; g++){
-        if(infer_type(&ctx, &ast->globals[g].type)) return 1;
+        if(infer_type(&ctx, &ast->globals[g].type)) return FAILURE;
         ast_expr_t **global_initial = &ast->globals[g].initial;
         if(*global_initial != NULL){
             unsigned int default_primitive = ast_primitive_from_ast_type(&ast->globals[g].type);
-            if(infer_expr(&ctx, NULL, global_initial, default_primitive, NULL)) return 1;
+            if(infer_expr(&ctx, NULL, global_initial, default_primitive, NULL)) return FAILURE;
         }
     }
 
-    if(infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)) return 1;
+    if(infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)) return FAILURE;
 
     ast->type_table = ctx.type_table;
-    return 0;
+    return SUCCESS;
 }
 
-int infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length){
+errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length){
     for(length_t f = 0; f != funcs_length; f++){
         infer_var_scope_t func_scope;
         infer_var_scope_init(&func_scope, NULL);
 
         // Resolve aliases in function return type
-        if(infer_type(ctx, &funcs[f].return_type)) return 1;
+        if(infer_type(ctx, &funcs[f].return_type)) return FAILURE;
 
         // Resolve aliases in function arguments
         for(length_t a = 0; a != funcs[f].arity; a++){
             if(infer_type(ctx, &funcs[f].arg_types[a])) {
-                return 1;
+                return FAILURE;
             }
 
             if(!(funcs[f].traits & AST_FUNC_FOREIGN)){
@@ -78,33 +78,33 @@ int infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length){
         // Infer expressions in statements
         if(infer_in_stmts(ctx, &funcs[f], funcs[f].statements, funcs[f].statements_length, &func_scope)){
             infer_var_scope_free(&func_scope);
-            return 1;
+            return FAILURE;
         }
         infer_var_scope_free(&func_scope);
     }
-    return 0;
+    return SUCCESS;
 }
 
-int infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length, infer_var_scope_t *scope){
+errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length, infer_var_scope_t *scope){
     for(length_t s = 0; s != statements_length; s++){
         switch(statements[s]->id){
         case EXPR_RETURN: {
                 ast_expr_return_t *return_stmt = (ast_expr_return_t*) statements[s];
-                if(return_stmt->value != NULL && infer_expr(ctx, func, &return_stmt->value, ast_primitive_from_ast_type(&func->return_type), scope)) return 1;
+                if(return_stmt->value != NULL && infer_expr(ctx, func, &return_stmt->value, ast_primitive_from_ast_type(&func->return_type), scope)) return FAILURE;
             }
             break;
         case EXPR_CALL: {
                 ast_expr_call_t *call_stmt = (ast_expr_call_t*) statements[s];
                 for(length_t a = 0; a != call_stmt->arity; a++){
-                    if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return 1;
+                    if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return FAILURE;
                 }
             }
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
                 ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) statements[s];
-                if(infer_type(ctx, &declare_stmt->type)) return 1;
+                if(infer_type(ctx, &declare_stmt->type)) return FAILURE;
                 if(declare_stmt->value != NULL){
-                    if(infer_expr(ctx, func, &declare_stmt->value, ast_primitive_from_ast_type(&declare_stmt->type), scope)) return 1;
+                    if(infer_expr(ctx, func, &declare_stmt->value, ast_primitive_from_ast_type(&declare_stmt->type), scope)) return FAILURE;
                 }
 
                 infer_var_scope_add_variable(scope, declare_stmt->name, &declare_stmt->type);
@@ -113,37 +113,37 @@ int infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, 
         case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
         case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN: {
                 ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) statements[s];
-                if(infer_expr(ctx, func, &assign_stmt->destination, EXPR_NONE, scope)) return 1;
-                if(infer_expr(ctx, func, &assign_stmt->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &assign_stmt->destination, EXPR_NONE, scope)) return FAILURE;
+                if(infer_expr(ctx, func, &assign_stmt->value, EXPR_NONE, scope)) return FAILURE;
             }
             break;
         case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {
                 ast_expr_if_t *conditional = (ast_expr_if_t*) statements[s];
-                if(infer_expr(ctx, func, &conditional->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &conditional->value, EXPR_NONE, scope)) return FAILURE;
 
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length, scope)){
                     infer_var_scope_pop(&scope);
-                    return 1;
+                    return FAILURE;
                 }
                 infer_var_scope_pop(&scope);
             }
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
                 ast_expr_ifelse_t *complex_conditional = (ast_expr_ifelse_t*) statements[s];
-                if(infer_expr(ctx, func, &complex_conditional->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &complex_conditional->value, EXPR_NONE, scope)) return FAILURE;
 
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, complex_conditional->statements, complex_conditional->statements_length, scope)){
                     infer_var_scope_pop(&scope);
-                    return 1;
+                    return FAILURE;
                 }
                 
                 infer_var_scope_pop(&scope);
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, complex_conditional->else_statements, complex_conditional->else_statements_length, scope)){
                     infer_var_scope_pop(&scope);
-                    return 1;
+                    return FAILURE;
                 }
                 infer_var_scope_pop(&scope);
             }
@@ -153,29 +153,29 @@ int infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, 
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length, scope)){
                     infer_var_scope_pop(&scope);
-                    return 1;
+                    return FAILURE;
                 }
                 infer_var_scope_pop(&scope);
             }
             break;
         case EXPR_CALL_METHOD: {
                 ast_expr_call_method_t *call_stmt = (ast_expr_call_method_t*) statements[s];
-                if(infer_expr(ctx, func, &call_stmt->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &call_stmt->value, EXPR_NONE, scope)) return FAILURE;
                 for(length_t a = 0; a != call_stmt->arity; a++){
-                    if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return 1;
+                    if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return FAILURE;
                 }
             }
             break;
         case EXPR_DELETE: {
                 ast_expr_unary_t *delete_stmt = (ast_expr_unary_t*) statements[s];
-                if(infer_expr(ctx, func, &delete_stmt->value, EXPR_NONE, scope)) return 1;
+                if(infer_expr(ctx, func, &delete_stmt->value, EXPR_NONE, scope)) return FAILURE;
             }
             break;
         case EXPR_EACH_IN: {
                 ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
-                if(infer_type(ctx, loop->it_type)) return 1;
-                if(infer_expr(ctx, func, &loop->low_array, EXPR_NONE, scope)) return 1;
-                if(infer_expr(ctx, func, &loop->length, EXPR_ULONG, scope)) return 1;
+                if(infer_type(ctx, loop->it_type)) return FAILURE;
+                if(infer_expr(ctx, func, &loop->low_array, EXPR_NONE, scope)) return FAILURE;
+                if(infer_expr(ctx, func, &loop->length, EXPR_ULONG, scope)) return FAILURE;
  
                 infer_var_scope_push(&scope);
                 infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
@@ -183,21 +183,21 @@ int infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, 
 
                 if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
                     infer_var_scope_pop(&scope);
-                    return 1;
+                    return FAILURE;
                 }
                 infer_var_scope_pop(&scope);
             }
             break;
         case EXPR_REPEAT: {
                 ast_expr_repeat_t *loop = (ast_expr_repeat_t*) statements[s];
-                if(infer_expr(ctx, func, &loop->limit, EXPR_ULONG, scope)) return 1;
+                if(infer_expr(ctx, func, &loop->limit, EXPR_ULONG, scope)) return FAILURE;
  
                 infer_var_scope_push(&scope);
                 infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
 
                 if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
                     infer_var_scope_pop(&scope);
-                    return 1;
+                    return FAILURE;
                 }
                 infer_var_scope_pop(&scope);
             }
@@ -206,10 +206,10 @@ int infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, 
             // Ignore this statement, it doesn't contain any expressions that we need to worry about
         }
     }
-    return 0;
+    return SUCCESS;
 }
 
-int infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope){
+errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope){
     // NOTE: The 'ast_expr_t*' pointed to by 'root' may be written to
     // NOTE: 'default_assigned_type' is used as a default assigned type if generics aren't resolved within the expression
     // NOTE: if 'default_assigned_type' is EXPR_NONE, then the most suitable type for the given generics is chosen
@@ -223,7 +223,7 @@ int infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsign
 
     if(infer_expr_inner(ctx, ast_func, root, &undetermined, scope)){
         free(undetermined.expressions);
-        return 1;
+        return FAILURE;
     }
 
     // Determine all of the undetermined types
@@ -235,17 +235,17 @@ int infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsign
         if(default_assigned_type != EXPR_NONE){
             if(undetermined_expr_list_give_solution(ctx, &undetermined, default_assigned_type)){
                 free(undetermined.expressions);
-                return 1;
+                return FAILURE;
             }
         }
     }
 
     // <expressions inside undetermined.expressions are just references so we dont free those>
     free(undetermined.expressions);
-    return 0;
+    return SUCCESS;
 }
 
-int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope){
+errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope){
     // NOTE: 'ast_func' can be NULL
     // NOTE: The 'ast_expr_t*' pointed to by 'expr' may be written to
 
@@ -268,7 +268,7 @@ int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, 
     case EXPR_FLOAT:
     case EXPR_DOUBLE:
     case EXPR_BOOLEAN:
-        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return 1;
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_VARIABLE: {
             bool found_variable = false;
@@ -277,7 +277,7 @@ int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, 
 
             if(ast_func == NULL || scope == NULL){
                 compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
-                return 1;
+                return FAILURE;
             }
 
             infer_var_t *infer_var = infer_var_scope_find(scope, variable_name);
@@ -311,7 +311,7 @@ int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, 
                     free(*expr);
 
                     *expr = ast_expr_clone(ast->constants[constant_index].expression); // Clone constant expression
-                    if(infer_expr_inner(ctx, ast_func, expr, undetermined, scope)) return 1;
+                    if(infer_expr_inner(ctx, ast_func, expr, undetermined, scope)) return FAILURE;
 
                     break; // The identifier has been resovled, so break
                 }
@@ -321,14 +321,14 @@ int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, 
                 compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
                 const char *nearest = infer_var_scope_nearest(scope, variable_name);
                 if(nearest) printf("\nDid you mean '%s'?\n", nearest);
-                return 1;
+                return FAILURE;
             }
 
             // Return if we already know the solution primitive
-            if(undetermined->solution != EXPR_NONE) return 0;
+            if(undetermined->solution != EXPR_NONE) return SUCCESS;
 
             unsigned int var_expr_primitive = ast_primitive_from_ast_type(variable_type);
-            if(undetermined_expr_list_give_solution(ctx, undetermined, var_expr_primitive)) return 1;
+            if(undetermined_expr_list_give_solution(ctx, undetermined, var_expr_primitive)) return FAILURE;
         }
         break;
     case EXPR_STR: break;
@@ -353,92 +353,92 @@ int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, 
     case EXPR_BIT_LGC_RSHIFT:
         a = &((ast_expr_math_t*) *expr)->a;
         b = &((ast_expr_math_t*) *expr)->b;
-        if(infer_expr_inner(ctx, ast_func, a, undetermined, scope)) return 1;
-        if(infer_expr_inner(ctx, ast_func, b, undetermined, scope)) return 1;
+        if(infer_expr_inner(ctx, ast_func, a, undetermined, scope)) return FAILURE;
+        if(infer_expr_inner(ctx, ast_func, b, undetermined, scope)) return FAILURE;
         break;
     case EXPR_AND:
     case EXPR_OR:
         a = &((ast_expr_math_t*) *expr)->a;
         b = &((ast_expr_math_t*) *expr)->b;
-        if(infer_expr(ctx, ast_func, a, EXPR_NONE, scope)) return 1;
-        if(infer_expr(ctx, ast_func, b, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, a, EXPR_NONE, scope)) return FAILURE;
+        if(infer_expr(ctx, ast_func, b, EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_CALL:
         for(length_t i = 0; i != ((ast_expr_call_t*) *expr)->arity; i++){
-            if(infer_expr(ctx, ast_func, &((ast_expr_call_t*) *expr)->args[i], EXPR_NONE, scope)) return 1;
+            if(infer_expr(ctx, ast_func, &((ast_expr_call_t*) *expr)->args[i], EXPR_NONE, scope)) return FAILURE;
         }
         break;
     case EXPR_GENERIC_INT:
     case EXPR_GENERIC_FLOAT:
-        if(undetermined_expr_list_give_generic(ctx, undetermined, expr)) return 1;
+        if(undetermined_expr_list_give_generic(ctx, undetermined, expr)) return FAILURE;
         break;
     case EXPR_MEMBER:
-        if(infer_expr(ctx, ast_func, &((ast_expr_member_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_member_t*) *expr)->value, EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr = (ast_expr_func_addr_t*) *expr;
             if(func_addr->match_args != NULL) for(length_t a = 0; a != func_addr->match_args_length; a++){
-                if(infer_type(ctx, &func_addr->match_args[a].type)) return 1;
+                if(infer_type(ctx, &func_addr->match_args[a].type)) return FAILURE;
             }
         }
         break;
     case EXPR_ADDRESS:
-        if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_DEREFERENCE:
-        if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_NULL:
         break;
     case EXPR_AT:
     case EXPR_ARRAY_ACCESS:
-        if(infer_expr(ctx, ast_func, &((ast_expr_array_access_t*) *expr)->index, EXPR_NONE, scope)) return 1;
-        if(infer_expr(ctx, ast_func, &((ast_expr_array_access_t*) *expr)->value, EXPR_NONE, scope)) return 1;
+        if(infer_expr(ctx, ast_func, &((ast_expr_array_access_t*) *expr)->index, EXPR_NONE, scope)) return FAILURE;
+        if(infer_expr(ctx, ast_func, &((ast_expr_array_access_t*) *expr)->value, EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_CAST:
-        if(infer_type(ctx, &((ast_expr_cast_t*) *expr)->to)) return 1;
-        if(infer_expr(ctx, ast_func, &((ast_expr_cast_t*) *expr)->from, EXPR_NONE, scope)) return 1;
+        if(infer_type(ctx, &((ast_expr_cast_t*) *expr)->to)) return FAILURE;
+        if(infer_expr(ctx, ast_func, &((ast_expr_cast_t*) *expr)->from, EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_SIZEOF:
-        if(infer_type(ctx, &((ast_expr_sizeof_t*) *expr)->type)) return 1;
+        if(infer_type(ctx, &((ast_expr_sizeof_t*) *expr)->type)) return FAILURE;
         break;
     case EXPR_CALL_METHOD:
-        if(infer_expr_inner(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->value, undetermined, scope)) return 1;
+        if(infer_expr_inner(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->value, undetermined, scope)) return FAILURE;
         for(length_t i = 0; i != ((ast_expr_call_method_t*) *expr)->arity; i++){
-            if(infer_expr(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->args[i], EXPR_NONE, scope)) return 1;
+            if(infer_expr(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->args[i], EXPR_NONE, scope)) return FAILURE;
         }
         break;
     case EXPR_NOT:
     case EXPR_BIT_COMPLEMENT:
     case EXPR_NEGATE:
-        if(infer_expr_inner(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, undetermined, scope)) return 1;
+        if(infer_expr_inner(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, undetermined, scope)) return FAILURE;
         break;
     case EXPR_NEW:
-        if(infer_type(ctx, &((ast_expr_new_t*) *expr)->type)) return 1;
-        if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(ctx, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, scope)) return 1;
+        if(infer_type(ctx, &((ast_expr_new_t*) *expr)->type)) return FAILURE;
+        if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(ctx, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_NEW_CSTRING:
     case EXPR_ENUM_VALUE:
         break;
     case EXPR_STATIC_ARRAY: {
-            if(infer_type(ctx, &((ast_expr_static_data_t*) *expr)->type)) return 1;
+            if(infer_type(ctx, &((ast_expr_static_data_t*) *expr)->type)) return FAILURE;
 
             unsigned int default_primitive = ast_primitive_from_ast_type(&((ast_expr_static_data_t*) *expr)->type);
 
             for(length_t i = 0; i != ((ast_expr_static_data_t*) *expr)->length; i++){
-                if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope)) return 1;
+                if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope)) return FAILURE;
             }
         }
         break;
     case EXPR_STATIC_STRUCT: {
             ast_expr_static_data_t *static_data = (ast_expr_static_data_t*) *expr;
-            if(infer_type(ctx, &static_data->type)) return 1;
+            if(infer_type(ctx, &static_data->type)) return FAILURE;
 
             if(static_data->type.elements_length != 1 || static_data->type.elements[0]->id != AST_ELEM_BASE){
                 char *s = ast_type_str(&static_data->type);
                 compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for non-struct type '%s'\n", s);
                 free(s);
-                return 1;
+                return FAILURE;
             }
 
             const char *base = ((ast_elem_base_t*) static_data->type.elements[0])->base;
@@ -450,7 +450,7 @@ int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, 
                 } else {
                     compiler_panicf(ctx->compiler, static_data->type.source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", base);
                 }
-                return 1;
+                return FAILURE;
             }
 
             if(static_data->length != structure->field_count){
@@ -459,51 +459,62 @@ int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, 
                 } else {
                     compiler_panicf(ctx->compiler, static_data->type.source, "Not enough fields specified for struct '%s' (expected %d, got %d)", base, structure->field_count, static_data->length);
                 }
-                return 1;
+                return FAILURE;
             }
 
             for(length_t i = 0; i != ((ast_expr_static_data_t*) *expr)->length; i++){
                 unsigned int default_primitive = ast_primitive_from_ast_type(&structure->field_types[i]);
-                if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope)) return 1;
+                if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope)) return FAILURE;
             }
+        }
+        break;
+    case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
+            ast_expr_inline_declare_t *def = (ast_expr_inline_declare_t*) *expr;
+            if(infer_type(ctx, &def->type)) return FAILURE;
+
+            if(def->value != NULL && infer_expr(ctx, ast_func, &def->value, ast_primitive_from_ast_type(&def->type), scope) == FAILURE){
+                return FAILURE;
+            }
+
+            infer_var_scope_add_variable(scope, def->name, &def->type);
         }
         break;
     default:
         compiler_panic(ctx->compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
-        return 1;
+        return FAILURE;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
 int undetermined_expr_list_give_solution(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, unsigned int solution_primitive){
     // Ensure solution is real
-    if(solution_primitive == EXPR_NONE) return 0;
+    if(solution_primitive == EXPR_NONE) return SUCCESS;
 
     // Ensure we don't already have a solution
-    if(undetermined->solution != EXPR_NONE) return 0;
+    if(undetermined->solution != EXPR_NONE) return SUCCESS;
     
     // Remember the solution
     undetermined->solution = solution_primitive;
 
     // Resolve any generics already in the list
     if(resolve_generics(ctx, undetermined->expressions, undetermined->expressions_length, solution_primitive)){
-        return 1;
+        return FAILURE;
     }
 
     undetermined->expressions_length = 0;
-    return 0;
+    return SUCCESS;
 }
 
 int undetermined_expr_list_give_generic(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, ast_expr_t **expr){
     if(undetermined->solution != EXPR_NONE){
         // Resolve the generic if we already know what type it should be
-        if(resolve_generics(ctx, expr, 1, undetermined->solution)) return 1;
+        if(resolve_generics(ctx, expr, 1, undetermined->solution)) return FAILURE;
     } else {
         // Otherwise, add it to the list of undetermined expressions
         undetermined->expressions[undetermined->expressions_length++] = *expr;
     }
-    return 0;
+    return SUCCESS;
 }
 
 int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expressions_length, unsigned int target_primitive){
@@ -542,7 +553,7 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
                 break;
             default:
                 compiler_panic(ctx->compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
-                return 1; // Unknown assigned type
+                return FAILURE; // Unknown assigned type
             }
             expr->id = target_primitive;
             break;
@@ -575,7 +586,7 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
                 break; // No changes special changes necessary
             default:
                 compiler_panic(ctx->compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
-                return 1; // Unknown assigned type
+                return FAILURE; // Unknown assigned type
             }
             expr->id = target_primitive;
             break;
@@ -583,7 +594,7 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
         }
     }
 
-    return 0;
+    return SUCCESS;
 }
 
 unsigned int generics_primitive_type(ast_expr_t **expressions, length_t expressions_length){
@@ -644,7 +655,7 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
     return EXPR_NONE; // Should never be reached
 }
 
-int infer_type(infer_ctx_t *ctx, ast_type_t *type){
+errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
     // NOTE: Expands 'type' by resolving any aliases
 
     ast_alias_t *aliases = ctx->ast->aliases;
@@ -681,10 +692,10 @@ int infer_type(infer_ctx_t *ctx, ast_type_t *type){
         }
         else if(type->elements[e]->id == AST_ELEM_FUNC){
             for(length_t a = 0; a != ((ast_elem_func_t*) type->elements[e])->arity; a++){
-                if(infer_type(ctx, &((ast_elem_func_t*) type->elements[e])->arg_types[a])) return 1;
+                if(infer_type(ctx, &((ast_elem_func_t*) type->elements[e])->arg_types[a])) return FAILURE;
             }
 
-            if(infer_type(ctx, ((ast_elem_func_t*) type->elements[e])->return_type)) return 1;
+            if(infer_type(ctx, ((ast_elem_func_t*) type->elements[e])->return_type)) return FAILURE;
         }
 
         // If not an alias, continue on as usual
@@ -697,7 +708,7 @@ int infer_type(infer_ctx_t *ctx, ast_type_t *type){
     type->elements = new_elements;
     type->elements_length = length;
     type_table_give(ctx->type_table, type, maybe_alias_name);
-    return 0;
+    return SUCCESS;
 }
 
 void infer_var_scope_init(infer_var_scope_t *out_scope, infer_var_scope_t *parent){

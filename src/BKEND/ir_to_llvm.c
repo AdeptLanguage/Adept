@@ -7,6 +7,7 @@
 #include <llvm-c/BitWriter.h>
 
 #include "IR/ir.h"
+#include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/filename.h"
 #include "BKEND/ir_to_llvm.h"
@@ -103,21 +104,6 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             case TYPE_KIND_FLOAT: return LLVMConstReal(LLVMFloatType(), *((double*) value->extra));
             case TYPE_KIND_DOUBLE: return LLVMConstReal(LLVMDoubleType(), *((double*) value->extra));
             case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((bool*) value->extra), false);
-            case TYPE_KIND_POINTER:
-                if( ((ir_type_t*) value->type->extra)->kind == TYPE_KIND_U8 ){ // Null-terminated string literal
-                    char *data = (char*) value->extra;
-                    length_t data_length = strlen((char*) value->extra) + 1;
-                    LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), data_length), ".str");
-                    LLVMSetLinkage(global_data, LLVMInternalLinkage);
-                    LLVMSetGlobalConstant(global_data, true);
-                    LLVMSetInitializer(global_data, LLVMConstString(data, data_length, true));
-                    LLVMValueRef indices[2];
-                    indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
-                    indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-                    LLVMValueRef literal = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
-                    return literal;
-                }
-                // Fall through to default if not caught
             default:
                 redprintf("INTERNAL ERROR: Unknown type kind literal in ir_to_llvm_value\n");
                 return NULL;
@@ -175,6 +161,18 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             ir_value_anon_global_t *extra = (ir_value_anon_global_t*) value->extra;
             return llvm->anon_global_variables[extra->anon_global_id];
         }
+    case VALUE_TYPE_CSTR_OF_LEN: {
+        ir_value_cstr_of_len_t *cstr_of_len = value->extra;
+        LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), ".str");
+        LLVMSetLinkage(global_data, LLVMInternalLinkage);
+        LLVMSetGlobalConstant(global_data, true);
+        LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));
+        LLVMValueRef indices[2];
+        indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
+        indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
+        LLVMValueRef literal = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+        return literal;
+    }
     default:
         redprintf("INTERNAL ERROR: Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
         return NULL;
@@ -1043,8 +1041,23 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         return FAILURE;
     }
 
-    if(compiler->traits & COMPILER_EXECUTE_RESULT) system(compiler->output_filename);
+    if(compiler->traits & COMPILER_EXECUTE_RESULT){
+        #ifdef _WIN32
+        /* For windows, make sure we change all '/' to '\' before invoking */
+        char *execute_filename = strclone(compiler->output_filename);
+        length_t execute_filename_length = strlen(execute_filename);
 
+        for(length_t i = 0; i != execute_filename_length; i++)
+            if(execute_filename[i] == '/') execute_filename[i] = '\\';
+
+        system(execute_filename);
+        free(execute_filename);
+        #else
+        system(compiler->output_filename);
+        #endif
+    }
+
+    if(!(compiler->traits & COMPILER_NO_REMOVE_OBJECT)) remove(object_filename);
     free(object_filename);
     free(link_command);
     return SUCCESS;

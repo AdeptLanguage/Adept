@@ -22,6 +22,7 @@ typedef struct {
     ast_type_t *arg_types;
     source_t *arg_sources;
     char *arg_flows; // in | out | inout
+    trait_t *arg_type_traits;
     length_t arity;
     ast_type_t return_type;
     trait_t traits;
@@ -30,6 +31,8 @@ typedef struct {
     length_t statements_capacity;
     source_t source;
 } ast_func_t;
+
+#define AST_FUNC_ARG_TYPE_TRAIT_POD TRAIT_1
 
 // Possible AST function traits
 #define AST_FUNC_FOREIGN TRAIT_1

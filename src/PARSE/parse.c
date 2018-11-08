@@ -21,7 +21,7 @@ errorcode_t parse(compiler_t *compiler, object_t *object){
 
     object_init_ast(object);
     parse_ctx_init(&ctx, compiler, object);
-    any_inject_ast(ctx.ast);
+    if(!(compiler->traits & COMPILER_INFLATE_PACKAGE)) any_inject_ast(ctx.ast);
 
     if(parse_tokens(&ctx)) return FAILURE;
 

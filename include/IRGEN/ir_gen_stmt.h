@@ -25,6 +25,6 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_f
 // ---------------- ir_gen_statements ----------------
 // Generates intermediate representation for
 // statements given an existing 'ir_builder_t'
-errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length);
+errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated);
 
 #endif // IR_GEN_STMT_H

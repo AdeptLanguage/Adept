@@ -35,6 +35,15 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
 #define MATH_OP_RESULT_BOOL  0x02
 #define MATH_OP_ALL_BOOL     0x03
 
+
+errorcode_t build_basic_IvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
+    ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int ints_instr, unsigned int floats_instr,
+    const char *operation_name, const char *overload_name, bool standard_result_is_boolean);
+
+errorcode_t build_basic_UvSvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
+        ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int unsigned_instr, unsigned int signed_instr,
+        unsigned int floats_instr, const char *operation_name, const char *overload_name, bool standard_result_is_boolean);
+
 // ---------------- i_vs_f_instruction ----------------
 // If the math instruction given will have it's
 // instruction id changed based on what it operates on.

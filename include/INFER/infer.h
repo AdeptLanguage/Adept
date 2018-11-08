@@ -57,37 +57,37 @@ typedef struct {
 
 // ---------------- infer ----------------
 // Entry point to inference module
-int infer(compiler_t *compiler, object_t *object);
+errorcode_t infer(compiler_t *compiler, object_t *object);
 
 // ---------------- infer_in_funcs ----------------
 // Infers aliases and generics in a list of functions
-int infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length);
+errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length);
 
 // ---------------- infer_in_stmts ----------------
 // Infers aliases and generics in a list of statements
-int infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length, infer_var_scope_t *scope);
+errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length, infer_var_scope_t *scope);
 
 // ---------------- infer_expr ----------------
 // Infers an expression from the root of it
-int infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope);
+errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope);
 
 // ---------------- infer_expr_inner ----------------
 // Infers an inner expression within the root
-int infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope);
+errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope);
 
 // ---------------- undetermined_expr_list_give ----------------
 // Gives a potential solution for an undetermined list
-int undetermined_expr_list_give_solution(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, unsigned int potential_solution_primitive);
+errorcode_t undetermined_expr_list_give_solution(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, unsigned int potential_solution_primitive);
 
 // ---------------- undetermined_expr_list_give_generic ----------------
 // Resolves the generic if the solution is already known,
 // otherwise adds it to the list of undetermined generics
-int undetermined_expr_list_give_generic(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, ast_expr_t **expr);
+errorcode_t undetermined_expr_list_give_generic(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, ast_expr_t **expr);
 
 // ---------------- resolve_generics ----------------
 // Attempts to convert a list of generic expressions
 // to a primitive of the given expression ID
-int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expressions_length, unsigned int assigned_type);
+errorcode_t resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expressions_length, unsigned int assigned_type);
 
 // ---------------- generics_primitive_type ----------------
 // Generates a suitable primitive expression ID for the
@@ -102,7 +102,7 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type);
 
 // ---------------- infer_type ----------------
 // Infers a type (includes aliases and runtime type information things)
-int infer_type(infer_ctx_t *ctx, ast_type_t *type);
+errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type);
 
 // ---------------- infer_var_scope_init ----------------
 // Initializes an inference variable scope

@@ -44,11 +44,11 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     if(parse_arguments(compiler, object, argc, argv)) return;
     debug_signal(compiler, DEBUG_SIGNAL_AT_STAGE_ARGS_AND_LEX, NULL);
 
+    // Compile / Package the code
+    if(compiler_read_file(compiler, object)) return;
+
     if(compiler->traits & COMPILER_INFLATE_PACKAGE){
         // Inflate the package and exit
-        object->buffer = NULL;
-        if(pkg_read(compiler, object)) return;
-        object->compilation_stage = COMPILATION_STAGE_TOKENLIST;
         debug_signal(compiler, DEBUG_SIGNAL_AT_STAGE_PARSE, NULL);
         if(parse(compiler, object)) return;
         char *inflated_filename = filename_ext(object->filename, "idep");
@@ -57,9 +57,6 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
         compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         return;
     }
-
-    // Compile / Package the code
-    if(compiler_read_file(compiler, object)) return;
 
     debug_signal(compiler, DEBUG_SIGNAL_AT_STAGE_PARSE, NULL);
     if(parse(compiler, object)) return;
@@ -199,6 +196,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_EXECUTE_RESULT;
             } else if(strcmp(argv[arg_index], "-w") == 0){
                 compiler->traits |= COMPILER_NO_WARN;
+            } else if(strcmp(argv[arg_index], "-j") == 0){
+                compiler->traits |= COMPILER_NO_REMOVE_OBJECT;
             } else if(strcmp(argv[arg_index], "-O0") == 0){
                 compiler->optimization = OPTIMIZATION_NONE;
             } else if(strcmp(argv[arg_index], "-O1") == 0){
@@ -373,6 +372,7 @@ void show_help(){
     printf("    -p, --package     Output a package\n");
     printf("    -d                Include debugging symbols\n");
     printf("    -w                Disable all compiler warnings\n");
+    printf("    -j                Preserve generated object file\n");
     printf("    -O                Set optimization level\n");
 
     printf("\nLanguage Options:\n");

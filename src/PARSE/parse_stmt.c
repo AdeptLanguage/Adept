@@ -52,7 +52,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                     (*i)++; if(parse_stmt_call(ctx, stmt_list)) return FAILURE;
                     break;
                 case TOKEN_WORD: case TOKEN_FUNC:
-                case TOKEN_STDCALL: case TOKEN_NEXT:
+                case TOKEN_STDCALL: case TOKEN_NEXT: case TOKEN_POD:
                 case TOKEN_GENERIC_INT: /*fixed array*/ case TOKEN_MULTIPLY: /*pointer*/
                     (*i)--; if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
                     break;
@@ -74,6 +74,12 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                             compiler_panic(ctx->compiler, sources[(*i) - 1], "Expected assignment operator after expression");
                             ast_expr_free_fully(mutable_expression);
                             return FAILURE;
+                        }
+
+                        bool is_pod = false;
+                        if(tokens[*i].id == TOKEN_POD){
+                            is_pod = true;
+                            (*i)++;
                         }
 
                         if(!EXPR_IS_MUTABLE(mutable_expression->id)){
@@ -108,6 +114,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                         stmt->source = source;
                         stmt->destination = mutable_expression;
                         stmt->value = value_expression;
+                        stmt->is_pod = is_pod;
                         stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
                     }
                     break;
@@ -652,6 +659,8 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     length_t length = 0;
     length_t capacity = 0;
 
+    bool is_pod = false;
+    bool is_assign_pod = false;
     ast_expr_t *decl_value = NULL;
     ast_type_t decl_type;
 
@@ -677,6 +686,11 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         } else break;
     }
 
+    if(tokens[*i].id == TOKEN_POD){
+        is_pod = true;
+        (*i)++;
+    }
+
     // Parse the type for the variable(s)
     if(parse_type(ctx, &decl_type)){
         free(decl_names);
@@ -692,13 +706,20 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         if(tokens[*i].id == TOKEN_UNDEF){
             declare_stmt_type = EXPR_DECLAREUNDEF;
             (*i)++;
-        } else if(parse_expr(ctx, &decl_value)){
-            ast_type_free(&decl_type);
-            free(decl_names);
-            free(decl_sources);
-            return FAILURE;
+        } else {
+            if(tokens[*i].id == TOKEN_POD){
+                is_assign_pod = true;
+                (*i)++;
+            }
+
+            if(parse_expr(ctx, &decl_value)){
+                ast_type_free(&decl_type);
+                free(decl_names);
+                free(decl_sources);
+                return FAILURE;
+            }
         }
-    }
+    }    
 
     // Add each variable to the necessary data sets
     for(length_t v = 0; v != length; v++){
@@ -706,6 +727,8 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         stmt->id = declare_stmt_type;
         stmt->source = decl_sources[v];
         stmt->name = decl_names[v];
+        stmt->is_pod = is_pod;
+        stmt->is_assign_pod = is_assign_pod;
 
         if(v + 1 == length){
             stmt->type = decl_type;

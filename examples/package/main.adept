@@ -1,5 +1,6 @@
 
-pragma options '-p -n sum'
+pragma project_name 'sum'
+pragma package
 
 func sum_doubles(a double, b double) double {
     return a + b

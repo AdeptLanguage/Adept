@@ -73,6 +73,12 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
         ast_expr_create_cstring(out_expr, (char*) tokens[*i].data, sources[*i]);
         *i += 1;
         break;
+    case TOKEN_STRING: {
+            token_string_data_t *string_data = (token_string_data_t*) tokens[*i].data;
+            ast_expr_create_string(out_expr, string_data->array, string_data->length, sources[*i]);
+            *i += 1;
+        }
+        break;
     case TOKEN_NULL:
         ast_expr_create_null(out_expr, sources[(*i)++]);
         break;
@@ -113,6 +119,9 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
         break;
     case TOKEN_STATIC:
         if(parse_expr_static(ctx, out_expr)) return FAILURE;
+        break;
+    case TOKEN_DEF: case TOKEN_UNDEF:
+        if(parse_expr_def(ctx, out_expr)) return FAILURE;
         break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
@@ -694,6 +703,62 @@ errorcode_t parse_expr_static(parse_ctx_t *ctx, ast_expr_t **out_expr){
 
     *i += 1;
     *out_expr = (ast_expr_t*) static_array;
+    return SUCCESS;
+}
+
+errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    // NOTE: Assume either 'def' or 'undef' keyword in expression
+
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist->tokens;
+    source_t *sources = ctx->tokenlist->sources;
+
+    ast_expr_inline_declare_t *def = malloc(sizeof(ast_expr_inline_declare_t));
+    def->id = (tokens[*i].id == TOKEN_UNDEF ? EXPR_ILDECLAREUNDEF : EXPR_ILDECLARE);
+    def->source = sources[(*i)++];
+    def->is_pod = false;
+    def->is_assign_pod = false;
+
+    def->name = parse_eat_word(ctx, "Expected variable name for inline declaration");
+    if(def->name == NULL){
+        free(def);
+        return FAILURE;
+    }
+
+    if(tokens[*i].id == TOKEN_POD){
+        def->is_pod = true;
+        (*i)++;
+    }
+
+    if(parse_type(ctx, &def->type)){
+        free(def);
+        return FAILURE;
+    }
+
+    if(tokens[*i].id == TOKEN_ASSIGN){
+        if(def->id == EXPR_ILDECLAREUNDEF){
+            compiler_panic(ctx->compiler, sources[*i], "Can't initialize undefined inline variable");
+            printf("\nDid you mean to use 'def' instead of 'undef'?\n");
+            ast_type_free(&def->type);
+            free(def);
+            return FAILURE;
+        }
+
+        if(tokens[++(*i)].id == TOKEN_POD){
+            def->is_assign_pod = true;
+            (*i)++;
+        }
+
+        if(parse_expr(ctx, &def->value)){
+            ast_type_free(&def->type);
+            free(def);
+            return FAILURE;
+        }
+    } else {
+        def->value = NULL;
+    }
+
+    *out_expr = (ast_expr_t*) def;
     return SUCCESS;
 }
 

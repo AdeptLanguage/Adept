@@ -65,7 +65,17 @@ call :compile ifelse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile import
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile inline_declaration
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile int_ptr_cast
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile management_assign
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile management_defer
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile management_math
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile management_pass
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile mathassign
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

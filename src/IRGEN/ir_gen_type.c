@@ -87,6 +87,22 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
         // NOTE: mappings[i].type.extra is used temporary to store the ast_struct_t* used
         ast_struct_t *structure = mappings[i].type.extra;
 
+        // Special enforcement of type 'String'
+        if(strcmp(structure->name, "String") == 0){
+            if(structure->traits != TRAIT_NONE
+            || structure->field_count != 4
+            || !ast_type_is_base_ptr_of(&structure->field_types[0], "ubyte")
+            || !ast_type_is_base_of(&structure->field_types[1], "usize")
+            || !ast_type_is_base_of(&structure->field_types[2], "usize")
+            || !ast_type_is_base_of(&structure->field_types[3], "StringOwnership")){
+                compiler_panic(compiler, structure->source, "Invalid definition of built-in type 'String'");
+                printf("\nShould be declared as:\n\nstruct String (\n    array *ubyte,   length usize,\n    capacity usize, ownership StringOwnership\n)\n");
+                return FAILURE;
+            }
+
+            module->common.ir_string_struct = &mappings[i].type;
+        }
+
         // NOTE: This composite information will replace mappings[i].type.extra
         ir_type_extra_composite_t *composite = ir_pool_alloc(pool, sizeof(ir_type_extra_composite_t));
         composite->subtypes_length = structure->field_count;

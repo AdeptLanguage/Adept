@@ -82,11 +82,14 @@ maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error){
 maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error){
     tokenid_t id = ctx->tokenlist->tokens[++(*ctx->i)].id;
 
-    if(id != TOKEN_CSTRING && id != TOKEN_STRING){
-        // ERROR: That token isn't a string
-        if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], error);
-        return NULL;
-    }
+    if(id == TOKEN_CSTRING)
+        return (char*) ctx->tokenlist->tokens[(*ctx->i)].data;
+    
+    if(id == TOKEN_STRING)
+        // Do lazy conversion to weak c-string
+        return ((token_string_data_t*) ctx->tokenlist->tokens[(*ctx->i)].data)->array;
 
-    return (char*) ctx->tokenlist->tokens[(*ctx->i)].data;
+    // ERROR: That token isn't a string
+    if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], error);
+    return NULL;
 }
