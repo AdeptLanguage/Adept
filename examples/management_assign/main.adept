@@ -3,7 +3,7 @@ import 'sys/cstdio.adept'
 
 struct Assigned (value int)
 
-func __assign__(this *Assigned, rhs Assigned) void {
+func __assign__(this *Assigned, rhs POD Assigned) void {
     this.value = 12345
 }
 
