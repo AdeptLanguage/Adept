@@ -23,6 +23,23 @@ void terminal_set_color_win32(char color){
     }
 }
 
-#endif // __WIN32__
+#else
 
-// If not windows, then terminal color will not be changed
+void terminal_set_color_posix(char color){
+    switch(color){
+    case TERMINAL_COLOR_DEFAULT:
+        fputs("\e[0m", stdout);
+        break;
+    case TERMINAL_COLOR_RED:
+        fputs("\e[31;1m", stdout);
+        break;
+    case TERMINAL_COLOR_YELLOW:
+        fputs("\e[33;1m", stdout);
+        break;
+    case TERMINAL_COLOR_WHITE:
+        fputs("\e[37;1m", stdout);
+        break;
+    }
+}
+
+#endif
