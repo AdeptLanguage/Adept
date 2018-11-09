@@ -20,7 +20,8 @@
 #define terminal_set_color(a) terminal_set_color_win32(a)
 void terminal_set_color_win32(char color);
 #else
-#define terminal_set_color(a) ((void) 0)
+#define terminal_set_color(a) terminal_set_color_posix(a)
+void terminal_set_color_posix(char color);
 #endif
 
 // ---------------- redprintf(...) ----------------
