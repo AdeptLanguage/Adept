@@ -4,7 +4,6 @@
 #include <llvm-c/Target.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/BitWriter.h>
-#include <llvm-c/BitWriter.h>
 
 #include "IR/ir.h"
 #include "UTIL/util.h"
