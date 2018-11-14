@@ -57,4 +57,11 @@ void filename_auto_ext(char **out_filename, unsigned int mode);
 // doesn't already end in it
 void filename_append_if_missing(char **out_filename, const char *addition);
 
+// ---------------- filename_without_ext ----------------
+// Returns the filename without the extension
+char *filename_without_ext(char *filename);
+
+// ---------------- filename_prepend_dotslash_if_needed ----------------
+void filename_prepend_dotslash_if_needed(char **filename);
+
 #endif // FILENAME_H

@@ -205,3 +205,35 @@ void filename_append_if_missing(char **out_filename, const char *addition){
         *out_filename = new_filename;
     }
 }
+
+strong_cstr_t filename_without_ext(char *filename){
+	length_t i;
+    length_t filename_length = strlen(filename);
+    char *without_ext = NULL;
+
+    for(i = filename_length - 1 ; i != 0; i--){
+        if(filename[i] == '.'){
+            without_ext = malloc(i);
+            memcpy(without_ext, filename, i);
+            break;
+        } else if(filename[i] == '/' || filename[i] == '\\'){
+            return strclone(filename);
+        }
+    }
+
+	return (without_ext == NULL) ? strclone(filename) : without_ext;
+}
+
+void filename_prepend_dotslash_if_needed(char **filename){
+	length_t filename_length = strlen(*filename);
+	if(filename_length < 2) return;
+	
+	if((*filename)[0] != '/' && !((*filename)[0] == '.' && (*filename)[1] == '/')){
+		char *new_filename = malloc(2 + filename_length + 1);
+        memcpy(&new_filename[0], "./", 2);
+        memcpy(&new_filename[2], *filename, filename_length + 1);
+		free(*filename);
+        *filename = new_filename;
+	}
+}
+

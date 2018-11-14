@@ -7,11 +7,15 @@ ifeq ($(OS), Windows_NT)
 	RES_C=C:/.storage/MinGW64/bin/windres
 	WIN_ICON=obj/icon.res
 	WIN_ICON_SRC=resource/icon.rc
+	EXECUTABLE=bin/adept.exe
+	DEBUG_EXECUTABLE=bin/adept_debug.exe
 else
 	CC=gcc
 	LINKER=g++
 	LLVM_LINKER_FLAGS=-L/usr/lib/llvm-5.0/build/lib
 	LLVM_INCLUDE_DIRS=-I/usr/lib/llvm-5.0/include -I/usr/lib/llvm-5.0/build/include
+	EXECUTABLE=bin/adept
+	DEBUG_EXECUTABLE=bin/adept_debug
 endif
 
 # LLVM Flags
@@ -39,7 +43,7 @@ LLVM_LIBS=-lLLVMCoverage -lLLVMDlltoolDriver -lLLVMLibDriver -lLLVMOption -lLLVM
 ifeq ($(OS), Windows_NT)
 	LLVM_LIBS += -lpsapi -lshell32 -lole32 -luuid
 else
-	LLVM_LIBS += -lpthread -lz
+	LLVM_LIBS += -lpthread -lz -lcurses
 endif
 
 # -static-libgcc -static-libstdc++ -static
@@ -57,8 +61,6 @@ SRCDIR=src
 OBJDIR=obj
 OBJECTS=$(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 DEBUG_OBJECTS=$(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/debug/%.o) $(ADDITIONAL_DEBUG_SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/debug/%.o)
-EXECUTABLE=bin/adept.exe
-DEBUG_EXECUTABLE=bin/adept_debug.exe
 
 release: $(SOURCES) $(EXECUTABLE)
 
@@ -113,8 +115,7 @@ ifeq ($(OS), Windows_NT)
 	@del bin\adept.exe /S /Q 1> nul 2>&1
 	@del bin\adept_debug.exe /S /Q 1> nul 2>&1
 else
-	@rm -rf 2> /dev/null obj/debug/*.*
-	@rm -rf 2> /dev/null obj/*.*
-	@rm -rf 2> /dev/null bin/adept.exe
-	@rm -rf 2> /dev/null bin/adept_debug.exe
+	@find . -name "*.o" -type f -delete 2> /dev/null
+	@rm -rf 2> /dev/null bin/adept
+	@rm -rf 2> /dev/null bin/adept_debug
 endif

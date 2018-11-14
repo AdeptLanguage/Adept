@@ -923,7 +923,11 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.memcpy_intrinsic = NULL;
     llvm.compiler = compiler;
 
+	#ifdef _WIN32
     char *triple = "x86_64-pc-windows-gnu";
+	#else
+	char *triple = LLVMGetDefaultTargetTriple();
+	#endif
     LLVMSetTarget(llvm.module, triple);
 
     char *error_message; LLVMTargetRef target;
@@ -935,11 +939,11 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     if(compiler->output_filename == NULL){
         // May need to change based on operating system etc.
-        compiler->output_filename = filename_ext(object->filename, "exe");
-    } else {
-        // Automatically add proper extension if missing
-        filename_auto_ext(&compiler->output_filename, FILENAME_AUTO_EXECUTABLE);
+        compiler->output_filename = filename_without_ext(object->filename);
     }
+	
+	// Automatically add proper extension if missing
+    filename_auto_ext(&compiler->output_filename, FILENAME_AUTO_EXECUTABLE);
 
     char* object_filename = filename_ext(compiler->output_filename, "o");
 
@@ -980,6 +984,10 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     const char *root = compiler->root;
     length_t root_length = strlen(root);
 
+	char *link_command; // Will be determined based on system
+
+	#ifdef _WIN32
+	// Windows Linkering
     // TODO: SECURITY: Stop using system(1) call to invoke linker
     const char *linker = "ld.exe"; // May need to change depending on system etc.
     length_t linker_length = strlen(linker);
@@ -1008,10 +1016,20 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 
     // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
-    char *link_command = malloc(linker_length + root_length * 18 + 14 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
+    link_command = malloc(linker_length + root_length * 18 + 14 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
     sprintf(link_command, "\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
 
     if(linker_additional_length != 0) free(linker_additional);
+	#else
+	// UNIX Linkering
+	
+    const char *linker = "gcc"; // May need to change depending on system etc.
+    length_t linker_length = strlen(linker);
+	
+	link_command = malloc(linker_length + root_length * 18 + 14 + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
+
+	    sprintf(link_command, "%s \"%s\" -o \"%s\"", linker, object_filename, compiler->output_filename);
+	#endif
 
     #ifdef ENABLE_DEBUG_FEATURES
     if(!(llvm.compiler->debug_traits & COMPILER_DEBUG_NO_VERIFICATION) && LLVMVerifyModule(llvm.module, LLVMPrintMessageAction, NULL) == 1){
@@ -1052,7 +1070,10 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         system(execute_filename);
         free(execute_filename);
         #else
-        system(compiler->output_filename);
+		char *executable = strclone(compiler->output_filename);
+		filename_prepend_dotslash_if_needed(&executable);
+        system(executable);
+		free(executable);
         #endif
     }
 
