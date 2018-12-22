@@ -21,9 +21,9 @@ typedef struct { LLVMValueRef *value_references; } value_catalog_block_t;
 // of every block in a function
 typedef struct { value_catalog_block_t *blocks; length_t blocks_length; } value_catalog_t;
 
-// ---------------- stack_t ----------------
+// ---------------- varstack_t ----------------
 // A list of stack variables for a function
-typedef struct { LLVMValueRef *values; LLVMTypeRef *types; length_t length; } stack_t;
+typedef struct { LLVMValueRef *values; LLVMTypeRef *types; length_t length; } varstack_t;
 
 // ---------------- llvm_context_t ----------------
 // A general container for the LLVM exporting context
@@ -31,7 +31,7 @@ typedef struct {
     LLVMModuleRef module;
     LLVMBuilderRef builder;
     value_catalog_t *catalog;
-    stack_t *stack;
+    varstack_t *stack;
     LLVMValueRef *func_skeletons;
     LLVMValueRef *global_variables;
     LLVMValueRef *anon_global_variables;

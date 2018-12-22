@@ -237,7 +237,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         catalog.blocks_length = basicblocks_length;
         for(length_t c = 0; c != basicblocks_length; c++) catalog.blocks[c].value_references = malloc(sizeof(LLVMValueRef) * basicblocks[c].instructions_length);
 
-        stack_t stack;
+        varstack_t stack;
         stack.values = malloc(sizeof(LLVMValueRef) * funcs[f].variable_count);
         stack.types = malloc(sizeof(LLVMTypeRef) * funcs[f].variable_count);
         stack.length = funcs[f].variable_count;
