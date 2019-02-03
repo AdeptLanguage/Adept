@@ -167,6 +167,33 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         sprintf(value_str, "constanonglob %d", (int) ((ir_value_anon_global_t*) value->extra)->anon_global_id);
         free(typename);
         return value_str;
+    case VALUE_TYPE_CSTR_OF_LEN: {
+            ir_value_cstr_of_len_t *cstroflen = value->extra;
+            value_str = malloc(32 + cstroflen->length);
+            sprintf(value_str, "cstroflen %d \"%s\"", (int) cstroflen->length, cstroflen->array);
+            free(typename);
+            return value_str;
+        }
+        break;
+    case VALUE_TYPE_CONST_BITCAST: {
+            strong_cstr_t from = ir_value_str(value->extra);
+            strong_cstr_t to = ir_type_str(value->type);
+            value_str = malloc(32 + strlen(to) + strlen(from));
+            sprintf(value_str, "cbc %s to %s", from, to);
+            free(to);
+            free(from);
+            return value_str;
+        }
+        break;
+    case VALUE_TYPE_STRUCT_CONSTRUCTION: {
+            ir_value_struct_construction_t *construction = (ir_value_struct_construction_t*) value->extra;
+            strong_cstr_t of = ir_type_str(value->type);
+            value_str = malloc(40 + strlen(of));
+            sprintf(value_str, "construct %s (from %d values)", of, (int) construction->length);
+            free(of);
+            return value_str;
+        }
+        break;
     default:
         redprintf("INTERNAL ERROR: Unexpected value type of value in ir_value_str function\n");
         return NULL;

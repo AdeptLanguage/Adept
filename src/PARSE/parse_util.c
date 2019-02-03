@@ -25,6 +25,8 @@ void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id,
     char *format = malloc(message_length + 13);
 
     if(ctx->object->traits & OBJECT_PACKAGE){
+        line = 1;
+        column = 1;
         memcpy(format, "%s: ", 4);
         memcpy(&format[4], message, message_length);
         memcpy(&format[4 + message_length], "!\n", 3);

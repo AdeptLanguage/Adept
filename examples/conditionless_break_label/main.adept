@@ -3,6 +3,7 @@ import 'sys/cstdio.adept'
 
 func main(in argc int, in argv **ubyte) int {
     value int = 0
+    
 
     until break at_10 {
         value += 1

@@ -7,7 +7,7 @@ errorcode_t parse_import(parse_ctx_t *ctx){
     // import 'somefile.adept'
     //   ^
 
-    char *file = parse_grab_string(ctx, "Expected filename string after 'import' keyword");
+    maybe_null_weak_cstr_t file = parse_grab_string(ctx, "Expected filename string after 'import' keyword");
     if(file == NULL) return FAILURE;
 
     maybe_null_strong_cstr_t target = parse_find_import(ctx, file);
@@ -36,10 +36,29 @@ void parse_foreign_library(parse_ctx_t *ctx){
     //    ^
 
     // Assume the token we're currently on is 'foreign' keyword
-    char *library = parse_grab_string(ctx, "INTERNAL ERROR: Assumption failed that 'foreign' keyword would be proceeded by a string, will probably crash...");
+    maybe_null_weak_cstr_t library = parse_grab_string(ctx, "INTERNAL ERROR: Assumption failed that 'foreign' keyword would be proceeded by a string, will probably crash...");
+    bool is_framework = false;
 
-    library = filename_local(ctx->object->filename, library);
-    ast_add_foreign_library(ctx->ast, library);
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist->tokens;
+
+    if(tokens[*i + 1].id == TOKEN_WORD){
+        const char *data = tokens[*i + 1].data;
+
+        if(strcmp(data, "framework") == 0){
+            is_framework = true;
+
+            // Take ownership of library string
+            tokens[*i].data = NULL;
+        } else {
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i + 1], "Unrecognized foreign library type '%s'", data);
+        }
+
+        (*ctx->i)++;
+    }
+
+    if(!is_framework) library = filename_local(ctx->object->filename, library);
+    ast_add_foreign_library(ctx->ast, library, is_framework);
 }
 
 errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filename, strong_cstr_t absolute_filename) {
@@ -58,7 +77,7 @@ errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filenam
 }
 
 maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename){
-    char *test = filename_local(ctx->object->filename, filename);
+    strong_cstr_t test = filename_local(ctx->object->filename, filename);
     if(access(test, F_OK) != -1) return test;
 
     free(test);

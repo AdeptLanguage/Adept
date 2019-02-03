@@ -5,6 +5,7 @@
 #include "UTIL/filename.h"
 #include "UTIL/builtin_type.h"
 #include "BRIDGE/any.h"
+#include "BRIDGE/rtti.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_stmt.h"
@@ -155,6 +156,7 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
 
     for(length_t g = 0; g != ast->globals_length; g++){
         module->globals[g].name = ast->globals[g].name;
+        module->globals[g].traits = ast->globals[g].traits & AST_GLOBAL_EXTERNAL ? IR_GLOBAL_EXTERNAL : TRAIT_NONE;
 
         if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &module->globals[g].type)){
             return FAILURE;
@@ -220,7 +222,7 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
 
     if(ast_global->traits & AST_GLOBAL___TYPES__){
         ir_type_t *any_type_type, *any_struct_type_type, *any_ptr_type_type,
-            *any_type_ptr_type = NULL, *ubyte_ptr_ptr_type;
+            *any_type_ptr_type = NULL, *ubyte_ptr_type;
         
         if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
             if(!ir_type_map_find(builder->type_map, "AnyType", &any_type_type)){
@@ -240,15 +242,14 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
         if(!ir_type_map_find(builder->type_map, "AnyType", &any_type_type)
         || !ir_type_map_find(builder->type_map, "AnyStructType", &any_struct_type_type)
         || !ir_type_map_find(builder->type_map, "AnyPtrType", &any_ptr_type_type)
-        || !ir_type_map_find(builder->type_map, "ubyte", &ubyte_ptr_ptr_type)){
+        || !ir_type_map_find(builder->type_map, "ubyte", &ubyte_ptr_type)){
             redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
             return FAILURE;
         }
 
-
-        ir_type_t *usize_ptr_type = ir_builder_usize_ptr(builder);
+        ir_type_t *usize_type = ir_builder_usize(builder);
         any_type_ptr_type = ir_type_pointer_to(builder->pool, any_type_type);
-        ubyte_ptr_ptr_type = ir_type_pointer_to(builder->pool, ir_type_pointer_to(builder->pool, ubyte_ptr_ptr_type));
+        ubyte_ptr_type = ir_type_pointer_to(builder->pool, ubyte_ptr_type);
 
         ir_value_array_literal_t *array_literal = ir_pool_alloc(builder->pool, sizeof(ir_value_array_literal_t));
         array_literal->values = NULL; // Will be set to array_values
@@ -311,10 +312,10 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                     }
 
                     if(subtype_index == -1){
-                        ir_value_t *null_pointer = build_null_pointer(builder->pool);
+                        ir_value_t *null_pointer = build_null_pointer_of_type(builder->pool, any_type_ptr_type);
                         initializer_members[3] = null_pointer; // subtype
                     } else {
-                        initializer_members[3] = array_values[subtype_index]; // subtype
+                        initializer_members[3] = build_const_bitcast(builder->pool, array_values[subtype_index], any_type_ptr_type); // subtype
                     }
 
                     initializer_type = any_ptr_type_type;
@@ -352,7 +353,7 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                         if(subtype_index == -1){
                             composite_members[s] = build_null_pointer(builder->pool); // members[s]
                         } else {
-                            composite_members[s] = array_values[subtype_index]; // members[s]
+                            composite_members[s] = build_const_bitcast(builder->pool, array_values[subtype_index], any_type_ptr_type); // members[s]
                         }
 
                         composite_offsets[s] = build_literal_usize(builder->pool, 0);
@@ -360,8 +361,8 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                     }
 
                     ir_value_t *members_array = build_static_array(builder->pool, any_type_ptr_type, composite_members, composite->subtypes_length);
-                    ir_value_t *offsets_array = build_static_array(builder->pool, usize_ptr_type, composite_offsets, composite->subtypes_length);
-                    ir_value_t *member_names_array = build_static_array(builder->pool, ubyte_ptr_ptr_type, composite_member_names, composite->subtypes_length);
+                    ir_value_t *offsets_array = build_static_array(builder->pool, usize_type, composite_offsets, composite->subtypes_length);
+                    ir_value_t *member_names_array = build_static_array(builder->pool, ubyte_ptr_type, composite_member_names, composite->subtypes_length);
 
                     initializer_members[3] = members_array;
                     initializer_members[4] = build_literal_usize(builder->pool, composite->subtypes_length); // length
@@ -406,6 +407,10 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
 
             ir_value_t *initializer = build_static_struct(&builder->object->ir_module, initializer_type, initializer_members, initializer_members_length, false);
             build_anon_global_initializer(&builder->object->ir_module, array_values[i], initializer);
+
+            if(initializer_type != any_type_ptr_type){
+                array_values[i] = build_const_bitcast(builder->pool, array_values[i], any_type_ptr_type);
+            }
         }
 
         array_literal->values = array_values;
@@ -424,6 +429,54 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
         type_table_reduce(table);
 
         ir_value_t *value = build_literal_usize(builder->pool, table->length);
+        build_store(builder, value, destination);
+        return SUCCESS;
+    }
+
+    if(ast_global->traits & AST_GLOBAL___TYPE_KINDS__){
+        ir_type_t *ubyte_ptr_type, *ubyte_ptr_ptr_type;
+
+        if(!ir_type_map_find(builder->type_map, "ubyte", &ubyte_ptr_type)){
+            redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
+            return FAILURE;
+        }
+
+        // Construct IR Types we need
+        ubyte_ptr_type = ir_type_pointer_to(builder->pool, ubyte_ptr_type);
+        ubyte_ptr_ptr_type = ir_type_pointer_to(builder->pool, ubyte_ptr_type);
+
+        if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+            build_store(builder, build_null_pointer_of_type(builder->pool, ubyte_ptr_ptr_type), destination);
+            return SUCCESS;
+        }
+
+        ir_value_array_literal_t *kinds_array_literal = ir_pool_alloc(builder->pool, sizeof(ir_value_array_literal_t));
+        kinds_array_literal->values = NULL; // Will be set to array_values
+        kinds_array_literal->length = MAX_ANY_TYPE_KIND + 1;
+
+        ir_value_t *kinds_array_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+        kinds_array_value->value_type = VALUE_TYPE_ARRAY_LITERAL;
+        kinds_array_value->type = ir_type_pointer_to(builder->pool, ubyte_ptr_type);
+        kinds_array_value->extra = kinds_array_literal;
+        
+        ir_value_t **array_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * (MAX_ANY_TYPE_KIND + 1));
+
+        for(length_t i = 0; i != MAX_ANY_TYPE_KIND + 1; i++){
+            array_values[i] = build_literal_cstr(builder, (weak_cstr_t) any_type_kind_names[i]);
+        }
+
+        kinds_array_literal->values = array_values;
+        build_store(builder, kinds_array_value, destination);
+        return SUCCESS;
+    }
+
+    if(ast_global->traits & AST_GLOBAL___TYPE_KINDS_LENGTH__){
+        if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+            build_store(builder, build_literal_usize(builder->pool, 0), destination);
+            return SUCCESS;
+        }
+
+        ir_value_t *value = build_literal_usize(builder->pool, MAX_ANY_TYPE_KIND + 1);
         build_store(builder, value, destination);
         return SUCCESS;
     }

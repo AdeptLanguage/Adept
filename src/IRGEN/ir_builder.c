@@ -129,6 +129,19 @@ ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t
     return value;
 }
 
+ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_STRUCT_CONSTRUCTION;
+    value->type = type;
+
+    ir_value_struct_construction_t *extra = ir_pool_alloc(pool, sizeof(ir_value_struct_construction_t));
+    extra->values = values;
+    extra->length = length;
+    value->extra = extra;
+
+    return value;
+}
+
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_ARRAY_LITERAL;
@@ -243,6 +256,7 @@ ir_value_t* build_literal_str(ir_builder_t *builder, char *array, length_t lengt
     if(builder->object->ir_module.common.ir_string_struct == NULL){
         redprintf("Can't create string literal without String type present");
         printf("\nTry importing '2.1/String.adept'\n");
+        return NULL;
     }
 
     ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 4);
@@ -302,6 +316,111 @@ ir_value_t* build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
     value->type = type;
     // neglect value->extra
     return value;
+}
+
+ir_value_t* build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t* to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_BITCAST;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_CONST_BITCAST;
+    value->type = to;
+    value->extra = from;
+    return value;
+}
+
+ir_value_t* build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_ZEXT;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_TRUNC;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_FEXT;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_FTRUNC;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_INTTOPTR;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_PTRTOINT;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_FPTOUI;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_FPTOSI;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_UITOFP;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+    instr->id = INSTRUCTION_SITOFP;
+    instr->result_type = to;
+    instr->value = from;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result){
+    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
+    instruction->id = instr_id;
+    instruction->a = a;
+    instruction->b = b;
+    instruction->result_type = result;
+    return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_bool(ir_pool_t *pool, bool value){

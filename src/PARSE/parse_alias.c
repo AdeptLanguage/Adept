@@ -13,7 +13,7 @@ errorcode_t parse_alias(parse_ctx_t *ctx){
     ast_type_t type;
     source_t source = ctx->tokenlist->sources[(*ctx->i)++];
 
-    char *name = parse_eat_word(ctx, "Expected alias name after 'alias' keyword");
+    maybe_null_weak_cstr_t name = parse_eat_word(ctx, "Expected alias name after 'alias' keyword");
     if (name == NULL) return FAILURE;
 
     const char *invalid_names[] = {

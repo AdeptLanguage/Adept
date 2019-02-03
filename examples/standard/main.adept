@@ -1,0 +1,6 @@
+
+import '2.1/basics.adept'
+
+func main {
+    print("Hello World from Adept!")
+}

@@ -2,6 +2,10 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================= token.h =================================
     Module for containing tokenized information
@@ -18,7 +22,7 @@
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x0000000A
+#define TOKEN_ITERATION_VERSION 0x0000000C
 
 typedef unsigned short tokenid_t;
 
@@ -119,7 +123,8 @@ extern const char *global_token_name_table[];
 #define TOKEN_BIT_LGC_LSHIFT   0x00000036
 #define TOKEN_BIT_LGC_RSHIFT   0x00000037
 #define TOKEN_NAMESPACE        0x00000038
-// 38..3F
+#define TOKEN_META             0x00000039
+// 3A..3F
 
 // NOTE: 0x00000040 .. 0x0000006F reserved for keywords
 // Keywords are organized as such that 0x00000040 + the id of
@@ -169,28 +174,33 @@ extern const char *global_token_name_table[];
 #define TOKEN_STRUCT           0x00000069
 #define TOKEN_SWITCH           0x0000006A
 #define TOKEN_TRUE             0x0000006B
-#define TOKEN_UNDEF            0x0000006C
-#define TOKEN_UNLESS           0x0000006D
-#define TOKEN_UNTIL            0x0000006E
-#define TOKEN_WHILE            0x0000006F
-// 6F..6F
+#define TOKEN_TYPEINFO         0x0000006C
+#define TOKEN_UNDEF            0x0000006D
+#define TOKEN_UNLESS           0x0000006E
+#define TOKEN_UNTIL            0x0000006F
+#define TOKEN_WHILE            0x00000070
+// 71..7F
 #define MAX_LEX_TOKEN          TOKEN_WHILE
 
 // Shorthand tokens for common sequences in packages; Not recognized by parser
 #define TOKEN_PKG_MIN         TOKEN_PKG_WBOOL
-#define TOKEN_PKG_WBOOL       0x000000070
-#define TOKEN_PKG_WBYTE       0x000000071
-#define TOKEN_PKG_WDOUBLE     0x000000072
-#define TOKEN_PKG_WFLOAT      0x000000073
-#define TOKEN_PKG_WINT        0x000000074
-#define TOKEN_PKG_WLONG       0x000000075
-#define TOKEN_PKG_WSHORT      0x000000076
-#define TOKEN_PKG_WUBYTE      0x000000077
-#define TOKEN_PKG_WUINT       0x000000078
-#define TOKEN_PKG_WULONG      0x000000079
-#define TOKEN_PKG_WUSHORT     0x00000007A
-#define TOKEN_PKG_WUSIZE      0x00000007B
+#define TOKEN_PKG_WBOOL       0x000000080
+#define TOKEN_PKG_WBYTE       0x000000081
+#define TOKEN_PKG_WDOUBLE     0x000000082
+#define TOKEN_PKG_WFLOAT      0x000000083
+#define TOKEN_PKG_WINT        0x000000084
+#define TOKEN_PKG_WLONG       0x000000085
+#define TOKEN_PKG_WSHORT      0x000000086
+#define TOKEN_PKG_WUBYTE      0x000000087
+#define TOKEN_PKG_WUINT       0x000000088
+#define TOKEN_PKG_WULONG      0x000000089
+#define TOKEN_PKG_WUSHORT     0x00000008A
+#define TOKEN_PKG_WUSIZE      0x00000008B
 #define TOKEN_PKG_MAX         TOKEN_PKG_WUSIZE
-// 7C..7F
+// 8C..8F
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // TOKEN_H

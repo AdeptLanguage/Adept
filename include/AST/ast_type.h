@@ -2,8 +2,10 @@
 #ifndef AST_TYPE_H
 #define AST_TYPE_H
 
-#include "UTIL/ground.h"
-#include "UTIL/trait.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 /*
     =============================== ast_type.h ===============================
@@ -14,6 +16,9 @@
     as [PTR] [PTR] [BASE] in the ast_type_t elements array
     ---------------------------------------------------------------------------
 */
+
+#include "UTIL/trait.h"
+#include "UTIL/ground.h"
 
 // Possible AST type elements
 #define AST_ELEM_NONE          0x00
@@ -51,7 +56,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char *base;
+    strong_cstr_t base;
 } ast_elem_base_t;
 
 // ---------------- ast_elem_pointer_t ----------------
@@ -174,5 +179,9 @@ bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base);
 // ---------------- ast_type_is_pointer_to ----------------
 // Returns whether an AST type is a pointer to another AST type
 bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // AST_TYPE_H

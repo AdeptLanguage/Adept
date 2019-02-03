@@ -2,6 +2,10 @@
 #ifndef PARSE_STMT_H
 #define PARSE_STMT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "UTIL/ground.h"
 #include "AST/ast_expr.h"
 #include "PARSE/parse_ctx.h"
@@ -28,5 +32,9 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
 // Unravels a list of defered statements into another list of
 // statements in reverse order until 'unravel_point' is reached.
 void parse_unravel_defer_stmts(ast_expr_list_t *stmts, ast_expr_list_t *defer_list, length_t unravel_point);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PARSE_STMT_H

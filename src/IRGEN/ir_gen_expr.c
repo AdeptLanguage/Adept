@@ -8,6 +8,7 @@
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
+#include "BRIDGE/rtti.h"
 #include "BRIDGE/bridge.h"
 
 errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
@@ -130,10 +131,12 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         if(builder->object->ir_module.common.ir_string_struct == NULL){
             compiler_panic(builder->compiler, expr->source, "Can't create string literal without String type present");
             printf("\nTry importing '2.1/String.adept'\n");
+            return FAILURE;
         }
         
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("String"));
         *ir_value = build_literal_str(builder, ((ast_expr_str_t*) expr)->array, ((ast_expr_str_t*) expr)->length);
+        // NOTE: build_literal_str shouldn't return NULL since we verified that 'String' type is present
         break;
     case EXPR_CSTR:
         if(out_expr_type != NULL) ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
@@ -578,14 +581,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ir_type_t *casted_ir_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
                 casted_ir_type->kind = TYPE_KIND_POINTER;
                 casted_ir_type->extra = ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype;
-
                 array_type.elements[0]->id = AST_ELEM_POINTER;
-
-                ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-                instr->id = INSTRUCTION_BITCAST;
-                instr->result_type = casted_ir_type;
-                instr->value = array_value;
-                array_value = build_value_from_prev_instruction(builder);
+                array_value = build_bitcast(builder, array_value, casted_ir_type);
             } else if(EXPR_IS_MUTABLE(array_access_expr->value->id)){
                 // Load value reference
                 // (*)  int -> int
@@ -947,8 +944,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
             (*ir_value)->value_type = VALUE_TYPE_LITERAL;
             ir_type_map_find(builder->type_map, enum_value_expr->enum_name, &((*ir_value)->type));
-            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long)); \
-            *((unsigned long long*) (*ir_value)->extra) = enum_kind_id; \
+            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
+            *((unsigned long long*) (*ir_value)->extra) = enum_kind_id;
 
             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(enum_value_expr->enum_name));
         }
@@ -1063,6 +1060,21 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 *out_expr_type = ast_type_clone(&static_struct_expr->type);
                 ast_type_prepend_ptr(out_expr_type);
             }
+        }
+        break;
+    case EXPR_TYPEINFO: {
+            ast_expr_typeinfo_t *typeinfo = (ast_expr_typeinfo_t*) expr;
+            
+            if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+                compiler_panic(builder->compiler, typeinfo->source, "Unable to use runtime type info when runtime type information is disabled");
+                return FAILURE;
+            }
+
+            *ir_value = rtti_for(builder, &typeinfo->target, typeinfo->source);
+            if(*ir_value == NULL) return FAILURE;
+
+            if(out_expr_type)
+                ast_type_make_base_ptr(out_expr_type, strclone("AnyType"));
         }
         break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {

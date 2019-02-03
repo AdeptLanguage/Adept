@@ -1,0 +1,13 @@
+
+import 'sys/cstdio.adept'
+
+// Alias to test {alias} description
+alias FuncReturnsInt = func () int
+
+func main {
+    each *AnyType in [__types__, __types_length__] {
+        additional_description *ubyte = ''
+        if it.is_alias, additional_description = '{alias}'
+        printf('%-20s - %-16s %s\n', it.name, __type_kinds__[it.kind], additional_description)
+    }
+}

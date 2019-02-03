@@ -229,7 +229,87 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
     // Determine all of the undetermined types
     if(undetermined.solution == EXPR_NONE){
         if(default_assigned_type == EXPR_NONE){
-            default_assigned_type = generics_primitive_type(undetermined.expressions,  undetermined.expressions_length);
+            default_assigned_type = generics_primitive_type(undetermined.expressions, undetermined.expressions_length);
+        }
+
+        // HACK: Mention types created through primative data to the type table
+        // (since with the current system, we can't know what types we will need very well)
+        // TODO: Change the system so the resolution of rtti is further delayed
+        // - Isaac Shelton, January 20th 2019
+        switch(default_assigned_type){
+        case EXPR_NONE:
+        case EXPR_NULL:
+            // The type would've had already been mentioned to the type table,
+            // so we don't have to worry about it
+            break;
+        case EXPR_BOOLEAN:
+            type_table_give_base(ctx->type_table, "bool");
+            break;
+        case EXPR_BYTE:
+            type_table_give_base(ctx->type_table, "byte");
+            break;
+        case EXPR_UBYTE:
+            type_table_give_base(ctx->type_table, "ubyte");
+            break;
+        case EXPR_SHORT:
+            type_table_give_base(ctx->type_table, "short");
+            break;
+        case EXPR_USHORT:
+            type_table_give_base(ctx->type_table, "ushort");
+            break;
+        case EXPR_INT:
+            type_table_give_base(ctx->type_table, "int");
+            break;
+        case EXPR_UINT:
+            type_table_give_base(ctx->type_table, "uint");
+            break;
+        case EXPR_LONG:
+            type_table_give_base(ctx->type_table, "long");
+            break;
+        case EXPR_ULONG:
+            type_table_give_base(ctx->type_table, "ulong");
+            break;
+        case EXPR_DOUBLE:
+            type_table_give_base(ctx->type_table, "double");
+            break;
+        case EXPR_FLOAT:
+            type_table_give_base(ctx->type_table, "float");
+            break;
+        case EXPR_CSTR: {
+                // Create '*ubyte' type template for cloning
+                // ------------------------------
+                ast_elem_pointer_t ptr_elem;
+                ptr_elem.id = AST_ELEM_POINTER;
+                ptr_elem.source.index = 0;
+                ptr_elem.source.object_index = 0;
+
+                ast_elem_base_t cstr_base_elem;
+                cstr_base_elem.id = AST_ELEM_BASE;
+                cstr_base_elem.source.index = 0;
+                cstr_base_elem.source.object_index = 0;
+                cstr_base_elem.base = "ubyte";
+
+                ast_elem_t *cstr_type_elements[] = {
+                    (ast_elem_t*) &ptr_elem,
+                    (ast_elem_t*) &cstr_base_elem
+                };
+
+                ast_type_t cstr_type;
+                cstr_type.elements = cstr_type_elements;
+                cstr_type.elements_length = 2;
+                cstr_type.source.index = 0;
+                cstr_type.source.object_index = 0;
+                // ------------------------------
+
+                type_table_give(ctx->type_table, &cstr_type, NULL);
+            }
+            break;
+        case EXPR_STR:
+            type_table_give_base(ctx->type_table, "String");
+            break;
+        default:
+            redprintf("INTERNAL ERROR: Failed to mention type to type table from default assigned primitive for generic!\n");
+            redprintf("Continuing regardless...\n");
         }
 
         if(default_assigned_type != EXPR_NONE){
@@ -258,16 +338,47 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     switch((*expr)->id){
     case EXPR_NONE: break;
     case EXPR_BYTE:
+        type_table_give_base(ctx->type_table, "byte");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_UBYTE:
+        type_table_give_base(ctx->type_table, "ubyte");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_SHORT:
+        type_table_give_base(ctx->type_table, "short");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_USHORT:
+        type_table_give_base(ctx->type_table, "ushort");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_INT:
+        type_table_give_base(ctx->type_table, "int");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_UINT:
+        type_table_give_base(ctx->type_table, "uint");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_LONG:
+        type_table_give_base(ctx->type_table, "long");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_ULONG:
+        type_table_give_base(ctx->type_table, "ulong");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_FLOAT:
+        type_table_give_base(ctx->type_table, "float");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_DOUBLE:
+        type_table_give_base(ctx->type_table, "double");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
     case EXPR_BOOLEAN:
+        type_table_give_base(ctx->type_table, "bool");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_VARIABLE: {
@@ -466,6 +577,11 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
                 unsigned int default_primitive = ast_primitive_from_ast_type(&structure->field_types[i]);
                 if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope)) return FAILURE;
             }
+        }
+        break;
+    case EXPR_TYPEINFO: {
+            // Don't infer target type, but give it to the type table
+            type_table_give(ctx->type_table, &(((ast_expr_typeinfo_t*) *expr)->target), NULL);
         }
         break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {

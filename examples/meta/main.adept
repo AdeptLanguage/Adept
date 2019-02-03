@@ -1,0 +1,31 @@
+
+// #set
+// #get
+// #if
+// #elif
+// #end
+// #print
+// #place
+// #print_error
+// #place_error
+// #input
+// #halt
+// #import
+
+#import "sys/" + "cstdio.adept"
+
+func main {
+    #if __macos__
+        printf('Hello World on MacOS!\n')
+        #if go_bananas
+            printf('Go Bananas!!!\n')
+        #end
+    #elif __windows__
+        printf('Hello World on Windows!\n')
+        #if go_bananas
+            printf('Go Bananas!!!\n')
+        #end
+    #else
+        printf('Hello World on non-MacOS!\n')
+    #end
+}

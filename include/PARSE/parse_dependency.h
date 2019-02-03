@@ -2,6 +2,10 @@
 #ifndef PARSE_DEPENDENCY_H
 #define PARSE_DEPENDENCY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "UTIL/ground.h"
 #include "PARSE/parse_ctx.h"
 
@@ -30,5 +34,9 @@ maybe_null_strong_cstr_t parse_resolve_import(parse_ctx_t *ctx, weak_cstr_t file
 // ------------------ already_imported ------------------
 // Returns whether or not the file has already been imported
 bool already_imported(parse_ctx_t *ctx, weak_cstr_t filename);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PARSE_DEPENDENCY_H

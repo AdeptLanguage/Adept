@@ -1,0 +1,28 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstring.adept'
+
+func main {
+    value Any = undef
+    
+    int_type *AnyType = typeinfo **short
+    printf('typeinfo of **short has a name of \'%s\'\n', int_type.name)
+    
+    value.type = typeinfo int
+    *cast *int &value.placeholder = 123456789
+    showIntOrFloat(value)
+    
+    value.type = typeinfo float
+    *cast *float &value.placeholder = 3.14159
+    showIntOrFloat(value)
+}
+
+func showIntOrFloat(in any Any) {
+    if any.type.kind == AnyTypeKind::INT {
+        printf('int: %d\n', *cast *int &any.placeholder)
+    } else if any.type.kind == AnyTypeKind::FLOAT {
+        printf('float: %f\n', cast double *cast *float &any.placeholder)
+    } else {
+        printf('unknown value\n')
+    }
+}

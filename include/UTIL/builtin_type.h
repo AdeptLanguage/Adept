@@ -2,6 +2,10 @@
 #ifndef BULITIN_TYPE_H
 #define BULITIN_TYPE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
 
@@ -23,5 +27,9 @@
 const char * const global_primitives[13];
 
 #define typename_builtin_type(base) binary_string_search(global_primitives, 13, base)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // BULITIN_TYPE_H

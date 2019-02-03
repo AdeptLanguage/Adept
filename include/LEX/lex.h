@@ -2,6 +2,10 @@
 #ifndef LEX_H
 #define LEX_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================== lex.h ==================================
     Module for performing lexical analysis
@@ -46,10 +50,15 @@ typedef struct {
 #define LEX_STATE_UBERAND      0x00000012
 #define LEX_STATE_UBEROR       0x00000013
 #define LEX_STATE_COLON        0x00000014
+#define LEX_STATE_META         0x00000015
 
 // ---------------- lex ----------------
 // Entry point for lexical analysis
 errorcode_t lex(compiler_t *compiler, object_t *object);
+
+// ---------------- lex_buffer ----------------
+// Lex the text buffer attached to the given object
+errorcode_t lex_buffer(compiler_t *compiler, object_t *object);
 
 // ---------------- lex_state_init ----------------
 // Initializes lexical analysis state
@@ -62,5 +71,9 @@ void lex_state_free(lex_state_t *lex_state);
 // ---------------- lex_get_location ----------------
 // Retrieves line and column of an index in a buffer
 void lex_get_location(const char *buffer, length_t i, int *line, int *column);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEX_H

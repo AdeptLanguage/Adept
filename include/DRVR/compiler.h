@@ -2,6 +2,10 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================ compiler.h ================================
     Module for encapsulating the compiler
@@ -127,8 +131,10 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 
 // ---------------- compiler_undeclared_function ----------------
 // Prints an error message for an undeclared function
+#ifndef ADEPT_INSIGHT_BUILD
 void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, source_t source,
     const char *name, ast_type_t *types, length_t arity);
+#endif
 
 // ---------------- make_args_string ----------------
 // Helper function for generating a string for function arguments
@@ -137,5 +143,9 @@ strong_cstr_t make_args_string(ast_type_t *types, length_t arity);
 // ---------------- object_panic_plain ----------------
 // Prints a plain compiler error given an object
 void object_panic_plain(object_t *object, const char *message);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // COMPILER_H

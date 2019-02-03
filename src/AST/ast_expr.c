@@ -616,6 +616,9 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_CALL:
         ast_exprs_free_fully(((ast_expr_call_t*) expr)->args, ((ast_expr_call_t*) expr)->arity);
         break;
+    case EXPR_VARIABLE:
+        // name is a weak_cstr_t so we don't have to worry about it
+        break;
     case EXPR_MEMBER:
         ast_expr_free_fully( ((ast_expr_member_t*) expr)->value );
         free(((ast_expr_member_t*) expr)->member);
@@ -654,6 +657,10 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_STATIC_ARRAY: case EXPR_STATIC_STRUCT: {
             ast_type_free( &((ast_expr_static_data_t*) expr)->type );
             ast_exprs_free_fully(((ast_expr_static_data_t*) expr)->values, ((ast_expr_static_data_t*) expr)->length);
+        }
+        break;
+    case EXPR_TYPEINFO: {
+            ast_type_free( &((ast_expr_typeinfo_t*) expr)->target );
         }
         break;
     case EXPR_RETURN:
@@ -725,7 +732,7 @@ void ast_exprs_free_fully(ast_expr_t **exprs, length_t length){
 }
 
 ast_expr_t *ast_expr_clone(ast_expr_t* expr){
-    // NOTE: Exclusive statement expressions are currently unimplemented
+    // NOTE: Exclusively statement expressions are currently unimplemented
     ast_expr_t *clone = NULL;
 
     #define MACRO_VALUE_CLONE(expr_type) { \
@@ -748,7 +755,9 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_GENERIC_INT:   MACRO_VALUE_CLONE(ast_expr_generic_int_t); break;
     case EXPR_GENERIC_FLOAT: MACRO_VALUE_CLONE(ast_expr_generic_float_t); break;
     case EXPR_CSTR:          MACRO_VALUE_CLONE(ast_expr_cstr_t); break;
-    case EXPR_NULL: break;
+    case EXPR_NULL:
+        clone = malloc(sizeof(ast_expr_t));
+        break;
     case EXPR_ADD:
     case EXPR_SUBTRACT:
     case EXPR_MULTIPLY:
@@ -786,6 +795,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_VARIABLE:
         clone = malloc(sizeof(ast_expr_variable_t));
         ((ast_expr_variable_t*) clone)->name = ((ast_expr_variable_t*) expr)->name;
+        break;
     case EXPR_MEMBER:
         clone = malloc(sizeof(ast_expr_member_t));
         ((ast_expr_member_t*) clone)->value = ast_expr_clone(((ast_expr_member_t*) expr)->value);

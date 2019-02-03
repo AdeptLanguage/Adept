@@ -10,6 +10,12 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     token_t *tokens = ctx->tokenlist->tokens;
     source_t source = ctx->tokenlist->sources[*i];
     ast_t *ast = ctx->ast;
+    bool is_external = false;
+
+    if(tokens[*i].id == TOKEN_EXTERNAL){
+        is_external = true;
+        (*i)++;
+    }
 
     weak_cstr_t name = parse_eat_word(ctx, "INTERNAL ERROR: Expected word");
     if(name == NULL) return FAILURE;
@@ -34,7 +40,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         }
     }
 
-    ast_add_global(ast, name, type, initial_value, TRAIT_NONE, source);
+    ast_add_global(ast, name, type, initial_value, is_external ? AST_GLOBAL_EXTERNAL : TRAIT_NONE, source);
     return SUCCESS;
 }
 

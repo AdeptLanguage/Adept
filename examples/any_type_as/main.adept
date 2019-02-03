@@ -1,0 +1,36 @@
+
+import 'sys/cstdio.adept'
+
+struct Thing (x int, y int)
+
+func main {
+    show(10)
+    show(1234)
+    show(31.4142)
+    show(3.14159f)
+    show(987654321ul)
+    show(true)
+    show('Hello World')
+    x Thing
+    x.x = 1234
+    x.y = 5678
+    show(&x)
+}
+
+func show(in any Any) {
+    if any.type.kind == AnyTypeKind::INT {
+        printf('int: %d\n', *cast *int &any.placeholder)
+    } else if any.type.kind == AnyTypeKind::FLOAT {
+        printf('float: %f\n', cast double *cast *float &any.placeholder)
+    } else if any.type.kind == AnyTypeKind::DOUBLE {
+        printf('double: %f\n', *cast *double &any.placeholder)
+    } else if any.type.kind == AnyTypeKind::ULONG {
+        printf('ulong: %d\n', cast int *cast *ulong &any.placeholder)
+    } else if any.type.kind == AnyTypeKind::BOOL {
+        printf('bool: %d\n', cast int *cast *bool &any.placeholder)
+    } else if any.type == typeinfo *ubyte {
+        printf('cstring: \'%s\'\n', *cast **ubyte &any.placeholder)
+    } else {
+        printf('unknown value\n')
+    }
+}

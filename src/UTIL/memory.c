@@ -135,6 +135,26 @@ void memory_free_fast(void* data){
     return;
 }
 
+void memory_track_external_allocation(void *pointer, size_t size, const char *optional_filename, size_t optional_line){
+    if(global_memblocks_length == global_memblocks_capacity){
+        memblock_t *new_memory_blocks = malloc(sizeof(memblock_t) * global_memblocks_capacity * 2);
+        memcpy(new_memory_blocks, global_memblocks, sizeof(memblock_t) * global_memblocks_capacity);
+        global_memblocks_capacity *= 2;
+        free(global_memblocks);
+        global_memblocks = new_memory_blocks;
+    }
+
+    memblock_t *memblock = &global_memblocks[global_memblocks_length++];
+    memblock->pointer = pointer;
+    memblock->size = size;
+    memblock->freed = false;
+
+    #ifdef TRACK_MEMORY_FILE_AND_LINE
+    memblock->filename = optional_filename ? optional_filename : "external_allocation";
+    memblock->line_number = optional_line;
+    #endif // TRACK_MEMORY_FILE_AND_LINE
+}
+
 void memory_scan(){
     // Scans for unfreed memory blocks
     bool found_unfreed = false;
@@ -153,6 +173,9 @@ void memory_scan(){
 
             #ifdef TRACK_MEMORY_FILE_AND_LINE
             printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: 0x%p) - %s %d\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer, global_memblocks[i].filename, global_memblocks[i].line_number);
+            if(strcmp(global_memblocks[i].filename, "src/LEX/lex.c") == 0 && global_memblocks[i].line_number == 217){
+                printf("Content: '%s'\n", global_memblocks[i].pointer);
+            }
             #else // TRACK_MEMORY_FILE_AND_LINE
             printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: 0x%p)\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer);
             #endif // TRACK_MEMORY_FILE_AND_LINE

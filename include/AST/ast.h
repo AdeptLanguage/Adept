@@ -2,6 +2,10 @@
 #ifndef AST_H
 #define AST_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================== ast.h ==================================
     Module for creating and manipulating abstract syntax trees
@@ -12,6 +16,7 @@
 #include "UTIL/ground.h"
 #include "AST/ast_type.h"
 #include "AST/ast_expr.h"
+#include "AST/meta_directives.h"
 #include "BRIDGE/type_table.h"
 
 // ---------------- ast_func_t ----------------
@@ -84,9 +89,12 @@ typedef struct {
 } ast_global_t;
 
 // Possible ast_global_t traits
-#define AST_GLOBAL_SPECIAL          TRAIT_1
-#define AST_GLOBAL___TYPES__        TRAIT_2 // Sub-trait of AST_GLOBAL_SPECIAL
-#define AST_GLOBAL___TYPES_LENGTH__ TRAIT_3 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL_EXTERNAL              TRAIT_1
+#define AST_GLOBAL_SPECIAL               TRAIT_2
+#define AST_GLOBAL___TYPES__             TRAIT_3 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL___TYPES_LENGTH__      TRAIT_4 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL___TYPE_KINDS__        TRAIT_5 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL___TYPE_KINDS_LENGTH__ TRAIT_6 // Sub-trait of AST_GLOBAL_SPECIAL
 
 // ---------------- ast_enum_t ----------------
 // An enum AST node
@@ -123,12 +131,18 @@ typedef struct {
     length_t enums_length;
     length_t enums_capacity;
     strong_cstr_t *libraries;
+    bool *libraries_are_framework;
     length_t libraries_length;
     length_t libraries_capacity;
     ast_shared_common_t common;
 
     // Data members for bridging
     type_table_t *type_table;
+
+    // Data members for meta definitions
+    meta_definition_t *meta_definitions;
+    length_t meta_definitions_length;
+    length_t meta_definitions_capacity;
 } ast_t;
 
 // ---------------- ast_init ----------------
@@ -219,7 +233,7 @@ void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *i
 // ---------------- ast_add_foreign_library ----------------
 // Adds a library to the list of foreign libraries
 // NOTE: Does not have ownership of library string
-void ast_add_foreign_library(ast_t *ast, strong_cstr_t library);
+void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, bool is_framework);
 
 // ---------------- ast_get_usize ----------------
 // Gets constant AST type for type 'usize'
@@ -239,5 +253,9 @@ int ast_constants_cmp(const void *a, const void *b);
 // Compares two 'ast_enum_t' structures.
 // Used for qsort()
 int ast_enums_cmp(const void *a, const void *b);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // AST_H

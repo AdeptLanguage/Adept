@@ -6,6 +6,10 @@
 #include "AST/ast_expr.h"
 #include "PARSE/parse_ctx.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ------------------ parse_expr ------------------
 // Parses an expression into an AST.
 errorcode_t parse_expr(parse_ctx_t *ctx, ast_expr_t **out_expr);
@@ -85,9 +89,17 @@ errorcode_t parse_expr_static(parse_ctx_t *ctx, ast_expr_t **out_expr);
 // Parses a 'def' expression
 errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr);
 
+// ------------------ parse_expr_typeinfo ------------------
+// Parses a 'typeinfo' expression
+errorcode_t parse_expr_typeinfo(parse_ctx_t *ctx, ast_expr_t **out_expr);
+
 // ------------------ parse_get_precedence ------------------
 // Returns the precedence of the expression that will
 // be created by a given token id.
 int parse_get_precedence(unsigned int id);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PARSE_EXPR_H

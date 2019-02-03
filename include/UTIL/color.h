@@ -2,6 +2,10 @@
 #ifndef COLOR_H
 #define COLOR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================= color.h =================================
     Module for printing out colored text to the terminal
@@ -24,6 +28,11 @@ void terminal_set_color_win32(char color);
 void terminal_set_color_posix(char color);
 #endif
 
+#ifdef ADEPT_INSIGHT_BUILD
+#define redprintf(...) ((void) 0)
+#define yellowprintf(...) ((void) 0)
+#define whiteprintf(...) ((void) 0)
+#else
 // ---------------- redprintf(...) ----------------
 // Temporarily sets to red for a call to printf
 #define redprintf(...) { \
@@ -47,5 +56,6 @@ void terminal_set_color_posix(char color);
     printf(__VA_ARGS__); \
     terminal_set_color(TERMINAL_COLOR_DEFAULT); \
 }
+#endif
 
 #endif // COLOR_H

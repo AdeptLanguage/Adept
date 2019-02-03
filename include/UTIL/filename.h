@@ -2,6 +2,10 @@
 #ifndef FILENAME_H
 #define FILENAME_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================ filename.h ===============================
     Module for manipulating filenames
@@ -45,7 +49,7 @@ strong_cstr_t filename_absolute(const char *filename);
 // ---------------- filename_auto_ext ----------------
 // Append the correct file extension for the given
 // mode if '*out_filename' doesn't already have it
-void filename_auto_ext(char **out_filename, unsigned int mode);
+void filename_auto_ext(strong_cstr_t *out_filename, unsigned int mode);
 
 // Possible file auto-extension modes
 #define FILENAME_AUTO_NONE       0x00
@@ -55,13 +59,17 @@ void filename_auto_ext(char **out_filename, unsigned int mode);
 // ---------------- filename_append_if_missing ----------------
 // Appends a string to the filename if the filename
 // doesn't already end in it
-void filename_append_if_missing(char **out_filename, const char *addition);
+void filename_append_if_missing(strong_cstr_t *out_filename, const char *addition);
 
 // ---------------- filename_without_ext ----------------
 // Returns the filename without the extension
 char *filename_without_ext(char *filename);
 
 // ---------------- filename_prepend_dotslash_if_needed ----------------
-void filename_prepend_dotslash_if_needed(char **filename);
+void filename_prepend_dotslash_if_needed(strong_cstr_t *filename);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // FILENAME_H

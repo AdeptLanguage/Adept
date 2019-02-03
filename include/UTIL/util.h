@@ -2,6 +2,10 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================== util.h ==================================
     Module for general memory-related utilities
@@ -40,5 +44,9 @@ void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, len
 // ---------------- strclone ----------------
 // Clones a string, producing a duplicate
 strong_cstr_t strclone(const char *src);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // UTIL_H

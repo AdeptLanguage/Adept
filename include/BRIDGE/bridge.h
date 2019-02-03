@@ -2,6 +2,10 @@
 #ifndef BRIDGE_H
 #define BRIDGE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================= bridge.h =================================
     Module for bridging the gap between Abstract Syntax Trees and
@@ -9,8 +13,11 @@
     ----------------------------------------------------------------------------
 */
 
-#include "IR/ir_type.h"
 #include "AST/ast_type.h"
+
+#ifndef ADEPT_INSIGHT_BUILD
+#include "IR/ir_type.h"
+#endif
 
 #define BRIDGE_VAR_UNDEF        TRAIT_1 // Variable is to be uninitialized
 #define BRIDGE_VAR_REFERENCE    TRAIT_2 // Variable is to be treated as a mutable reference
@@ -19,7 +26,11 @@
 typedef struct {
     weak_cstr_t name;     // name of the variable
     ast_type_t *ast_type; // AST type of the variable
+
+    #ifndef ADEPT_INSIGHT_BUILD
     ir_type_t *ir_type;   // IR type of the variable
+    #endif
+
     length_t id;          // ID of the variable within the function stack
     trait_t traits;       // traits of the variable
 } bridge_var_t;
@@ -91,5 +102,9 @@ void bridge_var_scope_nearest_inner(bridge_var_scope_t *scope, const char *name,
 // within the bridge variable list.
 // (NOTE: Minimum distance of 3 to count as near enough)
 void bridge_var_list_nearest(bridge_var_list_t *list, const char *name, char **out_nearest_name, int *out_distance);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // BRIDGE_H

@@ -2,6 +2,8 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#ifndef ADEPT_INSIGHT_BUILD
+
 /*
     ================================= memory.h =================================
     Module for memory analysis
@@ -69,6 +71,10 @@ extern bool global_memblocks_sorted;
 // Initializes memory tracking
 void memory_init();
 
+// ---------------- memory_track_external_allocation ----------------
+// Tracks allocations not made by memory_alloc
+void memory_track_external_allocation(void *pointer, size_t size, const char *optional_filename, size_t optional_line);
+
 // ---------------- memory_scan ----------------
 // Scans memory allocations for unfreed memory
 void memory_scan();
@@ -96,5 +102,7 @@ void memory_free_fast(void* data);
 #endif // TRACK_MEMORY_FILE_AND_LINE
 
 #endif // TRACK_MEMORY_USAGE
+
+#endif // ADEPT_INSIGHT_BUILD
 
 #endif // MEMORY_H

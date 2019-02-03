@@ -139,7 +139,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
 
-            return LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+            return LLVMConstGEP(global_data, indices, 2);
         }
     case VALUE_TYPE_STRUCT_LITERAL: {
             ir_value_struct_literal_t *struct_literal = value->extra;
@@ -153,7 +153,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
                 // Assumes ir_value_t values are constants (should have been checked earlier)
                 values[i] = ir_to_llvm_value(llvm, struct_literal->values[i]);
             }
-
+            
             return LLVMConstNamedStruct(type, values, struct_literal->length);
         }
     case VALUE_TYPE_ANON_GLOBAL: case VALUE_TYPE_CONST_ANON_GLOBAL: {
@@ -161,17 +161,33 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             return llvm->anon_global_variables[extra->anon_global_id];
         }
     case VALUE_TYPE_CSTR_OF_LEN: {
-        ir_value_cstr_of_len_t *cstr_of_len = value->extra;
-        LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), ".str");
-        LLVMSetLinkage(global_data, LLVMInternalLinkage);
-        LLVMSetGlobalConstant(global_data, true);
-        LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));
-        LLVMValueRef indices[2];
-        indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
-        indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-        LLVMValueRef literal = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
-        return literal;
-    }
+            ir_value_cstr_of_len_t *cstr_of_len = value->extra;
+            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), ".str");
+            LLVMSetLinkage(global_data, LLVMInternalLinkage);
+            LLVMSetGlobalConstant(global_data, true);
+            LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));
+            LLVMValueRef indices[2];
+            indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            LLVMValueRef literal = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+            return literal;
+        }
+    case VALUE_TYPE_CONST_BITCAST: {
+            LLVMValueRef before = ir_to_llvm_value(llvm, value->extra);
+            LLVMTypeRef after = ir_to_llvm_type(value->type);
+            return LLVMConstBitCast(before, after);
+        }
+    case VALUE_TYPE_STRUCT_CONSTRUCTION: {
+            ir_value_struct_construction_t *construction = (ir_value_struct_construction_t*) value->extra;
+
+            LLVMValueRef constructed = LLVMGetUndef(ir_to_llvm_type(value->type));
+
+            for(length_t i = 0; i != construction->length; i++){
+                constructed = LLVMBuildInsertValue(llvm->builder, constructed, ir_to_llvm_value(llvm, construction->values[i]), i, "");
+            }
+
+            return constructed;
+        }
     default:
         redprintf("INTERNAL ERROR: Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
         return NULL;
@@ -352,10 +368,9 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     LLVMBuildRet(builder, ((ir_instr_ret_t*) instr)->value == NULL ? NULL : ir_to_llvm_value(llvm, ((ir_instr_ret_t*) instr)->value));
                     break;
                 case INSTRUCTION_ADD:
-                    #ifdef ENABLE_DEBUG_FEATURES
                     instr = basicblock->instructions[i];
 
-                    // Do excess instructions to get llvm to shut up
+                    // Do excess instructions for adding pointers to get llvm to shut up
                     if(((ir_instr_math_t*) instr)->a->type->kind == TYPE_KIND_POINTER){
                         LLVMValueRef val_a = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
                         LLVMValueRef val_b = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b);
@@ -368,11 +383,6 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         llvm_result = LLVMBuildAdd(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                         catalog.blocks[b].value_references[i] = llvm_result;    
                     }
-                    #else
-                    instr = basicblock->instructions[i];
-                    llvm_result = LLVMBuildAdd(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
-                    catalog.blocks[b].value_references[i] = llvm_result;
-                    #endif
                     break;
                 case INSTRUCTION_FADD:
                     instr = basicblock->instructions[i];
@@ -393,7 +403,6 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     instr = basicblock->instructions[i];
                     llvm_result = LLVMBuildMul(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
-                    break;
                     break;
                 case INSTRUCTION_FMULTIPLY:
                     instr = basicblock->instructions[i];
@@ -783,25 +792,23 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         LLVMValueRef *memcpy_intrinsic = &llvm->memcpy_intrinsic;
 
                         if(*memcpy_intrinsic == NULL){
-                            LLVMTypeRef arg_types[5];
+                            LLVMTypeRef arg_types[4];
                             arg_types[0] = LLVMPointerType(LLVMInt8Type(), 0);
                             arg_types[1] = LLVMPointerType(LLVMInt8Type(), 0);
                             arg_types[2] = LLVMInt64Type();
-                            arg_types[3] = LLVMInt32Type();
-                            arg_types[4] = LLVMInt1Type();
+                            arg_types[3] = LLVMInt1Type();
 
-                            LLVMTypeRef memcpy_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 5, 0);
+                            LLVMTypeRef memcpy_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
                             *memcpy_intrinsic = LLVMAddFunction(llvm->module, "llvm.memcpy.p0i8.p0i8.i64", memcpy_intrinsic_type);
                         }
 
-                        LLVMValueRef args[5];
+                        LLVMValueRef args[4];
                         args[0] = ir_to_llvm_value(llvm, ((ir_instr_memcpy_t*) instr)->destination);
                         args[1] = ir_to_llvm_value(llvm, ((ir_instr_memcpy_t*) instr)->value);
                         args[2] = ir_to_llvm_value(llvm, ((ir_instr_memcpy_t*) instr)->bytes);
-                        args[3] = LLVMConstInt(LLVMInt32Type(), 0, false);
-                        args[4] = LLVMConstInt(LLVMInt1Type(), ((ir_instr_memcpy_t*) instr)->is_volatile, false);
+                        args[3] = LLVMConstInt(LLVMInt1Type(), ((ir_instr_memcpy_t*) instr)->is_volatile, false);
 
-                        LLVMBuildCall(builder, *memcpy_intrinsic, args, 5, "");
+                        LLVMBuildCall(builder, *memcpy_intrinsic, args, 4, "");
                         catalog.blocks[b].value_references[i] = NULL;
                     }
                     break;
@@ -886,12 +893,17 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
     char global_implementation_name[256];
 
     for(length_t i = 0; i != globals_length; i++){
+        bool is_external = globals[i].traits & IR_GLOBAL_EXTERNAL;
         LLVMTypeRef global_llvm_type = ir_to_llvm_type(globals[i].type);
-        sprintf(global_implementation_name, "adeptglob_%X", (int) i);
 
-        llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, global_implementation_name);
+        if(is_external)
+            sprintf(global_implementation_name, "adeptglob_%X", (int) i);
+
+        llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, is_external ? globals[i].name : global_implementation_name);
         LLVMSetLinkage(llvm->global_variables[i], LLVMExternalLinkage);
-        LLVMSetInitializer(llvm->global_variables[i], LLVMGetUndef(global_llvm_type));
+
+        if(!is_external)
+            LLVMSetInitializer(llvm->global_variables[i], LLVMGetUndef(global_llvm_type));
     }
 
     for(length_t i = 0; i != anon_globals_length; i++){
@@ -923,10 +935,13 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.memcpy_intrinsic = NULL;
     llvm.compiler = compiler;
 
+    bool disposeTriple = false;
+
 	#ifdef _WIN32
     char *triple = "x86_64-pc-windows-gnu";
 	#else
 	char *triple = LLVMGetDefaultTargetTriple();
+    disposeTriple = true;
 	#endif
     LLVMSetTarget(llvm.module, triple);
 
@@ -986,25 +1001,21 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
 	char *link_command; // Will be determined based on system
 
-	#ifdef _WIN32
-	// Windows Linkering
-    // TODO: SECURITY: Stop using system(1) call to invoke linker
-    const char *linker = "ld.exe"; // May need to change depending on system etc.
-    length_t linker_length = strlen(linker);
-
-    const char *linker_options = "--start-group";
-    length_t linker_options_length = strlen(linker_options);
-
     char *linker_additional = "";
     length_t linker_additional_length = 0;
     length_t linker_additional_index = 0;
 
     for(length_t i = 0; i != object->ast.libraries_length; i++)
-        linker_additional_length += strlen(object->ast.libraries[i]) + 3;
+        linker_additional_length += strlen(object->ast.libraries[i]) + 3 + (object->ast.libraries_are_framework[i] ? 11 : 0);
 
     if(linker_additional_length != 0){
         linker_additional = malloc(linker_additional_length + 1);
         for(length_t i = 0; i != object->ast.libraries_length; i++){
+            if(object->ast.libraries_are_framework[i]){
+                memcpy(&linker_additional[linker_additional_index], " -framework", 11);
+                linker_additional_index += 11;
+            }
+
             linker_additional[linker_additional_index++] = ' ';
             linker_additional[linker_additional_index++] = '\"';
             length_t lib_length = strlen(object->ast.libraries[i]);
@@ -1015,11 +1026,18 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         linker_additional[linker_additional_index] = '\0';
     }
 
+	#ifdef _WIN32
+	// Windows Linkering
+    // TODO: SECURITY: Stop using system(3) call to invoke linker
+    const char *linker = "ld.exe"; // May need to change depending on system etc.
+    length_t linker_length = strlen(linker);
+
+    const char *linker_options = "--start-group";
+    length_t linker_options_length = strlen(linker_options);
+
     // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
     link_command = malloc(linker_length + root_length * 18 + 14 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
     sprintf(link_command, "\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
-
-    if(linker_additional_length != 0) free(linker_additional);
 	#else
 	// UNIX Linkering
 	
@@ -1028,8 +1046,10 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 	
 	link_command = malloc(linker_length + root_length * 18 + 14 + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
 
-	    sprintf(link_command, "%s \"%s\" -o \"%s\"", linker, object_filename, compiler->output_filename);
+    sprintf(link_command, "%s \"%s\"%s -o \"%s\"", linker, object_filename, linker_additional, compiler->output_filename);
 	#endif
+
+    if(linker_additional_length != 0) free(linker_additional);
 
     #ifdef ENABLE_DEBUG_FEATURES
     if(!(llvm.compiler->debug_traits & COMPILER_DEBUG_NO_VERIFICATION) && LLVMVerifyModule(llvm.module, LLVMPrintMessageAction, NULL) == 1){
@@ -1050,6 +1070,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMRunPassManager(pass_manager, llvm.module);
     LLVMDisposeTargetMachine(target_machine);
     LLVMDisposePassManager(pass_manager);
+    if(disposeTriple) LLVMDisposeMessage(triple);
 
     if(system(link_command) != 0){
         redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);

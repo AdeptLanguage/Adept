@@ -123,6 +123,9 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_DEF: case TOKEN_UNDEF:
         if(parse_expr_def(ctx, out_expr)) return FAILURE;
         break;
+    case TOKEN_TYPEINFO:
+        if(parse_expr_typeinfo(ctx, out_expr)) return FAILURE;
+        break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
         return FAILURE;
@@ -377,7 +380,7 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr){
         return parse_expr_enum_value(ctx, out_expr);
     }
 
-    char *variable_name = tokens[*i].data;
+    weak_cstr_t variable_name = tokens[*i].data;
     ast_expr_create_variable(out_expr, variable_name, ctx->tokenlist->sources[(*i)++]);
     return SUCCESS;
 }
@@ -389,7 +392,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
-    char *name = tokens[*i].data;
+    weak_cstr_t name = tokens[*i].data;
     source_t source = sources[*i];
     length_t arity = 0;
     ast_expr_t **args = NULL;
@@ -759,6 +762,20 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
     }
 
     *out_expr = (ast_expr_t*) def;
+    return SUCCESS;
+}
+
+errorcode_t parse_expr_typeinfo(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    ast_expr_typeinfo_t *typeinfo = malloc(sizeof(ast_expr_typeinfo_t));
+    typeinfo->id = EXPR_TYPEINFO;
+    typeinfo->source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    if(parse_type(ctx, &typeinfo->target)){
+        free(typeinfo);
+        return FAILURE;
+    }
+
+    *out_expr = (ast_expr_t*) typeinfo;
     return SUCCESS;
 }
 

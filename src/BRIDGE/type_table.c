@@ -16,14 +16,37 @@ void type_table_free(type_table_t *table){
 }
 
 void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cstr_t maybe_alias_name){
-    expand((void**) &table->records, sizeof(type_table_record_t), table->length, &table->capacity, 1, 16);
+    expand((void**) &table->records, sizeof(type_table_record_t), table->length, &table->capacity, 2, 16);
     
     strong_cstr_t name = maybe_alias_name ? maybe_alias_name : ast_type_str(type);
     table->records[table->length].name = name;
     table->records[table->length].ast_type = ast_type_clone(type);
+
+    #ifndef ADEPT_INSIGHT_BUILD
     table->records[table->length].ir_type = NULL;
+    #endif
+
     table->records[table->length++].is_alias = (maybe_alias_name != NULL);
 
+    // HACK: Add extra entry for pointer to given type
+    // since we cannot know whether or not '&' is even used on that type
+    // (with the current system)
+    // Also, this may turn out to be benificial for formulating types that
+    // may not have been directly refered to at compile time
+    if(strcmp(name, "void") != 0){
+        ast_type_t with_additional_ptr = ast_type_clone(type);
+        ast_type_prepend_ptr(&with_additional_ptr);
+        table->records[table->length].name = ast_type_str(&with_additional_ptr);
+        table->records[table->length].ast_type = with_additional_ptr;
+        
+        #ifndef ADEPT_INSIGHT_BUILD
+        table->records[table->length].ir_type = NULL;
+        #endif
+
+        table->records[table->length++].is_alias = false;
+    }
+
+    // Mention sub types to the type table
     if(type->elements_length != 0 && type->elements[0]->id == AST_ELEM_POINTER){
         ast_type_t subtype = ast_type_clone(type);
         // Modify ast_type_t to remove a pointer element from the front
@@ -38,13 +61,34 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
 }
 
 void type_table_give_base(type_table_t *table, weak_cstr_t base){
-    expand((void**) &table->records, sizeof(type_table_record_t), table->length, &table->capacity, 1, 16);
+    expand((void**) &table->records, sizeof(type_table_record_t), table->length, &table->capacity, 2, 16);
 
-    strong_cstr_t name = strclone(base);
-    table->records[table->length].name = name;
+    table->records[table->length].name = strclone(base);
     ast_type_make_base(&table->records[table->length].ast_type, strclone(base));
+
+    #ifndef ADEPT_INSIGHT_BUILD
     table->records[table->length].ir_type = NULL;
+    #endif
+
     table->records[table->length++].is_alias = false;
+
+    // HACK: Add extra entry for pointer to given type
+    // since we cannot know whether or not '&' is even used on that type
+    // (with the current system)
+    // Also, this may turn out to be benificial for formulating types that
+    // may not have been directly refered to at compile time
+    if(strcmp(base, "void") != 0){
+        ast_type_t with_additional_ptr;
+        ast_type_make_base_ptr(&with_additional_ptr, strclone(base));
+        table->records[table->length].name = ast_type_str(&with_additional_ptr);
+        table->records[table->length].ast_type = with_additional_ptr;
+
+        #ifndef ADEPT_INSIGHT_BUILD
+        table->records[table->length].ir_type = NULL;
+        #endif
+        
+        table->records[table->length++].is_alias = false;
+    }
 }
 
 void type_table_reduce(type_table_t *table){

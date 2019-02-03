@@ -86,6 +86,10 @@ void build_break(ir_builder_t *builder, length_t basicblock_id);
 // Builds a static struct
 ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable);
 
+// ---------------- build_struct_construction ----------------
+// Builds a struct construction
+ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);
+
 // ---------------- build_static_array ----------------
 // Builds a static array
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);
@@ -124,6 +128,7 @@ ir_value_t* build_literal_usize(ir_pool_t *pool, length_t value);
 
 // ---------------- build_literal_str ----------------
 // Builds a literal string value
+// NOTE: If no 'String' type is present, an error will be printed and NULL will be returned
 ir_value_t* build_literal_str(ir_builder_t *builder, char *array, length_t length);
 
 // ---------------- build_literal_cstr ----------------
@@ -141,6 +146,31 @@ ir_value_t* build_null_pointer(ir_pool_t *pool);
 // ---------------- build_null_pointer_of_type ----------------
 // Builds a literal null pointer value
 ir_value_t* build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type);
+
+// ---------------- build_bitcast ----------------
+// Builds a bitcast instruction
+ir_value_t* build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+
+// ---------------- build_const_bitcast ----------------
+// Builds a const bitcast value
+ir_value_t* build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to);
+
+// ---------------- build_<cast> ----------------
+// Builds a specialized value cast
+ir_value_t* build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t* build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+
+// ---------------- build_math ----------------
+// Bulids a basic math instruction
+ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result);
 
 // ---------------- build_bool ----------------
 // Builds a literal boolean value

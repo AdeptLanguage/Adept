@@ -2,6 +2,11 @@
 #include "UTIL/util.h"
 #include "BRIDGE/any.h"
 
+const char *any_type_kind_names[] = {
+    "void", "bool", "byte", "ubyte", "short", "ushort", "int", "uint",
+    "long", "ulong", "float", "double", "pointer", "struct", "function-pointer", "fixed-array"
+};
+
 void any_inject_ast(ast_t *ast){
     any_inject_ast_Any(ast);
     any_inject_ast_AnyType(ast);
@@ -14,6 +19,8 @@ void any_inject_ast(ast_t *ast){
 
     any_inject_ast___types__(ast);
     any_inject_ast___types_length__(ast);
+    any_inject_ast___type_kinds__(ast);
+    any_inject_ast___type_kinds_length__(ast);
 }
 
 void any_inject_ast_Any(ast_t *ast){
@@ -169,7 +176,7 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast){
 
 void any_inject_ast_AnyFixedArrayType(ast_t *ast){
     
-    /* struct AnyFixedArrayType (kind AnyTypeKind, is_alias bool, name *ubyte, subtype *AnyType, length usize) */
+    /* struct AnyFixedArrayType (kind AnyTypeKind, name *ubyte, is_alias bool, subtype *AnyType, length usize) */
 
     source_t source;
     source.index = 0;
@@ -218,4 +225,33 @@ void any_inject_ast___types_length__(ast_t *ast){
     ast_type_make_base(&type, strclone("usize"));
 
     ast_add_global(ast, "__types_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES_LENGTH__, source);
+}
+
+void any_inject_ast___type_kinds__(ast_t *ast){
+
+    /* __type_kinds__ **ubyte */
+
+    source_t source;
+    source.index = 0;
+    source.object_index = 0;
+
+    ast_type_t type;
+    ast_type_make_base_ptr_ptr(&type, strclone("ubyte"));
+
+    ast_add_global(ast, "__type_kinds__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS__, source);
+}
+
+void any_inject_ast___type_kinds_length__(ast_t *ast){
+
+    /* __type_kinds_length__ usize */
+
+    source_t source;
+    source.index = 0;
+    source.object_index = 0;
+
+    ast_type_t type;
+    ast_type_make_base(&type, strclone("usize"));
+
+    ast_add_global(ast, "__type_kinds_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS_LENGTH__, source);
+
 }

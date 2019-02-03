@@ -9,6 +9,8 @@ void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object){
     ctx->ast = &object->ast;
     ctx->i = NULL;
     ctx->func = NULL;
+    ctx->meta_ends_expected = 0;
+    memset(ctx->meta_else_allowed_flag, 0, sizeof(ctx->meta_else_allowed_flag));
 }
 
 void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx_fork){
@@ -17,11 +19,39 @@ void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx
     out_ctx_fork->tokenlist = &new_object->tokenlist;
 }
 
+void parse_ctx_set_meta_else_allowed(parse_ctx_t *ctx, length_t at_ends_expected, bool allowed){
+    // Shift range from 1-256 to 0-255
+    at_ends_expected--;
+
+    if(at_ends_expected > 255) return;
+
+    length_t group_index = at_ends_expected / 8;
+
+    if(allowed){
+        ctx->meta_else_allowed_flag[group_index] |= (1 << (at_ends_expected % 8));
+    } else {
+        ctx->meta_else_allowed_flag[group_index] &= ~(1 << (at_ends_expected % 8));
+    }
+}
+
+bool parse_ctx_get_meta_else_allowed(parse_ctx_t *ctx, length_t at_ends_expected){
+    // Shift range from 1-256 to 0-255
+    at_ends_expected--;
+
+    if(at_ends_expected > 255) return false;
+
+    return ctx->meta_else_allowed_flag[at_ends_expected / 8] & (1 << (at_ends_expected % 8));
+}
+
 // =================================================
 //                   parse_eat_*
 // =================================================
 
 errorcode_t parse_eat(parse_ctx_t *ctx, tokenid_t id, const char *error){
+    // NOTE: We don't need to check whether *ctx->i == ctx->tokenlist->length because
+    // every token list is terminated with a newline and this should never
+    // be called from a newline token
+    
     length_t i = (*ctx->i)++;
 
     if(ctx->tokenlist->tokens[i].id != id){
@@ -34,6 +64,10 @@ errorcode_t parse_eat(parse_ctx_t *ctx, tokenid_t id, const char *error){
 }
 
 maybe_null_weak_cstr_t parse_eat_word(parse_ctx_t *ctx, const char *error){
+    // NOTE: We don't need to check whether *ctx->i == ctx->tokenlist->length because
+    // every token list is terminated with a newline and this should never
+    // be called from a newline token
+
     length_t i = *ctx->i;
 
     if(ctx->tokenlist->tokens[i].id != TOKEN_WORD){
@@ -50,6 +84,10 @@ maybe_null_weak_cstr_t parse_eat_word(parse_ctx_t *ctx, const char *error){
 // =================================================
 
 maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error){
+    // NOTE: We don't need to check whether *ctx->i == ctx->tokenlist->length because
+    // every token list is terminated with a newline and this should never
+    // be called from a newline token
+
     length_t i = *ctx->i;
 
     if(ctx->tokenlist->tokens[i].id != TOKEN_WORD){
@@ -58,7 +96,7 @@ maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error){
         return NULL;
     }
 
-    char *ownership = (char*) ctx->tokenlist->tokens[i].data;
+    strong_cstr_t ownership = (char*) ctx->tokenlist->tokens[i].data;
     ctx->tokenlist->tokens[(*ctx->i)++].data = NULL;
     return ownership;
 }
@@ -68,6 +106,10 @@ maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error){
 // =================================================
 
 maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error){
+    // NOTE: We don't need to check whether *ctx->i == ctx->tokenlist->length because
+    // every token list is terminated with a newline and this should never
+    // be called from a newline token
+
     tokenid_t id = ctx->tokenlist->tokens[++(*ctx->i)].id;
 
     if(id != TOKEN_WORD){
@@ -80,6 +122,10 @@ maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error){
 }
 
 maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error){
+    // NOTE: We don't need to check whether *ctx->i == ctx->tokenlist->length because
+    // every token list is terminated with a newline and this should never
+    // be called from a newline token
+
     tokenid_t id = ctx->tokenlist->tokens[++(*ctx->i)].id;
 
     if(id == TOKEN_CSTRING)

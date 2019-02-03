@@ -1,6 +1,10 @@
- 
+
 #ifndef PARSE_STRUCT_H
 #define PARSE_STRUCT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "UTIL/ground.h"
 #include "PARSE/parse_ctx.h"
@@ -24,5 +28,9 @@ void parse_struct_grow_fields(strong_cstr_t **names, ast_type_t **types, length_
 // ------------------ parse_struct_free_fields ------------------
 // Frees struct fields (used for when errors occur)
 void parse_struct_free_fields(strong_cstr_t *names, ast_type_t *types, length_t length, length_t backfill);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PARSE_STRUCT_H

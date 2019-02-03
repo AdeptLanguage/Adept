@@ -22,11 +22,33 @@ void ast_init(ast_t *ast){
     ast->enums_length = 0;
     ast->enums_capacity = 0;
     ast->libraries = NULL;
+    ast->libraries_are_framework = NULL;
     ast->libraries_length = 0;
     ast->libraries_capacity = 0;
     ast->common.ast_usize_type = NULL;
 
     ast->type_table = NULL;
+
+    ast->meta_definitions = NULL;
+    ast->meta_definitions_length = 0;
+    ast->meta_definitions_capacity = 0;
+
+    // Add relevant standard meta definitions
+    #ifdef _WIN32
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__windows__", true);
+    #endif
+
+    #if defined(__APPLE__) || defined(__MACH__)
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__macos__", true);
+    #endif
+
+    #if defined(__unix__) || defined(__unix) || defined(unix)
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__unix__", true);
+    #endif
+
+    #if defined(__linux__) || defined(__linux) || defined(linux)
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__linux__", true);
+    #endif
 }
 
 void ast_free(ast_t *ast){
@@ -43,7 +65,9 @@ void ast_free(ast_t *ast){
         ast_type_free(&ast->aliases[i].type);
     }
 
-    for(length_t l = 0; l != ast->libraries_length; l++) free(ast->libraries[l]);
+    for(length_t l = 0; l != ast->libraries_length; l++){
+        free(ast->libraries[l]);
+    }
 
     free(ast->enums);
     free(ast->funcs);
@@ -52,6 +76,7 @@ void ast_free(ast_t *ast){
     free(ast->globals);
     free(ast->aliases);
     free(ast->libraries);
+    free(ast->libraries_are_framework);
 
     if(ast->common.ast_usize_type != NULL){
         ast_type_free_fully(ast->common.ast_usize_type);
@@ -59,6 +84,11 @@ void ast_free(ast_t *ast){
 
     type_table_free(ast->type_table);
     free(ast->type_table);
+
+    for(i = 0; i != ast->meta_definitions_length; i++){
+        meta_expr_free_fully(ast->meta_definitions[i].value);
+    }
+    free(ast->meta_definitions);
 }
 
 void ast_free_functions(ast_func_t *functions, length_t functions_length){
@@ -590,9 +620,10 @@ void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *i
     global->source = source;
 }
 
-void ast_add_foreign_library(ast_t *ast, strong_cstr_t library){
-    expand((void**) &ast->libraries, sizeof(char*), ast->libraries_length, &ast->libraries_capacity, 1, 4);
-    ast->libraries[ast->libraries_length++] = library;
+void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, bool is_framework){
+    coexpand((void**) &ast->libraries, sizeof(char*), (void**) &ast->libraries_are_framework, sizeof(bool), ast->libraries_length, &ast->libraries_capacity, 1, 4);
+    ast->libraries[ast->libraries_length] = library;
+    ast->libraries_are_framework[ast->libraries_length++] = is_framework;
 }
 
 ast_type_t* ast_get_usize(ast_t *ast){

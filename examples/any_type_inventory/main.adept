@@ -1,0 +1,16 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    printf('--------------------- TYPES ---------------------\n')
+    each *AnyType in [__types__, __types_length__],
+        printf('type: %-20s ', it.name);
+        if idx % 2 == 1, printf('\n')
+    
+    if __types_length__ % 2 == 1, printf('\n')
+    
+    printf('--------------------- KINDS ---------------------\n')
+    each *ubyte in [__type_kinds__, __type_kinds_length__],
+        printf('kind: %-20s ', it);
+        if idx % 2 == 1, printf('\n')
+}

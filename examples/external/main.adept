@@ -1,0 +1,17 @@
+
+pragma mac_only
+
+// SOME LIBC IMPLEMENTATIONS MAY USE
+// external stdout *FILE
+
+// THE MAC LIBC IMPLEMENTATION USES
+external __stdoutp *FILE
+stdout == __stdoutp
+
+struct FILE (_opaque 32 usize)
+foreign fprintf(*FILE, *ubyte, ...) int
+foreign printf(*ubyte, ...) int
+
+func main {
+    fprintf(stdout, 'Hello World!\n')
+}

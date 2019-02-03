@@ -1,6 +1,7 @@
 
 #include "UTIL/util.h"
 #include "PARSE/parse_expr.h"
+#include "PARSE/parse_meta.h"
 #include "PARSE/parse_stmt.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
@@ -272,7 +273,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 source = sources[(*i)++];
                 ast_expr_t *conditional = NULL;
                 trait_t stmts_mode;
-                char *label = NULL;
+                maybe_null_weak_cstr_t label = NULL;
 
                 if(tokens[*i].id == TOKEN_BREAK || tokens[*i].id == TOKEN_CONTINUE){
                     // 'while continue' or 'until break' loop
@@ -355,10 +356,10 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 source = sources[(*i)++];
                 ast_expr_t *length_limit = NULL;
                 ast_expr_t *low_array = NULL;
-                char *it_name = NULL;
+                maybe_null_strong_cstr_t it_name = NULL;
                 ast_type_t *it_type = NULL;
                 trait_t stmts_mode;
-                char *label = NULL;
+                maybe_null_weak_cstr_t label = NULL;
 
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
                     label = tokens[*i].data; *i += 2;
@@ -472,7 +473,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 source = sources[(*i)++];
                 ast_expr_t *limit = NULL;
                 trait_t stmts_mode;
-                char *label = NULL;
+                maybe_null_weak_cstr_t label = NULL;
 
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
                     label = tokens[*i].data; *i += 2;
@@ -570,6 +571,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 }
             }
             break;
+        case TOKEN_META:
+            if(parse_meta(ctx)) return FAILURE;
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
             return FAILURE;
@@ -654,7 +658,7 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
-    char **decl_names = NULL;
+    weak_cstr_t *decl_names = NULL;
     source_t *decl_sources = NULL;
     length_t length = 0;
     length_t capacity = 0;

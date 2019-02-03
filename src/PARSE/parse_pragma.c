@@ -5,6 +5,10 @@
 #include "PARSE/parse_pragma.h"
 #include "PARSE/parse_ctx.h"
 
+#ifdef __APPLE__
+#include "TargetConditionals.h"
+#endif
+
 errorcode_t parse_pragma(parse_ctx_t *ctx){
     // pragma <directive> ...
     //   ^
@@ -14,7 +18,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     maybe_null_weak_cstr_t read = NULL;
 
     const char * const directives[] = {
-        "compiler_version", "deprecated", "help", "no_type_info", "no_undef", "optimization", "options",
+        "compiler_version", "deprecated", "help", "mac_only", "no_type_info", "no_undef", "optimization", "options",
         "package", "project_name", "unsupported", "windows_only"
     };
 
@@ -54,7 +58,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         }
 
         if(read != NULL){
-            compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "This file is deprecated and may be removed in the future\n \xC0 %s", read);
+            compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "This file is deprecated and may be removed in the future\n %s %s", BOX_DRAWING_UP_RIGHT, read);
         } else {
             compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "This file is deprecated and may be removed in the future");
         }
@@ -62,13 +66,20 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     case 2: // 'help' directive
         show_help();
         return FAILURE;
-    case 3: // 'no_type_info' directive
+    case 3: // 'mac_only' directive
+        #if !defined(__APPLE__) || !TARGET_OS_MAC
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
+        return FAILURE;
+        #else
+        return SUCCESS;
+        #endif
+    case 4: // 'no_type_info' directive
         ctx->compiler->traits |= COMPILER_NO_TYPE_INFO;
         return SUCCESS;
-    case 4: // 'no_undef' directive
+    case 5: // 'no_undef' directive
         ctx->compiler->traits |= COMPILER_NO_UNDEF;
         return SUCCESS;
-    case 5: // 'optimization' directive
+    case 6: // 'optimization' directive
         read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
@@ -88,22 +99,22 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             return FAILURE;
         }
         return SUCCESS;
-    case 6: // 'options' directive
+    case 7: // 'options' directive
         return parse_pragma_cloptions(ctx);
-    case 7: // 'package' directive
+    case 8: // 'package' directive
         if(ctx->compiler->traits & COMPILER_INFLATE_PACKAGE) return SUCCESS;
         if(compiler_create_package(ctx->compiler, ctx->object) == 0){
             ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         }
         return FAILURE;
-    case 8: // 'project_name' directive
+    case 9: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
         if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 9: // 'unsupported' directive
+    case 10: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -115,12 +126,12 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
 
         if(read != NULL){
             object_panic_plain(ctx->object, "This file is no longer supported or was never supported to begin with!");
-            redprintf(" \xC0 %s\n", read);
+            redprintf(" %s %s\n", BOX_DRAWING_UP_RIGHT, read);
         } else {
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 10: // 'windows_only' directive
+    case 11: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;

@@ -8,9 +8,16 @@
     ---------------------------------------------------------------------------
 */
 
-#include "IR/ir.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "AST/ast.h"
+
+#ifndef ADEPT_INSIGHT_BUILD
+#include "IR/ir.h"
 #include "IRGEN/ir_builder.h"
+#endif
 
 #define ANY_TYPE_KIND_VOID        0x00
 #define ANY_TYPE_KIND_BOOL        0x01
@@ -28,6 +35,11 @@
 #define ANY_TYPE_KIND_STRUCT      0x0D
 #define ANY_TYPE_KIND_FUNC_PTR    0x0E
 #define ANY_TYPE_KIND_FIXED_ARRAY 0x0F
+#define MAX_ANY_TYPE_KIND ANY_TYPE_KIND_FIXED_ARRAY
+
+// ---------------- any_type_kind_names ----------------
+// Names for each ANY_TYPE_KIND_* id
+extern const char *any_type_kind_names[];
 
 // ---------------- any_inject_ast ----------------
 // Injects required data structures and enums
@@ -36,7 +48,9 @@ void any_inject_ast(ast_t *ast);
 
 // ---------------- any_inject_ir ----------------
 // Injects runtime type information
+#ifndef ADEPT_INSIGHT_BUILD
 void any_inject_ir(ir_builder_t *builder);
+#endif
 
 // ---------------- any_inject_ast_Any ----------------
 // Injects AST struct 'Any'
@@ -73,5 +87,17 @@ void any_inject_ast___types__(ast_t *ast);
 // ---------------- any_inject_ast___types_length__ ----------------
 // Injects AST global variable '__types_length__'
 void any_inject_ast___types_length__(ast_t *ast);
+
+// ---------------- any_inject_ast___type_kinds__ ----------------
+// Injects AST global variable '__type_kinds__'
+void any_inject_ast___type_kinds__(ast_t *ast);
+
+// ---------------- any_inject_ast___type_kinds_length__ ----------------
+// Injects AST global variable '__type_kinds_length__'
+void any_inject_ast___type_kinds_length__(ast_t *ast);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ANY_H

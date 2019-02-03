@@ -1,0 +1,21 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstring.adept'
+
+func main {
+    force_int_runtime_info int = undef
+    some_type *AnyType = null
+
+    each *AnyType in [__types__, __types_length__],
+        if strcmp(it.name, 'int') == 0,
+            some_type = it; break
+    
+    if some_type.kind == AnyTypeKind::INT {
+        printf('some_type kind is an int\n');
+    } else {
+        printf('some_type kind is NOT an int\n');
+    }
+
+    printf('some_type is named: \'%s\'\n', some_type.name)
+    printf('some_type kind is named: \'%s\'\n', __type_kinds__[some_type.kind])
+}

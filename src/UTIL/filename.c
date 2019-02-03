@@ -13,7 +13,7 @@
 
 strong_cstr_t filename_name(const char *filename){
     length_t i;
-    char *stub;
+    strong_cstr_t stub;
     length_t filename_length = strlen(filename);
 
     if(filename_length == 0){
@@ -54,7 +54,7 @@ weak_cstr_t filename_name_const(weak_cstr_t filename){
 strong_cstr_t filename_path(const char *filename){
     length_t i;
     length_t filename_length = strlen(filename);
-    char *path;
+    strong_cstr_t path;
 
     if(filename_length == 0){
         path = malloc(1);
@@ -80,9 +80,13 @@ strong_cstr_t filename_local(const char *current_filename, const char *local_fil
     // NOTE: Returns string that must be freed by caller
     // NOTE: Appends 'local_filename' to the path of 'current_filename' and returns result
 
+    if(current_filename == NULL || current_filename[0] == '\0'){
+        return strclone("");
+    }
+
     length_t current_filename_cutoff;
     bool found = false;
-    char *result;
+    strong_cstr_t result;
 
     for(current_filename_cutoff = strlen(current_filename) - 1; current_filename_cutoff != 0; current_filename_cutoff--){
         if(current_filename[current_filename_cutoff] == '/' || current_filename[current_filename_cutoff] == '\\'){
@@ -122,7 +126,7 @@ strong_cstr_t filename_ext(const char *filename, const char *ext_without_dot){
 
     length_t i;
     length_t filename_length = strlen(filename);
-    char *without_ext = NULL;
+    maybe_null_strong_cstr_t without_ext = NULL;
     length_t without_ext_length;
     length_t ext_length = strlen(ext_without_dot);
 
@@ -144,7 +148,7 @@ strong_cstr_t filename_ext(const char *filename, const char *ext_without_dot){
         without_ext_length = filename_length;
     }
 
-    char *with_ext = malloc(without_ext_length + ext_length + 2);
+    strong_cstr_t with_ext = malloc(without_ext_length + ext_length + 2);
     memcpy(with_ext, without_ext, without_ext_length);
     memcpy(&with_ext[without_ext_length], ".", 1);
     memcpy(&with_ext[without_ext_length + 1], ext_without_dot, ext_length + 1);
@@ -164,14 +168,20 @@ strong_cstr_t filename_absolute(const char *filename){
 
     #else
 
+    #ifdef TRACK_MEMORY_USAGE
+    char *malloced = realpath(filename, NULL);
+    memory_track_external_allocation(malloced, strlen(malloced) + 1, __FILE__, __LINE__ - 1);
+    return malloced;
+    #else
 	return realpath(filename, NULL);
-	
+    #endif
+
     #endif
 
     return NULL;
 }
 
-void filename_auto_ext(char **out_filename, unsigned int mode){
+void filename_auto_ext(strong_cstr_t *out_filename, unsigned int mode){
     if(mode == FILENAME_AUTO_PACKAGE){
         filename_append_if_missing(out_filename, ".dep");
         return;
@@ -192,7 +202,7 @@ void filename_auto_ext(char **out_filename, unsigned int mode){
     }
 }
 
-void filename_append_if_missing(char **out_filename, const char *addition){
+void filename_append_if_missing(strong_cstr_t *out_filename, const char *addition){
     length_t length = strlen(*out_filename);
     length_t addition_length = strlen(addition);
     if(addition_length == 0) return;
@@ -209,12 +219,15 @@ void filename_append_if_missing(char **out_filename, const char *addition){
 strong_cstr_t filename_without_ext(char *filename){
 	length_t i;
     length_t filename_length = strlen(filename);
-    char *without_ext = NULL;
+    maybe_null_strong_cstr_t without_ext = NULL;
+
+    if(filename_length == 0) return strclone("");
 
     for(i = filename_length - 1 ; i != 0; i--){
         if(filename[i] == '.'){
-            without_ext = malloc(i);
+            without_ext = malloc(i + 1);
             memcpy(without_ext, filename, i);
+            without_ext[i] = '\0';
             break;
         } else if(filename[i] == '/' || filename[i] == '\\'){
             return strclone(filename);
@@ -224,12 +237,12 @@ strong_cstr_t filename_without_ext(char *filename){
 	return (without_ext == NULL) ? strclone(filename) : without_ext;
 }
 
-void filename_prepend_dotslash_if_needed(char **filename){
+void filename_prepend_dotslash_if_needed(strong_cstr_t *filename){
 	length_t filename_length = strlen(*filename);
 	if(filename_length < 2) return;
 	
 	if((*filename)[0] != '/' && !((*filename)[0] == '.' && (*filename)[1] == '/')){
-		char *new_filename = malloc(2 + filename_length + 1);
+		strong_cstr_t new_filename = malloc(2 + filename_length + 1);
         memcpy(&new_filename[0], "./", 2);
         memcpy(&new_filename[2], *filename, filename_length + 1);
 		free(*filename);

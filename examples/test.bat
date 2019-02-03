@@ -7,6 +7,16 @@ call :compile aliases
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile andor
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile any_type_as
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile any_type_info
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile any_type_inventory
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile any_type_kind
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile any_type_list
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile array_access
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile as
@@ -130,6 +140,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile static_structs
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile stdcall
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile string
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile structs
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

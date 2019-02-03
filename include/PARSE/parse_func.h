@@ -2,6 +2,10 @@
 #ifndef PARSE_FUNC_H
 #define PARSE_FUNC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "UTIL/ground.h"
 #include "PARSE/parse_ctx.h"
 
@@ -40,5 +44,9 @@ bool parse_func_is_stdcall(parse_ctx_t *ctx);
 // ------------------ parse_free_unbackfilled_arguments ------------------
 // Frees function arguments that never got backfilled
 void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PARSE_FUNC_H

@@ -2,16 +2,27 @@
 #ifndef TYPE_TABLE_H
 #define TYPE_TABLE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "UTIL/ground.h"
 #include "AST/ast_type.h"
+
+#ifndef ADEPT_INSIGHT_BUILD
 #include "IR/ir_type.h"
+#endif
 
 // ---------------- type_table_record_t ----------------
 // A single record within a bridging type table
 typedef struct {
     strong_cstr_t name;
     ast_type_t ast_type;
+
+    #ifndef ADEPT_INSIGHT_BUILD
     ir_type_t *ir_type;
+    #endif
+    
     bool is_alias;
 } type_table_record_t;
 
@@ -57,5 +68,9 @@ void type_table_records_free(type_table_record_t *records, length_t length);
 // ---------------- type_table_record_cmp ----------------
 // Comparision function used for sorting type_table_record_t entries
 int type_table_record_cmp(const void *a, const void *b);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // TYPE_TABLE_H

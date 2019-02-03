@@ -9,13 +9,9 @@
 errorcode_t lex(compiler_t *compiler, object_t *object){
     FILE *file = fopen(object->filename, "r");
 
-    token_t *t;
     char *buffer;
-    int line, column;
     length_t buffer_size;
-    lex_state_t lex_state;
-    tokenlist_t *tokenlist = &object->tokenlist;
-
+    
     if(file == NULL){
         redprintf("The file '%s' doesn't exist or can't be accessed\n", object->filename);
         return FAILURE;
@@ -25,11 +21,6 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
     buffer_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    tokenlist->tokens = malloc(sizeof(token_t) * 1024);
-    tokenlist->length = 0;
-    tokenlist->capacity = 1024;
-    tokenlist->sources = malloc(sizeof(source_t) * 1024);
-
     buffer = malloc(buffer_size + 2);
     buffer_size = fread(buffer, 1, buffer_size, file);
     fclose(file);
@@ -37,6 +28,22 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
     buffer[buffer_size] = '\n';   // Append newline to flush everything
     buffer[++buffer_size] = '\0'; // Terminate the string for debug purposes
     object->buffer = buffer;      // Pass ownership to object instance
+
+    return lex_buffer(compiler, object);
+}
+
+errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
+    token_t *t;
+    char *buffer = object->buffer;
+    int line, column;
+    length_t buffer_size = strlen(buffer);
+    lex_state_t lex_state;
+    tokenlist_t *tokenlist = &object->tokenlist;
+
+    tokenlist->tokens = malloc(sizeof(token_t) * 1024);
+    tokenlist->length = 0;
+    tokenlist->capacity = 1024;
+    tokenlist->sources = malloc(sizeof(source_t) * 1024);
 
     // By this point we have a buffer and a tokenlist
     object->compilation_stage = COMPILATION_STAGE_TOKENLIST;
@@ -135,6 +142,12 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
             case '\'':
                 LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_CSTRING);
                 lex_state.buildup_length = 0; break;
+            case '#':
+                (*sources)[tokenlist->length].index = i;
+                (*sources)[tokenlist->length].object_index = object_index;
+                lex_state.buildup_length = 0;
+                lex_state.state = LEX_STATE_META;
+                break;
             default:
                 // Test for word
                 if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122)){
@@ -185,7 +198,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                     "delete", "each", "else", "enum", "external", "false", "for", "foreign", "func", "funcptr",
                     "global", "if", "import", "in", "inout", "link", "new", "null", "or", "out",
                     "packed", "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct",
-                    "switch", "true", "undef", "unless", "until", "while"
+                    "switch", "true", "typeinfo", "undef", "unless", "until", "while"
                 };
 
                 const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
@@ -207,7 +220,7 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
                 } else {
                     // Is a keyword, figure out token index from array index
                     t = &((*tokens)[tokenlist->length++]);
-                    t->id = 0x00000040 + (unsigned int) array_index; // Values 0x00000040..0x0000005F are reserved for keywords
+                    t->id = 0x00000040 + (unsigned int) array_index; // Values 0x00000040..0x0000007F are reserved for keywords
                     t->data = NULL;
                 }
 
@@ -568,6 +581,25 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
         case LEX_STATE_ENDCOMMENT: // End Multiline Comment
             if(buffer[i] == '/') { lex_state.state = LEX_STATE_IDLE; }
             else lex_state.state = LEX_STATE_LONGCOMMENT;
+            break;
+        case LEX_STATE_META:
+            tmp = buffer[i];
+            if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9')){
+                expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
+                lex_state.buildup[lex_state.buildup_length++] = buffer[i];
+            } else {
+                // Terminate string buildup buffer
+                expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
+                lex_state.buildup[lex_state.buildup_length] = '\0';
+
+                t = &((*tokens)[tokenlist->length++]);
+                t->id = TOKEN_META;
+                t->data = malloc(lex_state.buildup_length + 1);
+                memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
+                ((char*) t->data)[lex_state.buildup_length] = '\0';
+
+                i--; lex_state.state = LEX_STATE_IDLE;
+            }
             break;
         }
 

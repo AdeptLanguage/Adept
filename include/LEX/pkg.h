@@ -2,6 +2,10 @@
 #ifndef PKG_H
 #define PKG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================== pkg.h ==================================
     Module for writing & reading pre-lexed packages
@@ -38,5 +42,9 @@ errorcode_t pkg_read(compiler_t *compiler, object_t *object);
 // ---------------- pkg_compress_word ----------------
 // Attempts to compress a word, then writes it to disk
 errorcode_t pkg_compress_word(FILE *file, token_t *token);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PKG_H

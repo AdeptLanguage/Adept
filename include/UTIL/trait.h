@@ -2,6 +2,10 @@
 #ifndef TRAIT_H
 #define TRAIT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     ================================= trait.h =================================
     Module for storing traits as bitwise flags
@@ -30,5 +34,9 @@ typedef unsigned short trait_t;
 #define TRAIT_F    0x4000
 #define TRAIT_G    0x8000
 #define TRAIT_ALL  0xFFFF
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // TRAIT_H

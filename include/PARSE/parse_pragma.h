@@ -2,6 +2,9 @@
 #ifndef PRAGMA_H
 #define PRAGMA_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
     ================================= pragma.h =================================
     Module for handling 'pragma' directives sent from code being compiled
@@ -21,5 +24,9 @@ errorcode_t parse_pragma(parse_ctx_t *ctx);
 // Parses the 'options' pragma directive's command line
 // arguments string and passes it off to the compiler
 errorcode_t parse_pragma_cloptions(parse_ctx_t *ctx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PRAGMA_H

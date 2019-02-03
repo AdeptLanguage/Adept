@@ -154,10 +154,14 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_STRUCT:         printf("Keyword: struct\n"); break;
         case TOKEN_SWITCH:         printf("Keyword: switch\n"); break;
         case TOKEN_TRUE:           printf("Keyword: true\n"); break;
+        case TOKEN_TYPEINFO:       printf("Keyword: typeinfo\n"); break;
         case TOKEN_UNDEF:          printf("Keyword: undef\n"); break;
         case TOKEN_UNLESS:         printf("Keyword: unless\n"); break;
         case TOKEN_UNTIL:          printf("Keyword: until\n"); break;
         case TOKEN_WHILE:          printf("Keyword: while\n"); break;
+        case TOKEN_META:
+            printf("Meta: \"%s\"\n", (char*) tokenlist->tokens[i].data);
+            break;
         default:
             printf("unknown token 0x%08X: THIS TOKEN HAS AN UNKNOWN ID\n", tokenlist->tokens[i].id);
         }
@@ -233,7 +237,7 @@ const char *global_token_name_table[] = {
     "logical left shift",     // 0x00000036
     "logical right shift",    // 0x00000037
     "namespace",              // 0x00000038
-    "reserved",               // 0x00000039
+    "meta directive",         // 0x00000039
     "reserved",               // 0x0000003A
     "reserved",               // 0x0000003B
     "reserved",               // 0x0000003C
@@ -284,11 +288,11 @@ const char *global_token_name_table[] = {
     "struct keyword",         // 0x00000069
     "switch keyword",         // 0x0000006A
     "true keyword",           // 0x0000006B
-    "undef keyword",          // 0x0000006C
-    "unless keyword",         // 0x0000006D
-    "until keyword",          // 0x0000006E
-    "while keyword",          // 0x0000006F
-    "reserved",               // 0x00000070
+    "typeinfo keyword",       // 0x0000006C
+    "undef keyword",          // 0x0000006D
+    "unless keyword",         // 0x0000006E
+    "until keyword",          // 0x0000006F
+    "while keyword",          // 0x00000070
     "reserved",               // 0x00000071
     "reserved",               // 0x00000072
     "reserved",               // 0x00000073

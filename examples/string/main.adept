@@ -1,0 +1,14 @@
+
+pragma compiler_version '2.1'
+
+import '2.1/String.adept'
+import 'sys/cstdio.adept'
+
+func main {
+    string String = "Hello World!!!"
+    
+    each ubyte in [string.array, string.length] {
+        putchar(it)
+    }
+    putchar(0xA)
+}

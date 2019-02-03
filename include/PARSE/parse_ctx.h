@@ -2,6 +2,10 @@
 #ifndef PARSE_CTX_H
 #define PARSE_CTX_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "AST/ast.h"
 #include "LEX/lex.h"
 #include "UTIL/ground.h"
@@ -18,6 +22,10 @@ typedef struct {
     ast_t *ast;
     length_t *i;
     ast_func_t *func;
+
+    // NOTE: 256 is the max number of meta ends that can be expected
+    length_t meta_ends_expected;
+    unsigned char meta_else_allowed_flag[32];
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------
@@ -27,6 +35,16 @@ void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object);
 // ------------------ parse_ctx_fork ------------------
 // Forks an existing parse context for parsing
 void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx_fork);
+
+// ------------------ parse_ctx_set_meta_else_allowed ------------------
+// Sets whether #else is allowed at a certain ends-expected depth
+// NOTE: 'at_ends_expected' must be between 1-256 inclusive
+void parse_ctx_set_meta_else_allowed(parse_ctx_t *ctx, length_t at_ends_expected, bool allowed);
+
+// ------------------ parse_ctx_get_meta_else_allowed ------------------
+// Returns whether #else is allowed at a certain ends-expected depth
+// NOTE: 'at_ends_expected' must be between 1-256 inclusive
+bool parse_ctx_get_meta_else_allowed(parse_ctx_t *ctx, length_t at_ends_expected);
 
 // ==================================================
 //                    PARSE_EAT_*
@@ -53,7 +71,7 @@ maybe_null_weak_cstr_t parse_eat_word(parse_ctx_t *ctx, const char *error);
 
 // ==================================================
 //                   PARSE_TAKE_*
-//  Same as parse_eat_* except ownership isn't taken
+//  Same as parse_eat_* except ownership is taken
 // ==================================================
 
 // ------------------ parse_take_word ------------------
@@ -88,5 +106,9 @@ maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error);
 // (NOTE: error can be NULL to indicate no error should be printed)
 // (NOTE: ownership isn't taken)
 maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PARSE_CTX_H

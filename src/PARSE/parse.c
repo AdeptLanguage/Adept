@@ -7,6 +7,7 @@
 #include "PARSE/parse_enum.h"
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_func.h"
+#include "PARSE/parse_meta.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
 #include "PARSE/parse_alias.h"
@@ -53,6 +54,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_struct(ctx)) return FAILURE;
             break;
         case TOKEN_WORD:
+        case TOKEN_EXTERNAL:
             if(parse_global(ctx)) return FAILURE;
             break;
         case TOKEN_ALIAS:
@@ -66,6 +68,9 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             break;
         case TOKEN_ENUM:
             if(parse_enum(ctx)) return FAILURE;
+            break;
+        case TOKEN_META:
+            if(parse_meta(ctx)) return FAILURE;
             break;
         default:
             parse_panic_token(ctx, ctx->tokenlist->sources[i], tokens[i].id, "Encountered unexpected token '%s' in global scope");

@@ -1,10 +1,13 @@
 
+#include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
 #include "UTIL/filename.h"
 #include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_type.h"
+#include "BRIDGE/any.h"
+#include "BRIDGE/rtti.h"
 
 errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     // NOTE: Maps all accessible types in the program
@@ -416,11 +419,155 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         if(to_traits & TYPE_TRAIT_BASE_ANY) return true;
     }
 
-    if(to_traits & TYPE_TRAIT_BASE_ANY){
+    if(to_traits & TYPE_TRAIT_BASE_ANY && !(builder->compiler->traits & COMPILER_NO_TYPE_INFO)){
         if(from_traits & TYPE_TRAIT_BASE_ANY) return true;
-        // TODO: Maybe make into its own expression? That way we
-        // can return a mutable reference
-        printf("casting to any is currently unimplemented!\n");
+
+        ir_type_t *any_type;
+        ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
+
+        ir_type_t *placeholder_actual_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t*));
+        placeholder_actual_type->kind = TYPE_KIND_U64;
+
+        // type *AnyType
+        values[0] = rtti_for(builder, ast_from_type, ast_to_type->source);
+        if(values[0] == NULL) return FAILURE;
+
+        // placeholder ulong
+        if(ast_from_type->elements_length != 0) switch(ast_from_type->elements[0]->id){
+        case AST_ELEM_POINTER:
+            values[1] = build_ptrtoint(builder, *ir_value, placeholder_actual_type);
+            break;
+        case AST_ELEM_BASE: {
+                ast_elem_base_t *base_elem = (ast_elem_base_t*) ast_from_type->elements[0];
+                maybe_index_t recognized = typename_builtin_type(base_elem->base);
+
+                // For weird compatibility purposes, we have the ability to copy
+                // the lower byte region to the corresponding higher byte region
+                // (under normal circumstances we should never need to use this)
+                #ifdef IRGEN_COMPATIBILITY_CONVERSION_BYTE_PROMOTION
+                ir_value_t *reflection_mask;
+                #endif
+
+                switch(recognized){
+                case BUILTIN_TYPE_NONE:
+                    // Try to store a pointer to whatever the data is
+                    redprintf("converting non-built-in types to Any has not been implemented yet!\n");
+                    return false;
+                case BUILTIN_TYPE_SHORT:
+                case BUILTIN_TYPE_USHORT:
+                    values[1] = build_zext(builder, *ir_value, placeholder_actual_type);
+
+                    // For weird compatibility purposes, we have the ability to copy
+                    // the lower byte region to the corresponding higher byte region
+                    // (under normal circumstances we should never need to use this)
+                    #ifdef IRGEN_COMPATIBILITY_CONVERSION_BYTE_PROMOTION
+                    // -------------------------------------------------------------
+                    // Copy the lower 16 bits into the upper 16 bits
+                    // to ensure data access won't be affected by zext'ing
+                    // -------------------------------------------------------------
+                    
+                    // x = x + x + x * 0xFFFFFFFFFFFFul (6 bytes of 1s)
+                    reflection_mask = build_math(builder, INSTRUCTION_MULTIPLY, values[1], build_literal_usize(builder->pool, 0xFFFFFFFFFFFFul), placeholder_actual_type);
+                    values[1] = build_math(builder, INSTRUCTION_ADD, values[1], values[1], placeholder_actual_type);
+                    values[1] = build_math(builder, INSTRUCTION_ADD, reflection_mask, values[1], placeholder_actual_type);
+                    #endif
+                    break;
+                case BUILTIN_TYPE_INT:
+                case BUILTIN_TYPE_UINT:
+                    values[1] = build_zext(builder, *ir_value, placeholder_actual_type);
+
+                    // For weird compatibility purposes, we have the ability to copy
+                    // the lower byte region to the corresponding higher byte region
+                    // (under normal circumstances we should never need to use this)
+                    #ifdef IRGEN_COMPATIBILITY_CONVERSION_BYTE_PROMOTION
+                    // -------------------------------------------------------------
+                    // Copy the lower 32 bits into the upper 32 bits
+                    // to ensure data access won't be affected by zext'ing
+                    // -------------------------------------------------------------
+                    
+                    // x = x + x + x * 0xFFFFFFFF (4 bytes of 1s)
+                    reflection_mask = build_math(builder, INSTRUCTION_MULTIPLY, values[1], build_literal_usize(builder->pool, 0xFFFFFFFF), placeholder_actual_type);
+                    values[1] = build_math(builder, INSTRUCTION_ADD, values[1], values[1], placeholder_actual_type);
+                    values[1] = build_math(builder, INSTRUCTION_ADD, reflection_mask, values[1], placeholder_actual_type);
+                    #endif
+                    break;
+                case BUILTIN_TYPE_BOOL:
+                case BUILTIN_TYPE_BYTE:
+                case BUILTIN_TYPE_UBYTE:
+                case BUILTIN_TYPE_SUCCESSFUL:
+                    values[1] = build_zext(builder, *ir_value, placeholder_actual_type);
+
+                    // For weird compatibility purposes, we have the ability to copy
+                    // the lower byte region to the corresponding higher byte region
+                    // (under normal circumstances we should never need to use this)
+                    #ifdef IRGEN_COMPATIBILITY_CONVERSION_BYTE_PROMOTION
+                    // -------------------------------------------------------------
+                    // Copy the lowest 8 bits into the highest 8 bits
+                    // to ensure data access won't be affected by zext'ing
+                    // -------------------------------------------------------------
+
+                    // x = x + x + x * 0xFFFFFFFFFFFFFFul (7 bytes of 1s)
+                    reflection_mask = build_math(builder, INSTRUCTION_MULTIPLY, values[1], build_literal_usize(builder->pool, 0xFFFFFFFFFFFFFFul), placeholder_actual_type);
+                    values[1] = build_math(builder, INSTRUCTION_ADD, values[1], values[1], placeholder_actual_type);
+                    values[1] = build_math(builder, INSTRUCTION_ADD, reflection_mask, values[1], placeholder_actual_type);
+                    #endif
+                    break;
+                case BUILTIN_TYPE_FLOAT: {
+                        ir_type_t *uint_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t*));
+                        uint_type->kind = TYPE_KIND_U32;
+                        values[1] = build_zext(builder, build_bitcast(builder, *ir_value, uint_type), placeholder_actual_type);
+
+                        // For weird compatibility purposes, we have the ability to copy
+                        // the lower byte region to the corresponding higher byte region
+                        // (under normal circumstances we should never need to use this)
+                        #ifdef IRGEN_COMPATIBILITY_CONVERSION_BYTE_PROMOTION
+                        // -------------------------------------------------------------
+                        // Copy the lower 32 bits into the upper 32 bits
+                        // to ensure data access won't be affected by zext'ing
+                        // -------------------------------------------------------------
+                        
+                        // x = x + x + x * 0xFFFFFFFF (4 bytes of 1s)
+                        reflection_mask = build_math(builder, INSTRUCTION_MULTIPLY, values[1], build_literal_usize(builder->pool, 0xFFFFFFFF), placeholder_actual_type);
+                        values[1] = build_math(builder, INSTRUCTION_ADD, values[1], values[1], placeholder_actual_type);
+                        values[1] = build_math(builder, INSTRUCTION_ADD, reflection_mask, values[1], placeholder_actual_type);
+                        #endif
+                    }
+                    break;
+                case BUILTIN_TYPE_LONG:
+                case BUILTIN_TYPE_DOUBLE:
+                    // Bitcasting works fine here since they're both 64 bits
+                    values[1] = build_bitcast(builder, *ir_value, placeholder_actual_type);
+                    break;
+                case BUILTIN_TYPE_ULONG:
+                case BUILTIN_TYPE_USIZE:
+                    // No conversion necessary because they are already the same type as the placeholder
+                    values[1] = *ir_value;
+                    break;
+                default:
+                    values[1] = build_literal_usize(builder->pool, 0);
+                }
+            }
+            break;
+        default:
+            values[1] = build_literal_usize(builder->pool, 0);
+        }
+
+        //#define AST_ELEM_NONE          0x00
+        //#define AST_ELEM_BASE          0x01
+        //#define AST_ELEM_POINTER       0x02
+        //#define AST_ELEM_ARRAY         0x03
+        //#define AST_ELEM_FIXED_ARRAY   0x04
+        //#define AST_ELEM_GENERIC_INT   0x05
+        //#define AST_ELEM_GENERIC_FLOAT 0x06
+        //#define AST_ELEM_FUNC          0x07
+
+        if(!ir_type_map_find(builder->type_map, "Any", &any_type)){
+            redprintf("INTERNAL ERROR: Failed to find 'Any' type used by the runtime type table that should've been injected\n");
+            return FAILURE;
+        }
+        
+        *ir_value = build_struct_construction(builder->pool, any_type, values, 2);
+        return true;
     }
 
     #undef TYPE_TRAIT_POINTER

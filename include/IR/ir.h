@@ -105,6 +105,8 @@
 #define VALUE_TYPE_ANON_GLOBAL         0x00000007 // data = pointer to an 'ir_value_anon_global_t'
 #define VALUE_TYPE_CONST_ANON_GLOBAL   0x00000008 // data = pointer to an 'ir_value_anon_global_t'
 #define VALUE_TYPE_CSTR_OF_LEN         0x00000009 // data = pointer to an 'ir_value_cstr_of_len_t'
+#define VALUE_TYPE_CONST_BITCAST       0x0000000A // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_STRUCT_CONSTRUCTION 0x0000000B // data = pointer to an 'ir_value_struct_construction_t'
 
 #define VALUE_TYPE_IS_CONSTANT(a) (a & VALUE_TYPE_LITERAL || a & VALUE_TYPE_NULLPTR || a & VALUE_TYPE_ARRAY_LITERAL || a & VALUE_TYPE_STRUCT_LITERAL || a & VALUE_TYPE_CONST_ANON_GLOBAL)
 
@@ -156,6 +158,13 @@ typedef struct {
     length_t length;
 } ir_value_struct_literal_t;
 
+// ---------------- ir_value_cstr_of_len_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if
+// the value is a reference to an anonymous global variable
+typedef struct {
+    length_t anon_global_id;
+} ir_value_anon_global_t;
+
 // ---------------- ir_value_anon_global_t ----------------
 // Structure for 'extra' field of 'ir_value_t' if
 // the value is a reference to a literal c-string of a length
@@ -164,12 +173,13 @@ typedef struct {
     length_t length;
 } ir_value_cstr_of_len_t;
 
-// ---------------- ir_value_cstr_of_len_t ----------------
+// ---------------- ir_value_struct_construction_t ----------------
 // Structure for 'extra' field of 'ir_value_t' if
-// the value is a reference to an anonymous global variable
+// the value is a construction of a structure
 typedef struct {
-    length_t anon_global_id;
-} ir_value_anon_global_t;
+    ir_value_t **values;
+    length_t length;
+} ir_value_struct_construction_t;
 
 // ---------------- ir_instr_t ----------------
 // General structure for intermediate
@@ -434,7 +444,10 @@ typedef struct {
 typedef struct {
     const char *name;
     ir_type_t *type;
+    trait_t traits;
 } ir_global_t;
+
+#define IR_GLOBAL_EXTERNAL TRAIT_1
 
 // ---------------- ir_anon_global_t ----------------
 // An intermediate representation anonymous global variable
