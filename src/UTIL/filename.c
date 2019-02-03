@@ -170,7 +170,8 @@ strong_cstr_t filename_absolute(const char *filename){
 
     #ifdef TRACK_MEMORY_USAGE
     char *malloced = realpath(filename, NULL);
-    memory_track_external_allocation(malloced, strlen(malloced) + 1, __FILE__, __LINE__ - 1);
+    if(malloced)
+        memory_track_external_allocation(malloced, strlen(malloced) + 1, __FILE__, __LINE__ - 2);
     return malloced;
     #else
 	return realpath(filename, NULL);

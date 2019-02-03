@@ -63,12 +63,12 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 sizeof(source_t), tokenlist->length, &tokenlist->capacity, 1, 1024);
 
         // Macro to map a character to a single token
-        #define LEX_SINGLE_TOKEN_MAPPING_MACRO(token_id_mapping) { \
-            (*sources)[tokenlist->length].index = i; \
+        #define LEX_SINGLE_TOKEN_MAPPING_MACRO(_token_id, _token_index, _token_stride) { \
+            (*sources)[tokenlist->length].index = _token_index; \
             (*sources)[tokenlist->length].object_index = object_index; \
-            (*sources)[tokenlist->length].stride = 0; \
+            (*sources)[tokenlist->length].stride = _token_stride; \
             t = &((*tokens)[tokenlist->length++]); \
-            t->id = token_id_mapping; \
+            t->id = _token_id; \
             t->data = NULL; \
         }
 
@@ -83,69 +83,88 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         // Macro to add a token depending on whether an optional character is present
         // (can be used in non LEX_STATE_IDLE states)
         #define LEX_OPTIONAL_MOD_TOKEN_MAPPING(optional_character, if_mod_present, if_mod_absent) { \
-            t = &((*tokens)[tokenlist->length++]); \
+            t = &((*tokens)[tokenlist->length]); \
             lex_state.state = LEX_STATE_IDLE; \
             t->data = NULL; \
-            if(buffer[i] == optional_character) t->id = if_mod_present; \
-            else { t->id = if_mod_absent; i--; } \
+            if(buffer[i] == optional_character){ \
+                t->id = if_mod_present; \
+                (*sources)[tokenlist->length++].stride = 2; \
+            } else { \
+                t->id = if_mod_absent; \
+                (*sources)[tokenlist->length++].stride = 1; \
+                i--; \
+            } \
         }
 
         #define LEX_OPTIONAL_2MODS_TOKEN_MAPPING(optional_character1, if_mod1_present, optional_character2, if_mod2_present, if_mods_absent) { \
-            t = &((*tokens)[tokenlist->length++]); \
+            t = &((*tokens)[tokenlist->length]); \
             lex_state.state = LEX_STATE_IDLE; \
             t->data = NULL; \
-            if(buffer[i] == optional_character1) t->id = if_mod1_present; \
-            else if(buffer[i] == optional_character2) t->id = if_mod2_present; \
-            else { t->id = if_mods_absent; i--; } \
+            if(buffer[i] == optional_character1){ \
+                t->id = if_mod1_present; \
+                (*sources)[tokenlist->length++].stride = 2; \
+            } else if(buffer[i] == optional_character2){ \
+                t->id = if_mod2_present; \
+                (*sources)[tokenlist->length++].stride = 2; \
+            } else { \
+                t->id = if_mods_absent; \
+                (*sources)[tokenlist->length++].stride = 1; \
+                i--; \
+            } \
         }
 
         switch(lex_state.state){
         case LEX_STATE_IDLE:
             switch(buffer[i]){
             case ' ': case '\t': break;
-            case '+': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_ADD);        break;
-            case '-': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_SUBTRACT);   break;
-            case '*': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_MULTIPLY);   break;
-            case '/': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_DIVIDE);     break;
-            case '%': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_MODULUS);    break;
-            case '&': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_UBERAND);    break;
-            case '|': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_UBEROR);     break;
-            case '=': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_EQUALS);     break;
-            case '<': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_LESS);       break;
-            case '>': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_GREATER);    break;
-            case '!': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_NOT);        break;
-            case ':': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_COLON);      break;
-            //--------------------------------------------------------------------
-            case '(': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_OPEN);           break;
-            case ')': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_CLOSE);          break;
-            case '{': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BEGIN);          break;
-            case '}': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_END);            break;
-            case ',': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEXT);           break;
-            case '[': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_OPEN);   break;
-            case ']': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_CLOSE);  break;
-            case ';': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_TERMINATE_JOIN); break;
-            case '^': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_XOR);        break;
-            case '~': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_COMPLEMENT); break;
-            case '\n': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEWLINE);       break;
+            case '+': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_ADD);              break;
+            case '-': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_SUBTRACT);         break;
+            case '*': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_MULTIPLY);         break;
+            case '/': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_DIVIDE);           break;
+            case '%': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_MODULUS);          break;
+            case '&': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_UBERAND);          break;
+            case '|': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_UBEROR);           break;
+            case '=': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_EQUALS);           break;
+            case '<': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_LESS);             break;
+            case '>': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_GREATER);          break;
+            case '!': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_NOT);              break;
+            case ':': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_COLON);            break;
+            //--------------------------------------------------------------------------
+            case '(': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_OPEN, i, 1);           break;
+            case ')': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_CLOSE, i, 1);          break;
+            case '{': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BEGIN, i, 1);          break;
+            case '}': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_END, i, 1);            break;
+            case ',': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEXT, i, 1);           break;
+            case '[': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_OPEN, i, 1);   break;
+            case ']': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_CLOSE, i, 1);  break;
+            case ';': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_TERMINATE_JOIN, i, 1); break;
+            case '^': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_XOR, i, 1);        break;
+            case '~': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_COMPLEMENT, i, 1); break;
+            case '\n': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEWLINE, i, 1);       break;
             case '.':
                 (*sources)[tokenlist->length].index = i;
                 (*sources)[tokenlist->length].object_index = object_index;
-                t = &((*tokens)[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length]);
                 t->data = NULL;
                 if(buffer[i + 1] == '.' && buffer[i + 2] == '.'){
-                    t->id = TOKEN_ELLIPSIS; i += 2;
-                    (*sources)[tokenlist->length].stride = 3;
+                    t->id = TOKEN_ELLIPSIS;
+                    i += 2;
+                    (*sources)[tokenlist->length++].stride = 3;
                 } else {
                     t->id = TOKEN_MEMBER;
-                    (*sources)[tokenlist->length].stride = 1;
+                    (*sources)[tokenlist->length++].stride = 1;
                 }
                 break;
             case '"':
                 LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_STRING);
-                lex_state.buildup_length = 0; break;
+                lex_state.buildup_length = 0;
+                lex_state.buildup_inner_stride = 0;
+                break;
             case '\'':
                 LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_CSTRING);
-                lex_state.buildup_length = 0; break;
+                lex_state.buildup_length = 0;
+                lex_state.buildup_inner_stride = 0;
+                break;
             case '#':
                 (*sources)[tokenlist->length].index = i;
                 (*sources)[tokenlist->length].object_index = object_index;
@@ -221,25 +240,27 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
 
                 if(array_index == -1){
                     // Isn't a keyword, just an identifier
-                    t = &((*tokens)[tokenlist->length++]);
+                    t = &((*tokens)[tokenlist->length]);
                     t->id = TOKEN_WORD;
                     t->data = malloc(lex_state.buildup_length + 1);
                     memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
                     ((char*) t->data)[lex_state.buildup_length] = '\0';
                 } else {
                     // Is a keyword, figure out token index from array index
-                    t = &((*tokens)[tokenlist->length++]);
+                    t = &((*tokens)[tokenlist->length]);
                     t->id = 0x00000040 + (unsigned int) array_index; // Values 0x00000040..0x0000007F are reserved for keywords
                     t->data = NULL;
                 }
 
-                i--; lex_state.state = LEX_STATE_IDLE;
+                (*sources)[tokenlist->length++].stride = lex_state.buildup_length;
+                lex_state.state = LEX_STATE_IDLE;
+                i--;
             }
             break;
         case LEX_STATE_STRING:
             if(buffer[i] == '\"' && !(lex_state.buildup_length != 0 && lex_state.buildup[lex_state.buildup_length-1] == '\\')){
                 // End of string literal
-                t = &((*tokens)[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length]);
                 t->id = TOKEN_STRING;
 
                 t->data = malloc(sizeof(token_string_data_t));
@@ -249,6 +270,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
 
                 // Will null terminate for convenience of converting to c-string
                 ((token_string_data_t*) t->data)->array[lex_state.buildup_length] = '\0';
+                (*sources)[tokenlist->length++].stride = lex_state.buildup_inner_stride + 2;
                 lex_state.state = LEX_STATE_IDLE;
                 break;
             }
@@ -256,6 +278,8 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
 
             if(buffer[i] == '\\'){
+                lex_state.buildup_inner_stride += 2;
+
                 switch(buffer[++i]){
                 case 'n': lex_state.buildup[lex_state.buildup_length++] = '\n';  break;
                 case 'r': lex_state.buildup[lex_state.buildup_length++] = '\r';  break;
@@ -268,18 +292,20 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 case '\\': lex_state.buildup[lex_state.buildup_length++] = '\\'; break;
                 default:
                     lex_get_location(buffer, i, &line, &column);
-                    redprintf("%s:%d:%d: Unknown string escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
+                    redprintf("%s:%d:%d: Unknown escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
+                    compiler_print_source(compiler, line, column, (source_t){i - 1, object_index, 2});
                     lex_state_free(&lex_state);
                     return FAILURE;
                 }
             } else {
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
+                lex_state.buildup_inner_stride++;
             }
             break;
         case LEX_STATE_CSTRING:
             if(buffer[i] == '\''){
                 // End of string literal
-                t = &((*tokens)[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length]);
 
                 // Character literals
                 if(lex_state.buildup_length == 1){
@@ -288,15 +314,20 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                         t->data = malloc(sizeof(unsigned char));
                         *((unsigned char*) t->data) = lex_state.buildup[0];
                         lex_state.state = LEX_STATE_IDLE;
-                        i += 2; break;
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_inner_stride + 4;
+                        i += 2;
+                        break;
                     } else if(buffer[i + 1] == 's' && buffer[i + 2] == 'b'){
                         t->id = TOKEN_BYTE;
                         t->data = malloc(sizeof(char));
                         *((char*) t->data) = lex_state.buildup[0];
                         lex_state.state = LEX_STATE_IDLE;
-                        i += 2; break;
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_inner_stride + 4;
+                        i += 2;
+                        break;
                     }
                 }
+
 
                 // Regular cstring
                 t->id = TOKEN_CSTRING;
@@ -304,12 +335,14 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
                 ((char*) t->data)[lex_state.buildup_length] = '\0';
                 lex_state.state = LEX_STATE_IDLE;
+                (*sources)[tokenlist->length++].stride = lex_state.buildup_inner_stride + 2;
                 break;
             }
 
             expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
 
             if(buffer[i] == '\\'){
+                lex_state.buildup_inner_stride += 2;
                 switch(buffer[++i]){
                 case 'n': lex_state.buildup[lex_state.buildup_length++] = '\n'; break;
                 case 'r': lex_state.buildup[lex_state.buildup_length++] = '\r'; break;
@@ -320,7 +353,8 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 case '\\': lex_state.buildup[lex_state.buildup_length++] = '\\'; break;
                 default:
                     lex_get_location(buffer, i, &line, &column);
-                    redprintf("%s:%d:%d: Unknown string escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
+                    redprintf("%s:%d:%d: Unknown escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
+                    compiler_print_source(compiler, line, column, (source_t){i - 1, object_index, 2});
                     lex_state_free(&lex_state);
                     return FAILURE;
                 }
@@ -334,6 +368,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 }
                 
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
+                lex_state.buildup_inner_stride++;
             }
             break;
         case LEX_STATE_EQUALS:   LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_EQUALS, TOKEN_ASSIGN);             break;
@@ -344,35 +379,37 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUSASSIGN, TOKEN_MODULUS);     break;
         case LEX_STATE_LESS:
             if(buffer[i] == '<'){
+                // We don't need to check whether i + 1 exceeds the buffer length because we
+                // know that the final character in the buffer is a newline
                 if(buffer[i + 1] == '<'){
                     // Logical Left Shift
-                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_LSHIFT);
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_LSHIFT, i - 1, 3);
                     i++;
                 } else {
-                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LSHIFT);
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LSHIFT, i - 1, 2);
                 }
             } else if(buffer[i] == '='){
-                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_LESSTHANEQ);
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_LESSTHANEQ, i - 1, 2);
             } else {
-                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_LESSTHAN);
-                i--;
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_LESSTHAN, --i, 1);
             }
             lex_state.state = LEX_STATE_IDLE;
             break;
         case LEX_STATE_GREATER:
             if(buffer[i] == '>'){
+                // We don't need to check whether i + 1 exceeds the buffer length because we
+                // know that the final character in the buffer is a newline
                 if(buffer[i + 1] == '>'){
                     // Logical Left Shift
-                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_RSHIFT);
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_RSHIFT, i - 1, 3);
                     i++;
                 } else {
-                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_RSHIFT);
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_RSHIFT, i - 1, 2);
                 }
             } else if(buffer[i] == '='){
-                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_GREATERTHANEQ);
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_GREATERTHANEQ, i - 1, 2);
             } else {
-                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_GREATERTHAN);
-                i--;
+                LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_GREATERTHAN, --i, 1);
             }
             lex_state.state = LEX_STATE_IDLE;
             break;
@@ -393,7 +430,8 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             } else {
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length] = '\0';
-                t = &((*tokens)[tokenlist->length++]);
+
+                t = &((*tokens)[tokenlist->length]);
                 lex_state.state = LEX_STATE_IDLE;
 
                 bool contains_dot = false;
@@ -414,27 +452,37 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                             t->id = TOKEN_UBYTE;
                             t->data = malloc(sizeof(unsigned char));
                             *((unsigned char*) t->data) = strtoul(lex_state.buildup, NULL, base);
-                            i++; break;
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         case 's':
                             t->id = TOKEN_USHORT;
                             t->data = malloc(sizeof(unsigned short));
                             *((unsigned short*) t->data) = strtoul(lex_state.buildup, NULL, base);
-                            i++; break;
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         case 'i':
                             t->id = TOKEN_UINT;
                             t->data = malloc(sizeof(unsigned long long));
                             *((unsigned long*) t->data) = strtoul(lex_state.buildup, NULL, base);
-                            i++; break;
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         case 'l':
                             t->id = TOKEN_ULONG;
                             t->data = malloc(sizeof(unsigned long long));
-                            *((unsigned long long*) t->data) = strtoull(lex_state.buildup, NULL, base);// NOTE: Potential loss of data
-                            i++; break;
+                            *((unsigned long long*) t->data) = strtoull(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         case 'z':
                             t->id = TOKEN_USIZE;
                             t->data = malloc(sizeof(unsigned long long));
-                            *((unsigned long long*) t->data) = strtoull(lex_state.buildup, NULL, base);// NOTE: Potential loss of data
-                            i++; break;
+                            *((unsigned long long*) t->data) = strtoull(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         default:
                             lex_get_location(buffer, i, &line, &column);
                             redprintf("%s:%d:%d: Expected valid number suffix after 'u' base suffix\n", filename_name_const(object->filename), line, column);
@@ -455,61 +503,81 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                             t->id = TOKEN_BYTE;
                             t->data = malloc(sizeof(char));
                             *((char*) t->data) = strtol(lex_state.buildup, NULL, base);
-                            i++; break;
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         case 's':
                             t->id = TOKEN_SHORT;
                             t->data = malloc(sizeof(short));
                             *((short*) t->data) = strtol(lex_state.buildup, NULL, base);
-                            i++; break;
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         case 'i':
                             t->id = TOKEN_INT;
                             t->data = malloc(sizeof(long long));
                             *((long long*) t->data) = strtol(lex_state.buildup, NULL, base);
-                            i++; break;
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         case 'l':
                             t->id = TOKEN_LONG;
                             t->data = malloc(sizeof(long long));
                             *((long long*) t->data) = strtol(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
-                            i++; break;
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                            i++;
+                            break;
                         default:
                             t->id = TOKEN_SHORT;
                             t->data = malloc(sizeof(short));
                             *((short*) t->data) = strtol(lex_state.buildup, NULL, base);
+                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
                         }
                     } else {
                         t->id = TOKEN_SHORT;
                         t->data = malloc(sizeof(short));
                         *((short*) t->data) = strtol(lex_state.buildup, NULL, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     }
                     break;
                 case 'b':
                     t->id = TOKEN_BYTE;
                     t->data = malloc(sizeof(char));
                     *((char*) t->data) = strtol(lex_state.buildup, NULL, base);
-                    i++; break;
+                    (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
+                    i++;
+                    break;
                 case 'i':
                     t->id = TOKEN_INT;
                     t->data = malloc(sizeof(long));
                     *((long*) t->data) = strtol(lex_state.buildup, NULL, base);
-                    i++; break;
+                    (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
+                    i++;
+                    break;
                 case 'l':
                     t->id = TOKEN_LONG;
                     t->data = malloc(sizeof(long long));
                     *((long long*) t->data) = strtol(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
-                    i++; break;
+                    (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
+                    i++;
+                    break;
                 case 'f':
                     t->id = TOKEN_FLOAT;
                     t->data = malloc(sizeof(float));
                     *((float*) t->data) = atof(lex_state.buildup);
+                    (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     i++;
                     break;
                 case 'd':
                     t->id = TOKEN_DOUBLE;
                     t->data = malloc(sizeof(double));
                     *((double*) t->data) = atof(lex_state.buildup);
+                    (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     i++;
                     break;
                 default:
+                    (*sources)[tokenlist->length++].stride = lex_state.buildup_length;
+
                     // Probably not ideal for checking but I can't think of a better way atm
                     // TODO: Clean up this messy code, maybe make a contains() function in util.c?
                     for(length_t d = 0; d != lex_state.buildup_length; d++){
@@ -549,6 +617,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 (*sources)[tokenlist->length].object_index = object_index;
                 (*sources)[tokenlist->length].stride = 0;
                 lex_state.buildup_length = 2;
+                lex_state.buildup_inner_stride = 2;
                 lex_state.buildup[0] = '-';
                 lex_state.buildup[1] = buffer[i];
                 lex_state.state = LEX_STATE_NUMBER;
@@ -556,29 +625,39 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 break;
             }
 
-            t = &((*tokens)[tokenlist->length++]);
+            t = &((*tokens)[tokenlist->length]);
             lex_state.state = LEX_STATE_IDLE;
             t->data = NULL;
-            if(buffer[i] == '=') t->id = TOKEN_SUBTRACTASSIGN;
-            else { t->id = TOKEN_SUBTRACT; i--; }
+            if(buffer[i] == '='){
+                t->id = TOKEN_SUBTRACTASSIGN;
+                (*sources)[tokenlist->length++].stride = 2;
+            } else {
+                t->id = TOKEN_SUBTRACT;
+                (*sources)[tokenlist->length++].stride = 1;
+                i--;
+            }
             break;
         case LEX_STATE_DIVIDE:
             switch(buffer[i]){
             case '/':
-                lex_state.state = LEX_STATE_LINECOMMENT; break;
+                lex_state.state = LEX_STATE_LINECOMMENT;
+                break;
             case '*':
-                lex_state.state = LEX_STATE_LONGCOMMENT; break;
+                lex_state.state = LEX_STATE_LONGCOMMENT;
+                break;
             case '=':
                 lex_state.state = LEX_STATE_IDLE;
-                t = &((*tokens)[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length]);
                 t->id = TOKEN_DIVIDEASSIGN;
                 t->data = NULL;
+                (*sources)[tokenlist->length++].stride = 2;
                 break;
             default:
                 lex_state.state = LEX_STATE_IDLE;
-                t = &((*tokens)[tokenlist->length++]);
+                t = &((*tokens)[tokenlist->length]);
                 t->id = TOKEN_DIVIDE;
                 t->data = NULL;
+                (*sources)[tokenlist->length++].stride = 1;
                 i--;
             }
             break;
@@ -602,7 +681,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length] = '\0';
 
-                (*sources)[tokenlist->length].stride = lex_state.buildup_length;
+                (*sources)[tokenlist->length].stride = lex_state.buildup_length + 1;
                 t = &((*tokens)[tokenlist->length++]);
                 t->id = TOKEN_META;
                 t->data = malloc(lex_state.buildup_length + 1);
@@ -637,6 +716,7 @@ void lex_state_init(lex_state_t *lex_state){
     lex_state->buildup = NULL;
     lex_state->buildup_length = 0;
     lex_state->buildup_capacity = 0;
+    lex_state->buildup_inner_stride = 0;
 }
 
 void lex_state_free(lex_state_t *lex_state){

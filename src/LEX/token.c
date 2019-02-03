@@ -13,7 +13,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         if(buffer != NULL){
             int line, column;
             lex_get_location(buffer, tokenlist->sources[i].index, &line, &column);
-            printf("%d:%d ", line, column);
+            printf("%d:%d~%d ", line, column, (int) tokenlist->sources[i].stride);
         }
 
         switch(tokenlist->tokens[i].id){

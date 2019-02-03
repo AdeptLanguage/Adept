@@ -136,6 +136,8 @@ void memory_free_fast(void* data){
 }
 
 void memory_track_external_allocation(void *pointer, size_t size, const char *optional_filename, size_t optional_line){
+    if(pointer == NULL) return;
+    
     if(global_memblocks_length == global_memblocks_capacity){
         memblock_t *new_memory_blocks = malloc(sizeof(memblock_t) * global_memblocks_capacity * 2);
         memcpy(new_memory_blocks, global_memblocks, sizeof(memblock_t) * global_memblocks_capacity);

@@ -286,10 +286,18 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 }
             }
 
+            if(access(object->filename, F_OK) == -1){
+                object->compilation_stage = COMPILATION_STAGE_NONE;
+                redprintf("Can't find file '%s'\n", object->filename);
+                free(object->filename);
+                return FAILURE;
+            }
+
             // Calculate the absolute path of the filename
             object->full_filename = filename_absolute(object->filename);
 
             if(object->full_filename == NULL){
+                object->compilation_stage = COMPILATION_STAGE_NONE;
                 redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", object->filename);
                 free(object->filename);
                 return FAILURE;
@@ -307,13 +315,13 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             // If no file was specified and the file 'main.adept' exists,
             // then assume we want to compile 'main.adept'
             object->compilation_stage = COMPILATION_STAGE_FILENAME;
-            object->filename = malloc(11);
-            memcpy(object->filename, "main.adept", 11);
+            object->filename = strclone("main.adept");
 
             // Calculate the absolute path of the filename
             object->full_filename = filename_absolute(object->filename);
 
             if(object->full_filename == NULL){
+                object->compilation_stage = COMPILATION_STAGE_NONE;
                 redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", object->filename);
                 free(object->filename);
                 return FAILURE;
@@ -491,7 +499,10 @@ void compiler_print_source(compiler_t *compiler, int line, int column, source_t 
 
     for(length_t i = 0; i != prefix_length; i++) printf(" ");
     for(length_t i = line_index; i != source.index; i++) printf(object->buffer[i] != '\t' ? " " : "    ");
-    printf("^\n");
+
+    for(length_t i = 0; i != source.stride; i++)
+        printf("^");
+    printf("\n");
 }
 
 void compiler_panic(compiler_t *compiler, source_t source, const char *message){

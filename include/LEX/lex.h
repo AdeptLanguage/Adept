@@ -23,6 +23,7 @@ typedef struct {
     char *buildup;
     length_t buildup_length;
     length_t buildup_capacity;
+    length_t buildup_inner_stride;
     bool is_hexadecimal;
 } lex_state_t;
 

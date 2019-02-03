@@ -114,7 +114,7 @@ maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error){
 
     if(id != TOKEN_WORD){
         // ERROR: That token isn't a word
-        if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], error);
+        if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], error);
         return NULL;
     }
 
@@ -136,6 +136,6 @@ maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error){
         return ((token_string_data_t*) ctx->tokenlist->tokens[(*ctx->i)].data)->array;
 
     // ERROR: That token isn't a string
-    if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], error);
+    if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], error);
     return NULL;
 }

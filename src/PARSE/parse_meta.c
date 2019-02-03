@@ -9,7 +9,6 @@
 
 errorcode_t parse_meta(parse_ctx_t *ctx){
     // NOTE: Assumes (ctx->tokenlist->tokens[*ctx->i].id == TOKEN_META)
-    //ast_t *ast = ctx->ast;
 
     length_t *i = ctx->i;
     tokenlist_t *tokenlist = ctx->tokenlist;
