@@ -81,6 +81,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         out_type->elements_length = 0;
         out_type->source.index = 0;
         out_type->source.object_index = ctx->object->index;
+        out_type->source.stride = 0;
         return FAILURE;
     }
 
@@ -167,6 +168,7 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
     out_func_elem->return_type->elements_length = 0;
     out_func_elem->return_type->source.index = 0;
     out_func_elem->return_type->source.object_index = ctx->object->index;
+    out_func_elem->return_type->source.stride = 0;
 
     if(parse_type(ctx, out_func_elem->return_type)){
         ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);

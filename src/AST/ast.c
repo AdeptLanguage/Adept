@@ -476,7 +476,7 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     func->arity = 0;
     func->return_type.elements = NULL;
     func->return_type.elements_length = 0;
-    func->return_type.source.index = 0;
+    func->return_type.source = NULL_SOURCE;
     func->return_type.source.object_index = source.object_index;
     func->traits = TRAIT_NONE;
     func->statements = NULL;
@@ -635,11 +635,9 @@ ast_type_t* ast_get_usize(ast_t *ast){
         usize_type->elements[0] = malloc(sizeof(ast_elem_base_t));
         ((ast_elem_base_t*) usize_type->elements[0])->id = AST_ELEM_BASE;
         ((ast_elem_base_t*) usize_type->elements[0])->base = strclone("usize");
-        ((ast_elem_base_t*) usize_type->elements[0])->source.index = 0;
-        ((ast_elem_base_t*) usize_type->elements[0])->source.object_index = 0;
+        ((ast_elem_base_t*) usize_type->elements[0])->source = NULL_SOURCE;
         usize_type->elements_length = 1;
-        usize_type->source.index = 0;
-        usize_type->source.object_index = 0;
+        usize_type->source = NULL_SOURCE;
         ast->common.ast_usize_type = usize_type;
     }
 

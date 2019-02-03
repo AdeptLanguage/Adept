@@ -520,14 +520,14 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
                 bool_base.id = AST_ELEM_BASE;
-                bool_base.source.index = 0;
+                bool_base.source = NULL_SOURCE;
                 bool_base.source.object_index = builder->object->index;
                 bool_base.base = "bool";
                 ast_elem_t *bool_type_elem = (ast_elem_t*) &bool_base;
                 ast_type_t bool_type;
                 bool_type.elements = &bool_type_elem;
                 bool_type.elements_length = 1;
-                bool_type.source.index = 0;
+                bool_type.source = NULL_SOURCE;
                 bool_type.source.object_index = builder->object->index;
 
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &bool_type, CONFORM_MODE_PRIMITIVES)){
@@ -585,14 +585,14 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
                 bool_base.id = AST_ELEM_BASE;
-                bool_base.source.index = 0;
+                bool_base.source = NULL_SOURCE;;
                 bool_base.source.object_index = builder->object->index;
                 bool_base.base = "bool";
                 ast_elem_t *bool_type_elem = (ast_elem_t*) &bool_base;
                 ast_type_t bool_type;
                 bool_type.elements = &bool_type_elem;
                 bool_type.elements_length = 1;
-                bool_type.source.index = 0;
+                bool_type.source = NULL_SOURCE;;
                 bool_type.source.object_index = builder->object->index;
 
                 if(!ast_types_identical(&temporary_type, &bool_type)){
@@ -693,14 +693,14 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
                 bool_base.id = AST_ELEM_BASE;
-                bool_base.source.index = 0;
+                bool_base.source = NULL_SOURCE;
                 bool_base.source.object_index = builder->object->index;
                 bool_base.base = "bool";
                 ast_elem_t *bool_type_elem = (ast_elem_t*) &bool_base;
                 ast_type_t bool_type;
                 bool_type.elements = &bool_type_elem;
                 bool_type.elements_length = 1;
-                bool_type.source.index = 0;
+                bool_type.source = NULL_SOURCE;
                 bool_type.source.object_index = builder->object->index;
 
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &bool_type, CONFORM_MODE_PRIMITIVES)){

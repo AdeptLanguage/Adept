@@ -9,7 +9,7 @@
     // SOME LIBC IMPLEMENTATIONS SUCH AS GLIBC USE
     external stdout *FILE
     struct FILE (_opaque 32 usize)
-#endif
+#end
 
 foreign fprintf(*FILE, *ubyte, ...) int
 foreign printf(*ubyte, ...) int

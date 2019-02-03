@@ -280,13 +280,11 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
                 // ------------------------------
                 ast_elem_pointer_t ptr_elem;
                 ptr_elem.id = AST_ELEM_POINTER;
-                ptr_elem.source.index = 0;
-                ptr_elem.source.object_index = 0;
+                ptr_elem.source = NULL_SOURCE;
 
                 ast_elem_base_t cstr_base_elem;
                 cstr_base_elem.id = AST_ELEM_BASE;
-                cstr_base_elem.source.index = 0;
-                cstr_base_elem.source.object_index = 0;
+                cstr_base_elem.source = NULL_SOURCE;
                 cstr_base_elem.base = "ubyte";
 
                 ast_elem_t *cstr_type_elements[] = {
@@ -297,8 +295,7 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
                 ast_type_t cstr_type;
                 cstr_type.elements = cstr_type_elements;
                 cstr_type.elements_length = 2;
-                cstr_type.source.index = 0;
-                cstr_type.source.object_index = 0;
+                cstr_type.source = NULL_SOURCE;
                 // ------------------------------
 
                 type_table_give(ctx->type_table, &cstr_type, NULL);

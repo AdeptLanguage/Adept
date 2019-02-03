@@ -18,6 +18,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
 
     source.index = 0;
     source.object_index = ctx->object->index;
+    source.stride = 0;
 
     while(tokens[*i].id != TOKEN_END){
         if(parse_ignore_newlines(ctx, "Unexpected expression termination")) return FAILURE;

@@ -60,8 +60,7 @@ bool ast_expr_tests(){
     #define MACRO_PRIMITIVE_TEST(name, expr_type, expr) { \
         ast_expr_byte_t *_p = malloc(sizeof(expr_type)); \
         _p->id = expr; \
-        _p->source.index = 0; \
-        _p->source.object_index = 0; \
+        _p->source = NULL_SOURCE; \
         _p->value = 0; \
         clone = ast_expr_clone((ast_expr_t*) _p); \
         if(clone == NULL) { whiteprintf("!!! FAILURE Cloning %s expression\n", name); ok = false; } \

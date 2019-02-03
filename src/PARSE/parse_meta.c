@@ -37,7 +37,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
     if(standard == -1){
-        compiler_panicf(ctx->compiler, source, "Unknown meta directive '%s'", directive_name);
+        compiler_panicf(ctx->compiler, source, "Unrecognized meta directive #%s", directive_name);
         return FAILURE;
     }
 
@@ -55,6 +55,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             (*i)++;
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
+            meta_expr_free_fully(value);
 
             // Skip over everything until #end
             length_t ends_needed = 1;
@@ -65,8 +66,17 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
                 maybe_index_t pass_id = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
 
-                if(pass_id == META_DIRECTIVE_IF) ends_needed++;
-                if(pass_id == META_DIRECTIVE_END) ends_needed--;
+                switch(pass_id){
+                case META_DIRECTIVE_IF:
+                    ends_needed++;
+                    break;
+                case META_DIRECTIVE_END:
+                    ends_needed--;
+                    break;
+                case -1:
+                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Unrecognized meta directive #%s", pass_over_directive_name);
+                    return FAILURE;
+                }
             }
 
             if(*i == tokenlist->length){
@@ -93,11 +103,21 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
                 maybe_index_t pass_id = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
 
-                if(pass_id == META_DIRECTIVE_IF) ends_needed++;
-                if(pass_id == META_DIRECTIVE_END) ends_needed--;
-
-                if(pass_id == META_DIRECTIVE_ELSE && ends_needed == 1){
-                    compiler_panic(ctx->compiler, tokenlist->sources[*i], "Unexpected '#else' meta directive");
+                switch(pass_id){
+                case META_DIRECTIVE_IF:
+                    ends_needed++;
+                    break;
+                case META_DIRECTIVE_END:
+                    ends_needed--;
+                    break;
+                case META_DIRECTIVE_ELSE:
+                    if(ends_needed == 1){
+                        compiler_panic(ctx->compiler, tokenlist->sources[*i], "Unexpected '#else' meta directive");
+                        return FAILURE;
+                    }
+                    break;
+                case -1:
+                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Unrecognized meta directive #%s", pass_over_directive_name);
                     return FAILURE;
                 }
             }
@@ -125,6 +145,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             if(parse_meta_expr(ctx, &value)) return FAILURE;
 
             bool whether = meta_expr_into_bool(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_expr_free_fully(value);
 
             // If true, continue parsing as normal
             if(whether){
@@ -145,34 +166,42 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
                 maybe_index_t pass_id = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
 
-                if(pass_id == META_DIRECTIVE_IF) ends_needed++;
-                if(pass_id == META_DIRECTIVE_END) ends_needed--;
 
-                if(pass_id == META_DIRECTIVE_ELIF && ends_needed == 1){
-                    (*i)++;
+                if(pass_id == META_DIRECTIVE_IF){
+                    ends_needed++;
+                } else if(pass_id == META_DIRECTIVE_END){
+                    ends_needed--;
+                } else if(pass_id == META_DIRECTIVE_ELIF){
+                    if(ends_needed == 1){
+                        (*i)++;
 
-                    meta_expr_t *value;
-                    if(parse_meta_expr(ctx, &value)) return FAILURE;
+                        meta_expr_t *value;
+                        if(parse_meta_expr(ctx, &value)) return FAILURE;
 
-                    bool whether = meta_expr_into_bool(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+                        bool whether = meta_expr_into_bool(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+                        meta_expr_free_fully(value);
 
-                    if(whether){   
+                        if(whether){   
+                            if(ctx->meta_ends_expected++ == 256){
+                                compiler_panic(ctx->compiler, tokenlist->sources[*i], "Exceeded maximum meta conditional depth of 256");
+                                return FAILURE;
+                            }
+                            parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, true);
+                            break;
+                        }
+                    }
+                } else if(pass_id == META_DIRECTIVE_ELSE){
+                    if(ends_needed == 1){
                         if(ctx->meta_ends_expected++ == 256){
-                            compiler_panic(ctx->compiler, source, "Exceeded maximum meta conditional depth of 256");
+                            compiler_panic(ctx->compiler, tokenlist->sources[*i], "Exceeded maximum meta conditional depth of 256");
                             return FAILURE;
                         }
-                        parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, true);
+                        parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, false);
                         break;
                     }
-                }
-
-                if(pass_id == META_DIRECTIVE_ELSE && ends_needed == 1){
-                    if(ctx->meta_ends_expected++ == 256){
-                        compiler_panic(ctx->compiler, source, "Exceeded maximum meta conditional depth of 256");
-                        return FAILURE;
-                    }
-                    parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, false);
-                    break;
+                } else if(pass_id == -1){
+                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Unrecognized meta directive #%s", pass_over_directive_name);
+                    return FAILURE;
                 }
             }
 
@@ -190,6 +219,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             length_t new_i = *i;
 
             strong_cstr_t file = meta_expr_into_string(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_expr_free_fully(value);
             *i = old_i;
 
             maybe_null_strong_cstr_t target = parse_find_import(ctx, file);
@@ -306,6 +336,9 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             }
         }
         break;
+    default:
+        compiler_panicf(ctx->compiler, source, "Unimplemented meta directive #%s", directive_name);
+        return FAILURE;
     }
 
     return SUCCESS;

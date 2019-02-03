@@ -117,14 +117,12 @@ void ast_type_make_base(ast_type_t *type, strong_cstr_t base){
     ast_elem_base_t *elem = malloc(sizeof(ast_elem_base_t));
     elem->id = AST_ELEM_BASE;
     elem->base = base;
-    elem->source.index = 0;
-    elem->source.object_index = 0;
+    elem->source = NULL_SOURCE;
 
     type->elements = malloc(sizeof(ast_elem_t*));
     type->elements[0] = (ast_elem_t*) elem;
     type->elements_length = 1;
-    type->source.index = 0;
-    type->source.object_index = 0;
+    type->source = NULL_SOURCE;
 }
 
 void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base){
@@ -132,19 +130,16 @@ void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base){
     ast_elem_pointer_t *ptr = malloc(sizeof(ast_elem_pointer_t));
     elem->id = AST_ELEM_BASE;
     elem->base = base;
-    elem->source.index = 0;
-    elem->source.object_index = 0;
+    elem->source = NULL_SOURCE;
 
     ptr->id = AST_ELEM_POINTER;
-    ptr->source.index = 0;
-    ptr->source.object_index = 0;
+    ptr->source = NULL_SOURCE;
 
     type->elements = malloc(sizeof(ast_elem_t*) * 2);
     type->elements[0] = (ast_elem_t*) ptr;
     type->elements[1] = (ast_elem_t*) elem;
     type->elements_length = 2;
-    type->source.index = 0;
-    type->source.object_index = 0;
+    type->source = NULL_SOURCE;
 }
 
 void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base){
@@ -153,24 +148,20 @@ void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base){
     ast_elem_pointer_t *ptr2 = malloc(sizeof(ast_elem_pointer_t));
     elem->id = AST_ELEM_BASE;
     elem->base = base;
-    elem->source.index = 0;
-    elem->source.object_index = 0;
+    elem->source = NULL_SOURCE;
 
     ptr1->id = AST_ELEM_POINTER;
-    ptr1->source.index = 0;
-    ptr1->source.object_index = 0;
+    ptr1->source = NULL_SOURCE;
 
     ptr2->id = AST_ELEM_POINTER;
-    ptr2->source.index = 0;
-    ptr2->source.object_index = 0;
+    ptr2->source = NULL_SOURCE;
 
     type->elements = malloc(sizeof(ast_elem_t*) * 3);
     type->elements[0] = (ast_elem_t*) ptr1;
     type->elements[1] = (ast_elem_t*) ptr2;
     type->elements[2] = (ast_elem_t*) elem;
     type->elements_length = 3;
-    type->source.index = 0;
-    type->source.object_index = 0;
+    type->source = NULL_SOURCE;
 }
 
 void ast_type_prepend_ptr(ast_type_t *type){
@@ -182,8 +173,7 @@ void ast_type_prepend_ptr(ast_type_t *type){
 
     ast_elem_pointer_t *ptr = malloc(sizeof(ast_elem_pointer_t));
     ptr->id = AST_ELEM_POINTER;
-    ptr->source.index = 0;
-    ptr->source.object_index = 0;
+    ptr->source = NULL_SOURCE;
     new_elements[0] = (ast_elem_t*) ptr;
 
     type->elements = new_elements;
@@ -193,27 +183,23 @@ void ast_type_prepend_ptr(ast_type_t *type){
 void ast_type_make_generic_int(ast_type_t *type){
     ast_elem_base_t *elem = malloc(sizeof(ast_elem_t));
     elem->id = AST_ELEM_GENERIC_INT;
-    elem->source.index = 0;
-    elem->source.object_index = 0;
+    elem->source = NULL_SOURCE;
 
     type->elements = malloc(sizeof(ast_elem_t*));
     type->elements[0] = (ast_elem_t*) elem;
     type->elements_length = 1;
-    type->source.index = 0;
-    type->source.object_index = 0;
+    type->source = NULL_SOURCE;
 }
 
 void ast_type_make_generic_float(ast_type_t *type){
     ast_elem_base_t *elem = malloc(sizeof(ast_elem_t));
     elem->id = AST_ELEM_GENERIC_FLOAT;
-    elem->source.index = 0;
-    elem->source.object_index = 0;
+    elem->source = NULL_SOURCE;
 
     type->elements = malloc(sizeof(ast_elem_t*));
     type->elements[0] = (ast_elem_t*) elem;
     type->elements_length = 1;
-    type->source.index = 0;
-    type->source.object_index = 0;
+    type->source = NULL_SOURCE;
 }
 
 strong_cstr_t ast_type_str(const ast_type_t *type){

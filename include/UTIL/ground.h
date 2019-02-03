@@ -51,9 +51,12 @@ typedef size_t length_t;
 typedef struct {
     length_t index;
     length_t object_index;
+    length_t stride;
 } source_t;
 
-// ---------------- source_t ----------------
+#define NULL_SOURCE (source_t){0, 0, 0}
+
+// ---------------- maybe_index_t ----------------
 typedef long long maybe_index_t;
 
 // ---------------- troolean ----------------

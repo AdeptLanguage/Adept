@@ -66,6 +66,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         #define LEX_SINGLE_TOKEN_MAPPING_MACRO(token_id_mapping) { \
             (*sources)[tokenlist->length].index = i; \
             (*sources)[tokenlist->length].object_index = object_index; \
+            (*sources)[tokenlist->length].stride = 0; \
             t = &((*tokens)[tokenlist->length++]); \
             t->id = token_id_mapping; \
             t->data = NULL; \
@@ -75,6 +76,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         #define LEX_SINGLE_STATE_MAPPING_MACRO(state_mapping) { \
             (*sources)[tokenlist->length].index = i; \
             (*sources)[tokenlist->length].object_index = object_index; \
+            (*sources)[tokenlist->length].stride = 0; \
             lex_state.state = state_mapping; \
         }
 
@@ -132,8 +134,10 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 t->data = NULL;
                 if(buffer[i + 1] == '.' && buffer[i + 2] == '.'){
                     t->id = TOKEN_ELLIPSIS; i += 2;
+                    (*sources)[tokenlist->length].stride = 3;
                 } else {
                     t->id = TOKEN_MEMBER;
+                    (*sources)[tokenlist->length].stride = 1;
                 }
                 break;
             case '"':
@@ -145,6 +149,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             case '#':
                 (*sources)[tokenlist->length].index = i;
                 (*sources)[tokenlist->length].object_index = object_index;
+                (*sources)[tokenlist->length].stride = 0;
                 lex_state.buildup_length = 0;
                 lex_state.state = LEX_STATE_META;
                 break;
@@ -153,6 +158,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122)){
                     (*sources)[tokenlist->length].index = i;
                     (*sources)[tokenlist->length].object_index = object_index;
+                    (*sources)[tokenlist->length].stride = 0;
                     lex_state.buildup_length = 1;
                     lex_state.buildup[0] = buffer[i];
                     lex_state.state = LEX_STATE_WORD;
@@ -167,6 +173,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     }
                     (*sources)[tokenlist->length].index = i;
                     (*sources)[tokenlist->length].object_index = object_index;
+                    (*sources)[tokenlist->length].stride = 0;
                     lex_state.buildup_length = 1;
                     lex_state.buildup[0] = buffer[i];
                     lex_state.state = LEX_STATE_NUMBER;
@@ -177,8 +184,10 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 lex_get_location(buffer, i, &line, &column);
                 redprintf("%s:%d:%d: Unrecognized symbol '%c' (0x%02X)\n", filename_name_const(object->filename), line, column, buffer[i], (int) buffer[i]);
 
-                source_t here; here.index = i;
+                source_t here;
+                here.index = i;
                 here.object_index = object->index;
+                here.stride = 0;
                 compiler_print_source(compiler, line, column, here);
                 lex_state_free(&lex_state);
                 return FAILURE;
@@ -538,6 +547,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 }
                 (*sources)[tokenlist->length].index = i;
                 (*sources)[tokenlist->length].object_index = object_index;
+                (*sources)[tokenlist->length].stride = 0;
                 lex_state.buildup_length = 2;
                 lex_state.buildup[0] = '-';
                 lex_state.buildup[1] = buffer[i];
@@ -592,6 +602,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length] = '\0';
 
+                (*sources)[tokenlist->length].stride = lex_state.buildup_length;
                 t = &((*tokens)[tokenlist->length++]);
                 t->id = TOKEN_META;
                 t->data = malloc(lex_state.buildup_length + 1);

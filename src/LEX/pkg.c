@@ -132,6 +132,7 @@ errorcode_t pkg_read(compiler_t *compiler, object_t *object){
     for(length_t s = 0; s != sources_length; s++){
         // sources[s].index is never used
         sources[s].object_index = target_object_index;
+        // sources[s].stride is never used
     }
 
     char buildup[1024];

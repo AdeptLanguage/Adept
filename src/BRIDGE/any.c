@@ -27,10 +27,6 @@ void any_inject_ast_Any(ast_t *ast){
 
     /* struct Any (type *AnyType, placeholder ulong) */
 
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
-
     strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 2);
     names[0] = strclone("type");
     names[1] = strclone("placeholder");
@@ -39,16 +35,12 @@ void any_inject_ast_Any(ast_t *ast){
     ast_type_make_base_ptr(&types[0], strclone("AnyType"));
     ast_type_make_base(&types[1], strclone("ulong"));
 
-    ast_add_struct(ast, strclone("Any"), names, types, 2, TRAIT_NONE, source);
+    ast_add_struct(ast, strclone("Any"), names, types, 2, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyType(ast_t *ast){
 
     /* struct AnyType (kind AnyTypeKind, name *ubyte, is_alias bool) */
-
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
 
     strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 3);
     names[0] = strclone("kind");
@@ -60,7 +52,7 @@ void any_inject_ast_AnyType(ast_t *ast){
     ast_type_make_base_ptr(&types[1], strclone("ubyte"));
     ast_type_make_base(&types[2], strclone("bool"));
 
-    ast_add_struct(ast, strclone("AnyType"), names, types, 3, TRAIT_NONE, source);
+    ast_add_struct(ast, strclone("AnyType"), names, types, 3, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyTypeKind(ast_t *ast){
@@ -72,10 +64,6 @@ void any_inject_ast_AnyTypeKind(ast_t *ast){
     )
     */
 
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
-
     weak_cstr_t *kinds = malloc(sizeof(weak_cstr_t) * 16);
     kinds[0]  = "VOID";     kinds[1]  = "BOOL";
     kinds[2]  = "BYTE";     kinds[3]  = "UBYTE";
@@ -86,16 +74,12 @@ void any_inject_ast_AnyTypeKind(ast_t *ast){
     kinds[12] = "PTR";      kinds[13] = "STRUCT";
     kinds[14] = "FUNC_PTR"; kinds[15] = "FIXED_ARRAY";
 
-    ast_add_enum(ast, "AnyTypeKind", kinds, 16, source);
+    ast_add_enum(ast, "AnyTypeKind", kinds, 16, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyPtrType(ast_t *ast){
 
     /* struct AnyPtrType(kind AnyTypeKind, name *ubyte, is_alias bool, subtype *AnyType) */
-
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
 
     strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 4);
     names[0] = strclone("kind");
@@ -109,16 +93,12 @@ void any_inject_ast_AnyPtrType(ast_t *ast){
     ast_type_make_base(&types[2], strclone("bool"));
     ast_type_make_base_ptr(&types[3], strclone("AnyType"));
 
-    ast_add_struct(ast, strclone("AnyPtrType"), names, types, 4, TRAIT_NONE, source);
+    ast_add_struct(ast, strclone("AnyPtrType"), names, types, 4, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyStructType(ast_t *ast){
 
     /* struct AnyStructType (kind AnyTypeKind, name *ubyte, is_alias bool, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
-
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
 
     strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 8);
     names[0] = strclone("kind");
@@ -140,16 +120,12 @@ void any_inject_ast_AnyStructType(ast_t *ast){
     ast_type_make_base_ptr_ptr(&types[6], strclone("ubyte"));
     ast_type_make_base(&types[7], strclone("bool"));
 
-    ast_add_struct(ast, strclone("AnyStructType"), names, types, 8, TRAIT_NONE, source);
+    ast_add_struct(ast, strclone("AnyStructType"), names, types, 8, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyFuncPtrType(ast_t *ast){
     
     /* struct AnyFuncPtrType (kind AnyTypeKind, name *ubyte, is_alias bool, args **AnyType, length usize, return_type *AnyType, is_vararg bool, is_stdcall bool) */
-
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
 
     strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 8);
     names[0] = strclone("kind");
@@ -171,16 +147,12 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast){
     ast_type_make_base(&types[6], strclone("bool"));
     ast_type_make_base(&types[7], strclone("bool"));
 
-    ast_add_struct(ast, strclone("AnyFuncPtrType"), names, types, 8, TRAIT_NONE, source);
+    ast_add_struct(ast, strclone("AnyFuncPtrType"), names, types, 8, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyFixedArrayType(ast_t *ast){
     
     /* struct AnyFixedArrayType (kind AnyTypeKind, name *ubyte, is_alias bool, subtype *AnyType, length usize) */
-
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
 
     strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 5);
     names[0] = strclone("kind");
@@ -196,62 +168,46 @@ void any_inject_ast_AnyFixedArrayType(ast_t *ast){
     ast_type_make_base_ptr(&types[3], strclone("AnyType"));
     ast_type_make_base(&types[4], strclone("usize"));
 
-    ast_add_struct(ast, strclone("AnyFixedArrayType"), names, types, 5, TRAIT_NONE, source);
+    ast_add_struct(ast, strclone("AnyFixedArrayType"), names, types, 5, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast___types__(ast_t *ast){
 
     /* __types__ **AnyType */
 
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
-
     ast_type_t type;
     ast_type_make_base_ptr_ptr(&type, strclone("AnyType"));
 
-    ast_add_global(ast, "__types__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES__, source);
+    ast_add_global(ast, "__types__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES__, NULL_SOURCE);
 }
 
 void any_inject_ast___types_length__(ast_t *ast){
 
     /* __types_length__ usize */
 
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
-
     ast_type_t type;
     ast_type_make_base(&type, strclone("usize"));
 
-    ast_add_global(ast, "__types_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES_LENGTH__, source);
+    ast_add_global(ast, "__types_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES_LENGTH__, NULL_SOURCE);
 }
 
 void any_inject_ast___type_kinds__(ast_t *ast){
 
     /* __type_kinds__ **ubyte */
 
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
-
     ast_type_t type;
     ast_type_make_base_ptr_ptr(&type, strclone("ubyte"));
 
-    ast_add_global(ast, "__type_kinds__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS__, source);
+    ast_add_global(ast, "__type_kinds__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS__, NULL_SOURCE);
 }
 
 void any_inject_ast___type_kinds_length__(ast_t *ast){
 
     /* __type_kinds_length__ usize */
 
-    source_t source;
-    source.index = 0;
-    source.object_index = 0;
-
     ast_type_t type;
     ast_type_make_base(&type, strclone("usize"));
 
-    ast_add_global(ast, "__type_kinds_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS_LENGTH__, source);
+    ast_add_global(ast, "__type_kinds_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS_LENGTH__, NULL_SOURCE);
 
 }
