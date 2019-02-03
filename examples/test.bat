@@ -55,6 +55,8 @@ call :compile each_in
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile enums
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile external
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array_assign
@@ -134,6 +136,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile scoped_variables
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile sizeof
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile standard
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile static_arrays
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

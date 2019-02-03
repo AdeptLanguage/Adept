@@ -36,6 +36,7 @@ compile deprecated || exit $?
 compile dereference || exit $?
 compile each_in || exit $?
 compile enums || exit $?
+compile external || exit $?
 compile fixed_array || exit $?
 compile fixed_array_assign || exit $?
 compile funcptr || exit $?
@@ -79,6 +80,7 @@ compile repeat_fields || exit $?
 compile return_ten || exit $?
 compile scoped_variables || exit $?
 compile sizeof || exit $?
+compile standard || exit $?
 compile static_arrays || exit $?
 compile static_structs || exit $?
 compile stdcall || exit $?

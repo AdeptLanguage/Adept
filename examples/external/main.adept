@@ -1,14 +1,16 @@
 
-pragma mac_only
+#if __macos__
+    // THE MAC LIBC IMPLEMENTATION USES
+    external __stdoutp *FILE
+    stdout == __stdoutp
 
-// SOME LIBC IMPLEMENTATIONS MAY USE
-// external stdout *FILE
+    struct FILE (_opaque 32 usize)
+#else
+    // SOME LIBC IMPLEMENTATIONS SUCH AS GLIBC USE
+    external stdout *FILE
+    struct FILE (_opaque 32 usize)
+#endif
 
-// THE MAC LIBC IMPLEMENTATION USES
-external __stdoutp *FILE
-stdout == __stdoutp
-
-struct FILE (_opaque 32 usize)
 foreign fprintf(*FILE, *ubyte, ...) int
 foreign printf(*ubyte, ...) int
 
