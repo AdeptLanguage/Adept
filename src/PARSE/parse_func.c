@@ -26,7 +26,12 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(!is_foreign && ctx->tokenlist->tokens[*ctx->i].id == TOKEN_BEGIN){
         ast_type_make_base(&func->return_type, strclone("void"));
     } else {
-        if(parse_type(ctx, &func->return_type)) return FAILURE;
+        if(parse_type(ctx, &func->return_type)){
+            func->return_type.elements = NULL;
+            func->return_type.elements_length = 0;
+            func->return_type.source = NULL_SOURCE;
+            return FAILURE;
+        }
     }
     
     // enforce specific arguements for special functions & methods

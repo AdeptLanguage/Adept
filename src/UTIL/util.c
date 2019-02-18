@@ -68,8 +68,8 @@ void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, len
 }
 
 strong_cstr_t strclone(const char *src){
-    length_t src_length = strlen(src);
-    char *clone = malloc(src_length + 1);
-    memcpy(clone, src, src_length + 1);
+    length_t size = strlen(src) + 1;
+    char *clone = malloc(size);
+    memcpy(clone, src, size);
     return clone;
 }

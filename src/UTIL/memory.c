@@ -124,7 +124,7 @@ void memory_free_fast(void* data){
             } else break;
         }
         else if(global_memblocks[middle].pointer > data) last = middle - 1;
-        else first = middle + 1;
+    else first = middle + 1;
     }
 
     #ifdef TRACK_MEMORY_FILE_AND_LINE
