@@ -69,6 +69,9 @@ void meta_expr_free(meta_expr_t *expr){
             free(str->name);
         }
         break;
+    case META_EXPR_NOT:
+        free(((meta_expr_not_t*) expr)->value);
+        break;
     default:
         redprintf("INTERNAL ERROR: meta_expr_free encountered unknown meta expression id %d!\n", (int) expr->id);
     }
@@ -403,6 +406,13 @@ void meta_collapse(meta_definition_t *definitions, length_t definitions_length, 
                     meta_expr_free_fully(*expr);
                     *expr = (meta_expr_t*) result;
                 }
+            }
+            break;
+        case META_EXPR_NOT: {
+                meta_expr_not_t *not_expr = (meta_expr_not_t*) *expr;
+                bool whether = meta_expr_into_bool(definitions, definitions_length, &not_expr->value);
+                meta_expr_free_fully(not_expr->value);
+                (*expr)->id = whether ? META_EXPR_FALSE : META_EXPR_TRUE;
             }
             break;
         default:

@@ -405,6 +405,15 @@ errorcode_t parse_meta_primary_expr(parse_ctx_t *ctx, meta_expr_t **out_expr){
         if(parse_meta_expr(ctx, out_expr) != 0) return FAILURE;
         if(parse_eat(ctx, TOKEN_CLOSE, "Expected ')' after meta expression")) return FAILURE;
         break;
+    case TOKEN_NOT: {
+            (*i)++;
+            if(parse_meta_primary_expr(ctx, out_expr)) return FAILURE;
+            meta_expr_t *not_expr = malloc(sizeof(meta_expr_not_t));
+            ((meta_expr_not_t*) not_expr)->id = META_EXPR_NOT;
+            ((meta_expr_not_t*) not_expr)->value = *out_expr;
+            *out_expr = not_expr;
+        }
+        break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in meta expression");
         return FAILURE;

@@ -67,6 +67,11 @@ typedef struct {
 } meta_expr_float_t;
 
 typedef struct {
+    unsigned int id;
+    meta_expr_t *value;
+} meta_expr_not_t;
+
+typedef struct {
     weak_cstr_t name;
     meta_expr_t *value;
 } meta_definition_t;

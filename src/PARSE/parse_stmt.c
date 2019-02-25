@@ -586,10 +586,11 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
         }
 
         // Continue over newline token
-        if(tokens[*i].id != TOKEN_ELSE && tokens[(*i)++].id != TOKEN_NEWLINE){
+        if(tokens[*i].id != TOKEN_ELSE && tokens[*i].id != TOKEN_NEWLINE && !(tokens[*i].id == TOKEN_META && (strcmp(tokens[*i].data, "else") == 0 || strcmp(tokens[*i].data, "elif") == 0))){
             parse_panic_token(ctx, sources[*i - 1], tokens[*i - 1].id, "Encountered unexpected token '%s' at end of statement");
             return FAILURE;
         }
+        (*i)++;
 
         if(mode & PARSE_STMTS_SINGLE) return SUCCESS;
     }
