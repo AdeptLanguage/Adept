@@ -34,10 +34,10 @@ void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, l
 // ---------------- grow ----------------
 // Forces growth of an array to a certain length
 #ifdef UTIL_USE_REALLOC
-#define grow(a, b, c, d) grow_impl(a, b, d)
+#define grow(inout_memory, unit_size, old_length, new_length) grow_impl(inout_memory, unit_size, new_length)
 void grow_impl(void **inout_memory, length_t unit_size, length_t new_length);
 #else
-#define grow(a, b, c, d) grow_impl(a, b, c, d)
+#define grow(inout_memory, unit_size, old_length, new_length) grow_impl(inout_memory, unit_size, old_length, new_length)
 void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, length_t new_length);
 #endif
 

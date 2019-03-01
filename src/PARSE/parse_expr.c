@@ -470,8 +470,11 @@ errorcode_t parse_expr_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
 int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
     ast_expr_func_addr_t *func_addr_expr = malloc(sizeof(ast_expr_func_addr_t));
 
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist;
+
     func_addr_expr->id = EXPR_FUNC_ADDR;
-    func_addr_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
+    func_addr_expr->source = ctx->tokenlist->sources[(*i)++];
     func_addr_expr->traits = TRAIT_NONE;
     func_addr_expr->match_args = NULL;
     func_addr_expr->match_args_length = 0;
@@ -488,8 +491,47 @@ int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
         return FAILURE;
     }
 
+    /*
+    if(tokens[*i].id == TOKEN_OPEN){
+        ast_type_t arg_type;
+
+        ast_type_t *args = NULL;
+        length_t arity = 0;
+
+        (*i)++;
+
+        // TODO: Maybe add support for varargs while searching?
+        while(*i != ctx->tokenlist->length && tokens[*i].id != TOKEN_CLOSE){
+            grow(&args, sizeof(ast_type_t), arity, arity + 1);
+
+            if(parse_ignore_newlines(ctx, "Expected function argument") || parse_type(ctx, &arg_type)){
+                for(length_t i = 0; i != arity; i++) ast_type_free(&args[i]);
+                free(args);
+                return FAILURE;
+            }
+
+            args[arity++] = arg_type;
+
+            if(tokens[*i].id == TOKEN_NEXT){
+                if(tokens[++(*i)].id == TOKEN_CLOSE){
+                    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected type after ',' in argument list");
+                    return FAILURE;
+                }
+            } else if(tokens[*i].id != TOKEN_CLOSE){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after argument type");
+                return FAILURE;
+            }
+        }
+
+        (*i)++;
+        func_addr_expr->match_args = args;
+        func_addr_expr->match_args_length = arity;
+    }
+    */
+
     // TODO: Add support for match args
-    compiler_warn(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Match args not supported yet so 'func &' might return wrong function");
+    //compiler_warn(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Match args not supported yet so 'func &' might return wrong function");
+
     *out_expr = (ast_expr_t*) func_addr_expr;
     return SUCCESS;
 }

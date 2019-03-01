@@ -826,9 +826,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
                     malloc(sizeof(ast_unnamed_arg_t) * macro_expr_ref->match_args_length);
 
                 for(length_t a = 0; a != macro_clone_ref->match_args_length; a++){
-                    macro_clone_ref->match_args[a].type = ast_type_clone(&macro_expr_ref->match_args[a].type);
-                    macro_clone_ref->match_args[a].source = macro_expr_ref->match_args[a].source;
-                    macro_clone_ref->match_args[a].flow = macro_expr_ref->match_args[a].flow;
+                    macro_clone_ref->match_args[a] = ast_type_clone(&macro_expr_ref->match_args[a]);
                 }
             }
 

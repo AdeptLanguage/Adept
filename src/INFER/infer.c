@@ -486,7 +486,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr = (ast_expr_func_addr_t*) *expr;
             if(func_addr->match_args != NULL) for(length_t a = 0; a != func_addr->match_args_length; a++){
-                if(infer_type(ctx, &func_addr->match_args[a].type)) return FAILURE;
+                if(infer_type(ctx, &func_addr->match_args[a])) return FAILURE;
             }
         }
         break;
@@ -593,6 +593,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         }
         break;
     default:
+        printf("%08X\n", (*expr)->id);
         compiler_panic(ctx->compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
         return FAILURE;
     }

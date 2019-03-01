@@ -346,7 +346,7 @@ typedef struct {
     unsigned int id;
     source_t source;
     weak_cstr_t name;
-    ast_unnamed_arg_t *match_args; // Can be NULL to indicate name-only
+    ast_type_t *match_args; // Can be NULL to indicate name-only
     length_t match_args_length;
     trait_t traits;
 } ast_expr_func_addr_t;

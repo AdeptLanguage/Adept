@@ -744,6 +744,10 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
             stmt->value = decl_value == NULL ? NULL : ast_expr_clone(decl_value);
         }
 
+        if(v != 0){
+            expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, 1, 8);
+        }
+
         // Append the created declare statement
         stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     }

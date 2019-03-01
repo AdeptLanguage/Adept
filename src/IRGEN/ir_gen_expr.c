@@ -463,8 +463,14 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_func_addr_t *func_addr_expr = (ast_expr_func_addr_t*) expr;
 
             funcpair_t pair;
-            if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &pair)){
-                compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", func_addr_expr->name);
+
+            if(func_addr_expr->match_args == NULL){
+                if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &pair)){
+                    compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", func_addr_expr->name);
+                    return FAILURE;
+                }
+            } else if(ir_gen_find_func(builder->compiler, builder->object, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length, &pair)){
+                compiler_undeclared_function(builder->compiler, &builder->object->ir_module, func_addr_expr->source, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length);
                 return FAILURE;
             }
 
