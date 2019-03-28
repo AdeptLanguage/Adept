@@ -33,17 +33,24 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_func_t *ast_funcs;
     ir_func_t *module_funcs;
-    length_t ast_funcs_length;
+    length_t ast_funcs_nonpoly_length;
     length_t *module_funcs_length;
 
     ast_funcs = ast->funcs;
     module_funcs = module->funcs;
-    ast_funcs_length = ast->funcs_length;
+    ast_funcs_nonpoly_length = ast->funcs_length;
     module_funcs_length = &module->funcs_length;
     module->func_mappings = malloc(sizeof(ir_func_mapping_t) * ast->funcs_length);
 
-    for(length_t f = 0; f != ast_funcs_length; f++){
+    for(length_t f = 0; f != ast_funcs_nonpoly_length; f++){
         ast_func_t *ast_func = &ast_funcs[f];
+
+        if(ast_func->traits & AST_FUNC_POLYMORPHIC){
+            f--;
+            ast_funcs_nonpoly_length--;
+            continue;
+        }
+
         ir_func_t *module_func = &module_funcs[f];
 
         module_func->name = ast_func->name;
@@ -62,9 +69,15 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         module->func_mappings[f].is_beginning_of_group = -1;
         (*module_funcs_length)++;
 
-        if(ast_func->traits & AST_FUNC_FOREIGN) module_func->traits |= IR_FUNC_FOREIGN;
-        if(ast_func->traits & AST_FUNC_VARARG)  module_func->traits |= IR_FUNC_VARARG;
-        if(ast_func->traits & AST_FUNC_STDCALL) module_func->traits |= IR_FUNC_STDCALL;
+        //if(module_func->traits & IR_FUNC_POLYMORPHIC){
+        //    compiler_panic(compiler, ast_func->source, "Polymorphic functions aren't supported yet!");
+        //    return FAILURE;
+        //}
+
+        if(ast_func->traits & AST_FUNC_FOREIGN)     module_func->traits |= IR_FUNC_FOREIGN;
+        if(ast_func->traits & AST_FUNC_VARARG)      module_func->traits |= IR_FUNC_VARARG;
+        if(ast_func->traits & AST_FUNC_STDCALL)     module_func->traits |= IR_FUNC_STDCALL;
+        if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
 
         if(!(ast_func->traits & AST_FUNC_FOREIGN)){
             if(ast_func->arity > 0 && strcmp(ast_func->arg_names[0], "this") == 0){
@@ -130,7 +143,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         }
     }
 
-    qsort(module->func_mappings, ast->funcs_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
+    qsort(module->func_mappings, ast_funcs_nonpoly_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
     return SUCCESS;
 }
@@ -140,10 +153,15 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
 
     ast_func_t *ast_funcs = object->ast.funcs;
     ir_func_t *module_funcs = object->ir_module.funcs;
-    length_t ast_funcs_length = object->ast.funcs_length;
+    length_t ast_funcs_nonpoly_length = object->ast.funcs_length;
 
-    for(length_t f = 0; f != ast_funcs_length; f++){
+    for(length_t f = 0; f != ast_funcs_nonpoly_length; f++){
         if(ast_funcs[f].traits & AST_FUNC_FOREIGN) continue;
+        if(ast_funcs[f].traits & AST_FUNC_POLYMORPHIC){
+            f--;
+            ast_funcs_nonpoly_length--;
+            continue;
+        }
         if(ir_gen_func_statements(compiler, object, &ast_funcs[f], &module_funcs[f])) return FAILURE;
     }
 

@@ -74,6 +74,15 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             out_type->elements[out_type->elements_length] = (ast_elem_t*) func_elem;
         }
         break;
+    case TOKEN_POLYMORPH: {
+            ast_elem_polymorph_t *base_elem = malloc(sizeof(ast_elem_base_t));
+            base_elem->id = AST_ELEM_POLYMORPH;
+            base_elem->name = tokens[*i].data;
+            base_elem->source = sources[*i];
+            tokens[(*i)++].data = NULL; // Take ownership
+            out_type->elements[out_type->elements_length] = (ast_elem_t*) base_elem;
+        }
+        break;
     default:
         compiler_panic(ctx->compiler, sources[*i], "Expected type");
         ast_type_free(out_type);

@@ -14,6 +14,7 @@
 #include "BRIDGE/bridge.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
+#include "IR/ir_type_var.h"
 
 // =============================================================
 // ---------------- Possible IR instruction IDs ----------------
@@ -412,9 +413,10 @@ typedef struct {
 } ir_func_t;
 
 // Possible traits for ir_func_t
-#define IR_FUNC_FOREIGN TRAIT_1
-#define IR_FUNC_VARARG  TRAIT_2
-#define IR_FUNC_STDCALL TRAIT_3
+#define IR_FUNC_FOREIGN     TRAIT_1
+#define IR_FUNC_VARARG      TRAIT_2
+#define IR_FUNC_STDCALL     TRAIT_3
+#define IR_FUNC_POLYMORPHIC TRAIT_4
 
 // ---------------- ir_func_mapping_t ----------------
 // Mapping for a name or id to AST & IR function
@@ -469,7 +471,7 @@ typedef struct {
 // ---------------- ir_shared_common_t ----------------
 // General data that can be directly accessed by the
 // entire IR module
-// 'ir_funcptr_type' -> type used for function pointer implementation
+// 'ir_funcptr' -> type used for function pointer implementation
 typedef struct {
     ir_type_t *ir_funcptr;
     ir_type_t *ir_usize;
@@ -496,6 +498,7 @@ typedef struct {
     ir_anon_global_t *anon_globals;
     length_t anon_globals_length;
     length_t anon_globals_capacity;
+    ir_type_var_stack_t type_var_stack;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------
@@ -535,6 +538,5 @@ void ir_module_free(ir_module_t *ir_module);
 // ---------------- ir_module_free_funcs ----------------
 // Frees data within each IR function in a list
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length);
-
 
 #endif // IR_H

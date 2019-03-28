@@ -172,6 +172,13 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 lex_state.buildup_length = 0;
                 lex_state.state = LEX_STATE_META;
                 break;
+            case '$':
+                (*sources)[tokenlist->length].index = i;
+                (*sources)[tokenlist->length].object_index = object_index;
+                (*sources)[tokenlist->length].stride = 0;
+                lex_state.buildup_length = 0;
+                lex_state.state = LEX_STATE_POLYMORPH;
+                break;
             default:
                 // Test for word
                 if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122)){
@@ -671,7 +678,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             if(buffer[i] == '/') { lex_state.state = LEX_STATE_IDLE; }
             else lex_state.state = LEX_STATE_LONGCOMMENT;
             break;
-        case LEX_STATE_META:
+        case LEX_STATE_META: case LEX_STATE_POLYMORPH:
             tmp = buffer[i];
             if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9')){
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
@@ -683,7 +690,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
 
                 (*sources)[tokenlist->length].stride = lex_state.buildup_length + 1;
                 t = &((*tokens)[tokenlist->length++]);
-                t->id = TOKEN_META;
+                t->id = lex_state.state == LEX_STATE_META ? TOKEN_META : TOKEN_POLYMORPH;
                 t->data = malloc(lex_state.buildup_length + 1);
                 memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
                 ((char*) t->data)[lex_state.buildup_length] = '\0';

@@ -471,7 +471,6 @@ int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
     ast_expr_func_addr_t *func_addr_expr = malloc(sizeof(ast_expr_func_addr_t));
 
     length_t *i = ctx->i;
-    token_t *tokens = ctx->tokenlist;
 
     func_addr_expr->id = EXPR_FUNC_ADDR;
     func_addr_expr->source = ctx->tokenlist->sources[(*i)++];

@@ -52,6 +52,7 @@ typedef struct {
 #define LEX_STATE_UBEROR       0x00000013
 #define LEX_STATE_COLON        0x00000014
 #define LEX_STATE_META         0x00000015
+#define LEX_STATE_POLYMORPH    0x00000016
 
 // ---------------- lex ----------------
 // Entry point for lexical analysis

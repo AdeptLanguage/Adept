@@ -162,6 +162,9 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_META:
             printf("Meta: \"%s\"\n", (char*) tokenlist->tokens[i].data);
             break;
+        case TOKEN_POLYMORPH:
+            printf("Polymorph: \"%s\"\n", (char*) tokenlist->tokens[i].data);
+            break;
         default:
             printf("unknown token 0x%08X: THIS TOKEN HAS AN UNKNOWN ID\n", tokenlist->tokens[i].id);
         }
@@ -238,7 +241,7 @@ const char *global_token_name_table[] = {
     "logical right shift",    // 0x00000037
     "namespace",              // 0x00000038
     "meta directive",         // 0x00000039
-    "reserved",               // 0x0000003A
+    "polymorph",              // 0x0000003A
     "reserved",               // 0x0000003B
     "reserved",               // 0x0000003C
     "reserved",               // 0x0000003D

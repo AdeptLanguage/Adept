@@ -1,5 +1,6 @@
 
 #include "IR/ir.h"
+#include "UTIL/util.h"
 #include "UTIL/color.h"
 
 strong_cstr_t ir_value_str(ir_value_t *value){
@@ -625,6 +626,7 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t glob
     ir_module->anon_globals = NULL;
     ir_module->anon_globals_length = 0;
     ir_module->anon_globals_capacity = 0;
+    ir_type_var_stack_init(&ir_module->type_var_stack);
 
     // Initialize common data
     ir_module->common.ir_funcptr = NULL;

@@ -40,10 +40,11 @@ typedef struct {
 #define AST_FUNC_ARG_TYPE_TRAIT_POD TRAIT_1
 
 // Possible AST function traits
-#define AST_FUNC_FOREIGN TRAIT_1
-#define AST_FUNC_VARARG  TRAIT_2
-#define AST_FUNC_MAIN    TRAIT_3
-#define AST_FUNC_STDCALL TRAIT_4
+#define AST_FUNC_FOREIGN     TRAIT_1
+#define AST_FUNC_VARARG      TRAIT_2
+#define AST_FUNC_MAIN        TRAIT_3
+#define AST_FUNC_STDCALL     TRAIT_4
+#define AST_FUNC_POLYMORPHIC TRAIT_5
 
 // ---------------- ast_struct_t ----------------
 // A structure within the root AST
@@ -179,6 +180,10 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function
 void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, source_t source);
+
+// ---------------- ast_func_is_polymorphic ----------------
+// Returns whether an AST function has polymorphic arguments
+bool ast_func_is_polymorphic(ast_func_t *func);
 
 // ---------------- ast_struct_init ----------------
 // Initializes an AST struct

@@ -16,6 +16,8 @@ void type_table_free(type_table_t *table){
 }
 
 void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cstr_t maybe_alias_name){
+    if(ast_type_has_polymorph(type)) return;
+
     expand((void**) &table->records, sizeof(type_table_record_t), table->length, &table->capacity, 2, 16);
     
     strong_cstr_t name = maybe_alias_name ? maybe_alias_name : ast_type_str(type);

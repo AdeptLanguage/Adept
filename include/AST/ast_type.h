@@ -29,6 +29,7 @@ extern "C" {
 #define AST_ELEM_GENERIC_INT   0x05
 #define AST_ELEM_GENERIC_FLOAT 0x06
 #define AST_ELEM_FUNC          0x07
+#define AST_ELEM_POLYMORPH     0x08
 
 // Possible data flow patterns
 #define FLOW_NONE  0x00
@@ -93,6 +94,14 @@ typedef struct {
     trait_t traits; // Uses AST_FUNC_* traits
     bool ownership; // Whether or not we own our members
 } ast_elem_func_t;
+
+// ---------------- ast_elem_polymorph_t ----------------
+// Type element for a polymorphic type variable
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_t name;
+} ast_elem_polymorph_t;
 
 // ---------------- ast_unnamed_arg_t ----------------
 // Data structure for an unnamed argument
@@ -179,6 +188,10 @@ bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base);
 // ---------------- ast_type_is_pointer_to ----------------
 // Returns whether an AST type is a pointer to another AST type
 bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to);
+
+// ---------------- ast_type_has_polymorph ----------------
+// Returns whether an AST type contains a polymorphic type
+bool ast_type_has_polymorph(const ast_type_t *type);
 
 #ifdef __cplusplus
 }

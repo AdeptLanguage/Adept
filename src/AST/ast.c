@@ -489,6 +489,13 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     if(is_foreign)                func->traits |= AST_FUNC_FOREIGN;
 }
 
+bool ast_func_is_polymorphic(ast_func_t *func){
+    for(length_t i = 0; i != func->arity; i++){
+        if(ast_type_has_polymorph(&func->arg_types[i])) return true;
+    }
+    return false;
+}
+
 void ast_struct_init(ast_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source){
     structure->name = name;

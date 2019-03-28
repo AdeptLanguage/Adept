@@ -37,7 +37,7 @@ typedef struct ir_type_t ir_type_t;
 
 struct ir_type_t {
     unsigned int kind;
-    void *extra; //
+    void *extra;
 };
 
 // ---------------- ir_type_extra_composite_t ----------------

@@ -72,6 +72,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return FAILURE;
     }
 
+    if(ast_func_is_polymorphic(func)){
+        // Determine whether or not the function is polymorphic
+        func->traits |= AST_FUNC_POLYMORPHIC;
+    }
+
     if(parse_func_body(ctx, func)) return FAILURE;
     return SUCCESS;
 }

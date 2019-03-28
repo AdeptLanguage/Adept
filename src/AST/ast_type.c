@@ -59,6 +59,17 @@ ast_type_t ast_type_clone(const ast_type_t *original){
             ((ast_elem_func_t*) new.elements[i])->traits = ((ast_elem_func_t*) original->elements[i])->traits;
             ((ast_elem_func_t*) new.elements[i])->ownership = false;
             break;
+        case AST_ELEM_POLYMORPH: {
+                char *original_name = ((ast_elem_polymorph_t*) original->elements[i])->name;
+                length_t original_name_length = strlen(original_name);
+                char *new_name = malloc(original_name_length + 1);
+                memcpy(new_name, original_name, original_name_length + 1);
+                new.elements[i] = malloc(sizeof(ast_elem_polymorph_t));
+                ((ast_elem_polymorph_t*) new.elements[i])->id = AST_ELEM_POLYMORPH;
+                ((ast_elem_polymorph_t*) new.elements[i])->source = original->elements[i]->source;
+                ((ast_elem_polymorph_t*) new.elements[i])->name = new_name;
+                break;
+            }
         default:
             redprintf("INTERNAL ERROR: Encountered unexpected type element id when cloning ast_type_t, a crash will probably follow...\n");
         }
@@ -89,6 +100,10 @@ void ast_type_free(ast_type_t *type){
                 free(func_elem->arg_flows);
                 ast_type_free_fully(func_elem->return_type);
             }
+            free(type->elements[i]);
+            break;
+        case AST_ELEM_POLYMORPH:
+            free(((ast_elem_polymorph_t*) type->elements[i])->name);
             free(type->elements[i]);
             break;
         default:
@@ -178,6 +193,18 @@ void ast_type_prepend_ptr(ast_type_t *type){
 
     type->elements = new_elements;
     type->elements_length++;
+}
+
+void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name){
+    ast_elem_polymorph_t *elem = malloc(sizeof(ast_elem_polymorph_t));
+    elem->id = AST_ELEM_POLYMORPH;
+    elem->name = name;
+    elem->source = NULL_SOURCE;
+
+    type->elements = malloc(sizeof(ast_elem_t*));
+    type->elements[0] = (ast_elem_t*) elem;
+    type->elements_length = 1;
+    type->source = NULL_SOURCE;
 }
 
 void ast_type_make_generic_int(ast_type_t *type){
@@ -307,6 +334,15 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 free(type_str);
             }
             break;
+        case AST_ELEM_POLYMORPH: {
+                const char *polyname = ((ast_elem_polymorph_t*) type->elements[i])->name;
+                length_t polyname_length = strlen(polyname);
+                EXTEND_NAME_MACRO(polyname_length + 1);
+                name[name_length] = '$';
+                memcpy(&name[name_length + 1], polyname, polyname_length + 1);
+                name_length += polyname_length + 1;
+            }
+            break;
         default:
             printf("INTERNAL ERROR: Encountered unexpected element type 0x%08X when converting ast_type_t to a string\n", type->elements[i]->id);
             return NULL;
@@ -414,4 +450,30 @@ bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to){
     stripped.elements_length--;
     
     return ast_types_identical(&stripped, to);
+}
+
+bool ast_type_has_polymorph(const ast_type_t *type){
+    for(length_t i = 0; i != type->elements_length; i++){
+        switch(type->elements[i]->id){
+        case AST_ELEM_BASE:
+        case AST_ELEM_POINTER:
+        case AST_ELEM_GENERIC_INT:
+        case AST_ELEM_GENERIC_FLOAT:
+        case AST_ELEM_FIXED_ARRAY:
+            break;
+        case AST_ELEM_FUNC: {
+                ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];
+                for(length_t i = 0; i != func_elem->arity; i++){
+                    if(ast_type_has_polymorph(&func_elem->arg_types[i])) return true;
+                }
+                if(ast_type_has_polymorph(func_elem->return_type)) return true;
+            }
+            break;
+        case AST_ELEM_POLYMORPH:
+            return true;
+        default:
+            redprintf("INTERNAL ERROR: ast_type_has_polymorph encountered unknown element id 0x%8X", type->elements[i]->id);
+        }
+    }
+    return false;
 }
