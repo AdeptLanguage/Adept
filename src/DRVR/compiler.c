@@ -578,9 +578,10 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 }
 
 #ifndef ADEPT_INSIGHT_BUILD
-void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, source_t source,
+void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
         const char *name, ast_type_t *types, length_t arity){
 
+    ir_module_t *ir_module = &object->ir_module;
     maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
     
     if(original_index == -1){
@@ -606,8 +607,7 @@ void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, 
         }
         if(mapping->is_beginning_of_group == 1 && index != original_index) return;
 
-        // Assume compiler->objects[0] is where the AST is stored
-        ast_func_t *ast_func = &compiler->objects[0]->ast.funcs[mapping->ast_func_id];
+        ast_func_t *ast_func = &object->ast.funcs[mapping->ast_func_id];
 
         char *return_type_string = ast_type_str(&ast_func->return_type);
         char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);

@@ -327,7 +327,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                     if(error){
                         if(error == FAILURE){
-                            compiler_undeclared_function(builder->compiler, &builder->object->ir_module, statements[s]->source, call_stmt->name, arg_types, call_stmt->arity);
+                            compiler_undeclared_function(builder->compiler, builder->object, statements[s]->source, call_stmt->name, arg_types, call_stmt->arity);
                         }
                         
                         for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);

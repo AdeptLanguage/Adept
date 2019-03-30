@@ -339,7 +339,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
                 if(error){
                     if(error == FAILURE){
-                        compiler_undeclared_function(builder->compiler, &builder->object->ir_module, expr->source, call_expr->name, arg_types, call_expr->arity);
+                        compiler_undeclared_function(builder->compiler, builder->object, expr->source, call_expr->name, arg_types, call_expr->arity);
                     }
 
                     for(length_t t = 0; t != call_expr->arity; t++) ast_type_free(&arg_types[t]);
@@ -475,7 +475,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     return FAILURE;
                 }
             } else if(ir_gen_find_func(builder->compiler, builder->object, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length, &pair)){
-                compiler_undeclared_function(builder->compiler, &builder->object->ir_module, func_addr_expr->source, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length);
+                compiler_undeclared_function(builder->compiler, builder->object, func_addr_expr->source, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length);
                 return FAILURE;
             }
 
