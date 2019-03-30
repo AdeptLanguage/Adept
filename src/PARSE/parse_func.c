@@ -17,7 +17,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    length_t func_id = ast->funcs_length;
+    length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, name, is_stdcall, is_foreign, source);
 
@@ -86,7 +86,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
         ast_polymorphic_func_t *poly_func = &ast->polymorphic_funcs[ast->polymorphic_funcs_length++];
         poly_func->name = func->name;
-        poly_func->ast_func_id = func_id;
+        poly_func->ast_func_id = ast_func_id;
         poly_func->is_beginning_of_group = -1; // Uncalculated
     }
 

@@ -440,7 +440,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                     break;
                 case INSTRUCTION_FUNC_ADDRESS:
                     if(((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name == NULL)
-                        fprintf(file, "    0x%08X funcaddr 0x%X\n", (unsigned int) i, (int) ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->func_id);
+                        fprintf(file, "    0x%08X funcaddr 0x%X\n", (unsigned int) i, (int) ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->ast_func_id);
                     else
                         fprintf(file, "    0x%08X funcaddr %s\n", (unsigned int) i, ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name);
                     break;
@@ -558,7 +558,7 @@ void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i){
         free(arg);
     }
 
-    fprintf(file, "    0x%08X call adept_%X(%s) %s\n", i, (int) instruction->func_id, call_args, call_result_type);
+    fprintf(file, "    0x%08X call adept_%X(%s) %s\n", i, (int) instruction->ast_func_id, call_args, call_result_type);
     free(call_args);
     free(call_result_type);
 }
@@ -611,12 +611,15 @@ void ir_dump_var_scope_layout(FILE *file, bridge_var_scope_t *scope){
     }
 }
 
-void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t globals_length){
+void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length){
     ir_pool_init(&ir_module->pool);
 
-    ir_module->funcs = malloc(sizeof(ir_func_t) * funcs_length);
+    ir_module->funcs = malloc(sizeof(ir_func_t) * funcs_capacity);
     ir_module->funcs_length = 0;
+    ir_module->funcs_capacity = funcs_capacity;
     ir_module->func_mappings = NULL;
+    ir_module->func_mappings_length = 0;
+    ir_module->func_mappings_capacity = 0;
     ir_module->methods = NULL;
     ir_module->methods_length = 0;
     ir_module->methods_capacity = 0;

@@ -349,7 +349,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ((ir_instr_call_t*) built_instr)->result_type = pair.ir_func->return_type;
                     ((ir_instr_call_t*) built_instr)->values = arg_values;
                     ((ir_instr_call_t*) built_instr)->values_length = call_stmt->arity;
-                    ((ir_instr_call_t*) built_instr)->func_id = pair.func_id;
+                    ((ir_instr_call_t*) built_instr)->ast_func_id = pair.ast_func_id;
 
                     for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
@@ -878,7 +878,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 instruction->result_type = pair.ir_func->return_type;
                 instruction->values = arg_values;
                 instruction->values_length = call_stmt->arity + 1;
-                instruction->func_id = pair.func_id;
+                instruction->ast_func_id = pair.ast_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
 
                 for(length_t t = 0; t != call_stmt->arity + 1; t++) ast_type_free(&arg_types[t]);

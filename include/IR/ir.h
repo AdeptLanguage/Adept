@@ -224,7 +224,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
-    length_t func_id;
+    length_t ast_func_id;
     ir_value_t **values;
     length_t values_length;
 } ir_instr_call_t;
@@ -334,12 +334,12 @@ typedef struct {
 // ---------------- ir_instr_func_address_t ----------------
 // An IR instruction for getting the address of a function
 // ('name' is only used for foreign implementations)
-// ('func_id' is used for domestic implementations)
+// ('ast_func_id' is used for domestic implementations)
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
     const char *name;
-    length_t func_id;
+    length_t ast_func_id;
 } ir_instr_func_address_t;
 
 // ---------------- ir_instr_cast_t ----------------
@@ -415,18 +415,18 @@ typedef struct {
 // Possible traits for ir_func_t
 #define IR_FUNC_FOREIGN     TRAIT_1
 #define IR_FUNC_VARARG      TRAIT_2
-#define IR_FUNC_STDCALL     TRAIT_3
-#define IR_FUNC_POLYMORPHIC TRAIT_4
+#define IR_FUNC_MAIN        TRAIT_3
+#define IR_FUNC_STDCALL     TRAIT_4
+#define IR_FUNC_POLYMORPHIC TRAIT_5
 
 // ---------------- ir_func_mapping_t ----------------
 // Mapping for a name or id to AST & IR function
 // ('name' is only used for foreign implementations)
-// ('func_id' is used for domestic implementations)
+// ('ast_func_id' is used for domestic implementations)
 typedef struct {
     const char *name;
-    ast_func_t *ast_func;
-    ir_func_t *module_func;
-    length_t func_id;
+    length_t ir_func_id;
+    length_t ast_func_id;
     char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_func_mapping_t;
 
@@ -435,9 +435,8 @@ typedef struct {
 typedef struct {
     const char *struct_name;
     const char *name;
-    ast_func_t *ast_func;
     ir_func_t *module_func;
-    length_t func_id;
+    length_t ast_func_id;
     char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_method_t;
 
@@ -488,8 +487,11 @@ typedef struct {
     ir_pool_t pool;
     ir_type_map_t type_map;
     ir_func_t *funcs;
-    ir_func_mapping_t *func_mappings;
     length_t funcs_length;
+    length_t funcs_capacity;
+    ir_func_mapping_t *func_mappings;
+    length_t func_mappings_length;
+    length_t func_mappings_capacity;
     ir_method_t *methods;
     length_t methods_length;
     length_t methods_capacity;

@@ -20,7 +20,7 @@
 typedef struct {
     ast_func_t *ast_func;
     ir_func_t *ir_func;
-    length_t func_id;
+    length_t ast_func_id;
 } funcpair_t;
 
 // ---------------- ir_gen_find_func ----------------

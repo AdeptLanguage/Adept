@@ -581,7 +581,7 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, source_t source,
         const char *name, ast_type_t *types, length_t arity){
 
-    maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->funcs_length, name);
+    maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
     
     if(original_index == -1){
         // No other function with that name exists
@@ -606,10 +606,13 @@ void compiler_undeclared_function(compiler_t *compiler, ir_module_t *ir_module, 
         }
         if(mapping->is_beginning_of_group == 1 && index != original_index) return;
 
-        char *return_type_string = ast_type_str(&mapping->ast_func->return_type);
-        char *args_string = make_args_string(mapping->ast_func->arg_types, mapping->ast_func->arity);
+        // Assume compiler->objects[0] is where the AST is stored
+        ast_func_t *ast_func = &compiler->objects[0]->ast.funcs[mapping->ast_func_id];
 
-        printf("    %s(%s) %s\n", mapping->ast_func->name, args_string, return_type_string);
+        char *return_type_string = ast_type_str(&ast_func->return_type);
+        char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);
+
+        printf("    %s(%s) %s\n", ast_func->name, args_string, return_type_string);
 
         free(args_string);
         free(return_type_string);

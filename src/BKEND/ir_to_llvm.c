@@ -200,25 +200,25 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
     // Generates llvm function skeletons from ir function data
 
     LLVMModuleRef llvm_module = llvm->module;
-    ir_func_t *funcs = object->ir_module.funcs;
-    length_t funcs_length = object->ir_module.funcs_length;
+    ir_func_t *module_funcs = object->ir_module.funcs;
+    length_t module_funcs_length = object->ir_module.funcs_length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
-    for(length_t f = 0; f != funcs_length; f++){
-        LLVMTypeRef parameters[funcs[f].arity];
+    for(length_t f = 0; f != module_funcs_length; f++){
+        LLVMTypeRef parameters[module_funcs[f].arity];
 
-        for(length_t a = 0; a != funcs[f].arity; a++){
-            parameters[a] = ir_to_llvm_type(funcs[f].argument_types[a]);
+        for(length_t a = 0; a != module_funcs[f].arity; a++){
+            parameters[a] = ir_to_llvm_type(module_funcs[f].argument_types[a]);
             if(parameters[a] == NULL) return FAILURE;
         }
 
-        LLVMTypeRef return_type = ir_to_llvm_type(funcs[f].return_type);
-        LLVMTypeRef llvm_func_type = LLVMFunctionType(return_type, parameters, funcs[f].arity, funcs[f].traits & IR_FUNC_VARARG);
+        LLVMTypeRef return_type = ir_to_llvm_type(module_funcs[f].return_type);
+        LLVMTypeRef llvm_func_type = LLVMFunctionType(return_type, parameters, module_funcs[f].arity, module_funcs[f].traits & IR_FUNC_VARARG);
 
         const char *implementation_name;
 
-        if(funcs[f].traits & IR_FUNC_FOREIGN || object->ast.funcs[f].traits & AST_FUNC_MAIN){
-            implementation_name = funcs[f].name;
+        if(module_funcs[f].traits & IR_FUNC_FOREIGN || module_funcs[f].traits & AST_FUNC_MAIN){
+            implementation_name = module_funcs[f].name;
         } else {
             char adept_implementation_name[256];
             sprintf(adept_implementation_name, "a%X", (int) f);
@@ -227,7 +227,7 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
 
         func_skeletons[f] = LLVMAddFunction(llvm_module, implementation_name, llvm_func_type);
 
-        LLVMCallConv call_conv = funcs[f].traits & IR_FUNC_STDCALL ? LLVMX86StdcallCallConv : LLVMCCallConv;
+        LLVMCallConv call_conv = module_funcs[f].traits & IR_FUNC_STDCALL ? LLVMX86StdcallCallConv : LLVMCCallConv;
         LLVMSetFunctionCallConv(func_skeletons[f], call_conv);
     }
 
@@ -239,14 +239,14 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
     // NOTE: Expects function skeltons to already be present
 
     LLVMModuleRef llvm_module = llvm->module;
-    ir_func_t *funcs = object->ir_module.funcs;
-    length_t funcs_length = object->ir_module.funcs_length;
+    ir_func_t *module_funcs = object->ir_module.funcs;
+    length_t module_funcs_length = object->ir_module.funcs_length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
-    for(length_t f = 0; f != funcs_length; f++){
+    for(length_t f = 0; f != module_funcs_length; f++){
         LLVMBuilderRef builder = LLVMCreateBuilder();
-        ir_basicblock_t *basicblocks = funcs[f].basicblocks;
-        length_t basicblocks_length = funcs[f].basicblocks_length;
+        ir_basicblock_t *basicblocks = module_funcs[f].basicblocks;
+        length_t basicblocks_length = module_funcs[f].basicblocks_length;
 
         value_catalog_t catalog;
         catalog.blocks = malloc(sizeof(value_catalog_block_t) * basicblocks_length);
@@ -254,9 +254,9 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         for(length_t c = 0; c != basicblocks_length; c++) catalog.blocks[c].value_references = malloc(sizeof(LLVMValueRef) * basicblocks[c].instructions_length);
 
         varstack_t stack;
-        stack.values = malloc(sizeof(LLVMValueRef) * funcs[f].variable_count);
-        stack.types = malloc(sizeof(LLVMTypeRef) * funcs[f].variable_count);
-        stack.length = funcs[f].variable_count;
+        stack.values = malloc(sizeof(LLVMValueRef) * module_funcs[f].variable_count);
+        stack.types = malloc(sizeof(LLVMTypeRef) * module_funcs[f].variable_count);
+        stack.length = module_funcs[f].variable_count;
 
         llvm->module = llvm_module;
         llvm->builder = builder;
@@ -300,7 +300,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
             LLVMValueRef arg = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
 
-            const char *func_name = funcs[f].name;
+            const char *func_name = module_funcs[f].name;
             length_t func_name_len = strlen(func_name) + 1;
             global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), func_name_len), ".str");
             LLVMSetLinkage(global_data, LLVMInternalLinkage);
@@ -326,7 +326,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
             if(b == 0){ // Do any function entry instructions needed
                 // Allocate stack variables
                 for(length_t s = 0; s != stack.length; s++){
-                    bridge_var_t *var = bridge_var_scope_find_var_by_id(funcs[f].var_scope, s);
+                    bridge_var_t *var = bridge_var_scope_find_var_by_id(module_funcs[f].var_scope, s);
 
                     if(var == NULL){
                         redprintf("INTERNAL ERROR: VAR IN EXPORT STAGE COULD NOT BE FOUND (id: %d)\n", (int) s);
@@ -354,7 +354,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     stack.values[s] = LLVMBuildAlloca(builder, alloca_type, "");
                     stack.types[s] = alloca_type;
 
-                    if(s < funcs[f].arity){
+                    if(s < module_funcs[f].arity){
                         // Function argument that needs passed argument value
                         LLVMBuildStore(builder, LLVMGetParam(func_skeletons[f], s), stack.values[s]);
                     }
@@ -448,13 +448,13 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         }
 
                         char *implementation_name;
-                        ast_func_t *target_ast_func = &object->ast.funcs[((ir_instr_call_t*) instr)->func_id];
+                        ast_func_t *target_ast_func = &object->ast.funcs[((ir_instr_call_t*) instr)->ast_func_id];
 
                         if(target_ast_func->traits & AST_FUNC_FOREIGN || target_ast_func->traits & AST_FUNC_MAIN){
                             implementation_name = target_ast_func->name;
                         } else {
                             char adept_implementation_name[256];
-                            sprintf(adept_implementation_name, "a%X", (int) ((ir_instr_call_t*) instr)->func_id);
+                            sprintf(adept_implementation_name, "a%X", (int) ((ir_instr_call_t*) instr)->ast_func_id);
                             implementation_name = adept_implementation_name;
                         }
 
@@ -629,7 +629,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     if(((ir_instr_func_address_t*) instr)->name == NULL){
                         // Not a foreign function, so resolve via id
                         char implementation_name[256];
-                        sprintf(implementation_name, "a%X", (int) ((ir_instr_func_address_t*) instr)->func_id);
+                        sprintf(implementation_name, "a%X", (int) ((ir_instr_func_address_t*) instr)->ast_func_id);
                         llvm_result = LLVMGetNamedFunction(llvm_module, implementation_name);
                     } else {
                         // Is a foreign function, so get by name

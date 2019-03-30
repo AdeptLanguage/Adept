@@ -525,7 +525,7 @@ void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list){
                 instruction->result_type = method->module_func->return_type;
                 instruction->values = arguments;
                 instruction->values_length = 1;
-                instruction->func_id = method->func_id;
+                instruction->ast_func_id = method->ast_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
             }
         }
@@ -554,7 +554,7 @@ void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type
                 instruction->result_type = result.ir_func->return_type;
                 instruction->values = arguments;
                 instruction->values_length = 1;
-                instruction->func_id = result.func_id;
+                instruction->ast_func_id = result.ast_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
                 values[i] = build_value_from_prev_instruction(builder);
             }
@@ -592,7 +592,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
             instruction->result_type = method->module_func->return_type;
             instruction->values = arguments;
             instruction->values_length = 2;
-            instruction->func_id = method->func_id;
+            instruction->ast_func_id = method->ast_func_id;
             builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
             return SUCCESSFUL;
         }
@@ -625,7 +625,7 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
             instruction->result_type = result.ir_func->return_type;
             instruction->values = arguments;
             instruction->values_length = 2;
-            instruction->func_id = result.func_id;
+            instruction->ast_func_id = result.ast_func_id;
             builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
 
             if(out_type != NULL) *out_type = ast_type_clone(&result.ast_func->return_type);
@@ -643,7 +643,7 @@ ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_
     ast_t *ast = &builder->object->ast;
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    //length_t func_id = ast->funcs_length;
+    //length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, strclone(poly_func->name), poly_func->traits & AST_FUNC_STDCALL, false, poly_func->source);
     if(poly_func->traits & AST_FUNC_VARARG) func->traits |= AST_FUNC_VARARG;
