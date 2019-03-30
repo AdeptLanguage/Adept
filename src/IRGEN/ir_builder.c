@@ -612,7 +612,8 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
             ast_type_t types[2] = {*lhs_type, *rhs_type};
 
-            if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, &result) == FAILURE){
+            if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, &result)){
+                // Failed to find a suitable function
                 return NULL;
             }
 
@@ -633,4 +634,80 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
     }
 
     return NULL;
+}
+
+ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
+        length_t types_length, ast_type_var_catalog_t *catalog){
+    if(types_length < poly_func->arity) return NULL;
+
+    ast_t *ast = &builder->object->ast;
+    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+
+    //length_t func_id = ast->funcs_length;
+    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    ast_func_create_template(func, strclone(poly_func->name), poly_func->traits & AST_FUNC_STDCALL, false, poly_func->source);
+    if(poly_func->traits & AST_FUNC_VARARG) func->traits |= AST_FUNC_VARARG;
+
+    func->arg_names = malloc(sizeof(weak_cstr_t) * poly_func->arity);
+    func->arg_types = malloc(sizeof(ast_type_t) * poly_func->arity);
+    func->arg_sources = malloc(sizeof(source_t) * poly_func->arity);
+    func->arg_flows = malloc(sizeof(char) * poly_func->arity);
+    func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
+
+    for(length_t i = 0; i != poly_func->arity; i++){
+        func->arg_names[i] = strclone(poly_func->arg_names[i]);
+        func->arg_types[i] = ast_type_clone(&types[i]);
+    }
+
+    memcpy(func->arg_sources, poly_func->arg_sources, sizeof(source_t) * poly_func->arity);
+    memcpy(func->arg_flows, poly_func->arg_flows, sizeof(char) * poly_func->arity);
+    memcpy(func->arg_type_traits, poly_func->arg_type_traits, sizeof(trait_t) * poly_func->arity);
+
+    func->arity = poly_func->arity;
+    if(resolve_type_polymorphics(builder->compiler, catalog, &poly_func->return_type, &func->return_type)){
+        func->return_type.elements = NULL;
+        func->return_type.elements_length = 0;
+        func->return_type.source = NULL_SOURCE;
+        return NULL;
+    }
+
+    //func->statements;
+    //func->statements_length;
+    //func->statements_capacity;
+
+    compiler_panic(builder->compiler, func->source, "Failed to instantiate polymorphic function");
+    return NULL;
+}
+
+errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){
+    ast_elem_t **elements = NULL;
+    length_t length = 0;
+    length_t capacity = 0;
+
+    for(length_t i = 0; i != in_type->elements_length; i++){
+        expand((void**) &elements, sizeof(ast_elem_t*), length, &capacity, 1, 4);
+
+        // Clone any non-polymorphic type elements
+        if(in_type->elements[i]->id != AST_ELEM_POLYMORPH){
+            elements[length++] = ast_elem_clone(in_type->elements[i]);
+            continue;
+        }
+
+        // Find the determined type for the polymorphic type variable
+        ast_elem_polymorph_t *polymorphic_element = (ast_elem_polymorph_t*) in_type->elements[i];
+        ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, polymorphic_element->name);
+
+        if(type_var == NULL){
+            compiler_panicf(compiler, in_type->source, "Undetermined polymorphic type variable '$%s'", polymorphic_element->name);
+            return FAILURE;
+        }
+
+        // Replace the polymorphic type variable with the determined type
+        expand((void**) &elements, sizeof(ast_elem_t*), length, &capacity, type_var->binding.elements_length, 4);
+        for(length_t j = 0; j != type_var->binding.elements_length; j++){
+            elements[length++] = ast_elem_clone(type_var->binding.elements[j]);
+        }
+    }
+
+    return SUCCESS;
 }

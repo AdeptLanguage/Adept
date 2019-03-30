@@ -28,10 +28,12 @@ void ast_init(ast_t *ast){
     ast->common.ast_usize_type = NULL;
 
     ast->type_table = NULL;
-
     ast->meta_definitions = NULL;
     ast->meta_definitions_length = 0;
     ast->meta_definitions_capacity = 0;
+    ast->polymorphic_funcs = NULL;
+    ast->polymorphic_funcs_length = 0;
+    ast->polymorphic_funcs_capacity = 0;
 
     // Add relevant standard meta definitions
     #ifdef _WIN32
@@ -89,6 +91,7 @@ void ast_free(ast_t *ast){
         meta_expr_free_fully(ast->meta_definitions[i].value);
     }
     free(ast->meta_definitions);
+    free(ast->polymorphic_funcs);
 }
 
 void ast_free_functions(ast_func_t *functions, length_t functions_length){
@@ -661,4 +664,8 @@ int ast_constants_cmp(const void *a, const void *b){
 
 int ast_enums_cmp(const void *a, const void *b){
     return strcmp(((ast_enum_t*) a)->name, ((ast_enum_t*) b)->name);
+}
+
+int ast_polymorphic_funcs_cmp(const void *a, const void *b){
+    return strcmp(((ast_polymorphic_func_t*) a)->name, ((ast_polymorphic_func_t*) b)->name);
 }

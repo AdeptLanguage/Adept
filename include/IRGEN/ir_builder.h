@@ -210,4 +210,14 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
 ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
     ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name);
 
+// ---------------- instantiate_polymorphic_func ----------------
+// Instantiates a polymorphic function
+ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
+    length_t types_length, ast_type_var_catalog_t *catalog);
+
+// ---------------- resolve_type_polymorphics ----------------
+// Resolves any polymorphic type variables within an AST type
+// NOTE: Will show error messages on failure
+errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
+
 #endif // IR_BUILDER_H

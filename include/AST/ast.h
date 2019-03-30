@@ -23,7 +23,7 @@ extern "C" {
 // A function within the root AST
 typedef struct {
     strong_cstr_t name;
-    weak_cstr_t *arg_names;
+    strong_cstr_t *arg_names;
     ast_type_t *arg_types;
     source_t *arg_sources;
     char *arg_flows; // in | out | inout
@@ -110,6 +110,12 @@ typedef struct {
     ast_type_t *ast_usize_type;
 } ast_shared_common_t;
 
+typedef struct {
+    weak_cstr_t name;
+    length_t ast_func_id;
+    char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
+} ast_polymorphic_func_t;
+
 // ---------------- ast_t ----------------
 // The root AST
 typedef struct {
@@ -144,6 +150,11 @@ typedef struct {
     meta_definition_t *meta_definitions;
     length_t meta_definitions_length;
     length_t meta_definitions_capacity;
+
+    // Polymorphic functions (eventually sorted)
+    ast_polymorphic_func_t *polymorphic_funcs;
+    length_t polymorphic_funcs_length;
+    length_t polymorphic_funcs_capacity;
 } ast_t;
 
 // ---------------- ast_init ----------------
@@ -258,6 +269,11 @@ int ast_constants_cmp(const void *a, const void *b);
 // Compares two 'ast_enum_t' structures.
 // Used for qsort()
 int ast_enums_cmp(const void *a, const void *b);
+
+// ---------------- ast_polymorphic_funcs_cmp ----------------
+// Compares two 'ast_func_t*' structures by name.
+// Used for qsort()
+int ast_polymorphic_funcs_cmp(const void *a, const void *b);
 
 #ifdef __cplusplus
 }

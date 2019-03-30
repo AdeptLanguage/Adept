@@ -244,8 +244,8 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
         
         if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
             if(!ir_type_map_find(builder->type_map, "AnyType", &any_type_type)){
-                redprintf("INTERNAL ERROR: Failed to get 'AnyType' which should've been injected");
-                redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)")
+                redprintf("INTERNAL ERROR: Failed to get 'AnyType' which should've been injected\n");
+                redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)\n")
                 return FAILURE;
             }
 

@@ -25,7 +25,7 @@ void ir_type_var_stack_open(ir_type_var_stack_t *stack){
 
 void ir_type_var_stack_close(ir_type_var_stack_t *stack){
     if(stack->frames_length == 0){
-        redprintf("INTERNAL ERROR: ir_type_var_stack_close when no frame present");
+        redprintf("INTERNAL ERROR: ir_type_var_stack_close when no frame present\n");
         return;
     }
 
@@ -34,7 +34,7 @@ void ir_type_var_stack_close(ir_type_var_stack_t *stack){
 
 successful_t ir_type_var_stack_add(ir_type_var_stack_t *stack, ir_type_var_t type_var){
     if(stack->frames_length == 0){
-        redprintf("INTERNAL ERROR: ir_type_var_stack_add when no frame present");
+        redprintf("INTERNAL ERROR: ir_type_var_stack_add when no frame present\n");
         return false;
     }
 

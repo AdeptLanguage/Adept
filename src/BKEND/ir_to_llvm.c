@@ -221,7 +221,7 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
             implementation_name = funcs[f].name;
         } else {
             char adept_implementation_name[256];
-            sprintf(adept_implementation_name, "adept_%X", (int) f);
+            sprintf(adept_implementation_name, "a%X", (int) f);
             implementation_name = adept_implementation_name;
         }
 
@@ -454,7 +454,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                             implementation_name = target_ast_func->name;
                         } else {
                             char adept_implementation_name[256];
-                            sprintf(adept_implementation_name, "adept_%X", (int) ((ir_instr_call_t*) instr)->func_id);
+                            sprintf(adept_implementation_name, "a%X", (int) ((ir_instr_call_t*) instr)->func_id);
                             implementation_name = adept_implementation_name;
                         }
 
@@ -629,7 +629,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     if(((ir_instr_func_address_t*) instr)->name == NULL){
                         // Not a foreign function, so resolve via id
                         char implementation_name[256];
-                        sprintf(implementation_name, "adept_%X", (int) ((ir_instr_func_address_t*) instr)->func_id);
+                        sprintf(implementation_name, "a%X", (int) ((ir_instr_func_address_t*) instr)->func_id);
                         llvm_result = LLVMGetNamedFunction(llvm_module, implementation_name);
                     } else {
                         // Is a foreign function, so get by name
@@ -897,7 +897,7 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
         LLVMTypeRef global_llvm_type = ir_to_llvm_type(globals[i].type);
 
         if(is_external)
-            sprintf(global_implementation_name, "adeptglob_%X", (int) i);
+            sprintf(global_implementation_name, "g%X", (int) i);
 
         llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, is_external ? globals[i].name : global_implementation_name);
         LLVMSetLinkage(llvm->global_variables[i], LLVMExternalLinkage);

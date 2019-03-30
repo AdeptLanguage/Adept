@@ -17,6 +17,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
+    length_t func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, name, is_stdcall, is_foreign, source);
 
@@ -73,8 +74,20 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     }
 
     if(ast_func_is_polymorphic(func)){
-        // Determine whether or not the function is polymorphic
+        // Ensure this isn't a foreign function
+        if(is_foreign){
+            compiler_panic(ctx->compiler, source, "Cannot declare polymorphic foreign functions");
+            return FAILURE;
+        }
+
+        // Remember the function as polymorphic
         func->traits |= AST_FUNC_POLYMORPHIC;
+        expand((void**) &ast->polymorphic_funcs, sizeof(ast_polymorphic_func_t), ast->polymorphic_funcs_length, &ast->polymorphic_funcs_capacity, 1, 4);
+
+        ast_polymorphic_func_t *poly_func = &ast->polymorphic_funcs[ast->polymorphic_funcs_length++];
+        poly_func->name = func->name;
+        poly_func->ast_func_id = func_id;
+        poly_func->is_beginning_of_group = -1; // Uncalculated
     }
 
     if(parse_func_body(ctx, func)) return FAILURE;

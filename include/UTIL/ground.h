@@ -27,8 +27,9 @@ extern "C" {
 #endif
 
 // ---------------- errorcode_t ----------------
-#define SUCCESS 0
-#define FAILURE 1
+#define SUCCESS     0
+#define FAILURE     1
+#define ALT_FAILURE 2
 typedef int errorcode_t;
 
 // ---------------- successful_t ----------------

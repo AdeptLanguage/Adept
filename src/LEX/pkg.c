@@ -49,7 +49,7 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
             extra_data_length = strlen(tokens[t].data);
 
             if(extra_data_length == 1024){
-                redprintf("Failed to create package because string exceeded max length of 1024 bytes!");
+                redprintf("Failed to create package because string exceeded max length of 1024 bytes!\n");
                 fclose(file);
                 return FAILURE;
             }
@@ -288,7 +288,7 @@ errorcode_t pkg_compress_word(FILE *file, token_t *token){
         fwrite(&id, sizeof(tokenid_t), 1, file);
 
         if(word_length > 1024){
-            redprintf("Failed to create package because identifier exceeded max length of 1024 bytes!");
+            redprintf("Failed to create package because identifier exceeded max length of 1024 bytes!\n");
             fclose(file);
             return FAILURE;
         }

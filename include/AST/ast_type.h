@@ -111,6 +111,25 @@ typedef struct {
     char flow; // in | out | inout
 } ast_unnamed_arg_t;
 
+// ---------------- ast_type_var_t ----------------
+// Data structure for a single polymorphic type binding
+typedef struct {
+    weak_cstr_t name;
+    ast_type_t binding;
+} ast_type_var_t;
+
+// ---------------- ast_type_var_catalog_t ----------------
+// Data structure for polymorphic type bindings
+typedef struct {
+    ast_type_var_t *type_vars;
+    length_t length;
+    length_t capacity;
+} ast_type_var_catalog_t;
+
+// ---------------- ast_elem_clone ----------------
+// Clones an AST type element, producing a duplicate
+ast_elem_t *ast_elem_clone(const ast_elem_t *element);
+
 // ---------------- ast_type_clone ----------------
 // Clones an AST type, producing a duplicate
 ast_type_t ast_type_clone(const ast_type_t *type);
@@ -192,6 +211,27 @@ bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to);
 // ---------------- ast_type_has_polymorph ----------------
 // Returns whether an AST type contains a polymorphic type
 bool ast_type_has_polymorph(const ast_type_t *type);
+
+// ---------------- ast_type_has_polymorph ----------------
+// Returns whether a concrete AST type is valid for a given polymorphic type
+bool ast_type_polymorphable(const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog);
+
+// ---------------- ast_type_var_catalog_init ----------------
+// Initializes an AST type var catalog
+void ast_type_var_catalog_init(ast_type_var_catalog_t *catalog);
+
+// ---------------- ast_type_var_catalog_free ----------------
+// Frees an AST type var catalog
+void ast_type_var_catalog_free(ast_type_var_catalog_t *catalog);
+
+// ---------------- ast_type_var_catalog_add ----------------
+// Adds an AST type variable binding to an AST type var catalog
+// NOTE: 'binding' doesn't have to be preserved after this call
+void ast_type_var_catalog_add(ast_type_var_catalog_t *catalog, weak_cstr_t name, ast_type_t *binding);
+
+// ---------------- ast_type_var_catalog_find ----------------
+// Finds an AST type variable binding within an AST type var catalog
+ast_type_var_t *ast_type_var_catalog_find(ast_type_var_catalog_t *catalog, weak_cstr_t name);
 
 #ifdef __cplusplus
 }
