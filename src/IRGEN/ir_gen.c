@@ -61,11 +61,20 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
         module_func->var_scope = NULL;
         module_func->variable_count = 0;
+
+        #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN  && \
+            AST_FUNC_VARARG      == IR_FUNC_VARARG   && \
+            AST_FUNC_MAIN        == IR_FUNC_MAIN     && \
+            AST_FUNC_STDCALL     == IR_FUNC_STDCALL  && \
+            AST_FUNC_POLYMORPHIC == IR_FUNC_POLYMORPHIC
+        module_func->traits = ast_func->traits & 0x1F;
+        #else
         if(ast_func->traits & AST_FUNC_FOREIGN)     module_func->traits |= IR_FUNC_FOREIGN;
         if(ast_func->traits & AST_FUNC_VARARG)      module_func->traits |= IR_FUNC_VARARG;
         if(ast_func->traits & AST_FUNC_MAIN)        module_func->traits |= IR_FUNC_MAIN;
         if(ast_func->traits & AST_FUNC_STDCALL)     module_func->traits |= IR_FUNC_STDCALL;
         if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
+        #endif
 
         expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, ast->funcs_length);
         module->func_mappings[module->func_mappings_length].name = ast_func->name;

@@ -1,6 +1,7 @@
 
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
+#include "UTIL/util.h"
 #include "UTIL/color.h"
 
 strong_cstr_t ast_expr_str(ast_expr_t *expr){
@@ -756,6 +757,8 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_GENERIC_FLOAT: MACRO_VALUE_CLONE(ast_expr_generic_float_t); break;
     case EXPR_CSTR:          MACRO_VALUE_CLONE(ast_expr_cstr_t); break;
     case EXPR_NULL:
+    case EXPR_BREAK:
+    case EXPR_CONTINUE:
         clone = malloc(sizeof(ast_expr_t));
         break;
     case EXPR_ADD:
@@ -778,113 +781,341 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_BIT_RSHIFT:
     case EXPR_BIT_LGC_LSHIFT:
     case EXPR_BIT_LGC_RSHIFT:
-        clone = malloc(sizeof(ast_expr_math_t));
-        ((ast_expr_math_t*) clone)->a = ast_expr_clone(((ast_expr_math_t*) expr)->a);
-        ((ast_expr_math_t*) clone)->b = ast_expr_clone(((ast_expr_math_t*) expr)->b);
-        break;
-    case EXPR_CALL:
-        clone = malloc(sizeof(ast_expr_call_t));
-        ((ast_expr_call_t*) clone)->name = ((ast_expr_call_t*) expr)->name;
-        ((ast_expr_call_t*) clone)->args = malloc(sizeof(ast_expr_t*) * ((ast_expr_call_t*) expr)->arity);
-        ((ast_expr_call_t*) clone)->arity = ((ast_expr_call_t*) expr)->arity;
+        #define expr_as_math ((ast_expr_math_t*) expr)
+        #define clone_as_math ((ast_expr_math_t*) clone)
 
-        for(length_t i = 0; i != ((ast_expr_call_t*) expr)->arity; i++){
-            ((ast_expr_call_t*) clone)->args[i] = ast_expr_clone(((ast_expr_call_t*) expr)->args[i]);
+        clone = malloc(sizeof(ast_expr_math_t));
+        clone_as_math->a = ast_expr_clone(expr_as_math->a);
+        clone_as_math->b = ast_expr_clone(expr_as_math->b);
+        break;
+
+        #undef expr_as_math
+        #undef clone_as_math
+    case EXPR_CALL:
+        #define expr_as_call ((ast_expr_call_t*) expr)
+        #define clone_as_call ((ast_expr_call_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_call_t));
+        clone_as_call->name = expr_as_call->name;
+        clone_as_call->args = malloc(sizeof(ast_expr_t*) * expr_as_call->arity);
+        clone_as_call->arity = expr_as_call->arity;
+
+        for(length_t i = 0; i != expr_as_call->arity; i++){
+            clone_as_call->args[i] = ast_expr_clone(expr_as_call->args[i]);
         }
         break;
+
+        #undef expr_as_call
+        #undef clone_as_call
     case EXPR_VARIABLE:
+        #define expr_as_variable ((ast_expr_variable_t*) expr)
+        #define clone_as_variable ((ast_expr_variable_t*) clone)
+
         clone = malloc(sizeof(ast_expr_variable_t));
-        ((ast_expr_variable_t*) clone)->name = ((ast_expr_variable_t*) expr)->name;
+        clone_as_variable->name = expr_as_variable->name;
         break;
+
+        #undef expr_as_variable
+        #undef clone_as_variable
     case EXPR_MEMBER:
+        #define expr_as_member ((ast_expr_member_t*) expr)
+        #define clone_as_member ((ast_expr_member_t*) clone)
+        
         clone = malloc(sizeof(ast_expr_member_t));
-        ((ast_expr_member_t*) clone)->value = ast_expr_clone(((ast_expr_member_t*) expr)->value);
-        ((ast_expr_member_t*) clone)->member = malloc(strlen(((ast_expr_member_t*) expr)->member) + 1);
-        strcpy(((ast_expr_member_t*) clone)->member, ((ast_expr_member_t*) clone)->member);
+        clone_as_member->value = ast_expr_clone(expr_as_member->value);
+        clone_as_member->member = malloc(strlen(expr_as_member->member) + 1);
+        strcpy(clone_as_member->member, expr_as_member->member);
         break;
+
+        #undef expr_as_member    
+        #undef clone_as_member
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
     case EXPR_BIT_COMPLEMENT:
     case EXPR_NOT:
     case EXPR_NEGATE:
+    case EXPR_DELETE:
+        #define expr_as_unary ((ast_expr_unary_t*) expr)
+        #define clone_as_unary ((ast_expr_unary_t*) clone)
+
         clone = malloc(sizeof(ast_expr_unary_t));
-        ((ast_expr_unary_t*) clone)->value = ast_expr_clone(((ast_expr_unary_t*) expr)->value);
+        clone_as_unary->value = ast_expr_clone(expr_as_unary->value);
         break;
-    case EXPR_FUNC_ADDR: {
-            clone = malloc(sizeof(ast_expr_func_addr_t));
 
-            #define macro_clone_ref (((ast_expr_func_addr_t*) clone))
-            #define macro_expr_ref (((ast_expr_func_addr_t*) expr))
+        #undef expr_as_unary
+        #undef clone_as_unary
+    case EXPR_FUNC_ADDR:
+        #define expr_as_func_addr ((ast_expr_func_addr_t*) expr)
+        #define clone_as_func_addr ((ast_expr_func_addr_t*) clone)
 
-            macro_clone_ref->name = macro_expr_ref->name;
-            macro_clone_ref->traits = macro_expr_ref->traits;
-            macro_clone_ref->match_args_length = macro_expr_ref->match_args_length;
-            if(macro_expr_ref->match_args == NULL){
-                macro_clone_ref->match_args = NULL;
-            } else {
-                macro_clone_ref->match_args =
-                    malloc(sizeof(ast_unnamed_arg_t) * macro_expr_ref->match_args_length);
+        clone = malloc(sizeof(ast_expr_func_addr_t));
+        clone_as_func_addr->name = expr_as_func_addr->name;
+        clone_as_func_addr->traits = expr_as_func_addr->traits;
+        clone_as_func_addr->match_args_length = expr_as_func_addr->match_args_length;
 
-                for(length_t a = 0; a != macro_clone_ref->match_args_length; a++){
-                    macro_clone_ref->match_args[a] = ast_type_clone(&macro_expr_ref->match_args[a]);
-                }
+        if(expr_as_func_addr->match_args == NULL){
+            clone_as_func_addr->match_args = NULL;
+        } else {
+            clone_as_func_addr->match_args = malloc(sizeof(ast_unnamed_arg_t) * expr_as_func_addr->match_args_length);
+
+            for(length_t a = 0; a != clone_as_func_addr->match_args_length; a++){
+                clone_as_func_addr->match_args[a] = ast_type_clone(&expr_as_func_addr->match_args[a]);
             }
-
-            #undef macro_clone_ref
-            #undef macro_expr_ref
         }
         break;
-    case EXPR_ARRAY_ACCESS:
-        clone = malloc(sizeof(ast_expr_array_access_t));
-        ((ast_expr_array_access_t*) clone)->value = ast_expr_clone(((ast_expr_array_access_t*) expr)->value);
-        ((ast_expr_array_access_t*) clone)->index = ast_expr_clone(((ast_expr_array_access_t*) expr)->index);
-        break;
+
+        #undef expr_as_func_addr
+        #undef clone_as_func_addr
     case EXPR_AT:
+    case EXPR_ARRAY_ACCESS:
+        #define expr_as_access ((ast_expr_array_access_t*) expr)
+        #define clone_as_access ((ast_expr_array_access_t*) clone)
+
         clone = malloc(sizeof(ast_expr_array_access_t));
-        ((ast_expr_array_access_t*) clone)->value = ast_expr_clone(((ast_expr_array_access_t*) expr)->value);
-        ((ast_expr_array_access_t*) clone)->index = ast_expr_clone(((ast_expr_array_access_t*) expr)->index);
+        clone_as_access->value = ast_expr_clone(expr_as_access->value);
+        clone_as_access->index = ast_expr_clone(expr_as_access->index);
         break;
+
+        #undef expr_as_access
+        #undef clone_as_access
     case EXPR_CAST:
+        #define expr_as_cast ((ast_expr_cast_t*) expr)
+        #define clone_as_cast ((ast_expr_cast_t*) clone)
+
         clone = malloc(sizeof(ast_expr_cast_t));
-        ((ast_expr_cast_t*) clone)->from = ast_expr_clone(((ast_expr_cast_t*) expr)->from);
-        ((ast_expr_cast_t*) clone)->to = ast_type_clone(&((ast_expr_cast_t*) expr)->to);
+        clone_as_cast->from = ast_expr_clone(expr_as_cast->from);
+        clone_as_cast->to = ast_type_clone(&expr_as_cast->to);
         break;
+
+        #undef expr_as_cast
+        #undef clone_as_cast
     case EXPR_SIZEOF:
+        #define expr_as_sizeof ((ast_expr_sizeof_t*) expr)
+        #define clone_as_sizeof ((ast_expr_sizeof_t*) clone)
+
         clone = malloc(sizeof(ast_expr_sizeof_t));
-        ((ast_expr_sizeof_t*) clone)->type = ast_type_clone(&((ast_expr_sizeof_t*) expr)->type);
+        clone_as_sizeof->type = ast_type_clone(&expr_as_sizeof->type);
         break;
+
+        #undef expr_as_sizeof
+        #undef clone_as_sizeof
     case EXPR_CALL_METHOD:
+        #define expr_as_call_method ((ast_expr_call_method_t*) expr)
+        #define clone_as_call_method ((ast_expr_call_method_t*) clone)
+
         clone = malloc(sizeof(ast_expr_call_method_t));
-        ((ast_expr_call_method_t*) clone)->name = ((ast_expr_call_method_t*) expr)->name;
-        ((ast_expr_call_method_t*) clone)->args = malloc(sizeof(ast_expr_t*) * ((ast_expr_call_method_t*) expr)->arity);
-        ((ast_expr_call_method_t*) clone)->arity = ((ast_expr_call_method_t*) expr)->arity;
-        ((ast_expr_call_method_t*) clone)->value = ast_expr_clone(((ast_expr_call_method_t*) expr)->value);
-
-        for(length_t i = 0; i != ((ast_expr_call_method_t*) expr)->arity; i++){
-            ((ast_expr_call_method_t*) clone)->args[i] = ast_expr_clone(((ast_expr_call_method_t*) expr)->args[i]);
+        clone_as_call_method->name = expr_as_call_method->name;
+        clone_as_call_method->args = malloc(sizeof(ast_expr_t*) * expr_as_call_method->arity);
+        clone_as_call_method->arity = expr_as_call_method->arity;
+        clone_as_call_method->value = ast_expr_clone(expr_as_call_method->value);
+        for(length_t i = 0; i != expr_as_call_method->arity; i++){
+            clone_as_call_method->args[i] = ast_expr_clone(expr_as_call_method->args[i]);
         }
         break;
+        
+        #undef expr_as_call_method
+        #undef clone_as_call_method
     case EXPR_NEW:
+        #define expr_as_new ((ast_expr_new_t*) expr)
+        #define clone_as_new ((ast_expr_new_t*) clone)
+
         clone = malloc(sizeof(ast_expr_new_t));
-        ((ast_expr_new_t*) clone)->type = ast_type_clone(&((ast_expr_new_t*) expr)->type);
-
-        if(((ast_expr_new_t*) expr)->amount == NULL) ((ast_expr_new_t*) clone)->amount = NULL;
-        else ((ast_expr_new_t*) clone)->amount = ast_expr_clone(((ast_expr_new_t*) expr)->amount);
+        clone_as_new->type = ast_type_clone(&expr_as_new->type);
+        clone_as_new->amount = expr_as_new->amount ? ast_expr_clone(expr_as_new->amount) : NULL;
         break;
+
+        #undef expr_as_new
+        #undef clone_as_new
     case EXPR_NEW_CSTRING:
-        clone = malloc(sizeof(ast_expr_new_cstring_t));
-        ((ast_expr_new_cstring_t*) clone)->value = ((ast_expr_new_cstring_t*) expr)->value;
-        break;
-    case EXPR_STATIC_ARRAY: case EXPR_STATIC_STRUCT:
-        clone = malloc(sizeof(ast_expr_static_data_t));
-        ((ast_expr_static_data_t*) clone)->type = ast_type_clone(&((ast_expr_static_data_t*) expr)->type);
-        ((ast_expr_static_data_t*) clone)->values = malloc(sizeof(ast_expr_t*) * ((ast_expr_static_data_t*) expr)->length);
-        ((ast_expr_static_data_t*) clone)->length = ((ast_expr_static_data_t*) expr)->length;
+        #define expr_as_new_cstring ((ast_expr_new_cstring_t*) expr)
+        #define clone_as_new_cstring ((ast_expr_new_cstring_t*) clone)
 
-        for(length_t i = 0; i != ((ast_expr_static_data_t*) expr)->length; i++){
-            ((ast_expr_static_data_t*) clone)->values[i] = ast_expr_clone(((ast_expr_static_data_t*) expr)->values[i]);
+        clone = malloc(sizeof(ast_expr_new_cstring_t));
+        clone_as_new_cstring->value = expr_as_new_cstring->value;
+        break;
+
+        #undef expr_as_new_cstring
+        #undef clone_as_new_cstring
+    case EXPR_STATIC_ARRAY: case EXPR_STATIC_STRUCT:
+        #define expr_as_static_data ((ast_expr_static_data_t*) expr)
+        #define clone_as_static_data ((ast_expr_static_data_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_static_data_t));
+        clone_as_static_data->type = ast_type_clone(&expr_as_static_data->type);
+        clone_as_static_data->values = malloc(sizeof(ast_expr_t*) * expr_as_static_data->length);
+        clone_as_static_data->length = expr_as_static_data->length;
+
+        for(length_t i = 0; i != expr_as_static_data->length; i++){
+            clone_as_static_data->values[i] = ast_expr_clone(expr_as_static_data->values[i]);
         }
         break;
+
+        #undef expr_as_static_data
+        #undef clone_as_static_data
+    case EXPR_ENUM_VALUE:
+        #define expr_as_enum_value ((ast_expr_enum_value_t*) expr)
+        #define clone_as_enum_value ((ast_expr_enum_value_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_enum_value_t));
+        clone_as_enum_value->enum_name = expr_as_enum_value->enum_name;
+        clone_as_enum_value->kind_name = expr_as_enum_value->kind_name;
+        break;
+
+        #undef expr_as_enum_value
+        #undef clone_as_enum_value
+    case EXPR_TYPEINFO:
+        #define expr_as_typeinfo ((ast_expr_typeinfo_t*) expr)
+        #define clone_as_typeinfo ((ast_expr_typeinfo_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_typeinfo_t));
+        clone_as_typeinfo->target = ast_type_clone(&expr_as_typeinfo->target);
+        break;
+
+        #undef expr_as_typeinfo
+        #undef clone_as_typeinfo
+    case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
+    case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
+        #define expr_as_declare ((ast_expr_declare_t*) expr)
+        #define clone_as_declare ((ast_expr_declare_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_declare_t));
+        clone_as_declare->name = expr_as_declare->name;
+        clone_as_declare->type = ast_type_clone(&expr_as_declare->type);
+        clone_as_declare->value = expr_as_declare->value ? ast_expr_clone(expr_as_declare->value) : NULL;
+        clone_as_declare->is_pod = expr_as_declare->is_pod;
+        clone_as_declare->is_assign_pod = expr_as_declare->is_assign_pod;
+        break;
+
+        #undef expr_as_declare
+        #undef clone_as_declare    
+    case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
+    case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN:
+        #define expr_as_assign ((ast_expr_assign_t*) expr)
+        #define clone_as_assign ((ast_expr_assign_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_assign_t));
+        clone_as_assign->destination = expr_as_assign->destination ? ast_expr_clone(expr_as_assign->destination) : NULL;
+        clone_as_assign->value = expr_as_assign->value ? ast_expr_clone(expr_as_assign->value) : NULL;
+        clone_as_assign->is_pod = expr_as_assign->is_pod;
+        break;
+
+        #undef expr_as_assign
+        #undef clone_as_assign
+    case EXPR_RETURN:
+        #define expr_as_return ((ast_expr_return_t*) expr)
+        #define clone_as_return ((ast_expr_return_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_return_t));
+        clone_as_return->value = expr_as_return->value ? ast_expr_clone(expr_as_return->value) : NULL;
+        break;
+
+        #undef expr_as_return
+        #undef clone_as_return
+    case EXPR_IF:
+    case EXPR_UNLESS:
+    case EXPR_WHILE:
+    case EXPR_UNTIL:
+    case EXPR_WHILECONTINUE:
+    case EXPR_UNTILBREAK:
+        #define expr_as_if ((ast_expr_if_t*) expr)
+        #define clone_as_if ((ast_expr_if_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_if_t));
+        clone_as_if->label = expr_as_if->label;
+        clone_as_if->value = expr_as_if->value ? ast_expr_clone(expr_as_if->value) : NULL;
+        clone_as_if->statements_length = expr_as_if->statements_length;
+        clone_as_if->statements_capacity = expr_as_if->statements_length; // (statements_length is on purpose)
+        clone_as_if->statements = malloc(sizeof(ast_expr_t*) * expr_as_if->statements_length);
+
+        for(length_t s = 0; s != expr_as_if->statements_length; s++){
+            clone_as_if->statements[s] = ast_expr_clone(expr_as_if->statements[s]);
+        }
+        break;
+        
+        #undef expr_as_if
+        #undef clone_as_if
+    case EXPR_IFELSE:
+    case EXPR_UNLESSELSE:
+        #define expr_as_ifelse ((ast_expr_ifelse_t*) expr)
+        #define clone_as_ifelse ((ast_expr_ifelse_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_if_t));
+        clone_as_ifelse->label = expr_as_ifelse->label;
+        clone_as_ifelse->value = ast_expr_clone(expr_as_ifelse->value);
+        clone_as_ifelse->statements_length = expr_as_ifelse->statements_length;
+        clone_as_ifelse->statements_capacity = expr_as_ifelse->statements_length; // (statements_length is on purpose)
+        clone_as_ifelse->statements = malloc(sizeof(ast_expr_t*) * expr_as_ifelse->statements_length);
+        clone_as_ifelse->else_statements_length = expr_as_ifelse->else_statements_length;
+        clone_as_ifelse->else_statements_capacity = expr_as_ifelse->else_statements_length; // (else_statements_length is on purpose)
+        clone_as_ifelse->else_statements = malloc(sizeof(ast_expr_t*) * expr_as_ifelse->else_statements_length);
+
+        for(length_t s = 0; s != expr_as_ifelse->statements_length; s++){
+            clone_as_ifelse->statements[s] = ast_expr_clone(expr_as_ifelse->statements[s]);
+        }
+
+        for(length_t e = 0; e != expr_as_ifelse->else_statements_length; e++){
+            clone_as_ifelse->else_statements[e] = ast_expr_clone(expr_as_ifelse->else_statements[e]);
+        }
+        break;
+        
+        #undef expr_as_ifelse
+        #undef clone_as_ifelse
+    case EXPR_EACH_IN:
+        #define expr_as_each_in ((ast_expr_each_in_t*) expr)
+        #define clone_as_each_in ((ast_expr_each_in_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_each_in_t));
+        clone_as_each_in->label = expr_as_each_in->label;
+        clone_as_each_in->it_name = expr_as_each_in->it_name ? strclone(expr_as_each_in->it_name) : NULL;
+
+        if(expr_as_each_in->it_type){
+            clone_as_each_in->it_type = malloc(sizeof(ast_type_t));
+            *clone_as_each_in->it_type = ast_type_clone(expr_as_each_in->it_type);
+        }
+
+        clone_as_each_in->length = ast_expr_clone(expr_as_each_in->length);
+        clone_as_each_in->low_array = ast_expr_clone(expr_as_each_in->low_array);
+        clone_as_each_in->statements_length = expr_as_each_in->statements_length;
+        clone_as_each_in->statements_capacity = expr_as_each_in->statements_length; // (statements_length is on purpose)
+        clone_as_each_in->statements = malloc(sizeof(ast_expr_t*) * expr_as_each_in->statements_length);
+
+        for(length_t s = 0; s != expr_as_each_in->statements_length; s++){
+            clone_as_each_in->statements[s] = ast_expr_clone(expr_as_each_in->statements[s]);
+        }
+        break;
+
+        #undef expr_as_each_in
+        #undef clone_as_each_in
+    case EXPR_REPEAT:
+        #define expr_as_repeat ((ast_expr_repeat_t*) expr)
+        #define clone_as_repeat ((ast_expr_repeat_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_repeat_t));
+        clone_as_repeat->label = expr_as_repeat->label;
+        clone_as_repeat->limit = expr_as_repeat->limit ? ast_expr_clone(expr_as_repeat->limit) : NULL;
+        clone_as_repeat->statements_length = expr_as_repeat->statements_length;
+        clone_as_repeat->statements_capacity = expr_as_repeat->statements_length; // (statements_length is on purpose)
+        clone_as_repeat->statements = malloc(sizeof(ast_expr_t*) * expr_as_repeat->statements_length);
+        
+        for(length_t s = 0; s != expr_as_repeat->statements_length; s++){
+            clone_as_repeat->statements[s] = ast_expr_clone(expr_as_repeat->statements[s]);
+        }
+        break;
+
+        #undef expr_as_repeat
+        #undef clone_as_repeat
+    case EXPR_BREAK_TO:
+    case EXPR_CONTINUE_TO:
+        #define expr_as_break_to ((ast_expr_break_to_t*) expr)
+        #define clone_as_break_to ((ast_expr_break_to_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_break_to_t));
+        clone_as_break_to->label_source = expr_as_break_to->label_source;
+        clone_as_break_to->label = expr_as_break_to->label;
+        break;
+
+        #undef expr_as_break_to
+        #undef clone_as_break_to
     default:
         redprintf("INTERNAL ERROR: ast_expr_clone received unimplemented expression id 0x%08X\n", expr->id);
         redprintf("Returning NULL... a crash will probably follow\n");

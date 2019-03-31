@@ -403,15 +403,7 @@ typedef struct {
 
 // ---------------- ast_expr_inline_declare_t ----------------
 // Expression for declaring a variable then getting the address of it
-typedef struct {
-    unsigned int id;
-    source_t source;
-    weak_cstr_t name;
-    ast_type_t type;
-    ast_expr_t *value;
-    bool is_pod;
-    bool is_assign_pod;
-} ast_expr_inline_declare_t;
+typedef ast_expr_declare_t ast_expr_inline_declare_t;
 
 // ---------------- ast_expr_assign_t ----------------
 // Expression for assigning a value to a variable

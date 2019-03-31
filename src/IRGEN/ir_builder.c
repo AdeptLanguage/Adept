@@ -671,9 +671,15 @@ ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_
         return NULL;
     }
 
-    //func->statements;
-    //func->statements_length;
-    //func->statements_capacity;
+    func->statements_length = poly_func->statements_length;
+    func->statements_capacity = poly_func->statements_length; // (statements_length is on purpose)
+    func->statements = malloc(sizeof(ast_expr_t*) * poly_func->statements_length);
+
+    for(length_t s = 0; s != poly_func->statements_length; s++){
+        func->statements[s] = ast_expr_clone(poly_func->statements[s]);
+    }
+
+    // ast_dump_functions(stdout, func, 1);
 
     compiler_panic(builder->compiler, func->source, "Failed to instantiate polymorphic function");
     return NULL;
@@ -709,5 +715,8 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
         }
     }
 
+    out_type->elements = elements;
+    out_type->elements_length = length;
+    out_type->source = in_type->source;
     return SUCCESS;
 }
