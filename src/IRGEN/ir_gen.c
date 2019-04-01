@@ -32,123 +32,120 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
 
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
-    ast_func_t *ast_funcs;
-    ir_func_t *module_funcs;
-    length_t ast_funcs_nonpoly_length;
-    length_t *module_funcs_length;
+    ast_func_t *ast_funcs = ast->funcs;
 
-    ast_funcs = ast->funcs;
-    module_funcs = module->funcs;
-    ast_funcs_nonpoly_length = ast->funcs_length;
-    module_funcs_length = &module->funcs_length;
-
-    for(length_t f = 0; f != ast->funcs_length; f++){
-        ast_func_t *ast_func = &ast_funcs[f];
-
-        if(ast_func->traits & AST_FUNC_POLYMORPHIC){
-            ast_funcs_nonpoly_length--;
-            continue;
-        }
-
-        ir_func_t *module_func = &module_funcs[*module_funcs_length];
-
-        module_func->name = ast_func->name;
-        module_func->traits = TRAIT_NONE;
-        module_func->return_type = NULL;
-        module_func->argument_types = malloc(sizeof(ir_type_t*) * ast_func->arity);
-        module_func->arity = 0;
-        module_func->basicblocks = NULL; // Will be set after 'basicblocks' contains all of the basicblocks
-        module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
-        module_func->var_scope = NULL;
-        module_func->variable_count = 0;
-
-        #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN  && \
-            AST_FUNC_VARARG      == IR_FUNC_VARARG   && \
-            AST_FUNC_MAIN        == IR_FUNC_MAIN     && \
-            AST_FUNC_STDCALL     == IR_FUNC_STDCALL  && \
-            AST_FUNC_POLYMORPHIC == IR_FUNC_POLYMORPHIC
-        module_func->traits = ast_func->traits & 0x1F;
-        #else
-        if(ast_func->traits & AST_FUNC_FOREIGN)     module_func->traits |= IR_FUNC_FOREIGN;
-        if(ast_func->traits & AST_FUNC_VARARG)      module_func->traits |= IR_FUNC_VARARG;
-        if(ast_func->traits & AST_FUNC_MAIN)        module_func->traits |= IR_FUNC_MAIN;
-        if(ast_func->traits & AST_FUNC_STDCALL)     module_func->traits |= IR_FUNC_STDCALL;
-        if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
-        #endif
-
-        expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, ast->funcs_length);
-        module->func_mappings[module->func_mappings_length].name = ast_func->name;
-        module->func_mappings[module->func_mappings_length].ir_func_id = *module_funcs_length;
-        module->func_mappings[module->func_mappings_length].ast_func_id = f;
-        module->func_mappings[module->func_mappings_length].is_beginning_of_group = -1;
-        module->func_mappings_length++;
-        (*module_funcs_length)++;
-
-        if(!(ast_func->traits & AST_FUNC_FOREIGN)){
-            if(ast_func->arity > 0 && strcmp(ast_func->arg_names[0], "this") == 0){
-                // This is a struct method, attach a reference to the struct
-                ast_type_t *this_type = &ast_func->arg_types[0];
-
-                // Do basic checking to make sure the type is in the format: *Structure
-                if(this_type->elements_length != 2 || this_type->elements[0]->id != AST_ELEM_POINTER
-                        || this_type->elements[1]->id != AST_ELEM_BASE){
-                    compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
-                    return FAILURE;
-                }
-
-                // Check that the base isn't a primitive
-                char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
-                if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
-                    compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
-                    return FAILURE;
-                }
-
-                // Find the target structure
-                ast_struct_t *target = ast_struct_find(ast, ((ast_elem_base_t*) this_type->elements[1])->base);
-                if(target == NULL){
-                    compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base);
-                    return FAILURE;
-                }
-
-                // Append the method to the struct's method list
-                if(module->methods == NULL){
-                    module->methods = malloc(sizeof(ir_method_t) * 4);
-                    module->methods_length = 0;
-                    module->methods_capacity = 4;
-                } else if(module->methods_length == module->methods_capacity){
-                    module->methods_capacity *= 2;
-                    ir_method_t *new_methods = malloc(sizeof(ir_method_t) * module->methods_capacity);
-                    memcpy(new_methods, module->methods, sizeof(ir_method_t) * module->methods_length);
-                    free(module->methods);
-                    module->methods = new_methods;
-                }
-
-                ir_method_t *method = &module->methods[module->methods_length++];
-                method->struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
-                method->name = module_func->name;
-                method->module_func = module_func;
-                method->ast_func_id = f;
-                method->is_beginning_of_group = -1;
-            }
-        } else {
-            while(module_func->arity != ast_func->arity){
-                if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
-                module_func->arity++;
-            }
-        }
-
-        if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&ast_func->return_type)){
-            // If it's the main function and returns void, return int under the hood
-            module_func->return_type = ir_pool_alloc(&module->pool, sizeof(ir_type_t));
-            module_func->return_type->kind = TYPE_KIND_S32;
-            // neglect 'module_func->return_type->extra'
-        } else {
-            if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
-        }
+    for(length_t ast_func_id = 0; ast_func_id != ast->funcs_length; ast_func_id++){
+        ast_func_t *ast_func = &ast_funcs[ast_func_id];
+        if(ast_func->traits & AST_FUNC_POLYMORPHIC) continue;
+        if(ir_gen_func_head(compiler, object, ast_func, ast_func_id)) return FAILURE;
     }
 
     qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, length_t ast_func_id){
+    ir_module_t *module = &object->ir_module;
+
+    expand((void**) &module->funcs, sizeof(ir_func_t), module->funcs_length, &module->funcs_capacity, 1, object->ast.funcs_length);
+    ir_func_t *module_func = &module->funcs[module->funcs_length];
+    length_t ir_func_id = module->funcs_length;
+
+    module_func->name = ast_func->name;
+    module_func->traits = TRAIT_NONE;
+    module_func->return_type = NULL;
+    module_func->argument_types = malloc(sizeof(ir_type_t*) * ast_func->arity);
+    module_func->arity = 0;
+    module_func->basicblocks = NULL; // Will be set after 'basicblocks' contains all of the basicblocks
+    module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
+    module_func->var_scope = NULL;
+    module_func->variable_count = 0;
+
+    #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN  && \
+        AST_FUNC_VARARG      == IR_FUNC_VARARG   && \
+        AST_FUNC_MAIN        == IR_FUNC_MAIN     && \
+        AST_FUNC_STDCALL     == IR_FUNC_STDCALL  && \
+        AST_FUNC_POLYMORPHIC == IR_FUNC_POLYMORPHIC
+    module_func->traits = ast_func->traits & 0x1F;
+    #else
+    if(ast_func->traits & AST_FUNC_FOREIGN)     module_func->traits |= IR_FUNC_FOREIGN;
+    if(ast_func->traits & AST_FUNC_VARARG)      module_func->traits |= IR_FUNC_VARARG;
+    if(ast_func->traits & AST_FUNC_MAIN)        module_func->traits |= IR_FUNC_MAIN;
+    if(ast_func->traits & AST_FUNC_STDCALL)     module_func->traits |= IR_FUNC_STDCALL;
+    if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
+    #endif
+
+    expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, object->ast.funcs_length);
+    module->func_mappings[module->func_mappings_length].name = ast_func->name;
+    module->func_mappings[module->func_mappings_length].ir_func_id = module->funcs_length;
+    module->func_mappings[module->func_mappings_length].ast_func_id = ast_func_id;
+    module->func_mappings[module->func_mappings_length].is_beginning_of_group = -1;
+    module->func_mappings_length++;
+    module->funcs_length++;
+
+    if(!(ast_func->traits & AST_FUNC_FOREIGN)){
+        if(ast_func->arity > 0 && strcmp(ast_func->arg_names[0], "this") == 0){
+            // This is a struct method, attach a reference to the struct
+            ast_type_t *this_type = &ast_func->arg_types[0];
+
+            // Do basic checking to make sure the type is in the format: *Structure
+            if(this_type->elements_length != 2 || this_type->elements[0]->id != AST_ELEM_POINTER
+                    || this_type->elements[1]->id != AST_ELEM_BASE){
+                compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
+                return FAILURE;
+            }
+
+            // Check that the base isn't a primitive
+            char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
+            if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
+                compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
+                return FAILURE;
+            }
+
+            // Find the target structure
+            ast_struct_t *target = ast_struct_find(&object->ast, ((ast_elem_base_t*) this_type->elements[1])->base);
+            if(target == NULL){
+                compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base);
+                return FAILURE;
+            }
+
+            // Append the method to the struct's method list
+            if(module->methods == NULL){
+                module->methods = malloc(sizeof(ir_method_t) * 4);
+                module->methods_length = 0;
+                module->methods_capacity = 4;
+            } else if(module->methods_length == module->methods_capacity){
+                module->methods_capacity *= 2;
+                ir_method_t *new_methods = malloc(sizeof(ir_method_t) * module->methods_capacity);
+                memcpy(new_methods, module->methods, sizeof(ir_method_t) * module->methods_length);
+                free(module->methods);
+                module->methods = new_methods;
+            }
+
+            ir_method_t *method = &module->methods[module->methods_length++];
+            method->struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
+            method->name = module_func->name;
+            method->ir_func_id = ir_func_id;
+            method->ast_func_id = ast_func_id;
+            method->is_beginning_of_group = -1;
+        }
+    } else {
+        while(module_func->arity != ast_func->arity){
+            if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
+            module_func->arity++;
+        }
+    }
+
+    if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&ast_func->return_type)){
+        // If it's the main function and returns void, return int under the hood
+        module_func->return_type = ir_pool_alloc(&module->pool, sizeof(ir_type_t));
+        module_func->return_type->kind = TYPE_KIND_S32;
+        // neglect 'module_func->return_type->extra'
+    } else {
+        if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
+    }
+
     return SUCCESS;
 }
 
@@ -157,15 +154,28 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
 
     ast_func_t *ast_funcs = object->ast.funcs;
     ir_func_t *module_funcs = object->ir_module.funcs;
-    ir_func_mapping_t **mappings = &object->ir_module.func_mappings;
     length_t *mappings_length = &object->ir_module.func_mappings_length;
 
-    for(length_t m = 0; m != *mappings_length; m++){
-        ast_func_t *ast_func = &ast_funcs[(*mappings)[m].ast_func_id];
+    // Create jobs for already existing function mappings
+    ir_jobs_t jobs;
+    jobs.jobs = malloc(sizeof(ir_func_mapping_t) * (*mappings_length) + 4);
+    jobs.length = *mappings_length;
+    jobs.capacity = *mappings_length + 4;
+    memcpy(jobs.jobs, object->ir_module.func_mappings, sizeof(ir_func_mapping_t) * *mappings_length);
+
+    while(jobs.length != 0){
+        ir_func_mapping_t *job = &jobs.jobs[--jobs.length];
+
+        ast_func_t *ast_func = &ast_funcs[job->ast_func_id];
         if(ast_func->traits & AST_FUNC_FOREIGN) continue;
-        if(ir_gen_func_statements(compiler, object, ast_func, &module_funcs[(*mappings)[m].ir_func_id])) return FAILURE;
+
+        if(ir_gen_func_statements(compiler, object, ast_func, &module_funcs[job->ir_func_id], &jobs)){
+            free(jobs.jobs);
+            return FAILURE;
+        }
     }
 
+    free(jobs.jobs);
     return SUCCESS;
 }
 

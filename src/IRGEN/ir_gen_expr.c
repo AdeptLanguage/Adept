@@ -362,7 +362,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ((ir_instr_call_t*) instruction)->result_type = pair.ir_func->return_type;
                 ((ir_instr_call_t*) instruction)->values = arg_values;
                 ((ir_instr_call_t*) instruction)->values_length = call_expr->arity;
-                ((ir_instr_call_t*) instruction)->ast_func_id = pair.ast_func_id;
+                ((ir_instr_call_t*) instruction)->ir_func_id = pair.ir_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
                 *ir_value = build_value_from_prev_instruction(builder);
 
@@ -768,7 +768,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ((ir_instr_call_t*) instruction)->result_type = pair.ir_func->return_type;
             ((ir_instr_call_t*) instruction)->values = arg_values;
             ((ir_instr_call_t*) instruction)->values_length = call_expr->arity + 1;
-            ((ir_instr_call_t*) instruction)->ast_func_id = pair.ast_func_id;
+            ((ir_instr_call_t*) instruction)->ir_func_id = pair.ir_func_id;
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
 

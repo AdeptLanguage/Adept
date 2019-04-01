@@ -42,6 +42,7 @@ typedef struct {
     length_t next_var_id;
     length_t *next_reference_id;
     troolean has_string_struct;
+    ir_jobs_t *jobs;
 } ir_builder_t;
 
 // ---------------- build_basicblock ----------------
@@ -169,7 +170,7 @@ ir_value_t* build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to)
 ir_value_t* build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
 
 // ---------------- build_math ----------------
-// Bulids a basic math instruction
+// Builds a basic math instruction
 ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result);
 
 // ---------------- build_bool ----------------
@@ -212,8 +213,8 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function
-ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
-    length_t types_length, ast_type_var_catalog_t *catalog);
+errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
+    length_t types_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping);
 
 // ---------------- resolve_type_polymorphics ----------------
 // Resolves any polymorphic type variables within an AST type

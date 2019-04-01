@@ -10,7 +10,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "BRIDGE/bridge.h"
 
-errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ir_func_t *module_func){
+errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ir_func_t *module_func, ir_jobs_t *jobs){
     // ir_gens statements into basicblocks with instructions and sets in 'module_func'
 
     if(ast_func->statements_length == 0){
@@ -61,6 +61,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_f
     bridge_var_scope_init(module_func->var_scope, NULL);
     module_func->var_scope->first_var_id = 0;
     builder.var_scope = module_func->var_scope;
+    builder.jobs = jobs;
 
     while(module_func->arity != ast_func->arity){
         if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
@@ -349,7 +350,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ((ir_instr_call_t*) built_instr)->result_type = pair.ir_func->return_type;
                     ((ir_instr_call_t*) built_instr)->values = arg_values;
                     ((ir_instr_call_t*) built_instr)->values_length = call_stmt->arity;
-                    ((ir_instr_call_t*) built_instr)->ast_func_id = pair.ast_func_id;
+                    ((ir_instr_call_t*) built_instr)->ir_func_id = pair.ir_func_id;
 
                     for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
                     free(arg_types);
@@ -878,7 +879,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 instruction->result_type = pair.ir_func->return_type;
                 instruction->values = arg_values;
                 instruction->values_length = call_stmt->arity + 1;
-                instruction->ast_func_id = pair.ast_func_id;
+                instruction->ir_func_id = pair.ir_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
 
                 for(length_t t = 0; t != call_stmt->arity + 1; t++) ast_type_free(&arg_types[t]);

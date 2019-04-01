@@ -558,7 +558,7 @@ void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i){
         free(arg);
     }
 
-    fprintf(file, "    0x%08X call adept_%X(%s) %s\n", i, (int) instruction->ast_func_id, call_args, call_result_type);
+    fprintf(file, "    0x%08X call adept_%X(%s) %s\n", i, (int) instruction->ir_func_id, call_args, call_result_type);
     free(call_args);
     free(call_result_type);
 }

@@ -379,9 +379,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             return representation;
         }
     case EXPR_VARIABLE:
-        representation = malloc(strlen(((ast_expr_variable_t*) expr)->name) + 1);
-        sprintf(representation, "%s", ((ast_expr_variable_t*) expr)->name);
-        return representation;
+        return strclone(((ast_expr_variable_t*) expr)->name);
     case EXPR_MEMBER: {
             char *value_str = ast_expr_str(((ast_expr_member_t*) expr)->value);
             representation = malloc(strlen(value_str) + strlen(((ast_expr_member_t*) expr)->member) + 2);
@@ -422,7 +420,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_AT: {
             char *value_str1 = ast_expr_str(((ast_expr_array_access_t*) expr)->value);
             char *value_str2 = ast_expr_str(((ast_expr_array_access_t*) expr)->index);
-            representation = malloc(strlen(value_str1) + strlen(value_str2) + 3);
+            representation = malloc(strlen(value_str1) + strlen(value_str2) + 7);
             sprintf(representation, "%s at (%s)", value_str1, value_str2);
             free(value_str1);
             free(value_str2);
@@ -579,9 +577,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             return representation;
         }
     default:
-        representation = malloc(21);
-        memcpy(representation, "<unknown expression>", 21);
-        return representation;
+        return strclone("<unknown expression>");
     }
 
     return NULL; // Should never be reached

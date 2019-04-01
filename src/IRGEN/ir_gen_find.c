@@ -18,6 +18,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
         result->ast_func = ast_func;
         result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
         result->ast_func_id = mapping->ast_func_id;
+        result->ir_func_id = mapping->ir_func_id;
         return SUCCESS;
     }
 
@@ -33,6 +34,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
             result->ast_func = ast_func;
             result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
             result->ast_func_id = mapping->ast_func_id;
+            result->ir_func_id = mapping->ir_func_id;
             return SUCCESS;
         }
     }
@@ -51,6 +53,7 @@ errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
     result->ast_func = &object->ast.funcs[mapping->ast_func_id];
     result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
     result->ast_func_id = mapping->ast_func_id;
+    result->ir_func_id = mapping->ir_func_id;
     return SUCCESS;
 }
 
@@ -68,6 +71,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
             result->ast_func = ast_func;
             result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
             result->ast_func_id = mapping->ast_func_id;
+            result->ir_func_id = mapping->ir_func_id;
             return SUCCESS;
         }
 
@@ -84,6 +88,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
                 result->ast_func = ast_func;
                 result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
                 result->ast_func_id = mapping->ast_func_id;
+                result->ir_func_id = mapping->ir_func_id;
                 return SUCCESS;
             }
         }
@@ -99,7 +104,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
         bool found_compatible = false;
         ast_type_var_catalog_t using_catalog;
 
-        if(func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
+        if(poly_template->traits & AST_FUNC_POLYMORPHIC && func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
             found_compatible = true;
         } else while(++poly_index != ast->polymorphic_funcs_length){
             poly_func = &ast->polymorphic_funcs[poly_index];
@@ -110,19 +115,21 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
-            if(func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
+            if(poly_template->traits & AST_FUNC_POLYMORPHIC && func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
                 found_compatible = true;
             }
         }
 
         if(found_compatible){
-            ir_func_mapping_t *instance = instantiate_polymorphic_func(builder, poly_template, arg_types, type_list_length, &using_catalog);
+            ir_func_mapping_t instance;
+            
+            if(instantiate_polymorphic_func(builder, poly_template, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
             ast_type_var_catalog_free(&using_catalog);
-            if(!instance) return ALT_FAILURE;
 
-            result->ast_func = &builder->object->ast.funcs[instance->ast_func_id];
-            result->ir_func = &builder->object->ir_module.funcs[instance->ir_func_id];;
-            result->ast_func_id = instance->ast_func_id;
+            result->ast_func = &builder->object->ast.funcs[instance.ast_func_id];
+            result->ir_func = &builder->object->ir_module.funcs[instance.ir_func_id];
+            result->ast_func_id = instance.ast_func_id;
+            result->ir_func_id = instance.ir_func_id;
             return SUCCESS;
         }
     }
@@ -146,8 +153,9 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
 
     if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length)){
         result->ast_func = ast_func;
-        result->ir_func = method->module_func;
+        result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
         result->ast_func_id = method->ast_func_id;
+        result->ir_func_id = method->ir_func_id;
         return SUCCESS;
     }
 
@@ -162,8 +170,9 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
 
         if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length)){
             result->ast_func = ast_func;
-            result->ir_func = method->module_func;
+            result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
             result->ast_func_id = method->ast_func_id;
+            result->ir_func_id = method->ir_func_id;
             return SUCCESS;
         }
     }

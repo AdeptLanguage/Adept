@@ -224,7 +224,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
-    length_t ast_func_id;
+    length_t ir_func_id;
     ir_value_t **values;
     length_t values_length;
 } ir_instr_call_t;
@@ -435,10 +435,18 @@ typedef struct {
 typedef struct {
     const char *struct_name;
     const char *name;
-    ir_func_t *module_func;
+    length_t ir_func_id;
     length_t ast_func_id;
     char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_method_t;
+
+// ---------------- ir_jobs_t ----------------
+// List of jobs required during IR generation
+typedef struct {
+    ir_func_mapping_t *jobs;
+    length_t length;
+    length_t capacity;
+} ir_jobs_t;
 
 // ---------------- ir_global_t ----------------
 // An intermediate representation global variable

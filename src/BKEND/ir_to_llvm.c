@@ -204,31 +204,32 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
     length_t module_funcs_length = object->ir_module.funcs_length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
-    for(length_t f = 0; f != module_funcs_length; f++){
-        LLVMTypeRef parameters[module_funcs[f].arity];
+    for(length_t ir_func_id = 0; ir_func_id != module_funcs_length; ir_func_id++){
+        ir_func_t *ir_func = &module_funcs[ir_func_id];
+        LLVMTypeRef parameters[ir_func->arity];
 
-        for(length_t a = 0; a != module_funcs[f].arity; a++){
-            parameters[a] = ir_to_llvm_type(module_funcs[f].argument_types[a]);
+        for(length_t a = 0; a != ir_func->arity; a++){
+            parameters[a] = ir_to_llvm_type(ir_func->argument_types[a]);
             if(parameters[a] == NULL) return FAILURE;
         }
 
-        LLVMTypeRef return_type = ir_to_llvm_type(module_funcs[f].return_type);
-        LLVMTypeRef llvm_func_type = LLVMFunctionType(return_type, parameters, module_funcs[f].arity, module_funcs[f].traits & IR_FUNC_VARARG);
+        LLVMTypeRef return_type = ir_to_llvm_type(ir_func->return_type);
+        LLVMTypeRef llvm_func_type = LLVMFunctionType(return_type, parameters, ir_func->arity, ir_func->traits & IR_FUNC_VARARG);
 
         const char *implementation_name;
 
-        if(module_funcs[f].traits & IR_FUNC_FOREIGN || module_funcs[f].traits & AST_FUNC_MAIN){
-            implementation_name = module_funcs[f].name;
+        if(ir_func->traits & IR_FUNC_FOREIGN || ir_func->traits & AST_FUNC_MAIN){
+            implementation_name = ir_func->name;
         } else {
             char adept_implementation_name[256];
-            sprintf(adept_implementation_name, "a%X", (int) f);
+            sprintf(adept_implementation_name, "a%X", (int) ir_func_id);
             implementation_name = adept_implementation_name;
         }
 
-        func_skeletons[f] = LLVMAddFunction(llvm_module, implementation_name, llvm_func_type);
+        func_skeletons[ir_func_id] = LLVMAddFunction(llvm_module, implementation_name, llvm_func_type);
 
-        LLVMCallConv call_conv = module_funcs[f].traits & IR_FUNC_STDCALL ? LLVMX86StdcallCallConv : LLVMCCallConv;
-        LLVMSetFunctionCallConv(func_skeletons[f], call_conv);
+        LLVMCallConv call_conv = ir_func->traits & IR_FUNC_STDCALL ? LLVMX86StdcallCallConv : LLVMCCallConv;
+        LLVMSetFunctionCallConv(func_skeletons[ir_func_id], call_conv);
     }
 
     return SUCCESS;
@@ -447,14 +448,14 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                             arguments[v] = ir_to_llvm_value(llvm, ((ir_instr_call_t*) instr)->values[v]);
                         }
 
-                        char *implementation_name;
-                        ast_func_t *target_ast_func = &object->ast.funcs[((ir_instr_call_t*) instr)->ast_func_id];
+                        const char *implementation_name;
+                        ir_func_t *target_ir_func = &object->ir_module.funcs[((ir_instr_call_t*) instr)->ir_func_id];
 
-                        if(target_ast_func->traits & AST_FUNC_FOREIGN || target_ast_func->traits & AST_FUNC_MAIN){
-                            implementation_name = target_ast_func->name;
+                        if(target_ir_func->traits & IR_FUNC_FOREIGN || target_ir_func->traits & IR_FUNC_MAIN){
+                            implementation_name = target_ir_func->name;
                         } else {
                             char adept_implementation_name[256];
-                            sprintf(adept_implementation_name, "a%X", (int) ((ir_instr_call_t*) instr)->ast_func_id);
+                            sprintf(adept_implementation_name, "a%X", (int) ((ir_instr_call_t*) instr)->ir_func_id);
                             implementation_name = adept_implementation_name;
                         }
 

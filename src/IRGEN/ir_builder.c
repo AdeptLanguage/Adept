@@ -522,10 +522,10 @@ void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list){
                 ir_basicblock_new_instructions(builder->current_block, 1);
                 ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
                 instruction->id = INSTRUCTION_CALL;
-                instruction->result_type = method->module_func->return_type;
+                instruction->result_type = builder->object->ir_module.funcs[method->ir_func_id].return_type;
                 instruction->values = arguments;
                 instruction->values_length = 1;
-                instruction->ast_func_id = method->ast_func_id;
+                instruction->ir_func_id = method->ir_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
             }
         }
@@ -554,7 +554,7 @@ void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type
                 instruction->result_type = result.ir_func->return_type;
                 instruction->values = arguments;
                 instruction->values_length = 1;
-                instruction->ast_func_id = result.ast_func_id;
+                instruction->ir_func_id = result.ir_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
                 values[i] = build_value_from_prev_instruction(builder);
             }
@@ -589,10 +589,10 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
             ir_basicblock_new_instructions(builder->current_block, 1);
             ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
             instruction->id = INSTRUCTION_CALL;
-            instruction->result_type = method->module_func->return_type;
+            instruction->result_type = builder->object->ir_module.funcs[method->ir_func_id].return_type;
             instruction->values = arguments;
             instruction->values_length = 2;
-            instruction->ast_func_id = method->ast_func_id;
+            instruction->ir_func_id = method->ir_func_id;
             builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
             return SUCCESSFUL;
         }
@@ -625,7 +625,7 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
             instruction->result_type = result.ir_func->return_type;
             instruction->values = arguments;
             instruction->values_length = 2;
-            instruction->ast_func_id = result.ast_func_id;
+            instruction->ir_func_id = result.ir_func_id;
             builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
 
             if(out_type != NULL) *out_type = ast_type_clone(&result.ast_func->return_type);
@@ -636,17 +636,19 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
     return NULL;
 }
 
-ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
-        length_t types_length, ast_type_var_catalog_t *catalog){
-    if(types_length < poly_func->arity) return NULL;
+errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
+        length_t types_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping){
+    if(types_length < poly_func->arity) return FAILURE;
 
     ast_t *ast = &builder->object->ast;
+    ir_module_t *module = &builder->object->ir_module;
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    //length_t ast_func_id = ast->funcs_length;
+    length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, strclone(poly_func->name), poly_func->traits & AST_FUNC_STDCALL, false, poly_func->source);
     if(poly_func->traits & AST_FUNC_VARARG) func->traits |= AST_FUNC_VARARG;
+    func->traits |= AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * poly_func->arity);
     func->arg_types = malloc(sizeof(ast_type_t) * poly_func->arity);
@@ -668,7 +670,7 @@ ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_
         func->return_type.elements = NULL;
         func->return_type.elements_length = 0;
         func->return_type.source = NULL_SOURCE;
-        return NULL;
+        return FAILURE;
     }
 
     func->statements_length = poly_func->statements_length;
@@ -679,10 +681,24 @@ ir_func_mapping_t *instantiate_polymorphic_func(ir_builder_t *builder, ast_func_
         func->statements[s] = ast_expr_clone(poly_func->statements[s]);
     }
 
-    // ast_dump_functions(stdout, func, 1);
+    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id)){
+        return FAILURE;
+    }
 
-    compiler_panic(builder->compiler, func->source, "Failed to instantiate polymorphic function");
-    return NULL;
+    // HACK: Get generated function mapping
+    ir_func_mapping_t newest_mapping = module->func_mappings[module->funcs_length - 1];
+
+    // Add mapping to IR jobs
+    ir_jobs_t *jobs = builder->jobs;
+    expand((void**) &jobs->jobs, sizeof(ir_func_mapping_t), jobs->length, &jobs->capacity, 1, 4);
+    jobs->jobs[jobs->length++] = newest_mapping;
+
+    // Lazy update mappings and methods
+    qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
+    qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
+
+    if(out_mapping) *out_mapping = newest_mapping;
+    return SUCCESS;
 }
 
 errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){
