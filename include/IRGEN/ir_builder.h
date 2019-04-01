@@ -36,8 +36,8 @@ typedef struct {
     ir_type_map_t *type_map;
     compiler_t *compiler;
     object_t *object;
-    ast_func_t *ast_func;
-    ir_func_t *module_func;
+    length_t ast_func_id;
+    length_t ir_func_id;
     bridge_var_scope_t *var_scope;
     length_t next_var_id;
     length_t *next_reference_id;

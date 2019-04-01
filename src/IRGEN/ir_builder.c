@@ -686,7 +686,7 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     }
 
     // HACK: Get generated function mapping
-    ir_func_mapping_t newest_mapping = module->func_mappings[module->funcs_length - 1];
+    ir_func_mapping_t newest_mapping = module->func_mappings[module->func_mappings_length - 1];
 
     // Add mapping to IR jobs
     ir_jobs_t *jobs = builder->jobs;

@@ -32,10 +32,10 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
 
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
-    ast_func_t *ast_funcs = ast->funcs;
+    ast_func_t **ast_funcs = &ast->funcs;
 
     for(length_t ast_func_id = 0; ast_func_id != ast->funcs_length; ast_func_id++){
-        ast_func_t *ast_func = &ast_funcs[ast_func_id];
+        ast_func_t *ast_func = &(*ast_funcs)[ast_func_id];
         if(ast_func->traits & AST_FUNC_POLYMORPHIC) continue;
         if(ir_gen_func_head(compiler, object, ast_func, ast_func_id)) return FAILURE;
     }
@@ -77,10 +77,11 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     #endif
 
     expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, object->ast.funcs_length);
-    module->func_mappings[module->func_mappings_length].name = ast_func->name;
-    module->func_mappings[module->func_mappings_length].ir_func_id = module->funcs_length;
-    module->func_mappings[module->func_mappings_length].ast_func_id = ast_func_id;
-    module->func_mappings[module->func_mappings_length].is_beginning_of_group = -1;
+    ir_func_mapping_t *new_mapping = &module->func_mappings[module->func_mappings_length];
+    new_mapping->name = ast_func->name;
+    new_mapping->ir_func_id = ir_func_id;
+    new_mapping->ast_func_id = ast_func_id;
+    new_mapping->is_beginning_of_group = -1;
     module->func_mappings_length++;
     module->funcs_length++;
 
@@ -152,8 +153,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
     // NOTE: Only ir_gens function body; assumes skeleton already exists
 
-    ast_func_t *ast_funcs = object->ast.funcs;
-    ir_func_t *module_funcs = object->ir_module.funcs;
+    ast_func_t **ast_funcs = &object->ast.funcs;
     length_t *mappings_length = &object->ir_module.func_mappings_length;
 
     // Create jobs for already existing function mappings
@@ -166,10 +166,10 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
     while(jobs.length != 0){
         ir_func_mapping_t *job = &jobs.jobs[--jobs.length];
 
-        ast_func_t *ast_func = &ast_funcs[job->ast_func_id];
+        ast_func_t *ast_func = &(*ast_funcs)[job->ast_func_id];
         if(ast_func->traits & AST_FUNC_FOREIGN) continue;
 
-        if(ir_gen_func_statements(compiler, object, ast_func, &module_funcs[job->ir_func_id], &jobs)){
+        if(ir_gen_func_statements(compiler, object, job->ast_func_id, job->ir_func_id, &jobs)){
             free(jobs.jobs);
             return FAILURE;
         }

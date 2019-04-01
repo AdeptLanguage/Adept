@@ -10,15 +10,19 @@
 #include "IRGEN/ir_gen_type.h"
 #include "BRIDGE/bridge.h"
 
-errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_func_t *ast_func, ir_func_t *module_func, ir_jobs_t *jobs){
+errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_jobs_t *jobs){
     // ir_gens statements into basicblocks with instructions and sets in 'module_func'
+
+    ir_module_t *ir_module = &object->ir_module;
+    ir_pool_t *pool = &ir_module->pool;
+
+    // NOTE: These may be invalidated during statement generation
+    ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
+    ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
 
     if(ast_func->statements_length == 0){
         compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name);
     }
-
-    ir_module_t *ir_module = &object->ir_module;
-    ir_pool_t *pool = &ir_module->pool;
 
     // Used for constructing array of basicblocks
     ir_builder_t builder;
@@ -29,8 +33,8 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_f
     builder.type_map = &ir_module->type_map;
     builder.compiler = compiler;
     builder.object = object;
-    builder.ast_func = ast_func;
-    builder.module_func = module_func;
+    builder.ast_func_id = ast_func_id;
+    builder.ir_func_id = ir_func_id;
     builder.next_var_id = 0;
     builder.has_string_struct = TROOLEAN_UNKNOWN;
 
@@ -90,14 +94,23 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_f
 
     bool terminated;
     if(ir_gen_statements(&builder, statements, statements_length, &terminated)){
+        // Make sure to update 'module_func' because ir_module.funcs may have been moved
+        module_func = &object->ir_module.funcs[ir_func_id];
         module_func->basicblocks = builder.basicblocks;
         module_func->basicblocks_length = builder.basicblocks_length;
         return FAILURE;
     }
 
+    // Make sure to update references that may have been invalidated
+    ast_func = &object->ast.funcs[ast_func_id];
+    module_func = &object->ir_module.funcs[ir_func_id];
+
     // Append return instr for functions that return void
     if(!terminated){
         handle_defer_management(&builder, &builder.var_scope->list);
+
+        // Ensure latest version of module_func reference
+        module_func = &object->ir_module.funcs[ir_func_id];
 
         if(module_func->return_type->kind == TYPE_KIND_VOID){
             ir_instr_t *built_instr = build_instruction(&builder, sizeof(ir_instr_ret_t));
@@ -122,14 +135,13 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, ast_f
 
     module_func->var_scope->following_var_id = builder.next_var_id;
     module_func->variable_count = builder.next_var_id;
+    module_func->basicblocks = builder.basicblocks;
+    module_func->basicblocks_length = builder.basicblocks_length;
 
     free(builder.block_stack_labels);
     free(builder.block_stack_break_ids);
     free(builder.block_stack_continue_ids);
     free(builder.block_stack_scopes);
-
-    module_func->basicblocks = builder.basicblocks;
-    module_func->basicblocks_length = builder.basicblocks_length;
     return SUCCESS;
 }
 
@@ -143,59 +155,60 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
     for(length_t s = 0; s != statements_length; s++){
         switch(statements[s]->id){
-        case EXPR_RETURN:
-            /* handle __defer__ calls */ {
+        case EXPR_RETURN: {        
+                // handle __defer__ calls
                 bridge_var_scope_t *visit_scope;
                 for(visit_scope = builder->var_scope; visit_scope->parent != NULL; visit_scope = visit_scope->parent){
                     handle_defer_management(builder, &visit_scope->list);
                 }
 
                 handle_defer_management(builder, &visit_scope->list);
-            }
+                ast_type_t *return_type = &builder->object->ast.funcs[builder->ast_func_id].return_type;
 
-            if(((ast_expr_return_t*) statements[s])->value != NULL){
-                // Return non-void value
-                if(ir_gen_expression(builder, ((ast_expr_return_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
+                if(((ast_expr_return_t*) statements[s])->value != NULL){
+                    // Return non-void value
+                    if(ir_gen_expression(builder, ((ast_expr_return_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->ast_func->return_type, CONFORM_MODE_STANDARD)){
-                    char *a_type_str = ast_type_str(&temporary_type);
-                    char *b_type_str = ast_type_str(&builder->ast_func->return_type);
-                    compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return type '%s' when function expects type '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
+                    if(!ast_types_conform(builder, &expression_value, &temporary_type, return_type, CONFORM_MODE_STANDARD)){
+                        char *a_type_str = ast_type_str(&temporary_type);
+                        char *b_type_str = ast_type_str(return_type);
+                        compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return type '%s' when function expects type '%s'", a_type_str, b_type_str);
+                        free(a_type_str);
+                        free(b_type_str);
+                        ast_type_free(&temporary_type);
+                        return FAILURE;
+                    }
+
                     ast_type_free(&temporary_type);
-                    return FAILURE;
+                } else if(builder->object->ast.funcs[builder->ast_func_id].traits & AST_FUNC_MAIN && ast_type_is_void(return_type)){
+                    // Return 0 if in main function and it returns void
+                    expression_value = build_literal_int(builder->pool, 0);
+                } else {
+                    // Return void
+                    expression_value = NULL;
+
+                    if(return_type->elements_length != 1 || return_type->elements[0]->id != AST_ELEM_BASE
+                            || strcmp(((ast_elem_base_t*) return_type->elements[0])->base, "void") != 0){
+                        // This function expects a value to returned, not void
+                        char *a_type_str = ast_type_str(return_type);
+                        compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return void when function expects type '%s'", a_type_str);
+                        free(a_type_str);
+                        return FAILURE;
+                    }
                 }
 
-                ast_type_free(&temporary_type);
-            } else if(builder->ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&builder->ast_func->return_type)){
-                // Return 0 if in main function and it returns void
-                expression_value = build_literal_int(builder->pool, 0);
-            } else {
-                // Return void
-                expression_value = NULL;
+                built_instr = build_instruction(builder, sizeof(ir_instr_ret_t));
+                ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
+                ((ir_instr_ret_t*) built_instr)->result_type = NULL;
+                ((ir_instr_ret_t*) built_instr)->value = expression_value;
 
-                if(builder->ast_func->return_type.elements_length != 1 || builder->ast_func->return_type.elements[0]->id != AST_ELEM_BASE
-                        || strcmp(((ast_elem_base_t*) builder->ast_func->return_type.elements[0])->base, "void") != 0){
-                    // This function expects a value to returned, not void
-                    char *a_type_str = ast_type_str(&builder->ast_func->return_type);
-                    compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return void when function expects type '%s'", a_type_str);
-                    free(a_type_str);
-                    return FAILURE;
+                if(s + 1 != statements_length){
+                    compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", builder->object->ast.funcs[builder->ast_func_id].name);
                 }
+
+                if(out_is_terminated) *out_is_terminated = true;
+                return SUCCESS; // Return because no other statements can be after this one
             }
-
-            built_instr = build_instruction(builder, sizeof(ir_instr_ret_t));
-            ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
-            ((ir_instr_ret_t*) built_instr)->result_type = NULL;
-            ((ir_instr_ret_t*) built_instr)->value = expression_value;
-
-            if(s + 1 != statements_length){
-                compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", builder->ast_func->name);
-            }
-
-            if(out_is_terminated) *out_is_terminated = true;
-            return SUCCESS; // Return because no other statements can be after this one
         case EXPR_CALL: {
                 ast_expr_call_t *call_stmt = ((ast_expr_call_t*) statements[s]);
                 ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * call_stmt->arity);
