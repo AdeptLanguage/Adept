@@ -757,6 +757,17 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_CONTINUE:
         clone = malloc(sizeof(ast_expr_t));
         break;
+    case EXPR_STR:
+        #define expr_as_str ((ast_expr_str_t*) expr)
+        #define clone_as_str ((ast_expr_str_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_str_t));
+        clone_as_str->array = expr_as_str->array;
+        clone_as_str->length = expr_as_str->length;
+        break;
+
+        #undef expr_as_str
+        #undef clone_as_str
     case EXPR_ADD:
     case EXPR_SUBTRACT:
     case EXPR_MULTIPLY:

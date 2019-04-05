@@ -1,0 +1,28 @@
+
+import '2.1/basics.adept'
+
+func main {
+    print("--------------------------------------")
+    print(thing("Hello World"))
+    print("--------------------------------------")
+    print("3 + 5 = %" % sum(3, 5))
+    print("3.1415 + 5.0 = %" % sum(3.1415, 5.0))
+    print("\"Hello \" + \"World\" = \"%\"" % sum("Hello ", "World"))
+    print("--------------------------------------")
+    sumThings(3, 5)
+    sumThings(3.1415, 5.0)
+    sumThings("Hello ", "World")
+    print("--------------------------------------")
+}
+
+func thing(in value $T) $T {
+    return value
+}
+
+func sum(in a $T, in b $T) $T {
+    return a + b
+}
+
+func sumThings(a, b $T) {
+    print("% + % = %" % a % b % sum(a, b))
+}

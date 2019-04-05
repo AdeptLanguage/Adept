@@ -11,7 +11,7 @@
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
-
+    
 errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_t *ast = &object->ast;

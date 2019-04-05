@@ -72,6 +72,7 @@ compile null_checks --null-checks || exit $?
 compile order || exit $?
 compile package || exit $?
 compile package_use || exit $?
+compile polymorphic_functions || exit $?
 compile pragma || exit $?
 compile primitives || exit $?
 compile repeat || exit $?
