@@ -73,3 +73,8 @@ strong_cstr_t strclone(const char *src){
     memcpy(clone, src, size);
     return clone;
 }
+
+void freestrs(strong_cstr_t *array, length_t length){
+    for(length_t i = 0; i != length; i++) free(array[i]);
+    free(array);
+}

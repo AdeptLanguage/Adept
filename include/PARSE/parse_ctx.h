@@ -26,6 +26,9 @@ typedef struct {
     // NOTE: 256 is the max number of meta ends that can be expected
     length_t meta_ends_expected;
     unsigned char meta_else_allowed_flag[32];
+
+    // Used to 'unlex' multiple angle brackets
+    length_t angle_bracket_repeat;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------

@@ -8,17 +8,12 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
     ast_elem_t *new_element = NULL;
 
     switch(element->id){
-    case AST_ELEM_BASE: {
-            char *original_base = ((ast_elem_base_t*) element)->base;
-            length_t original_base_length = strlen(original_base);
-            char *new_base = malloc(original_base_length + 1);
-            memcpy(new_base, original_base, original_base_length + 1);
-            new_element = malloc(sizeof(ast_elem_base_t));
-            ((ast_elem_base_t*) new_element)->id = AST_ELEM_BASE;
-            ((ast_elem_base_t*) new_element)->source = element->source;
-            ((ast_elem_base_t*) new_element)->base = new_base;
-            break;
-        }
+    case AST_ELEM_BASE:
+        new_element = malloc(sizeof(ast_elem_base_t));
+        ((ast_elem_base_t*) new_element)->id = AST_ELEM_BASE;
+        ((ast_elem_base_t*) new_element)->source = element->source;
+        ((ast_elem_base_t*) new_element)->base = strclone(((ast_elem_base_t*) element)->base);
+        break;
     case AST_ELEM_POINTER:
         new_element = malloc(sizeof(ast_elem_pointer_t));
         ((ast_elem_pointer_t*) new_element)->id = AST_ELEM_POINTER;
@@ -49,22 +44,40 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
         new_element = malloc(sizeof(ast_elem_func_t));
         ((ast_elem_func_t*) new_element)->id = AST_ELEM_FUNC;
         ((ast_elem_func_t*) new_element)->source = ((ast_elem_func_t*) element)->source;
-        ((ast_elem_func_t*) new_element)->arg_types = ((ast_elem_func_t*) element)->arg_types;
-        ((ast_elem_func_t*) new_element)->arg_flows = ((ast_elem_func_t*) element)->arg_flows;
+
+        ((ast_elem_func_t*) new_element)->arg_types = malloc(sizeof(ast_type_t) * ((ast_elem_func_t*) element)->arity);
+        for(length_t i = 0; i != ((ast_elem_func_t*) element)->arity; i++){
+            ((ast_elem_func_t*) new_element)->arg_types[i] = ast_type_clone(&((ast_elem_func_t*) element)->arg_types[i]);
+        }
+
+        ((ast_elem_func_t*) new_element)->arg_flows = malloc(sizeof(char) * ((ast_elem_func_t*) element)->arity);
+        memcpy(((ast_elem_func_t*) new_element)->arg_flows, ((ast_elem_func_t*) element)->arg_flows, sizeof(char) * ((ast_elem_func_t*) element)->arity);
         ((ast_elem_func_t*) new_element)->arity = ((ast_elem_func_t*) element)->arity;
-        ((ast_elem_func_t*) new_element)->return_type = ((ast_elem_func_t*) element)->return_type;
+        ((ast_elem_func_t*) new_element)->return_type = malloc(sizeof(ast_type_t));
+        *((ast_elem_func_t*) new_element)->return_type = ast_type_clone(((ast_elem_func_t*) element)->return_type);
         ((ast_elem_func_t*) new_element)->traits = ((ast_elem_func_t*) element)->traits;
-        ((ast_elem_func_t*) new_element)->ownership = false;
+        ((ast_elem_func_t*) new_element)->ownership = true;
         break;
     case AST_ELEM_POLYMORPH: {
-            char *original_name = ((ast_elem_polymorph_t*) element)->name;
-            length_t original_name_length = strlen(original_name);
-            char *new_name = malloc(original_name_length + 1);
-            memcpy(new_name, original_name, original_name_length + 1);
             new_element = malloc(sizeof(ast_elem_polymorph_t));
             ((ast_elem_polymorph_t*) new_element)->id = AST_ELEM_POLYMORPH;
             ((ast_elem_polymorph_t*) new_element)->source = element->source;
-            ((ast_elem_polymorph_t*) new_element)->name = new_name;
+            ((ast_elem_polymorph_t*) new_element)->name = strclone(((ast_elem_polymorph_t*) element)->name);
+            break;
+        }
+    case AST_ELEM_GENERIC_BASE: {
+            new_element = malloc(sizeof(ast_elem_generic_base_t));
+            ((ast_elem_generic_base_t*) new_element)->id = AST_ELEM_GENERIC_BASE;
+            ((ast_elem_generic_base_t*) new_element)->source = element->source;
+            ((ast_elem_generic_base_t*) new_element)->name = strclone(((ast_elem_generic_base_t*) element)->name);
+            ((ast_elem_generic_base_t*) new_element)->generics = malloc(sizeof(ast_type_t) * ((ast_elem_generic_base_t*) element)->generics_length);
+            
+            for(length_t i = 0; i != ((ast_elem_generic_base_t*) element)->generics_length; i++){
+                ((ast_elem_generic_base_t*) new_element)->generics[i] = ast_type_clone(&((ast_elem_generic_base_t*) element)->generics[i]);
+            }
+
+            ((ast_elem_generic_base_t*) new_element)->generics_length = ((ast_elem_generic_base_t*) element)->generics_length;
+            ((ast_elem_generic_base_t*) new_element)->name_is_polymorphic = ((ast_elem_generic_base_t*) element)->name_is_polymorphic;
             break;
         }
     default:
@@ -102,18 +115,25 @@ void ast_type_free(ast_type_t *type){
             free(type->elements[i]);
             break;
         case AST_ELEM_FUNC:
-            if( ((ast_elem_func_t*) type->elements[i])->ownership ){
+            if(((ast_elem_func_t*) type->elements[i])->ownership){
                 ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];
                 ast_types_free(func_elem->arg_types, func_elem->arity);
                 free(func_elem->arg_types);
                 free(func_elem->arg_flows);
                 ast_type_free_fully(func_elem->return_type);
+                free(type->elements[i]);
             }
-            free(type->elements[i]);
             break;
         case AST_ELEM_POLYMORPH:
             free(((ast_elem_polymorph_t*) type->elements[i])->name);
             free(type->elements[i]);
+            break;
+        case AST_ELEM_GENERIC_BASE: {
+                ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) type->elements[i];
+                ast_types_free_fully(generic_base_elem->generics, generic_base_elem->generics_length);
+                free(generic_base_elem->name);
+                free(type->elements[i]);
+            }
             break;
         default:
             redprintf("INTERNAL ERROR: Encountered unexpected type element id when freeing ast_type_t\n");
@@ -352,6 +372,44 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 name_length += polyname_length + 1;
             }
             break;
+        case AST_ELEM_GENERIC_BASE: {
+                ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) type->elements[i];
+
+                EXTEND_NAME_MACRO(1);
+                memcpy(&name[name_length], "<", 1);
+                name_length += 1;
+
+                for(length_t i = 0; i != generic_base->generics_length; i++){
+                    strong_cstr_t type_str = ast_type_str(&generic_base->generics[i]);
+                    length_t type_str_length = strlen(type_str);
+
+                    EXTEND_NAME_MACRO(type_str_length);
+                    memcpy(&name[name_length], type_str, type_str_length);
+                    name_length += type_str_length;
+                    free(type_str);
+
+                    if(i != generic_base->generics_length - 1){
+                        memcpy(&name[name_length], ", ", 2);
+                        name_length += 2;
+                    }
+                }
+
+                EXTEND_NAME_MACRO(2);
+                memcpy(&name[name_length], "> ", 2);
+                name_length += 2;
+
+                if(generic_base->name_is_polymorphic){
+                    EXTEND_NAME_MACRO(1);
+                    memcpy(&name[name_length], "$", 1);
+                    name_length += 1;
+                }
+
+                length_t base_length = strlen(generic_base->name);
+                EXTEND_NAME_MACRO(base_length + 1);
+                memcpy(&name[name_length], generic_base->name, base_length + 1);
+                name_length += base_length;
+            }
+            break;
         default:
             printf("INTERNAL ERROR: Encountered unexpected element type 0x%08X when converting ast_type_t to a string\n", type->elements[i]->id);
             return NULL;
@@ -480,6 +538,15 @@ bool ast_type_has_polymorph(const ast_type_t *type){
             break;
         case AST_ELEM_POLYMORPH:
             return true;
+        case AST_ELEM_GENERIC_BASE: {
+                ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) type->elements[i];
+                if(generic_base->name_is_polymorphic) return true;
+                
+                for(length_t i = 0; i != generic_base->generics_length; i++){
+                    if(ast_type_has_polymorph(&generic_base->generics[i])) return true;
+                }
+            }
+            break;
         default:
             redprintf("INTERNAL ERROR: ast_type_has_polymorph encountered unknown element id 0x%8X\n", type->elements[i]->id);
         }

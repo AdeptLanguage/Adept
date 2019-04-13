@@ -15,7 +15,8 @@ errorcode_t parse_struct(parse_ctx_t *ctx);
 
 // ------------------ parse_struct_head ------------------
 // Parses the head of a struct
-errorcode_t parse_struct_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_packed);
+// NOTE: All arguments must be valid pointers
+errorcode_t parse_struct_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length);
 
 // ------------------ parse_struct_body ------------------
 // Parses the body of a struct

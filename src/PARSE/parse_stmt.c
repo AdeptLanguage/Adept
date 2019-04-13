@@ -56,6 +56,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 case TOKEN_WORD: case TOKEN_FUNC:
                 case TOKEN_STDCALL: case TOKEN_NEXT: case TOKEN_POD:
                 case TOKEN_GENERIC_INT: /*fixed array*/ case TOKEN_MULTIPLY: /*pointer*/
+                case TOKEN_LESSTHAN: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_LGC_LSHIFT: /*generics*/
                 case TOKEN_POLYMORPH: /*polymorphic type*/
                     (*i)--; if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
                     break;

@@ -12,7 +12,9 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
 
     strong_cstr_t name;
     bool is_packed;
-    if(parse_struct_head(ctx, &name, &is_packed)) return FAILURE;
+    strong_cstr_t *generics = NULL;
+    length_t generics_length = 0;
+    if(parse_struct_head(ctx, &name, &is_packed, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -38,11 +40,17 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
     }
 
     trait_t traits = is_packed ? AST_STRUCT_PACKED : TRAIT_NONE;
-    ast_add_struct(ast, name, field_names, field_types, field_count, traits, source);
+
+    if(generics){
+        ast_add_polymorphic_struct(ast, name, field_names, field_types, field_count, traits, source, generics, generics_length);
+    } else {
+        ast_add_struct(ast, name, field_names, field_types, field_count, traits, source);
+    }
+
     return SUCCESS;
 }
 
-errorcode_t parse_struct_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_packed){
+errorcode_t parse_struct_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
@@ -53,9 +61,59 @@ errorcode_t parse_struct_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *o
         return FAILURE;
     }
 
-    *out_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
-    if(*out_name == NULL) return FAILURE;
+    strong_cstr_t *generics = NULL;
+    length_t generics_length = 0;
+    length_t generics_capacity = 0;
 
+    if(tokens[*i].id == TOKEN_LESSTHAN){
+        (*i)++;
+
+        while(tokens[*i].id != TOKEN_GREATERTHAN){
+            expand((void**) &generics, sizeof(strong_cstr_t), generics_length, &generics_capacity, 1, 4);
+
+            if(parse_ignore_newlines(ctx, "Expected polymorphic generic type")){
+                freestrs(generics, generics_length);
+                return FAILURE;
+            }
+
+            if(tokens[*i].id != TOKEN_POLYMORPH){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type");
+                freestrs(generics, generics_length);
+                return FAILURE;
+            }
+
+            generics[generics_length++] = tokens[*i].data;
+            tokens[(*i)++].data = NULL; // Take ownership
+
+            if(parse_ignore_newlines(ctx, "Expected '>' or ',' after polymorphic generic type")){
+                freestrs(generics, generics_length);
+                return FAILURE;
+            }
+
+            if(tokens[*i].id == TOKEN_NEXT){
+                if(tokens[++(*i)].id == TOKEN_GREATERTHAN){
+                    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type after ',' in generics list");
+                    freestrs(generics, generics_length);
+                    return FAILURE;
+                }
+            } else if(tokens[*i].id != TOKEN_GREATERTHAN){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after polymorphic generic type");
+                freestrs(generics, generics_length);
+                return FAILURE;
+            }
+        }
+
+        (*i)++;
+    }
+
+    *out_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
+    if(*out_name == NULL){
+        freestrs(generics, generics_length);
+        return FAILURE;
+    }
+
+    *out_generics = generics;
+    *out_generics_length = generics_length;
     return SUCCESS;
 }
 

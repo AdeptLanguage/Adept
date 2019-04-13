@@ -11,6 +11,7 @@ void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object){
     ctx->func = NULL;
     ctx->meta_ends_expected = 0;
     memset(ctx->meta_else_allowed_flag, 0, sizeof(ctx->meta_else_allowed_flag));
+    ctx->angle_bracket_repeat = 0;
 }
 
 void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx_fork){

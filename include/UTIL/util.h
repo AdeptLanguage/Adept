@@ -45,6 +45,10 @@ void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, len
 // Clones a string, producing a duplicate
 strong_cstr_t strclone(const char *src);
 
+// ---------------- freestrs ----------------
+// Frees every string in an array, and then the array
+void freestrs(strong_cstr_t *array, length_t length);
+
 #ifdef __cplusplus
 }
 #endif

@@ -529,7 +529,7 @@ int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
     */
 
     // TODO: Add support for match args
-    //compiler_warn(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Match args not supported yet so 'func &' might return wrong function");
+    compiler_warn(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Match args not supported yet so 'func &' might return wrong function");
 
     *out_expr = (ast_expr_t*) func_addr_expr;
     return SUCCESS;

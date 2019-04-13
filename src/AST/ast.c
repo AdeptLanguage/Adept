@@ -34,6 +34,9 @@ void ast_init(ast_t *ast){
     ast->polymorphic_funcs = NULL;
     ast->polymorphic_funcs_length = 0;
     ast->polymorphic_funcs_capacity = 0;
+    ast->polymorphic_structs = NULL;
+    ast->polymorphic_structs_length = 0;
+    ast->polymorphic_structs_capacity = 0;
 
     // Add relevant standard meta definitions
     #ifdef _WIN32
@@ -92,6 +95,11 @@ void ast_free(ast_t *ast){
     }
     free(ast->meta_definitions);
     free(ast->polymorphic_funcs);
+    for(i = 0; i != ast->polymorphic_structs_length; i++){
+        ast_free_structs((ast_struct_t*) &ast->polymorphic_structs[i], 1);
+        freestrs(ast->polymorphic_structs[i].generics, ast->polymorphic_structs[i].generics_length);
+    }
+    free(ast->polymorphic_structs);
 }
 
 void ast_free_functions(ast_func_t *functions, length_t functions_length){
@@ -509,6 +517,18 @@ void ast_struct_init(ast_struct_t *structure, strong_cstr_t name, strong_cstr_t 
     structure->source = source;
 }
 
+void ast_polymorphic_struct_init(ast_polymorphic_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length){
+    structure->name = name;
+    structure->field_names = names;
+    structure->field_types = types;
+    structure->field_count = length;
+    structure->traits = traits;
+    structure->source = source;
+    structure->generics = generics;
+    structure->generics_length = generics_length;
+}
+
 void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source){
     alias->name = name;
     alias->type = type;
@@ -617,6 +637,13 @@ void ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_ty
     expand((void**) &ast->structs, sizeof(ast_struct_t), ast->structs_length, &ast->structs_capacity, 1, 4);
     ast_struct_t *structure = &ast->structs[ast->structs_length++];
     ast_struct_init(structure, name, names, types, length, traits, source);
+}
+
+void ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length){
+    expand((void**) &ast->polymorphic_structs, sizeof(ast_polymorphic_struct_t), ast->polymorphic_structs_length, &ast->polymorphic_structs_capacity, 1, 4);
+    ast_polymorphic_struct_t *poly_structure = &ast->polymorphic_structs[ast->polymorphic_structs_length++];
+    ast_polymorphic_struct_init(poly_structure, name, names, types, length, traits, source, generics, generics_length);
 }
 
 void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *initial_value, trait_t traits, source_t source){

@@ -30,6 +30,7 @@ extern "C" {
 #define AST_ELEM_GENERIC_FLOAT 0x06
 #define AST_ELEM_FUNC          0x07
 #define AST_ELEM_POLYMORPH     0x08
+#define AST_ELEM_GENERIC_BASE  0x09
 
 // Possible data flow patterns
 #define FLOW_NONE  0x00
@@ -92,7 +93,7 @@ typedef struct {
     length_t arity;
     ast_type_t *return_type;
     trait_t traits; // Uses AST_FUNC_* traits
-    bool ownership; // Whether or not we own our members
+    bool ownership; // Used for referencing functions w/o copying
 } ast_elem_func_t;
 
 // ---------------- ast_elem_polymorph_t ----------------
@@ -102,6 +103,17 @@ typedef struct {
     source_t source;
     strong_cstr_t name;
 } ast_elem_polymorph_t;
+
+// ---------------- ast_elem_generic_base_t ----------------
+// Type element for a varient of a generic base
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_t name;
+    ast_type_t *generics;
+    length_t generics_length;
+    bool name_is_polymorphic;
+} ast_elem_generic_base_t;
 
 // ---------------- ast_unnamed_arg_t ----------------
 // Data structure for an unnamed argument

@@ -1,6 +1,7 @@
 
 #include "PARSE/parse.h"
 #include "PARSE/parse_type.h"
+#include "PARSE/parse_util.h"
 #include "UTIL/util.h"
 
 errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
@@ -83,6 +84,63 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             out_type->elements[out_type->elements_length] = (ast_elem_t*) base_elem;
         }
         break;
+    case TOKEN_LESSTHAN: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_LGC_LSHIFT: {
+            if(ctx->angle_bracket_repeat == 0){
+                ctx->angle_bracket_repeat = id == TOKEN_LESSTHAN ? 1 : id == TOKEN_BIT_LSHIFT ? 2 : 3;
+            }
+
+            if(--ctx->angle_bracket_repeat == 0){
+                (*i)++;
+            }
+
+            ast_type_t *generics = NULL;
+            length_t generics_length = 0;
+            length_t generics_capacity = 0;
+            
+            while(tokens[*i].id != TOKEN_GREATERTHAN){
+                expand((void**) &generics, sizeof(ast_type_t), generics_length, &generics_capacity, 1, 4);
+
+                if(parse_ignore_newlines(ctx, "Expected type in polymorphic generics")){
+                    ast_types_free_fully(generics, generics_length);
+                    return FAILURE;
+                }
+
+                if(parse_type(ctx, &generics[generics_length++])
+                || parse_ignore_newlines(ctx, "Expected '>' or ',' after type in polymorphic generics")){
+                    ast_types_free_fully(generics, generics_length);
+                    return FAILURE;
+                }
+
+                if(tokens[*i].id == TOKEN_NEXT){
+                    if(tokens[++(*i)].id == TOKEN_GREATERTHAN){
+                        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected type after ',' in polymorphic generics");
+                        ast_types_free_fully(generics, generics_length);
+                        return FAILURE;
+                    }
+                } else if(tokens[*i].id != TOKEN_GREATERTHAN){
+                    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after type in polymorphic generics");
+                    ast_types_free_fully(generics, generics_length);
+                    return FAILURE;
+                }
+            }
+
+            strong_cstr_t base_name;
+            if(parse_eat(ctx, TOKEN_GREATERTHAN, "Expected '>' after polymorphic generics")
+            || (base_name = parse_take_word(ctx, "Expected type name")) == NULL){
+                ast_types_free_fully(generics, generics_length);
+                return FAILURE;
+            }
+
+            ast_elem_generic_base_t *generic_base_elem = malloc(sizeof(ast_elem_generic_base_t));
+            generic_base_elem->id = AST_ELEM_GENERIC_BASE;
+            generic_base_elem->name = base_name;
+            generic_base_elem->source = sources[*i];
+            generic_base_elem->generics = generics;
+            generic_base_elem->generics_length = generics_length;
+            generic_base_elem->name_is_polymorphic = false;
+            out_type->elements[out_type->elements_length] = (ast_elem_t*) generic_base_elem;
+        }
+        break;
     default:
         compiler_panic(ctx->compiler, sources[*i], "Expected type");
         ast_type_free(out_type);
@@ -127,6 +185,8 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
     while(tokens[*i].id != TOKEN_CLOSE){
         if(is_vararg){
             compiler_panic(ctx->compiler, sources[*i], "Expected ')' after variadic argument");
+            ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
+            free(out_func_elem->arg_flows);
             return FAILURE;
         }
 
@@ -146,8 +206,7 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
             out_func_elem->traits |= AST_FUNC_VARARG;
         } else {
             if(parse_type(ctx, &out_func_elem->arg_types[out_func_elem->arity])){
-                ast_types_free(out_func_elem->arg_types, out_func_elem->arity);
-                free(out_func_elem->arg_types);
+                ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
                 free(out_func_elem->arg_flows);
                 return FAILURE;
             }
@@ -157,22 +216,21 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
         if(tokens[*i].id == TOKEN_NEXT){
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
-                ast_types_free(out_func_elem->arg_types, out_func_elem->arity);
-                free(out_func_elem->arg_types);
+                ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
                 free(out_func_elem->arg_flows);
                 return FAILURE;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
             if(is_vararg) compiler_panic(ctx->compiler, sources[*i], "Expected ')' after variadic argument");
             else compiler_panic(ctx->compiler, sources[*i], "Expected ',' after argument type");
-            ast_types_free(out_func_elem->arg_types, out_func_elem->arity);
-            free(out_func_elem->arg_types);
+            ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
             free(out_func_elem->arg_flows);
             return FAILURE;
         }
     }
 
-    out_func_elem->return_type = malloc(sizeof(ast_type_t)); (*i)++;
+    (*i)++;
+    out_func_elem->return_type = malloc(sizeof(ast_type_t));
     out_func_elem->return_type->elements = NULL;
     out_func_elem->return_type->elements_length = 0;
     out_func_elem->return_type->source.index = 0;
@@ -181,7 +239,6 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
 
     if(parse_type(ctx, out_func_elem->return_type)){
         ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
-        ast_type_free_fully(out_func_elem->return_type);
         free(out_func_elem->arg_flows);
         return FAILURE;
     }

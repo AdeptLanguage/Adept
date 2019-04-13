@@ -59,7 +59,23 @@ typedef struct {
 } ast_struct_t;
 
 // Possible AST structure traits
-#define AST_STRUCT_PACKED TRAIT_1
+#define AST_STRUCT_PACKED      TRAIT_1
+#define AST_STRUCT_POLYMORPHIC TRAIT_2
+
+// ---------------- ast_polymorphic_struct_t ----------------
+// A polymorphic structure
+// NOTE: Guaranteed to overlap with 'ast_struct_t'
+typedef struct {
+    strong_cstr_t name;
+    strong_cstr_t *field_names;
+    ast_type_t *field_types;
+    length_t field_count;
+    trait_t traits;
+    source_t source;
+
+    strong_cstr_t *generics;
+    length_t generics_length;
+} ast_polymorphic_struct_t;
 
 // ---------------- ast_alias_t ----------------
 // A type alias within the root AST
@@ -81,7 +97,6 @@ typedef struct {
 
 // ---------------- ast_global_t ----------------
 // A global variable within the root AST
-
 typedef struct {
     const char *name;
     ast_type_t type;
@@ -156,6 +171,11 @@ typedef struct {
     ast_polymorphic_func_t *polymorphic_funcs;
     length_t polymorphic_funcs_length;
     length_t polymorphic_funcs_capacity;
+
+    // Polymorphic structures
+    ast_polymorphic_struct_t *polymorphic_structs;
+    length_t polymorphic_structs_length;
+    length_t polymorphic_structs_capacity;
 } ast_t;
 
 // ---------------- ast_init ----------------
@@ -202,6 +222,11 @@ bool ast_func_is_polymorphic(ast_func_t *func);
 void ast_struct_init(ast_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source);
 
+// ---------------- ast_polymorphic_struct_init ----------------
+// Initializes a polymorphic AST struct
+void ast_polymorphic_struct_init(ast_polymorphic_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length);
+
 // ---------------- ast_alias_init ----------------
 // Initializes an AST alias
 void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source);
@@ -242,6 +267,11 @@ void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t len
 // Adds a struct to the global scope of an AST
 void ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source);
+
+// ---------------- ast_add_polymorphic_struct ----------------
+// Adds a polymorphic struct to the global scope of an AST
+void ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length);
 
 // ---------------- ast_add_global ----------------
 // Adds a global variable to the global scope of an AST
