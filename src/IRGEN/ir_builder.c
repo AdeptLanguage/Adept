@@ -111,7 +111,16 @@ void build_break(ir_builder_t *builder, length_t basicblock_id){
     built_instr->block_id = basicblock_id;
 }
 
-ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable){
+ir_value_t* build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
+    ir_instr_math_t *built_instr = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
+    ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_EQUALS;
+    ((ir_instr_math_t*) built_instr)->a = a;
+    ((ir_instr_math_t*) built_instr)->b = b;
+    ((ir_instr_math_t*) built_instr)->result_type = ir_builder_bool(builder);
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t* build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable){
     ir_value_t *value = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_STRUCT_LITERAL;
     value->type = type;
@@ -129,7 +138,7 @@ ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t
     return value;
 }
 
-ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
+ir_value_t* build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_STRUCT_CONSTRUCTION;
     value->type = type;
@@ -142,7 +151,7 @@ ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value
     return value;
 }
 
-ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
+ir_value_t* build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_ARRAY_LITERAL;
     value->type = ir_type_pointer_to(pool, type);
@@ -153,7 +162,7 @@ ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **va
     return value;
 }
 
-ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
+ir_value_t* build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
     expand((void**) &module->anon_globals, sizeof(ir_anon_global_t), module->anon_globals_length, &module->anon_globals_capacity, 1, 4);
 
     ir_anon_global_t *anon_global = &module->anon_globals[module->anon_globals_length++];

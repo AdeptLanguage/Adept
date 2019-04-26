@@ -67,6 +67,16 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     builder.var_scope = module_func->var_scope;
     builder.jobs = jobs;
 
+    builder.static_bool_base.id = AST_ELEM_BASE;
+    builder.static_bool_base.source = NULL_SOURCE;
+    builder.static_bool_base.source.object_index = builder.object->index;
+    builder.static_bool_base.base = "bool";
+    builder.static_bool_elems = (ast_elem_t*) &builder.static_bool_base;
+    builder.static_bool.elements = &builder.static_bool_elems;
+    builder.static_bool.elements_length = 1;
+    builder.static_bool.source = NULL_SOURCE;
+    builder.static_bool.source.object_index = builder.object->index;
+
     while(module_func->arity != ast_func->arity){
         if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
             module_func->basicblocks = builder.basicblocks;
@@ -536,22 +546,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 unsigned int conditional_type = statements[s]->id;
                 if(ir_gen_expression(builder, ((ast_expr_if_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
-                // Create static bool type for comparison with
-                ast_elem_base_t bool_base;
-                bool_base.id = AST_ELEM_BASE;
-                bool_base.source = NULL_SOURCE;
-                bool_base.source.object_index = builder->object->index;
-                bool_base.base = "bool";
-                ast_elem_t *bool_type_elem = (ast_elem_t*) &bool_base;
-                ast_type_t bool_type;
-                bool_type.elements = &bool_type_elem;
-                bool_type.elements_length = 1;
-                bool_type.source = NULL_SOURCE;
-                bool_type.source.object_index = builder->object->index;
-
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &bool_type, CONFORM_MODE_PRIMITIVES)){
+                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_PRIMITIVES)){
                     char *a_type_str = ast_type_str(&temporary_type);
-                    char *b_type_str = ast_type_str(&bool_type);
+                    char *b_type_str = ast_type_str(&builder->static_bool);
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
                     free(a_type_str);
                     free(b_type_str);
@@ -601,22 +598,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 unsigned int conditional_type = statements[s]->id;
                 if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
-                // Create static bool type for comparison with
-                ast_elem_base_t bool_base;
-                bool_base.id = AST_ELEM_BASE;
-                bool_base.source = NULL_SOURCE;;
-                bool_base.source.object_index = builder->object->index;
-                bool_base.base = "bool";
-                ast_elem_t *bool_type_elem = (ast_elem_t*) &bool_base;
-                ast_type_t bool_type;
-                bool_type.elements = &bool_type_elem;
-                bool_type.elements_length = 1;
-                bool_type.source = NULL_SOURCE;;
-                bool_type.source.object_index = builder->object->index;
-
-                if(!ast_types_identical(&temporary_type, &bool_type)){
+                if(!ast_types_identical(&temporary_type, &builder->static_bool)){
                     char *a_type_str = ast_type_str(&temporary_type);
-                    char *b_type_str = ast_type_str(&bool_type);
+                    char *b_type_str = ast_type_str(&builder->static_bool);
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
                     free(a_type_str);
                     free(b_type_str);
@@ -1033,7 +1017,6 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 ir_type_t *idx_ir_type = ir_builder_usize(builder);
                 ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
-                ir_type_t *ir_bool_type = ir_builder_usize(builder);
 
                 open_var_scope(builder);
 
@@ -1072,13 +1055,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Generate (idx == length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr);
-
-                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
-                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_EQUALS;
-                ((ir_instr_math_t*) built_instr)->a = idx_value;
-                ((ir_instr_math_t*) built_instr)->b = array_length;
-                ((ir_instr_math_t*) built_instr)->result_type = ir_bool_type;
-                ir_value_t *is_done_value = build_value_from_prev_instruction(builder);
+                ir_value_t *is_done_value = build_equals(builder, idx_value, array_length);
 
                 // Generate conditional break
                 built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
@@ -1222,7 +1199,6 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 ir_type_t *idx_ir_type = ir_builder_usize(builder);
                 ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
-                ir_type_t *ir_bool_type = ir_builder_bool(builder);
                 
                 open_var_scope(builder);
 
@@ -1263,13 +1239,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Generate (idx == length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr);
-
-                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
-                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_EQUALS;
-                ((ir_instr_math_t*) built_instr)->a = idx_value;
-                ((ir_instr_math_t*) built_instr)->b = limit;
-                ((ir_instr_math_t*) built_instr)->result_type = ir_bool_type;
-                ir_value_t *is_done_value = build_value_from_prev_instruction(builder);
+                ir_value_t *is_done_value = build_equals(builder, idx_value, limit);
 
                 // Generate conditional break
                 built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));

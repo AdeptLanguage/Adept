@@ -185,8 +185,51 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
     case AST_ELEM_GENERIC_BASE: {
             // TODO: Find polymorphic structure and instantiate it with the correct types
 
-            compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Polymorphic structures not supported yet");
-            return FAILURE;
+            ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
+            ir_type_t *created_type = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t));
+            ir_type_extra_composite_t *extra = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_extra_composite_t));
+            created_type->kind = TYPE_KIND_STRUCTURE;
+            created_type->extra = extra;
+
+            // Find polymorphic structure
+            ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
+            
+            if(generic_base->generics_length != template->generics_length){
+                const char *message = generic_base->generics_length < template->generics_length ?
+                                    "Not enough type parameters specified for struct '%s' (expected %d, got %d)"
+                                    : "Too many type parameters specified for struct '%s' (expected %d, got %d)";
+                compiler_panicf(compiler, generic_base->source, message, generic_base->name, template->generics_length, generic_base->generics_length);
+                return FAILURE;
+            }
+
+            ast_type_var_catalog_t catalog;
+            ast_type_var_catalog_init(&catalog);
+
+            for(length_t i = 0; i != template->generics_length; i++){
+                ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+            }
+
+            extra->subtypes = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t*) * template->field_count);
+            extra->subtypes_length = template->field_count;
+
+            for(length_t i = 0; i != extra->subtypes_length; i++){
+                ast_type_t tmp_ast_type;
+                if(resolve_type_polymorphics(compiler, &catalog, &template->field_types[i], &tmp_ast_type)){
+                    ast_type_var_catalog_free(&catalog);
+                    return FAILURE;
+                }
+
+                if(ir_gen_resolve_type(compiler, object, &tmp_ast_type, &extra->subtypes[i])){
+                    ast_type_free(&tmp_ast_type);
+                    ast_type_var_catalog_free(&catalog);
+                    return FAILURE;
+                }
+                ast_type_free(&tmp_ast_type);
+            }
+
+            extra->traits = TRAIT_NONE;
+            *resolved_type = created_type;
+            ast_type_var_catalog_free(&catalog);
         }
         break;
     default: {

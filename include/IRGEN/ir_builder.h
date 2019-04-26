@@ -43,6 +43,9 @@ typedef struct {
     length_t *next_reference_id;
     troolean has_string_struct;
     ir_jobs_t *jobs;
+    ast_type_t static_bool;
+    ast_elem_base_t static_bool_base;
+    ast_elem_t *static_bool_elems;
 } ir_builder_t;
 
 // ---------------- build_basicblock ----------------
@@ -82,6 +85,10 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
 // ---------------- build_break ----------------
 // Builds a break instruction
 void build_break(ir_builder_t *builder, length_t basicblock_id);
+
+// ---------------- build_equals ----------------
+// Builds an equals instruction
+ir_value_t* build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);
 
 // ---------------- build_static_struct ----------------
 // Builds a static struct

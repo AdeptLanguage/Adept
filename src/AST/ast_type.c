@@ -121,8 +121,8 @@ void ast_type_free(ast_type_t *type){
                 free(func_elem->arg_types);
                 free(func_elem->arg_flows);
                 ast_type_free_fully(func_elem->return_type);
-                free(type->elements[i]);
             }
+            free(type->elements[i]);
             break;
         case AST_ELEM_POLYMORPH:
             free(((ast_elem_polymorph_t*) type->elements[i])->name);

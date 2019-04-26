@@ -79,48 +79,48 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
         *ir_value = build_null_pointer(builder->pool);
         break;
-    case EXPR_ADD: 
-        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ADD, INSTRUCTION_FADD, "add", "__add__", false))
+    case EXPR_ADD:
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ADD, INSTRUCTION_FADD, INSTRUCTION_NONE, "add", "__add__", false))
             return FAILURE;
         break;
     case EXPR_SUBTRACT:
-        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT, "subtract", "__subtract__", false))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_SUBTRACT, INSTRUCTION_SUBTRACT, INSTRUCTION_NONE, "subtract", "__subtract__", false))
             return FAILURE;
         break;
     case EXPR_MULTIPLY:
-        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY, "multiply", "__multiply__", false))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY, INSTRUCTION_NONE, "multiply", "__multiply__", false))
             return FAILURE;
         break;
     case EXPR_DIVIDE:
-        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE, "divide", "__divide__", false))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE, "divide", "__divide__", false))
             return FAILURE;
         break;
     case EXPR_MODULUS:
-        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS, "take the modulus of", "__modulus__", false))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS, "take the modulus of", "__modulus__", false))
             return FAILURE;
         break;
     case EXPR_EQUALS:
-        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS, "test equality for", "__equals__", true))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS, INSTRUCTION_NONE, "test equality for", "__equals__", true))
             return FAILURE;
         break;
     case EXPR_NOTEQUALS:
-        if(build_basic_IvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS, "test inequality for", "__not_equals__", true))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS, INSTRUCTION_NONE, "test inequality for", "__not_equals__", true))
             return FAILURE;
         break;
     case EXPR_GREATER:
-        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER, "compare", "__greater_than__", true))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER, "compare", "__greater_than__", true))
             return FAILURE;
         break;
     case EXPR_LESSER:
-        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER, "compare", "__less_than__", true))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER, "compare", "__less_than__", true))
             return FAILURE;
         break;
     case EXPR_GREATEREQ:
-        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ, "compare", "__greater_than_or_equal__", true))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ, "compare", "__greater_than_or_equal__", true))
             return FAILURE;
         break;
     case EXPR_LESSEREQ:
-        if(build_basic_UvSvF_math_op(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ, "compare", "__less_than_or_equal__", true))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ, "compare", "__less_than_or_equal__", true))
             return FAILURE;
         break;
     case EXPR_AND:
@@ -1165,9 +1165,12 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     return SUCCESS;
 }
 
-errorcode_t build_basic_IvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
-        ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int ints_instr, unsigned int floats_instr,
-        const char *operation_name, const char *overload_name, bool standard_result_is_boolean){
+errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
+        unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean){
+
+    // NOTE: If instr3 is INSTRUCTION_NONE then the operation will be differentiated for Integer vs. Float (using instr1 and instr2)
+    //       Otherwise, the operation will be differentiated for Unsigned Integer vs. Signed Integer vs. Float (using instr1, instr2 & instr3)
+
     ir_pool_snapshot_t tmp_pool_snapshot;
     ast_type_t ast_type_a, ast_type_b;
     ir_value_t *lhs, *rhs;
@@ -1179,8 +1182,8 @@ errorcode_t build_basic_IvF_math_op(ir_builder_t *builder, ast_expr_math_t *math
     }
 
     if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_PRIMITIVES)){
-        if(overload_name){
-            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
+        if(overload){
+            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload);
 
             if(*ir_value != NULL){
                 ast_type_free(&ast_type_a);
@@ -1207,17 +1210,20 @@ errorcode_t build_basic_IvF_math_op(ir_builder_t *builder, ast_expr_math_t *math
     instruction->id = INSTRUCTION_NONE; // For safety
     instruction->result_type = lhs->type;
 
-    if(i_vs_f_instruction((ir_instr_math_t*) instruction, ints_instr, floats_instr) == FAILURE){
+    if(instr3 == INSTRUCTION_NONE
+            ? i_vs_f_instruction((ir_instr_math_t*) instruction, instr1, instr2) == FAILURE
+            : u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, instr1, instr2, instr3) == FAILURE
+    ){
         // Remove math instruction template
         ir_pool_snapshot_restore(builder->pool, &tmp_pool_snapshot);
         builder->current_block->instructions_length--;
 
-        *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
+        *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload);
         ast_type_free(&ast_type_a);
         ast_type_free(&ast_type_b);
 
         if(*ir_value == NULL){
-            compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", operation_name);
+            compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", op_verb);
             return FAILURE;
         }
 
@@ -1226,78 +1232,8 @@ errorcode_t build_basic_IvF_math_op(ir_builder_t *builder, ast_expr_math_t *math
 
     *ir_value = build_value_from_prev_instruction(builder);
     if(out_expr_type != NULL){
-        if(standard_result_is_boolean) ast_type_make_base(out_expr_type, strclone("bool"));
-        else                           *out_expr_type = ast_type_clone(&ast_type_a);
-    }
-
-    ast_type_free(&ast_type_a);
-    ast_type_free(&ast_type_b);
-    return SUCCESS;
-}
-
-errorcode_t build_basic_UvSvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
-        ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int unsigned_instr, unsigned int signed_instr,
-        unsigned int floats_instr, const char *operation_name, const char *overload_name, bool standard_result_is_boolean){
-    ir_pool_snapshot_t tmp_pool_snapshot;
-    ast_type_t ast_type_a, ast_type_b;
-    ir_value_t *lhs, *rhs;
-
-    if(ir_gen_expression(builder, math_expr->a, &lhs, false, &ast_type_a)) return FAILURE;
-    if(ir_gen_expression(builder, math_expr->b, &rhs, false, &ast_type_b)){
-        ast_type_free(&ast_type_a);
-        return FAILURE;
-    }
-
-    if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_PRIMITIVES)){
-        if(overload_name){
-            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
-
-            if(*ir_value != NULL){
-                ast_type_free(&ast_type_a);
-                ast_type_free(&ast_type_b);
-                return SUCCESS;
-            }
-        }
-
-        char *a_type_str = ast_type_str(&ast_type_a);
-        char *b_type_str = ast_type_str(&ast_type_b);
-        compiler_panicf(builder->compiler, math_expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-        free(a_type_str);
-        free(b_type_str);
-        ast_type_free(&ast_type_a);
-        ast_type_free(&ast_type_b);
-        return FAILURE;
-    }
-
-    // Add math instruction template
-    ir_pool_snapshot_capture(builder->pool, &tmp_pool_snapshot);
-    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-    instruction->a = lhs;
-    instruction->b = rhs;
-    instruction->id = INSTRUCTION_NONE; // For safety
-    instruction->result_type = lhs->type;
-
-    if(u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, unsigned_instr, signed_instr, floats_instr) == FAILURE){
-        // Remove math instruction template
-        ir_pool_snapshot_restore(builder->pool, &tmp_pool_snapshot);
-        builder->current_block->instructions_length--;
-
-        *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload_name);
-        ast_type_free(&ast_type_a);
-        ast_type_free(&ast_type_b);
-
-        if(*ir_value == NULL){
-            compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", operation_name);
-            return FAILURE;
-        }
-
-        return SUCCESS;
-    }
-
-    *ir_value = build_value_from_prev_instruction(builder);
-    if(out_expr_type != NULL){
-        if(standard_result_is_boolean) ast_type_make_base(out_expr_type, strclone("bool"));
-        else                           *out_expr_type = ast_type_clone(&ast_type_a);
+        if(result_is_boolean) ast_type_make_base(out_expr_type, strclone("bool"));
+        else                  *out_expr_type = ast_type_clone(&ast_type_a);
     }
 
     ast_type_free(&ast_type_a);

@@ -563,6 +563,16 @@ successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, l
     return false;
 }
 
+ast_polymorphic_struct_t *ast_polymorphic_struct_find(ast_t *ast, const char *name){
+    // TODO: Maybe sort and do a binary serach or something
+    for(length_t i = 0; i != ast->polymorphic_structs_length; i++){
+        if(strcmp(ast->polymorphic_structs[i].name, name) == 0){
+            return &ast->polymorphic_structs[i];
+        }
+    }
+    return NULL;
+}
+
 successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t *out_index){
     for(length_t i = 0; i != ast_enum->length; i++){
         if(strcmp(ast_enum->kinds[i], name) == 0){

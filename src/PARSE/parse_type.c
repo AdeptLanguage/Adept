@@ -134,7 +134,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             ast_elem_generic_base_t *generic_base_elem = malloc(sizeof(ast_elem_generic_base_t));
             generic_base_elem->id = AST_ELEM_GENERIC_BASE;
             generic_base_elem->name = base_name;
-            generic_base_elem->source = sources[*i];
+            generic_base_elem->source = sources[*i - 1];
             generic_base_elem->generics = generics;
             generic_base_elem->generics_length = generics_length;
             generic_base_elem->name_is_polymorphic = false;

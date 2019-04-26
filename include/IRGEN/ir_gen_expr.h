@@ -35,14 +35,17 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
 #define MATH_OP_RESULT_BOOL  0x02
 #define MATH_OP_ALL_BOOL     0x03
 
-
-errorcode_t build_basic_IvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
-    ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int ints_instr, unsigned int floats_instr,
-    const char *operation_name, const char *overload_name, bool standard_result_is_boolean);
-
-errorcode_t build_basic_UvSvF_math_op(ir_builder_t *builder, ast_expr_math_t *math_expr,
-        ir_value_t **ir_value, ast_type_t *out_expr_type, unsigned int unsigned_instr, unsigned int signed_instr,
-        unsigned int floats_instr, const char *operation_name, const char *overload_name, bool standard_result_is_boolean);
+// ---------------- differentiate_math_operation ----------------
+// Differentiates an operation for different data types
+// When given 2 instruction ids: (instr3 == INSTRUCTION_NONE)
+//     - instr1 is chosen for integers
+//     - instr2 is chosen for floats
+// When given 3 instruction ids:
+//     - instr1 is chosen for unsigned integers
+//     - instr2 is chosen for signed integers
+//     - instr3 is chosen for floats
+errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
+        unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean);
 
 // ---------------- i_vs_f_instruction ----------------
 // If the math instruction given will have it's

@@ -361,32 +361,87 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                     ir_value_t **composite_offsets = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * composite->subtypes_length);
                     ir_value_t **composite_member_names = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * composite->subtypes_length);
 
-                    const char *struct_name = ((ast_elem_base_t*) table->records[i].ast_type.elements[0])->base;
-                    ast_struct_t *structure = ast_struct_find(&builder->object->ast, struct_name);
+                    ast_elem_t *elem = table->records[i].ast_type.elements[0];
 
-                    if(structure == NULL){
-                        redprintf("INTERNAL ERROR: Failed to find struct '%s' that should exist when generating runtime type table!\n", struct_name);
-                        return FAILURE;
-                    }
-
-                    if(structure->field_count != composite->subtypes_length){
-                        redprintf("INTERNAL ERROR: Mismatching member count of IR as AST types for struct '%s' when generating runtime type table!\n", struct_name);
-                        return FAILURE;
-                    }
-
-                    for(length_t s = 0; s != composite->subtypes_length; s++){
-                        char *member_type_name = ast_type_str(&structure->field_types[s]);
-                        maybe_index_t subtype_index = type_table_find(table, member_type_name);
-                        free(member_type_name);
-
-                        if(subtype_index == -1){
-                            composite_members[s] = build_null_pointer(builder->pool); // members[s]
-                        } else {
-                            composite_members[s] = build_const_bitcast(builder->pool, array_values[subtype_index], any_type_ptr_type); // members[s]
+                    if(elem->id == AST_ELEM_GENERIC_BASE){
+                        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
+                        
+                        // Find polymorphic struct
+                        ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&builder->object->ast, generic_base->name);
+                        
+                        if(template == NULL){
+                            redprintf("INTERNAL ERROR: Failed to find polymorphic struct '%s' that should exist when generating runtime type table!\n", generic_base->name);
+                            return FAILURE;
                         }
 
-                        composite_offsets[s] = build_literal_usize(builder->pool, 0);
-                        composite_member_names[s] = build_literal_cstr(builder, structure->field_names[s]);
+                        // Substitute generic type parameters
+                        ast_type_var_catalog_t catalog;
+                        ast_type_var_catalog_init(&catalog);
+
+                        if(template->generics_length != generic_base->generics_length){
+                            redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
+                            return FAILURE;
+                        }
+
+                        for(length_t i = 0; i != template->generics_length; i++){
+                            ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+                        }
+
+                        // Generate meta data
+                        for(length_t s = 0; s != composite->subtypes_length; s++){
+                            ast_type_t tmp_ast_type;
+                            if(resolve_type_polymorphics(builder->compiler, &catalog, &template->field_types[s], &tmp_ast_type)){
+                                ast_type_var_catalog_free(&catalog);
+                                return FAILURE;
+                            }
+
+                            char *member_type_name = ast_type_str(&tmp_ast_type);
+                            maybe_index_t subtype_index = type_table_find(table, member_type_name);
+                            free(member_type_name);
+
+                            if(subtype_index == -1){
+                                composite_members[s] = build_null_pointer_of_type(builder->pool, any_type_ptr_type); // members[s]
+                            } else {
+                                composite_members[s] = build_const_bitcast(builder->pool, array_values[subtype_index], any_type_ptr_type); // members[s]
+                            }
+
+                            composite_offsets[s] = build_literal_usize(builder->pool, 0);
+                            composite_member_names[s] = build_literal_cstr(builder, template->field_names[s]);
+                            ast_type_free(&tmp_ast_type);
+                        }
+
+                        ast_type_var_catalog_free(&catalog);
+                    } else if(elem->id == AST_ELEM_BASE){
+                        const char *struct_name = ((ast_elem_base_t*) elem)->base;
+                        ast_struct_t *structure = ast_struct_find(&builder->object->ast, struct_name);
+
+                        if(structure == NULL){
+                            redprintf("INTERNAL ERROR: Failed to find struct '%s' that should exist when generating runtime type table!\n", struct_name);
+                            return FAILURE;
+                        }
+
+                        if(structure->field_count != composite->subtypes_length){
+                            redprintf("INTERNAL ERROR: Mismatching member count of IR as AST types for struct '%s' when generating runtime type table!\n", struct_name);
+                            return FAILURE;
+                        }
+
+                        for(length_t s = 0; s != composite->subtypes_length; s++){
+                            char *member_type_name = ast_type_str(&structure->field_types[s]);
+                            maybe_index_t subtype_index = type_table_find(table, member_type_name);
+                            free(member_type_name);
+
+                            if(subtype_index == -1){
+                                composite_members[s] = build_null_pointer_of_type(builder->pool, any_type_ptr_type); // members[s]
+                            } else {
+                                composite_members[s] = build_const_bitcast(builder->pool, array_values[subtype_index], any_type_ptr_type); // members[s]
+                            }
+
+                            composite_offsets[s] = build_literal_usize(builder->pool, 0);
+                            composite_member_names[s] = build_literal_cstr(builder, structure->field_names[s]);
+                        }
+                    } else {
+                        redprintf("INTERNAL ERROR: Unknown AST type element for TYPE_KIND_STRUCTURE when generating runtime type information!\n");
+                        return FAILURE;
                     }
 
                     ir_value_t *members_array = build_static_array(builder->pool, any_type_ptr_type, composite_members, composite->subtypes_length);

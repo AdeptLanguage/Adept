@@ -163,13 +163,12 @@ errorcode_t pkg_read(compiler_t *compiler, object_t *object){
             ((char*)tokenlist->tokens[t].data)[buildup_length] = '\0';
         }
         else if(id == TOKEN_STRING){
-            length_t length;
-            fread(&length, sizeof(length_t), 1, file);
+            fread(&buildup_length, sizeof(length_t), 1, file);
 
             tokenlist->tokens[t].data = malloc(sizeof(token_string_data_t));
             ((token_string_data_t*) tokenlist->tokens[t].data)->array = malloc(buildup_length + 1);
-            fread(((token_string_data_t*) tokenlist->tokens[t].data)->array, sizeof(char), length, file);
-            ((token_string_data_t*) tokenlist->tokens[t].data)->array[length] = '\0'; // For lazy conversion to c-string
+            fread(((token_string_data_t*) tokenlist->tokens[t].data)->array, sizeof(char), buildup_length, file);
+            ((token_string_data_t*) tokenlist->tokens[t].data)->array[buildup_length] = '\0'; // For lazy conversion to c-string
         }
         else if(id == TOKEN_GENERIC_INT){
             char read;
