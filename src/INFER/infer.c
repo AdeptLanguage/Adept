@@ -778,43 +778,50 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
     ast_elem_t **new_elements = NULL;
     length_t length = 0;
     length_t capacity = 0;
-
     maybe_null_strong_cstr_t maybe_alias_name = NULL;
 
     for(length_t e = 0; e != type->elements_length; e++){
-        if(type->elements[e]->id == AST_ELEM_BASE){
-            int alias_index = find_alias(aliases, aliases_length, ((ast_elem_base_t*) type->elements[e])->base);
-            if(alias_index != -1){
+        ast_elem_t *elem = type->elements[e];
 
-                // NOTE: The alias target type was already resolved of any aliases,
-                //       so we don't have to scan the new elements
-                ast_type_t cloned = ast_type_clone(&aliases[alias_index].type);
-                expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, cloned.elements_length, 4);
+        switch(elem->id){
+        case AST_ELEM_BASE: {
+                int alias_index = find_alias(aliases, aliases_length, ((ast_elem_base_t*) elem)->base);
+                if(alias_index != -1){
+                    // NOTE: The alias target type was already resolved of any aliases,
+                    //       so we don't have to scan the new elements
+                    ast_type_t cloned = ast_type_clone(&aliases[alias_index].type);
+                    expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, cloned.elements_length, 4);
 
-                // Move all the elements from the cloned type to this type
-                for(length_t m = 0; m != cloned.elements_length; m++){
-                    new_elements[length++] = cloned.elements[m];
+                    // Move all the elements from the cloned type to this type
+                    for(length_t m = 0; m != cloned.elements_length; m++){
+                        new_elements[length++] = cloned.elements[m];
+                    }
+
+                    // DANGEROUS: Manually (partially) deleting ast_elem_base_t
+                    maybe_alias_name = ((ast_elem_base_t*) elem)->base;
+                    free(elem);
+
+                    free(cloned.elements);
+                    continue; // Don't do normal stuff that follows
                 }
-
-                // DANGEROUS: Manually (partially) deleting ast_elem_base_t
-                maybe_alias_name = ((ast_elem_base_t*) type->elements[e])->base;
-                free(type->elements[e]);
-
-                free(cloned.elements);
-                continue; // Don't do normal stuff that follows
             }
-        }
-        else if(type->elements[e]->id == AST_ELEM_FUNC){
-            for(length_t a = 0; a != ((ast_elem_func_t*) type->elements[e])->arity; a++){
-                if(infer_type(ctx, &((ast_elem_func_t*) type->elements[e])->arg_types[a])) return FAILURE;
+            break;
+        case AST_ELEM_FUNC:
+            for(length_t a = 0; a != ((ast_elem_func_t*) elem)->arity; a++){
+                if(infer_type(ctx, &((ast_elem_func_t*) elem)->arg_types[a])) return FAILURE;
             }
-
-            if(infer_type(ctx, ((ast_elem_func_t*) type->elements[e])->return_type)) return FAILURE;
+            if(infer_type(ctx, ((ast_elem_func_t*) elem)->return_type)) return FAILURE;
+            break;
+        case AST_ELEM_GENERIC_BASE:
+            for(length_t a = 0; a != ((ast_elem_generic_base_t*) elem)->generics_length; a++){
+                if(infer_type(ctx, &((ast_elem_generic_base_t*) elem)->generics[a])) return FAILURE;
+            }
+            break;
         }
 
         // If not an alias, continue on as usual
         expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, 1, 4);
-        new_elements[length++] = type->elements[e];
+        new_elements[length++] = elem;
     }
 
     // Overwrite changes

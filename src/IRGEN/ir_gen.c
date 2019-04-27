@@ -380,6 +380,7 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
 
                         if(template->generics_length != generic_base->generics_length){
                             redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
+                            ast_type_var_catalog_free(&catalog);
                             return FAILURE;
                         }
 

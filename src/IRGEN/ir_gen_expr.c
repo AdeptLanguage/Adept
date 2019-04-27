@@ -403,38 +403,110 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
             }
 
-            if(struct_value_ast_type.elements_length == 0 || struct_value_ast_type.elements[0]->id != AST_ELEM_BASE){
-                char *nonstruct_typename = ast_type_str(&struct_value_ast_type);
-                compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-struct type '%s'", nonstruct_typename);
-                ast_type_free(&struct_value_ast_type);
-                free(nonstruct_typename);
-                return FAILURE;
-            }
-
-            char *struct_name = ((ast_elem_base_t*) struct_value_ast_type.elements[0])->base;
-            ast_struct_t *target = ast_struct_find(&builder->object->ast, struct_name);
-
-            if(target == NULL){
-                if(typename_builtin_type(struct_name) != BUILTIN_TYPE_NONE){
-                    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on built-in type '%s'", struct_name);
-                } else {
-                    compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", struct_name);
-                }
+            if(struct_value_ast_type.elements_length == 0){
+                compiler_panicf(builder->compiler, expr->source, "INTERNAL ERROR: Member expression in ir_gen_expression received bad AST type");
                 ast_type_free(&struct_value_ast_type);
                 return FAILURE;
+
             }
 
             length_t field_index;
-            if(!ast_struct_find_field(target, member_expr->member, &field_index)){
-                char *struct_typename = ast_type_str(&struct_value_ast_type);
-                compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "Field '%s' doesn't exist in struct '%s'", member_expr->member, struct_typename);
-                ast_type_free(&struct_value_ast_type);
-                free(struct_typename);
-                return FAILURE;
-            }
-
             ir_type_t *field_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[field_index], &field_type)) return FAILURE;
+            ast_elem_t *elem = struct_value_ast_type.elements[0];
+
+            switch(elem->id){
+            case AST_ELEM_BASE: {
+                    char *struct_name = ((ast_elem_base_t*) elem)->base;
+                    ast_struct_t *target = ast_struct_find(&builder->object->ast, struct_name);
+
+                    if(target == NULL){
+                        if(typename_builtin_type(struct_name) != BUILTIN_TYPE_NONE){
+                            compiler_panicf(builder->compiler, expr->source, "Can't use member operator on built-in type '%s'", struct_name);
+                        } else {
+                            compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", struct_name);
+                        }
+                        ast_type_free(&struct_value_ast_type);
+                        return FAILURE;
+                    }
+
+                    if(!ast_struct_find_field(target, member_expr->member, &field_index)){
+                        char *struct_typename = ast_type_str(&struct_value_ast_type);
+                        compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "Field '%s' doesn't exist in struct '%s'", member_expr->member, struct_typename);
+                        ast_type_free(&struct_value_ast_type);
+                        free(struct_typename);
+                        return FAILURE;
+                    }
+
+                    if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[field_index], &field_type)){
+                        ast_type_free(&struct_value_ast_type);
+                        return FAILURE;
+                    }
+
+                    if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&target->field_types[field_index]);
+                }
+                break;
+            case AST_ELEM_GENERIC_BASE: {
+                    ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
+
+                    char *poly_struct_name = generic_base->name;
+                    ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&builder->object->ast, poly_struct_name);
+
+                    if(template == NULL){
+                        compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find polymorphic struct '%s' that should exist", poly_struct_name);
+                        ast_type_free(&struct_value_ast_type);
+                        return FAILURE;
+                    }
+
+                    if(!ast_struct_find_field((ast_struct_t*) template, member_expr->member, &field_index)){
+                        char *struct_typename = ast_type_str(&struct_value_ast_type);
+                        compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "Field '%s' doesn't exist in struct '%s'", member_expr->member, struct_typename);
+                        ast_type_free(&struct_value_ast_type);
+                        free(struct_typename);
+                        return FAILURE;
+                    }
+
+                    // Substitute generic type parameters
+                    ast_type_var_catalog_t catalog;
+                    ast_type_var_catalog_init(&catalog);
+
+                    if(template->generics_length != generic_base->generics_length){
+                        redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
+                        ast_type_free(&struct_value_ast_type);
+                        ast_type_var_catalog_free(&catalog);
+                        return FAILURE;
+                    }
+
+                    for(length_t i = 0; i != template->generics_length; i++){
+                        ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+                    }
+
+                    ast_type_t ast_field_type;
+                    if(resolve_type_polymorphics(builder->compiler, &catalog, &template->field_types[field_index], &ast_field_type)){
+                        ast_type_free(&struct_value_ast_type);
+                        ast_type_var_catalog_free(&catalog);
+                        return FAILURE;
+                    }
+
+                    if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &field_type)){
+                        ast_type_free(&struct_value_ast_type);
+                        ast_type_var_catalog_free(&catalog);
+                        return FAILURE;
+                    }
+
+                    if(out_expr_type != NULL) *out_expr_type = ast_field_type;
+                    else                      ast_type_free(&ast_field_type);
+
+                    ast_type_var_catalog_free(&catalog);
+                }
+                break;
+            default: {
+                    char *nonstruct_typename = ast_type_str(&struct_value_ast_type);
+                    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-struct type '%s'", nonstruct_typename);
+                    ast_type_free(&struct_value_ast_type);
+                    free(nonstruct_typename);
+                    return FAILURE;
+                }
+            }
 
             ir_type_t *field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
             field_ptr_type->kind = TYPE_KIND_POINTER;
@@ -455,7 +527,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             ast_type_free(&struct_value_ast_type);
-            if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&target->field_types[field_index]);
         }
         break;
     case EXPR_ADDRESS: {
