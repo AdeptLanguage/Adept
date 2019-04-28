@@ -553,9 +553,7 @@ void compiler_warn(compiler_t *compiler, source_t source, const char *message){
     object_t *object = compiler->objects[source.object_index];
     int line, column;
     lex_get_location(object->buffer, source.index, &line, &column);
-    terminal_set_color(TERMINAL_COLOR_YELLOW);
-    printf("%s:%d:%d: %s\n", filename_name_const(object->filename), line, column, message);
-    terminal_set_color(TERMINAL_COLOR_DEFAULT);
+    yellowprintf("%s:%d:%d: %s\n", filename_name_const(object->filename), line, column, message);
 }
 
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){

@@ -713,6 +713,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         case TYPE_KIND_FLOAT: zero = LLVMConstReal(LLVMFloatType(), 0); break;
                         case TYPE_KIND_DOUBLE: zero = LLVMConstReal(LLVMDoubleType(), 0); break;
                         case TYPE_KIND_BOOLEAN: zero = LLVMConstInt(LLVMInt1Type(), 0, false); break;
+                        case TYPE_KIND_FUNCPTR:
                         case TYPE_KIND_POINTER: zero = LLVMConstNull(ir_to_llvm_type(((ir_instr_cast_t*) instr)->value->type)); break;
                         default:
                             redprintf("INTERNAL ERROR: INSTRUCTION_ISNTZERO received unknown type kind\n");

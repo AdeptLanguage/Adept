@@ -1,0 +1,33 @@
+
+import '2.1/basics.adept'
+
+struct <$T> Box (contents $T)
+
+func boxes_demo {
+    int_box <int> Box
+    float_box <float> Box
+    box_box <<String> Box> Box
+    
+    int_box.contents = 123
+    print("int_box.contents = %" % int_box.contents)
+    
+    float_box.contents = 3.14159265
+    print("float_box.contents = %" % float_box.contents)
+    
+    box_box.contents.contents = "Hello World"
+    print("box_box.contents.contents = \"%\"" % box_box.contents.contents)
+}
+
+struct <$K, $V> Pair (key $K, value $V)
+
+func pairs_demo {
+    name_age <String, int> Pair
+    name_age.key = "John Smith"
+    name_age.value = 42
+    print("% is % years old" % name_age.key % name_age.value)
+}
+
+func main {
+    boxes_demo()
+    pairs_demo()
+}

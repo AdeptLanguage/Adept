@@ -13,6 +13,13 @@ func main(in argc int, in argv **ubyte) int {
     math_operation = func &product
     myprint('>>> 8 * 13 = %d\n', math_operation(8, 13))
     math_operation(8, 13)
+
+    if !math_operation || math_operation == null || !(math_operation && math_operation) {
+        printf('math_operation is null\n')
+    } else {
+        printf('math_operation exists\n')
+    }
+
     return 0
 }
 

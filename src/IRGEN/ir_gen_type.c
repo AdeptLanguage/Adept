@@ -333,10 +333,10 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         }
     }
 
-    if(to_type_kind == TYPE_KIND_BOOLEAN && (from_type_kind != TYPE_KIND_NONE || (from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_POINTER))){
+    if(to_type_kind == TYPE_KIND_BOOLEAN && (from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_POINTER || from_traits & TYPE_TRAIT_FUNC_PTR)){
         ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         instr->id = INSTRUCTION_ISNTZERO;
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
         instr->result_type = ir_to_type;
         instr->value = *ir_value;
         *ir_value = build_value_from_prev_instruction(builder);
@@ -353,7 +353,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         ){
 
         // Casting ptr -> *something
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
         ir_instr_cast_t *bitcast_instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         bitcast_instr->id = INSTRUCTION_BITCAST;
@@ -369,7 +369,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         || to_traits & TYPE_TRAIT_BASE_PTR)){
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
             instr->id = INSTRUCTION_INTTOPTR;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -379,7 +379,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         || from_traits & TYPE_TRAIT_BASE_PTR)){
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
             instr->id = INSTRUCTION_PTRTOINT;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -401,7 +401,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
             if(global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind]){
                 instr->id = INSTRUCTION_REINTERPRET; // They are the same size
-                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
                 instr->result_type = ir_to_type;
                 instr->value = *ir_value;
                 *ir_value = build_value_from_prev_instruction(builder);
@@ -413,7 +413,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
                 (from_is_float ? INSTRUCTION_FEXT   : INSTRUCTION_ZEXT) :
                 (from_is_float ? INSTRUCTION_FTRUNC : INSTRUCTION_TRUNC);
 
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -432,7 +432,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
                 (to_is_signed   ? INSTRUCTION_FPTOSI : INSTRUCTION_FPTOUI):
                 (from_is_signed ? INSTRUCTION_SITOFP : INSTRUCTION_UITOFP);
 
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return FAILURE;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -448,7 +448,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
 
             // Set result type of instruction
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &instr->result_type)) return FAILURE;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &instr->result_type)) return false;
 
             // Set 'from' value for instruction
             instr->value = *ir_value;
@@ -480,7 +480,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
         // type *AnyType
         values[0] = rtti_for(builder, ast_from_type, ast_to_type->source);
-        if(values[0] == NULL) return FAILURE;
+        if(values[0] == NULL) return false;
 
         // placeholder ulong
         if(ast_from_type->elements_length != 0) switch(ast_from_type->elements[0]->id){
@@ -613,7 +613,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
         if(!ir_type_map_find(builder->type_map, "Any", &any_type)){
             redprintf("INTERNAL ERROR: Failed to find 'Any' type used by the runtime type table that should've been injected\n");
-            return FAILURE;
+            return false;
         }
         
         *ir_value = build_struct_construction(builder->pool, any_type, values, 2);

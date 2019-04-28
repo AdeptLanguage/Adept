@@ -1433,7 +1433,7 @@ int i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsig
     // NOTE: Returns 1 if unsupported type
 
     switch(instruction->a->type->kind){
-    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
+    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
     case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
         if(i_instr == INSTRUCTION_NONE) return FAILURE;
@@ -1454,7 +1454,7 @@ int u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_ins
     // NOTE: Returns 1 if unsupported type
 
     switch(instruction->a->type->kind){
-    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
+    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
         if(u_instr == INSTRUCTION_NONE) return FAILURE;
         instruction->id = u_instr; break;
@@ -1471,7 +1471,7 @@ int u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_ins
 
 char ir_type_get_catagory(ir_type_t *type){
     switch(type->kind){
-    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
+    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
         return PRIMITIVE_UI;
     case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:

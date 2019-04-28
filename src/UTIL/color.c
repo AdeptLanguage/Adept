@@ -29,6 +29,7 @@ void terminal_set_color_posix(char color){
     switch(color){
     case TERMINAL_COLOR_DEFAULT:
         fputs("\e[0m", stdout);
+        fflush(stdout);
         break;
     case TERMINAL_COLOR_RED:
         fputs("\e[31;1m", stdout);

@@ -598,7 +598,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 unsigned int conditional_type = statements[s]->id;
                 if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
-                if(!ast_types_identical(&temporary_type, &builder->static_bool)){
+                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_PRIMITIVES)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&builder->static_bool);
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
