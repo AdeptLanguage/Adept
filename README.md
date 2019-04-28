@@ -1,5 +1,5 @@
 
-# Adept 2.0
+# The Adept Programming Language
 A blazing fast language for general purpose programming.
 
 ## Command-Line Usage
