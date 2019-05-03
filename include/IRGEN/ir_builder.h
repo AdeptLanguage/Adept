@@ -226,6 +226,12 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
 // ---------------- resolve_type_polymorphics ----------------
 // Resolves any polymorphic type variables within an AST type
 // NOTE: Will show error messages on failure
+// NOTE: in_type == out_type is allowed
+// NOTE: out_type is same as in_type if out_type == null
 errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
+
+// ---------------- resolve_expr_polymorphics ----------------
+// Resovles any polymorphic type variables within an AST expression
+errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_expr_t *expr);
 
 #endif // IR_BUILDER_H

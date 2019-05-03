@@ -491,8 +491,6 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         }
         break;
     case EXPR_ADDRESS:
-        if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return FAILURE;
-        break;
     case EXPR_DEREFERENCE:
         if(infer_expr(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, EXPR_NONE, scope)) return FAILURE;
         break;

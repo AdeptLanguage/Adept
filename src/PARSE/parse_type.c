@@ -102,12 +102,21 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
 
                 if(parse_ignore_newlines(ctx, "Expected type in polymorphic generics")){
                     ast_types_free_fully(generics, generics_length);
+                    ast_type_free(out_type);
                     return FAILURE;
                 }
 
-                if(parse_type(ctx, &generics[generics_length++])
-                || parse_ignore_newlines(ctx, "Expected '>' or ',' after type in polymorphic generics")){
+                if(parse_type(ctx, &generics[generics_length])){
                     ast_types_free_fully(generics, generics_length);
+                    ast_type_free(out_type);
+                    return FAILURE;
+                }
+
+                generics_length++;
+
+                if(parse_ignore_newlines(ctx, "Expected '>' or ',' after type in polymorphic generics")){
+                    ast_types_free_fully(generics, generics_length);
+                    ast_type_free(out_type);
                     return FAILURE;
                 }
 
@@ -115,11 +124,13 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                     if(tokens[++(*i)].id == TOKEN_GREATERTHAN){
                         compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected type after ',' in polymorphic generics");
                         ast_types_free_fully(generics, generics_length);
+                        ast_type_free(out_type);
                         return FAILURE;
                     }
                 } else if(tokens[*i].id != TOKEN_GREATERTHAN){
                     compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after type in polymorphic generics");
                     ast_types_free_fully(generics, generics_length);
+                    ast_type_free(out_type);
                     return FAILURE;
                 }
             }
@@ -128,6 +139,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             if(parse_eat(ctx, TOKEN_GREATERTHAN, "Expected '>' after polymorphic generics")
             || (base_name = parse_take_word(ctx, "Expected type name")) == NULL){
                 ast_types_free_fully(generics, generics_length);
+                ast_type_free(out_type);
                 return FAILURE;
             }
 

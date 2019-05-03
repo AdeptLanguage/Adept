@@ -158,7 +158,7 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
 
     // Create jobs for already existing function mappings
     ir_jobs_t jobs;
-    jobs.jobs = malloc(sizeof(ir_func_mapping_t) * (*mappings_length) + 4);
+    jobs.jobs = malloc(sizeof(ir_func_mapping_t) * (*mappings_length + 4));
     jobs.length = *mappings_length;
     jobs.capacity = *mappings_length + 4;
     memcpy(jobs.jobs, object->ir_module.func_mappings, sizeof(ir_func_mapping_t) * *mappings_length);
