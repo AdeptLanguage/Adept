@@ -1046,7 +1046,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         #define expr_as_ifelse ((ast_expr_ifelse_t*) expr)
         #define clone_as_ifelse ((ast_expr_ifelse_t*) clone)
 
-        clone = malloc(sizeof(ast_expr_if_t));
+        clone = malloc(sizeof(ast_expr_ifelse_t));
         clone_as_ifelse->label = expr_as_ifelse->label;
         clone_as_ifelse->value = ast_expr_clone(expr_as_ifelse->value);
         clone_as_ifelse->statements_length = expr_as_ifelse->statements_length;
