@@ -73,6 +73,8 @@ compile order || exit $?
 compile package || exit $?
 compile package_use || exit $?
 compile polymorphic_functions || exit $?
+compile polymorphic_inner || exit $?
+compile polymorphic_structs || exit $?
 compile pragma || exit $?
 compile primitives || exit $?
 compile repeat || exit $?

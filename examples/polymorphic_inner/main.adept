@@ -1,0 +1,22 @@
+
+import '2.1/basics.adept'
+
+struct <$T> Box (contents $T)
+
+func main {
+    test(100)
+    test(3.14159265)
+    test("Hello")
+}
+
+func test(value $T) {
+    x $T = value
+    y *$T = new $T
+    z <$T> Box
+    
+    defer delete y
+    *y = value
+    z.contents = value
+    
+    print("% + % + % = %" % x % *y % z.contents % (x + *y + z.contents))
+}
