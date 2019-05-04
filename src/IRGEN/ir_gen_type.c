@@ -602,15 +602,6 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             values[1] = build_literal_usize(builder->pool, 0);
         }
 
-        //#define AST_ELEM_NONE          0x00
-        //#define AST_ELEM_BASE          0x01
-        //#define AST_ELEM_POINTER       0x02
-        //#define AST_ELEM_ARRAY         0x03
-        //#define AST_ELEM_FIXED_ARRAY   0x04
-        //#define AST_ELEM_GENERIC_INT   0x05
-        //#define AST_ELEM_GENERIC_FLOAT 0x06
-        //#define AST_ELEM_FUNC          0x07
-
         if(!ir_type_map_find(builder->type_map, "Any", &any_type)){
             redprintf("INTERNAL ERROR: Failed to find 'Any' type used by the runtime type table that should've been injected\n");
             return false;

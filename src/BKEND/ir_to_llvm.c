@@ -630,7 +630,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     if(((ir_instr_func_address_t*) instr)->name == NULL){
                         // Not a foreign function, so resolve via id
                         char implementation_name[256];
-                        sprintf(implementation_name, "a%X", (int) ((ir_instr_func_address_t*) instr)->ast_func_id);
+                        sprintf(implementation_name, "a%X", (int) ((ir_instr_func_address_t*) instr)->ir_func_id);
                         llvm_result = LLVMGetNamedFunction(llvm_module, implementation_name);
                     } else {
                         // Is a foreign function, so get by name

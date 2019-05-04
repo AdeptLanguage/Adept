@@ -550,7 +550,15 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
-            ir_type_t *ir_funcptr_type = ir_builder_funcptr(builder);
+            ir_type_extra_function_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
+            extra->arg_types = pair.ir_func->argument_types;
+            extra->arity = pair.ast_func->arity;
+            extra->return_type = pair.ir_func->return_type;
+            extra->traits = func_addr_expr->traits;
+
+            ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
+            ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
+            ir_funcptr_type->extra = extra;
 
             const char *maybe_name = pair.ast_func->traits & AST_FUNC_FOREIGN ||
                 pair.ast_func->traits & AST_FUNC_MAIN ? func_addr_expr->name : NULL;
@@ -560,7 +568,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ((ir_instr_func_address_t*) instruction)->id = INSTRUCTION_FUNC_ADDRESS;
             ((ir_instr_func_address_t*) instruction)->result_type = ir_funcptr_type;
             ((ir_instr_func_address_t*) instruction)->name = maybe_name;
-            ((ir_instr_func_address_t*) instruction)->ast_func_id = pair.ast_func_id;
+            ((ir_instr_func_address_t*) instruction)->ir_func_id = pair.ir_func_id;
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
 
@@ -573,7 +581,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 function_elem->id = AST_ELEM_FUNC;
                 function_elem->source = func_addr_expr->source;
                 function_elem->arg_types = pair.ast_func->arg_types;
-                function_elem->arg_flows = pair.ast_func->arg_flows;
                 function_elem->arity = pair.ast_func->arity;
                 function_elem->return_type = &pair.ast_func->return_type;
                 function_elem->traits = pair.ast_func->traits;

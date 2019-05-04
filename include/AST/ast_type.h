@@ -89,7 +89,6 @@ typedef struct {
     unsigned int id;
     source_t source;
     ast_type_t *arg_types;
-    char *arg_flows;
     length_t arity;
     ast_type_t *return_type;
     trait_t traits; // Uses AST_FUNC_* traits

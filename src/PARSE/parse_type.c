@@ -179,7 +179,6 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
     source_t *sources = ctx->tokenlist->sources;
 
     out_func_elem->arg_types = NULL;
-    out_func_elem->arg_flows = NULL;
     out_func_elem->arity = 0;
     out_func_elem->traits = TRAIT_NONE;
     out_func_elem->ownership = true;
@@ -198,19 +197,17 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
         if(is_vararg){
             compiler_panic(ctx->compiler, sources[*i], "Expected ')' after variadic argument");
             ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
-            free(out_func_elem->arg_flows);
             return FAILURE;
         }
 
-        coexpand((void**) &out_func_elem->arg_types, sizeof(ast_type_t), (void**) &out_func_elem->arg_flows,
-                sizeof(char), out_func_elem->arity, &args_capacity, 1, 4);
+        expand((void**) &out_func_elem->arg_types, sizeof(ast_type_t), out_func_elem->arity, &args_capacity, 1, 4);
 
-        // Set argument flow
+        // Ignore argument flow
         switch(tokens[*i].id){
-        case TOKEN_IN:    out_func_elem->arg_flows[out_func_elem->arity] = FLOW_IN;    (*i)++; break;
-        case TOKEN_OUT:   out_func_elem->arg_flows[out_func_elem->arity] = FLOW_OUT;   (*i)++; break;
-        case TOKEN_INOUT: out_func_elem->arg_flows[out_func_elem->arity] = FLOW_INOUT; (*i)++; break;
-        default:          out_func_elem->arg_flows[out_func_elem->arity] = FLOW_IN;    break;
+        case TOKEN_IN:    (*i)++; break;
+        case TOKEN_OUT:   (*i)++; break;
+        case TOKEN_INOUT: (*i)++; break;
+        default:          break;
         }
 
         if(tokens[*i].id == TOKEN_ELLIPSIS){
@@ -219,7 +216,6 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
         } else {
             if(parse_type(ctx, &out_func_elem->arg_types[out_func_elem->arity])){
                 ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
-                free(out_func_elem->arg_flows);
                 return FAILURE;
             }
             out_func_elem->arity++;
@@ -229,14 +225,12 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
                 ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
-                free(out_func_elem->arg_flows);
                 return FAILURE;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
             if(is_vararg) compiler_panic(ctx->compiler, sources[*i], "Expected ')' after variadic argument");
             else compiler_panic(ctx->compiler, sources[*i], "Expected ',' after argument type");
             ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
-            free(out_func_elem->arg_flows);
             return FAILURE;
         }
     }
@@ -251,7 +245,6 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
 
     if(parse_type(ctx, out_func_elem->return_type)){
         ast_types_free_fully(out_func_elem->arg_types, out_func_elem->arity);
-        free(out_func_elem->arg_flows);
         return FAILURE;
     }
 

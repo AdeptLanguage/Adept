@@ -50,8 +50,6 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
             ((ast_elem_func_t*) new_element)->arg_types[i] = ast_type_clone(&((ast_elem_func_t*) element)->arg_types[i]);
         }
 
-        ((ast_elem_func_t*) new_element)->arg_flows = malloc(sizeof(char) * ((ast_elem_func_t*) element)->arity);
-        memcpy(((ast_elem_func_t*) new_element)->arg_flows, ((ast_elem_func_t*) element)->arg_flows, sizeof(char) * ((ast_elem_func_t*) element)->arity);
         ((ast_elem_func_t*) new_element)->arity = ((ast_elem_func_t*) element)->arity;
         ((ast_elem_func_t*) new_element)->return_type = malloc(sizeof(ast_type_t));
         *((ast_elem_func_t*) new_element)->return_type = ast_type_clone(((ast_elem_func_t*) element)->return_type);
@@ -119,7 +117,6 @@ void ast_type_free(ast_type_t *type){
                 ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];
                 ast_types_free(func_elem->arg_types, func_elem->arity);
                 free(func_elem->arg_types);
-                free(func_elem->arg_flows);
                 ast_type_free_fully(func_elem->return_type);
             }
             free(type->elements[i]);
@@ -464,10 +461,14 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
 
                 for(length_t a = 0; a != func_elem_a->arity; a++){
                     if(!ast_types_identical(&func_elem_a->arg_types[a], &func_elem_b->arg_types[a])) return false;
-                    if(func_elem_a->arg_flows[a] != func_elem_b->arg_flows[a]) return false;
                 }
             }
             break;
+        case AST_ELEM_POINTER:
+            break;
+        default:
+            redprintf("INTERNAL ERROR: ast_types_identical received unknown element id\n");
+            return false;
         }
     }
 
@@ -624,7 +625,6 @@ bool ast_type_polymorphable(const ast_type_t *polymorphic_type, const ast_type_t
 
                 for(length_t a = 0; a != func_elem_a->arity; a++){
                     if(!ast_type_polymorphable(&func_elem_a->arg_types[a], &func_elem_b->arg_types[a], catalog)) return false;
-                    if(func_elem_a->arg_flows[a] != func_elem_b->arg_flows[a]) return false;
                 }
             }
             break;

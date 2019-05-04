@@ -994,7 +994,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         break;
 
         #undef expr_as_declare
-        #undef clone_as_declare    
+        #undef clone_as_declare
     case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
     case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN:
         #define expr_as_assign ((ast_expr_assign_t*) expr)

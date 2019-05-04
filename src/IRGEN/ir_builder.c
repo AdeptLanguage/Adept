@@ -189,18 +189,6 @@ void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global,
     module->anon_globals[index].initializer = initializer;
 }
 
-ir_type_t* ir_builder_funcptr(ir_builder_t *builder){
-    ir_type_t **shared_type = &builder->object->ir_module.common.ir_funcptr;
-
-    if(*shared_type == NULL){
-        (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        (*shared_type)->kind = TYPE_KIND_FUNCPTR;
-        // 'ir_funcptr_type->extra' not set because never used
-    }
-    
-    return *shared_type;
-}
-
 ir_type_t* ir_builder_usize(ir_builder_t *builder){
     ir_type_t **shared_type = &builder->object->ir_module.common.ir_usize;
 
@@ -730,7 +718,6 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
                 resolved->id = AST_ELEM_FUNC;
                 resolved->source = func->source;
                 resolved->arg_types = malloc(sizeof(ast_type_t) * func->arity);
-                resolved->arg_flows = malloc(sizeof(char) * func->arity);
                 resolved->arity = func->arity;
                 resolved->return_type = malloc(sizeof(ast_type_t));
                 resolved->traits = func->traits;
@@ -739,16 +726,14 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
                 for(length_t i = 0; i != func->arity; i++){
                     if(resolve_type_polymorphics(compiler, catalog, &func->arg_types[i], &resolved->arg_types[i])){
                         ast_types_free_fully(resolved->arg_types, i);
-                        free(resolved->arg_flows);
                         free(resolved->return_type);
                         free(resolved);
                         return FAILURE;
                     }
                 }
 
-                if(resolve_type_polymorphics(compiler, catalog, func->return_type, NULL)){
+                if(resolve_type_polymorphics(compiler, catalog, func->return_type, resolved->return_type)){
                     ast_types_free_fully(resolved->arg_types, i);
-                    free(resolved->arg_flows);
                     free(resolved->return_type);
                     free(resolved);
                     return FAILURE;

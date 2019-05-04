@@ -339,7 +339,7 @@ typedef struct {
     unsigned int id;
     ir_type_t *result_type;
     const char *name;
-    length_t ast_func_id;
+    length_t ir_func_id;
 } ir_instr_func_address_t;
 
 // ---------------- ir_instr_cast_t ----------------
@@ -478,9 +478,7 @@ typedef struct {
 // ---------------- ir_shared_common_t ----------------
 // General data that can be directly accessed by the
 // entire IR module
-// 'ir_funcptr' -> type used for function pointer implementation
 typedef struct {
-    ir_type_t *ir_funcptr;
     ir_type_t *ir_usize;
     ir_type_t *ir_usize_ptr;
     ir_type_t *ir_bool;

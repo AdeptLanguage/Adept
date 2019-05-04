@@ -440,7 +440,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                     break;
                 case INSTRUCTION_FUNC_ADDRESS:
                     if(((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name == NULL)
-                        fprintf(file, "    0x%08X funcaddr 0x%X\n", (unsigned int) i, (int) ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->ast_func_id);
+                        fprintf(file, "    0x%08X funcaddr 0x%X\n", (unsigned int) i, (int) ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->ir_func_id);
                     else
                         fprintf(file, "    0x%08X funcaddr %s\n", (unsigned int) i, ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name);
                     break;
@@ -632,7 +632,6 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_type_var_stack_init(&ir_module->type_var_stack);
 
     // Initialize common data
-    ir_module->common.ir_funcptr = NULL;
     ir_module->common.ir_usize = NULL;
     ir_module->common.ir_usize_ptr = NULL;
     ir_module->common.ir_bool = NULL;
