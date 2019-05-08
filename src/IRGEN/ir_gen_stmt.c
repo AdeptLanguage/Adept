@@ -248,6 +248,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
                         char *s = ast_type_str(ast_var_type);
                         compiler_panicf(builder->compiler, call_stmt->source, "Can't call value of non function type '%s'", s);
+                        ast_types_free_fully(arg_types, call_stmt->arity);
                         free(s);
                         return FAILURE;
                     }
@@ -286,6 +287,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
                             char *s = ast_type_str(ast_var_type);
                             compiler_panicf(builder->compiler, call_stmt->source, "Can't call value of non function type '%s'", s);
+                            ast_types_free_fully(arg_types, call_stmt->arity);
                             free(s);
                             return FAILURE;
                         }
@@ -817,19 +819,20 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * (call_stmt->arity + 1));
                 ast_type_t *arg_types = malloc(sizeof(ast_type_t) * (call_stmt->arity + 1));
 
-                // Resolve & ir_gen function arguments
+                // Generate primary argument
                 if(ir_gen_expression(builder, call_stmt->value, &arg_values[0], true, &arg_types[0])){
                     free(arg_types);
                     return FAILURE;
                 }
 
+                // Validate and prepare primary argument
                 ast_elem_t **type_elems = arg_types[0].elements;
                 length_t type_elems_length = arg_types[0].elements_length;
 
-                if(type_elems_length == 1 && type_elems[0]->id == AST_ELEM_BASE){
+                if(type_elems_length == 1 && (type_elems[0]->id == AST_ELEM_BASE || type_elems[0]->id == AST_ELEM_GENERIC_BASE)){
                     ast_type_prepend_ptr(&arg_types[0]);
                 } else if(type_elems_length == 2 && type_elems[0]->id == AST_ELEM_POINTER
-                        && type_elems[1]->id == AST_ELEM_BASE){
+                        && (type_elems[1]->id == AST_ELEM_BASE || type_elems[1]->id == AST_ELEM_GENERIC_BASE)){
                     // Load the value that's being called on
                     arg_values[0] = build_load(builder, arg_values[0]);
                 } else {
@@ -841,23 +844,50 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                const char *struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
-
+                // Generate secondary argument values
                 for(length_t a = 0; a != call_stmt->arity; a++){
                     if(ir_gen_expression(builder, call_stmt->args[a], &arg_values[a + 1], false, &arg_types[a + 1])){
-                        for(length_t t = 0; t != a + 1; t++) ast_type_free(&arg_types[t]);
-                        free(arg_types);
+                        ast_types_free_fully(arg_types, a + 1);
                         return FAILURE;
                     }
                 }
 
-                // Find function that fits given name and arguments
+                // Find appropriate method
                 funcpair_t pair;
-                if(ir_gen_find_method_conforming(builder, struct_name, call_stmt->name,
-                        arg_values, arg_types, call_stmt->arity + 1, &pair)){
-                    compiler_panicf(builder->compiler, call_stmt->source, "Undeclared method '%s'", call_stmt->name);
-                    for(length_t t = 0; t != call_stmt->arity + 1; t++) ast_type_free(&arg_types[t]);
-                    free(arg_types);
+                switch(arg_types[0].elements[1]->id){
+                case AST_ELEM_BASE: {
+                        const char *struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
+                
+                        // Find function that fits given name and arguments        
+                        if(ir_gen_find_method_conforming(builder, struct_name, call_stmt->name,
+                                arg_values, arg_types, call_stmt->arity + 1, &pair)){
+                            compiler_panicf(builder->compiler, call_stmt->source, "Undeclared method '%s'", call_stmt->name);
+                            ast_types_free_fully(arg_types, call_stmt->arity + 1);
+                            return FAILURE;
+                        }
+                        
+                        break;
+                    }
+                case AST_ELEM_GENERIC_BASE: {
+                        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
+
+                        if(generic_base->name_is_polymorphic){
+                            compiler_panic(builder->compiler, generic_base->source, "Can't call method on struct value with unresolved polymorphic name");
+                            ast_types_free_fully(arg_types, call_stmt->arity + 1);
+                            return FAILURE;
+                        }
+
+                        if(ir_gen_find_generic_base_method_conforming(builder, generic_base->name, call_stmt->name, arg_values, arg_types, call_stmt->arity + 1, &pair)){
+                            compiler_panicf(builder->compiler, call_stmt->source, "Undeclared method '%s'", call_stmt->name);
+                            ast_types_free_fully(arg_types, call_stmt->arity + 1);
+                            return FAILURE;
+                        }
+
+                        break;
+                    }
+                default:
+                    redprintf("INTERNAL ERROR: EXPR_CALL_METHOD in ir_gen_stmt.c received bad primary element id\n")
+                    ast_types_free_fully(arg_types, call_stmt->arity + 1);
                     return FAILURE;
                 }
 

@@ -232,6 +232,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
                     char *s = ast_type_str(ast_var_type);
                     compiler_panicf(builder->compiler, call_expr->source, "Can't call value of non function type '%s'", s);
+                    ast_types_free_fully(arg_types, call_expr->arity);
                     free(s);
                     return FAILURE;
                 }
@@ -270,6 +271,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
                         char *s = ast_type_str(ast_var_type);
                         compiler_panicf(builder->compiler, call_expr->source, "Can't call value of non function type '%s'", s);
+                        ast_types_free_fully(arg_types, call_expr->arity);
                         free(s);
                         return FAILURE;
                     }
@@ -782,16 +784,17 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * (call_expr->arity + 1));
             ast_type_t *arg_types = malloc(sizeof(ast_type_t) * (call_expr->arity + 1));
 
-            // Resolve & ir_gen function arguments
+            // Generate primary argument
             if(ir_gen_expression(builder, call_expr->value, &arg_values[0], true, &arg_types[0])){
                 free(arg_types);
                 return FAILURE;
             }
 
+            // Validate and prepare primary argument
             ast_elem_t **type_elems = arg_types[0].elements;
             length_t type_elems_length = arg_types[0].elements_length;
 
-            if(type_elems_length == 1 && type_elems[0]->id == AST_ELEM_BASE){
+            if(type_elems_length == 1 && (type_elems[0]->id == AST_ELEM_BASE || type_elems[0]->id == AST_ELEM_GENERIC_BASE)){
                 if(!EXPR_IS_MUTABLE(call_expr->value->id)){
                     compiler_panic(builder->compiler, call_expr->source, "Can't call method on immutable value");
                     ast_type_free(&arg_types[0]);
@@ -800,7 +803,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
 
                 ast_type_prepend_ptr(&arg_types[0]);
-            } else if(type_elems_length == 2 && type_elems[0]->id == AST_ELEM_POINTER && type_elems[1]->id == AST_ELEM_BASE){
+            } else if(type_elems_length == 2 && type_elems[0]->id == AST_ELEM_POINTER
+                    && (type_elems[1]->id == AST_ELEM_BASE || type_elems[1]->id == AST_ELEM_GENERIC_BASE)){
                 // Load the value that's being called on if the expression is mutable
                 if(EXPR_IS_MUTABLE(call_expr->value->id)){
                     arg_values[0] = build_load(builder, arg_values[0]);
@@ -814,19 +818,49 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
-            const char *struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
-
+            // Generate secondary argument values
             for(length_t a = 0; a != call_expr->arity; a++){
                 if(ir_gen_expression(builder, call_expr->args[a], &arg_values[a + 1], false, &arg_types[a + 1])){
                     ast_types_free_fully(arg_types, a + 1);
                     return FAILURE;
                 }
             }
-
-            // Find function that fits given name and arguments
+            
+            // Find appropriate method
             funcpair_t pair;
-            if(ir_gen_find_method_conforming(builder, struct_name, call_expr->name, arg_values, arg_types, call_expr->arity + 1, &pair)){
-                compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
+            switch(arg_types[0].elements[1]->id){
+            case AST_ELEM_BASE: {
+                    const char *struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
+            
+                    // Find function that fits given name and arguments        
+                    if(ir_gen_find_method_conforming(builder, struct_name, call_expr->name,
+                            arg_values, arg_types, call_expr->arity + 1, &pair)){
+                        compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
+                        ast_types_free_fully(arg_types, call_expr->arity + 1);
+                        return FAILURE;
+                    }
+                    
+                    break;
+                }
+            case AST_ELEM_GENERIC_BASE: {
+                    ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
+
+                    if(generic_base->name_is_polymorphic){
+                        compiler_panic(builder->compiler, generic_base->source, "Can't call method on struct value with unresolved polymorphic name");
+                        ast_types_free_fully(arg_types, call_expr->arity + 1);
+                        return FAILURE;
+                    }
+
+                    if(ir_gen_find_generic_base_method_conforming(builder, generic_base->name, call_expr->name, arg_values, arg_types, call_expr->arity + 1, &pair)){
+                        compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
+                        ast_types_free_fully(arg_types, call_expr->arity + 1);
+                        return FAILURE;
+                    }
+
+                    break;
+                }
+            default:
+                redprintf("INTERNAL ERROR: EXPR_CALL_METHOD in ir_gen_expr.c received bad primary element id\n")
                 ast_types_free_fully(arg_types, call_expr->arity + 1);
                 return FAILURE;
             }

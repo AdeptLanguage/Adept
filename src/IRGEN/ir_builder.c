@@ -694,6 +694,7 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     // Lazy update mappings and methods
     qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
+    qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
 
     if(out_mapping) *out_mapping = newest_mapping;
     return SUCCESS;

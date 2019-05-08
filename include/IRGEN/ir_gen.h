@@ -53,4 +53,9 @@ int ir_func_mapping_cmp(const void *a, const void *b);
 // Used for qsort()
 int ir_method_cmp(const void *a, const void *b);
 
+// ---------------- ir_generic_base_method_cmp ----------------
+// Compares two 'ir_generic_base_method_t' structures.
+// Used for qsort()
+int ir_generic_base_method_cmp(const void *a, const void *b);
+
 #endif // IR_GEN_H

@@ -440,6 +440,18 @@ typedef struct {
     char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_method_t;
 
+// ---------------- ir_generic_base_method_t ----------------
+// Mapping for a generic base method to an actual function
+typedef struct {
+    const char *generic_base;
+    ast_type_t *generics;
+    length_t generics_length;
+    const char *name;
+    length_t ir_func_id;
+    length_t ast_func_id;
+    char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
+} ir_generic_base_method_t;
+
 // ---------------- ir_jobs_t ----------------
 // List of jobs required during IR generation
 typedef struct {
@@ -501,6 +513,9 @@ typedef struct {
     ir_method_t *methods;
     length_t methods_length;
     length_t methods_capacity;
+    ir_generic_base_method_t *generic_base_methods;
+    length_t generic_base_methods_length;
+    length_t generic_base_methods_capacity;
     ir_global_t *globals;
     length_t globals_length;
     ir_anon_global_t *anon_globals;

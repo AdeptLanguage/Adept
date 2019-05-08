@@ -42,6 +42,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
 
     qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
+    qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
     return SUCCESS;
 }
 
@@ -91,45 +92,67 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
             ast_type_t *this_type = &ast_func->arg_types[0];
 
             // Do basic checking to make sure the type is in the format: *Structure
-            if(this_type->elements_length != 2 || this_type->elements[0]->id != AST_ELEM_POINTER
-                    || this_type->elements[1]->id != AST_ELEM_BASE){
+            if(this_type->elements_length != 2 || this_type->elements[0]->id != AST_ELEM_POINTER){
+                compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
+                return FAILURE; 
+            }
+
+            switch(this_type->elements[1]->id){
+            case AST_ELEM_BASE: {
+                    // Check that the base isn't a primitive
+                    char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
+                    if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
+                        compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
+                        return FAILURE;
+                    }
+
+                    // Find the target structure
+                    ast_struct_t *target = ast_struct_find(&object->ast, ((ast_elem_base_t*) this_type->elements[1])->base);
+                    if(target == NULL){
+                        compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base);
+                        return FAILURE;
+                    }
+
+                    // Append the method to the struct's method list
+                    expand((void**) &module->methods, sizeof(ir_method_t), module->methods_length, &module->methods_capacity, 1, 4);
+                    ir_method_t *method = &module->methods[module->methods_length++];
+                    method->struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
+                    method->name = module_func->name;
+                    method->ir_func_id = ir_func_id;
+                    method->ast_func_id = ast_func_id;
+                    method->is_beginning_of_group = -1;
+                }
+                break;
+            case AST_ELEM_GENERIC_BASE: {
+                    ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
+                    ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
+                    
+                    if(template == NULL){
+                        compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", generic_base->name);
+                        return FAILURE;
+                    }
+
+                    if(template->generics_length != generic_base->generics_length){
+                        compiler_panic(compiler, this_type->source, "INTERNAL ERROR: ir_gen_func_head got method with incorrect number of type parameters for generic struct type for 'this'");
+                        return FAILURE;
+                    }
+
+                    // Append the method to the struct's method list
+                    expand((void**) &module->generic_base_methods, sizeof(ir_generic_base_method_t), module->generic_base_methods_length, &module->generic_base_methods_capacity, 1, 4);
+                    ir_generic_base_method_t *generic_base_method = &module->generic_base_methods[module->generic_base_methods_length++];
+                    generic_base_method->generic_base = generic_base->name;
+                    generic_base_method->generics = generic_base->generics; // NOTE: Memory for function argument types should persist, so this is ok
+                    generic_base_method->generics_length = generic_base->generics_length;
+                    generic_base_method->name = module_func->name;
+                    generic_base_method->ir_func_id = ir_func_id;
+                    generic_base_method->ast_func_id = ast_func_id;
+                    generic_base_method->is_beginning_of_group = -1;
+                }
+                break;
+            default:
                 compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
                 return FAILURE;
             }
-
-            // Check that the base isn't a primitive
-            char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
-            if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
-                compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
-                return FAILURE;
-            }
-
-            // Find the target structure
-            ast_struct_t *target = ast_struct_find(&object->ast, ((ast_elem_base_t*) this_type->elements[1])->base);
-            if(target == NULL){
-                compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base);
-                return FAILURE;
-            }
-
-            // Append the method to the struct's method list
-            if(module->methods == NULL){
-                module->methods = malloc(sizeof(ir_method_t) * 4);
-                module->methods_length = 0;
-                module->methods_capacity = 4;
-            } else if(module->methods_length == module->methods_capacity){
-                module->methods_capacity *= 2;
-                ir_method_t *new_methods = malloc(sizeof(ir_method_t) * module->methods_capacity);
-                memcpy(new_methods, module->methods, sizeof(ir_method_t) * module->methods_length);
-                free(module->methods);
-                module->methods = new_methods;
-            }
-
-            ir_method_t *method = &module->methods[module->methods_length++];
-            method->struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
-            method->name = module_func->name;
-            method->ir_func_id = ir_func_id;
-            method->ast_func_id = ast_func_id;
-            method->is_beginning_of_group = -1;
         }
     } else {
         while(module_func->arity != ast_func->arity){
@@ -583,4 +606,12 @@ int ir_method_cmp(const void *a, const void *b){
     diff = strcmp(((ir_method_t*) a)->name, ((ir_method_t*) b)->name);
     if(diff != 0) return diff;
     return (int) ((ir_method_t*) a)->ast_func_id - (int) ((ir_method_t*) b)->ast_func_id;
+}
+
+int ir_generic_base_method_cmp(const void *a, const void *b){
+    int diff = strcmp(((ir_generic_base_method_t*) a)->generic_base, ((ir_generic_base_method_t*) b)->generic_base);
+    if(diff != 0) return diff;
+    diff = strcmp(((ir_generic_base_method_t*) a)->name, ((ir_generic_base_method_t*) b)->name);
+    if(diff != 0) return diff;
+    return (int) ((ir_generic_base_method_t*) a)->ast_func_id - (int) ((ir_generic_base_method_t*) b)->ast_func_id;
 }

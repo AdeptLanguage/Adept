@@ -172,6 +172,11 @@ typedef struct {
     length_t polymorphic_funcs_length;
     length_t polymorphic_funcs_capacity;
 
+    // A second list of polymorphic functions that only contains methods
+    ast_polymorphic_func_t *polymorphic_methods;
+    length_t polymorphic_methods_length;
+    length_t polymorphic_methods_capacity;
+
     // Polymorphic structures
     ast_polymorphic_struct_t *polymorphic_structs;
     length_t polymorphic_structs_length;

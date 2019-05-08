@@ -34,6 +34,9 @@ void ast_init(ast_t *ast){
     ast->polymorphic_funcs = NULL;
     ast->polymorphic_funcs_length = 0;
     ast->polymorphic_funcs_capacity = 0;
+    ast->polymorphic_methods = NULL;
+    ast->polymorphic_methods_length = 0;
+    ast->polymorphic_methods_capacity = 0;
     ast->polymorphic_structs = NULL;
     ast->polymorphic_structs_length = 0;
     ast->polymorphic_structs_capacity = 0;
@@ -95,6 +98,7 @@ void ast_free(ast_t *ast){
     }
     free(ast->meta_definitions);
     free(ast->polymorphic_funcs);
+    free(ast->polymorphic_methods);
     for(i = 0; i != ast->polymorphic_structs_length; i++){
         ast_free_structs((ast_struct_t*) &ast->polymorphic_structs[i], 1);
         freestrs(ast->polymorphic_structs[i].generics, ast->polymorphic_structs[i].generics_length);

@@ -37,7 +37,7 @@ errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
     const char *name, funcpair_t *result);
 
 // ---------------- ir_gen_find_func_conforming ----------------
-// Finds a function that has the given name and conforms.
+// Finds a function that has the given name and conforms
 // to the arguments given. Result info stored 'result'
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
@@ -46,9 +46,16 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
         ast_type_t *arg_types, length_t type_list_length, funcpair_t *result);
 
 // ---------------- ir_gen_find_method_conforming ----------------
-// Finds a method that has the given name and conforms.
+// Finds a method that has the given name and conforms
 // to the arguments given. Result info stored 'result'
 errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
+    const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
+    length_t type_list_length, funcpair_t *result);
+
+// ---------------- ir_gen_find_generic_base_method_conforming ----------------
+// Finds a method that has the matches a generic base and conforms
+// to the arguments given. Result info stored 'result'
+errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, const char *generic_base,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
     length_t type_list_length, funcpair_t *result);
 
@@ -60,6 +67,11 @@ maybe_index_t find_beginning_of_func_group(ir_func_mapping_t *mappings, length_t
 // Searches for beginning of method group in a list of methods
 maybe_index_t find_beginning_of_method_group(ir_method_t *methods, length_t length,
     const char *struct_name, const char *name);
+
+// ---------------- find_beginning_of_generic_base_method_group ----------------
+// Searches for beginning of method group in a list of generic base methods
+maybe_index_t find_beginning_of_generic_base_method_group(ir_generic_base_method_t *methods, length_t length,
+    const char *generic_base, const char *name);
 
 // ---------------- find_beginning_of_poly_func_group ----------------
 // Searches for beginning of function group in a list of mappings

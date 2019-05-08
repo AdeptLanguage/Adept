@@ -88,6 +88,14 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         poly_func->name = func->name;
         poly_func->ast_func_id = ast_func_id;
         poly_func->is_beginning_of_group = -1; // Uncalculated
+
+        if(func->arity != 0 && strcmp(func->arg_names[0], "this") == 0){
+            expand((void**) &ast->polymorphic_methods, sizeof(ast_polymorphic_func_t), ast->polymorphic_methods_length, &ast->polymorphic_methods_capacity, 1, 4);
+            ast_polymorphic_func_t *poly_method = &ast->polymorphic_methods[ast->polymorphic_methods_length++];
+            poly_method->name = func->name;
+            poly_method->ast_func_id = ast_func_id;
+            poly_method->is_beginning_of_group = -1; // Uncalculated
+        }
     }
 
     if(parse_func_body(ctx, func)) return FAILURE;

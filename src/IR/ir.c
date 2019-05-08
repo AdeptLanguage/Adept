@@ -623,6 +623,9 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->methods = NULL;
     ir_module->methods_length = 0;
     ir_module->methods_capacity = 0;
+    ir_module->generic_base_methods = NULL;
+    ir_module->generic_base_methods_length = 0;
+    ir_module->generic_base_methods_capacity = 0;
     ir_module->type_map.mappings = NULL;
     ir_module->globals = malloc(sizeof(ir_global_t) * globals_length);
     ir_module->globals_length = 0;
@@ -642,6 +645,7 @@ void ir_module_free(ir_module_t *ir_module){
     free(ir_module->funcs);
     free(ir_module->func_mappings);
     free(ir_module->methods);
+    free(ir_module->generic_base_methods);
     free(ir_module->type_map.mappings);
     free(ir_module->globals);
     free(ir_module->anon_globals);
