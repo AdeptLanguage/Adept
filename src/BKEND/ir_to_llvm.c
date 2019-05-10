@@ -775,11 +775,46 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     break;
                 case INSTRUCTION_MALLOC: {
                         instr = basicblock->instructions[i];
-                        if( ((ir_instr_malloc_t*) instr)->amount == NULL ){
-                            catalog.blocks[b].value_references[i] = LLVMBuildMalloc(builder, ir_to_llvm_type(((ir_instr_malloc_t*) instr)->type), "");
+                        LLVMTypeRef ty = ir_to_llvm_type(((ir_instr_malloc_t*) instr)->type);
+                        LLVMValueRef allocated;
+
+                        if( ((ir_instr_malloc_t*) instr)->amount == NULL ){    
+                            allocated = LLVMBuildMalloc(builder, ty, "");
+                            catalog.blocks[b].value_references[i] = allocated;
+                            
+                            if(!(((ir_instr_malloc_t*) instr)->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
+                                LLVMBuildStore(builder, LLVMConstNull(ty), LLVMBuildBitCast(builder, allocated, LLVMPointerType(ty, 0), ""));
+                            }
                         } else {
-                            catalog.blocks[b].value_references[i] = LLVMBuildArrayMalloc(builder,
-                                ir_to_llvm_type(((ir_instr_malloc_t*) instr)->type), ir_to_llvm_value(llvm, ((ir_instr_malloc_t*) instr)->amount), "");
+                            LLVMValueRef count = ir_to_llvm_value(llvm, ((ir_instr_malloc_t*) instr)->amount);
+                            allocated = LLVMBuildArrayMalloc(builder, ty, count, "");
+                            catalog.blocks[b].value_references[i] = allocated;
+
+                            if(!(((ir_instr_malloc_t*) instr)->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
+                                LLVMValueRef *memset_intrinsic = &llvm->memset_intrinsic;
+
+                                if(*memset_intrinsic == NULL){
+                                    LLVMTypeRef arg_types[4];
+                                    arg_types[0] = LLVMPointerType(LLVMInt8Type(), 0);
+                                    arg_types[1] = LLVMInt8Type();
+                                    arg_types[2] = LLVMInt64Type();
+                                    arg_types[3] = LLVMInt1Type();
+
+                                    LLVMTypeRef memset_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
+                                    *memset_intrinsic = LLVMAddFunction(llvm->module, "llvm.memset.p0i8.i64", memset_intrinsic_type);
+                                }
+
+                                LLVMValueRef per_item_size = LLVMConstInt(LLVMInt64Type(), LLVMABISizeOfType(llvm->data_layout, ty), false);
+                                count = LLVMBuildZExt(llvm->builder, count, LLVMInt64Type(), "");
+
+                                LLVMValueRef args[4];
+                                args[0] = LLVMBuildBitCast(llvm->builder, allocated, LLVMPointerType(LLVMInt8Type(), 0), "");
+                                args[1] = LLVMConstInt(LLVMInt8Type(), 0, false);
+                                args[2] = LLVMBuildMul(llvm->builder, per_item_size, count, "");
+                                args[3] = LLVMConstInt(LLVMInt1Type(), 0, false);
+
+                                LLVMBuildCall(builder, *memset_intrinsic, args, 4, "");
+                            }
                         }
                     }
                     break;
@@ -935,6 +970,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     llvm.module = LLVMModuleCreateWithName(filename_name_const(object->filename));
     llvm.memcpy_intrinsic = NULL;
+    llvm.memset_intrinsic = NULL;
     llvm.compiler = compiler;
 
     bool disposeTriple = false;

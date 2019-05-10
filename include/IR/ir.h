@@ -255,6 +255,7 @@ typedef struct {
     ir_type_t *result_type;
     ir_type_t *type;
     ir_value_t *amount;
+    bool is_undef;
 } ir_instr_malloc_t;
 
 // ---------------- ir_instr_free_t ----------------

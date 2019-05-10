@@ -1,0 +1,7 @@
+
+import '2.1/basics.adept'
+
+func main {
+    undefined_integers *int = new undef int * 10
+    repeat 10, print("[%] : %" % idx % undefined_integers[idx])
+}

@@ -653,8 +653,13 @@ errorcode_t parse_expr_new(parse_ctx_t *ctx, ast_expr_t **out_expr){
 
     ast_expr_new_t *new_expr = malloc(sizeof(ast_expr_new_t));
     new_expr->id = EXPR_NEW;
-    new_expr->source = sources[(*i)++];
     new_expr->amount = NULL;
+    new_expr->is_undef = false;
+    new_expr->source = sources[*i];
+    if(tokens[++*i].id == TOKEN_UNDEF){
+        new_expr->is_undef = true;
+        (*i)++;
+    }
 
     if(parse_type(ctx, &new_expr->type)){
         free(new_expr);

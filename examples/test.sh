@@ -65,6 +65,7 @@ compile negate || exit $?
 compile new_cstring || exit $?
 compile new_delete || exit $?
 compile new_dynamic || exit $?
+compile new_undef || exit $?
 compile not || exit $?
 compile null || exit $?
 compile null_checks --null-checks || exit $?

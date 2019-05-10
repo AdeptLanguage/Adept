@@ -249,6 +249,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_NO_UNDEF;
             } else if(strcmp(argv[arg_index], "--no-type-info") == 0){
                 compiler->traits |= COMPILER_NO_TYPE_INFO;
+            } else if(strcmp(argv[arg_index], "--unsafe-new") == 0){
+                compiler->traits |= COMPILER_UNSAFE_NEW;
             } else if(strcmp(argv[arg_index], "--null-checks") == 0){
                 compiler->checks |= COMPILER_NULL_CHECKS;
             }
@@ -423,8 +425,9 @@ void show_help(){
     printf("    -O                Set optimization level\n");
 
     printf("\nLanguage Options:\n");
-    printf("    --no-undef        Force initialize for 'undef'\n");
     printf("    --no-type-info    Disable runtime type information\n");
+    printf("    --no-undef        Force initialize for 'undef'\n");
+    printf("    --unsafe-new      Disables zero-initialization of memory allocated with 'new'\n");
     printf("    --null-checks     Enable runtime null-checks\n");
 
     #ifdef ENABLE_DEBUG_FEATURES

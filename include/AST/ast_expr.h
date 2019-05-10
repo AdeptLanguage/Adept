@@ -275,6 +275,7 @@ typedef struct {
     source_t source;
     ast_type_t type;
     ast_expr_t *amount; // Can be NULL to indicate single element
+    bool is_undef;
 } ast_expr_new_t;
 
 // ---------------- ast_expr_new_cstring_t ----------------

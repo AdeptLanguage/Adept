@@ -37,6 +37,7 @@ typedef struct {
     LLVMValueRef *anon_global_variables;
     LLVMTargetDataRef data_layout;
     LLVMValueRef memcpy_intrinsic;
+    LLVMValueRef memset_intrinsic;
     compiler_t *compiler;
 
     LLVMValueRef null_check_on_fail_func;

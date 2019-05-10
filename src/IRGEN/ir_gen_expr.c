@@ -990,6 +990,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ((ir_instr_malloc_t*) instruction)->result_type->extra = ir_type;
             ((ir_instr_malloc_t*) instruction)->type = ir_type;
             ((ir_instr_malloc_t*) instruction)->amount = amount;
+            ((ir_instr_malloc_t*) instruction)->is_undef = ((ast_expr_new_t*) expr)->is_undef;
 
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);

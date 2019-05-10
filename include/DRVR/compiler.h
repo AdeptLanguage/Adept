@@ -26,6 +26,7 @@ extern "C" {
 #define COMPILER_NO_UNDEF         TRAIT_7
 #define COMPILER_NO_TYPE_INFO     TRAIT_8
 #define COMPILER_NO_REMOVE_OBJECT TRAIT_A
+#define COMPILER_UNSAFE_NEW       TRAIT_B
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
