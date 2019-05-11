@@ -84,7 +84,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             return FAILURE;
         break;
     case EXPR_SUBTRACT:
-        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_SUBTRACT, INSTRUCTION_SUBTRACT, INSTRUCTION_NONE, "subtract", "__subtract__", false))
+        if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT, INSTRUCTION_NONE, "subtract", "__subtract__", false))
             return FAILURE;
         break;
     case EXPR_MULTIPLY:
