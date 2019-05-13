@@ -175,9 +175,6 @@ void memory_scan(){
 
             #ifdef TRACK_MEMORY_FILE_AND_LINE
             printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: 0x%p) - %s %d\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer, global_memblocks[i].filename, global_memblocks[i].line_number);
-            if(strcmp(global_memblocks[i].filename, "src/LEX/lex.c") == 0 && global_memblocks[i].line_number == 217){
-                printf("Content: '%s'\n", global_memblocks[i].pointer);
-            }
             #else // TRACK_MEMORY_FILE_AND_LINE
             printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: 0x%p)\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer);
             #endif // TRACK_MEMORY_FILE_AND_LINE

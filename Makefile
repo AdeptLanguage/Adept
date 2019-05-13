@@ -1,61 +1,55 @@
 
-# LLVM Flags
-LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
-
-# -lgtest_main -lgtest -lLLVMTestingSupport
-
-# LLVM library dependencies (Probably don't need all of them but whatever)
+# --------------------------- Change These Values ---------------------------
+# NOTE: For Windows, ensure mingw32-make.exe uses cmd.exe for shell
+# (see HOW_TO_COMPILE.md for details)
+WINDOWS_CC=x86_64-w64-mingw32-gcc
+WINDOWS_CXX=x86_64-w64-mingw32-g++
+WINDOWS_WINRES=C:/Users/isaac/Projects/mingw64/bin/windres
+WINDOWS_LLVM_LIB=C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release/lib
+WINDOWS_LLVM_INCLUDE=C:/Users/isaac/Projects/llvm-7.0.0.src/include
+WINDOWS_LLVM_BUILD_INCLUDE=C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release/include
+UNIX_CC=gcc
+UNIX_CXX=g++
+UNIX_LLVM_LIB=/Users/isaac/Projects/llvm-7.0.0.src/build/lib
+UNIX_LLVM_INCLUDE=/usr/lib/llvm-5.0/include
+UNIX_LLVM_BUILD_INCLUDE=/usr/lib/llvm-5.0/build/include
 
 INSIGHT_OUT_DIR=INSIGHT
+# ---------------------------------------------------------------------------
 
 ifeq ($(OS), Windows_NT)
-	CC=x86_64-w64-mingw32-gcc
-	LINKER=x86_64-w64-mingw32-g++
+	CC=$(WINDOWS_CC)
+	LINKER=$(WINDOWS_CXX)
 
 	# Depends on where user has llvm
-	LLVM_LINKER_FLAGS=-LC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/lib
-	LLVM_INCLUDE_DIRS=-IC:/.storage/OpenSource/llvm-5.0.0.src/include -IC:/.storage/OpenSource/llvm-5.0.0.src/mingw64-make/include
+	LLVM_LINKER_FLAGS=-L$(WINDOWS_LLVM_LIB)
+	LLVM_INCLUDE_DIRS=-I$(WINDOWS_LLVM_INCLUDE) -I$(WINDOWS_LLVM_BUILD_INCLUDE)
 
-	RES_C=C:/.storage/MinGW64/bin/windres
 	WIN_ICON=obj/icon.res
 	WIN_ICON_SRC=resource/icon.rc
 	EXECUTABLE=bin/adept.exe
 	DEBUG_EXECUTABLE=bin/adept_debug.exe
 
 	# Libraries that will satisfy mingw64 on Windows
-	LLVM_LIBS=-lLLVMCoverage -lLLVMDlltoolDriver -lLLVMLibDriver -lLLVMOption -lLLVMOrcJIT -lLLVMTableGen -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen \
-		-lLLVMXCoreDesc -lLLVMXCoreInfo -lLLVMXCoreAsmPrinter -lLLVMSystemZDisassembler -lLLVMSystemZCodeGen -lLLVMSystemZAsmParser -lLLVMSystemZDesc -lLLVMSystemZInfo \
-		-lLLVMSystemZAsmPrinter -lLLVMSparcDisassembler -lLLVMSparcCodeGen -lLLVMSparcAsmParser -lLLVMSparcDesc -lLLVMSparcInfo -lLLVMSparcAsmPrinter -lLLVMPowerPCDisassembler \
-		-lLLVMPowerPCCodeGen -lLLVMPowerPCAsmParser -lLLVMPowerPCDesc -lLLVMPowerPCInfo -lLLVMPowerPCAsmPrinter -lLLVMNVPTXCodeGen -lLLVMNVPTXDesc -lLLVMNVPTXInfo \
-		-lLLVMNVPTXAsmPrinter -lLLVMMSP430CodeGen -lLLVMMSP430Desc -lLLVMMSP430Info -lLLVMMSP430AsmPrinter -lLLVMMipsDisassembler -lLLVMMipsCodeGen -lLLVMMipsAsmParser \
-		-lLLVMMipsDesc -lLLVMMipsInfo -lLLVMMipsAsmPrinter -lLLVMLanaiDisassembler -lLLVMLanaiCodeGen -lLLVMLanaiAsmParser -lLLVMLanaiDesc -lLLVMLanaiAsmPrinter -lLLVMLanaiInfo \
-		-lLLVMHexagonDisassembler -lLLVMHexagonCodeGen -lLLVMHexagonAsmParser -lLLVMHexagonDesc -lLLVMHexagonInfo -lLLVMBPFDisassembler -lLLVMBPFCodeGen -lLLVMBPFDesc -lLLVMBPFInfo \
-		-lLLVMBPFAsmPrinter -lLLVMARMDisassembler -lLLVMARMCodeGen -lLLVMARMAsmParser -lLLVMARMDesc -lLLVMARMInfo -lLLVMARMAsmPrinter -lLLVMAMDGPUDisassembler -lLLVMAMDGPUCodeGen \
-		-lLLVMAMDGPUAsmParser -lLLVMAMDGPUDesc -lLLVMAMDGPUInfo -lLLVMAMDGPUAsmPrinter -lLLVMAMDGPUUtils -lLLVMAArch64Disassembler -lLLVMAArch64CodeGen -lLLVMAArch64AsmParser \
-		-lLLVMAArch64Desc -lLLVMAArch64Info -lLLVMAArch64AsmPrinter -lLLVMAArch64Utils  -lLLVMInterpreter -lLLVMLineEditor -lLLVMLTO -lLLVMPasses -lLLVMObjCARCOpts \
-		-lLLVMCoroutines -lLLVMipo -lLLVMInstrumentation -lLLVMVectorize -lLLVMLinker -lLLVMIRReader -lLLVMObjectYAML -lLLVMSymbolize -lLLVMDebugInfoPDB -lLLVMDebugInfoDWARF \
-		-lLLVMMIRParser -lLLVMAsmParser -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMGlobalISel -lLLVMSelectionDAG -lLLVMAsmPrinter -lLLVMDebugInfoCodeView \
-		-lLLVMDebugInfoMSF -lLLVMCodeGen -lLLVMScalarOpts -lLLVMInstCombine -lLLVMTransformUtils -lLLVMBitWriter -lLLVMX86Desc -lLLVMMCDisassembler -lLLVMX86Info -lLLVMX86AsmPrinter \
-		-lLLVMX86Utils -lLLVMMCJIT -lLLVMExecutionEngine -lLLVMTarget -lLLVMAnalysis -lLLVMProfileData -lLLVMRuntimeDyld -lLLVMObject -lLLVMMCParser -lLLVMBitReader -lLLVMMC -lLLVMCore \
-		-lLLVMBinaryFormat -lLLVMSupport -lLLVMDemangle -lpsapi -lshell32 -lole32 -luuid
+	LLVM_LIBS=-lLLVMLTO -lLLVMPasses -lLLVMObjCARCOpts -lLLVMSymbolize -lLLVMDebugInfoPDB -lLLVMDebugInfoDWARF -lLLVMMIRParser -lLLVMFuzzMutate -lLLVMCoverage -lLLVMTableGen -lLLVMDlltoolDriver -lLLVMOrcJIT -lLLVMTestingSupport -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen -lLLVMXCoreDesc -lLLVMXCoreInfo -lLLVMXCoreAsmPrinter -lLLVMSystemZDisassembler -lLLVMSystemZCodeGen -lLLVMSystemZAsmParser -lLLVMSystemZDesc -lLLVMSystemZInfo -lLLVMSystemZAsmPrinter -lLLVMSparcDisassembler -lLLVMSparcCodeGen -lLLVMSparcAsmParser -lLLVMSparcDesc -lLLVMSparcInfo -lLLVMSparcAsmPrinter -lLLVMPowerPCDisassembler -lLLVMPowerPCCodeGen -lLLVMPowerPCAsmParser -lLLVMPowerPCDesc -lLLVMPowerPCInfo -lLLVMPowerPCAsmPrinter -lLLVMNVPTXCodeGen -lLLVMNVPTXDesc -lLLVMNVPTXInfo -lLLVMNVPTXAsmPrinter -lLLVMMSP430CodeGen -lLLVMMSP430Desc -lLLVMMSP430Info -lLLVMMSP430AsmPrinter -lLLVMMipsDisassembler -lLLVMMipsCodeGen -lLLVMMipsAsmParser -lLLVMMipsDesc -lLLVMMipsInfo -lLLVMMipsAsmPrinter -lLLVMLanaiDisassembler -lLLVMLanaiCodeGen -lLLVMLanaiAsmParser -lLLVMLanaiDesc -lLLVMLanaiAsmPrinter -lLLVMLanaiInfo -lLLVMHexagonDisassembler -lLLVMHexagonCodeGen -lLLVMHexagonAsmParser -lLLVMHexagonDesc -lLLVMHexagonInfo -lLLVMBPFDisassembler -lLLVMBPFCodeGen -lLLVMBPFAsmParser -lLLVMBPFDesc -lLLVMBPFInfo -lLLVMBPFAsmPrinter -lLLVMARMDisassembler -lLLVMARMCodeGen -lLLVMARMAsmParser -lLLVMARMDesc -lLLVMARMInfo -lLLVMARMAsmPrinter -lLLVMARMUtils -lLLVMAMDGPUDisassembler -lLLVMAMDGPUCodeGen -lLLVMAMDGPUAsmParser -lLLVMAMDGPUDesc -lLLVMAMDGPUInfo -lLLVMAMDGPUAsmPrinter -lLLVMAMDGPUUtils -lLLVMAArch64Disassembler -lLLVMAArch64CodeGen -lLLVMAArch64AsmParser -lLLVMAArch64Desc -lLLVMAArch64Info -lLLVMAArch64AsmPrinter -lLLVMAArch64Utils -lLLVMObjectYAML -lLLVMLibDriver -lLLVMOption -lgtest_main -lgtest -lLLVMWindowsManifest -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMGlobalISel -lLLVMSelectionDAG -lLLVMAsmPrinter -lLLVMX86Desc -lLLVMMCDisassembler -lLLVMX86Info -lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCJIT -lLLVMLineEditor -lLLVMInterpreter -lLLVMExecutionEngine -lLLVMRuntimeDyld -lLLVMCodeGen -lLLVMTarget -lLLVMCoroutines -lLLVMipo -lLLVMInstrumentation -lLLVMVectorize -lLLVMScalarOpts -lLLVMLinker -lLLVMIRReader -lLLVMAsmParser -lLLVMInstCombine -lLLVMBitWriter -lLLVMAggressiveInstCombine -lLLVMTransformUtils -lLLVMAnalysis -lLLVMProfileData -lLLVMObject -lLLVMMCParser -lLLVMMC -lLLVMDebugInfoCodeView -lLLVMDebugInfoMSF -lLLVMBitReader -lLLVMCore -lLLVMBinaryFormat -lLLVMSupport -lLLVMDemangle -lz -lpsapi -lshell32 -lole32 -luuid -ladvapi32
 else
-	CC=gcc
-	LINKER=g++
+	CC=$(UNIX_CC)
+	LINKER=$(WINDOWS_CXX)
 	EXECUTABLE=bin/adept
 	DEBUG_EXECUTABLE=bin/adept_debug
 	UNAME_S := $(shell uname -s)
 
 	ifeq ($(UNAME_S),Darwin)
 		# Depends on where user has llvm
-		LLVM_LINKER_FLAGS=-L/Users/isaac/Projects/llvm-7.0.0.src/build/lib -Wl,-search_paths_first -Wl,-headerpad_max_install_names
-		LLVM_INCLUDE_DIRS=-I/Users/isaac/Projects/llvm-7.0.0.src/include -I/Users/isaac/Projects/llvm-7.0.0.src/build/include
+		LLVM_LINKER_FLAGS=-L$(UNIX_LLVM_LIB) -Wl,-search_paths_first -Wl,-headerpad_max_install_names
+		LLVM_INCLUDE_DIRS=-I$(UNIX_LLVM_INCLUDE) -I$(UNIX_LLVM_BUILD_INCLUDE)
 
 		# Libraries that will satisfy clang on Mac
 		LLVM_LIBS=-lLLVMLTO -lLLVMPasses -lLLVMObjCARCOpts -lLLVMSymbolize -lLLVMDebugInfoPDB -lLLVMDebugInfoDWARF -lLLVMMIRParser -lLLVMFuzzMutate -lLLVMCoverage -lLLVMTableGen -lLLVMDlltoolDriver -lLLVMOrcJIT -lLLVMTestingSupport -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen -lLLVMXCoreDesc -lLLVMXCoreInfo -lLLVMXCoreAsmPrinter -lLLVMSystemZDisassembler -lLLVMSystemZCodeGen -lLLVMSystemZAsmParser -lLLVMSystemZDesc -lLLVMSystemZInfo -lLLVMSystemZAsmPrinter -lLLVMSparcDisassembler -lLLVMSparcCodeGen -lLLVMSparcAsmParser -lLLVMSparcDesc -lLLVMSparcInfo -lLLVMSparcAsmPrinter -lLLVMPowerPCDisassembler -lLLVMPowerPCCodeGen -lLLVMPowerPCAsmParser -lLLVMPowerPCDesc -lLLVMPowerPCInfo -lLLVMPowerPCAsmPrinter -lLLVMNVPTXCodeGen -lLLVMNVPTXDesc -lLLVMNVPTXInfo -lLLVMNVPTXAsmPrinter -lLLVMMSP430CodeGen -lLLVMMSP430Desc -lLLVMMSP430Info -lLLVMMSP430AsmPrinter -lLLVMMipsDisassembler -lLLVMMipsCodeGen -lLLVMMipsAsmParser -lLLVMMipsDesc -lLLVMMipsInfo -lLLVMMipsAsmPrinter -lLLVMLanaiDisassembler -lLLVMLanaiCodeGen -lLLVMLanaiAsmParser -lLLVMLanaiDesc -lLLVMLanaiAsmPrinter -lLLVMLanaiInfo -lLLVMHexagonDisassembler -lLLVMHexagonCodeGen -lLLVMHexagonAsmParser -lLLVMHexagonDesc -lLLVMHexagonInfo -lLLVMBPFDisassembler -lLLVMBPFCodeGen -lLLVMBPFAsmParser -lLLVMBPFDesc -lLLVMBPFInfo -lLLVMBPFAsmPrinter -lLLVMARMDisassembler -lLLVMARMCodeGen -lLLVMARMAsmParser -lLLVMARMDesc -lLLVMARMInfo -lLLVMARMAsmPrinter -lLLVMARMUtils -lLLVMAMDGPUDisassembler -lLLVMAMDGPUCodeGen -lLLVMAMDGPUAsmParser -lLLVMAMDGPUDesc -lLLVMAMDGPUInfo -lLLVMAMDGPUAsmPrinter -lLLVMAMDGPUUtils -lLLVMAArch64Disassembler -lLLVMAArch64CodeGen -lLLVMAArch64AsmParser -lLLVMAArch64Desc -lLLVMAArch64Info -lLLVMAArch64AsmPrinter -lLLVMAArch64Utils -lLLVMObjectYAML -lLLVMLibDriver -lLLVMOption -lgtest_main -lgtest -lLLVMWindowsManifest -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMGlobalISel -lLLVMSelectionDAG -lLLVMAsmPrinter -lLLVMX86Desc -lLLVMMCDisassembler -lLLVMX86Info -lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCJIT -lLLVMLineEditor -lLLVMInterpreter -lLLVMExecutionEngine -lLLVMRuntimeDyld -lLLVMCodeGen -lLLVMTarget -lLLVMCoroutines -lLLVMipo -lLLVMInstrumentation -lLLVMVectorize -lLLVMScalarOpts -lLLVMLinker -lLLVMIRReader -lLLVMAsmParser -lLLVMInstCombine -lLLVMBitWriter -lLLVMAggressiveInstCombine -lLLVMTransformUtils -lLLVMAnalysis -lLLVMProfileData -lLLVMObject -lLLVMMCParser -lLLVMMC -lLLVMDebugInfoCodeView -lLLVMDebugInfoMSF -lLLVMBitReader -lLLVMCore -lLLVMBinaryFormat -lLLVMSupport -lLLVMDemangle -lstdc++
 	else
 		# /usr/lib/
-		LLVM_LINKER_FLAGS=-L/usr/lib/llvm-5.0/build/lib
-		LLVM_INCLUDE_DIRS=-I/usr/lib/llvm-5.0/include -I/usr/lib/llvm-5.0/build/include
+		LLVM_LINKER_FLAGS=-L$(UNIX_LLVM_LIB)
+		LLVM_INCLUDE_DIRS=-I$(UNIX_LLVM_INCLUDE) -I$(UNIX_LLVM_BUILD_INCLUDE)
 
 		# Libraries that will probably satisfy what the compiler needs
 		LLVM_LIBS=-lLLVMCoverage -lLLVMDlltoolDriver -lLLVMLibDriver -lLLVMOption -lLLVMOrcJIT -lLLVMTableGen -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen \
@@ -78,16 +72,19 @@ else
 	LLVM_LIBS += -lpthread -lz -lcurses
 endif
 
-# -static-libgcc -static-libstdc++ -static
+# LLVM Flags
+LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
+# -lgtest_main -lgtest -lLLVMTestingSupport
 
+# -static-libgcc -static-libstdc++ -static
 CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O0 -DNDEBUG # -fmax-errors=5 -Werror
-ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g # -fprofile-instr-generate -fcoverage-mapping
-LDFLAGS=$(LLVM_LINKER_FLAGS) # -fprofile-instr-generate
+ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
+LDFLAGS=$(LLVM_LINKER_FLAGS) 
 SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c src/BRIDGE/bridge.c src/BRIDGE/type_table.c \
 	src/BRIDGE/rtti.c src/DRVR/compiler.c src/DRVR/main.c src/DRVR/object.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type_var.c src/IR/ir_type.c src/IR/ir.c src/IRGEN/ir_builder.c \
 	src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
 	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_alias.c src/PARSE/parse_ctx.c src/PARSE/parse_dependency.c src/PARSE/parse_enum.c src/PARSE/parse_expr.c src/PARSE/parse_func.c src/PARSE/parse_global.c src/PARSE/parse_meta.c src/PARSE/parse_pragma.c \
-	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c src/PARSE/parse.c src/UTIL/color.c src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/improved_qsort.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
+	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c src/PARSE/parse.c src/UTIL/color.c src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj
@@ -206,6 +203,7 @@ endif
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
 ifeq ($(OS), Windows_NT)
 	@if not exist obj mkdir obj
+	@if not exist obj\debug mkdir obj\debug
 	@if not exist "$(@D)" mkdir "$(@D)"
 else
 	@mkdir -p "$(@D)"
@@ -233,7 +231,7 @@ endif
 	$(CC) $(CFLAGS) $(ADDITIONAL_DEBUG_CFLAGS) $< -o $@
 
 $(WIN_ICON):
-	$(RES_C) -J rc -O coff -i $(WIN_ICON_SRC) -o $(WIN_ICON)
+	$(WINDOWS_WINRES) -J rc -O coff -i $(WIN_ICON_SRC) -o $(WIN_ICON)
 
 clean: rm_insight
 ifeq ($(OS), Windows_NT)

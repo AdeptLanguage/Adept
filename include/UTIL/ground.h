@@ -17,8 +17,15 @@ extern "C" {
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdbool.h>
+
+#ifdef _WIN32
+#include <io.h>
+#define access _access
+#define F_OK 0
+#else
+#include <unistd.h>
+#endif
 
 #include "UTIL/memory.h"
 
