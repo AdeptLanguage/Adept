@@ -633,7 +633,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 ir_pool_snapshot_capture(builder->pool, &snapshot);
                 
                 ir_type_t *ir_field_type;
-                if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_struct->field_types[f], &ir_field_type)){
+                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_field_type, &ir_field_type)){
                     return ALT_FAILURE;
                 }
 
@@ -673,10 +673,89 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
         }
         break;
     case AST_ELEM_GENERIC_BASE: {
-            //weak_cstr_t struct_name = ((ast_elem_generic_base_t*) concrete_elem)->name;
+            ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) concrete_elem;
+            weak_cstr_t template_name = generic_base->name;
 
-            // TODO: handle_children_deference support for AST_ELEM_GENERIC_BASE is unimplemented
-            compiler_warnf(builder->compiler, concrete_elem->source, "handle_children_deference support for AST_ELEM_GENERIC_BASE is unimplemented");
+            // Attempt to call __defer__ on members
+            ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&builder->object->ast, template_name);
+
+            // Don't bother with polymorphic structs that don't exist
+            if(template == NULL) return FAILURE;
+
+            // Substitution Catalog
+            ast_type_var_catalog_t catalog;
+            ast_type_var_catalog_init(&catalog);
+
+            if(template->generics_length != generic_base->generics_length){
+                redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating child deference!\n", generic_base->name);
+                ast_type_var_catalog_free(&catalog);
+                return ALT_FAILURE;
+            }
+
+            for(length_t i = 0; i != template->generics_length; i++){
+                ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+            }
+
+            for(length_t f = 0; f != template->field_count; f++){
+                ast_type_t *ast_unresolved_field_type = &template->field_types[f];
+                ast_type_t ast_field_type;
+
+                if(resolve_type_polymorphics(builder->compiler, &catalog, ast_unresolved_field_type, &ast_field_type)){
+                    ast_type_var_catalog_free(&catalog);
+                    return ALT_FAILURE;
+                }
+
+                // Capture snapshot for if we need to backtrack
+                ir_pool_snapshot_capture(builder->pool, &snapshot);
+                
+                ir_type_t *ir_field_type;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type)){
+                    ast_type_var_catalog_free(&catalog);
+                    ast_type_free(&ast_field_type);
+                    return ALT_FAILURE;
+                }
+
+                ir_type_t *this_ir_type;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type)){
+                    ast_type_var_catalog_free(&catalog);
+                    ast_type_free(&ast_field_type);
+                    return ALT_FAILURE;
+                }
+
+                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0));
+
+                ir_type_t *ir_field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                ir_field_ptr_type->kind = TYPE_KIND_POINTER;
+                ir_field_ptr_type->extra = ir_field_type;
+
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_member_t));
+                ((ir_instr_member_t*) instruction)->id = INSTRUCTION_MEMBER;
+                ((ir_instr_member_t*) instruction)->result_type = ir_field_ptr_type;
+                ((ir_instr_member_t*) instruction)->value = this_ir_value;
+                ((ir_instr_member_t*) instruction)->member = f;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                ir_value_t *ir_field_value = build_value_from_prev_instruction(builder);
+
+                errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value);
+                ast_type_free(&ast_field_type);
+
+                if(failed){
+                    // Remove VARPTR, LOAD, and MEMBER instruction
+                    builder->current_block->instructions_length -= 3;
+
+                    // Revert recent pool allocations
+                    ir_pool_snapshot_restore(builder->pool, &snapshot);
+
+                    // Propogate alternate failure cause
+                    if(failed == ALT_FAILURE){
+                        ast_type_var_catalog_free(&catalog);
+                        return ALT_FAILURE;
+                    }
+                }
+            }
+
+            ast_type_var_catalog_free(&catalog);
         }
         break;
     default:
@@ -865,17 +944,27 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
 errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result){
     if(type_list_length != 1) return FAILURE; // Require single argument ('this') for auto-generated __defer__
-    if(!ast_type_is_base_ptr(&arg_types[0])) {
-        // TODO: Add support for generic bases
-        yellowprintf("INTERNAL WARNING: attempt_autogen___defer__ only supports *BasicBase types\n");
-        return FAILURE; // Require '*Type' for 'this' type
+
+    bool is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
+    bool is_generic_base_ptr = is_base_ptr ? false : ast_type_is_generic_base_ptr(&arg_types[0]);
+
+    if(!(is_base_ptr || is_generic_base_ptr)){
+        return FAILURE; // Require '*Type' or '*<...> Type' for 'this' type
     }
 
     ast_t *ast = &builder->object->ast;
     ir_module_t *module = &builder->object->ir_module;
 
-    weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
-    if(ast_struct_find(ast, struct_name) == NULL) return FAILURE; // Require structure to exist
+    if(is_base_ptr){
+        weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
+        if(ast_struct_find(ast, struct_name) == NULL) return FAILURE; // Require structure to exist
+    } else if(is_generic_base_ptr){
+        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
+        weak_cstr_t struct_name = generic_base->name;
+        ast_polymorphic_struct_t *polymorphic_struct = ast_polymorphic_struct_find(ast, struct_name);
+        if(polymorphic_struct == NULL) return FAILURE; // Require generic structure to exist
+        if(polymorphic_struct->generics_length != generic_base->generics_length) return FAILURE; // Require generics count to match
+    }
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 

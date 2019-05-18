@@ -476,6 +476,7 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 }
 
                 if(generic_base_a->generics_length != generic_base_b->generics_length) return false;
+                if(strcmp(generic_base_a->name, generic_base_b->name) != 0) return false;
 
                 for(length_t i = 0; i != generic_base_a->generics_length; i++){
                     if(!ast_types_identical(&generic_base_a->generics[i], &generic_base_b->generics[i])) return false;
@@ -678,6 +679,7 @@ bool ast_type_polymorphable(const ast_type_t *polymorphic_type, const ast_type_t
                 }
 
                 if(generic_base_a->generics_length != generic_base_b->generics_length) return false;
+                if(strcmp(generic_base_a->name, generic_base_b->name) != 0) return false;
 
                 for(length_t i = 0; i != generic_base_a->generics_length; i++){
                     if(!ast_type_polymorphable(&generic_base_a->generics[i], &generic_base_b->generics[i], catalog)) return false;

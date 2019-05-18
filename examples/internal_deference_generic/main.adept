@@ -1,0 +1,25 @@
+
+struct Bomb ()
+struct Gift (bomb1, bomb2, bomb3 Bomb)
+struct <$T> Present (contents $T)
+struct <$K, $V> Pair (key $K, value $V)
+
+foreign printf(*ubyte, ...) int
+
+func __defer__(this *Bomb) {
+    printf('Kaboom!\n')
+}
+
+func __defer__(this *Gift) {
+    printf('Destroying Gift...\n')
+}
+
+func __defer__(this *<$K, $V> Pair) {
+    printf('Destroying <$K, $V> Pair\n')
+}
+
+func main {
+    present <Gift> Present
+    bomb <<Gift> Present> Present
+    pair <Bomb, Bomb> Pair
+}
