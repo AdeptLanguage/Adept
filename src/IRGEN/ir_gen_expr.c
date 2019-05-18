@@ -889,8 +889,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         }
         break;
     case EXPR_NOT: case EXPR_NEGATE: case EXPR_BIT_COMPLEMENT: {
-            // TODO: CLEANUP: Cleanup this code for unary operators
-
             ast_expr_unary_t *unary_expr = (ast_expr_unary_t*) expr;
             ast_type_t expr_type;
             ir_value_t *expr_value;
@@ -907,27 +905,25 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_unary_t));
+            ((ir_instr_unary_t*) instruction)->value = expr_value;
+
             if(expr->id == EXPR_NOT){
                 // Build and append an 'iszero' instruction
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_unary_t));
                 ((ir_instr_unary_t*) instruction)->id = INSTRUCTION_ISZERO;
                 ((ir_instr_unary_t*) instruction)->result_type = ir_builder_bool(builder);
-                ((ir_instr_unary_t*) instruction)->value = expr_value;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
+                if(out_expr_type) ast_type_make_base(out_expr_type, strclone("bool"));
             } else {
                 // Build and append an 'negate' instruction
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_unary_t));
                 ((ir_instr_unary_t*) instruction)->result_type = expr_value->type;
-                ((ir_instr_unary_t*) instruction)->value = expr_value;
 
                 switch(((ir_instr_unary_t*) instruction)->value->type->kind){
                 case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
                 case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
                 case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-                    instruction->id = (expr->id == EXPR_NEGATE ? INSTRUCTION_NEGATE : INSTRUCTION_BIT_COMPLEMENT); break;
+                    instruction->id = (expr->id == EXPR_NEGATE ? INSTRUCTION_NEGATE : INSTRUCTION_BIT_COMPLEMENT);
+                    break;
                 case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
                     if(expr->id == EXPR_BIT_COMPLEMENT){
                         char *s = ast_type_str(&expr_type);
@@ -946,18 +942,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     }
                 }
 
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
+                if(out_expr_type) *out_expr_type = ast_type_clone(&expr_type);
             }
 
-            if(out_expr_type != NULL){
-                if(expr->id == EXPR_NOT){
-                    ast_type_make_base(out_expr_type, strclone("bool"));
-                } else {
-                    *out_expr_type = ast_type_clone(&expr_type);
-                }
-            }
-
+            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+            *ir_value = build_value_from_prev_instruction(builder);
             ast_type_free(&expr_type);
         }
         break;

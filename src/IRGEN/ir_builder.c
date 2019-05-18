@@ -878,7 +878,6 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     if(types_length < poly_func->arity) return FAILURE;
 
     ast_t *ast = &builder->object->ast;
-    ir_module_t *module = &builder->object->ir_module;
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
     length_t ast_func_id = ast->funcs_length;
@@ -919,23 +918,15 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
         if(resolve_expr_polymorphics(builder->compiler, catalog, func->statements[s])) return FAILURE;
     }
 
-    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id)){
+    ir_func_mapping_t newest_mapping;
+    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id, true, &newest_mapping)){
         return FAILURE;
     }
-
-    // HACK: Get generated function mapping
-    ir_func_mapping_t newest_mapping = module->func_mappings[module->func_mappings_length - 1];
 
     // Add mapping to IR jobs
     ir_jobs_t *jobs = builder->jobs;
     expand((void**) &jobs->jobs, sizeof(ir_func_mapping_t), jobs->length, &jobs->capacity, 1, 4);
     jobs->jobs[jobs->length++] = newest_mapping;
-
-    // Lazy update mappings and methods
-    // TODO: Use better approach
-    qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
-    qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
-    qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
 
     if(out_mapping) *out_mapping = newest_mapping;
     return SUCCESS;
@@ -996,23 +987,15 @@ errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_va
     // be taken care of inside __defer__ function during IR generation
     // of the auto-generated function
 
-    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id)){
+    ir_func_mapping_t newest_mapping;
+    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id, true, &newest_mapping)){
         return FAILURE;
     }
-
-    // HACK: Get generated function mapping
-    ir_func_mapping_t newest_mapping = module->func_mappings[module->func_mappings_length - 1];
 
     // Add mapping to IR jobs
     ir_jobs_t *jobs = builder->jobs;
     expand((void**) &jobs->jobs, sizeof(ir_func_mapping_t), jobs->length, &jobs->capacity, 1, 4);
     jobs->jobs[jobs->length++] = newest_mapping;
-
-    // Lazy update mappings and methods
-    // TODO: Use better approach
-    qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
-    qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
-    qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
 
     result->ast_func_id = ast_func_id;
     result->ir_func_id = newest_mapping.ir_func_id;

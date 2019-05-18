@@ -37,7 +37,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     for(length_t ast_func_id = 0; ast_func_id != ast->funcs_length; ast_func_id++){
         ast_func_t *ast_func = &(*ast_funcs)[ast_func_id];
         if(ast_func->traits & AST_FUNC_POLYMORPHIC) continue;
-        if(ir_gen_func_head(compiler, object, ast_func, ast_func_id)) return FAILURE;
+        if(ir_gen_func_head(compiler, object, ast_func, ast_func_id, false, NULL)) return FAILURE;
     }
 
     qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
@@ -46,7 +46,8 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     return SUCCESS;
 }
 
-errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, length_t ast_func_id){
+errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, length_t ast_func_id,
+        bool preserve_sortedness, ir_func_mapping_t *optional_out_new_mapping){
     ir_module_t *module = &object->ir_module;
 
     expand((void**) &module->funcs, sizeof(ir_func_t), module->funcs_length, &module->funcs_capacity, 1, object->ast.funcs_length);
@@ -86,6 +87,14 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     module->func_mappings_length++;
     module->funcs_length++;
 
+    // Give data about the created function if asked for
+    if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
+
+    if(preserve_sortedness){
+        // TODO: Don't resort the entire array
+        qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
+    }
+
     if(!(ast_func->traits & AST_FUNC_FOREIGN)){
         if(ast_func->arity > 0 && strcmp(ast_func->arg_names[0], "this") == 0){
             // This is a struct method, attach a reference to the struct
@@ -121,6 +130,11 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     method->ir_func_id = ir_func_id;
                     method->ast_func_id = ast_func_id;
                     method->is_beginning_of_group = -1;
+
+                    if(preserve_sortedness){
+                        // TODO: Don't resort the entire array
+                        qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
+                    }
                 }
                 break;
             case AST_ELEM_GENERIC_BASE: {
@@ -147,6 +161,11 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     generic_base_method->ir_func_id = ir_func_id;
                     generic_base_method->ast_func_id = ast_func_id;
                     generic_base_method->is_beginning_of_group = -1;
+
+                    if(preserve_sortedness){
+                        // TODO: Don't resort the entire array
+                        qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
+                    }
                 }
                 break;
             default:

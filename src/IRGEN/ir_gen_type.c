@@ -183,8 +183,6 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
         }
         break;
     case AST_ELEM_GENERIC_BASE: {
-            // TODO: Find polymorphic structure and instantiate it with the correct types
-
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
             ir_type_t *created_type = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t));
             ir_type_extra_composite_t *extra = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_extra_composite_t));

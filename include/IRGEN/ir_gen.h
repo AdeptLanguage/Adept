@@ -24,7 +24,8 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_func_head ----------------
 // Generates IR function skeleton for an AST function.
-errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, length_t ast_func_id);
+errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, length_t ast_func_id,
+    bool preserve_sortedness, ir_func_mapping_t *optional_out_new_mapping);
 
 // ---------------- ir_gen_functions_body ----------------
 // Generates IR function bodies for AST functions.
