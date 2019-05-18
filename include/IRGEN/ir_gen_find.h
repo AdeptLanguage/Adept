@@ -13,16 +13,8 @@
 #include "AST/ast.h"
 #include "UTIL/ground.h"
 #include "DRVR/compiler.h"
+#include "BRIDGE/funcpair.h"
 #include "IRGEN/ir_builder.h"
-
-// ---------------- funcpair_t ----------------
-// A container for function results
-typedef struct {
-    ast_func_t *ast_func;
-    ir_func_t *ir_func;
-    length_t ast_func_id;
-    length_t ir_func_id;
-} funcpair_t;
 
 // ---------------- ir_gen_find_func ----------------
 // Finds a function that exactly matches the given

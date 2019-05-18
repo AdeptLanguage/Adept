@@ -36,12 +36,15 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     }
     
     // enforce specific arguements for special functions & methods
-    if(strcmp(func->name, "__defer__") == 0 && (
-        func->traits != TRAIT_NONE
+    if(func->traits == AST_FUNC_DEFER && (
+        strcmp(func->name, "__defer__") != 0
         || !ast_type_is_void(&func->return_type)
         || func->arity != 1
         || strcmp(func->arg_names[0], "this") != 0
-        || !ast_type_is_base_ptr(&func->arg_types[0])
+        || !(  ast_type_is_base_ptr(&func->arg_types[0])
+            || ast_type_is_polymorph_ptr(&func->arg_types[0])
+            || ast_type_is_generic_base_ptr(&func->arg_types[0])
+            )
         || func->arg_type_traits[0] != TRAIT_NONE
     )){
         compiler_panic(ctx->compiler, source, "Management method __defer__ must be declared as 'func __defer__(this *T) void'");

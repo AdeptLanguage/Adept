@@ -20,7 +20,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
     ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
 
-    if(ast_func->statements_length == 0){
+    if(ast_func->statements_length == 0 && !(ast_func->traits & AST_FUNC_GENERATED) && compiler->traits & COMPILER_FUSSY){
         compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name);
     }
 
@@ -111,15 +111,20 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         return FAILURE;
     }
 
-    // Make sure to update references that may have been invalidated
-    ast_func = &object->ast.funcs[ast_func_id];
-    module_func = &object->ir_module.funcs[ir_func_id];
-
     // Append return instr for functions that return void
     if(!terminated){
         handle_defer_management(&builder, &builder.var_scope->list);
 
+        // Make sure to update references that may have been invalidated
+        ast_func = &object->ast.funcs[ast_func_id];
+
+        if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(&builder)){
+            // Failed to auto-generate __defer__() calls to children of parent type
+            return FAILURE;
+        }
+
         // Ensure latest version of module_func reference
+        ast_func = &object->ast.funcs[ast_func_id];
         module_func = &object->ir_module.funcs[ir_func_id];
 
         if(module_func->return_type->kind == TYPE_KIND_VOID){
@@ -142,6 +147,9 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
             return FAILURE;
         }
     }
+
+    // Make sure to update references that may have been invalidated
+    module_func = &object->ir_module.funcs[ir_func_id];
 
     module_func->var_scope->following_var_id = builder.next_var_id;
     module_func->variable_count = builder.next_var_id;
@@ -172,8 +180,16 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     handle_defer_management(builder, &visit_scope->list);
                 }
 
+                // DANGEROUS: Could be invalidated by 'ir_gen_expression' call, in which case it should no longer be used
+                ast_func_t *ast_func = &builder->object->ast.funcs[builder->ast_func_id];
+                ast_type_t *return_type = &ast_func->return_type;
+
                 handle_defer_management(builder, &visit_scope->list);
-                ast_type_t *return_type = &builder->object->ast.funcs[builder->ast_func_id].return_type;
+
+                if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder)){
+                    // Failed to auto-generate __defer__() calls to children of parent type
+                    return FAILURE;
+                }
 
                 if(((ast_expr_return_t*) statements[s])->value != NULL){
                     // Return non-void value
@@ -190,7 +206,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
 
                     ast_type_free(&temporary_type);
-                } else if(builder->object->ast.funcs[builder->ast_func_id].traits & AST_FUNC_MAIN && ast_type_is_void(return_type)){
+                } else if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(return_type)){
                     // Return 0 if in main function and it returns void
                     expression_value = build_literal_int(builder->pool, 0);
                 } else {

@@ -218,6 +218,12 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
         }
     }
 
+    if(strcmp(name, "__defer__") == 0
+    && attempt_autogen___defer__(builder, arg_values, arg_types, type_list_length, result) == SUCCESS){
+        // Auto-generate __defer__ method if possible
+        return SUCCESS;
+    }
+
     return FAILURE; // No method with that definition found
 }
 
@@ -301,6 +307,12 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
             result->ir_func_id = instance.ir_func_id;
             return SUCCESS;
         }
+    }
+
+    if(strcmp(name, "__defer__") == 0
+    && attempt_autogen___defer__(builder, arg_values, arg_types, type_list_length, result) == SUCCESS){
+        // Auto-generate __defer__ method if possible
+        return SUCCESS;
     }
 
     return FAILURE; // No method with that definition found

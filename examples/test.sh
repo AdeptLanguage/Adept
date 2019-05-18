@@ -49,6 +49,7 @@ compile ifelse || exit $?
 compile import || exit $?
 compile inline_declaration || exit $?
 compile int_ptr_cast || exit $?
+compile internal_deference || exit $?
 compile management_assign || exit $?
 compile management_defer || exit $?
 compile management_math || exit $?

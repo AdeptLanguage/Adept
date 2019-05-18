@@ -536,6 +536,30 @@ bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to){
     return ast_types_identical(&stripped, to);
 }
 
+bool ast_type_is_polymorph(const ast_type_t *type){
+    if(type->elements_length != 1) return false;
+    if(type->elements[0]->id != AST_ELEM_POLYMORPH) return false;
+    return true;
+}
+
+bool ast_type_is_polymorph_ptr(const ast_type_t *type){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER || type->elements[1]->id != AST_ELEM_POLYMORPH) return false;
+    return true;
+}
+
+bool ast_type_is_generic_base(const ast_type_t *type){
+    if(type->elements_length != 1) return false;
+    if(type->elements[0]->id != AST_ELEM_GENERIC_BASE) return false;
+    return true;
+}
+
+bool ast_type_is_generic_base_ptr(const ast_type_t *type){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER || type->elements[1]->id != AST_ELEM_GENERIC_BASE) return false;
+    return true;
+}
+
 bool ast_type_has_polymorph(const ast_type_t *type){
     for(length_t i = 0; i != type->elements_length; i++){
         switch(type->elements[i]->id){

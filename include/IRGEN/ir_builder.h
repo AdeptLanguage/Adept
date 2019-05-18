@@ -13,6 +13,7 @@
 #include "DRVR/object.h"
 #include "DRVR/compiler.h"
 #include "BRIDGE/bridge.h"
+#include "BRIDGE/funcpair.h"
 
 // ---------------- ir_builder_t ----------------
 // Container for storing general information
@@ -200,6 +201,21 @@ void close_var_scope(ir_builder_t *builder);
 // Adds a variable to the current bridge_var_scope_t
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
 
+// ---------------- handle_deference_for_variables ----------------
+// Handles deference for variables in a variable list
+// Returns FAILURE on compile time error
+errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_list_t *list);
+
+// ---------------- handle_single_deference ----------------
+// Calls __defer__ method on a value and it's children if the method exists
+// NOTE: Assumes (ast_type->elements_length == 1)
+// NOTE: Returns SUCCESS if value was utilized in deference
+//       Returns FAILURE if value was not utilized in deference
+//       Returns ALT_FAILURE if a compiler time error occured
+errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *value);
+
+errorcode_t handle_children_deference(ir_builder_t *builder);
+
 // ---------------- handle_defer_management ----------------
 // Handles '__defer__' management method calls for stack allocated variables
 void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list);
@@ -222,6 +238,13 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 // Instantiates a polymorphic function
 errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
     length_t types_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping);
+
+// ---------------- attempt_autogen___defer__ ----------------
+// Attempts to auto-generate __defer__ management method
+// NOTE: Does NOT check for existing suitable __defer__ methods
+// NOTE: Returns FAILURE if couldn't auto generate
+errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
+        length_t type_list_length, funcpair_t *result);
 
 // ---------------- resolve_type_polymorphics ----------------
 // Resolves any polymorphic type variables within an AST type

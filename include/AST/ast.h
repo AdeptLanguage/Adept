@@ -46,6 +46,7 @@ typedef struct {
 #define AST_FUNC_STDCALL     TRAIT_4
 #define AST_FUNC_POLYMORPHIC TRAIT_5
 #define AST_FUNC_GENERATED   TRAIT_6
+#define AST_FUNC_DEFER       TRAIT_7
 
 // ---------------- ast_struct_t ----------------
 // A structure within the root AST

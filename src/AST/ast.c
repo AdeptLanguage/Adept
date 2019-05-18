@@ -499,9 +499,10 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     func->statements_capacity = 0;
     func->source = source;
 
-    if(strcmp(name, "main") == 0) func->traits |= AST_FUNC_MAIN;
-    if(is_stdcall)                func->traits |= AST_FUNC_STDCALL;
-    if(is_foreign)                func->traits |= AST_FUNC_FOREIGN;
+    if(strcmp(name, "main") == 0)      func->traits |= AST_FUNC_MAIN;
+    if(strcmp(name, "__defer__") == 0) func->traits |= AST_FUNC_DEFER;
+    if(is_stdcall)                     func->traits |= AST_FUNC_STDCALL;
+    if(is_foreign)                     func->traits |= AST_FUNC_FOREIGN;
 }
 
 bool ast_func_is_polymorphic(ast_func_t *func){

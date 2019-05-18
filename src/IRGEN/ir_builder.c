@@ -494,39 +494,200 @@ void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type,
     list->length++;
 }
 
-void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list){
+errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_list_t *list){
     for(length_t i = 0; i != list->length; i++){
-        // Don't perform defer management on POD variables
-        if(list->variables[i].traits & BRIDGE_VAR_POD) continue;
+        // Don't perform defer management on POD variables or non-struct types
+        if(list->variables[i].traits & BRIDGE_VAR_POD || list->variables[i].ir_type->kind != TYPE_KIND_STRUCTURE) continue;
 
-        // Only perform defer management on structures with a __defer__ method
-        if(list->variables[i].ir_type->kind == TYPE_KIND_STRUCTURE){
-            ast_type_t *ast_type = list->variables[i].ast_type;
+        bridge_var_t *variable = &list->variables[i];
 
-            if(ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE){
-                // Call __defer__ if that type has one
+        // Ensure we're working with a single AST type element in the type
+        if(variable->ast_type->elements_length != 1) continue;
 
-                weak_cstr_t struct_name = ((ast_elem_base_t*) ast_type->elements[0])->base;
+        // Capture snapshot of current pool state (for if we need to revert allocations)
+        ir_pool_snapshot_t snapshot;
+        ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-                maybe_index_t index = find_beginning_of_method_group(builder->object->ir_module.methods, builder->object->ir_module.methods_length, struct_name, "__defer__");
-                if(index == -1) continue;
+        ir_value_t *ir_var_value = build_varptr(builder, ir_type_pointer_to(builder->pool, variable->ir_type), variable->id);
 
-                ir_method_t *method = &builder->object->ir_module.methods[index];
-                ir_value_t *variable_pointer = build_varptr(builder, ir_type_pointer_to(builder->pool, list->variables[i].ir_type), list->variables[i].id);
-                ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t**));
-                arguments[0] = variable_pointer;
+        errorcode_t failed = handle_single_deference(builder, variable->ast_type, ir_var_value);
 
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-                instruction->id = INSTRUCTION_CALL;
-                instruction->result_type = builder->object->ir_module.funcs[method->ir_func_id].return_type;
-                instruction->values = arguments;
-                instruction->values_length = 1;
-                instruction->ir_func_id = method->ir_func_id;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
-            }
+        if(failed){
+            // Remove VARPTR instruction
+            builder->current_block->instructions_length--;
+
+            // Revert recent pool allocations
+            ir_pool_snapshot_restore(builder->pool, &snapshot);
+
+            // Real failure if a compile time error occured
+            if(failed == ALT_FAILURE) return FAILURE;
         }
     }
+
+    return SUCCESS;
+}
+
+errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *value){
+    // Calls __defer__ method on a value and it's children if the method exists
+    // NOTE: Assumes (ast_type->elements_length == 1)
+    // NOTE: Returns SUCCESS if value was utilized in deference
+    //       Returns FAILURE if value was not utilized in deference
+    //       Returns ALT_FAILURE if a compiler time error occured
+
+    funcpair_t defer_func;
+
+    ast_type_t ast_type_ptr;
+    ast_elem_t *ast_type_ptr_elems[2];
+    ast_elem_t ast_type_ptr_elem;
+
+    ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
+    arguments[0] = value;
+
+    switch(ast_type->elements[0]->id){
+    case AST_ELEM_BASE: {
+            weak_cstr_t struct_name = ((ast_elem_base_t*) ast_type->elements[0])->base;
+
+            // Create temporary AST pointer type
+            ast_type_ptr_elem.id = AST_ELEM_POINTER;
+            ast_type_ptr_elem.source = ast_type->source;
+            ast_type_ptr_elems[0] = &ast_type_ptr_elem;
+            ast_type_ptr_elems[1] = ast_type->elements[0];
+            ast_type_ptr.elements = ast_type_ptr_elems;
+            ast_type_ptr.elements_length = 2;
+            ast_type_ptr.source = ast_type->source;
+
+            if(ir_gen_find_method_conforming(builder, struct_name, "__defer__", arguments, &ast_type_ptr, 1, &defer_func)){
+                return FAILURE;
+            }
+        }
+        break;
+    case AST_ELEM_GENERIC_BASE: {
+            weak_cstr_t struct_name = ((ast_elem_generic_base_t*) ast_type->elements[0])->name;
+
+            // Create temporary AST pointer type
+            ast_type_ptr_elem.id = AST_ELEM_POINTER;
+            ast_type_ptr_elem.source = ast_type->source;
+            ast_type_ptr_elems[0] = &ast_type_ptr_elem;
+            ast_type_ptr_elems[1] = ast_type->elements[0];
+            ast_type_ptr.elements = ast_type_ptr_elems;
+            ast_type_ptr.elements_length = 2;
+            ast_type_ptr.source = ast_type->source;
+
+            if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__defer__", arguments, &ast_type_ptr, 1, &defer_func)){
+                return FAILURE;
+            }
+        }
+        break;
+    default:
+        return FAILURE;
+    }
+
+    // Call __defer__()
+    ir_basicblock_new_instructions(builder->current_block, 1);
+    ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+    instruction->id = INSTRUCTION_CALL;
+    instruction->result_type = builder->object->ir_module.funcs[defer_func.ir_func_id].return_type;
+    instruction->values = arguments;
+    instruction->values_length = 1;
+    instruction->ir_func_id = defer_func.ir_func_id;
+    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction; 
+    return SUCCESS;
+}
+
+errorcode_t handle_children_deference(ir_builder_t *builder){
+    // Generates __defer__ calls for children of the parent type of a __defer__ function
+
+    // DANGEROUS: 'func' could be invalidated by generation of new functions
+    ast_func_t *func = &builder->object->ast.funcs[builder->ast_func_id];
+    ast_type_t *this_ast_type = func->arity == 1 ? &func->arg_types[0] : NULL;
+    ir_pool_snapshot_t snapshot;
+
+    if(this_ast_type == NULL || this_ast_type->elements_length != 2){
+        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_dereference() encountered unrecognzied format of __defer__ management method");
+        return FAILURE;
+    }
+
+    if(func->arg_type_traits[0] & BRIDGE_VAR_POD) return SUCCESS;
+
+    ast_elem_t *concrete_elem = this_ast_type->elements[1];
+
+    if(this_ast_type->elements[0]->id != AST_ELEM_POINTER || !(concrete_elem->id == AST_ELEM_BASE || concrete_elem->id == AST_ELEM_GENERIC_BASE)){
+        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_dereference() encountered unrecognzied argument types of __defer__ management method");
+        return FAILURE;
+    }
+
+    switch(concrete_elem->id){
+    case AST_ELEM_BASE: {
+            weak_cstr_t struct_name = ((ast_elem_base_t*) concrete_elem)->base;
+
+            // Attempt to call __defer__ on members
+            ast_struct_t *ast_struct = ast_struct_find(&builder->object->ast, struct_name);
+
+            // Don't bother with structs that don't exist
+            if(ast_struct == NULL) return FAILURE;
+
+            for(length_t f = 0; f != ast_struct->field_count; f++){
+                ast_type_t *ast_field_type = &ast_struct->field_types[f];
+
+                // Capture snapshot for if we need to backtrack
+                ir_pool_snapshot_capture(builder->pool, &snapshot);
+                
+                ir_type_t *ir_field_type;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_struct->field_types[f], &ir_field_type)){
+                    return ALT_FAILURE;
+                }
+
+                ir_type_t *this_ir_type;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type)){
+                    return ALT_FAILURE;
+                }
+
+                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0));
+
+                ir_type_t *ir_field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                ir_field_ptr_type->kind = TYPE_KIND_POINTER;
+                ir_field_ptr_type->extra = ir_field_type;
+
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_member_t));
+                ((ir_instr_member_t*) instruction)->id = INSTRUCTION_MEMBER;
+                ((ir_instr_member_t*) instruction)->result_type = ir_field_ptr_type;
+                ((ir_instr_member_t*) instruction)->value = this_ir_value;
+                ((ir_instr_member_t*) instruction)->member = f;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                ir_value_t *ir_field_value = build_value_from_prev_instruction(builder);
+
+                errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value);
+
+                if(failed){
+                    // Remove VARPTR, LOAD, and MEMBER instruction
+                    builder->current_block->instructions_length -= 3;
+
+                    // Revert recent pool allocations
+                    ir_pool_snapshot_restore(builder->pool, &snapshot);
+
+                    // Propogate alternate failure cause
+                    if(failed == ALT_FAILURE) return ALT_FAILURE;
+                }
+            }
+        }
+        break;
+    case AST_ELEM_GENERIC_BASE: {
+            //weak_cstr_t struct_name = ((ast_elem_generic_base_t*) concrete_elem)->name;
+
+            // TODO: handle_children_deference support for AST_ELEM_GENERIC_BASE is unimplemented
+            compiler_warnf(builder->compiler, concrete_elem->source, "handle_children_deference support for AST_ELEM_GENERIC_BASE is unimplemented");
+        }
+        break;
+    default:
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list){
+    handle_deference_for_variables(builder, list);
 }
 
 void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity){
@@ -692,11 +853,82 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     jobs->jobs[jobs->length++] = newest_mapping;
 
     // Lazy update mappings and methods
+    // TODO: Use better approach
     qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
     qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
 
     if(out_mapping) *out_mapping = newest_mapping;
+    return SUCCESS;
+}
+
+errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
+        length_t type_list_length, funcpair_t *result){
+    if(type_list_length != 1) return FAILURE; // Require single argument ('this') for auto-generated __defer__
+    if(!ast_type_is_base_ptr(&arg_types[0])) {
+        // TODO: Add support for generic bases
+        yellowprintf("INTERNAL WARNING: attempt_autogen___defer__ only supports *BasicBase types\n");
+        return FAILURE; // Require '*Type' for 'this' type
+    }
+
+    ast_t *ast = &builder->object->ast;
+    ir_module_t *module = &builder->object->ir_module;
+
+    weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
+    if(ast_struct_find(ast, struct_name) == NULL) return FAILURE; // Require structure to exist
+
+    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+
+    length_t ast_func_id = ast->funcs_length;
+    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    ast_func_create_template(func, strclone("__defer__"), false, false, NULL_SOURCE);
+    func->traits |= AST_FUNC_GENERATED;
+
+    func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
+    func->arg_types = malloc(sizeof(ast_type_t));
+    func->arg_sources = malloc(sizeof(source_t));
+    func->arg_flows = malloc(sizeof(char));
+    func->arg_type_traits = malloc(sizeof(trait_t));
+
+    func->arg_names[0] = strclone("this");
+    func->arg_types[0] = ast_type_clone(&arg_types[0]);
+    func->arg_sources[0] = NULL_SOURCE;
+    func->arg_flows[0] = FLOW_IN;
+    func->arg_type_traits[0] = AST_FUNC_ARG_TYPE_TRAIT_POD;
+    func->arity = 1;
+
+    func->statements_length = 0;
+    func->statements_capacity = 0;
+    func->statements = NULL;
+
+    ast_type_make_base(&func->return_type, strclone("void"));
+
+    // Don't generate any statements because children will
+    // be taken care of inside __defer__ function during IR generation
+    // of the auto-generated function
+
+    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id)){
+        return FAILURE;
+    }
+
+    // HACK: Get generated function mapping
+    ir_func_mapping_t newest_mapping = module->func_mappings[module->func_mappings_length - 1];
+
+    // Add mapping to IR jobs
+    ir_jobs_t *jobs = builder->jobs;
+    expand((void**) &jobs->jobs, sizeof(ir_func_mapping_t), jobs->length, &jobs->capacity, 1, 4);
+    jobs->jobs[jobs->length++] = newest_mapping;
+
+    // Lazy update mappings and methods
+    // TODO: Use better approach
+    qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
+    qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
+    qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
+
+    result->ast_func_id = ast_func_id;
+    result->ir_func_id = newest_mapping.ir_func_id;
+    result->ast_func = &ast->funcs[ast_func_id];
+    result->ir_func = &module->funcs[newest_mapping.ir_func_id];
     return SUCCESS;
 }
 

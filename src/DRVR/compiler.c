@@ -245,6 +245,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->optimization = OPTIMIZATION_DEFAULT;
             } else if(strcmp(argv[arg_index], "-O3") == 0){
                 compiler->optimization = OPTIMIZATION_AGGRESSIVE;
+            } else if(strcmp(argv[arg_index], "--fussy") == 0){
+                compiler->traits |= COMPILER_FUSSY;
             } else if(strcmp(argv[arg_index], "--no-undef") == 0){
                 compiler->traits |= COMPILER_NO_UNDEF;
             } else if(strcmp(argv[arg_index], "--no-type-info") == 0){
@@ -411,7 +413,7 @@ void break_into_arguments(const char *s, int *out_argc, char ***out_argv){
 }
 
 void show_help(){
-    printf("The Adept Compiler v2.1 - (c) 2016-2019 Isaac Shelton\n\n");
+    printf("The Adept Compiler v2.2 - (c) 2016-2019 Isaac Shelton\n\n");
     printf("Usage: adept [options] <filename>\n\n");
     printf("Options:\n");
     printf("    -h, --help        Display this message\n");
@@ -423,6 +425,7 @@ void show_help(){
     printf("    -w                Disable all compiler warnings\n");
     printf("    -j                Preserve generated object file\n");
     printf("    -O                Set optimization level\n");
+    printf("    --fussy           Show typically insignificant warnings\n");
 
     printf("\nLanguage Options:\n");
     printf("    --no-type-info    Disable runtime type information\n");
