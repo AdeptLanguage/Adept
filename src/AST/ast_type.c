@@ -483,6 +483,12 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 }
             }
             break;
+        case AST_ELEM_POLYMORPH: {
+                ast_elem_polymorph_t *polymorph_a = (ast_elem_polymorph_t*) a->elements[i];
+                ast_elem_polymorph_t *polymorph_b = (ast_elem_polymorph_t*) b->elements[i];
+                if(strcmp(polymorph_a->name, polymorph_b->name) != 0) return false;
+            }
+            break;
         default:
             redprintf("INTERNAL ERROR: ast_types_identical received unknown element id\n");
             return false;

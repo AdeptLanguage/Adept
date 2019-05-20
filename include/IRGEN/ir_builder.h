@@ -221,7 +221,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder);
 void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list);
 
 // ---------------- handle_pass_management ----------------
-// Handles '__pass__' management method calls for passing arguments
+// Handles '__pass__' management function calls for passing arguments
 // NOTE: 'arg_type_traits' can be NULL
 void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity);
 

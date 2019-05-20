@@ -53,7 +53,10 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     if(strcmp(func->name, "__pass__") == 0 && (
         func->traits != TRAIT_NONE
-        || !ast_type_is_base(&func->return_type)
+        || !(  ast_type_is_base(&func->return_type)
+            || ast_type_is_polymorph(&func->return_type)
+            || ast_type_is_generic_base(&func->return_type)
+            )
         || func->arity != 1
         || !ast_types_identical(&func->return_type, &func->arg_types[0])
         || func->arg_type_traits[0] != AST_FUNC_ARG_TYPE_TRAIT_POD
