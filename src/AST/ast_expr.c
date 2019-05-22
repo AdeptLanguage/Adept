@@ -351,10 +351,12 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
 
             // (..., ..., ...)
             args_representation_length += (call_expr->arity == 0) ? 2 : 2 * call_expr->arity;
-            char *args_representation = malloc(args_representation_length + 1);
-            args_representation[0] = '(';
+            char *args_representation = malloc(args_representation_length + 2);
 
-            length_t args_representation_index = 1;
+            length_t args_representation_index = 0;
+            if(call_expr->is_tentative) args_representation[args_representation_index++] = '?';
+            args_representation[args_representation_index++] = '(';
+
             for(length_t i = 0; i != call_expr->arity; i++){
                 length_t arg_string_length = strlen(arg_strings[i]);
                 memcpy(&args_representation[args_representation_index], arg_strings[i], arg_string_length);
@@ -806,6 +808,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_call->name = expr_as_call->name;
         clone_as_call->args = malloc(sizeof(ast_expr_t*) * expr_as_call->arity);
         clone_as_call->arity = expr_as_call->arity;
+        clone_as_call->is_tentative = expr_as_call->is_tentative;
 
         for(length_t i = 0; i != expr_as_call->arity; i++){
             clone_as_call->args[i] = ast_expr_clone(expr_as_call->args[i]);
@@ -915,6 +918,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_call_method->args = malloc(sizeof(ast_expr_t*) * expr_as_call_method->arity);
         clone_as_call_method->arity = expr_as_call_method->arity;
         clone_as_call_method->value = ast_expr_clone(expr_as_call_method->value);
+        clone_as_call_method->is_tentative = expr_as_call_method->is_tentative;
         for(length_t i = 0; i != expr_as_call_method->arity; i++){
             clone_as_call_method->args[i] = ast_expr_clone(expr_as_call_method->args[i]);
         }
@@ -1169,12 +1173,13 @@ void ast_expr_create_variable(ast_expr_t **out_expr, weak_cstr_t name, source_t 
     ((ast_expr_variable_t*) *out_expr)->source = source;
 }
 
-void ast_expr_create_call(ast_expr_t **out_expr, weak_cstr_t name, length_t arity, ast_expr_t **args, source_t source){
+void ast_expr_create_call(ast_expr_t **out_expr, weak_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, source_t source){
     *out_expr = malloc(sizeof(ast_expr_call_t));
     ((ast_expr_call_t*) *out_expr)->id = EXPR_CALL;
     ((ast_expr_call_t*) *out_expr)->name = name;
     ((ast_expr_call_t*) *out_expr)->arity = arity;
     ((ast_expr_call_t*) *out_expr)->args = args;
+    ((ast_expr_call_t*) *out_expr)->is_tentative = is_tentative;
     ((ast_expr_call_t*) *out_expr)->source = source;
 }
 

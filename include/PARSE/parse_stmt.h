@@ -22,7 +22,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *expr_list, ast_expr_l
 
 // ------------------ parse_stmt_call ------------------
 // Parses a function call statement
-errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
+errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *expr_list, bool is_tentative);
 
 // ------------------ parse_stmt_declare ------------------
 // Parses a variable declaration statement

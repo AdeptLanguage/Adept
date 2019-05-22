@@ -140,6 +140,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             case ';': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_TERMINATE_JOIN, i, 1); break;
             case '^': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_XOR, i, 1);        break;
             case '~': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_COMPLEMENT, i, 1); break;
+            case '?': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_MAYBE, i, 1);          break;
             case '\n': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEWLINE, i, 1);       break;
             case '.':
                 (*sources)[tokenlist->length].index = i;

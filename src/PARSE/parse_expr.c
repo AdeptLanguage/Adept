@@ -172,6 +172,9 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
             }
             break;
         case TOKEN_MEMBER: {
+                bool is_tentative = tokens[*i + 1].id == TOKEN_MAYBE;
+                if(is_tentative) (*i)++;
+
                 if(tokens[++(*i)].id != TOKEN_WORD){
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected identifier after '.' operator");
                     return FAILURE;
@@ -186,6 +189,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     call_expr->source = sources[*i - 2];
                     call_expr->arity = 0;
                     call_expr->args = NULL;
+                    call_expr->is_tentative = is_tentative;
                     *i += 2;
 
                     // value.method(arg1, arg2, ...)
@@ -240,6 +244,11 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     *inout_expr = (ast_expr_t*) call_expr;
                     (*i)++;
                 } else {
+                    if(is_tentative){
+                        compiler_panic(ctx->compiler, sources[*i - 2], "Cannot have tentative field access");
+                        return FAILURE;
+                    }
+
                     // Member access expression
                     ast_expr_member_t *memb_expr = malloc(sizeof(ast_expr_member_t));
                     memb_expr->id = EXPR_MEMBER;
@@ -400,8 +409,16 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     ast_expr_t *arg;
     length_t max_arity = 0;
 
-    // Assume that '(' token follows
-    *i += 2;
+    // Determine whether call is tentative, assume that '(' token follows
+    bool is_tentative;
+    (*i)++;
+
+    if(tokens[(*i)++].id == TOKEN_MAYBE){
+        is_tentative = true;
+        (*i)++;
+    } else {
+        is_tentative = false;
+    }
 
     while(tokens[*i].id != TOKEN_CLOSE){
         if(parse_expr(ctx, &arg)){
@@ -423,7 +440,12 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         }
     }
 
-    ast_expr_create_call(out_expr, name, arity, args, source);
+    if(is_tentative){
+        compiler_panic(ctx->compiler, source, "Tentative calls cannot be used in expressions");
+        return FAILURE;
+    }
+
+    ast_expr_create_call(out_expr, name, arity, args, is_tentative, source);
     *i += 1;
     return SUCCESS;
 }

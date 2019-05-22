@@ -1,0 +1,20 @@
+
+import 'sys/cstdio.adept'
+
+struct StructA ()
+struct StructB ()
+
+func main {
+    a StructA
+    b StructB
+    test(a)
+    test(b)
+}
+
+func test(thing $T) {
+    greet?(&thing, 1234)
+}
+
+func greet(this *StructB, dummy_parameter int) {
+    printf('Hello World from StructB\n')
+}

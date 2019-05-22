@@ -297,7 +297,8 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
             break;
         case EXPR_CALL: {
                 ast_expr_call_t *call_stmt = (ast_expr_call_t*) statements[s];
-                fprintf(file, "%s(", call_stmt->name);
+
+                fprintf(file, "%s%s(", call_stmt->name, call_stmt->is_tentative ? "?" : "");
                 for(length_t arg_index = 0; arg_index != call_stmt->arity; arg_index++){
                     char *arg_str = ast_expr_str(call_stmt->args[arg_index]);
                     if(arg_index + 1 != call_stmt->arity) fprintf(file, "%s, ", arg_str);
@@ -365,7 +366,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
         case EXPR_CALL_METHOD: {
                 ast_expr_call_method_t *call_stmt = (ast_expr_call_method_t*) statements[s];
                 char *value_str = ast_expr_str(call_stmt->value);
-                fprintf(file, "%s.%s(", value_str, call_stmt->name);
+                fprintf(file, "%s.%s%s(", value_str, call_stmt->name, call_stmt->is_tentative ? "?" : "");
                 free(value_str);
                 for(length_t arg_index = 0; arg_index != call_stmt->arity; arg_index++){
                     char *arg_str = ast_expr_str(call_stmt->args[arg_index]);

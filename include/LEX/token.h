@@ -22,7 +22,7 @@ extern "C" {
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x0000000D
+#define TOKEN_ITERATION_VERSION 0x0000000E
 
 typedef unsigned short tokenid_t;
 
@@ -125,7 +125,8 @@ extern const char *global_token_name_table[];
 #define TOKEN_NAMESPACE        0x00000038
 #define TOKEN_META             0x00000039
 #define TOKEN_POLYMORPH        0x0000003A
-// 3B..3F
+#define TOKEN_MAYBE            0x0000003B
+// 3C..3F
 
 // NOTE: 0x00000040 .. 0x0000006F reserved for keywords
 // Keywords are organized as such that 0x00000040 + the id of

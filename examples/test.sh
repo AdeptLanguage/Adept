@@ -94,6 +94,8 @@ compile stdcall || exit $?
 compile string || exit $?
 compile structs || exit $?
 compile successful || exit $?
+compile tentative_function_calls || exit $?
+compile tentative_method_calls || exit $?
 compile terminate_join || exit $?
 compile truefalse || exit $?
 compile undef || exit $?

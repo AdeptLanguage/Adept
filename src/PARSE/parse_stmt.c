@@ -50,8 +50,17 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 source = sources[(*i)++]; // Read ahead to see what type of statement this is
 
                 switch(tokens[*i].id){
+                case TOKEN_MAYBE:
+                    if(tokens[++(*i)].id == TOKEN_OPEN){
+                        (*i)++; if(parse_stmt_call(ctx, stmt_list, true)) return FAILURE;
+                    } else {
+                        // TODO: Have a better error message here
+                        parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
+                        return FAILURE;
+                    }
+                    break;
                 case TOKEN_OPEN:
-                    (*i)++; if(parse_stmt_call(ctx, stmt_list)) return FAILURE;
+                    (*i)++; if(parse_stmt_call(ctx, stmt_list, false)) return FAILURE;
                     break;
                 case TOKEN_WORD: case TOKEN_FUNC:
                 case TOKEN_STDCALL: case TOKEN_NEXT: case TOKEN_POD:
@@ -600,7 +609,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
     return SUCCESS; // '}' was reached
 }
 
-errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
+errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool is_tentative){
     // Expects from 'ctx': compiler, object, tokenlist, i
 
     // <function_name>( <arguments> )
@@ -616,10 +625,12 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     stmt = malloc(sizeof(ast_expr_call_t));
     stmt->id = EXPR_CALL;
-    stmt->source = sources[*i - 2];
-    stmt->name = (char*) tokens[*i - 2].data;
+    // DANGEROUS: Using is_tentative to determine location of word
+    stmt->source = sources[*i - 2 - (int) is_tentative];
+    stmt->name = (char*) tokens[*i - 2 - (int) is_tentative].data;
     stmt->arity = 0;
     stmt->args = NULL;
+    stmt->is_tentative = is_tentative;
 
     while(tokens[*i].id != TOKEN_CLOSE){
         if(parse_ignore_newlines(ctx, "Expected function argument")) return FAILURE;

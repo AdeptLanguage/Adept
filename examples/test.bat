@@ -168,6 +168,10 @@ call :compile structs
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile successful
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile tentative_function_calls
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile tentative_method_calls
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile terminate_join
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile truefalse
