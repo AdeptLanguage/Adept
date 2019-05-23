@@ -776,14 +776,18 @@ void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type
         if(values[i]->type->kind == TYPE_KIND_STRUCTURE){
             ast_type_t *ast_type = &types[i];
 
-            if(ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE){
-                funcpair_t result;
-                if(ir_gen_find_func(builder->compiler, builder->object, "__pass__", &types[i], 1, &result) == FAILURE){
-                    continue;
-                }
+            if(ast_type->elements_length == 1 && (ast_type->elements[0]->id == AST_ELEM_BASE || ast_type->elements[0]->id == AST_ELEM_GENERIC_BASE)){
+                ir_pool_snapshot_t snapshot;
+                ir_pool_snapshot_capture(builder->pool, &snapshot);
 
+                funcpair_t result;
                 ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
                 arguments[0] = values[i];
+
+                if(ir_gen_find_func_conforming(builder, "__pass__", arguments, types, 1, &result) == FAILURE){
+                    ir_pool_snapshot_restore(builder->pool, &snapshot);
+                    continue;
+                }
                 
                 ir_basicblock_new_instructions(builder->current_block, 1);
                 ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));

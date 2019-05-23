@@ -1,0 +1,31 @@
+
+import 'sys/cstdio.adept'
+
+struct Something (value int)
+struct <$T> Container (value $T)
+
+func main {
+    something Something
+    container <double> Container
+    printSomething(something)
+    printContainer(container)
+}
+
+func printSomething(something Something) {
+    printf('something.value = %d\n', something.value)
+}
+
+func printContainer(container <$T> Container) {
+    // Assume $T is double for testing purposes
+    printf('container.value = %f\n', container.value)
+}
+
+func __pass__(something POD Something) Something {
+    something.value = 1234
+    return something
+}
+
+func __pass__(container POD <$T> Container) <$T> Container {
+    container.value = 3.14159265
+    return container
+}

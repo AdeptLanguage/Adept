@@ -75,6 +75,7 @@ compile null_checks --null-checks || exit $?
 compile order || exit $?
 compile package || exit $?
 compile package_use || exit $?
+compile pass || exit $?
 compile polymorphic_functions || exit $?
 compile polymorphic_inner || exit $?
 compile polymorphic_methods || exit $?
