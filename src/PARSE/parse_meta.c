@@ -17,21 +17,22 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     char *directive_name = tokenlist->tokens[*i].data;
 
     const char *standard_directives[] = {
-        "elif", "else", "end", "halt", "if", "import", "input", "place", "place_error", "print", "print_error", "set"
+        "default", "elif", "else", "end", "halt", "if", "import", "input", "place", "place_error", "print", "print_error", "set"
     };
 
-    #define META_DIRECTIVE_ELIF 0
-    #define META_DIRECTIVE_ELSE 1
-    #define META_DIRECTIVE_END 2
-    #define META_DIRECTIVE_HALT 3
-    #define META_DIRECTIVE_IF 4
-    #define META_DIRECTIVE_IMPORT 5
-    #define META_DIRECTIVE_INPUT 6
-    #define META_DIRECTIVE_PLACE 7
-    #define META_DIRECTIVE_PLACE_ERROR 8
-    #define META_DIRECTIVE_PRINT 9
-    #define META_DIRECTIVE_PRINT_ERROR 10
-    #define META_DIRECTIVE_SET 11
+    #define META_DIRECTIVE_DEFAULT 0
+    #define META_DIRECTIVE_ELIF 1
+    #define META_DIRECTIVE_ELSE 2
+    #define META_DIRECTIVE_END 3
+    #define META_DIRECTIVE_HALT 4
+    #define META_DIRECTIVE_IF 5
+    #define META_DIRECTIVE_IMPORT 6
+    #define META_DIRECTIVE_INPUT 7
+    #define META_DIRECTIVE_PLACE 8
+    #define META_DIRECTIVE_PLACE_ERROR 9
+    #define META_DIRECTIVE_PRINT 10
+    #define META_DIRECTIVE_PRINT_ERROR 11
+    #define META_DIRECTIVE_SET 12
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -41,6 +42,22 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     }
 
     switch(standard){
+    case META_DIRECTIVE_DEFAULT: { // default
+            char *definition_name = parse_grab_word(ctx, "Expected transcendent variable name after #default");
+            if(!definition_name) return FAILURE;
+            (*i)++;
+
+            meta_expr_t *value;
+            if(parse_meta_expr(ctx, &value)) return FAILURE;
+            meta_collapse(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
+            meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
+
+            if(existing == NULL){
+                meta_definition_add(&ctx->ast->meta_definitions, &ctx->ast->meta_definitions_length, &ctx->ast->meta_definitions_capacity, definition_name, value);
+            }
+        }
+        break;
     case META_DIRECTIVE_ELIF: {
             // This gets triggered when #if was true
 
