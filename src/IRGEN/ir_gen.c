@@ -260,7 +260,7 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
 
         if(ir_gen_expression(builder, ast_global->initial, &value, false, &value_ast_type)) return FAILURE;
 
-        if(!ast_types_conform(builder, &value, &value_ast_type, &ast_global->type, CONFORM_MODE_PRIMITIVES)){
+        if(!ast_types_conform(builder, &value, &value_ast_type, &ast_global->type, CONFORM_MODE_ASSIGNING)){
             char *a_type_str = ast_type_str(&value_ast_type);
             char *b_type_str = ast_type_str(&ast_global->type);
             compiler_panicf(builder->compiler, ast_global->initial->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);

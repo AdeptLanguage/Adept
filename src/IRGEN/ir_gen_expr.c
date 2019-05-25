@@ -329,7 +329,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
 
                 for(length_t a = 0; a != function_elem->arity; a++){
-                    if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_PRIMITIVES)){
+                    if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_CALL_ARGUMENTS)){
                         if(call_expr->is_tentative){
                             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
                             hard_break = true;
@@ -1276,7 +1276,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ast_type_t temporary_type;
                 if(ir_gen_expression(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
 
-                if(!ast_types_conform(builder, &initial, &temporary_type, &def->type, CONFORM_MODE_PRIMITIVES)){
+                if(!ast_types_conform(builder, &initial, &temporary_type, &def->type, CONFORM_MODE_ASSIGNING)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&def->type);
                     compiler_panicf(builder->compiler, def->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
@@ -1349,7 +1349,7 @@ errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t 
         return FAILURE;
     }
 
-    if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_PRIMITIVES)){
+    if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
         if(overload){
             *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload);
 
@@ -1434,7 +1434,7 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
         // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
         ast_type_make_base(out_expr_type, strclone("bool"));
 
-        if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, &a, &ast_type_a, out_expr_type, CONFORM_MODE_PRIMITIVES)){
+        if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, &a, &ast_type_a, out_expr_type, CONFORM_MODE_CALCULATION)){
             char *a_type_str = ast_type_str(&ast_type_a);
             compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", a_type_str);
             free(a_type_str);
@@ -1444,7 +1444,7 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
             return NULL;
         }
 
-        if(!ast_types_identical(&ast_type_b, out_expr_type) && !ast_types_conform(builder, &b, &ast_type_b, out_expr_type, CONFORM_MODE_PRIMITIVES)){
+        if(!ast_types_identical(&ast_type_b, out_expr_type) && !ast_types_conform(builder, &b, &ast_type_b, out_expr_type, CONFORM_MODE_CALCULATION)){
             char *b_type_str = ast_type_str(&ast_type_b);
             compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", b_type_str);
             free(b_type_str);
@@ -1460,7 +1460,7 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
         ast_type_b = *out_expr_type;
     }
 
-    if(!ast_types_conform(builder, &b, &ast_type_b, &ast_type_a, CONFORM_MODE_PRIMITIVES)){
+    if(!ast_types_conform(builder, &b, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
         char *a_type_str = ast_type_str(&ast_type_a);
         char *b_type_str = ast_type_str(&ast_type_b);
         compiler_panicf(builder->compiler, expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);

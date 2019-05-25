@@ -24,7 +24,13 @@
 #define CONFORM_MODE_INTPTR        TRAIT_4    // Allow conforming between integers and pointers
 #define CONFORM_MODE_INTENUM       TRAIT_5    // Allow conforming between integers and enums
 #define CONFORM_MODE_FROM_ANY      TRAIT_6    // Allow conforming from an Any
+#define CONFORM_MODE_BOOLPTR       TRAIT_7    // Allow conforming from pointer to bool
+#define CONFORM_MODE_POINTERPTR    TRAIT_8    // Allow conforming between pointers and non-specific ptr
 #define CONFORM_MODE_ALL           TRAIT_ALL  // Allow all conformation methods
+
+#define CONFORM_MODE_CALL_ARGUMENTS CONFORM_MODE_PRIMITIVES | CONFORM_MODE_POINTERPTR
+#define CONFORM_MODE_ASSIGNING      CONFORM_MODE_PRIMITIVES | CONFORM_MODE_POINTERPTR | CONFORM_MODE_BOOLPTR
+#define CONFORM_MODE_CALCULATION    CONFORM_MODE_PRIMITIVES | CONFORM_MODE_POINTERPTR | CONFORM_MODE_BOOLPTR
 
 // ---------------- ir_gen_type_mappings ----------------
 // Generates IR type mappings for all standard and

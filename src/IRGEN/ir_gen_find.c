@@ -504,7 +504,7 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
 
     for(length_t a = 0; a != args_count; a++){
-        if(!ast_types_conform(builder, &arg_value_list[a], &arg_type_list[a], &arg_types[a], CONFORM_MODE_PRIMITIVES)){
+        if(!ast_types_conform(builder, &arg_value_list[a], &arg_type_list[a], &arg_types[a], CONFORM_MODE_CALL_ARGUMENTS)){
             // Restore pool snapshot
             ir_pool_snapshot_restore(builder->pool, &snapshot);
 

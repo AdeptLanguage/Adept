@@ -195,7 +195,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     // Return non-void value
                     if(ir_gen_expression(builder, ((ast_expr_return_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
-                    if(!ast_types_conform(builder, &expression_value, &temporary_type, return_type, CONFORM_MODE_STANDARD)){
+                    if(!ast_types_conform(builder, &expression_value, &temporary_type, return_type, CONFORM_MODE_CALCULATION)){
                         char *a_type_str = ast_type_str(&temporary_type);
                         char *b_type_str = ast_type_str(return_type);
                         compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return type '%s' when function expects type '%s'", a_type_str, b_type_str);
@@ -344,7 +344,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
 
                     for(length_t a = 0; a != function_elem->arity; a++){
-                        if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_PRIMITIVES)){
+                        if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_CALL_ARGUMENTS)){
                             if(call_stmt->is_tentative){
                                 // Tentative call won't see the light of day, because incompatible arguments
                                 hard_break = true;
@@ -437,7 +437,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                     if(ir_gen_expression(builder, declare_stmt->value, &initial, false, &temporary_type)) return FAILURE;
 
-                    if(!ast_types_conform(builder, &initial, &temporary_type, &declare_stmt->type, CONFORM_MODE_PRIMITIVES)){
+                    if(!ast_types_conform(builder, &initial, &temporary_type, &declare_stmt->type, CONFORM_MODE_ASSIGNING)){
                         char *a_type_str = ast_type_str(&temporary_type);
                         char *b_type_str = ast_type_str(&declare_stmt->type);
                         compiler_panicf(builder->compiler, declare_stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
@@ -497,7 +497,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                if(!ast_types_conform(builder, &expression_value, &expression_value_type, &destination_type, CONFORM_MODE_PRIMITIVES)){
+                if(!ast_types_conform(builder, &expression_value, &expression_value_type, &destination_type, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&expression_value_type);
                     char *b_type_str = ast_type_str(&destination_type);
                     compiler_panicf(builder->compiler, assign_stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
@@ -582,7 +582,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 unsigned int conditional_type = statements[s]->id;
                 if(ir_gen_expression(builder, ((ast_expr_if_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_PRIMITIVES)){
+                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&builder->static_bool);
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
@@ -634,7 +634,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 unsigned int conditional_type = statements[s]->id;
                 if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
 
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_PRIMITIVES)){
+                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&builder->static_bool);
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
@@ -742,7 +742,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 bool_type.source = NULL_SOURCE;
                 bool_type.source.object_index = builder->object->index;
 
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &bool_type, CONFORM_MODE_PRIMITIVES)){
+                if(!ast_types_conform(builder, &expression_value, &temporary_type, &bool_type, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&bool_type);
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
@@ -1126,7 +1126,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_STANDARD)){
+                if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     compiler_panicf(builder->compiler, each_in->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
@@ -1309,7 +1309,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                if(!ast_types_conform(builder, &limit, &temporary_type, idx_ast_type, CONFORM_MODE_PRIMITIVES)){
+                if(!ast_types_conform(builder, &limit, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);

@@ -331,7 +331,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         }
     }
 
-    if(to_type_kind == TYPE_KIND_BOOLEAN && (from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_POINTER || from_traits & TYPE_TRAIT_FUNC_PTR)){
+    if(/*mode & CONFORM_MODE_BOOLPTR && */ to_type_kind == TYPE_KIND_BOOLEAN && (from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_POINTER || from_traits & TYPE_TRAIT_FUNC_PTR)){
         ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         instr->id = INSTRUCTION_ISNTZERO;
         if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
@@ -342,15 +342,17 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     }
 
     // Do bitcast if appropriate
-    if( (from_traits & TYPE_TRAIT_BASE_PTR && to_traits & TYPE_TRAIT_POINTER) || // 'ptr' and '*something'
-        (to_traits & TYPE_TRAIT_BASE_PTR && from_traits & TYPE_TRAIT_POINTER) || // '*something' and 'ptr'
-        (from_traits & TYPE_TRAIT_FUNC_PTR && to_traits & TYPE_TRAIT_BASE_PTR) || // 'ptr' and function pointer
-        (to_traits & TYPE_TRAIT_FUNC_PTR && from_traits & TYPE_TRAIT_BASE_PTR) || // function pointer and 'ptr'
-        (mode & CONFORM_MODE_POINTERS && to_traits & TYPE_TRAIT_POINTER && from_traits & TYPE_TRAIT_POINTER
-            && !ast_types_identical(ast_from_type, ast_to_type)) // '*something' && '*somethingelse'
-        ){
-
-        // Casting ptr -> *something
+    if(
+        (/*mode & CONFORM_MODE_POINTERPTR &&*/ (
+            (from_traits & TYPE_TRAIT_BASE_PTR && to_traits & TYPE_TRAIT_POINTER)  || // 'ptr' and '*something'
+            (to_traits & TYPE_TRAIT_BASE_PTR && from_traits & TYPE_TRAIT_POINTER)  || // '*something' and 'ptr'
+            (from_traits & TYPE_TRAIT_FUNC_PTR && to_traits & TYPE_TRAIT_BASE_PTR) || // 'ptr' and function pointer
+            (to_traits & TYPE_TRAIT_FUNC_PTR && from_traits & TYPE_TRAIT_BASE_PTR)    // function pointer and 'ptr'
+        )) || (mode & CONFORM_MODE_POINTERS && to_traits & TYPE_TRAIT_POINTER && from_traits & TYPE_TRAIT_POINTER
+            && !ast_types_identical(ast_from_type, ast_to_type) // '*something' && '*somethingelse'
+        )
+    ){
+        // Casting pointers
         if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
         ir_instr_cast_t *bitcast_instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
