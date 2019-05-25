@@ -447,7 +447,6 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         return FAILURE;
                     }
 
-                    ast_type_free(&temporary_type);
 
                     ir_basicblock_new_instructions(builder->current_block, 2);
                     instr = &builder->current_block->instructions[builder->current_block->instructions_length++];
@@ -464,9 +463,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
-                    if(declare_stmt->is_assign_pod || !handle_assign_management(builder, initial, destination, &declare_stmt->type, true)){
+                    if(declare_stmt->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &declare_stmt->type, true)){
                         build_store(builder, initial, destination);
                     }
+
+                    ast_type_free(&temporary_type);
                 } else if(statements[s]->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
                     // Mark the variable as undefined memory so it isn't auto-initialized later on
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
@@ -510,7 +511,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *instr_value;
 
                 if(assignment_type == EXPR_ASSIGN){
-                    if(assign_stmt->is_pod || !handle_assign_management(builder, expression_value, destination, &destination_type, false)){
+                    if(assign_stmt->is_pod || !handle_assign_management(builder, expression_value, &expression_value_type, destination, &destination_type, false)){
                         build_store(builder, expression_value, destination);
                     }
 

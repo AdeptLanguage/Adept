@@ -19,6 +19,7 @@ compile any_type_kind || exit $?
 compile any_type_list || exit $?
 compile array_access || exit $?
 compile as || exit $?
+compile assign_func || exit $?
 compile assignment || exit $?
 compile at || exit $?
 compile bitwise || exit $?
@@ -75,7 +76,7 @@ compile null_checks --null-checks || exit $?
 compile order || exit $?
 compile package || exit $?
 compile package_use || exit $?
-compile pass || exit $?
+compile pass_func || exit $?
 compile polymorphic_functions || exit $?
 compile polymorphic_inner || exit $?
 compile polymorphic_methods || exit $?

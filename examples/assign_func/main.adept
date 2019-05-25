@@ -1,0 +1,21 @@
+
+foreign printf(*ubyte, ...) int
+
+struct Test ()
+struct <$T> Container (t $T)
+
+func main {
+    t1 Test
+    t2 Test = t1
+
+    t3 <Test> Container
+    t4 <Test> Container = t3
+}
+
+func __assign__(this *Test, other POD Test) {
+    printf('Hello ')
+}
+
+func __assign__(this *<$T> Container, other POD <$T> Container) {
+    printf('World\n')
+}

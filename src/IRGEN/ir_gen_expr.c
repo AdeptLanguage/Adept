@@ -1286,15 +1286,15 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     return FAILURE;
                 }
 
-                ast_type_free(&temporary_type);
 
                 ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
                 add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
-                if(def->is_assign_pod || !handle_assign_management(builder, initial, destination, &def->type, true)){
+                if(def->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
                     build_store(builder, initial, destination);
                 }
 
+                ast_type_free(&temporary_type);
                 *ir_value = destination;
             } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
                 // Mark the variable as undefined memory so it isn't auto-initialized later on

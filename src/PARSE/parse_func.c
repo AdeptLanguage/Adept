@@ -70,7 +70,10 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         || !ast_type_is_void(&func->return_type)
         || func->arity != 2
         || strcmp(func->arg_names[0], "this") != 0
-        || !ast_type_is_base_ptr(&func->arg_types[0])
+        || !(  ast_type_is_base_ptr(&func->arg_types[0])
+            || ast_type_is_polymorph_ptr(&func->arg_types[0])
+            || ast_type_is_generic_base_ptr(&func->arg_types[0])
+            )
         || !ast_type_is_pointer_to(&func->arg_types[0], &func->arg_types[1])
         || func->arg_type_traits[0] != TRAIT_NONE
         || func->arg_type_traits[1] != AST_FUNC_ARG_TYPE_TRAIT_POD

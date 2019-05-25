@@ -21,6 +21,8 @@ call :compile array_access
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile as
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile assign_func
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile assignment
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile at
@@ -130,7 +132,7 @@ call :compile package
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile package_use
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
-call :compile pass
+call :compile pass_func
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile polymorphic_functions
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

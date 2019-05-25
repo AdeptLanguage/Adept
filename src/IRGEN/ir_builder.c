@@ -803,43 +803,75 @@ void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type
     }
 }
 
-successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, ast_type_t *type, bool zero_initialize){    
-    if(value->type->kind == TYPE_KIND_STRUCTURE){
-        if(type->elements_length == 1 && type->elements[0]->id == AST_ELEM_BASE){
-            weak_cstr_t struct_name = ((ast_elem_base_t*) type->elements[0])->base;
+successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_value_type, ir_value_t *destination,
+        ast_type_t *ast_destination_type, bool zero_initialize){
 
-            maybe_index_t index = find_beginning_of_method_group(builder->object->ir_module.methods, builder->object->ir_module.methods_length, struct_name, "__assign__");
-            if(index == -1) return UNSUCCESSFUL;
+    if(value->type->kind != TYPE_KIND_STRUCTURE || ast_destination_type->elements_length != 1) return UNSUCCESSFUL;
 
-            if(zero_initialize){
-                // Zero initialize for declaration assignments
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                ir_instr_varzeroinit_t *zero_instr = (ir_instr_varzeroinit_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
-                zero_instr->id = INSTRUCTION_VARZEROINIT;
-                zero_instr->result_type = NULL;
-                zero_instr->index = builder->next_var_id - 1;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) zero_instr;
-            }
+    funcpair_t result;
+    weak_cstr_t struct_name;
 
-            ir_method_t *method = &builder->object->ir_module.methods[index];
+    ir_pool_snapshot_t snapshot;
+    ir_pool_snapshot_capture(builder->pool, &snapshot);
+    ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
+    arguments[0] = destination;
+    arguments[1] = value;
 
-            ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
-            arguments[0] = destination;
-            arguments[1] = value;
-            
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-            instruction->id = INSTRUCTION_CALL;
-            instruction->result_type = builder->object->ir_module.funcs[method->ir_func_id].return_type;
-            instruction->values = arguments;
-            instruction->values_length = 2;
-            instruction->ir_func_id = method->ir_func_id;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
-            return SUCCESSFUL;
+    ast_type_t arg_types[2];
+    arg_types[0] = ast_type_clone(ast_destination_type);
+    arg_types[1] = *ast_value_type;
+    ast_type_prepend_ptr(&arg_types[0]);
+
+    switch(ast_destination_type->elements[0]->id){
+    case AST_ELEM_BASE:
+        struct_name = ((ast_elem_base_t*) ast_destination_type->elements[0])->base;
+
+        if(ir_gen_find_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, &result) == FAILURE){
+            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            ast_type_free(&arg_types[0]);
+            // NOTE: Don't free arg_types[1] because we don't have ownership
+            return UNSUCCESSFUL;
         }
+        break;
+    case AST_ELEM_GENERIC_BASE:
+        struct_name = ((ast_elem_generic_base_t*) ast_destination_type->elements[0])->name;
+
+        if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, &result) == FAILURE){
+            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            ast_type_free(&arg_types[0]);
+            // NOTE: Don't free arg_types[1] because we don't have ownership
+            return UNSUCCESSFUL;
+        }
+        break;
+    default:
+        ir_pool_snapshot_restore(builder->pool, &snapshot);
+        ast_type_free(&arg_types[0]);
+        // NOTE: Don't free arg_types[1] because we don't have ownership
+        return UNSUCCESSFUL;
     }
 
-    return UNSUCCESSFUL;
+    ast_type_free(&arg_types[0]);
+    // NOTE: Don't free arg_types[1] because we don't have ownership
+
+    if(zero_initialize){
+        // Zero initialize for declaration assignments
+        ir_basicblock_new_instructions(builder->current_block, 1);
+        ir_instr_varzeroinit_t *zero_instr = (ir_instr_varzeroinit_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
+        zero_instr->id = INSTRUCTION_VARZEROINIT;
+        zero_instr->result_type = NULL;
+        zero_instr->index = builder->next_var_id - 1;
+        builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) zero_instr;
+    }
+
+    ir_basicblock_new_instructions(builder->current_block, 1);
+    ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+    instruction->id = INSTRUCTION_CALL;
+    instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
+    instruction->values = arguments;
+    instruction->values_length = 2;
+    instruction->ir_func_id = result.ir_func_id;
+    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+    return SUCCESSFUL;
 }
 
 ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name){

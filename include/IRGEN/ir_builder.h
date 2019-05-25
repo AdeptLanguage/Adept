@@ -227,7 +227,9 @@ void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type
 
 // ---------------- handle_assign_management ----------------
 // Handles '__assign__' management method calls
-successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, ast_type_t *type, bool zero_initialize);
+// NOTE: 'ast_destination_type' is not a pointer, but value provided is mutable
+successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_value_type, ir_value_t *destination,
+    ast_type_t *ast_destination_type, bool zero_initialize);
 
 // ---------------- handle_math_management ----------------
 // Handles basic math management function calls
