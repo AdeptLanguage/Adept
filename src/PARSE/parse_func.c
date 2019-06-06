@@ -1,5 +1,6 @@
 
 #include "UTIL/util.h"
+#include "UTIL/search.h"
 #include "PARSE/parse.h"
 #include "PARSE/parse_func.h"
 #include "PARSE/parse_stmt.h"
@@ -80,6 +81,29 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     )){
         compiler_panic(ctx->compiler, source, "Management method __assign__ must be declared as 'func __assign__(this *T, other POD T) void'");
         return FAILURE;
+    }
+
+    static const char *math_management_funcs[] = {
+        "__add__", "__divide__", "__equals__", "__greater_than__",
+        "__greater_than_or_equal__", "__less_than__", "__less_than_or_equal__",
+        "__modulus__", "__multiply__", "__not_equals__", "__subtract__"
+    };
+    static const length_t math_management_funcs_length = sizeof(math_management_funcs) / sizeof(const char*);
+    maybe_index_t math_func_index = binary_string_search(math_management_funcs, math_management_funcs_length, func->name);
+    
+    if(math_func_index != -1){
+        // Enforce math management function prototype
+        // NOTE: The type that's returned is up to the user
+        // NOTE: The first argument cannot be a pointer
+        if(func->arity != 2){
+            compiler_panicf(ctx->compiler, source, "Management method %s must take two arguments", func->name);
+            return FAILURE;
+        }
+
+        if(ast_type_is_pointer(&func->arg_types[0])){
+            compiler_panicf(ctx->compiler, source, "Management method %s cannot have a pointer as the first argument", func->name);
+            return FAILURE;
+        }
     }
 
     if(ast_func_is_polymorphic(func)){

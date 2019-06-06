@@ -57,6 +57,8 @@ call :compile each_in
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile enums
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile equals_func
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 
 echo Skipping 'external' test program
 REM call :compile external

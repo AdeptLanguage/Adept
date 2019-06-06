@@ -1,0 +1,13 @@
+
+import '2.1/basics.adept'
+
+func main {
+    test1, test2 Test
+    if test1 == test2, print("test1 == test2")
+}
+
+struct Test ()
+
+func __equals__(first Test, second Test) bool {
+    return true
+}

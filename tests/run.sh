@@ -37,6 +37,7 @@ compile deprecated || exit $?
 compile dereference || exit $?
 compile each_in || exit $?
 compile enums || exit $?
+compile equals_func || exit $?
 compile external || exit $?
 compile fixed_array || exit $?
 compile fixed_array_assign || exit $?

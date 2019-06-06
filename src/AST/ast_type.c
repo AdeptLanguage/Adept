@@ -530,6 +530,10 @@ bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base){
     return true;
 }
 
+bool ast_type_is_pointer(const ast_type_t *type){
+    return type->elements_length > 1 && type->elements[0]->id == AST_ELEM_POINTER;
+}
+
 bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to){
     if(type->elements_length < 2 || type->elements_length != to->elements_length + 1) return false;
     if(type->elements[0]->id != AST_ELEM_POINTER) return false;
