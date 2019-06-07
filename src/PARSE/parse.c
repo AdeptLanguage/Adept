@@ -47,7 +47,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             break;
         case TOKEN_FOREIGN:
             if(tokens[i + 1].id == TOKEN_STRING || tokens[i + 1].id == TOKEN_CSTRING){
-                parse_foreign_library(ctx);
+                if(parse_foreign_library(ctx)) return FAILURE;
                 break;
             }
             if(parse_func(ctx)) return FAILURE;

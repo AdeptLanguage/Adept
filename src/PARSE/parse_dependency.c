@@ -36,7 +36,7 @@ errorcode_t parse_import(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-void parse_foreign_library(parse_ctx_t *ctx){
+errorcode_t parse_foreign_library(parse_ctx_t *ctx){
     // foreign 'libmycustomlibrary.a'
     //    ^
 
@@ -69,6 +69,7 @@ void parse_foreign_library(parse_ctx_t *ctx){
 
     if(!is_framework) library = filename_local(ctx->object->filename, library);
     ast_add_foreign_library(ctx->ast, library, is_framework);
+    return SUCCESS;
 }
 
 errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filename, strong_cstr_t absolute_filename) {

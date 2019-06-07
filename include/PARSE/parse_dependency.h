@@ -15,7 +15,7 @@ errorcode_t parse_import(parse_ctx_t* ctx);
 
 // ------------------ parse_foreign_library ------------------
 // Parses a foreign library (ex: foreign 'libcustom.a')
-void parse_foreign_library(parse_ctx_t* ctx);
+errorcode_t parse_foreign_library(parse_ctx_t* ctx);
 
 // ------------------ parse_import_object ------------------
 // Imports an object given the relative and absolute filenames
