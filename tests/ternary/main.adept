@@ -1,0 +1,7 @@
+
+import '2.1/basics.adept'
+
+func main {
+    print(true ? "true is true" : "true is false")
+    print(false ? "false is true" : false ? "false is true" : "false is false")
+}

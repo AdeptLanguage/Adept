@@ -1256,6 +1256,70 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ast_type_make_base_ptr(out_expr_type, strclone("AnyType"));
         }
         break;
+    case EXPR_TERNARY: {
+            ast_expr_ternary_t *ternary = (ast_expr_ternary_t*) expr;
+
+            ir_value_t *condition, *if_true, *if_false;
+            ast_type_t condition_type, if_true_type, if_false_type;
+
+            if(ir_gen_expression(builder, ternary->condition, &condition, false, &condition_type))
+                return FAILURE;
+
+            if(!ast_types_conform(builder, &condition, &condition_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
+                char *condition_type_str = ast_type_str(&condition_type);
+                compiler_panicf(builder->compiler, ternary->condition->source, "Received type '%s' when conditional expects type 'bool'", condition_type_str);
+                free(condition_type_str);
+                ast_type_free(&condition_type);
+                return FAILURE;
+            }
+
+            ast_type_free(&condition_type);
+
+            if(ir_gen_expression(builder, ternary->if_true, &if_true, false, &if_true_type))
+                return FAILURE;
+
+            if(ir_gen_expression(builder, ternary->if_false, &if_false, false, &if_false_type)){
+                ast_type_free(&if_true_type);
+                return FAILURE;
+            }
+
+            if(!ast_types_identical(&if_true_type, &if_false_type)){
+                char *if_true_typename = ast_type_str(&if_true_type);
+                char *if_false_typename = ast_type_str(&if_false_type);
+                compiler_panicf(builder->compiler, ternary->source, "ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
+                ast_type_free(&if_true_type);
+                ast_type_free(&if_false_type);
+                free(if_true_typename);
+                free(if_false_typename);
+                return FAILURE;
+            }
+
+            ir_type_t *result_ir_type;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &if_true_type, &result_ir_type)){
+                ast_type_free(&if_true_type);
+                ast_type_free(&if_false_type);
+                return FAILURE;
+            }
+
+            if(out_expr_type){
+                *out_expr_type = if_true_type;
+            } else {
+                ast_type_free(&if_true_type);
+            }
+
+            ast_type_free(&if_false_type);
+
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_select_t));
+            ((ir_instr_select_t*) instruction)->id = INSTRUCTION_SELECT;
+            ((ir_instr_select_t*) instruction)->result_type = result_ir_type;
+            ((ir_instr_select_t*) instruction)->condition = condition;
+            ((ir_instr_select_t*) instruction)->if_true = if_true;
+            ((ir_instr_select_t*) instruction)->if_false = if_false;
+            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+            *ir_value = build_value_from_prev_instruction(builder);
+        }
+        break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
 

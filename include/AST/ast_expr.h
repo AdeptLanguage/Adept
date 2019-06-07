@@ -78,33 +78,34 @@ extern "C" {
 #define EXPR_STATIC_ARRAY   0x00000036
 #define EXPR_STATIC_STRUCT  0x00000037
 #define EXPR_TYPEINFO       0x00000038
+#define EXPR_TERNARY        0x00000039
 // Exclusive statements --------------
-#define EXPR_DECLARE        0x00000039
-#define EXPR_DECLAREUNDEF   0x0000003A
-#define EXPR_ILDECLARE      0x0000003B
-#define EXPR_ILDECLAREUNDEF 0x0000003C
-#define EXPR_ASSIGN         0x0000003D
-#define EXPR_ADDASSIGN      0x0000003E
-#define EXPR_SUBTRACTASSIGN 0x0000003F
-#define EXPR_MULTIPLYASSIGN 0x00000040
-#define EXPR_DIVIDEASSIGN   0x00000041
-#define EXPR_MODULUSASSIGN  0x00000042
-#define EXPR_RETURN         0x00000043
-#define EXPR_IF             0x00000044
-#define EXPR_UNLESS         0x00000045
-#define EXPR_IFELSE         0x00000046
-#define EXPR_UNLESSELSE     0x00000047
-#define EXPR_WHILE          0x00000048
-#define EXPR_UNTIL          0x00000049
-#define EXPR_WHILECONTINUE  0x0000004A
-#define EXPR_UNTILBREAK     0x0000004B
-#define EXPR_EACH_IN        0x0000004C
-#define EXPR_REPEAT         0x0000004D
-#define EXPR_DELETE         0x0000004E
-#define EXPR_BREAK          0x0000004F
-#define EXPR_CONTINUE       0x00000050
-#define EXPR_BREAK_TO       0x00000051
-#define EXPR_CONTINUE_TO    0x00000052
+#define EXPR_DECLARE        0x0000003A
+#define EXPR_DECLAREUNDEF   0x0000003B
+#define EXPR_ILDECLARE      0x0000003C
+#define EXPR_ILDECLAREUNDEF 0x0000003D
+#define EXPR_ASSIGN         0x0000003E
+#define EXPR_ADDASSIGN      0x0000003F
+#define EXPR_SUBTRACTASSIGN 0x00000040
+#define EXPR_MULTIPLYASSIGN 0x00000041
+#define EXPR_DIVIDEASSIGN   0x00000042
+#define EXPR_MODULUSASSIGN  0x00000043
+#define EXPR_RETURN         0x00000044
+#define EXPR_IF             0x00000045
+#define EXPR_UNLESS         0x00000046
+#define EXPR_IFELSE         0x00000047
+#define EXPR_UNLESSELSE     0x00000048
+#define EXPR_WHILE          0x00000049
+#define EXPR_UNTIL          0x0000004A
+#define EXPR_WHILECONTINUE  0x0000004B
+#define EXPR_UNTILBREAK     0x0000004C
+#define EXPR_EACH_IN        0x0000004D
+#define EXPR_REPEAT         0x0000004E
+#define EXPR_DELETE         0x0000004F
+#define EXPR_BREAK          0x00000050
+#define EXPR_CONTINUE       0x00000051
+#define EXPR_BREAK_TO       0x00000052
+#define EXPR_CONTINUE_TO    0x00000053
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -306,13 +307,23 @@ typedef struct {
     length_t length;
 } ast_expr_static_data_t;
 
-// ---------------- ast_expr_typeinfo ----------------
+// ---------------- ast_expr_typeinfo_t ----------------
 // Expression for getting runtime type information for a type
 typedef struct {
     unsigned int id;
     source_t source;
     ast_type_t target;
 } ast_expr_typeinfo_t;
+
+// ---------------- ast_expr_ternary_t ----------------
+// Expression for conditionally selecting between two expressions
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_expr_t *condition;
+    ast_expr_t *if_true;
+    ast_expr_t *if_false;
+} ast_expr_ternary_t;
 
 // ---------------- ast_expr_call_t ----------------
 // Expression for calling a function
@@ -558,6 +569,10 @@ void ast_expr_create_variable(ast_expr_t **out_expr, weak_cstr_t name, source_t 
 // ---------------- ast_expr_create_enum_value ----------------
 // Creates an enum value expression
 void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cstr_t kind, source_t source);
+
+// ---------------- ast_expr_create_ternary ----------------
+// Creates a ternary expression
+void ast_expr_create_ternary(ast_expr_t **out_expr, ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source);
 
 // ---------------- ast_expr_create_cast ----------------
 // Creates a cast expression

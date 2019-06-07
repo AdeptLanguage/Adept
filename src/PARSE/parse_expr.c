@@ -1,5 +1,6 @@
 
 #include "UTIL/util.h"
+#include "UTIL/search.h"
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_util.h"
 #include "PARSE/parse_type.h"
@@ -276,6 +277,21 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 *inout_expr = (ast_expr_t*) at_expr;
             }
             break;
+        case TOKEN_MAYBE: {
+                ast_expr_t *expr_a, *expr_b;
+                source_t source = sources[(*i)++];
+                if(parse_expr(ctx, &expr_a)) return FAILURE;
+
+                if(tokens[(*i)++].id != TOKEN_COLON){
+                    compiler_panic(ctx->compiler, sources[*i - 1], "ternary operator expected ':' after expression");
+                    ast_expr_free_fully(expr_a);
+                    return FAILURE;
+                }
+
+                if(parse_expr(ctx, &expr_b)) return FAILURE;
+                ast_expr_create_ternary(inout_expr, *inout_expr, expr_a, expr_b, source);
+            }
+            break;
         default:
             return SUCCESS;
         }
@@ -300,13 +316,29 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
 
         if(keep_mutable) return SUCCESS;
 
-        if(operator == TOKEN_NEWLINE || operator == TOKEN_END || operator == TOKEN_CLOSE
-            || operator == TOKEN_NEXT || operator == TOKEN_TERMINATE_JOIN
-            || operator == TOKEN_BEGIN || operator == TOKEN_BRACKET_CLOSE
-            || operator == TOKEN_ASSIGN || operator == TOKEN_ADDASSIGN
-            || operator == TOKEN_SUBTRACTASSIGN || operator == TOKEN_MULTIPLYASSIGN
-            || operator == TOKEN_DIVIDEASSIGN || operator == TOKEN_MODULUSASSIGN
-            || operator == TOKEN_ELSE) return SUCCESS;
+        // NOTE: Must be sorted
+        const static int op_termination_tokens[] = {
+            TOKEN_ASSIGN,         // 0x00000008
+            TOKEN_CLOSE,          // 0x00000011
+            TOKEN_BEGIN,          // 0x00000012
+            TOKEN_END,            // 0x00000013
+            TOKEN_NEWLINE,        // 0x00000014
+            TOKEN_NEXT,           // 0x00000021
+            TOKEN_BRACKET_CLOSE,  // 0x00000023
+            TOKEN_ADDASSIGN,      // 0x00000027
+            TOKEN_SUBTRACTASSIGN, // 0x00000028
+            TOKEN_MULTIPLYASSIGN, // 0x00000029
+            TOKEN_DIVIDEASSIGN,   // 0x0000002A
+            TOKEN_MODULUSASSIGN,  // 0x0000002B
+            TOKEN_TERMINATE_JOIN, // 0x0000002F
+            TOKEN_COLON,          // 0x00000030
+            TOKEN_MAYBE,          // 0x0000003B
+            TOKEN_ELSE            // 0x0000004E
+        };
+
+        // Terminate operator expression portion if termination operator encountered
+        if(binary_int_search(op_termination_tokens, sizeof(op_termination_tokens) / sizeof(int), operator) != -1)
+            return SUCCESS;
 
         #define BUILD_MATH_EXPR_MACRO(new_built_expr_id) { \
             if(parse_rhs_expr(ctx, inout_left, &right, operator_precedence)) return FAILURE; \
@@ -319,29 +351,31 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
         }
 
         switch(operator){
-        case TOKEN_ADD:            BUILD_MATH_EXPR_MACRO(EXPR_ADD);        break;
-        case TOKEN_SUBTRACT:       BUILD_MATH_EXPR_MACRO(EXPR_SUBTRACT);   break;
-        case TOKEN_MULTIPLY:       BUILD_MATH_EXPR_MACRO(EXPR_MULTIPLY);   break;
-        case TOKEN_DIVIDE:         BUILD_MATH_EXPR_MACRO(EXPR_DIVIDE);     break;
-        case TOKEN_MODULUS:        BUILD_MATH_EXPR_MACRO(EXPR_MODULUS);    break;
-        case TOKEN_EQUALS:         BUILD_MATH_EXPR_MACRO(EXPR_EQUALS);     break;
-        case TOKEN_NOTEQUALS:      BUILD_MATH_EXPR_MACRO(EXPR_NOTEQUALS);  break;
-        case TOKEN_GREATERTHAN:    BUILD_MATH_EXPR_MACRO(EXPR_GREATER);    break;
-        case TOKEN_LESSTHAN:       BUILD_MATH_EXPR_MACRO(EXPR_LESSER);     break;
-        case TOKEN_GREATERTHANEQ:  BUILD_MATH_EXPR_MACRO(EXPR_GREATEREQ);  break;
-        case TOKEN_LESSTHANEQ:     BUILD_MATH_EXPR_MACRO(EXPR_LESSEREQ);   break;
-        case TOKEN_BIT_AND:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_AND);    break;
-        case TOKEN_BIT_OR:         BUILD_MATH_EXPR_MACRO(EXPR_BIT_OR);     break;
-        case TOKEN_BIT_XOR:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_XOR);    break;
-        case TOKEN_BIT_LSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_LSHIFT); break;
-        case TOKEN_BIT_RSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_RSHIFT); break;
+        case TOKEN_ADD:            BUILD_MATH_EXPR_MACRO(EXPR_ADD);            break;
+        case TOKEN_SUBTRACT:       BUILD_MATH_EXPR_MACRO(EXPR_SUBTRACT);       break;
+        case TOKEN_MULTIPLY:       BUILD_MATH_EXPR_MACRO(EXPR_MULTIPLY);       break;
+        case TOKEN_DIVIDE:         BUILD_MATH_EXPR_MACRO(EXPR_DIVIDE);         break;
+        case TOKEN_MODULUS:        BUILD_MATH_EXPR_MACRO(EXPR_MODULUS);        break;
+        case TOKEN_EQUALS:         BUILD_MATH_EXPR_MACRO(EXPR_EQUALS);         break;
+        case TOKEN_NOTEQUALS:      BUILD_MATH_EXPR_MACRO(EXPR_NOTEQUALS);      break;
+        case TOKEN_GREATERTHAN:    BUILD_MATH_EXPR_MACRO(EXPR_GREATER);        break;
+        case TOKEN_LESSTHAN:       BUILD_MATH_EXPR_MACRO(EXPR_LESSER);         break;
+        case TOKEN_GREATERTHANEQ:  BUILD_MATH_EXPR_MACRO(EXPR_GREATEREQ);      break;
+        case TOKEN_LESSTHANEQ:     BUILD_MATH_EXPR_MACRO(EXPR_LESSEREQ);       break;
+        case TOKEN_BIT_AND:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_AND);        break;
+        case TOKEN_BIT_OR:         BUILD_MATH_EXPR_MACRO(EXPR_BIT_OR);         break;
+        case TOKEN_BIT_XOR:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_XOR);        break;
+        case TOKEN_BIT_LSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_LSHIFT);     break;
+        case TOKEN_BIT_RSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_RSHIFT);     break;
         case TOKEN_BIT_LGC_LSHIFT: BUILD_MATH_EXPR_MACRO(EXPR_BIT_LGC_LSHIFT); break;
         case TOKEN_BIT_LGC_RSHIFT: BUILD_MATH_EXPR_MACRO(EXPR_BIT_LGC_RSHIFT); break;
         case TOKEN_AND:
-        case TOKEN_UBERAND:        BUILD_MATH_EXPR_MACRO(EXPR_AND);        break;
+        case TOKEN_UBERAND:        BUILD_MATH_EXPR_MACRO(EXPR_AND);            break;
         case TOKEN_OR:
-        case TOKEN_UBEROR:         BUILD_MATH_EXPR_MACRO(EXPR_OR);         break;
-        case TOKEN_AS: if(parse_expr_as(ctx, inout_left)) return FAILURE;       break;
+        case TOKEN_UBEROR:         BUILD_MATH_EXPR_MACRO(EXPR_OR);             break;
+        case TOKEN_AS:
+            if(parse_expr_as(ctx, inout_left)) return FAILURE;
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unrecognized operator '%s' in expression");
             ast_expr_free_fully(*inout_left);

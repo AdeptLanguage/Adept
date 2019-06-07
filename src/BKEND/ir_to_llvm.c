@@ -896,6 +896,13 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     llvm_result = LLVMBuildFNeg(builder, ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
                     break;
+                case INSTRUCTION_SELECT:
+                    instr = basicblock->instructions[i];
+                    catalog.blocks[b].value_references[i] = LLVMBuildSelect(builder,
+                        ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->condition),
+                        ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->if_true),
+                        ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->if_false), "");
+                    break;
                 default:
                     redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", basicblocks[b].instructions[i]->id);
                     for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);

@@ -180,6 +180,8 @@ call :compile tentative_method_calls
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile terminate_join
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile ternary
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile truefalse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile undef

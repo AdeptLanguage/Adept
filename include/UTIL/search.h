@@ -18,6 +18,10 @@ extern "C" {
 // Performs a binary search to find a string in an array
 maybe_index_t binary_string_search(const char * const strings[], length_t string_count, const char *target);
 
+// ---------------- binary_int_search ----------------
+// Performs a binary search to find an int in an array
+maybe_index_t binary_int_search(const int ints[], length_t int_count, int target);
+
 #ifdef __cplusplus
 }
 #endif

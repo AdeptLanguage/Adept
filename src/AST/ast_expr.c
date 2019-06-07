@@ -555,6 +555,27 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(type_str);
             return representation;
         }
+    case EXPR_TYPEINFO: {
+            char *type_str = ast_type_str( &(((ast_expr_static_data_t*) expr)->type) );
+            representation = malloc(strlen(type_str) + 10);
+            sprintf(representation, "typeinfo %s", type_str);
+            free(type_str);
+            return representation;
+        }
+    case EXPR_TERNARY: {
+            char *condition_str = ast_expr_str(((ast_expr_ternary_t*) expr)->condition);
+            char *true_str = ast_expr_str(((ast_expr_ternary_t*) expr)->if_true);
+            char *false_str = ast_expr_str(((ast_expr_ternary_t*) expr)->if_false);
+
+            representation = malloc(strlen(condition_str) + strlen(true_str) + strlen(false_str) + 9);
+
+            sprintf(representation, "(%s ? %s : %s)", condition_str, true_str, false_str);
+
+            free(condition_str);
+            free(true_str);
+            free(false_str);
+            return representation;
+        }
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -661,6 +682,11 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_TYPEINFO: {
             ast_type_free( &((ast_expr_typeinfo_t*) expr)->target );
         }
+        break;
+    case EXPR_TERNARY:
+        ast_expr_free_fully( ((ast_expr_ternary_t*) expr)->condition );
+        ast_expr_free_fully( ((ast_expr_ternary_t*) expr)->if_true );
+        ast_expr_free_fully( ((ast_expr_ternary_t*) expr)->if_false );
         break;
     case EXPR_RETURN:
         if(((ast_expr_return_t*) expr)->value != NULL){
@@ -984,6 +1010,18 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_typeinfo
         #undef clone_as_typeinfo
+    case EXPR_TERNARY:
+        #define expr_as_ternary ((ast_expr_ternary_t*) expr)
+        #define clone_as_ternary ((ast_expr_ternary_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_ternary_t));
+        clone_as_ternary->condition = ast_expr_clone(expr_as_ternary->condition);
+        clone_as_ternary->if_true = ast_expr_clone(expr_as_ternary->if_true);
+        clone_as_ternary->if_false = ast_expr_clone(expr_as_ternary->if_false);
+        break;
+
+        #undef expr_as_ternary
+        #undef clone_as_ternary
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         #define expr_as_declare ((ast_expr_declare_t*) expr)
@@ -1191,6 +1229,15 @@ void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cs
     ((ast_expr_enum_value_t*) *out_expr)->source = source;
 }
 
+void ast_expr_create_ternary(ast_expr_t **out_expr, ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_ternary_t));
+    ((ast_expr_ternary_t*) *out_expr)->id = EXPR_TERNARY;
+    ((ast_expr_ternary_t*) *out_expr)->source = source;
+    ((ast_expr_ternary_t*) *out_expr)->condition = condition;
+    ((ast_expr_ternary_t*) *out_expr)->if_true = if_true;
+    ((ast_expr_ternary_t*) *out_expr)->if_false = if_false;
+}
+
 void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from, source_t source){
     *out_expr = malloc(sizeof(ast_expr_cast_t));
     ((ast_expr_cast_t*) *out_expr)->id = EXPR_CAST;
@@ -1210,83 +1257,88 @@ void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
 }
 
 const char *global_expression_rep_table[] = {
-    "<none>",                  // 0x00000000
-    "<byte literal>",          // 0x00000001
-    "<ubyte literal>",         // 0x00000002
-    "<short literal>",         // 0x00000003
-    "<ushort literal>",        // 0x00000004
-    "<int literal>",           // 0x00000005
-    "<uint literal>",          // 0x00000006
-    "<long literal>",          // 0x00000007
-    "<ulong literal>",         // 0x00000008
-    "<float literal>",         // 0x00000009
-    "<double literal>",        // 0x0000000A
-    "<boolean literal>",       // 0x0000000B
-    "<string literal>",        // 0x0000000C
-    "<length string literal>", // 0x0000000D
-    "null",                    // 0x0000000E
-    "<generic int>",           // 0x0000000F
-    "<generic float>",         // 0x00000010
-    "+",                       // 0x00000011
-    "-",                       // 0x00000012
-    "*",                       // 0x00000013
-    "/",                       // 0x00000014
-    "%",                       // 0x00000015
-    "==",                      // 0x00000016
-    "!=",                      // 0x00000017
-    ">",                       // 0x00000018
-    "<",                       // 0x00000019
-    ">=",                      // 0x0000001A
-    "<=",                      // 0x0000001B
-    "&&",                      // 0x0000001C
-    "||",                      // 0x0000001D
-    "!",                       // 0x0000001E
-    "&",                       // 0x0000001F
-    "|",                       // 0x00000020
-    "^",                       // 0x00000021
-    "~",                       // 0x00000022
-    "<<",                      // 0x00000023
-    ">>",                      // 0x00000024
-    "<<<",                     // 0x00000025
-    ">>>",                     // 0x00000026
-    "-",                       // 0x00000027
-    "<at>",                    // 0x00000028
-    "<call>",                  // 0x00000029
-    "<variable>",              // 0x0000002A
-    ".",                       // 0x0000002B
-    "&",                       // 0x0000002C
-    "func&",                   // 0x0000002D
-    "*",                       // 0x0000002E
-    "[]",                      // 0x0000002F
-    "<cast>",                  // 0x00000030
-    "<sizeof>",                // 0x00000031
-    "<call method>",           // 0x00000032
-    "<new>",                   // 0x00000033
-    "<new cstring>",           // 0x00000034
-    "<enum value>",            // 0x00000035
-    "<enum value>",            // 0x00000036
-    "<static array>",          // 0x00000037
-    "<undef declaration>",     // 0x00000038
-    "=",                       // 0x00000039
-    "+=",                      // 0x0000003A
-    "-=",                      // 0x0000003B
-    "*=",                      // 0x0000003C
-    "/=",                      // 0x0000003D
-    "%=",                      // 0x0000003E
-    "<return>",                // 0x0000003F
-    "<if>",                    // 0x00000040
-    "<unless>",                // 0x00000041
-    "<if else>",               // 0x00000042
-    "<unless else>",           // 0x00000043
-    "<while>",                 // 0x00000044
-    "<until>",                 // 0x00000045
-    "<while continue>",        // 0x00000046
-    "<until break>",           // 0x00000047
-    "<each in>",               // 0x00000048
-    "<repeat>",                // 0x00000049
-    "<delete>",                // 0x0000004A
-    "<break>",                 // 0x0000004B
-    "<continue>",              // 0x0000004C
-    "<break to>",              // 0x0000004D
-    "<continue to>",           // 0x0000004E
+    "<none>",                     // 0x00000000
+    "<byte literal>",             // 0x00000001
+    "<ubyte literal>",            // 0x00000002
+    "<short literal>",            // 0x00000003
+    "<ushort literal>",           // 0x00000004
+    "<int literal>",              // 0x00000005
+    "<uint literal>",             // 0x00000006
+    "<long literal>",             // 0x00000007
+    "<ulong literal>",            // 0x00000008
+    "<float literal>",            // 0x00000009
+    "<double literal>",           // 0x0000000A
+    "<boolean literal>",          // 0x0000000B
+    "<string literal>",           // 0x0000000C
+    "<length string literal>",    // 0x0000000D
+    "null",                       // 0x0000000E
+    "<generic int>",              // 0x0000000F
+    "<generic float>",            // 0x00000010
+    "+",                          // 0x00000011
+    "-",                          // 0x00000012
+    "*",                          // 0x00000013
+    "/",                          // 0x00000014
+    "%",                          // 0x00000015
+    "==",                         // 0x00000016
+    "!=",                         // 0x00000017
+    ">",                          // 0x00000018
+    "<",                          // 0x00000019
+    ">=",                         // 0x0000001A
+    "<=",                         // 0x0000001B
+    "&&",                         // 0x0000001C
+    "||",                         // 0x0000001D
+    "!",                          // 0x0000001E
+    "&",                          // 0x0000001F
+    "|",                          // 0x00000020
+    "^",                          // 0x00000021
+    "~",                          // 0x00000022
+    "<<",                         // 0x00000023
+    ">>",                         // 0x00000024
+    "<<<",                        // 0x00000025
+    ">>>",                        // 0x00000026
+    "-",                          // 0x00000027
+    "<at>",                       // 0x00000028
+    "<call>",                     // 0x00000029
+    "<variable>",                 // 0x0000002A
+    ".",                          // 0x0000002B
+    "&",                          // 0x0000002C
+    "func&",                      // 0x0000002D
+    "*",                          // 0x0000002E
+    "[]",                         // 0x0000002F
+    "<cast>",                     // 0x00000030
+    "<sizeof>",                   // 0x00000031
+    "<call method>",              // 0x00000032
+    "<new>",                      // 0x00000033
+    "<new cstring>",              // 0x00000034
+    "<enum value>",               // 0x00000035
+    "<static array>",             // 0x00000036
+    "<static struct value>",      // 0x00000037
+    "<typeinfo for type>",        // 0x00000038
+    "<ternary>",                  // 0x00000039
+    "<declaration>",              // 0x0000003A
+    "<undef declaration>",        // 0x0000003B
+    "<inline declaration>",       // 0x0000003C
+    "<inline undef declaration>", // 0x0000003D
+    "=",                          // 0x0000003E
+    "+=",                         // 0x0000003F
+    "-=",                         // 0x00000040
+    "*=",                         // 0x00000041
+    "/=",                         // 0x00000042
+    "%=",                         // 0x00000043
+    "<return>",                   // 0x00000044
+    "<if>",                       // 0x00000045
+    "<unless>",                   // 0x00000046
+    "<if else>",                  // 0x00000047
+    "<unless else>",              // 0x00000048
+    "<while>",                    // 0x00000049
+    "<until>",                    // 0x0000004A
+    "<while continue>",           // 0x0000004B
+    "<until break>",              // 0x0000004C
+    "<each in>",                  // 0x0000004D
+    "<repeat>",                   // 0x0000004E
+    "<delete>",                   // 0x0000004F
+    "<break>",                    // 0x00000050
+    "<continue>",                 // 0x00000051
+    "<break to>",                 // 0x00000052
+    "<continue to>",              // 0x00000053
 };

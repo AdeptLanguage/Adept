@@ -579,6 +579,11 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             type_table_give(ctx->type_table, &(((ast_expr_typeinfo_t*) *expr)->target), NULL);
         }
         break;
+    case EXPR_TERNARY:
+        if(infer_expr(ctx, ast_func, &((ast_expr_ternary_t*) *expr)->condition, EXPR_NONE, scope)) return FAILURE;
+        if(infer_expr(ctx, ast_func, &((ast_expr_ternary_t*) *expr)->if_true,   EXPR_NONE, scope)) return FAILURE;
+        if(infer_expr(ctx, ast_func, &((ast_expr_ternary_t*) *expr)->if_false,  EXPR_NONE, scope)) return FAILURE;
+        break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = (ast_expr_inline_declare_t*) *expr;
             if(infer_type(ctx, &def->type)) return FAILURE;

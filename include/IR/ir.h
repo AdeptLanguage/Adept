@@ -92,6 +92,7 @@
 #define INSTRUCTION_BIT_LGC_RSHIFT 0x0000004C // ir_instr_math_t
 #define INSTRUCTION_NEGATE         0x0000004D // ir_instr_unary_t
 #define INSTRUCTION_FNEGATE        0x0000004E // ir_instr_unary_t
+#define INSTRUCTION_SELECT         0x0000004F
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -370,8 +371,7 @@ typedef struct {
 } ir_instr_offsetof_t;
 
 // ---------------- ir_instr_varzeroinit_t ----------------
-// An IR pseudo-instruction for zero-initializing a
-// stack allocated variable
+// An IR for zero-initializing a stack allocated variable
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
@@ -379,8 +379,7 @@ typedef struct {
 } ir_instr_varzeroinit_t;
 
 // ---------------- ir_instr_memcpy_t ----------------
-// An IR pseudo-instruction for copying chunks of memory
-// from one place to another
+// An IR for copying chunks of memory from one place to another
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
@@ -389,6 +388,16 @@ typedef struct {
     ir_value_t *bytes;
     bool is_volatile;
 } ir_instr_memcpy_t;
+
+// ---------------- ir_instr_select_t ----------------
+// An IR for conditionally selecting between two values
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_value_t *condition;
+    ir_value_t *if_true;
+    ir_value_t *if_false;
+} ir_instr_select_t;
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block
