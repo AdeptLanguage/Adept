@@ -382,7 +382,9 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         case LEX_STATE_EQUALS:   LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_EQUALS, TOKEN_ASSIGN);             break;
         case LEX_STATE_NOT:      LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_NOTEQUALS, TOKEN_NOT);             break;
         case LEX_STATE_COLON:    LEX_OPTIONAL_MOD_TOKEN_MAPPING(':', TOKEN_NAMESPACE, TOKEN_COLON);           break;
-        case LEX_STATE_ADD:      LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_ADDASSIGN, TOKEN_ADD);             break;
+        case LEX_STATE_ADD:
+            LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_ADDASSIGN, '+', TOKEN_INCREMENT, TOKEN_ADD);
+            break;
         case LEX_STATE_MULTIPLY: LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MULTIPLYASSIGN, TOKEN_MULTIPLY);   break;
         case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUSASSIGN, TOKEN_MODULUS);     break;
         case LEX_STATE_LESS:
@@ -638,6 +640,9 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             t->data = NULL;
             if(buffer[i] == '='){
                 t->id = TOKEN_SUBTRACTASSIGN;
+                (*sources)[tokenlist->length++].stride = 2;
+            } else if(buffer[i] == '-'){
+                t->id = TOKEN_DECREMENT;
                 (*sources)[tokenlist->length++].stride = 2;
             } else {
                 t->id = TOKEN_SUBTRACT;

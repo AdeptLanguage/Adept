@@ -127,6 +127,12 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_TYPEINFO:
         if(parse_expr_typeinfo(ctx, out_expr)) return FAILURE;
         break;
+    case TOKEN_INCREMENT:
+        if(parse_expr_preincrement(ctx, out_expr)) return FAILURE;
+        break;
+    case TOKEN_DECREMENT:
+        if(parse_expr_predecrement(ctx, out_expr)) return FAILURE;
+        break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
         return FAILURE;
@@ -283,13 +289,26 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 if(parse_expr(ctx, &expr_a)) return FAILURE;
 
                 if(tokens[(*i)++].id != TOKEN_COLON){
-                    compiler_panic(ctx->compiler, sources[*i - 1], "ternary operator expected ':' after expression");
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Ternary operator expected ':' after expression");
                     ast_expr_free_fully(expr_a);
                     return FAILURE;
                 }
 
                 if(parse_expr(ctx, &expr_b)) return FAILURE;
                 ast_expr_create_ternary(inout_expr, *inout_expr, expr_a, expr_b, source);
+            }
+            break;
+        case TOKEN_INCREMENT: case TOKEN_DECREMENT: {
+                if(!expr_is_mutable(*inout_expr)){
+                    compiler_panicf(ctx->compiler, sources[*i], "Can only %s mutable values", tokens[*i].id == TOKEN_INCREMENT ? "increment" : "decrement");
+                    return FAILURE;
+                }
+
+                ast_expr_unary_t *increment = (ast_expr_unary_t*) malloc(sizeof(ast_expr_unary_t));
+                increment->id = tokens[*i].id == TOKEN_INCREMENT ? EXPR_POSTINCREMENT : EXPR_POSTDECREMENT;
+                increment->source = sources[(*i)++];
+                increment->value = *inout_expr;
+                *inout_expr = (ast_expr_t*) increment;
             }
             break;
         default:
@@ -513,7 +532,7 @@ errorcode_t parse_expr_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
         return FAILURE;
     }
 
-    if(!EXPR_IS_MUTABLE(addr_expr->value->id)){
+    if(!expr_is_mutable(addr_expr->value)){
         compiler_panic(ctx->compiler, addr_expr->value->source, "The '&' operator requires the operand to be mutable");
         ast_expr_free_fully((ast_expr_t*) addr_expr);
         return FAILURE;
@@ -878,6 +897,46 @@ errorcode_t parse_expr_typeinfo(parse_ctx_t *ctx, ast_expr_t **out_expr){
     }
 
     *out_expr = (ast_expr_t*) typeinfo;
+    return SUCCESS;
+}
+
+errorcode_t parse_expr_preincrement(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    ast_expr_unary_t *preincrement_expr = malloc(sizeof(ast_expr_unary_t));
+    preincrement_expr->id = EXPR_PREINCREMENT;
+    preincrement_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    if(parse_primary_expr(ctx, &preincrement_expr->value) || parse_op_expr(ctx, 0, &preincrement_expr->value, true)){
+        free(preincrement_expr);
+        return FAILURE;
+    }
+
+    if(!expr_is_mutable(preincrement_expr->value)){
+        compiler_panic(ctx->compiler, preincrement_expr->value->source, "The '++' operator requires the operand to be mutable");
+        ast_expr_free_fully((ast_expr_t*) preincrement_expr);
+        return FAILURE;
+    }
+    
+    *out_expr = (ast_expr_t*) preincrement_expr;
+    return SUCCESS;
+}
+
+errorcode_t parse_expr_predecrement(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    ast_expr_unary_t *predecrement_expr = malloc(sizeof(ast_expr_unary_t));
+    predecrement_expr->id = EXPR_PREDECREMENT;
+    predecrement_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    if(parse_primary_expr(ctx, &predecrement_expr->value) || parse_op_expr(ctx, 0, &predecrement_expr->value, true)){
+        free(predecrement_expr);
+        return FAILURE;
+    }
+
+    if(!expr_is_mutable(predecrement_expr->value)){
+        compiler_panic(ctx->compiler, predecrement_expr->value->source, "The '--' operator requires the operand to be mutable");
+        ast_expr_free_fully((ast_expr_t*) predecrement_expr);
+        return FAILURE;
+    }
+    
+    *out_expr = (ast_expr_t*) predecrement_expr;
     return SUCCESS;
 }
 

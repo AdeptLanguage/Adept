@@ -79,39 +79,39 @@ extern "C" {
 #define EXPR_STATIC_STRUCT  0x00000037
 #define EXPR_TYPEINFO       0x00000038
 #define EXPR_TERNARY        0x00000039
+#define EXPR_PREINCREMENT   0x0000003A
+#define EXPR_PREDECREMENT   0x0000003B
+#define EXPR_POSTINCREMENT  0x0000003C
+#define EXPR_POSTDECREMENT  0x0000003D
 // Exclusive statements --------------
-#define EXPR_DECLARE        0x0000003A
-#define EXPR_DECLAREUNDEF   0x0000003B
-#define EXPR_ILDECLARE      0x0000003C
-#define EXPR_ILDECLAREUNDEF 0x0000003D
-#define EXPR_ASSIGN         0x0000003E
-#define EXPR_ADDASSIGN      0x0000003F
-#define EXPR_SUBTRACTASSIGN 0x00000040
-#define EXPR_MULTIPLYASSIGN 0x00000041
-#define EXPR_DIVIDEASSIGN   0x00000042
-#define EXPR_MODULUSASSIGN  0x00000043
-#define EXPR_RETURN         0x00000044
-#define EXPR_IF             0x00000045
-#define EXPR_UNLESS         0x00000046
-#define EXPR_IFELSE         0x00000047
-#define EXPR_UNLESSELSE     0x00000048
-#define EXPR_WHILE          0x00000049
-#define EXPR_UNTIL          0x0000004A
-#define EXPR_WHILECONTINUE  0x0000004B
-#define EXPR_UNTILBREAK     0x0000004C
-#define EXPR_EACH_IN        0x0000004D
-#define EXPR_REPEAT         0x0000004E
-#define EXPR_DELETE         0x0000004F
-#define EXPR_BREAK          0x00000050
-#define EXPR_CONTINUE       0x00000051
-#define EXPR_BREAK_TO       0x00000052
-#define EXPR_CONTINUE_TO    0x00000053
+#define EXPR_DECLARE        0x0000003E
+#define EXPR_DECLAREUNDEF   0x0000003F
+#define EXPR_ILDECLARE      0x00000040
+#define EXPR_ILDECLAREUNDEF 0x00000041
+#define EXPR_ASSIGN         0x00000042
+#define EXPR_ADDASSIGN      0x00000043
+#define EXPR_SUBTRACTASSIGN 0x00000044
+#define EXPR_MULTIPLYASSIGN 0x00000045
+#define EXPR_DIVIDEASSIGN   0x00000046
+#define EXPR_MODULUSASSIGN  0x00000047
+#define EXPR_RETURN         0x00000048
+#define EXPR_IF             0x00000049
+#define EXPR_UNLESS         0x0000004A
+#define EXPR_IFELSE         0x0000004B
+#define EXPR_UNLESSELSE     0x0000004C
+#define EXPR_WHILE          0x0000004D
+#define EXPR_UNTIL          0x0000004E
+#define EXPR_WHILECONTINUE  0x0000004F
+#define EXPR_UNTILBREAK     0x00000050
+#define EXPR_EACH_IN        0x00000051
+#define EXPR_REPEAT         0x00000052
+#define EXPR_DELETE         0x00000053
+#define EXPR_BREAK          0x00000054
+#define EXPR_CONTINUE       0x00000055
+#define EXPR_BREAK_TO       0x00000056
+#define EXPR_CONTINUE_TO    0x00000057
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
-
-// ---------------- EXPR_IS_MUTABLE(expr) ----------------
-// Tests to see if the result of an expression will be mutable
-#define EXPR_IS_MUTABLE(a) (a == EXPR_VARIABLE || a == EXPR_MEMBER || a == EXPR_DEREFERENCE || a == EXPR_ARRAY_ACCESS)
 
 // Static data that stores general expression syntax representations
 extern const char *global_expression_rep_table[];
@@ -517,6 +517,10 @@ typedef struct {
     length_t length;
     length_t capacity;
 } ast_expr_list_t;
+
+// ---------------- expr_is_mutable ----------------
+// Tests to see if the result of an expression will be mutable
+bool expr_is_mutable(ast_expr_t *expr);
 
 // ---------------- ast_expr_str ----------------
 // Generates a c-string given an AST expression

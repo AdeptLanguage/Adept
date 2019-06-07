@@ -84,6 +84,8 @@ call :compile ifelse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile import
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile increment
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile inline_declaration
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile int_ptr_cast

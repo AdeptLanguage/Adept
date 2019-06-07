@@ -95,7 +95,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                             (*i)++;
                         }
 
-                        if(!EXPR_IS_MUTABLE(mutable_expression->id)){
+                        if(!expr_is_mutable(mutable_expression)){
                             compiler_panic(ctx->compiler, sources[*i], "Can't modify expression because it is immutable");
                             ast_expr_free_fully(mutable_expression);
                             return FAILURE;
@@ -147,7 +147,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                     return FAILURE;
                 }
 
-                if(!EXPR_IS_MUTABLE(mutable_expression->id)){
+                if(!expr_is_mutable(mutable_expression)){
                     compiler_panic(ctx->compiler, sources[*i], "Can't modify expression because it is immutable");
                     ast_expr_free_fully(mutable_expression);
                     return FAILURE;

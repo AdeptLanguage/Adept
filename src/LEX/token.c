@@ -166,6 +166,8 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
             printf("Polymorph: \"%s\"\n", (char*) tokenlist->tokens[i].data);
             break;
         case TOKEN_MAYBE:          printf("Maybe\n"); break;
+        case TOKEN_INCREMENT:      printf("Increment\n"); break;
+        case TOKEN_DECREMENT:      printf("Decrement\n"); break;
         default:
             printf("unknown token 0x%08X: THIS TOKEN HAS AN UNKNOWN ID\n", tokenlist->tokens[i].id);
         }
@@ -244,8 +246,8 @@ const char *global_token_name_table[] = {
     "meta directive",         // 0x00000039
     "polymorph",              // 0x0000003A
     "maybe",                  // 0x0000003B
-    "reserved",               // 0x0000003C
-    "reserved",               // 0x0000003D
+    "increment",              // 0x0000003C
+    "decrement",              // 0x0000003D
     "reserved",               // 0x0000003E
     "reserved",               // 0x0000003F
     "POD keyword",            // 0x00000040

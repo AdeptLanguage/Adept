@@ -49,6 +49,7 @@ compile hexadecimal || exit $?
 compile if || exit $?
 compile ifelse || exit $?
 compile import || exit $?
+compile increment || exit $?
 compile inline_declaration || exit $?
 compile int_ptr_cast || exit $?
 compile internal_deference || exit $?

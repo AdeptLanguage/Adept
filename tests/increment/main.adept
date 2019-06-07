@@ -1,0 +1,7 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    x int = 0
+    printf('%d %d %d %d\n', x++, x--, ++x, --x)
+}

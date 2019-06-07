@@ -4,6 +4,19 @@
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 
+bool expr_is_mutable(ast_expr_t *expr){
+    switch(expr->id){
+    case EXPR_VARIABLE: case EXPR_MEMBER: case EXPR_DEREFERENCE: case EXPR_ARRAY_ACCESS:
+        return true;
+    case EXPR_TERNARY:
+        return expr_is_mutable(((ast_expr_ternary_t*) expr)->if_true) && expr_is_mutable(((ast_expr_ternary_t*) expr)->if_false);
+    case EXPR_POSTINCREMENT: case EXPR_POSTDECREMENT:
+        return expr_is_mutable(((ast_expr_unary_t*) expr)->value);
+    }
+
+    return false;
+}
+
 strong_cstr_t ast_expr_str(ast_expr_t *expr){
     // NOTE: Returns an allocated string representation of the expression
 
@@ -576,6 +589,34 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(false_str);
             return representation;
         }
+    case EXPR_PREINCREMENT: {
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
+            representation = malloc(strlen(value_str) + 5);
+            sprintf(representation, "++(%s)", value_str);
+            free(value_str);
+            return representation;
+        }
+    case EXPR_PREDECREMENT: {
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
+            representation = malloc(strlen(value_str) + 5);
+            sprintf(representation, "--(%s)", value_str);
+            free(value_str);
+            return representation;
+        }
+    case EXPR_POSTINCREMENT: {
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
+            representation = malloc(strlen(value_str) + 5);
+            sprintf(representation, "(%s)++", value_str);
+            free(value_str);
+            return representation;
+        }
+    case EXPR_POSTDECREMENT: {
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
+            representation = malloc(strlen(value_str) + 5);
+            sprintf(representation, "(%s)--", value_str);
+            free(value_str);
+            return representation;
+        }
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -668,6 +709,10 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_NOT:
     case EXPR_NEGATE:
     case EXPR_DELETE:
+    case EXPR_PREINCREMENT:
+    case EXPR_PREDECREMENT:
+    case EXPR_POSTINCREMENT:
+    case EXPR_POSTDECREMENT:
         ast_expr_free_fully( ((ast_expr_unary_t*) expr)->value );
         break;
     case EXPR_NEW:
@@ -871,6 +916,10 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_NOT:
     case EXPR_NEGATE:
     case EXPR_DELETE:
+    case EXPR_PREINCREMENT:
+    case EXPR_PREDECREMENT:
+    case EXPR_POSTINCREMENT:
+    case EXPR_POSTDECREMENT:
         #define expr_as_unary ((ast_expr_unary_t*) expr)
         #define clone_as_unary ((ast_expr_unary_t*) clone)
 

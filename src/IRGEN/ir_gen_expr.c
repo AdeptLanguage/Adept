@@ -62,9 +62,9 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_USHORT:
         BUILD_LITERAL_IR_VALUE(ast_expr_ushort_t, "ushort", /*stored w/ extra precision*/ unsigned int); break;
     case EXPR_INT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_int_t, "int", long long); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_int_t, "int", /*stored w/ extra precision*/ long long); break;
     case EXPR_UINT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_uint_t, "uint", unsigned long long); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_uint_t, "uint", /*stored w/ extra precision*/ unsigned long long); break;
     case EXPR_LONG:
         BUILD_LITERAL_IR_VALUE(ast_expr_long_t, "long", long long); break;
     case EXPR_ULONG:
@@ -434,7 +434,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 memmove(struct_value_ast_type.elements, &struct_value_ast_type.elements[1], sizeof(ast_elem_t*) * (struct_value_ast_type.elements_length - 1));
                 struct_value_ast_type.elements_length--; // Reduce length accordingly
 
-                if(EXPR_IS_MUTABLE(member_expr->value->id)){
+                if(expr_is_mutable(member_expr->value)){
                     struct_value = build_load(builder, struct_value);
                 }
             }
@@ -708,7 +708,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 casted_ir_type->extra = ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype;
                 array_type.elements[0]->id = AST_ELEM_POINTER;
                 array_value = build_bitcast(builder, array_value, casted_ir_type);
-            } else if(EXPR_IS_MUTABLE(array_access_expr->value->id)){
+            } else if(expr_is_mutable(array_access_expr->value)){
                 // Load value reference
                 // (*)  int -> int
                 array_value = build_load(builder, array_value);
@@ -829,7 +829,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             length_t type_elems_length = arg_types[0].elements_length;
 
             if(type_elems_length == 1 && (type_elems[0]->id == AST_ELEM_BASE || type_elems[0]->id == AST_ELEM_GENERIC_BASE)){
-                if(!EXPR_IS_MUTABLE(call_expr->value->id)){
+                if(!expr_is_mutable(call_expr->value)){
                     if(call_expr->is_tentative){
                         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
                         break;
@@ -845,7 +845,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             } else if(type_elems_length == 2 && type_elems[0]->id == AST_ELEM_POINTER
                     && (type_elems[1]->id == AST_ELEM_BASE || type_elems[1]->id == AST_ELEM_GENERIC_BASE)){
                 // Load the value that's being called on if the expression is mutable
-                if(EXPR_IS_MUTABLE(call_expr->value->id)){
+                if(expr_is_mutable(call_expr->value)){
                     arg_values[0] = build_load(builder, arg_values[0]);
                 }
             } else {
@@ -1320,6 +1320,116 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             *ir_value = build_value_from_prev_instruction(builder);
         }
         break;
+    case EXPR_PREINCREMENT: case EXPR_PREDECREMENT:
+    case EXPR_POSTINCREMENT: case EXPR_POSTDECREMENT: {
+            ir_value_t *before_value;
+            ast_type_t before_ast_type;
+            ast_expr_unary_t *unary = (ast_expr_unary_t*) expr;
+
+            // NOTE: unary->value is guaranteed to be a mutable expression
+            if(ir_gen_expression(builder, unary->value, &before_value, true, &before_ast_type))
+                return FAILURE;
+            
+            if(before_value->type->kind != TYPE_KIND_POINTER){
+                compiler_panic(builder->compiler, unary->value->source, "INTERNAL ERROR: ir_gen_expr() EXPR_xCREMENT expected mutable value");
+                ast_type_free(&before_ast_type);
+                return FAILURE;
+            }
+
+            ir_value_t *one = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+            one->value_type = VALUE_TYPE_LITERAL;
+            one->type = (ir_type_t*) before_value->type->extra;
+            one->extra = NULL;
+            
+            switch(one->type->kind){
+            case TYPE_KIND_S8:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(char));
+                *((char*) one->extra) = 1;
+                break;
+            case TYPE_KIND_U8:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned char));
+                *((unsigned char*) one->extra) = 1;
+                break;
+            case TYPE_KIND_S16:
+                // stored w/ extra precision
+                one->extra = ir_pool_alloc(builder->pool, sizeof(int));
+                *((int*) one->extra) = 1;
+                break;
+            case TYPE_KIND_U16:
+                // stored w/ extra precision
+                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned int));
+                *((unsigned int*) one->extra) = 1;
+                break;
+            case TYPE_KIND_S32:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(long long));
+                *((long long*) one->extra) = 1;
+                break;
+            case TYPE_KIND_U32:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
+                *((unsigned long long*) one->extra) = 1;
+                break;
+            case TYPE_KIND_S64:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(long long));
+                *((long long*) one->extra) = 1;
+                break;
+            case TYPE_KIND_U64:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long));
+                *((unsigned long long*) one->extra) = 1;
+                break;
+            }
+
+            if(one->extra == NULL){
+                char *typename = ast_type_str(&before_ast_type);
+                compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'",
+                    expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT ? "increment" : "decrement", typename);
+                ast_type_free(&before_ast_type);
+                free(typename);
+                return FAILURE;
+            }
+
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_math_t));
+
+            ((ir_instr_math_t*) instruction)->id = INSTRUCTION_NONE; // Will be determined
+            ((ir_instr_math_t*) instruction)->a = build_load(builder, before_value);
+            ((ir_instr_math_t*) instruction)->b = one;
+            ((ir_instr_math_t*) instruction)->result_type = before_value->type; 
+
+            if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT){
+                if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_ADD, INSTRUCTION_FADD)){
+                    char *typename = ast_type_str(&before_ast_type);
+                    compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "increment", typename);
+                    ast_type_free(&before_ast_type);
+                    free(typename);
+                    return FAILURE;
+                }
+            } else {
+                if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
+                    char *typename = ast_type_str(&before_ast_type);
+                    compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "decrement", typename);
+                    ast_type_free(&before_ast_type);
+                    free(typename);
+                    return FAILURE;
+                }
+            }
+
+            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+            ir_value_t *modified = build_value_from_prev_instruction(builder);
+            build_store(builder, modified, before_value);
+
+            if(out_expr_type){
+                *out_expr_type = before_ast_type;
+            } else {
+                ast_type_free(&before_ast_type);
+            }
+
+            if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_PREDECREMENT){
+                *ir_value = leave_mutable ? before_value : build_load(builder, before_value);
+            } else {
+                *ir_value = leave_mutable ? before_value : ((ir_instr_math_t*) instruction)->a;
+            }
+        }
+        break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
 
@@ -1587,7 +1697,7 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
     return *instruction;
 }
 
-int i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsigned int f_instr){
+errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsigned int f_instr){
     // NOTE: Sets the instruction id to 'i_instr' if operating on intergers
     //       Sets the instruction id to 'f_instr' if operating on floats
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
@@ -1607,7 +1717,7 @@ int i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsig
     return SUCCESS;
 }
 
-int u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
+errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
     // NOTE: Sets the instruction id to 'u_instr' if operating on unsigned intergers
     //       Sets the instruction id to 's_instr' if operating on signed intergers
     //       Sets the instruction id to 'f_instr' if operating on floats
