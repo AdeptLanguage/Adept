@@ -131,36 +131,65 @@ errorcode_t parse_struct_body(parse_ctx_t *ctx, strong_cstr_t **names, ast_type_
     length_t backfill = 0;
 
     while(tokens[*i].id != TOKEN_CLOSE){
-        parse_struct_grow_fields(names, types, *length, &capacity, backfill);
-
         if(parse_ignore_newlines(ctx, "Expected name of field")){
             parse_struct_free_fields(*names, *types, *length, backfill);
             return FAILURE;
         }
 
-        strong_cstr_t field_name = parse_take_word(ctx, "Expected name of field");
-        if(field_name == NULL){
-            parse_struct_free_fields(*names, *types, *length, backfill);
-            return FAILURE;
-        }
+        if(tokens[*i].id == TOKEN_STRUCT){
+            if(backfill != 0){
+                compiler_panic(ctx->compiler, sources[*i], "Expected field type for previous fields before struct integration");
+                parse_struct_free_fields(*names, *types, *length, backfill);
+                return FAILURE;
+            }
 
-        (*names)[(*length)++] = field_name;
+            maybe_null_weak_cstr_t inner_struct_name = parse_grab_word(ctx, "Expected struct name for integration");
+            if(inner_struct_name == NULL){
+                parse_struct_free_fields(*names, *types, *length, backfill);
+                return FAILURE;
+            }
 
-        if(tokens[*i].id == TOKEN_NEXT){
-            backfill++; (*i)++;
-            continue;
-        }
+            ast_struct_t *inner_struct = ast_struct_find(ctx->ast, inner_struct_name);
+            if(inner_struct == NULL){
+                compiler_panicf(ctx->compiler, sources[*i], "Struct '%s' must already be declared", inner_struct_name);
+                parse_struct_free_fields(*names, *types, *length, backfill);
+                return FAILURE;
+            }
 
-        ast_type_t *end_type_ptr =  &((*types)[*length - 1]);
+            for(length_t f = 0; f != inner_struct->field_count; f++){
+                parse_struct_grow_fields(names, types, *length, &capacity, backfill);
+                (*types)[*length] = ast_type_clone(&inner_struct->field_types[f]);
+                (*names)[(*length)++] = strclone(inner_struct->field_names[f]);
+            }
 
-        if(parse_type(ctx, end_type_ptr)){
-            parse_struct_free_fields(*names, *types, *length, backfill);
-            return FAILURE;
-        }
+            (*i)++;
+        } else {
+            parse_struct_grow_fields(names, types, *length, &capacity, backfill);
 
-        while(backfill != 0){
-            (*types)[*length - backfill - 1] = ast_type_clone(end_type_ptr);
-            backfill -= 1;
+            strong_cstr_t field_name = parse_take_word(ctx, "Expected name of field");
+            if(field_name == NULL){
+                parse_struct_free_fields(*names, *types, *length, backfill);
+                return FAILURE;
+            }
+
+            (*names)[(*length)++] = field_name;
+
+            if(tokens[*i].id == TOKEN_NEXT){
+                backfill++; (*i)++;
+                continue;
+            }
+
+            ast_type_t *end_type_ptr = &((*types)[*length - 1]);
+
+            if(parse_type(ctx, end_type_ptr)){
+                parse_struct_free_fields(*names, *types, *length, backfill);
+                return FAILURE;
+            }
+
+            while(backfill != 0){
+                (*types)[*length - backfill - 1] = ast_type_clone(end_type_ptr);
+                backfill -= 1;
+            }
         }
 
         if(parse_ignore_newlines(ctx, "Expected ')' or ',' after struct field")){
@@ -200,7 +229,6 @@ void parse_struct_grow_fields(char ***names, ast_type_t **types, length_t length
 }
 
 void parse_struct_free_fields(strong_cstr_t *names, ast_type_t *types, length_t length, length_t backfill){
-    for(length_t i = 0; i != length; i++) free(names[i]);
-    ast_types_free_fully(types, length - backfill);
-    free(names);
+    if(names) freestrs(names, length);
+    if(types) ast_types_free_fully(types, length - backfill);
 }

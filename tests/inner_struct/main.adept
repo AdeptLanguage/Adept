@@ -1,0 +1,14 @@
+
+import 'sys/cstdio.adept'
+
+struct Vec3 (x, y, z float)
+struct Vec4 (struct Vec3, w float)
+
+func main {
+    v Vec4
+    v.x = 1.0f
+    v.y = 2.0f
+    v.z = 3.0f
+    v.w = 4.0f
+    printf('%f %f %f %f\n', v.x as double, v.y as double, v.z as double, v.w as double)
+}

@@ -88,6 +88,8 @@ call :compile increment
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile inline_declaration
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile inner_struct
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile int_ptr_cast
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile internal_deference
