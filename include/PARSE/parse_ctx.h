@@ -29,6 +29,9 @@ typedef struct {
 
     // Used to 'unlex' multiple angle brackets
     length_t angle_bracket_repeat;
+
+    // Used to automatically promote functions into methods
+    ast_struct_t *struct_association;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------

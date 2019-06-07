@@ -176,6 +176,8 @@ call :compile string
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile structs
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile struct_association
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile successful
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile tentative_function_calls

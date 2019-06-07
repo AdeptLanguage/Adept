@@ -10,6 +10,11 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
     source_t source = ctx->tokenlist->sources[*ctx->i];
 
+    if(ctx->struct_association != NULL){
+        compiler_panicf(ctx->compiler, source, "Cannot declare struct within another struct's domain");
+        return FAILURE;
+    }
+
     strong_cstr_t name;
     bool is_packed;
     strong_cstr_t *generics = NULL;
@@ -39,12 +44,22 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
         return FAILURE;
     }
 
+    ast_struct_t *domain = NULL;
     trait_t traits = is_packed ? AST_STRUCT_PACKED : TRAIT_NONE;
 
     if(generics){
-        ast_add_polymorphic_struct(ast, name, field_names, field_types, field_count, traits, source, generics, generics_length);
+        domain = (ast_struct_t*) ast_add_polymorphic_struct(ast, name, field_names, field_types, field_count, traits, source, generics, generics_length);
     } else {
-        ast_add_struct(ast, name, field_names, field_types, field_count, traits, source);
+        domain = ast_add_struct(ast, name, field_names, field_types, field_count, traits, source);
+    }
+
+    length_t scan_i = *ctx->i + 1;
+    while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
+        scan_i++;
+    
+    if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
+        ctx->struct_association = domain;
+        *ctx->i = scan_i;
     }
 
     return SUCCESS;

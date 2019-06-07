@@ -12,6 +12,11 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
     bool is_external = false;
 
+    if(ctx->struct_association != NULL){
+        compiler_panicf(ctx->compiler, source, "Cannot declare global variable within struct domain");
+        return FAILURE;
+    }
+
     if(tokens[*i].id == TOKEN_EXTERNAL){
         is_external = true;
         (*i)++;

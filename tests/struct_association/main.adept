@@ -1,0 +1,13 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    greeter Greeter
+    greeter.greet()
+}
+
+struct Greeter () {
+    func greet {
+        printf('Hello World!\n')
+    }
+}

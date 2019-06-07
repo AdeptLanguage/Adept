@@ -8,6 +8,11 @@ errorcode_t parse_enum(parse_ctx_t *ctx){
     length_t length = 0;
     source_t source = ctx->tokenlist->sources[*ctx->i];
 
+    if(ctx->struct_association != NULL){
+        compiler_panicf(ctx->compiler, source, "Cannot declare enum within struct domain");
+        return FAILURE;
+    }
+
     if(parse_eat(ctx, TOKEN_ENUM, "Expected 'enum' keyword")) return FAILURE;
 
     maybe_null_weak_cstr_t name = parse_eat_word(ctx, "Expected name of enum after 'enum' keyword");

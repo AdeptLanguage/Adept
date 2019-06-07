@@ -98,6 +98,7 @@ compile static_structs || exit $?
 compile stdcall || exit $?
 compile string || exit $?
 compile structs || exit $?
+compile struct_association || exit $?
 compile successful || exit $?
 compile tentative_function_calls || exit $?
 compile tentative_method_calls || exit $?

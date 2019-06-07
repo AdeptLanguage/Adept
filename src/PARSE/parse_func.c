@@ -16,6 +16,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign)) return FAILURE;
 
+    if(is_foreign && ctx->struct_association != NULL){
+        compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
+        return FAILURE;
+    }
+
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
     length_t ast_func_id = ast->funcs_length;
@@ -194,6 +199,16 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     length_t capacity = 0;
 
     if(parse_ignore_newlines(ctx, "Expected '(' after function name")) return FAILURE;
+
+    if(ctx->struct_association){
+        parse_func_grow_arguments(func, backfill, &capacity);
+        func->arg_names[0] = strclone("this");
+        ast_type_make_base_ptr(&func->arg_types[0], strclone(ctx->struct_association->name));
+        func->arg_sources[0] = ctx->struct_association->source;
+        func->arg_flows[0] = FLOW_IN;
+        func->arg_type_traits[0] = TRAIT_NONE;
+        func->arity++;
+    }
 
     if(tokens[*i].id != TOKEN_OPEN) return SUCCESS;
     (*i)++; // Eat '('

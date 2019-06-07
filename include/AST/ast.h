@@ -275,12 +275,12 @@ void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t len
 
 // ---------------- ast_add_struct ----------------
 // Adds a struct to the global scope of an AST
-void ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+ast_struct_t *ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source);
 
 // ---------------- ast_add_polymorphic_struct ----------------
 // Adds a polymorphic struct to the global scope of an AST
-void ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+ast_polymorphic_struct_t *ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length);
 
 // ---------------- ast_add_global ----------------

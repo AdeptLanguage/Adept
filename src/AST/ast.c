@@ -648,18 +648,20 @@ void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t len
     ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
 }
 
-void ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+ast_struct_t *ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source){
     expand((void**) &ast->structs, sizeof(ast_struct_t), ast->structs_length, &ast->structs_capacity, 1, 4);
     ast_struct_t *structure = &ast->structs[ast->structs_length++];
     ast_struct_init(structure, name, names, types, length, traits, source);
+    return structure;
 }
 
-void ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
+ast_polymorphic_struct_t *ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
         length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length){
     expand((void**) &ast->polymorphic_structs, sizeof(ast_polymorphic_struct_t), ast->polymorphic_structs_length, &ast->polymorphic_structs_capacity, 1, 4);
     ast_polymorphic_struct_t *poly_structure = &ast->polymorphic_structs[ast->polymorphic_structs_length++];
     ast_polymorphic_struct_init(poly_structure, name, names, types, length, traits, source, generics, generics_length);
+    return poly_structure;
 }
 
 void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *initial_value, trait_t traits, source_t source){

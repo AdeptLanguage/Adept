@@ -7,6 +7,11 @@ errorcode_t parse_import(parse_ctx_t *ctx){
     // import 'somefile.adept'
     //   ^
 
+    if(ctx->struct_association != NULL){
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot import dependencies within struct domain");
+        return FAILURE;
+    }
+
     maybe_null_weak_cstr_t file = parse_grab_string(ctx, "Expected filename string after 'import' keyword");
     if(file == NULL) return FAILURE;
 
