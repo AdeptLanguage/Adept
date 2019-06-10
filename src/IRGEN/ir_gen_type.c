@@ -191,6 +191,11 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
 
             // Find polymorphic structure
             ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
+
+            if(template == NULL){
+                compiler_panicf(compiler, generic_base->source, "Undeclared type '%s'", generic_base->name);
+                return FAILURE;
+            }
             
             if(generic_base->generics_length != template->generics_length){
                 const char *message = generic_base->generics_length < template->generics_length ?
