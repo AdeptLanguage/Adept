@@ -1175,8 +1175,6 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(!ast_types_identical(&temporary_type, each_in->it_type)){
                     compiler_panic(builder->compiler, each_in->it_type->source,
                         "Element type doesn't match given array's element type");
-                    ast_type_free(&temporary_type);
-                    close_var_scope(builder);
 
                     char *s1 = ast_type_str(each_in->it_type);
                     char *s2 = ast_type_str(&temporary_type);
@@ -1184,6 +1182,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     free(s1);
                     free(s2);
 
+                    ast_type_free(&temporary_type);
+                    close_var_scope(builder);
                     return FAILURE;
                 }
 
