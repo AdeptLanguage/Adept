@@ -225,6 +225,9 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
 
+    // Reduce type table
+    type_table_reduce(object->ast.type_table);
+
     for(length_t g = 0; g != ast->globals_length; g++){
         module->globals[g].name = ast->globals[g].name;
         module->globals[g].traits = ast->globals[g].traits & AST_GLOBAL_EXTERNAL ? IR_GLOBAL_EXTERNAL : TRAIT_NONE;
@@ -308,7 +311,6 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
         }
 
         type_table_t *table = builder->object->ast.type_table;
-        type_table_reduce(table);
 
         if(!ir_type_map_find(builder->type_map, "AnyType", &any_type_type)
         || !ir_type_map_find(builder->type_map, "AnyStructType", &any_struct_type_type)

@@ -1319,6 +1319,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog
             if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_static_data_t*) expr)->type, NULL)) return FAILURE;
         }
         break;
+    case EXPR_TYPEINFO: {
+            if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_typeinfo_t*) expr)->target, NULL)) return FAILURE;
+        }
+        break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = (ast_expr_inline_declare_t*) expr;
 

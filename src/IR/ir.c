@@ -255,7 +255,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
     for(length_t f = 0; f != functions_length; f++){
         // Print prototype
         char *ret_type_str = ir_type_str(functions[f].return_type);
-        fprintf(file, "fn %s -> %s\n", functions[f].name, ret_type_str);
+        fprintf(file, "fn %s a%X -> %s\n", functions[f].name, (int) f, ret_type_str);
 
         // Count the total number of instructions
         length_t total_instructions = 0;
@@ -320,8 +320,10 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                 case INSTRUCTION_FMODULUS:
                     ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "frem");
                     break;
-                case INSTRUCTION_CALL:
-                    ir_dump_call_instruction(file, (ir_instr_call_t*) functions[f].basicblocks[b].instructions[i], i);
+                case INSTRUCTION_CALL: {
+                        const char *real_name = functions[((ir_instr_call_t*) functions[f].basicblocks[b].instructions[i])->ir_func_id].name;
+                        ir_dump_call_instruction(file, (ir_instr_call_t*) functions[f].basicblocks[b].instructions[i], i, real_name);
+                    }
                     break;
                 case INSTRUCTION_CALL_ADDRESS:
                     ir_dump_call_address_instruction(file, (ir_instr_call_address_t*) functions[f].basicblocks[b].instructions[i], i);
@@ -531,7 +533,7 @@ void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, c
     free(val_str_2);
 }
 
-void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i){
+void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, const char *real_name){
     char *call_args = malloc(256);
     length_t call_args_length = 0;
     length_t call_args_capacity = 256;
@@ -558,7 +560,7 @@ void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i){
         free(arg);
     }
 
-    fprintf(file, "    0x%08X call adept_%X(%s) %s\n", i, (int) instruction->ir_func_id, call_args, call_result_type);
+    fprintf(file, "    0x%08X call a%X \"%s\" (%s) %s\n", i, (int) instruction->ir_func_id, real_name, call_args, call_result_type);
     free(call_args);
     free(call_result_type);
 }
