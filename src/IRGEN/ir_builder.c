@@ -497,7 +497,8 @@ void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type,
 errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_list_t *list){
     for(length_t i = 0; i != list->length; i++){
         // Don't perform defer management on POD variables or non-struct types
-        if(list->variables[i].traits & BRIDGE_VAR_POD || list->variables[i].ir_type->kind != TYPE_KIND_STRUCTURE) continue;
+        trait_t traits = list->variables[i].traits;
+        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE || list->variables[i].ir_type->kind != TYPE_KIND_STRUCTURE) continue;
 
         bridge_var_t *variable = &list->variables[i];
 
