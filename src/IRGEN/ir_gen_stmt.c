@@ -236,58 +236,90 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 return SUCCESS; // Return because no other statements can be after this one
             }
         case EXPR_CALL: {
-                ast_expr_call_t *call_stmt = ((ast_expr_call_t*) statements[s]);
-                ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * call_stmt->arity);
-                ast_type_t *arg_types = malloc(sizeof(ast_type_t) * call_stmt->arity);
+                ast_expr_call_t *call_expr = (ast_expr_call_t*) statements[s];
+                ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * call_expr->arity);
+                ast_type_t *arg_types = malloc(sizeof(ast_type_t) * call_expr->arity);
 
-                bool found_variable = false;
                 ast_type_t *ast_var_type;
                 ir_type_t *ir_var_type;
-                ir_type_t *ir_return_type;
                 ast_t *ast = &builder->object->ast;
+                bool hard_break = false;
+                ir_value_t *var_value;
 
                 // Resolve & ir_gen function arguments
-                for(length_t a = 0; a != call_stmt->arity; a++){
-                    if(ir_gen_expression(builder, call_stmt->args[a], &arg_values[a], false, &arg_types[a])){
-                        for(length_t t = 0; t != a; t++) ast_type_free(&arg_types[t]);
-                        free(arg_types);
+                for(length_t a = 0; a != call_expr->arity; a++){
+                    if(ir_gen_expression(builder, call_expr->args[a], &arg_values[a], false, &arg_types[a])){
+                        ast_types_free_fully(arg_types, a);
                         return FAILURE;
                     }
                 }
 
-                bridge_var_t *var = bridge_var_scope_find_var(builder->var_scope, call_stmt->name);
+                // Check for non-global variable
+                bridge_var_t *var = bridge_var_scope_find_var(builder->var_scope, call_expr->name);
 
                 if(var){
                     ast_var_type = var->ast_type;
                     ir_var_type = ir_type_pointer_to(builder->pool, var->ir_type);
 
-                    if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
-                        if(call_stmt->is_tentative) break;
+                    if(ast_var_type->elements_length != 1 || ast_var_type->elements[0]->id != AST_ELEM_FUNC){
+                        if(call_expr->is_tentative) break;
                         char *s = ast_type_str(ast_var_type);
-                        compiler_panicf(builder->compiler, call_stmt->source, "Can't call value of non function type '%s'", s);
-                        ast_types_free_fully(arg_types, call_stmt->arity);
+                        compiler_panicf(builder->compiler, call_expr->source, "Can't call value of non function type '%s'", s);
+                        ast_types_free_fully(arg_types, call_expr->arity);
                         free(s);
                         return FAILURE;
                     }
 
-                    ast_type_t *ast_function_return_type = ((ast_elem_func_t*) ast_var_type->elements[0])->return_type;
+                    var_value = build_varptr(builder, ir_var_type, var->id);
+                    var_value = build_load(builder, var_value);
 
-                    if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type)){
-                        for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
-                        free(arg_types);
-                        return FAILURE;
+                    errorcode_t error = ir_gen_call_function_value(builder, ast_var_type, ir_var_type, call_expr, arg_values, arg_types, &var_value, NULL);
+                    ast_types_free_fully(arg_types, call_expr->arity);
+
+                    if(error){
+                        if(error == ALT_FAILURE){
+                            break;
+                        } else {
+                            return FAILURE;
+                        }
                     }
-
-                    if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
-                        expression_value = build_varptr(builder, ir_var_type, var->id);
-                        expression_value = build_load(builder, expression_value);
-                    }
-
-                    found_variable = true;
+                    
+                    break;
                 }
 
-                if(!found_variable) for(length_t g = 0; g != ast->globals_length; g++){
-                    if(strcmp(ast->globals[g].name, call_stmt->name) == 0){
+                // If no non-global variable exists, look for function
+                funcpair_t pair;
+                errorcode_t error = ir_gen_find_func_conforming(builder, call_expr->name, arg_values, arg_types, call_expr->arity, &pair);
+
+                if(error == SUCCESS){
+                    // Found function that fits given name and arguments
+
+                    if(pair.ast_func->traits & AST_FUNC_VARARG){
+                        trait_t arg_type_traits[call_expr->arity];
+                        memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
+                        memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_expr->arity - pair.ast_func->arity));
+                        handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity);
+                    } else {
+                        handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity);
+                    }
+
+                    ir_basicblock_new_instructions(builder->current_block, 1);
+                    ir_instr_call_t *instruction = (ir_instr_call_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+                    instruction->id = INSTRUCTION_CALL;
+                    instruction->result_type = pair.ir_func->return_type;
+                    instruction->values = arg_values;
+                    instruction->values_length = call_expr->arity;
+                    instruction->ir_func_id = pair.ir_func_id;
+                    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+                    ast_types_free_fully(arg_types, call_expr->arity);
+                    break;
+                }
+
+
+                // If no function exists, look for global
+                // TODO: SPEED: Make this so it isn't slow
+                for(length_t g = 0; g != ast->globals_length; g++){
+                    if(strcmp(ast->globals[g].name, call_expr->name) == 0){
                         ast_var_type = &ast->globals[g].type;
 
                         // We could search the ir var map, but this is easier
@@ -296,125 +328,57 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         ir_var_type->kind = TYPE_KIND_POINTER;
 
                         if(ir_gen_resolve_type(builder->compiler, builder->object, ast_var_type, (ir_type_t**) &ir_var_type->extra)){
-                            for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
-                            free(arg_types);
+                            ast_types_free_fully(arg_types, call_expr->arity);
                             return FAILURE;
                         }
 
-                        if(ast_var_type->elements[0]->id != AST_ELEM_FUNC){
-                            char *s = ast_type_str(ast_var_type);
-                            compiler_panicf(builder->compiler, call_stmt->source, "Can't call value of non function type '%s'", s);
-                            ast_types_free_fully(arg_types, call_stmt->arity);
-                            free(s);
-                            return FAILURE;
-                        }
-
-                        ast_type_t *ast_function_return_type = ((ast_elem_func_t*) ast_var_type->elements[0])->return_type;
-
-                        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type)){
-                            for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
-                            free(arg_types);
-                            return FAILURE;
-                        }
-
-                        if(ast_var_type->elements_length == 1 && ast_var_type->elements[0]->id == AST_ELEM_FUNC){
-                            expression_value = build_gvarptr(builder, ir_var_type, g);
-                            expression_value = build_load(builder, expression_value);
-                            found_variable = true;
-                        }
-                        break;
-                    }
-                }
-
-                if(found_variable){
-                    // This is ok since we previously checked that (ast_var_type->elements[0]->id == AST_ELEM_FUNC)
-                    ast_elem_func_t *function_elem = (ast_elem_func_t*) ast_var_type->elements[0];
-                    bool hard_break = false;
-
-                    if(function_elem->traits & AST_FUNC_VARARG){
-                        if(function_elem->arity > call_stmt->arity){
-                            if(call_stmt->is_tentative) break;
-                            compiler_panicf(builder->compiler, call_stmt->source, "Incorrect argument count (at least %d expected, %d given)", (int) function_elem->arity, (int) call_stmt->arity);
-                            return FAILURE;
-                        }
-                    } else if(function_elem->arity != call_stmt->arity){
-                        if(call_stmt->is_tentative) break;
-                        compiler_panicf(builder->compiler, call_stmt->source, "Incorrect argument count (%d expected, %d given)", (int) function_elem->arity, (int) call_stmt->arity);
-                        return FAILURE;
-                    }
-
-                    for(length_t a = 0; a != function_elem->arity; a++){
-                        if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_CALL_ARGUMENTS)){
-                            if(call_stmt->is_tentative){
-                                // Tentative call won't see the light of day, because incompatible arguments
+                        if(ast_var_type->elements_length != 1 || ast_var_type->elements[0]->id != AST_ELEM_FUNC){
+                            if(call_expr->is_tentative){
+                                ast_types_free_fully(arg_types, call_expr->arity);
                                 hard_break = true;
                                 break;
                             }
 
-                            char *s1 = ast_type_str(&function_elem->arg_types[a]);
-                            char *s2 = ast_type_str(&arg_types[a]);
-                            compiler_panicf(builder->compiler, call_stmt->args[a]->source, "Required argument type '%s' is incompatible with type '%s'", s1, s2);
-                            free(s1);
-                            free(s2);
+                            char *s = ast_type_str(ast_var_type);
+                            compiler_panicf(builder->compiler, call_expr->source, "Can't call value of non function type '%s'", s);
+                            ast_types_free_fully(arg_types, call_expr->arity);
+                            free(s);
                             return FAILURE;
                         }
-                    }
 
-                    if(hard_break) break;
-                    handle_pass_management(builder, arg_values, arg_types, NULL, call_stmt->arity);
+                        var_value = build_gvarptr(builder, ir_var_type, g);
+                        var_value = build_load(builder, var_value);
 
-                    ir_basicblock_new_instructions(builder->current_block, 1);
-                    built_instr = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_call_address_t));
-                    ((ir_instr_call_address_t*) built_instr)->id = INSTRUCTION_CALL_ADDRESS;
-                    ((ir_instr_call_address_t*) built_instr)->result_type = ir_return_type;
-                    ((ir_instr_call_address_t*) built_instr)->address = expression_value;
-                    ((ir_instr_call_address_t*) built_instr)->values = arg_values;
-                    ((ir_instr_call_address_t*) built_instr)->values_length = call_stmt->arity;
-                    builder->current_block->instructions[builder->current_block->instructions_length++] = built_instr;
+                        errorcode_t error = ir_gen_call_function_value(builder, ast_var_type, ir_var_type, call_expr, arg_values, arg_types, &var_value, NULL);
+                        ast_types_free_fully(arg_types, call_expr->arity);
 
-                    for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
-                    free(arg_types);
-                } else {
-                    funcpair_t pair;
-                    errorcode_t error = ir_gen_find_func_conforming(builder, call_stmt->name, arg_values, arg_types, call_stmt->arity, &pair);
-
-                    if(error){
-                        if(error == FAILURE && !call_stmt->is_tentative){
-                            compiler_undeclared_function(builder->compiler, builder->object, statements[s]->source, call_stmt->name, arg_types, call_stmt->arity);
+                        if(error){
+                            if(error == ALT_FAILURE){
+                                hard_break = true;
+                                break;
+                            } else {
+                                return FAILURE;
+                            }
                         }
                         
-                        for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
-                        free(arg_types);
-
-                        if(call_stmt->is_tentative){
-                            // Tentative call won't see the light of day, because the function doesn't exist
-                            break;
-                        }
-
-                        return FAILURE;
+                        hard_break = true;
+                        break;
                     }
-
-                    if(pair.ast_func->traits & AST_FUNC_VARARG){
-                        trait_t arg_type_traits[call_stmt->arity];
-                        memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
-                        memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_stmt->arity - pair.ast_func->arity));
-                        handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_stmt->arity);
-                    } else {
-                        handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_stmt->arity);
-                    }
-
-                    built_instr = build_instruction(builder, sizeof(ir_instr_call_t));
-                    ((ir_instr_call_t*) built_instr)->id = INSTRUCTION_CALL;
-                    ((ir_instr_call_t*) built_instr)->result_type = pair.ir_func->return_type;
-                    ((ir_instr_call_t*) built_instr)->values = arg_values;
-                    ((ir_instr_call_t*) built_instr)->values_length = call_stmt->arity;
-                    ((ir_instr_call_t*) built_instr)->ir_func_id = pair.ir_func_id;
-
-                    for(length_t t = 0; t != call_stmt->arity; t++) ast_type_free(&arg_types[t]);
-                    free(arg_types);
                 }
+
+                if(hard_break) break;
+
+                // Otherwise no function was found
+                if(call_expr->is_tentative){
+                    ast_types_free_fully(arg_types, call_expr->arity);
+                    break;
+                } else {
+                    compiler_undeclared_function(builder->compiler, builder->object, call_expr->source, call_expr->name, arg_types, call_expr->arity);
+                    ast_types_free_fully(arg_types, call_expr->arity);
+                }
+
+                return FAILURE;
             }
-            break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
                 ast_expr_declare_t *declare_stmt = ((ast_expr_declare_t*) statements[s]);
 

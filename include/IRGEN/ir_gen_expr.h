@@ -30,6 +30,12 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 // instruction id (for caller to determine afterwards).
 ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, unsigned int op_res, ast_type_t *out_expr_type);
 
+// ---------------- ir_gen_call_function_value ----------------
+// Generates instructions for calling a value that's a function pointer
+errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_var_type,
+        ir_type_t *ir_var_type, ast_expr_call_t *call, ir_value_t **arg_values, ast_type_t *arg_types,
+        ir_value_t **inout_ir_value, ast_type_t *out_expr_type);
+
 // Operation result auto-type-casting modes for 'ir_gen_math_operands'
 #define MATH_OP_RESULT_MATCH 0x01
 #define MATH_OP_RESULT_BOOL  0x02
