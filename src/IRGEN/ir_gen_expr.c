@@ -1317,7 +1317,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 *((long long*) one->extra) = 1;
                 break;
             case TYPE_KIND_U64:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long));
+                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
                 *((unsigned long long*) one->extra) = 1;
                 break;
             }

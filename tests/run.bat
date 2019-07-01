@@ -112,8 +112,8 @@ call :compile methods
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile multiple_declaration
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
-call :compile native_linking
-if %errorlevel% neq 0 popd & exit /b %errorlevel%
+REM call :compile native_linking
+REM if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile negate
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile new_cstring
