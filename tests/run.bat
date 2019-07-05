@@ -188,6 +188,8 @@ call :compile terminate_join
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile ternary
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile ternary_circuit
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile truefalse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile undef

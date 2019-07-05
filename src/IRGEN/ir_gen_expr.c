@@ -1219,14 +1219,39 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             ast_type_free(&condition_type);
 
+            length_t when_true_block_id = build_basicblock(builder);
+            length_t when_false_block_id = build_basicblock(builder);
+
+            instruction = build_instruction(builder, sizeof(ir_instr_cond_break_t));
+            ((ir_instr_cond_break_t*) instruction)->id = INSTRUCTION_CONDBREAK;
+            ((ir_instr_cond_break_t*) instruction)->result_type = NULL;
+            ((ir_instr_cond_break_t*) instruction)->value = condition;
+            ((ir_instr_cond_break_t*) instruction)->true_block_id = when_true_block_id;
+            ((ir_instr_cond_break_t*) instruction)->false_block_id = when_false_block_id;
+
+            // Generate instructions for when condition is true
+            build_using_basicblock(builder, when_true_block_id);
             if(ir_gen_expression(builder, ternary->if_true, &if_true, false, &if_true_type))
                 return FAILURE;
+            length_t when_true_landing = builder->current_block_id;
 
+            // Generate instructions for when condition is false
+            build_using_basicblock(builder, when_false_block_id);
             if(ir_gen_expression(builder, ternary->if_false, &if_false, false, &if_false_type)){
                 ast_type_free(&if_true_type);
                 return FAILURE;
             }
+            length_t when_false_landing = builder->current_block_id;
 
+            // Break from both landing blocks to the merge block
+            length_t merge_block_id = build_basicblock(builder);
+            build_break(builder, merge_block_id);
+            build_using_basicblock(builder, when_true_landing);
+            build_break(builder, merge_block_id);
+
+            // Merge to grab the result
+            build_using_basicblock(builder, merge_block_id);
+            
             if(!ast_types_identical(&if_true_type, &if_false_type)){
                 char *if_true_typename = ast_type_str(&if_true_type);
                 char *if_false_typename = ast_type_str(&if_false_type);
@@ -1254,12 +1279,13 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_type_free(&if_false_type);
 
             ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_select_t));
-            ((ir_instr_select_t*) instruction)->id = INSTRUCTION_SELECT;
-            ((ir_instr_select_t*) instruction)->result_type = result_ir_type;
-            ((ir_instr_select_t*) instruction)->condition = condition;
-            ((ir_instr_select_t*) instruction)->if_true = if_true;
-            ((ir_instr_select_t*) instruction)->if_false = if_false;
+            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_phi2_t));
+            ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
+            ((ir_instr_phi2_t*) instruction)->result_type = result_ir_type;
+            ((ir_instr_phi2_t*) instruction)->a = if_true;
+            ((ir_instr_phi2_t*) instruction)->b = if_false;
+            ((ir_instr_phi2_t*) instruction)->block_id_a = when_true_landing;
+            ((ir_instr_phi2_t*) instruction)->block_id_b = when_false_landing;
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
         }

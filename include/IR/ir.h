@@ -93,6 +93,7 @@
 #define INSTRUCTION_NEGATE         0x0000004D // ir_instr_unary_t
 #define INSTRUCTION_FNEGATE        0x0000004E // ir_instr_unary_t
 #define INSTRUCTION_SELECT         0x0000004F
+#define INSTRUCTION_PHI2           0x00000050
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -398,6 +399,17 @@ typedef struct {
     ir_value_t *if_true;
     ir_value_t *if_false;
 } ir_instr_select_t;
+
+// ---------------- ir_instr_phi2_t ----------------
+// IR instruction for general two point phi
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_value_t *a;
+    ir_value_t *b;
+    length_t block_id_a;
+    length_t block_id_b;
+} ir_instr_phi2_t;
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block

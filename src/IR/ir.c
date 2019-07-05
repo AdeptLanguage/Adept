@@ -514,6 +514,15 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                     fprintf(file, "    0x%08X fneg %s\n", (int) i, val_str);
                     free(val_str);
                     break;
+                case INSTRUCTION_PHI2: {
+                        ir_instr_phi2_t *phi2 = (ir_instr_phi2_t*) functions[f].basicblocks[b].instructions[i];
+                        char *a = ir_value_str(phi2->a);
+                        char *b = ir_value_str(phi2->b);
+                        fprintf(file, "    0x%08X phi2 |%d| -> %s, |%d| -> %s\n", (int) i, (int) phi2->block_id_a, a, (int) phi2->block_id_b, b);
+                        free(a);
+                        free(b);
+                    }
+                    break;
                 default:
                     printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) functions[f].basicblocks[b].instructions[i]->id);
                     fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);

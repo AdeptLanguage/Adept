@@ -903,6 +903,20 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->if_true),
                         ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->if_false), "");
                     break;
+                case INSTRUCTION_PHI2: {
+                        instr = basicblock->instructions[i];
+                        LLVMValueRef phi = LLVMBuildPhi(llvm->builder, ir_to_llvm_type(instr->result_type), "");
+
+                        LLVMValueRef when_a = ir_to_llvm_value(llvm, ((ir_instr_phi2_t*) instr)->a);
+                        LLVMValueRef when_b = ir_to_llvm_value(llvm, ((ir_instr_phi2_t*) instr)->b);
+                        LLVMBasicBlockRef llvm_block_a = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_a];
+                        LLVMBasicBlockRef llvm_block_b = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_b];
+
+                        LLVMAddIncoming(phi, &when_a, &llvm_block_a, 1);
+                        LLVMAddIncoming(phi, &when_b, &llvm_block_b, 1);
+                        catalog.blocks[b].value_references[i] = phi;
+                    }
+                    break;
                 default:
                     redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", basicblocks[b].instructions[i]->id);
                     for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
