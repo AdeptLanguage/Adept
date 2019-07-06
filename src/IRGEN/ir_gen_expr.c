@@ -1228,7 +1228,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_BIT_OR:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_OR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types"); break;
     case EXPR_BIT_XOR:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_XOR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types"); break;
+        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_XOR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'xor' on those types"); break;
     case EXPR_BIT_LSHIFT:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
     case EXPR_BIT_RSHIFT:

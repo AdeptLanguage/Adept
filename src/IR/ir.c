@@ -451,8 +451,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                 case INSTRUCTION_FTRUNC: case INSTRUCTION_INTTOPTR:
                 case INSTRUCTION_PTRTOINT: case INSTRUCTION_FPTOUI:
                 case INSTRUCTION_FPTOSI: case INSTRUCTION_UITOFP:
-                case INSTRUCTION_SITOFP: case INSTRUCTION_REINTERPRET:
-                 {
+                case INSTRUCTION_SITOFP: case INSTRUCTION_REINTERPRET: {
                         char *instr_name = "";
 
                         switch(functions[f].basicblocks[b].instructions[i]->id){

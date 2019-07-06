@@ -283,21 +283,6 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 *inout_expr = (ast_expr_t*) at_expr;
             }
             break;
-        case TOKEN_MAYBE: {
-                ast_expr_t *expr_a, *expr_b;
-                source_t source = sources[(*i)++];
-                if(parse_expr(ctx, &expr_a)) return FAILURE;
-
-                if(tokens[(*i)++].id != TOKEN_COLON){
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Ternary operator expected ':' after expression");
-                    ast_expr_free_fully(expr_a);
-                    return FAILURE;
-                }
-
-                if(parse_expr(ctx, &expr_b)) return FAILURE;
-                ast_expr_create_ternary(inout_expr, *inout_expr, expr_a, expr_b, source);
-            }
-            break;
         case TOKEN_INCREMENT: case TOKEN_DECREMENT: {
                 if(!expr_is_mutable(*inout_expr)){
                     compiler_panicf(ctx->compiler, sources[*i], "Can only %s mutable values", tokens[*i].id == TOKEN_INCREMENT ? "increment" : "decrement");
@@ -351,7 +336,6 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
             TOKEN_MODULUSASSIGN,  // 0x0000002B
             TOKEN_TERMINATE_JOIN, // 0x0000002F
             TOKEN_COLON,          // 0x00000030
-            TOKEN_MAYBE,          // 0x0000003B
             TOKEN_ELSE            // 0x0000004E
         };
 
@@ -394,6 +378,28 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
         case TOKEN_UBEROR:         BUILD_MATH_EXPR_MACRO(EXPR_OR);             break;
         case TOKEN_AS:
             if(parse_expr_as(ctx, inout_left)) return FAILURE;
+            break;
+        case TOKEN_MAYBE: {
+                (*i)++;
+
+                ast_expr_t *expr_a, *expr_b;
+                if(parse_expr(ctx, &expr_a)) return FAILURE;
+
+                if(tokens[(*i)++].id != TOKEN_COLON){
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Ternary operator expected ':' after expression");
+                    ast_expr_free_fully(*inout_left);
+                    ast_expr_free_fully(expr_a);
+                    return FAILURE;
+                }
+
+                if(parse_expr(ctx, &expr_b)){
+                    ast_expr_free_fully(*inout_left);
+                    ast_expr_free_fully(expr_a);
+                    return FAILURE;
+                }
+
+                ast_expr_create_ternary(inout_left, *inout_left, expr_a, expr_b, source);
+            }
             break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unrecognized operator '%s' in expression");
@@ -942,20 +948,22 @@ errorcode_t parse_expr_predecrement(parse_ctx_t *ctx, ast_expr_t **out_expr){
 
 int parse_get_precedence(unsigned int id){
     switch(id){
-    case TOKEN_UBERAND: case TOKEN_UBEROR:
+    case TOKEN_MAYBE:
         return 1;
-    case TOKEN_AND: case TOKEN_OR:
+    case TOKEN_UBERAND: case TOKEN_UBEROR:
         return 2;
+    case TOKEN_AND: case TOKEN_OR:
+        return 3;
     case TOKEN_EQUALS: case TOKEN_NOTEQUALS:
     case TOKEN_LESSTHAN: case TOKEN_GREATERTHAN:
     case TOKEN_LESSTHANEQ: case TOKEN_GREATERTHANEQ:
-        return 3;
-    case TOKEN_ADD: case TOKEN_SUBTRACT: case TOKEN_WORD:
         return 4;
-    case TOKEN_MULTIPLY: case TOKEN_DIVIDE: case TOKEN_MODULUS:
+    case TOKEN_ADD: case TOKEN_SUBTRACT: case TOKEN_WORD:
         return 5;
-    case TOKEN_AS:
+    case TOKEN_MULTIPLY: case TOKEN_DIVIDE: case TOKEN_MODULUS:
         return 6;
+    case TOKEN_AS:
+        return 7;
     default:
         return 0;
     }
