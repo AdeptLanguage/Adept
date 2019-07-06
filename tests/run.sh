@@ -47,6 +47,7 @@ compile functions || exit $?
 compile globals || exit $?
 compile hello_world || exit $?
 compile hexadecimal || exit $?
+compile idx_manipulation || exit $?
 compile if || exit $?
 compile ifelse || exit $?
 compile import || exit $?

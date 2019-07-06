@@ -1100,17 +1100,22 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 ast_type_free(&temporary_type);
 
-                // Generate (idx == length)
+                // Generate (idx < length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr);
-                ir_value_t *is_done_value = build_equals(builder, idx_value, array_length);
+                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
+                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ULESSER;
+                ((ir_instr_math_t*) built_instr)->result_type = ir_builder_bool(builder);
+                ((ir_instr_math_t*) built_instr)->a = idx_value;
+                ((ir_instr_math_t*) built_instr)->b = array_length;
+                ir_value_t *whether_keep_going_value = build_value_from_prev_instruction(builder);
 
                 // Generate conditional break
                 built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
                 ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
                 ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = is_done_value;
-                ((ir_instr_cond_break_t*) built_instr)->true_block_id = end_basicblock_id;
-                ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
+                ((ir_instr_cond_break_t*) built_instr)->value = whether_keep_going_value;
+                ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
+                ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
 
                 build_using_basicblock(builder, new_basicblock_id);
 
@@ -1284,17 +1289,22 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 ast_type_free(&temporary_type);
 
-                // Generate (idx == length)
+                // Generate (idx < length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr);
-                ir_value_t *is_done_value = build_equals(builder, idx_value, limit);
+                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
+                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ULESSER;
+                ((ir_instr_math_t*) built_instr)->result_type = ir_builder_bool(builder);
+                ((ir_instr_math_t*) built_instr)->a = idx_value;
+                ((ir_instr_math_t*) built_instr)->b = limit;
+                ir_value_t *whether_keep_going_value = build_value_from_prev_instruction(builder);
 
                 // Generate conditional break
                 built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
                 ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
                 ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = is_done_value;
-                ((ir_instr_cond_break_t*) built_instr)->true_block_id = end_basicblock_id;
-                ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
+                ((ir_instr_cond_break_t*) built_instr)->value = whether_keep_going_value;
+                ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
+                ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
 
                 build_using_basicblock(builder, new_basicblock_id);
 

@@ -80,6 +80,8 @@ call :compile hello_world
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile hexadecimal
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile idx_manipulation
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile if
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile ifelse
