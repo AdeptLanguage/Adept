@@ -716,7 +716,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         case TYPE_KIND_FUNCPTR:
                         case TYPE_KIND_POINTER: zero = LLVMConstNull(ir_to_llvm_type(((ir_instr_cast_t*) instr)->value->type)); break;
                         default:
-                            redprintf("INTERNAL ERROR: INSTRUCTION_ISNTZERO received unknown type kind\n");
+                            redprintf("INTERNAL ERROR: INSTRUCTION_ISxxZERO received unknown type kind\n");
                             for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
                             free(catalog.blocks);
                             free(stack.values);

@@ -110,6 +110,14 @@ void build_break(ir_builder_t *builder, length_t basicblock_id){
     built_instr->result_type = NULL;
     built_instr->block_id = basicblock_id;
 }
+void build_cond_break(ir_builder_t *builder, ir_value_t *condition, length_t true_block_id, length_t false_block_id){
+    ir_instr_cond_break_t *built_instr = (ir_instr_cond_break_t*) build_instruction(builder, sizeof(ir_instr_cond_break_t));
+    built_instr->id = INSTRUCTION_CONDBREAK;
+    built_instr->result_type = NULL;
+    built_instr->value = condition;
+    built_instr->true_block_id = true_block_id;
+    built_instr->false_block_id = false_block_id;
+}
 
 ir_value_t* build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
     ir_instr_math_t *built_instr = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));

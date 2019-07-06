@@ -75,7 +75,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             return value_str;
         case TYPE_KIND_BOOLEAN:
             value_str = malloc(typename_length + 6);
-            sprintf(value_str, "%s %s", typename, *((double*) value->extra) ? "true" : "false");
+            sprintf(value_str, "%s %s", typename, *((bool*) value->extra) ? "true" : "false");
             free(typename);
             return value_str;
         case TYPE_KIND_POINTER:
@@ -452,7 +452,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                 case INSTRUCTION_PTRTOINT: case INSTRUCTION_FPTOUI:
                 case INSTRUCTION_FPTOSI: case INSTRUCTION_UITOFP:
                 case INSTRUCTION_SITOFP: case INSTRUCTION_REINTERPRET:
-                case INSTRUCTION_ISNTZERO: {
+                 {
                         char *instr_name = "";
 
                         switch(functions[f].basicblocks[b].instructions[i]->id){
@@ -467,7 +467,6 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                         case INSTRUCTION_FPTOSI:      instr_name = "fp2si";  break;
                         case INSTRUCTION_UITOFP:      instr_name = "ui2fp";  break;
                         case INSTRUCTION_SITOFP:      instr_name = "si2fp";  break;
-                        case INSTRUCTION_ISNTZERO:    instr_name = "inz";    break;
                         case INSTRUCTION_REINTERPRET: instr_name = "reinterp";  break;
                         }
 
@@ -475,6 +474,13 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                         val_str = ir_value_str(((ir_instr_cast_t*) functions[f].basicblocks[b].instructions[i])->value);
                         fprintf(file, "    0x%08X %s %s to %s\n", (int) i, instr_name, val_str, to_type);
                         free(to_type);
+                        free(val_str);
+                    }
+                    break;
+                case INSTRUCTION_ISZERO: case INSTRUCTION_ISNTZERO: {
+                        char *instr_name = functions[f].basicblocks[b].instructions[i]->id == INSTRUCTION_ISZERO ? "isz" : "inz";
+                        val_str = ir_value_str(((ir_instr_cast_t*) functions[f].basicblocks[b].instructions[i])->value);
+                        fprintf(file, "    0x%08X %s %s\n", (int) i, instr_name, val_str);
                         free(val_str);
                     }
                     break;

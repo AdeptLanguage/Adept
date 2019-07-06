@@ -1,0 +1,23 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main(in argc int, in argv **ubyte) int {
+    printf('1 and 1 = %s\n\n', (one() and one())   ? 'true' : 'false')
+    printf('1 or 1 = %s\n\n',  (one() or one())    ? 'true' : 'false')
+    printf('0 && 1 = %s\n\n',  (zero() && one())   ? 'true' : 'false')
+    printf('0 || 1 = %s\n\n',  (zero() || one())   ? 'true' : 'false')
+    printf('0 and 0 = %s\n\n', (zero() and zero()) ? 'true' : 'false')
+    printf('0 or 0 = %s\n\n',  (zero() or zero())  ? 'true' : 'false')
+    return 0
+}
+
+func one int {
+    printf('one\n')
+    return 1
+}
+
+func zero int {
+    printf('zero\n')
+    return 0
+}

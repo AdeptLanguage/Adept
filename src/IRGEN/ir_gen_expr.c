@@ -37,12 +37,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         } \
     }
 
-    #define BUILD_MATH_OP_BOOL_MACRO(i, E) { \
-        instruction = ir_gen_math_operands(builder, expr, ir_value, MATH_OP_ALL_BOOL, out_expr_type); \
-        if(instruction == NULL) return FAILURE; \
-        instruction->id = i; \
-    }
-
     #define BUILD_LITERAL_IR_VALUE(ast_expr_type, typename, storage_type) { \
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(typename)); \
         *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t)); \
@@ -123,10 +117,166 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ, "compare", "__less_than_or_equal__", true))
             return FAILURE;
         break;
-    case EXPR_AND:
-        BUILD_MATH_OP_BOOL_MACRO(INSTRUCTION_AND, "Can't use operator 'and' on those types"); break;
-    case EXPR_OR:
-        BUILD_MATH_OP_BOOL_MACRO(INSTRUCTION_OR, "Can't use operator 'or' on those types"); break;
+    case EXPR_AND: {
+            ir_value_t *a, *b;
+            ast_type_t ast_type_a, ast_type_b;
+            *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+            (*ir_value)->value_type = VALUE_TYPE_RESULT;
+
+            // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
+            // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
+            ast_type_make_base(out_expr_type, strclone("bool"));
+
+            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->a, &a, false, &ast_type_a)) return FAILURE;
+
+            if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, &a, &ast_type_a, out_expr_type, CONFORM_MODE_CALCULATION)){
+                char *a_type_str = ast_type_str(&ast_type_a);
+                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", a_type_str);
+                free(a_type_str);
+                ast_type_free(&ast_type_a);
+                ast_type_free(out_expr_type);
+                return FAILURE;
+            }
+
+            length_t landing_a_block_id = builder->current_block_id;
+
+            length_t more_block_id = build_basicblock(builder);
+            build_using_basicblock(builder, more_block_id);
+
+            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->b, &b, false, &ast_type_b)){
+                ast_type_free(&ast_type_a);
+                return FAILURE;
+            }
+
+            if(!ast_types_identical(&ast_type_b, out_expr_type) && !ast_types_conform(builder, &b, &ast_type_b, out_expr_type, CONFORM_MODE_CALCULATION)){
+                char *b_type_str = ast_type_str(&ast_type_b);
+                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", b_type_str);
+                free(b_type_str);
+                ast_type_free(&ast_type_a);
+                ast_type_free(&ast_type_b);
+                ast_type_free(out_expr_type);
+                return FAILURE;
+            }
+
+            ast_type_free(&ast_type_a);
+            ast_type_free(&ast_type_b);
+            ast_type_a = *out_expr_type;
+            ast_type_b = *out_expr_type;
+
+            if(!ast_types_conform(builder, &b, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
+                char *a_type_str = ast_type_str(&ast_type_a);
+                char *b_type_str = ast_type_str(&ast_type_b);
+                compiler_panicf(builder->compiler, expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+                free(a_type_str);
+                free(b_type_str);
+                ast_type_free(out_expr_type);
+                return FAILURE;
+            }
+
+            length_t landing_b_block_id = builder->current_block_id;
+
+            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
+            ((ir_value_result_t*) (*ir_value)->extra)->block_id = builder->current_block_id;
+            ((ir_value_result_t*) (*ir_value)->extra)->instruction_id = builder->current_block->instructions_length;
+
+            // Merge evaluation
+            length_t merge_block_id = build_basicblock(builder);
+            build_break(builder, merge_block_id);
+            build_using_basicblock(builder, landing_a_block_id);
+            build_cond_break(builder, a, more_block_id, merge_block_id);
+            build_using_basicblock(builder, merge_block_id);
+
+            instruction = build_instruction(builder, sizeof(ir_instr_phi2_t));
+            ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
+            ((ir_instr_phi2_t*) instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+            ((ir_instr_phi2_t*) instruction)->result_type->kind = TYPE_KIND_BOOLEAN;
+            ((ir_instr_phi2_t*) instruction)->a = build_bool(builder->pool, false);
+            ((ir_instr_phi2_t*) instruction)->b = b;
+            ((ir_instr_phi2_t*) instruction)->block_id_a = landing_a_block_id;
+            ((ir_instr_phi2_t*) instruction)->block_id_b = landing_b_block_id;
+            *ir_value = build_value_from_prev_instruction(builder);
+        }
+        break;
+    case EXPR_OR: {
+            ir_value_t *a, *b;
+            ast_type_t ast_type_a, ast_type_b;
+            *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+            (*ir_value)->value_type = VALUE_TYPE_RESULT;
+
+            // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
+            // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
+            ast_type_make_base(out_expr_type, strclone("bool"));
+
+            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->a, &a, false, &ast_type_a)) return FAILURE;
+
+            if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, &a, &ast_type_a, out_expr_type, CONFORM_MODE_CALCULATION)){
+                char *a_type_str = ast_type_str(&ast_type_a);
+                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", a_type_str);
+                free(a_type_str);
+                ast_type_free(&ast_type_a);
+                ast_type_free(out_expr_type);
+                return FAILURE;
+            }
+
+            length_t landing_a_block_id = builder->current_block_id;
+
+            length_t more_block_id = build_basicblock(builder);
+            build_using_basicblock(builder, more_block_id);
+
+            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->b, &b, false, &ast_type_b)){
+                ast_type_free(&ast_type_a);
+                return FAILURE;
+            }
+
+            if(!ast_types_identical(&ast_type_b, out_expr_type) && !ast_types_conform(builder, &b, &ast_type_b, out_expr_type, CONFORM_MODE_CALCULATION)){
+                char *b_type_str = ast_type_str(&ast_type_b);
+                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", b_type_str);
+                free(b_type_str);
+                ast_type_free(&ast_type_a);
+                ast_type_free(&ast_type_b);
+                ast_type_free(out_expr_type);
+                return FAILURE;
+            }
+
+            ast_type_free(&ast_type_a);
+            ast_type_free(&ast_type_b);
+            ast_type_a = *out_expr_type;
+            ast_type_b = *out_expr_type;
+
+            if(!ast_types_conform(builder, &b, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
+                char *a_type_str = ast_type_str(&ast_type_a);
+                char *b_type_str = ast_type_str(&ast_type_b);
+                compiler_panicf(builder->compiler, expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+                free(a_type_str);
+                free(b_type_str);
+                ast_type_free(out_expr_type);
+                return FAILURE;
+            }
+
+            length_t landing_b_block_id = builder->current_block_id;
+
+            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
+            ((ir_value_result_t*) (*ir_value)->extra)->block_id = builder->current_block_id;
+            ((ir_value_result_t*) (*ir_value)->extra)->instruction_id = builder->current_block->instructions_length;
+
+            // Merge evaluation
+            length_t merge_block_id = build_basicblock(builder);
+            build_break(builder, merge_block_id);
+            build_using_basicblock(builder, landing_a_block_id);
+            build_cond_break(builder, a, merge_block_id, more_block_id);
+            build_using_basicblock(builder, merge_block_id);
+
+            instruction = build_instruction(builder, sizeof(ir_instr_phi2_t));
+            ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
+            ((ir_instr_phi2_t*) instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+            ((ir_instr_phi2_t*) instruction)->result_type->kind = TYPE_KIND_BOOLEAN;
+            ((ir_instr_phi2_t*) instruction)->a = build_bool(builder->pool, true);
+            ((ir_instr_phi2_t*) instruction)->b = b;
+            ((ir_instr_phi2_t*) instruction)->block_id_a = landing_a_block_id;
+            ((ir_instr_phi2_t*) instruction)->block_id_b = landing_b_block_id;
+            *ir_value = build_value_from_prev_instruction(builder);
+        }
+        break;
     case EXPR_STR:
         if(builder->object->ir_module.common.ir_string_struct == NULL){
             compiler_panic(builder->compiler, expr->source, "Can't create string literal without String type present");
@@ -1222,12 +1372,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             length_t when_true_block_id = build_basicblock(builder);
             length_t when_false_block_id = build_basicblock(builder);
 
-            instruction = build_instruction(builder, sizeof(ir_instr_cond_break_t));
-            ((ir_instr_cond_break_t*) instruction)->id = INSTRUCTION_CONDBREAK;
-            ((ir_instr_cond_break_t*) instruction)->result_type = NULL;
-            ((ir_instr_cond_break_t*) instruction)->value = condition;
-            ((ir_instr_cond_break_t*) instruction)->true_block_id = when_true_block_id;
-            ((ir_instr_cond_break_t*) instruction)->false_block_id = when_false_block_id;
+            build_cond_break(builder, condition, when_true_block_id, when_false_block_id);
 
             // Generate instructions for when condition is true
             build_using_basicblock(builder, when_true_block_id);

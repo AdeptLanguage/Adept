@@ -87,6 +87,10 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
 // Builds a break instruction
 void build_break(ir_builder_t *builder, length_t basicblock_id);
 
+// ---------------- build_cond_break ----------------
+// Builds a conditional break instruction
+void build_cond_break(ir_builder_t *builder, ir_value_t *condition, length_t true_block_id, length_t false_block_id);
+
 // ---------------- build_equals ----------------
 // Builds an equals instruction
 ir_value_t* build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);

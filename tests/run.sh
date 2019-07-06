@@ -12,6 +12,7 @@ function compile() {
 compile address || exit $?
 compile aliases || exit $?
 compile andor || exit $?
+compile andor_circuit || exit $?
 compile any_type_as || exit $?
 compile any_type_info || exit $?
 compile any_type_inventory || exit $?
