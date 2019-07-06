@@ -1,0 +1,12 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main {
+    repeat 9, printf('%d ', idx as int); idx += 1
+    printf('\n')
+    
+    letters *ubyte = 'abcdefghijklmnopqrstuvwxyz'
+    each ubyte in [letters, 26], printf('%c', it); idx += 2
+    printf('\n')
+}
