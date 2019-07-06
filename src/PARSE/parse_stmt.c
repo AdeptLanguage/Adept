@@ -632,10 +632,12 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
     stmt->args = NULL;
     stmt->is_tentative = is_tentative;
 
-    while(tokens[*i].id != TOKEN_CLOSE){
-        if(parse_ignore_newlines(ctx, "Expected function argument")) return FAILURE;
+    // Ignore newline termination within children expressions
+    ctx->ignore_newlines_in_expr_depth++;
 
-        if(parse_expr(ctx, &arg_expr)){
+    while(tokens[*i].id != TOKEN_CLOSE){
+        if(parse_ignore_newlines(ctx, "Expected function argument") || parse_expr(ctx, &arg_expr)){
+            ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(stmt->args, stmt->arity);
             free(stmt);
             return FAILURE;
@@ -643,23 +645,29 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
 
         // Allocate room for more arguments if necessary
         expand((void**) &stmt->args, sizeof(ast_expr_t*), stmt->arity, &args_capacity, 1, 4);
-
         stmt->args[stmt->arity++] = arg_expr;
 
-        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")) return FAILURE;
+        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")){
+            ctx->ignore_newlines_in_expr_depth--;
+            ast_exprs_free_fully(stmt->args, stmt->arity);
+            free(stmt);
+            return FAILURE;
+        }
 
         if(tokens[*i].id == TOKEN_NEXT){
             (*i)++;
         } else if(tokens[*i].id != TOKEN_CLOSE){
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
+            ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(stmt->args, stmt->arity);
             free(stmt);
             return FAILURE;
         }
     }
 
-    (*i)++;
+    ctx->ignore_newlines_in_expr_depth--;
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+    (*i)++;
     return SUCCESS;
 }
 

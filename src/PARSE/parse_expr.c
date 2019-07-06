@@ -88,7 +88,17 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
         break;
     case TOKEN_OPEN:
         (*i)++;
-        if(parse_expr(ctx, out_expr) != 0) return FAILURE;
+        if(parse_ignore_newlines(ctx, "Expected ')' after expression")) return FAILURE;
+
+        // Ignore newline termination within group
+        ctx->ignore_newlines_in_expr_depth++;
+
+        if(parse_expr(ctx, out_expr) != 0){
+            ctx->ignore_newlines_in_expr_depth--;
+            return FAILURE;
+        }
+
+        ctx->ignore_newlines_in_expr_depth--;
         if(parse_eat(ctx, TOKEN_CLOSE, "Expected ')' after expression")) return FAILURE;
         break;
     case TOKEN_ADDRESS:
@@ -182,8 +192,16 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 bool is_tentative = tokens[*i + 1].id == TOKEN_MAYBE;
                 if(is_tentative) (*i)++;
 
+                if(parse_ignore_newlines(ctx, "Unexpected statement termination")){
+                    return FAILURE;
+                }
+
                 if(tokens[++(*i)].id != TOKEN_WORD){
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected identifier after '.' operator");
+                    return FAILURE;
+                }
+
+                if(parse_ignore_newlines(ctx, "Unexpected statement termination")){
                     return FAILURE;
                 }
 
@@ -205,14 +223,19 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     ast_expr_t *arg_expr;
                     length_t args_capacity = 0;
 
+                    // Ignore newline termination within children expressions
+                    ctx->ignore_newlines_in_expr_depth++;
+
                     while(tokens[*i].id != TOKEN_CLOSE){
                         if(parse_ignore_newlines(ctx, "Expected method argument")){
+                            ctx->ignore_newlines_in_expr_depth--;
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
                             free(call_expr);
                             return FAILURE;
                         }
 
                         if(parse_expr(ctx, &arg_expr)){
+                            ctx->ignore_newlines_in_expr_depth--;
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
                             free(call_expr);
                             return FAILURE;
@@ -234,6 +257,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
 
                         call_expr->args[call_expr->arity++] = arg_expr;
                         if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")){
+                            ctx->ignore_newlines_in_expr_depth--;
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
                             free(call_expr);
                             return FAILURE;
@@ -241,6 +265,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
 
                         if(tokens[*i].id == TOKEN_NEXT) (*i)++;
                         else if(tokens[*i].id != TOKEN_CLOSE){
+                            ctx->ignore_newlines_in_expr_depth--;
                             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
                             free(call_expr);
@@ -248,6 +273,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                         }
                     }
 
+                    ctx->ignore_newlines_in_expr_depth--;
                     *inout_expr = (ast_expr_t*) call_expr;
                     (*i)++;
                 } else {
@@ -312,36 +338,53 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
     ast_expr_t *right, *expr;
 
     while(*i != ctx->tokenlist->length) {
-        int operator_precedence =  parse_get_precedence(tokens[*i].id);
+        int operator;
+        source_t source;
 
-        if(operator_precedence < precedence) return SUCCESS;
-        int operator = tokens[*i].id;
-        source_t source = sources[*i];
+        // Await possible termination operators
+        while(true){
+            operator = tokens[*i].id;
+            source = sources[*i];
+            
+            // NOTE: Must be sorted
+            const static int op_termination_tokens[] = {
+                TOKEN_ASSIGN,         // 0x00000008
+                TOKEN_CLOSE,          // 0x00000011
+                TOKEN_BEGIN,          // 0x00000012
+                TOKEN_END,            // 0x00000013
+                TOKEN_NEWLINE,        // 0x00000014
+                TOKEN_NEXT,           // 0x00000021
+                TOKEN_BRACKET_CLOSE,  // 0x00000023
+                TOKEN_ADDASSIGN,      // 0x00000027
+                TOKEN_SUBTRACTASSIGN, // 0x00000028
+                TOKEN_MULTIPLYASSIGN, // 0x00000029
+                TOKEN_DIVIDEASSIGN,   // 0x0000002A
+                TOKEN_MODULUSASSIGN,  // 0x0000002B
+                TOKEN_TERMINATE_JOIN, // 0x0000002F
+                TOKEN_COLON,          // 0x00000030
+                TOKEN_ELSE            // 0x0000004E
+            };
 
-        if(keep_mutable) return SUCCESS;
+            // Terminate operator expression portion if termination operator encountered
+            maybe_index_t op_termination = binary_int_search(op_termination_tokens, sizeof(op_termination_tokens) / sizeof(int), operator);
+            if(op_termination != -1){
+                // Always terminate if not newline
+                if(op_termination_tokens[op_termination] != TOKEN_NEWLINE) return SUCCESS;
+                
+                // Terminate for newlines if not ignoring them
+                if(ctx->ignore_newlines_in_expr_depth == 0) return SUCCESS;
+                else {
+                    // Otherwise skip over newlines
+                    if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
+                    continue;
+                }
+            }
 
-        // NOTE: Must be sorted
-        const static int op_termination_tokens[] = {
-            TOKEN_ASSIGN,         // 0x00000008
-            TOKEN_CLOSE,          // 0x00000011
-            TOKEN_BEGIN,          // 0x00000012
-            TOKEN_END,            // 0x00000013
-            TOKEN_NEWLINE,        // 0x00000014
-            TOKEN_NEXT,           // 0x00000021
-            TOKEN_BRACKET_CLOSE,  // 0x00000023
-            TOKEN_ADDASSIGN,      // 0x00000027
-            TOKEN_SUBTRACTASSIGN, // 0x00000028
-            TOKEN_MULTIPLYASSIGN, // 0x00000029
-            TOKEN_DIVIDEASSIGN,   // 0x0000002A
-            TOKEN_MODULUSASSIGN,  // 0x0000002B
-            TOKEN_TERMINATE_JOIN, // 0x0000002F
-            TOKEN_COLON,          // 0x00000030
-            TOKEN_ELSE            // 0x0000004E
-        };
+            break;
+        }
 
-        // Terminate operator expression portion if termination operator encountered
-        if(binary_int_search(op_termination_tokens, sizeof(op_termination_tokens) / sizeof(int), operator) != -1)
-            return SUCCESS;
+        int operator_precedence =  parse_get_precedence(operator);
+        if(operator_precedence < precedence || keep_mutable) return SUCCESS;
 
         #define BUILD_MATH_EXPR_MACRO(new_built_expr_id) { \
             if(parse_rhs_expr(ctx, inout_left, &right, operator_precedence)) return FAILURE; \
@@ -440,12 +483,9 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
-    if(tokens[*i + 1].id == TOKEN_OPEN){
-        return parse_expr_call(ctx, out_expr);
-    }
-
-    if(tokens[*i + 1].id == TOKEN_NAMESPACE){
-        return parse_expr_enum_value(ctx, out_expr);
+    switch(tokens[*i + 1].id){
+    case TOKEN_OPEN:      return parse_expr_call(ctx, out_expr);
+    case TOKEN_NAMESPACE: return parse_expr_enum_value(ctx, out_expr);
     }
 
     weak_cstr_t variable_name = tokens[*i].data;
@@ -472,6 +512,8 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     bool is_tentative;
     (*i)++;
 
+    if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
+
     if(tokens[(*i)++].id == TOKEN_MAYBE){
         is_tentative = true;
         (*i)++;
@@ -479,8 +521,12 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         is_tentative = false;
     }
 
+    // Ignore newline termination within children expressions
+    ctx->ignore_newlines_in_expr_depth++;
+
     while(tokens[*i].id != TOKEN_CLOSE){
-        if(parse_expr(ctx, &arg)){
+        if(parse_ignore_newlines(ctx, "Expected function argument") || parse_expr(ctx, &arg)){
+            ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(args, arity);
             return FAILURE;
         }
@@ -489,23 +535,32 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         expand((void**) &args, sizeof(ast_expr_t*), arity, &max_arity, 1, 4);
         args[arity++] = arg;
         
-        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")) return FAILURE;
+        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")){
+            ctx->ignore_newlines_in_expr_depth--;
+            ast_exprs_free_fully(args, arity);
+            return FAILURE;
+        }
 
         if(tokens[*i].id == TOKEN_NEXT){
             (*i)++;
         } else if(tokens[*i].id != TOKEN_CLOSE){
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
+            ctx->ignore_newlines_in_expr_depth--;
+            ast_exprs_free_fully(args, arity);
             return FAILURE;
         }
     }
 
     if(is_tentative){
         compiler_panic(ctx->compiler, source, "Tentative calls cannot be used in expressions");
+        ctx->ignore_newlines_in_expr_depth--;
+        ast_exprs_free_fully(args, arity);
         return FAILURE;
     }
 
+    ctx->ignore_newlines_in_expr_depth--;
     ast_expr_create_call(out_expr, name, arity, args, is_tentative, source);
-    *i += 1;
+    (*i)++;
     return SUCCESS;
 }
 
@@ -643,20 +698,9 @@ errorcode_t parse_expr_cast(parse_ctx_t *ctx, ast_expr_t **out_expr){
     source_t source = ctx->tokenlist->sources[(*i)++];
 
     if(parse_type(ctx, &to)) return FAILURE;
+    if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
 
-    if(ctx->tokenlist->tokens[*i].id == TOKEN_OPEN){
-        (*i)++;
-        
-        if(parse_expr(ctx, &from)){
-            ast_type_free(&to);
-            return FAILURE;
-        }
-
-        if(parse_eat(ctx, TOKEN_CLOSE, "Expected ')' after expression given to 'cast'")){
-            ast_type_free(&to);
-            return FAILURE;
-        }
-    } else if(parse_primary_expr(ctx, &from)){ // cast <type> value
+    if(parse_primary_expr(ctx, &from)){ // cast <type> value
         ast_type_free(&to);
         return FAILURE;
     }

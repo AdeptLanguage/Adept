@@ -32,6 +32,9 @@ typedef struct {
 
     // Used to automatically promote functions into methods
     ast_struct_t *struct_association;
+
+    // Used to allow parse_expr and friends to ignore newlines within expressions
+    length_t ignore_newlines_in_expr_depth;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------

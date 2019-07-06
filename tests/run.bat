@@ -128,6 +128,8 @@ call :compile new_dynamic
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile new_undef
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile newline_tolerance
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile not
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile null

@@ -1,0 +1,51 @@
+
+import 'sys/cstdio.adept'
+
+struct Dummy () {
+    func withMethod(format, s1, s2 *ubyte, c ubyte) {
+        printf(format, s1, s2, c)
+    }
+}
+
+func main {
+    printf(
+        '%s %s%c\n'
+        ,
+        'Hello'
+        , 'World',
+        '!'ub
+        )
+    
+    dummy Dummy
+    dummy.withMethod(
+        '%s %s%c\n'
+        ,
+        'Hi'
+        , 'World',
+        '!'ub
+    )
+
+    printf('%d\n', 123
+        + 1 *
+        1234 / 2
+        - 43
+    )
+
+    x int = (
+        123
+        + 1 *
+        1234 / 2
+        - 43 + 1
+    )
+
+    printf('%d\n', x)
+
+    printf('%d\n', cast int
+    (
+        123ul
+        + 1ul *
+        1234ul / 2ul
+        - 43ul + 2ul
+    )
+    )
+}
