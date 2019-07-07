@@ -1,0 +1,9 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    printf('%s %d\n', message(), sum(10, 11))
+}
+
+func message *ubyte = 'Hello World'
+func sum(x, y int) int = x + y

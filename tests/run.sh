@@ -95,6 +95,7 @@ compile repeat_fields || exit $?
 compile return_ten || exit $?
 compile scoped_variables || exit $?
 compile sizeof || exit $?
+compile small_functions || exit $?
 compile standard || exit $?
 compile static_arrays || exit $?
 compile static_structs || exit $?

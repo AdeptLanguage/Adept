@@ -170,6 +170,8 @@ call :compile scoped_variables
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile sizeof
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile small_functions
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile standard
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile static_arrays

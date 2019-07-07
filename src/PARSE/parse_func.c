@@ -2,6 +2,7 @@
 #include "UTIL/util.h"
 #include "UTIL/search.h"
 #include "PARSE/parse.h"
+#include "PARSE/parse_expr.h"
 #include "PARSE/parse_func.h"
 #include "PARSE/parse_stmt.h"
 #include "PARSE/parse_type.h"
@@ -30,7 +31,9 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(parse_func_arguments(ctx, func)) return FAILURE;
     if(parse_ignore_newlines(ctx, "Expected '{' after function head")) return FAILURE;
 
-    if(!is_foreign && ctx->tokenlist->tokens[*ctx->i].id == TOKEN_BEGIN){
+    tokenid_t beginning_token_id = ctx->tokenlist->tokens[*ctx->i].id;
+
+    if(!is_foreign && (beginning_token_id == TOKEN_BEGIN || beginning_token_id == TOKEN_ASSIGN)){
         ast_type_make_base(&func->return_type, strclone("void"));
     } else {
         if(parse_type(ctx, &func->return_type)){
@@ -163,11 +166,37 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out
 
 errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     if(func->traits & AST_FUNC_FOREIGN) return SUCCESS;
-
-    if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return FAILURE;
+    if(parse_ignore_newlines(ctx, "Expected function body")) return FAILURE;
 
     ast_expr_list_t stmts;
     ast_expr_list_t defer_stmts;
+
+    if(ctx->tokenlist->tokens[*ctx->i].id == TOKEN_ASSIGN){
+        (*ctx->i)++;
+        ctx->func = func;
+        
+        if(parse_ignore_newlines(ctx, "Expected function body")) return FAILURE;
+        ast_expr_list_init(&stmts, 1);
+
+        ast_expr_t *return_expression;
+        if(parse_expr(ctx, &return_expression)){
+            ast_free_statements_fully(stmts.statements, stmts.length);
+            return FAILURE;
+        }
+
+        ast_expr_return_t *stmt = malloc(sizeof(ast_expr_return_t));
+        stmt->id = EXPR_RETURN;
+        stmt->source = return_expression->source;
+        stmt->value = return_expression;
+        stmts.statements[stmts.length++] = (ast_expr_t*) stmt;
+
+        func->statements = stmts.statements;
+        func->statements_length = stmts.length;
+        func->statements_capacity = stmts.capacity;
+        return SUCCESS;
+    }
+
+    if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return FAILURE;
 
     ast_expr_list_init(&stmts, 16);
     ast_expr_list_init(&defer_stmts, 0);
