@@ -426,6 +426,33 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                         free(it_name);
                         return FAILURE;
                     }
+                } else if(tokens[*i].id == TOKEN_WORD){
+                    source_t variable_source = sources[*i];
+                    weak_cstr_t variable_name = (weak_cstr_t) tokens[(*i)++].data;
+                    
+                    ast_expr_t *variable;
+                    ast_expr_create_variable(&variable, variable_name, variable_source);
+
+                    ast_expr_call_method_t *array_call = malloc(sizeof(ast_expr_call_method_t));
+                    array_call->id = EXPR_CALL_METHOD;
+                    array_call->source = variable_source;
+                    array_call->name = "__array__";
+                    array_call->value = variable;
+                    array_call->args = NULL;
+                    array_call->arity = 0;
+                    array_call->is_tentative = false;
+
+                    ast_expr_call_method_t *length_call = malloc(sizeof(ast_expr_call_method_t));
+                    length_call->id = EXPR_CALL_METHOD;
+                    length_call->source = variable_source;
+                    length_call->name = "__length__";
+                    length_call->value = ast_expr_clone(variable);
+                    length_call->args = NULL;
+                    length_call->arity = 0;
+                    length_call->is_tentative = false;
+
+                    low_array = (ast_expr_t*) array_call;
+                    length_limit = (ast_expr_t*) length_call;
                 } else {
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected [<data>, <length>] after 'in' keyword in 'each in' statement");
                     ast_type_free_fully(it_type);

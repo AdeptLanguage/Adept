@@ -37,6 +37,7 @@ compile defer || exit $?
 compile deprecated || exit $?
 compile dereference || exit $?
 compile each_in || exit $?
+compile each_in_list || exit $?
 compile enums || exit $?
 compile equals_func || exit $?
 compile external || exit $?

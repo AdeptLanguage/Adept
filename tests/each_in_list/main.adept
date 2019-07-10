@@ -1,0 +1,42 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    my_list MyList = createList()
+    
+    each *ubyte in my_list {
+        if idx == 2, my_list.change()
+        printf('=> %s\n', it)
+    }
+}
+
+struct MyList (list **ubyte, length usize) {
+    func __defer__ {
+        delete this.list
+    }
+    
+    func change {
+        this.__defer__()
+        this.list = new *ubyte * 5
+        this.length = 5
+        this.list[0] = 'Apple'
+        this.list[1] = 'Banana'
+        this.list[2] = 'Peach'
+        this.list[3] = 'Orange'
+        this.list[4] = 'Carrot'
+    }
+
+    func __array__ **ubyte = this.list
+    func __length__ usize  = this.length
+}
+
+func createList() MyList {
+    list POD MyList
+    list.list = new *ubyte * 4
+    list.length = 4
+    list.list[0] = 'Apple'
+    list.list[1] = 'Banana'
+    list.list[2] = 'Peach'
+    list.list[3] = 'Orange'
+    return list
+}
