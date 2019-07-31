@@ -116,6 +116,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_ALIAS:          printf("Keyword: alias\n"); break;
         case TOKEN_AND:            printf("Keyword: and\n"); break;
         case TOKEN_AS:             printf("Keyword: as\n"); break;
+        case TOKEN_AT:             printf("Keyword: at\n"); break;
         case TOKEN_BREAK:          printf("Keyword: break\n"); break;
         case TOKEN_CASE:           printf("Keyword: case\n"); break;
         case TOKEN_CAST:           printf("Keyword: cast\n"); break;

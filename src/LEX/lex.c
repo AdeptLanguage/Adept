@@ -266,7 +266,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             }
             break;
         case LEX_STATE_STRING:
-            if(buffer[i] == '\"' && !(lex_state.buildup_length != 0 && lex_state.buildup[lex_state.buildup_length-1] == '\\')){
+            if(buffer[i] == '\"'){
                 // End of string literal
                 t = &((*tokens)[tokenlist->length]);
                 t->id = TOKEN_STRING;
@@ -720,8 +720,8 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         }
         return FAILURE;
     }
-
-    return 0;
+    
+    return SUCCESS;
 }
 
 void lex_state_init(lex_state_t *lex_state){
