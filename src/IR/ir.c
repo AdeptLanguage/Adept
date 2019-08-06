@@ -143,7 +143,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         sprintf(value_str, "%s >|%d| 0x%08X<", typename, (int) ((ir_value_result_t*) value->extra)->block_id, (int) ((ir_value_result_t*) value->extra)->instruction_id);
         free(typename);
         return value_str;
-    case VALUE_TYPE_NULLPTR:
+    case VALUE_TYPE_NULLPTR: case VALUE_TYPE_NULLPTR_OF_TYPE:
         value_str = malloc(5);
         memcpy(value_str, "null", 5);
         free(typename);
@@ -252,10 +252,13 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
     // NOTE: Dumps the functions in an ir_module_t to a file
     // TODO: Clean up this function
 
+    char implementation_buffer[32];
+
     for(length_t f = 0; f != functions_length; f++){
         // Print prototype
         char *ret_type_str = ir_type_str(functions[f].return_type);
-        fprintf(file, "fn %s a%X -> %s\n", functions[f].name, (int) f, ret_type_str);
+        ir_implementation(f, 'a', implementation_buffer);
+        fprintf(file, "fn %s %s -> %s\n", functions[f].name, implementation_buffer, ret_type_str);
 
         // Count the total number of instructions
         length_t total_instructions = 0;
@@ -441,9 +444,11 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                     free(idx_str);
                     break;
                 case INSTRUCTION_FUNC_ADDRESS:
-                    if(((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name == NULL)
-                        fprintf(file, "    0x%08X funcaddr 0x%X\n", (unsigned int) i, (int) ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->ir_func_id);
-                    else
+                    if(((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name == NULL){
+                        char buffer[32];
+                        ir_implementation(((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->ir_func_id, 0x00, buffer);
+                        fprintf(file, "    0x%08X funcaddr 0x%s\n", (unsigned int) i, buffer);
+                    } else
                         fprintf(file, "    0x%08X funcaddr %s\n", (unsigned int) i, ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name);
                     break;
                 case INSTRUCTION_BITCAST: case INSTRUCTION_ZEXT:
@@ -574,7 +579,9 @@ void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, c
         free(arg);
     }
 
-    fprintf(file, "    0x%08X call a%X \"%s\" (%s) %s\n", i, (int) instruction->ir_func_id, real_name, call_args, call_result_type);
+    char implementation_buffer[32];
+    ir_implementation((int) instruction->ir_func_id, 'a', implementation_buffer);
+    fprintf(file, "    0x%08X call %s \"%s\" (%s) %s\n", i, implementation_buffer, real_name, call_args, call_result_type);
     free(call_args);
     free(call_result_type);
 }
@@ -681,4 +688,33 @@ void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
             free(funcs[f].var_scope);
         }
     }
+}
+
+char *ir_implementation_encoding = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+length_t ir_implementation_encoding_base;
+
+void ir_implementation_setup(){
+    ir_implementation_encoding_base = strlen(ir_implementation_encoding);
+}
+
+void ir_implementation(length_t id, char prefix, char *output_buffer){
+    // NOTE: output_buffer is assumed to be able to hold 32 characters
+    length_t length = 0;
+
+    if(prefix != 0x00){
+        output_buffer[length++] = prefix;
+    }
+    
+    do {
+        length_t digit = id % ir_implementation_encoding_base;
+        output_buffer[length++] = ir_implementation_encoding[digit];
+        id /= ir_implementation_encoding_base;
+
+        if(length == 31){
+            printf("INTERNAL ERROR: ir_implementation received too large of an id\n");
+            break;
+        }
+    } while(id != 0);
+
+    output_buffer[length] = 0x00;
 }

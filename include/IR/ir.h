@@ -584,4 +584,13 @@ void ir_module_free(ir_module_t *ir_module);
 // Frees data within each IR function in a list
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length);
 
+// ---------------- ir_implementation_setup ----------------
+// Preprares for calls to ir_implementation()
+void ir_implementation_setup();
+
+// ---------------- ir_implementation ----------------
+// Encodes an ID for an implementation name
+// NOTE: output_buffer is assumed to be able to hold 32 characters
+void ir_implementation(length_t id, char prefix, char *output_buffer);
+
 #endif // IR_H

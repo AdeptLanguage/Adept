@@ -16,6 +16,7 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_t *ast = &object->ast;
 
+    ir_implementation_setup();
     ir_module_init(module, ast->funcs_length, ast->globals_length);
     object->compilation_stage = COMPILATION_STAGE_IR_MODULE;
 
