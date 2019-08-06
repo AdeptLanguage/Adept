@@ -11,7 +11,7 @@
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
-    
+
 errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_t *ast = &object->ast;
@@ -225,9 +225,6 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
 
-    // Reduce type table
-    type_table_reduce(object->ast.type_table);
-
     for(length_t g = 0; g != ast->globals_length; g++){
         module->globals[g].name = ast->globals[g].name;
         module->globals[g].traits = ast->globals[g].traits & AST_GLOBAL_EXTERNAL ? IR_GLOBAL_EXTERNAL : TRAIT_NONE;
@@ -336,11 +333,11 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
         ir_value_t **array_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * table->length);
 
         for(length_t i = 0; i != table->length; i++){
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &table->records[i].ast_type, &table->records[i].ir_type)){
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &table->entries[i].ast_type, &table->entries[i].ir_type)){
                 return FAILURE;
             }
 
-            switch(table->records[i].ir_type->kind){
+            switch(table->entries[i].ir_type->kind){
             case TYPE_KIND_POINTER:
                 array_values[i] = build_anon_global(&builder->object->ir_module, any_ptr_type_type, true);
                 break;
@@ -357,7 +354,7 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
             ir_value_t **initializer_members;
             length_t initializer_members_length;
             unsigned int any_type_kind_id = ANY_TYPE_KIND_VOID;
-            unsigned int type_type_kind = table->records[i].ir_type->kind;
+            unsigned int type_type_kind = table->entries[i].ir_type->kind;
 
             switch(type_type_kind){
             case TYPE_KIND_POINTER: {
@@ -369,8 +366,8 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                     maybe_index_t subtype_index = -1;
 
                     // HACK: We really shouldn't be doing this
-                    if(table->records[i].ast_type.elements_length > 1){
-                        ast_type_t dereferenced = ast_type_clone(&table->records[i].ast_type);
+                    if(table->entries[i].ast_type.elements_length > 1){
+                        ast_type_t dereferenced = ast_type_clone(&table->entries[i].ast_type);
 
                         // Modify ast_type_t to remove a pointer element from the front
                         // DANGEROUS: Manually deleting ast_elem_pointer_t
@@ -397,7 +394,7 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
             case TYPE_KIND_STRUCTURE: {
                     /* struct AnyStructType (kind AnyTypeKind, name *ubyte, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
 
-                    ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) table->records[i].ir_type->extra;
+                    ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) table->entries[i].ir_type->extra;
                     initializer_members = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 8);
                     initializer_members_length = 8;
 
@@ -405,7 +402,7 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                     ir_value_t **composite_offsets = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * composite->subtypes_length);
                     ir_value_t **composite_member_names = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * composite->subtypes_length);
 
-                    ast_elem_t *elem = table->records[i].ast_type.elements[0];
+                    ast_elem_t *elem = table->entries[i].ast_type.elements[0];
 
                     if(elem->id == AST_ELEM_GENERIC_BASE){
                         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
@@ -531,8 +528,8 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
             }
 
             initializer_members[0] = build_literal_usize(builder->pool, any_type_kind_id); // kind
-            initializer_members[1] = build_literal_cstr(builder, table->records[i].name); // name
-            initializer_members[2] = build_bool(builder->pool, table->records[i].is_alias); // is_alias
+            initializer_members[1] = build_literal_cstr(builder, table->entries[i].name); // name
+            initializer_members[2] = build_bool(builder->pool, table->entries[i].is_alias); // is_alias
 
             ir_value_t *initializer = build_static_struct(&builder->object->ir_module, initializer_type, initializer_members, initializer_members_length, false);
             build_anon_global_initializer(&builder->object->ir_module, array_values[i], initializer);
@@ -553,11 +550,7 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
             return SUCCESS;
         }
 
-        // Reduce type table if haven't
-        type_table_t *table = builder->object->ast.type_table;
-        type_table_reduce(table);
-
-        ir_value_t *value = build_literal_usize(builder->pool, table->length);
+        ir_value_t *value = build_literal_usize(builder->pool, builder->object->ast.type_table->length);
         build_store(builder, value, destination);
         return SUCCESS;
     }

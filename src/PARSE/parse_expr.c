@@ -700,7 +700,25 @@ errorcode_t parse_expr_cast(parse_ctx_t *ctx, ast_expr_t **out_expr){
     if(parse_type(ctx, &to)) return FAILURE;
     if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
 
-    if(parse_primary_expr(ctx, &from)){ // cast <type> value
+    if(ctx->tokenlist->tokens[*i].id == TOKEN_OPEN){
+        // 'cast' will only apply to expression in parentheses if present.
+        // If this behavior is undesired, use the newer 'as' operator instead
+        (*i)++;
+
+        // Ignore newlines before actual expression
+        if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
+        
+        if(parse_expr(ctx, &from)){
+            ast_type_free(&to);
+            return FAILURE;
+        }
+
+        if(parse_eat(ctx, TOKEN_CLOSE, "Expected ')' after expression given to 'cast'")){
+            ast_expr_free(from);
+            ast_type_free(&to);
+            return FAILURE;
+        }
+    } else if(parse_primary_expr(ctx, &from)){ // cast <type> value
         ast_type_free(&to);
         return FAILURE;
     }
@@ -708,7 +726,6 @@ errorcode_t parse_expr_cast(parse_ctx_t *ctx, ast_expr_t **out_expr){
     ast_expr_cast_t *cast_expr = malloc(sizeof(ast_expr_cast_t));
     cast_expr->id = EXPR_CAST;
     cast_expr->source = source;
-
     cast_expr->to = to;
     cast_expr->from = from;
     *out_expr = (ast_expr_t*) cast_expr;

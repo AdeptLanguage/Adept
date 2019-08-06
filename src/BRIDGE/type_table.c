@@ -3,49 +3,86 @@
 #include "BRIDGE/type_table.h"
 
 void type_table_init(type_table_t *table){
-    table->records = NULL;
+    table->entries = NULL;
     table->length = 0;
     table->capacity = 0;
-    table->reduced = false;
 }
 
 void type_table_free(type_table_t *table){
     if(table == NULL) return;
-    type_table_records_free(table->records, table->length);
-    free(table->records);
+    for(length_t i = 0; i != table->length; i++){
+        free(table->entries[i].name);
+        ast_type_free(&table->entries[i].ast_type);
+    }
+    free(table->entries);
+}
+
+bool type_table_add(type_table_t *table, type_table_entry_t weak_ast_type_entry){
+    int position;
+
+    // Don't add if it already exists
+    if(type_table_locate(table, weak_ast_type_entry.name, &position)) return false;
+
+    // Expand entries list
+    if(table->length == table->capacity){
+        table->capacity += 64;
+        
+        type_table_entry_t *new_entries = malloc(sizeof(type_table_entry_t) * table->capacity);
+        memcpy(new_entries, table->entries, sizeof(type_table_entry_t) * table->length);
+        free(table->entries);
+        table->entries = new_entries;
+    }
+
+    memmove(&table->entries[position + 1], &table->entries[position], (table->length - position) * sizeof(type_table_entry_t));
+    table->length++;
+
+    // Instantiate entry with it's own data
+    weak_ast_type_entry.ast_type = ast_type_clone(&weak_ast_type_entry.ast_type);
+    table->entries[position] = weak_ast_type_entry;
+    return true;
 }
 
 void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cstr_t maybe_alias_name){
     if(ast_type_has_polymorph(type)) return;
 
-    expand((void**) &table->records, sizeof(type_table_record_t), table->length, &table->capacity, 2, 16);
-    
-    strong_cstr_t name = maybe_alias_name ? maybe_alias_name : ast_type_str(type);
-    table->records[table->length].name = name;
-    table->records[table->length].ast_type = ast_type_clone(type);
-
+    type_table_entry_t weak_ast_type_entry;
+    weak_ast_type_entry.name = maybe_alias_name ? maybe_alias_name : ast_type_str(type);
+    weak_ast_type_entry.ast_type = *type;
     #ifndef ADEPT_INSIGHT_BUILD
-    table->records[table->length].ir_type = NULL;
+    weak_ast_type_entry.ir_type = NULL;
     #endif
+    weak_ast_type_entry.is_alias = (maybe_alias_name != NULL);
 
-    table->records[table->length++].is_alias = (maybe_alias_name != NULL);
+    // Don't add if it already exists
+    if(!type_table_add(table, weak_ast_type_entry)){
+        free(weak_ast_type_entry.name);
+        return;
+    }
 
     // HACK: Add extra entry for pointer to given type
     // since we cannot know whether or not '&' is even used on that type
     // (with the current system)
     // Also, this may turn out to be benificial for formulating types that
     // may not have been directly refered to at compile time
-    if(strcmp(name, "void") != 0){
+    if(strcmp(weak_ast_type_entry.name, "void") != 0){
         ast_type_t with_additional_ptr = ast_type_clone(type);
         ast_type_prepend_ptr(&with_additional_ptr);
-        table->records[table->length].name = ast_type_str(&with_additional_ptr);
-        table->records[table->length].ast_type = with_additional_ptr;
-        
+
+        type_table_entry_t strong_ast_type_entry;
+        strong_ast_type_entry.name = ast_type_str(&with_additional_ptr);
+        strong_ast_type_entry.ast_type = with_additional_ptr;
+
         #ifndef ADEPT_INSIGHT_BUILD
-        table->records[table->length].ir_type = NULL;
+        strong_ast_type_entry.ir_type = NULL;
         #endif
 
-        table->records[table->length++].is_alias = false;
+        strong_ast_type_entry.is_alias = false;
+
+        if(!type_table_add(table, strong_ast_type_entry)){
+            ast_type_free(&strong_ast_type_entry.ast_type);
+            free(strong_ast_type_entry.name);
+            return;
+        }
     }
 
     // Mention sub types to the type table
@@ -63,70 +100,73 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
 }
 
 void type_table_give_base(type_table_t *table, weak_cstr_t base){
-    expand((void**) &table->records, sizeof(type_table_record_t), table->length, &table->capacity, 2, 16);
+    type_table_entry_t weak_ast_type_entry;
+    weak_ast_type_entry.name = strclone(base);
 
-    table->records[table->length].name = strclone(base);
-    ast_type_make_base(&table->records[table->length].ast_type, strclone(base));
+    // Static AST type for base
+    ast_elem_base_t static_pointer_element;
+    static_pointer_element.id = AST_ELEM_POINTER;
+    static_pointer_element.source = NULL_SOURCE;
+    ast_elem_base_t static_base_element;
+    static_base_element.id = AST_ELEM_BASE;
+    static_base_element.base = weak_ast_type_entry.name;
+    static_base_element.source = NULL_SOURCE;
+    ast_elem_t *static_elements[2];
+    static_elements[0] = (ast_elem_t*) &static_pointer_element;
+    static_elements[1] = (ast_elem_t*) &static_base_element;
+    weak_ast_type_entry.ast_type.elements = &static_elements[1];
+    weak_ast_type_entry.ast_type.elements_length = 1;
+    weak_ast_type_entry.ast_type.source = NULL_SOURCE;
+
+    ast_type_make_base(&weak_ast_type_entry.ast_type, strclone(base));
 
     #ifndef ADEPT_INSIGHT_BUILD
-    table->records[table->length].ir_type = NULL;
+    weak_ast_type_entry.ir_type = NULL;
     #endif
+    weak_ast_type_entry.is_alias = false;
 
-    table->records[table->length++].is_alias = false;
+    bool added = type_table_add(table, weak_ast_type_entry);
 
     // HACK: Add extra entry for pointer to given type
     // since we cannot know whether or not '&' is even used on that type
     // (with the current system)
     // Also, this may turn out to be benificial for formulating types that
     // may not have been directly refered to at compile time
-    if(strcmp(base, "void") != 0){
-        ast_type_t with_additional_ptr;
-        ast_type_make_base_ptr(&with_additional_ptr, strclone(base));
-        table->records[table->length].name = ast_type_str(&with_additional_ptr);
-        table->records[table->length].ast_type = with_additional_ptr;
+    if(strcmp(weak_ast_type_entry.name, "void") != 0){
+        if(added) static_base_element.base = strclone(weak_ast_type_entry.name);
+        weak_ast_type_entry.ast_type.elements = &static_elements[0];
+        weak_ast_type_entry.ast_type.elements_length = 2;
+        weak_ast_type_entry.ast_type.source = NULL_SOURCE;
+        weak_ast_type_entry.name = ast_type_str(&weak_ast_type_entry.ast_type);
 
-        #ifndef ADEPT_INSIGHT_BUILD
-        table->records[table->length].ir_type = NULL;
-        #endif
-        
-        table->records[table->length++].is_alias = false;
-    }
-}
-
-void type_table_reduce(type_table_t *table){
-    if(table->reduced) return;
-
-    qsort(table->records, table->length, sizeof(type_table_record_t), type_table_record_cmp);
-
-    for(length_t i = 0; i != table->length; i++){
-        if(i + 1 != table->length && strcmp(table->records[i].name, table->records[i + 1].name) == 0){
-            // Remove this entry, because next entry is identical
-            type_table_records_free(&table->records[i], 1);
-
-            memcpy(&table->records[i], &table->records[i + 1], (table->length - i - 1) * sizeof(type_table_record_t));
-            table->length--;
-            i--;
+        if(!type_table_add(table, weak_ast_type_entry)){
+            free(static_base_element.base);
+            free(weak_ast_type_entry.name);
         }
     }
 }
 
-maybe_index_t type_table_find(type_table_t *table, const char *name){
-    // TODO: Make this fast
+bool type_table_locate(type_table_t *table, weak_cstr_t name, int *out_position){
+    int first = 0, middle = 0, last = table->length - 1, comparison = 0;
 
-    for(length_t i = 0; i != table->length; i++){
-        if(strcmp(table->records[i].name, name) == 0) return i;
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = strcmp(table->entries[middle].name, name);
+
+        if(comparison == 0){
+            *out_position = middle;
+            return true;
+        }
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
     }
 
+    *out_position = comparison >= 0 ? middle : middle + 1;
+    return false;
+}
+
+maybe_index_t type_table_find(type_table_t *table, weak_cstr_t name){
+    int position;
+    if(type_table_locate(table, name, &position)) return position;
     return -1;
 }
-
-void type_table_records_free(type_table_record_t *records, length_t length){
-    for(length_t i = 0; i != length; i++){
-        free(records[i].name);
-        ast_type_free(&records[i].ast_type);
-    }
-}
-
-int type_table_record_cmp(const void *a, const void *b){
-    return strcmp(((type_table_record_t*) a)->name, ((type_table_record_t*) b)->name);
-} 

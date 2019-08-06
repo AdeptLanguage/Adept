@@ -145,7 +145,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
     // Peel back pointer layers
     for(non_concrete_layers = 0; non_concrete_layers != unresolved_type->elements_length; non_concrete_layers++){
         unsigned int element_id = unresolved_type->elements[non_concrete_layers]->id;
-        if(element_id == AST_ELEM_BASE || element_id == AST_ELEM_FUNC || element_id == AST_ELEM_POLYMORPH || element_id == AST_ELEM_GENERIC_BASE) break;
+        if(element_id != AST_ELEM_FIXED_ARRAY && element_id != AST_ELEM_POINTER) break;
     }
 
     switch(unresolved_type->elements[non_concrete_layers]->id){
