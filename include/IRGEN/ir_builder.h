@@ -26,11 +26,11 @@ typedef struct {
     length_t current_block_id;
     length_t break_block_id; // 0 == none
     length_t continue_block_id; // 0 == none
-    bridge_var_scope_t *break_continue_scope;
+    bridge_scope_t *break_continue_scope;
     strong_cstr_t *block_stack_labels;
     length_t *block_stack_break_ids;
     length_t *block_stack_continue_ids;
-    bridge_var_scope_t **block_stack_scopes;
+    bridge_scope_t **block_stack_scopes;
     length_t block_stack_length;
     length_t block_stack_capacity;
     ir_pool_t *pool;
@@ -39,7 +39,7 @@ typedef struct {
     object_t *object;
     length_t ast_func_id;
     length_t ir_func_id;
-    bridge_var_scope_t *var_scope;
+    bridge_scope_t *scope;
     length_t next_var_id;
     length_t *next_reference_id;
     troolean has_string_struct;
@@ -193,16 +193,16 @@ ir_value_t *build_bool(ir_pool_t *pool, bool value);
 // Ensures there's enough room for another label
 void prepare_for_new_label(ir_builder_t *builder);
 
-// ---------------- open_var_scope ----------------
-// Opens a new variable scope
-void open_var_scope(ir_builder_t *builder);
+// ---------------- open_scope ----------------
+// Opens a new scope
+void open_scope(ir_builder_t *builder);
 
-// ---------------- close_var_scope ----------------
-// Closes the current variable scope
-void close_var_scope(ir_builder_t *builder);
+// ---------------- close_scope ----------------
+// Closes the current scope
+void close_scope(ir_builder_t *builder);
 
 // ---------------- add_variable ----------------
-// Adds a variable to the current bridge_var_scope_t
+// Adds a variable to the current bridge_scope_t
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
 
 // ---------------- handle_deference_for_variables ----------------

@@ -17,11 +17,16 @@ void type_table_free(type_table_t *table){
     free(table->entries);
 }
 
-bool type_table_add(type_table_t *table, type_table_entry_t weak_ast_type_entry){
+bool type_table_add(type_table_t *table, type_table_entry_t entry){
+    // DANGEROUS: This function is really quirky, and should avoided when possible
+    //            Use 'type_table_give' instead!
+
+    // See definition for details on how to use this function
+
     int position;
 
     // Don't add if it already exists
-    if(type_table_locate(table, weak_ast_type_entry.name, &position)) return false;
+    if(type_table_locate(table, entry.name, &position)) return false;
 
     // Expand entries list
     if(table->length == table->capacity){
@@ -37,8 +42,8 @@ bool type_table_add(type_table_t *table, type_table_entry_t weak_ast_type_entry)
     table->length++;
 
     // Instantiate entry with it's own data
-    weak_ast_type_entry.ast_type = ast_type_clone(&weak_ast_type_entry.ast_type);
-    table->entries[position] = weak_ast_type_entry;
+    entry.ast_type = ast_type_clone(&entry.ast_type);
+    table->entries[position] = entry;
     return true;
 }
 
@@ -83,6 +88,8 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
             free(strong_ast_type_entry.name);
             return;
         }
+
+        ast_type_free(&strong_ast_type_entry.ast_type);
     }
 
     // Mention sub types to the type table
@@ -118,8 +125,6 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base){
     weak_ast_type_entry.ast_type.elements_length = 1;
     weak_ast_type_entry.ast_type.source = NULL_SOURCE;
 
-    ast_type_make_base(&weak_ast_type_entry.ast_type, strclone(base));
-
     #ifndef ADEPT_INSIGHT_BUILD
     weak_ast_type_entry.ir_type = NULL;
     #endif
@@ -132,17 +137,20 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base){
     // (with the current system)
     // Also, this may turn out to be benificial for formulating types that
     // may not have been directly refered to at compile time
+    // TODO: Clean up this messy code
     if(strcmp(weak_ast_type_entry.name, "void") != 0){
-        if(added) static_base_element.base = strclone(weak_ast_type_entry.name);
         weak_ast_type_entry.ast_type.elements = &static_elements[0];
         weak_ast_type_entry.ast_type.elements_length = 2;
         weak_ast_type_entry.ast_type.source = NULL_SOURCE;
         weak_ast_type_entry.name = ast_type_str(&weak_ast_type_entry.ast_type);
 
         if(!type_table_add(table, weak_ast_type_entry)){
-            free(static_base_element.base);
             free(weak_ast_type_entry.name);
         }
+    }
+    
+    if(!added){
+        free(static_base_element.base);
     }
 }
 

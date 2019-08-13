@@ -61,10 +61,10 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     builder.block_stack_length = 0;
     builder.block_stack_capacity = 0;
 
-    module_func->var_scope = malloc(sizeof(bridge_var_scope_t));
-    bridge_var_scope_init(module_func->var_scope, NULL);
-    module_func->var_scope->first_var_id = 0;
-    builder.var_scope = module_func->var_scope;
+    module_func->scope = malloc(sizeof(bridge_scope_t));
+    bridge_scope_init(module_func->scope, NULL);
+    module_func->scope->first_var_id = 0;
+    builder.scope = module_func->scope;
     builder.jobs = jobs;
 
     builder.static_bool_base.id = AST_ELEM_BASE;
@@ -113,7 +113,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 
     // Append return instr for functions that return void
     if(!terminated){
-        handle_defer_management(&builder, &builder.var_scope->list);
+        handle_defer_management(&builder, &builder.scope->list);
 
         // Make sure to update references that may have been invalidated
         ast_func = &object->ast.funcs[ast_func_id];
@@ -151,7 +151,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     // Make sure to update references that may have been invalidated
     module_func = &object->ir_module.funcs[ir_func_id];
 
-    module_func->var_scope->following_var_id = builder.next_var_id;
+    module_func->scope->following_var_id = builder.next_var_id;
     module_func->variable_count = builder.next_var_id;
     module_func->basicblocks = builder.basicblocks;
     module_func->basicblocks_length = builder.basicblocks_length;
@@ -174,22 +174,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
     for(length_t s = 0; s != statements_length; s++){
         switch(statements[s]->id){
         case EXPR_RETURN: {        
-                // handle __defer__ calls
-                bridge_var_scope_t *visit_scope;
-                for(visit_scope = builder->var_scope; visit_scope->parent != NULL; visit_scope = visit_scope->parent){
-                    handle_defer_management(builder, &visit_scope->list);
-                }
-
                 // DANGEROUS: Could be invalidated by 'ir_gen_expression' call, in which case it should no longer be used
                 ast_func_t *ast_func = &builder->object->ast.funcs[builder->ast_func_id];
                 ast_type_t *return_type = &ast_func->return_type;
-
-                handle_defer_management(builder, &visit_scope->list);
-
-                if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder)){
-                    // Failed to auto-generate __defer__() calls to children of parent type
-                    return FAILURE;
-                }
 
                 if(((ast_expr_return_t*) statements[s])->value != NULL){
                     // Return non-void value
@@ -221,6 +208,22 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         free(a_type_str);
                         return FAILURE;
                     }
+                }
+
+                // Update ast_func in case 'ast.funcs' moved
+                ast_func = &builder->object->ast.funcs[builder->ast_func_id];
+
+                // handle __defer__ calls
+                bridge_scope_t *visit_scope;
+                for(visit_scope = builder->scope; visit_scope->parent != NULL; visit_scope = visit_scope->parent){
+                    handle_defer_management(builder, &visit_scope->list);
+                }
+
+                handle_defer_management(builder, &visit_scope->list);
+
+                if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder)){
+                    // Failed to auto-generate __defer__() calls to children of parent type
+                    return FAILURE;
                 }
 
                 built_instr = build_instruction(builder, sizeof(ir_instr_ret_t));
@@ -255,7 +258,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 // Check for non-global variable
-                bridge_var_t *var = bridge_var_scope_find_var(builder->var_scope, call_expr->name);
+                bridge_var_t *var = bridge_scope_find_var(builder->scope, call_expr->name);
 
                 if(var){
                     ast_var_type = var->ast_type;
@@ -383,7 +386,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_expr_declare_t *declare_stmt = ((ast_expr_declare_t*) statements[s]);
 
                 // Search for existing variable named that
-                if(bridge_var_scope_already_in_list(builder->var_scope, declare_stmt->name)){
+                if(bridge_scope_var_already_in_list(builder->scope, declare_stmt->name)){
                     compiler_panicf(builder->compiler, statements[s]->source, "Variable '%s' already declared", declare_stmt->name);
                     return FAILURE;
                 }
@@ -578,19 +581,19 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t if_stmts_length = ((ast_expr_if_t*) statements[s])->statements_length;
                 bool terminated;
 
-                open_var_scope(builder);
+                open_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, if_stmts, if_stmts_length, &terminated)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->var_scope->list);
+                    handle_defer_management(builder, &builder->scope->list);
                     build_break(builder, end_basicblock_id);
                 }
 
-                close_var_scope(builder);
+                close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
             }
             break;
@@ -631,37 +634,37 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t if_stmts_length = ((ast_expr_ifelse_t*) statements[s])->statements_length;
                 bool terminated;
 
-                open_var_scope(builder);
+                open_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
 
                 if(ir_gen_statements(builder, if_stmts, if_stmts_length, &terminated)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->var_scope->list);
+                    handle_defer_management(builder, &builder->scope->list);
                     build_break(builder, end_basicblock_id);
                 }
 
-                close_var_scope(builder);
+                close_scope(builder);
 
                 ast_expr_t **else_stmts = ((ast_expr_ifelse_t*) statements[s])->else_statements;
                 length_t else_stmts_length = ((ast_expr_ifelse_t*) statements[s])->else_statements_length;
 
-                open_var_scope(builder);
+                open_scope(builder);
                 build_using_basicblock(builder, else_basicblock_id);
                 if(ir_gen_statements(builder, else_stmts, else_stmts_length, &terminated)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->var_scope->list);
+                    handle_defer_management(builder, &builder->scope->list);
                     build_break(builder, end_basicblock_id);
                 }
 
-                close_var_scope(builder);
+                close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
             }
             break;
@@ -675,17 +678,17 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_while_t*) statements[s])->label;
                     builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
                     builder->block_stack_continue_ids[builder->block_stack_length] = test_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->var_scope;
+                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
                     builder->block_stack_length++;
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
                 length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_var_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
 
                 builder->break_block_id = end_basicblock_id;
                 builder->continue_block_id = test_basicblock_id;
-                builder->break_continue_scope = builder->var_scope;
+                builder->break_continue_scope = builder->scope;
 
                 build_break(builder, test_basicblock_id);
                 build_using_basicblock(builder, test_basicblock_id);
@@ -735,20 +738,20 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t while_stmts_length = ((ast_expr_while_t*) statements[s])->statements_length;
                 bool terminated;
 
-                open_var_scope(builder);
+                open_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, while_stmts, while_stmts_length, &terminated)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->var_scope->list);
+                    handle_defer_management(builder, &builder->scope->list);
                     build_break(builder, test_basicblock_id);
                 }
 
                 if(((ast_expr_while_t*) statements[s])->label != NULL) builder->block_stack_length--;
-                close_var_scope(builder);
+                close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
                 builder->break_block_id = prev_break_block_id;
@@ -765,17 +768,17 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_whilecontinue_t*) statements[s])->label;
                     builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
                     builder->block_stack_continue_ids[builder->block_stack_length] = new_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->var_scope;
+                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
                     builder->block_stack_length++;
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
                 length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_var_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
 
                 builder->break_block_id = end_basicblock_id;
                 builder->continue_block_id = new_basicblock_id;
-                builder->break_continue_scope = builder->var_scope;
+                builder->break_continue_scope = builder->scope;
 
                 build_break(builder, new_basicblock_id);
                 build_using_basicblock(builder, new_basicblock_id);
@@ -784,15 +787,15 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t loop_stmts_length = ((ast_expr_whilecontinue_t*) statements[s])->statements_length;
                 bool terminated;
 
-                open_var_scope(builder);
+                open_scope(builder);
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, loop_stmts, loop_stmts_length, &terminated)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->var_scope->list);
+                    handle_defer_management(builder, &builder->scope->list);
 
                     if(statements[s]->id == EXPR_WHILECONTINUE){
                         // 'while continue'
@@ -804,7 +807,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(((ast_expr_whilecontinue_t*) statements[s])->label != NULL) builder->block_stack_length--;
-                close_var_scope(builder);
+                close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
                 builder->break_block_id = prev_break_block_id;
@@ -957,8 +960,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                bridge_var_scope_t *visit_scope;
-                for(visit_scope = builder->var_scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
+                bridge_scope_t *visit_scope;
+                for(visit_scope = builder->scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
                     handle_defer_management(builder, &visit_scope->list);
                 }
                 handle_defer_management(builder, &visit_scope->list);
@@ -972,8 +975,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                bridge_var_scope_t *visit_scope;
-                for(visit_scope = builder->var_scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
+                bridge_scope_t *visit_scope;
+                for(visit_scope = builder->scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
                     handle_defer_management(builder, &visit_scope->list);
                 }
                 handle_defer_management(builder, &visit_scope->list);
@@ -984,7 +987,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_BREAK_TO: {
                 char *target_label = ((ast_expr_break_to_t*) statements[s])->label;
                 length_t target_block_id = 0;
-                bridge_var_scope_t *block_scope;
+                bridge_scope_t *block_scope;
 
                 for(length_t i = builder->block_stack_length - 1; i != -1 /* overflow occurs */; i--){
                     if(strcmp(target_label, builder->block_stack_labels[i]) == 0){
@@ -999,8 +1002,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                bridge_var_scope_t *visit_scope;
-                for(visit_scope = builder->var_scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
+                bridge_scope_t *visit_scope;
+                for(visit_scope = builder->scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
                     handle_defer_management(builder, &visit_scope->list);
                 }
                 handle_defer_management(builder, &visit_scope->list);
@@ -1011,7 +1014,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_CONTINUE_TO: {
                 char *target_label = ((ast_expr_continue_to_t*) statements[s])->label;
                 length_t target_block_id = 0;
-                bridge_var_scope_t *block_scope;
+                bridge_scope_t *block_scope;
 
                 for(length_t i = builder->block_stack_length - 1; i != -1 /* overflow occurs */; i--){
                     if(strcmp(target_label, builder->block_stack_labels[i]) == 0){
@@ -1026,8 +1029,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                bridge_var_scope_t *visit_scope;
-                for(visit_scope = builder->var_scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
+                bridge_scope_t *visit_scope;
+                for(visit_scope = builder->scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
                     handle_defer_management(builder, &visit_scope->list);
                 }
                 handle_defer_management(builder, &visit_scope->list);
@@ -1048,24 +1051,24 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     builder->block_stack_labels[builder->block_stack_length] = each_in->label;
                     builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
                     builder->block_stack_continue_ids[builder->block_stack_length] = inc_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->var_scope;
+                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
                     builder->block_stack_length++;
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
                 length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_var_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
 
                 builder->break_block_id = end_basicblock_id;
                 builder->continue_block_id = inc_basicblock_id;
-                builder->break_continue_scope = builder->var_scope;
+                builder->break_continue_scope = builder->scope;
 
                 ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
 
                 ir_type_t *idx_ir_type = ir_builder_usize(builder);
                 ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
 
-                open_var_scope(builder);
+                open_scope(builder);
 
                 // Create 'idx' variable
                 length_t idx_var_id = builder->next_var_id;
@@ -1123,7 +1126,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *array;
 
                 if(ir_gen_expression(builder, each_in->low_array, &array, false, &temporary_type)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
@@ -1131,7 +1134,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     compiler_panic(builder->compiler, each_in->low_array->source,
                         "Low-level array type for 'each in' statement must be a pointer");
                     ast_type_free(&temporary_type);
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
@@ -1152,7 +1155,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     free(s2);
 
                     ast_type_free(&temporary_type);
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
@@ -1179,12 +1182,12 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 bool terminated;
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, each_in->statements, each_in->statements_length, &terminated)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->var_scope->list);
+                    handle_defer_management(builder, &builder->scope->list);
                     build_break(builder, inc_basicblock_id);
                 }
 
@@ -1212,7 +1215,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Jump Prep
                 build_break(builder, prep_basicblock_id);
 
-                close_var_scope(builder);
+                close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
                 if(each_in->label != NULL) builder->block_stack_length--;
@@ -1235,24 +1238,24 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     builder->block_stack_labels[builder->block_stack_length] = repeat->label;
                     builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
                     builder->block_stack_continue_ids[builder->block_stack_length] = inc_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->var_scope;
+                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
                     builder->block_stack_length++;
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
                 length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_var_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
 
                 builder->break_block_id = end_basicblock_id;
                 builder->continue_block_id = inc_basicblock_id;
-                builder->break_continue_scope = builder->var_scope;
+                builder->break_continue_scope = builder->scope;
 
                 ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
 
                 ir_type_t *idx_ir_type = ir_builder_usize(builder);
                 ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
                 
-                open_var_scope(builder);
+                open_scope(builder);
 
                 // Create 'idx' variable
                 length_t idx_var_id = builder->next_var_id;
@@ -1274,7 +1277,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *limit;
 
                 if(ir_gen_expression(builder, repeat->limit, &limit, false, &temporary_type)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
@@ -1283,7 +1286,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
                     ast_type_free(&temporary_type);
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
@@ -1312,12 +1315,12 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 bool terminated;
                 build_using_basicblock(builder, new_basicblock_id);
                 if(ir_gen_statements(builder, repeat->statements, repeat->statements_length, &terminated)){
-                    close_var_scope(builder);
+                    close_scope(builder);
                     return FAILURE;
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->var_scope->list);
+                    handle_defer_management(builder, &builder->scope->list);
                     build_break(builder, inc_basicblock_id);
                 }
 
@@ -1345,7 +1348,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Jump Prep
                 build_break(builder, prep_basicblock_id);
 
-                close_var_scope(builder);
+                close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
                 if(repeat->label != NULL) builder->block_stack_length--;

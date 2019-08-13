@@ -62,10 +62,27 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base);
 
 // ---------------- type_table_add ----------------
 // Adds entry if it has a unique name
-// NOTE: Only takes ownership of name if added otherwise no ownership is taken
-// NOTE: Does not take ownership of 'weak_ast_type_entry.type'!!!!!!!!
 // NOTE: Returns whether the entry was added
-bool type_table_add(type_table_t *table, type_table_entry_t weak_ast_type_entry);
+// NOTE: If call fails, 'entry.name' will most likely need to be freed
+// DANGEROUS: This function is really quirky, and should avoided when possible
+//            Use 'type_table_give' instead!
+/*
+    -----------------------------------------------------------------
+                        Ownership transfer details
+    -----------------------------------------------------------------
+    typedef struct {
+        strong_cstr_t name;                Ownership taken if added
+        ast_type_t ast_type;               Ownership never taken (cloned instead)
+
+        #ifndef ADEPT_INSIGHT_BUILD
+        ir_type_t *ir_type;                Ownershipless
+        #endif
+        
+        bool is_alias;                     Ownershipless
+    } type_table_entry_t;
+    -----------------------------------------------------------------
+*/
+bool type_table_add(type_table_t *table, type_table_entry_t entry);
 
 #ifdef __cplusplus
 }

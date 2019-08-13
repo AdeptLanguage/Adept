@@ -62,7 +62,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     module_func->arity = 0;
     module_func->basicblocks = NULL; // Will be set after 'basicblocks' contains all of the basicblocks
     module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
-    module_func->var_scope = NULL;
+    module_func->scope = NULL;
     module_func->variable_count = 0;
 
     #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN  && \

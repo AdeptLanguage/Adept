@@ -430,7 +430,7 @@ typedef struct {
     length_t arity;
     ir_basicblock_t *basicblocks;
     length_t basicblocks_length;
-    bridge_var_scope_t *var_scope;
+    bridge_scope_t *scope;
     length_t variable_count;
 } ir_func_t;
 
@@ -570,7 +570,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
 void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, const char *instruction_name);
 void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, const char *real_name);
 void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instruction, int i);
-void ir_dump_var_scope_layout(FILE *file, bridge_var_scope_t *scope);
+void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope);
 
 // ---------------- ir_module_free ----------------
 // Initializes an IR module for use

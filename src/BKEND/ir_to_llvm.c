@@ -327,7 +327,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
             if(b == 0){ // Do any function entry instructions needed
                 // Allocate stack variables
                 for(length_t s = 0; s != stack.length; s++){
-                    bridge_var_t *var = bridge_var_scope_find_var_by_id(module_funcs[f].var_scope, s);
+                    bridge_var_t *var = bridge_scope_find_var_by_id(module_funcs[f].scope, s);
 
                     if(var == NULL){
                         redprintf("INTERNAL ERROR: VAR IN EXPORT STAGE COULD NOT BE FOUND (id: %d)\n", (int) s);

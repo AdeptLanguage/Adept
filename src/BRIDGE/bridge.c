@@ -4,7 +4,7 @@
 #include "UTIL/levenshtein.h"
 #include "BRIDGE/bridge.h"
 
-void bridge_var_scope_init(bridge_var_scope_t *out_scope, bridge_var_scope_t *parent){
+void bridge_scope_init(bridge_scope_t *out_scope, bridge_scope_t *parent){
     out_scope->parent = parent;
     out_scope->list.variables = NULL;
     out_scope->list.length = 0;
@@ -15,9 +15,9 @@ void bridge_var_scope_init(bridge_var_scope_t *out_scope, bridge_var_scope_t *pa
     out_scope->children_capacity = 0;
 }
 
-void bridge_var_scope_free(bridge_var_scope_t *scope){
+void bridge_scope_free(bridge_scope_t *scope){
     for(length_t i = 0; i != scope->children_length; i++){
-        bridge_var_scope_free(scope->children[i]);
+        bridge_scope_free(scope->children[i]);
         free(scope->children[i]);
     }
 
@@ -25,7 +25,7 @@ void bridge_var_scope_free(bridge_var_scope_t *scope){
     free(scope->children);
 
 }
-bridge_var_t* bridge_var_scope_find_var(bridge_var_scope_t *scope, const char *name){
+bridge_var_t* bridge_scope_find_var(bridge_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
         if(strcmp(scope->list.variables[i].name, name) == 0){
             return &scope->list.variables[i];
@@ -33,13 +33,13 @@ bridge_var_t* bridge_var_scope_find_var(bridge_var_scope_t *scope, const char *n
     }
 
     if(scope->parent){
-        return bridge_var_scope_find_var(scope->parent, name);
+        return bridge_scope_find_var(scope->parent, name);
     } else {
         return NULL;
     }
 }
 
-bridge_var_t* bridge_var_scope_find_var_by_id(bridge_var_scope_t *scope, length_t id){
+bridge_var_t* bridge_scope_find_var_by_id(bridge_scope_t *scope, length_t id){
     length_t starting_id = scope->first_var_id;
     length_t ending_id = scope->following_var_id;
     length_t count = scope->list.length;
@@ -51,27 +51,27 @@ bridge_var_t* bridge_var_scope_find_var_by_id(bridge_var_scope_t *scope, length_
     }
 
     if(id < ending_id) for(length_t i = 0; i != scope->children_length; i++){
-        bridge_var_t *var = bridge_var_scope_find_var_by_id(scope->children[i], id);
+        bridge_var_t *var = bridge_scope_find_var_by_id(scope->children[i], id);
         if(var) return var;
     }
 
     return NULL;
 }
 
-bool bridge_var_scope_already_in_list(bridge_var_scope_t *scope, const char *name){
+bool bridge_scope_var_already_in_list(bridge_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
         if(strcmp(scope->list.variables[i].name, name) == 0) return true;
     }
     return false;
 }
 
-const char* bridge_var_scope_nearest(bridge_var_scope_t *scope, const char *name){
+const char* bridge_scope_var_nearest(bridge_scope_t *scope, const char *name){
     char *nearest_name = NULL;
-    bridge_var_scope_nearest_inner(scope, name, &nearest_name, NULL);
+    bridge_scope_var_nearest_inner(scope, name, &nearest_name, NULL);
     return nearest_name;
 }
 
-void bridge_var_scope_nearest_inner(bridge_var_scope_t *scope, const char *name, char **out_nearest_name, int *out_distance){
+void bridge_scope_var_nearest_inner(bridge_scope_t *scope, const char *name, char **out_nearest_name, int *out_distance){
     // NOTE: out_nearest_name must be a valid pointer
     // NOTE: out_distance may be NULL
 

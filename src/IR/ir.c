@@ -268,7 +268,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
         if(!(functions[f].traits & IR_FUNC_FOREIGN))
             fprintf(file, "    {%d BBs, %d INSTRs, %d VARs}\n", (int) functions[f].basicblocks_length, (int) total_instructions, (int) functions[f].variable_count);
 
-        ir_dump_var_scope_layout(file, functions[f].var_scope);
+        ir_dump_var_scope_layout(file, functions[f].scope);
 
         char *val_str, *dest_str, *idx_str;
 
@@ -620,7 +620,7 @@ void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instr
     free(call_result_type);
 }
 
-void ir_dump_var_scope_layout(FILE *file, bridge_var_scope_t *scope){
+void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope){
     if(!scope) return;
 
     for(length_t v = 0; v != scope->list.length; v++){
@@ -683,9 +683,9 @@ void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
         free(funcs[f].basicblocks);
         free(funcs[f].argument_types);
 
-        if(funcs[f].var_scope != NULL){
-            bridge_var_scope_free(funcs[f].var_scope);
-            free(funcs[f].var_scope);
+        if(funcs[f].scope != NULL){
+            bridge_scope_free(funcs[f].scope);
+            free(funcs[f].scope);
         }
     }
 }

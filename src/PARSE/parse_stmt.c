@@ -80,6 +80,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                             break;
                         }
 
+                        // NOTE: This is not the only place which assignment operators are handled
                         unsigned int id = tokens[(*i)++].id;
                         if(id != TOKEN_ASSIGN && id != TOKEN_ADDASSIGN
                         && id != TOKEN_SUBTRACTASSIGN && id != TOKEN_MULTIPLYASSIGN
@@ -153,12 +154,19 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                     return FAILURE;
                 }
 
+                bool is_pod = false;
+                if(tokens[*i].id == TOKEN_POD){
+                    is_pod = true;
+                    (*i)++;
+                }
+
                 ast_expr_t *value_expression;
                 if(parse_expr(ctx, &value_expression)){
                     ast_expr_free_fully(mutable_expression);
                     return FAILURE;
                 }
 
+                // NOTE: This is not the only place which assignment operators are handled
                 unsigned int stmt_id;
                 switch(id){
                 case TOKEN_ASSIGN: stmt_id = EXPR_ASSIGN; break;
@@ -178,6 +186,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 stmt->source = source;
                 stmt->destination = mutable_expression;
                 stmt->value = value_expression;
+                stmt->is_pod = is_pod;
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;

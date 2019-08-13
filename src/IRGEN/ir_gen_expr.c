@@ -294,7 +294,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         break;
     case EXPR_VARIABLE: {
             char *variable_name = ((ast_expr_variable_t*) expr)->name;
-            bridge_var_t *variable = bridge_var_scope_find_var(builder->var_scope, variable_name);
+            bridge_var_t *variable = bridge_scope_find_var(builder->scope, variable_name);
             length_t var_index;
 
             if(variable){
@@ -348,7 +348,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // No suitable variable or global found
             compiler_panicf(builder->compiler, ((ast_expr_variable_t*) expr)->source, "Undeclared variable '%s'", variable_name);
-            const char *nearest = bridge_var_scope_nearest(builder->var_scope, variable_name);
+            const char *nearest = bridge_scope_var_nearest(builder->scope, variable_name);
             if(nearest) printf("\nDid you mean '%s'?\n", nearest);
             return FAILURE;
         }
@@ -372,7 +372,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             // Check for non-global variable
-            bridge_var_t *var = bridge_var_scope_find_var(builder->var_scope, call_expr->name);
+            bridge_var_t *var = bridge_scope_find_var(builder->scope, call_expr->name);
 
             if(var){
                 ast_var_type = var->ast_type;
@@ -1549,7 +1549,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
 
             // Search for existing variable named that
-            if(bridge_var_scope_already_in_list(builder->var_scope, def->name)){
+            if(bridge_scope_var_already_in_list(builder->scope, def->name)){
                 compiler_panicf(builder->compiler, def->source, "Variable '%s' already declared", def->name);
                 return FAILURE;
             }

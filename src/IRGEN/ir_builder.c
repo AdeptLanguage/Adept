@@ -446,18 +446,18 @@ void prepare_for_new_label(ir_builder_t *builder){
         builder->block_stack_labels = malloc(sizeof(char*) * 4);
         builder->block_stack_break_ids = malloc(sizeof(length_t) * 4);
         builder->block_stack_continue_ids = malloc(sizeof(length_t) * 4);
-        builder->block_stack_scopes = malloc(sizeof(bridge_var_scope_t*) * 4);
+        builder->block_stack_scopes = malloc(sizeof(bridge_scope_t*) * 4);
         builder->block_stack_capacity = 4;
     } else if(builder->block_stack_length == builder->block_stack_capacity){
         builder->block_stack_capacity *= 2;
         char **new_block_stack_labels = malloc(sizeof(char*) * builder->block_stack_capacity);
         length_t *new_block_stack_break_ids = malloc(sizeof(length_t) * builder->block_stack_capacity);
         length_t *new_block_stack_continue_ids = malloc(sizeof(length_t) * builder->block_stack_capacity);
-        bridge_var_scope_t **new_block_stack_scopes = malloc(sizeof(bridge_var_scope_t*) * builder->block_stack_capacity);
+        bridge_scope_t **new_block_stack_scopes = malloc(sizeof(bridge_scope_t*) * builder->block_stack_capacity);
         memcpy(new_block_stack_labels, builder->block_stack_labels, sizeof(char*) * builder->block_stack_length);
         memcpy(new_block_stack_break_ids, builder->block_stack_break_ids, sizeof(length_t) * builder->block_stack_length);
         memcpy(new_block_stack_continue_ids, builder->block_stack_continue_ids, sizeof(length_t) * builder->block_stack_length);
-        memcpy(new_block_stack_scopes, builder->block_stack_scopes, sizeof(bridge_var_scope_t*) * builder->block_stack_length);
+        memcpy(new_block_stack_scopes, builder->block_stack_scopes, sizeof(bridge_scope_t*) * builder->block_stack_length);
         free(builder->block_stack_labels);
         free(builder->block_stack_break_ids);
         free(builder->block_stack_continue_ids);
@@ -469,30 +469,28 @@ void prepare_for_new_label(ir_builder_t *builder){
     }
 }
 
-void open_var_scope(ir_builder_t *builder){
-    bridge_var_scope_t *var_scope = builder->var_scope;
-    bridge_var_scope_t *scope = malloc(sizeof(bridge_var_scope_t));
-    bridge_var_scope_init(scope, builder->var_scope);
-    scope->first_var_id = builder->next_var_id;
-    scope->parent = var_scope;
+void open_scope(ir_builder_t *builder){
+    bridge_scope_t *old_scope = builder->scope;
+    bridge_scope_t *new_scope = malloc(sizeof(bridge_scope_t));
+    bridge_scope_init(new_scope, old_scope);
+    new_scope->first_var_id = builder->next_var_id;
 
-    expand((void**) &var_scope->children, sizeof(bridge_var_scope_t*), var_scope->children_length, &var_scope->children_capacity, 1, 4);
-    var_scope->children[var_scope->children_length++] = scope;
-    builder->var_scope = scope;
+    expand((void**) &old_scope->children, sizeof(bridge_scope_t*), old_scope->children_length, &old_scope->children_capacity, 1, 4);
+    old_scope->children[old_scope->children_length++] = new_scope;
+    builder->scope = new_scope;
 }
 
-void close_var_scope(ir_builder_t *builder){
-    if(builder->var_scope->parent == NULL) redprintf("INTERNAL ERROR: TRIED TO CLOSE BRIDGE VARIABLE SCOPE WITH NO PARENT, probably will crash...\n");
-
-    bridge_var_scope_t *old_scope = builder->var_scope;
-    old_scope->following_var_id = builder->next_var_id;
-    builder->var_scope = old_scope->parent;
+void close_scope(ir_builder_t *builder){
+    builder->scope->following_var_id = builder->next_var_id;
+    builder->scope = builder->scope->parent;
+    
+    if(builder->scope == NULL)
+        redprintf("INTERNAL ERROR: TRIED TO CLOSE BRIDGE SCOPE WITH NO PARENT, probably will crash...\n");
 }
 
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
-    bridge_var_list_t *list = &builder->var_scope->list;
+    bridge_var_list_t *list = &builder->scope->list;
     expand((void**) &list->variables, sizeof(bridge_var_t), list->length, &list->capacity, 1, 4);
-
     list->variables[list->length].name = name;
     list->variables[list->length].ast_type = ast_type;
     list->variables[list->length].ir_type = ir_type;
