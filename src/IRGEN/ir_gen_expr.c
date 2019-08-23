@@ -63,6 +63,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         BUILD_LITERAL_IR_VALUE(ast_expr_long_t, "long", long long); break;
     case EXPR_ULONG:
         BUILD_LITERAL_IR_VALUE(ast_expr_ulong_t, "ulong", unsigned long long); break;
+    case EXPR_USIZE:
+        BUILD_LITERAL_IR_VALUE(ast_expr_usize_t, "usize", unsigned long long); break;
     case EXPR_FLOAT:
         BUILD_LITERAL_IR_VALUE(ast_expr_float_t, "float", /*stored w/ extra precision*/ double); break;
     case EXPR_DOUBLE:

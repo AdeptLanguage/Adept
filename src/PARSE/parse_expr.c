@@ -55,6 +55,9 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_ULONG:
         LITERAL_TO_EXPR(ast_expr_ulong_t, EXPR_ULONG, unsigned long long);
         break;
+    case TOKEN_USIZE:
+        LITERAL_TO_EXPR(ast_expr_usize_t, EXPR_USIZE, unsigned long long);
+        break;
     case TOKEN_FLOAT:
         LITERAL_TO_EXPR(ast_expr_float_t, EXPR_FLOAT, float);
         break;

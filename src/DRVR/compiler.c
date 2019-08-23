@@ -587,8 +587,9 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
 
     ir_module_t *ir_module = &object->ir_module;
     maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
-    
-    if(original_index == -1){
+    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
+
+    if(original_index == -1 && poly_index == -1){
         // No other function with that name exists
         compiler_panicf(compiler, source, "Undeclared function '%s'", name);
         return;
@@ -603,15 +604,36 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
 
     maybe_index_t index = original_index;
 
-    do {
+    if(index != -1) do {
         ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
 
         if(mapping->is_beginning_of_group == -1){
-            mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
+            mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
         }
         if(mapping->is_beginning_of_group == 1 && index != original_index) return;
 
         ast_func_t *ast_func = &object->ast.funcs[mapping->ast_func_id];
+
+        char *return_type_string = ast_type_str(&ast_func->return_type);
+        char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);
+
+        printf("    %s(%s) %s\n", ast_func->name, args_string, return_type_string);
+
+        free(args_string);
+        free(return_type_string);
+    } while(++index != ir_module->funcs_length);
+
+    index = poly_index;
+
+    if(index != -1) do {
+        ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
+        
+        if(poly->is_beginning_of_group == -1){
+            poly->is_beginning_of_group = index == 0 ? 1 : (strcmp(poly->name, ir_module->func_mappings[index - 1].name) != 0);
+        }
+        if(poly->is_beginning_of_group == 1 && index != poly_index) return;
+
+        ast_func_t *ast_func = &object->ast.funcs[poly->ast_func_id];
 
         char *return_type_string = ast_type_str(&ast_func->return_type);
         char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);

@@ -88,6 +88,9 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_ULONG:
             printf("Unsigned Long [Loss of Data]: %lu\n", (long) *((long long*) tokenlist->tokens[i].data)); // Loss of data when printed
             break;
+        case TOKEN_USIZE:
+            printf("Unsigned Long [Loss of Data]: %lu\n", (long) *((long long*) tokenlist->tokens[i].data)); // Loss of data when printed
+            break;
         case TOKEN_FLOAT:
             printf("Float: %f\n", (double) *((float*) tokenlist->tokens[i].data));
             break;
@@ -216,40 +219,40 @@ const char *global_token_name_table[] = {
     "uint literal",           // 0x0000001A
     "long literal",           // 0x0000001B
     "ulong literal",          // 0x0000001C
-    "float literal",          // 0x0000001D
-    "double literal",         // 0x0000001E
-    "member access operator", // 0x0000001F
-    "address operator",       // 0x00000021
-    "next operator",          // 0x00000020
-    "square bracket open",    // 0x00000022
-    "square bracket close",   // 0x00000023
-    "modulus",                // 0x00000024
-    "generic integer value",  // 0x00000025
-    "generic float value",    // 0x00000026
-    "add assign",             // 0x00000027
-    "subtract assign",        // 0x00000028
-    "multiply assign",        // 0x00000029
-    "divide assign",          // 0x0000002A
-    "modulus assign",         // 0x0000002B
-    "ellipsis",               // 0x0000002C
-    "uber and",               // 0x0000002D
-    "uber or",                // 0x0000002E
-    "terminate join",         // 0x0000002F
-    "colon",                  // 0x00000030
-    "bit or",                 // 0x00000031
-    "bit and",                // 0x00000032
-    "left shift",             // 0x00000033
-    "right shift",            // 0x00000034
-    "complement",             // 0x00000035
-    "logical left shift",     // 0x00000036
-    "logical right shift",    // 0x00000037
-    "namespace",              // 0x00000038
-    "meta directive",         // 0x00000039
-    "polymorph",              // 0x0000003A
-    "maybe",                  // 0x0000003B
-    "increment",              // 0x0000003C
-    "decrement",              // 0x0000003D
-    "reserved",               // 0x0000003E
+    "usize literal",          // 0x0000001D
+    "float literal",          // 0x0000001E
+    "double literal",         // 0x0000001F
+    "member access operator", // 0x00000021
+    "address operator",       // 0x00000020
+    "next operator",          // 0x00000022
+    "square bracket open",    // 0x00000023
+    "square bracket close",   // 0x00000024
+    "modulus",                // 0x00000025
+    "generic integer value",  // 0x00000026
+    "generic float value",    // 0x00000027
+    "add assign",             // 0x00000028
+    "subtract assign",        // 0x00000029
+    "multiply assign",        // 0x0000002A
+    "divide assign",          // 0x0000002B
+    "modulus assign",         // 0x0000002C
+    "ellipsis",               // 0x0000002D
+    "uber and",               // 0x0000002E
+    "uber or",                // 0x0000002F
+    "terminate join",         // 0x00000030
+    "colon",                  // 0x00000031
+    "bit or",                 // 0x00000032
+    "bit and",                // 0x00000033
+    "left shift",             // 0x00000034
+    "right shift",            // 0x00000035
+    "complement",             // 0x00000036
+    "logical left shift",     // 0x00000037
+    "logical right shift",    // 0x00000038
+    "namespace",              // 0x00000039
+    "meta directive",         // 0x0000003A
+    "polymorph",              // 0x0000003B
+    "maybe",                  // 0x0000003C
+    "increment",              // 0x0000003D
+    "decrement",              // 0x0000003E
     "reserved",               // 0x0000003F
     "POD keyword",            // 0x00000040
     "alias keyword",          // 0x00000041

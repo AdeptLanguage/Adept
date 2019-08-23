@@ -175,7 +175,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
                 if(infer_type(ctx, loop->it_type)) return FAILURE;
                 if(infer_expr(ctx, func, &loop->low_array, EXPR_NONE, scope)) return FAILURE;
-                if(infer_expr(ctx, func, &loop->length, EXPR_ULONG, scope)) return FAILURE;
+                if(infer_expr(ctx, func, &loop->length, EXPR_USIZE, scope)) return FAILURE;
  
                 infer_var_scope_push(&scope);
                 infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
@@ -190,7 +190,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
             break;
         case EXPR_REPEAT: {
                 ast_expr_repeat_t *loop = (ast_expr_repeat_t*) statements[s];
-                if(infer_expr(ctx, func, &loop->limit, EXPR_ULONG, scope)) return FAILURE;
+                if(infer_expr(ctx, func, &loop->limit, EXPR_USIZE, scope)) return FAILURE;
  
                 infer_var_scope_push(&scope);
                 infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
@@ -268,6 +268,9 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
             break;
         case EXPR_ULONG:
             type_table_give_base(ctx->type_table, "ulong");
+            break;
+        case EXPR_USIZE:
+            type_table_give_base(ctx->type_table, "usize");
             break;
         case EXPR_DOUBLE:
             type_table_give_base(ctx->type_table, "double");
@@ -364,6 +367,10 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         break;
     case EXPR_ULONG:
         type_table_give_base(ctx->type_table, "ulong");
+        if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
+        break;
+    case EXPR_USIZE:
+        type_table_give_base(ctx->type_table, "usize");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_FLOAT:
@@ -665,7 +672,7 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
                     ((ast_expr_short_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
                 }
                 break;
-            case EXPR_INT: case EXPR_UINT: case EXPR_LONG: case EXPR_ULONG:
+            case EXPR_INT: case EXPR_UINT: case EXPR_LONG: case EXPR_ULONG: case EXPR_USIZE:
                 break; // No changes special changes necessary
             case EXPR_FLOAT: case EXPR_DOUBLE: {
                     double tmp = (double) ((ast_expr_generic_int_t*) expr)->value;
@@ -698,7 +705,7 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
                     compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a %s", target_primitive == EXPR_SHORT ? "short" : "ushort");
                 }
                 break;
-            case EXPR_INT: case EXPR_UINT: case EXPR_LONG: case EXPR_ULONG: {
+            case EXPR_INT: case EXPR_UINT: case EXPR_LONG: case EXPR_ULONG: case EXPR_USIZE: {
                     long long tmp = (long long) ((ast_expr_generic_float_t*) expr)->value;
                     ((ast_expr_int_t*) expr)->value = tmp; // // This is ok because the memory that was allocated is larger than needed
                 }
@@ -769,7 +776,7 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
     case BUILTIN_TYPE_UINT:       return EXPR_UINT;
     case BUILTIN_TYPE_ULONG:      return EXPR_ULONG;
     case BUILTIN_TYPE_USHORT:     return EXPR_USHORT;
-    case BUILTIN_TYPE_USIZE:      return EXPR_ULONG;
+    case BUILTIN_TYPE_USIZE:      return EXPR_USIZE;
     case BUILTIN_TYPE_NONE:       return EXPR_NONE;
     }
 

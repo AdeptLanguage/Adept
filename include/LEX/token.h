@@ -22,7 +22,7 @@ extern "C" {
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x0000000F
+#define TOKEN_ITERATION_VERSION 0x00000010
 
 typedef unsigned short tokenid_t;
 
@@ -93,42 +93,42 @@ extern const char *global_token_name_table[];
 #define TOKEN_UINT             0x0000001A
 #define TOKEN_LONG             0x0000001B
 #define TOKEN_ULONG            0x0000001C
-#define TOKEN_USIZE            TOKEN_ULONG
-#define TOKEN_FLOAT            0x0000001D
-#define TOKEN_DOUBLE           0x0000001E
-#define TOKEN_MEMBER           0x0000001F
-#define TOKEN_ADDRESS          0x00000020
+#define TOKEN_USIZE            0x0000001D
+#define TOKEN_FLOAT            0x0000001E
+#define TOKEN_DOUBLE           0x0000001F
+#define TOKEN_MEMBER           0x00000020
+#define TOKEN_ADDRESS          0x00000021
 #define TOKEN_BIT_AND          TOKEN_ADDRESS
-#define TOKEN_NEXT             0x00000021
-#define TOKEN_BRACKET_OPEN     0x00000022
-#define TOKEN_BRACKET_CLOSE    0x00000023
-#define TOKEN_MODULUS          0x00000024
-#define TOKEN_GENERIC_INT      0x00000025
-#define TOKEN_GENERIC_FLOAT    0x00000026
-#define TOKEN_ADDASSIGN        0x00000027
-#define TOKEN_SUBTRACTASSIGN   0x00000028
-#define TOKEN_MULTIPLYASSIGN   0x00000029
-#define TOKEN_DIVIDEASSIGN     0x0000002A
-#define TOKEN_MODULUSASSIGN    0x0000002B
-#define TOKEN_ELLIPSIS         0x0000002C
-#define TOKEN_UBERAND          0x0000002D
-#define TOKEN_UBEROR           0x0000002E
-#define TOKEN_TERMINATE_JOIN   0x0000002F
-#define TOKEN_COLON            0x00000030
-#define TOKEN_BIT_OR           0x00000031
-#define TOKEN_BIT_XOR          0x00000032
-#define TOKEN_BIT_LSHIFT       0x00000033
-#define TOKEN_BIT_RSHIFT       0x00000034
-#define TOKEN_BIT_COMPLEMENT   0x00000035
-#define TOKEN_BIT_LGC_LSHIFT   0x00000036
-#define TOKEN_BIT_LGC_RSHIFT   0x00000037
-#define TOKEN_NAMESPACE        0x00000038
-#define TOKEN_META             0x00000039
-#define TOKEN_POLYMORPH        0x0000003A
-#define TOKEN_MAYBE            0x0000003B
-#define TOKEN_INCREMENT        0x0000003C
-#define TOKEN_DECREMENT        0x0000003D
-// 3E..3F
+#define TOKEN_NEXT             0x00000022
+#define TOKEN_BRACKET_OPEN     0x00000023
+#define TOKEN_BRACKET_CLOSE    0x00000024
+#define TOKEN_MODULUS          0x00000025
+#define TOKEN_GENERIC_INT      0x00000026
+#define TOKEN_GENERIC_FLOAT    0x00000027
+#define TOKEN_ADDASSIGN        0x00000028
+#define TOKEN_SUBTRACTASSIGN   0x00000029
+#define TOKEN_MULTIPLYASSIGN   0x0000002A
+#define TOKEN_DIVIDEASSIGN     0x0000002B
+#define TOKEN_MODULUSASSIGN    0x0000002C
+#define TOKEN_ELLIPSIS         0x0000002D
+#define TOKEN_UBERAND          0x0000002E
+#define TOKEN_UBEROR           0x0000002F
+#define TOKEN_TERMINATE_JOIN   0x00000030
+#define TOKEN_COLON            0x00000031
+#define TOKEN_BIT_OR           0x00000032
+#define TOKEN_BIT_XOR          0x00000033
+#define TOKEN_BIT_LSHIFT       0x00000034
+#define TOKEN_BIT_RSHIFT       0x00000035
+#define TOKEN_BIT_COMPLEMENT   0x00000036
+#define TOKEN_BIT_LGC_LSHIFT   0x00000037
+#define TOKEN_BIT_LGC_RSHIFT   0x00000038
+#define TOKEN_NAMESPACE        0x00000039
+#define TOKEN_META             0x0000003A
+#define TOKEN_POLYMORPH        0x0000003B
+#define TOKEN_MAYBE            0x0000003C
+#define TOKEN_INCREMENT        0x0000003D
+#define TOKEN_DECREMENT        0x0000003E
+// 3F..3F
 
 // NOTE: 0x00000040 .. 0x0000006F reserved for keywords
 // Keywords are organized as such that 0x00000040 + the id of
