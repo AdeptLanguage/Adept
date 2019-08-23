@@ -6,7 +6,37 @@
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
 
-errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_list_t *defer_list, trait_t mode){
+void defer_scope_init(defer_scope_t *defer_scope, defer_scope_t *parent, weak_cstr_t label, trait_t traits){
+    defer_scope->list.statements = NULL;
+    defer_scope->list.length = 0;
+    defer_scope->list.capacity = 0;
+    defer_scope->parent = parent;
+    defer_scope->label = label;
+    defer_scope->traits = traits;
+}
+
+void defer_scope_free(defer_scope_t *defer_scope){
+    ast_free_statements_fully(defer_scope->list.statements, defer_scope->list.length);
+}
+
+length_t defer_scope_total(defer_scope_t *defer_scope){
+    length_t total = 0;
+    while(defer_scope){
+        total += defer_scope->list.length;
+        defer_scope = defer_scope->parent;
+    }
+    return total;
+}
+
+void defer_scope_fulfill(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list){
+    expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, defer_scope->list.length, defer_scope->list.length);
+    for(length_t r = defer_scope->list.length; r != 0; r--){
+        stmt_list->statements[stmt_list->length++] = defer_scope->list.statements[r - 1];
+    }
+    defer_scope->list.length = 0;
+}
+
+errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope, trait_t mode){
     // NOTE: Outputs statements to stmt_list
     // NOTE: Ends on 'i' pointing to a '}' token
     // NOTE: Even if this function returns 1, statements appended to stmt_list still must be freed
@@ -39,9 +69,21 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 stmt->id = EXPR_RETURN;
                 stmt->source = source;
                 stmt->value = return_expression;
+                stmt->last_minute.capacity = defer_scope_total(defer_scope);
+                stmt->last_minute.statements = malloc(stmt->last_minute.capacity * sizeof(ast_expr_t*));
+                stmt->last_minute.length = 0;
 
-                // Unravel all remaining defer statements
-                parse_unravel_defer_stmts(stmt_list, defer_list, 0);
+                defer_scope_fulfill(defer_scope, &stmt->last_minute);
+
+                // Duplicate defer statements of ancestors
+                defer_scope_t *traverse = defer_scope->parent;
+
+                while(traverse){
+                    for(size_t r = traverse->list.length; r != 0; r--){
+                        stmt->last_minute.statements[stmt->last_minute.length++] = ast_expr_clone(traverse->list.statements[r - 1]);
+                    }
+                    traverse = traverse->parent;
+                }
 
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
@@ -212,16 +254,17 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 if_stmt_list.length = 0;
                 if_stmt_list.capacity = 4;
 
-                length_t defer_unravel_length = defer_list->length;
+                defer_scope_t if_defer_scope;
+                defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
 
-                if(parse_stmts(ctx, &if_stmt_list, defer_list, stmts_mode)){
+                if(parse_stmts(ctx, &if_stmt_list, &if_defer_scope, stmts_mode)){
                     ast_free_statements_fully(if_stmt_list.statements, if_stmt_list.length);
                     ast_expr_free_fully(conditional);
+                    defer_scope_free(&if_defer_scope);
                     return FAILURE;
                 }
 
-                // Unravel all defer statements added in the block
-                parse_unravel_defer_stmts(&if_stmt_list, defer_list, defer_unravel_length);
+                defer_scope_free(&if_defer_scope);
 
                 if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
 
@@ -248,17 +291,17 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                     else_stmt_list.length = 0;
                     else_stmt_list.capacity = 4;
 
-                    defer_unravel_length = defer_list->length;
+                    // Reuse 'if_defer_scope' for else defer scope
+                    defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
 
-                    if(parse_stmts(ctx, &else_stmt_list, defer_list, stmts_mode)){
+                    if(parse_stmts(ctx, &else_stmt_list, &if_defer_scope, stmts_mode)){
                         ast_free_statements_fully(else_stmt_list.statements, else_stmt_list.length);
-                        ast_free_statements_fully(if_stmt_list.statements, if_stmt_list.length);
                         ast_expr_free_fully(conditional);
+                        defer_scope_free(&if_defer_scope);
                         return FAILURE;
                     }
 
-                    // Unravel all defer statements added in the block
-                    parse_unravel_defer_stmts(&else_stmt_list, defer_list, defer_unravel_length);
+                    defer_scope_free(&if_defer_scope);
 
                     if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
                     else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
@@ -335,16 +378,17 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 while_stmt_list.length = 0;
                 while_stmt_list.capacity = 4;
 
-                length_t defer_unravel_length = defer_list->length;
+                defer_scope_t while_defer_scope;
+                defer_scope_init(&while_defer_scope, defer_scope, label, BREAKABLE | CONTINUABLE);
 
-                if(parse_stmts(ctx, &while_stmt_list, defer_list, stmts_mode)){
+                if(parse_stmts(ctx, &while_stmt_list, &while_defer_scope, stmts_mode)){
                     ast_free_statements_fully(while_stmt_list.statements, while_stmt_list.length);
                     ast_expr_free_fully(conditional);
+                    defer_scope_free(&while_defer_scope);
                     return FAILURE;
                 }
-
-                // Unravel all defer statements added in the block
-                parse_unravel_defer_stmts(&while_stmt_list, defer_list, defer_unravel_length);
+                
+                defer_scope_free(&while_defer_scope);
 
                 if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
                 else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
@@ -483,19 +527,20 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 each_in_stmt_list.length = 0;
                 each_in_stmt_list.capacity = 4;
 
-                length_t defer_unravel_length = defer_list->length;
+                defer_scope_t each_in_defer_scope;
+                defer_scope_init(&each_in_defer_scope, defer_scope, label, BREAKABLE | CONTINUABLE);
 
-                if(parse_stmts(ctx, &each_in_stmt_list, defer_list, stmts_mode)){
+                if(parse_stmts(ctx, &each_in_stmt_list, &each_in_defer_scope, stmts_mode)){
                     ast_free_statements_fully(each_in_stmt_list.statements, each_in_stmt_list.length);
                     ast_type_free_fully(it_type);
                     ast_expr_free_fully(low_array);
                     ast_expr_free_fully(length_limit);
                     free(it_name);
+                    defer_scope_free(&each_in_defer_scope);
                     return FAILURE;
                 }
 
-                // Unravel all defer statements added in the block
-                parse_unravel_defer_stmts(&each_in_stmt_list, defer_list, defer_unravel_length);
+                defer_scope_free(&each_in_defer_scope);
 
                 if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
                 else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
@@ -535,21 +580,22 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                     return FAILURE;
                 }
 
-                ast_expr_list_t each_in_stmt_list;
-                each_in_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
-                each_in_stmt_list.length = 0;
-                each_in_stmt_list.capacity = 4;
+                ast_expr_list_t repeat_stmt_list;
+                repeat_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
+                repeat_stmt_list.length = 0;
+                repeat_stmt_list.capacity = 4;
 
-                length_t defer_unravel_length = defer_list->length;
+                defer_scope_t repeat_defer_scope;
+                defer_scope_init(&repeat_defer_scope, defer_scope, label, BREAKABLE | CONTINUABLE);
 
-                if(parse_stmts(ctx, &each_in_stmt_list, defer_list, stmts_mode)){
-                    ast_free_statements_fully(each_in_stmt_list.statements, each_in_stmt_list.length);
+                if(parse_stmts(ctx, &repeat_stmt_list, &repeat_defer_scope, stmts_mode)){
+                    ast_free_statements_fully(repeat_stmt_list.statements, repeat_stmt_list.length);
                     ast_expr_free_fully(limit);
+                    defer_scope_free(&repeat_defer_scope);
                     return FAILURE;
                 }
 
-                // Unravel all defer statements added in the block
-                parse_unravel_defer_stmts(&each_in_stmt_list, defer_list, defer_unravel_length);
+                defer_scope_free(&repeat_defer_scope);
 
                 if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
                 else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
@@ -559,16 +605,24 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
                 stmt->source = source;
                 stmt->label = label;
                 stmt->limit = limit;
-                stmt->statements = each_in_stmt_list.statements;
-                stmt->statements_length = each_in_stmt_list.length;
-                stmt->statements_capacity = each_in_stmt_list.capacity;
+                stmt->statements = repeat_stmt_list.statements;
+                stmt->statements_length = repeat_stmt_list.length;
+                stmt->statements_capacity = repeat_stmt_list.capacity;
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;
         case TOKEN_DEFER: {
+                defer_scope_t defer_defer_scope;
+                defer_scope_init(&defer_defer_scope, defer_scope, NULL, TRAIT_NONE);
+
                 (*i)++; // Skip over 'defer' keyword
-                if(parse_stmts(ctx, defer_list, defer_list, PARSE_STMTS_SINGLE)) return FAILURE;
+                if(parse_stmts(ctx, &defer_scope->list, &defer_defer_scope, PARSE_STMTS_SINGLE)){
+                    defer_scope_free(&defer_defer_scope);
+                    return FAILURE;
+                }
                 (*i)--; // Go back to newline because we used PARSE_STMTS_SINGLE
+
+                defer_scope_free(&defer_defer_scope);
             }
             break;
         case TOKEN_DELETE: {
@@ -636,9 +690,13 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_l
         }
         (*i)++;
 
-        if(mode & PARSE_STMTS_SINGLE) return SUCCESS;
+        if(mode & PARSE_STMTS_SINGLE){
+            defer_scope_fulfill(defer_scope, stmt_list);
+            return SUCCESS;
+        }
     }
 
+    defer_scope_fulfill(defer_scope, stmt_list);
     return SUCCESS; // '}' was reached
 }
 
@@ -809,27 +867,4 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     free(decl_names);
     free(decl_sources);
     return SUCCESS;
-}
-
-void parse_unravel_defer_stmts(ast_expr_list_t *stmts, ast_expr_list_t *defer_list, length_t unravel_length){
-    // This function will spit out each statement in 'defer_list' into 'stmts' in reverse order
-    //     so that defer_list->length will be back at a previously sampled 'unravel_length'
-
-    // ------------------------------------------
-    // | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-    // -----------------------------------------
-    //         ^                               ^
-    //  unravel_length (2)         defer_list->length (10)
-
-    // Will spit out statements 9, 8, 7, 6, 5, 4, 3, and 2 in above example (8 in total)
-
-    if(defer_list->length == 0) return;
-    expand((void**) &stmts->statements, sizeof(ast_expr_t*), stmts->length, &stmts->capacity, defer_list->length - unravel_length, 8);
-
-    for(length_t len_idx = defer_list->length; len_idx != unravel_length; len_idx--){
-        // Spit out statement before 'len_idx' while it hasn't reached the target length of 'unravel_length'
-        stmts->statements[stmts->length++] = defer_list->statements[len_idx - 1];
-    }
-
-    defer_list->length = unravel_length;
 }

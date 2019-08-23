@@ -177,10 +177,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // DANGEROUS: Could be invalidated by 'ir_gen_expression' call, in which case it should no longer be used
                 ast_func_t *ast_func = &builder->object->ast.funcs[builder->ast_func_id];
                 ast_type_t *return_type = &ast_func->return_type;
+                ast_expr_return_t *return_stmt = (ast_expr_return_t*) statements[s];
 
-                if(((ast_expr_return_t*) statements[s])->value != NULL){
+                if(return_stmt->value != NULL){
                     // Return non-void value
-                    if(ir_gen_expression(builder, ((ast_expr_return_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
+                    if(ir_gen_expression(builder, return_stmt->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                     if(!ast_types_conform(builder, &expression_value, &temporary_type, return_type, CONFORM_MODE_CALCULATION)){
                         char *a_type_str = ast_type_str(&temporary_type);
@@ -204,7 +205,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                             || strcmp(((ast_elem_base_t*) return_type->elements[0])->base, "void") != 0){
                         // This function expects a value to returned, not void
                         char *a_type_str = ast_type_str(return_type);
-                        compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return void when function expects type '%s'", a_type_str);
+                        compiler_panicf(builder->compiler, return_stmt->source, "Attempting to return void when function expects type '%s'", a_type_str);
                         free(a_type_str);
                         return FAILURE;
                     }
@@ -213,7 +214,18 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Update ast_func in case 'ast.funcs' moved
                 ast_func = &builder->object->ast.funcs[builder->ast_func_id];
 
-                // handle __defer__ calls
+                // Handle deferred statements
+                bool illegal_termination;
+                if(ir_gen_statements(builder, return_stmt->last_minute.statements, return_stmt->last_minute.length, &illegal_termination)){
+                    return FAILURE;
+                }
+
+                if(illegal_termination){
+                    compiler_panicf(builder->compiler, return_stmt->source, "Cannot expand a previously deferred terminating statement");
+                    return FAILURE;
+                }
+
+                // Handle __defer__ calls
                 bridge_scope_t *visit_scope;
                 for(visit_scope = builder->scope; visit_scope->parent != NULL; visit_scope = visit_scope->parent){
                     handle_defer_management(builder, &visit_scope->list);

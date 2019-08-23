@@ -169,7 +169,8 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     if(parse_ignore_newlines(ctx, "Expected function body")) return FAILURE;
 
     ast_expr_list_t stmts;
-    ast_expr_list_t defer_stmts;
+    defer_scope_t defer_scope;
+    defer_scope_init(&defer_scope, NULL, NULL, TRAIT_NONE);
 
     if(ctx->tokenlist->tokens[*ctx->i].id == TOKEN_ASSIGN){
         (*ctx->i)++;
@@ -188,6 +189,9 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
         stmt->id = EXPR_RETURN;
         stmt->source = return_expression->source;
         stmt->value = return_expression;
+        stmt->last_minute.statements = NULL;
+        stmt->last_minute.length = 0;
+        stmt->last_minute.capacity = 0;
         stmts.statements[stmts.length++] = (ast_expr_t*) stmt;
 
         func->statements = stmts.statements;
@@ -199,19 +203,16 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return FAILURE;
 
     ast_expr_list_init(&stmts, 16);
-    ast_expr_list_init(&defer_stmts, 0);
-
     ctx->func = func;
 
-    if(parse_stmts(ctx, &stmts, &defer_stmts, PARSE_STMTS_STANDARD)){
+    if(parse_stmts(ctx, &stmts, &defer_scope, PARSE_STMTS_STANDARD)){
         ast_free_statements_fully(stmts.statements, stmts.length);
-        ast_free_statements_fully(defer_stmts.statements, defer_stmts.length);
+        defer_scope_free(&defer_scope);
         return FAILURE;
     }
 
-    parse_unravel_defer_stmts(&stmts, &defer_stmts, 0);
-    free(defer_stmts.statements);
-
+    defer_scope_free(&defer_scope);
+    
     func->statements = stmts.statements;
     func->statements_length = stmts.length;
     func->statements_capacity = stmts.capacity;

@@ -124,6 +124,14 @@ typedef struct {
     source_t source;  // Where in source code
 } ast_expr_t;
 
+// ---------------- ast_expr_list_t ----------------
+// List structure for holding statements/expressions
+typedef struct {
+    ast_expr_t **statements;
+    length_t length;
+    length_t capacity;
+} ast_expr_list_t;
+
 // ---------------- ast_expr_byte_t ----------------
 // Expression for a literal byte value
 typedef struct {
@@ -444,6 +452,7 @@ typedef struct {
     unsigned int id;
     source_t source;
     ast_expr_t *value;
+    ast_expr_list_t last_minute;
 } ast_expr_return_t;
 
 // ---------------- ast_expr_if_t (and friends) ----------------
@@ -518,14 +527,6 @@ typedef struct {
     source_t label_source;
     weak_cstr_t label;
 } ast_expr_break_to_t, ast_expr_continue_to_t;
-
-// ---------------- ast_expr_list_t ----------------
-// List structure for holding statements/expressions
-typedef struct {
-    ast_expr_t **statements;
-    length_t length;
-    length_t capacity;
-} ast_expr_list_t;
 
 // ---------------- expr_is_mutable ----------------
 // Tests to see if the result of an expression will be mutable

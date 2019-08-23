@@ -741,6 +741,7 @@ void ast_expr_free(ast_expr_t *expr){
         if(((ast_expr_return_t*) expr)->value != NULL){
             ast_expr_free_fully( ((ast_expr_return_t*) expr)->value );
         }
+        ast_free_statements_fully(((ast_expr_return_t*) expr)->last_minute.statements, ((ast_expr_return_t*) expr)->last_minute.length);
         break;
     case EXPR_DECLARE: case EXPR_ILDECLARE:
         ast_type_free(&((ast_expr_declare_t*) expr)->type);
@@ -1110,6 +1111,13 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         clone = malloc(sizeof(ast_expr_return_t));
         clone_as_return->value = expr_as_return->value ? ast_expr_clone(expr_as_return->value) : NULL;
+        clone_as_return->last_minute.length = expr_as_return->last_minute.length;
+        clone_as_return->last_minute.capacity = expr_as_return->last_minute.length; // (using 'length' on purpose)
+        clone_as_return->last_minute.statements = malloc(sizeof(ast_expr_t*) * expr_as_return->last_minute.length);
+        
+        for(length_t s = 0; s != expr_as_return->last_minute.length; s++){
+            clone_as_return->last_minute.statements[s] = ast_expr_clone(expr_as_return->last_minute.statements[s]);
+        }
         break;
 
         #undef expr_as_return
