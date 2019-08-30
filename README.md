@@ -309,7 +309,7 @@ func main(in argc int, in argv **ubyte) int {
 - [2D Platformer](https://github.com/IsaacShelton/Adept2DPlatformer)
 
 # Syntax Examples
-[See examples folder](https://github.com/IsaacShelton/Adept/tree/master/examples)
+[See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
 
 # Differences from Adept 1.1
 - Updated and improved syntax
