@@ -27,12 +27,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         "package", "project_name", "unsupported", "windows_only"
     };
 
-    const char * const supported_features[] = {
-        "2.1", "2.2"
-    };
-
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
-    const length_t supported_features_length = sizeof(supported_features) / sizeof(const char * const);
 
     weak_cstr_t directive_string = parse_grab_word(ctx, "Expected pragma option after 'pragma' keyword");
     if(directive_string == NULL) return FAILURE;
@@ -41,25 +36,13 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
 
     switch(directive){
     case 0: // 'compiler_supports' directive
-        read = parse_grab_string(ctx, "Expected compiler version or feature string after 'pragma compiler_supports'");
-
-        if(read == NULL){
-            puts("\nDid you mean: pragma compiler_version '2.0'?");
-            return FAILURE;
-        }
-
-        if(strcmp(read, "2.0") == 0){
-            compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read);
-        } else if(binary_string_search(supported_features, supported_features_length, read) == -1){
-            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support '%s'", read);
-            return FAILURE;
-        }
-        break;
     case 1: // 'compiler_version' directive
-        read = parse_grab_string(ctx, "Expected compiler version string after 'pragma compiler_version'");
+        read = parse_grab_string(ctx, directive == 0
+                ? "Expected compiler version string after 'pragma compiler_supports'"
+                : "Expected compiler version string after 'pragma compiler_version'");
 
         if(read == NULL){
-            puts("\nDid you mean: pragma compiler_version '2.0'?");
+            printf("\nDid you mean: pragma %s '2.2'?\n", directive == 0 ? "compiler_supports" : "compiler_version");
             return FAILURE;
         }
 
@@ -68,7 +51,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read);
         } else if(strcmp(read, "2.2") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
-            puts("\nSupported Versions: '2.0', '2.1', '2.2'");
+            puts("\nSupported Versions: '2.2', '2.1', '2.0'");
             return FAILURE;
         }
         return SUCCESS;
