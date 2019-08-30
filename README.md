@@ -304,9 +304,11 @@ func main(in argc int, in argv **ubyte) int {
 ```
 
 # Applications in Adept 2.0
-- [Tic-Tac-Toe](https://github.com/IsaacShelton/AdeptTicTacToe)
-- [Neural Network](https://github.com/IsaacShelton/AdeptNeuralNetwork)
-- [2D Platformer](https://github.com/IsaacShelton/Adept2DPlatformer)
+- [Tic-Tac-Toe (2.0)](https://github.com/IsaacShelton/AdeptTicTacToe)
+- [Neural Network (2.0)](https://github.com/IsaacShelton/AdeptNeuralNetwork)
+- [2D Platformer (2.0)](https://github.com/IsaacShelton/Adept2DPlatformer)
+- [Minesweeper (2.1)](https://github.com/IsaacShelton/AdeptMinesweeper)
+- [Another 2D Platformer (2.2)](https://github.com/IsaacShelton/Tangent)
 
 # Syntax Examples
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
