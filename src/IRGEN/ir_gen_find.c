@@ -164,7 +164,7 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
             ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
             if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = (strcmp(method->name, ir_module->methods[index - 1].name) != 0);
+                method->is_beginning_of_group = (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
             }
             if(method->is_beginning_of_group == 1) break;
 
@@ -255,7 +255,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
             ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
             if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = (strcmp(method->name, ir_module->methods[index - 1].name) != 0);
+                method->is_beginning_of_group = (strcmp(method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
             }
             if(method->is_beginning_of_group == 1) break;
 
@@ -371,7 +371,7 @@ maybe_index_t find_beginning_of_method_group(ir_method_t *methods, length_t leng
                 while(true){
                     if(methods[middle].is_beginning_of_group == -1){
                         // It is uncalculated, so we must calculate it
-                        bool prev_different_name = middle == 0 ? true : strcmp(methods[middle - 1].name, name) != 0;
+                        bool prev_different_name = middle == 0 ? true : strcmp(methods[middle - 1].name, name) != 0 || strcmp(methods[middle - 1].struct_name, struct_name) != 0;
                         methods[middle].is_beginning_of_group = prev_different_name;
                     }
                     if(methods[middle].is_beginning_of_group == 1){
@@ -413,7 +413,7 @@ maybe_index_t find_beginning_of_generic_base_method_group(ir_generic_base_method
                 while(true){
                     if(methods[middle].is_beginning_of_group == -1){
                         // It is uncalculated, so we must calculate it
-                        bool prev_different_name = middle == 0 ? true : strcmp(methods[middle - 1].name, name) != 0;
+                        bool prev_different_name = middle == 0 ? true : strcmp(methods[middle - 1].name, name) != 0 || strcmp(methods[middle - 1].generic_base, generic_base) != 0;
                         methods[middle].is_beginning_of_group = prev_different_name;
                     }
                     if(methods[middle].is_beginning_of_group == 1){

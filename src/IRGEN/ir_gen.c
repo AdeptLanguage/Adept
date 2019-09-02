@@ -164,8 +164,12 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     generic_base_method->is_beginning_of_group = -1;
 
                     if(preserve_sortedness){
-                        // TODO: Don't resort the entire array
+                        // SPEED: LAZY: TODO: Don't resort the entire array
                         qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
+
+                        // SPEED: LAZY: TODO: Don't invalidate the entire array
+                        for(size_t i = 0; i != module->generic_base_methods_length; i++)
+                            module->generic_base_methods[i].is_beginning_of_group = -1;
                     }
                 }
                 break;
