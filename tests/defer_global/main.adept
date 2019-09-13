@@ -1,0 +1,30 @@
+
+#default test_global_list_of_strings true
+
+import 'sys/cstdio.adept'
+
+struct Test () {
+    func __defer__ {
+        printf('Test.__defer__() called!\n')
+    }
+}
+
+#if test_global_list_of_strings
+    #set log_string_deletion true
+    import '2.2/basics.adept'
+    list <String> List
+#end
+
+test1 Test
+test2 POD Test
+
+func main {
+    #if test_global_list_of_strings
+        list.add(scan("Enter first item: "))
+        list.add(scan("Enter second item: "))
+        list.add(scan("Enter third item: "))
+    #end
+
+    // 'test1.__defer__()' should be called but not 'test2.__defer__()'
+    // 'list.__defer__()' should be called and string deletion should be logged for each entry in the list
+}

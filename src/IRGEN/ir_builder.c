@@ -502,11 +502,11 @@ void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type,
 
 errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_list_t *list){
     for(length_t i = 0; i != list->length; i++){
-        // Don't perform defer management on POD variables or non-struct types
-        trait_t traits = list->variables[i].traits;
-        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE || list->variables[i].ir_type->kind != TYPE_KIND_STRUCTURE) continue;
-
         bridge_var_t *variable = &list->variables[i];
+
+        // Don't perform defer management on POD variables or non-struct types
+        trait_t traits = variable->traits;
+        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE || variable->ir_type->kind != TYPE_KIND_STRUCTURE) continue;
 
         // Ensure we're working with a single AST type element in the type
         if(variable->ast_type->elements_length != 1) continue;
@@ -516,7 +516,6 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         ir_pool_snapshot_capture(builder->pool, &snapshot);
 
         ir_value_t *ir_var_value = build_varptr(builder, ir_type_pointer_to(builder->pool, variable->ir_type), variable->id);
-
         errorcode_t failed = handle_single_deference(builder, variable->ast_type, ir_var_value);
 
         if(failed){
@@ -531,6 +530,51 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         }
     }
 
+    return SUCCESS;
+}
+
+errorcode_t handle_deference_for_globals(ir_builder_t *builder){
+    ast_global_t *globals = builder->object->ast.globals;
+    length_t globals_length = builder->object->ast.globals_length;
+
+    for(length_t i = 0; i != globals_length; i++){
+        ast_global_t *global = &globals[i];
+
+        // Don't perform defer management on POD variables or non-struct types or special globals
+        trait_t traits = global->traits;
+        
+        // Faster way of doing: (traits & AST_GLOBAL_EXTERNAL || traits & AST_GLOBAL_POD || traits & AST_GLOBAL_SPECIAL)
+        if(traits != TRAIT_NONE) continue;
+
+        // Ensure we're working with a single AST type element in the type
+        if(global->type.elements_length != 1) continue;
+
+        // Capture snapshot of current pool state (for if we need to revert allocations)
+        ir_pool_snapshot_t snapshot;
+        ir_pool_snapshot_capture(builder->pool, &snapshot);
+
+        ir_type_t *ir_type;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, &global->type, &ir_type)){
+            // Revert recent pool allocations
+            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            return FAILURE;
+        }
+
+        // WARNING: Assuming i is the same as the global variable id
+        ir_value_t *ir_value = build_gvarptr(builder, ir_type, i);
+        errorcode_t failed = handle_single_deference(builder, &global->type, ir_value);
+
+        if(failed){
+            // Remove GVARPTR instruction
+            builder->current_block->instructions_length--;
+
+            // Revert recent pool allocations
+            ir_pool_snapshot_restore(builder->pool, &snapshot);
+
+            // Real failure if a compile time error occured
+            if(failed == ALT_FAILURE) return FAILURE;
+        }
+    }
     return SUCCESS;
 }
 
@@ -770,10 +814,6 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
     }
 
     return SUCCESS;
-}
-
-void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list){
-    handle_deference_for_variables(builder, list);
 }
 
 void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity){

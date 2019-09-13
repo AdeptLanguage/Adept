@@ -51,6 +51,8 @@ call :compile continue_to
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile defer
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile defer_global
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile deprecated
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile dereference

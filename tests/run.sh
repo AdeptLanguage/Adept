@@ -34,6 +34,7 @@ compile constants || exit $?
 compile continue || exit $?
 compile continue_to || exit $?
 compile defer || exit $?
+compile defer_global || exit $?
 compile deprecated || exit $?
 compile dereference || exit $?
 compile each_in || exit $?

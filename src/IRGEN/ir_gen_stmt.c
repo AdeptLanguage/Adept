@@ -113,7 +113,11 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 
     // Append return instr for functions that return void
     if(!terminated){
-        handle_defer_management(&builder, &builder.scope->list);
+        handle_deference_for_variables(&builder, &builder.scope->list);
+
+        if(ast_func->traits & AST_FUNC_MAIN){
+            handle_deference_for_globals(&builder);
+        }
 
         // Make sure to update references that may have been invalidated
         ast_func = &object->ast.funcs[ast_func_id];
@@ -228,10 +232,14 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Handle __defer__ calls
                 bridge_scope_t *visit_scope;
                 for(visit_scope = builder->scope; visit_scope->parent != NULL; visit_scope = visit_scope->parent){
-                    handle_defer_management(builder, &visit_scope->list);
+                    handle_deference_for_variables(builder, &visit_scope->list);
                 }
 
-                handle_defer_management(builder, &visit_scope->list);
+                handle_deference_for_variables(builder, &visit_scope->list);
+
+                if(ast_func->traits & AST_FUNC_MAIN){
+                    handle_deference_for_globals(builder);
+                }
 
                 if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder)){
                     // Failed to auto-generate __defer__() calls to children of parent type
@@ -601,7 +609,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->scope->list);
+                    handle_deference_for_variables(builder, &builder->scope->list);
                     build_break(builder, end_basicblock_id);
                 }
 
@@ -655,7 +663,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->scope->list);
+                    handle_deference_for_variables(builder, &builder->scope->list);
                     build_break(builder, end_basicblock_id);
                 }
 
@@ -672,7 +680,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->scope->list);
+                    handle_deference_for_variables(builder, &builder->scope->list);
                     build_break(builder, end_basicblock_id);
                 }
 
@@ -758,7 +766,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->scope->list);
+                    handle_deference_for_variables(builder, &builder->scope->list);
                     build_break(builder, test_basicblock_id);
                 }
 
@@ -807,7 +815,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->scope->list);
+                    handle_deference_for_variables(builder, &builder->scope->list);
 
                     if(statements[s]->id == EXPR_WHILECONTINUE){
                         // 'while continue'
@@ -974,9 +982,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 bridge_scope_t *visit_scope;
                 for(visit_scope = builder->scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
-                    handle_defer_management(builder, &visit_scope->list);
+                    handle_deference_for_variables(builder, &visit_scope->list);
                 }
-                handle_defer_management(builder, &visit_scope->list);
+                handle_deference_for_variables(builder, &visit_scope->list);
                 build_break(builder, builder->break_block_id);
                 if(out_is_terminated) *out_is_terminated = true;
             }
@@ -989,9 +997,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 bridge_scope_t *visit_scope;
                 for(visit_scope = builder->scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
-                    handle_defer_management(builder, &visit_scope->list);
+                    handle_deference_for_variables(builder, &visit_scope->list);
                 }
-                handle_defer_management(builder, &visit_scope->list);
+                handle_deference_for_variables(builder, &visit_scope->list);
                 build_break(builder, builder->continue_block_id);
                 if(out_is_terminated) *out_is_terminated = true;
             }
@@ -1016,9 +1024,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 bridge_scope_t *visit_scope;
                 for(visit_scope = builder->scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
-                    handle_defer_management(builder, &visit_scope->list);
+                    handle_deference_for_variables(builder, &visit_scope->list);
                 }
-                handle_defer_management(builder, &visit_scope->list);
+                handle_deference_for_variables(builder, &visit_scope->list);
                 build_break(builder, target_block_id);
                 if(out_is_terminated) *out_is_terminated = true;
             }
@@ -1043,9 +1051,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 bridge_scope_t *visit_scope;
                 for(visit_scope = builder->scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
-                    handle_defer_management(builder, &visit_scope->list);
+                    handle_deference_for_variables(builder, &visit_scope->list);
                 }
-                handle_defer_management(builder, &visit_scope->list);
+                handle_deference_for_variables(builder, &visit_scope->list);
                 build_break(builder, target_block_id);
                 if(out_is_terminated) *out_is_terminated = true;
             }
@@ -1199,7 +1207,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->scope->list);
+                    handle_deference_for_variables(builder, &builder->scope->list);
                     build_break(builder, inc_basicblock_id);
                 }
 
@@ -1332,7 +1340,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(!terminated){
-                    handle_defer_management(builder, &builder->scope->list);
+                    handle_deference_for_variables(builder, &builder->scope->list);
                     build_break(builder, inc_basicblock_id);
                 }
 

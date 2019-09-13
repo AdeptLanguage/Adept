@@ -210,6 +210,11 @@ void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type,
 // Returns FAILURE on compile time error
 errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_list_t *list);
 
+// ---------------- handle_deference_for_globals ----------------
+// Handles deference for global variables
+// Returns FAILURE on compile time error
+errorcode_t handle_deference_for_globals(ir_builder_t *builder);
+
 // ---------------- handle_single_deference ----------------
 // Calls __defer__ method on a value and it's children if the method exists
 // NOTE: Assumes (ast_type->elements_length == 1)
@@ -219,10 +224,6 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
 errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *value);
 
 errorcode_t handle_children_deference(ir_builder_t *builder);
-
-// ---------------- handle_defer_management ----------------
-// Handles '__defer__' management method calls for stack allocated variables
-void handle_defer_management(ir_builder_t *builder, bridge_var_list_t *list);
 
 // ---------------- handle_pass_management ----------------
 // Handles '__pass__' management function calls for passing arguments

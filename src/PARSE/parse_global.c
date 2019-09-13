@@ -10,7 +10,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     token_t *tokens = ctx->tokenlist->tokens;
     source_t source = ctx->tokenlist->sources[*i];
     ast_t *ast = ctx->ast;
-    bool is_external = false;
+    trait_t traits = TRAIT_NONE;
 
     if(ctx->struct_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare global variable within struct domain");
@@ -18,7 +18,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     }
 
     if(tokens[*i].id == TOKEN_EXTERNAL){
-        is_external = true;
+        traits |= AST_GLOBAL_EXTERNAL;
         (*i)++;
     }
 
@@ -29,6 +29,11 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         return parse_constant_global(ctx, name, source);
     }
 
+    if(tokens[*i].id == TOKEN_POD){
+        traits |= AST_GLOBAL_POD;
+        (*i)++;
+    }
+    
     ast_expr_t *initial_value = NULL;
 
     ast_type_t type;
@@ -45,7 +50,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         }
     }
 
-    ast_add_global(ast, name, type, initial_value, is_external ? AST_GLOBAL_EXTERNAL : TRAIT_NONE, source);
+    ast_add_global(ast, name, type, initial_value, traits, source);
     return SUCCESS;
 }
 
