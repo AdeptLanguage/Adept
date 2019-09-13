@@ -459,9 +459,6 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_LESSER:
     case EXPR_GREATEREQ:
     case EXPR_LESSEREQ:
-    case EXPR_BIT_AND:
-    case EXPR_BIT_OR:
-    case EXPR_BIT_XOR:
     case EXPR_BIT_LSHIFT:
     case EXPR_BIT_RSHIFT:
     case EXPR_BIT_LGC_LSHIFT:
@@ -473,6 +470,9 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         break;
     case EXPR_AND:
     case EXPR_OR:
+    case EXPR_BIT_AND:
+    case EXPR_BIT_OR:
+    case EXPR_BIT_XOR:
         a = &((ast_expr_math_t*) *expr)->a;
         b = &((ast_expr_math_t*) *expr)->b;
         if(infer_expr(ctx, ast_func, a, EXPR_NONE, scope)) return FAILURE;
