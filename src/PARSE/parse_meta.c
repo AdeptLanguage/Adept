@@ -17,7 +17,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     char *directive_name = tokenlist->tokens[*i].data;
 
     const char *standard_directives[] = {
-        "default", "elif", "else", "end", "halt", "if", "import", "input", "place", "place_error", "print", "print_error", "set"
+        "default", "elif", "else", "end", "halt", "if", "import", "input", "place", "place_error", "print", "print_error", "set", "unless"
     };
 
     #define META_DIRECTIVE_DEFAULT 0
@@ -33,6 +33,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     #define META_DIRECTIVE_PRINT 10
     #define META_DIRECTIVE_PRINT_ERROR 11
     #define META_DIRECTIVE_SET 12
+    #define META_DIRECTIVE_UNLESS 13
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -83,7 +84,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 maybe_index_t pass_id = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
 
                 switch(pass_id){
-                case META_DIRECTIVE_IF:
+                case META_DIRECTIVE_IF: case META_DIRECTIVE_UNLESS:
                     ends_needed++;
                     break;
                 case META_DIRECTIVE_END:
@@ -120,7 +121,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 maybe_index_t pass_id = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
 
                 switch(pass_id){
-                case META_DIRECTIVE_IF:
+                case META_DIRECTIVE_IF: case META_DIRECTIVE_UNLESS:
                     ends_needed++;
                     break;
                 case META_DIRECTIVE_END:
@@ -154,13 +155,14 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     case META_DIRECTIVE_HALT: // halt
         ctx->compiler->traits |= COMPILER_RESULT_SUCCESS;
         return FAILURE;
-    case META_DIRECTIVE_IF: { // if
+    case META_DIRECTIVE_IF: case META_DIRECTIVE_UNLESS: { // if, unless
+            bool is_unless = standard == META_DIRECTIVE_UNLESS;
             (*i)++;
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
 
-            bool whether = meta_expr_into_bool(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            bool whether = meta_expr_into_bool(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value) ^ is_unless;
             meta_expr_free_fully(value);
 
             // If true, continue parsing as normal
@@ -183,7 +185,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 maybe_index_t pass_id = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
 
 
-                if(pass_id == META_DIRECTIVE_IF){
+                if(pass_id == META_DIRECTIVE_IF || pass_id == META_DIRECTIVE_UNLESS){
                     ends_needed++;
                 } else if(pass_id == META_DIRECTIVE_END){
                     ends_needed--;

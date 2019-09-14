@@ -11,6 +11,7 @@
 // #input
 // #halt
 // #import
+// #unless
 
 #import "sys/" + "cstdio.adept"
 
@@ -27,5 +28,9 @@ func main {
         #end
     #else
         printf('Hello World on non-MacOS!\n')
+    #end
+
+    #unless go_bananas
+        #print "Not going bananas..."
     #end
 }
