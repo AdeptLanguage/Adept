@@ -13,9 +13,83 @@
 // #import
 // #unless
 
+#set go_bananas true
+
+#if go_bananas
+    #print "go_bananas"
+#else
+    #print "don't go_bananas"
+#end
+
+#unless go_bananas
+    #print "2nd don't go_bananas"
+#else
+    #print "2nd go_bananas"
+#end
+
+#if true
+    #print "1"
+#elif true
+    #print "2"
+#elif true
+    #print "3"
+#else
+    #print "4"
+#end
+
+#if false
+    #print "1"
+#elif true
+    #print "2"
+#elif true
+    #print "3"
+#else
+    #print "4"
+#end
+
+#if false
+    #print "1"
+#elif false
+    #print "2"
+#elif true
+    #print "3"
+#else
+    #print "4"
+#end
+
+#if false
+    #print "1"
+#elif false
+    #print "2"
+#elif false
+    #print "3"
+#else
+    #print "4"
+#end
+
+#if __macos__
+    #print "Hello World on MacOS!"
+    #if go_bananas
+        #print "Go Bananas!!!"
+    #end
+#elif __windows__
+    #print "Hello World on Windows!"
+    #if go_bananas
+        #print "Go Bananas!!!"
+    #end
+#else
+    #print "Hello World on non-MacOS!"
+#end
+
 #import "sys/" + "cstdio.adept"
 
 func main {
+    #unless go_bananas
+        #print "Not going bananas..."
+    #else
+        #print "GOING BANANAS!!!!!!!!!"
+    #end
+
     #if __macos__
         printf('Hello World on MacOS!\n')
         #if go_bananas
@@ -28,9 +102,5 @@ func main {
         #end
     #else
         printf('Hello World on non-MacOS!\n')
-    #end
-
-    #unless go_bananas
-        #print "Not going bananas..."
     #end
 }
