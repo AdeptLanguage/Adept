@@ -184,7 +184,6 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
                 maybe_index_t pass_id = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
 
-
                 if(pass_id == META_DIRECTIVE_IF || pass_id == META_DIRECTIVE_UNLESS){
                     ends_needed++;
                 } else if(pass_id == META_DIRECTIVE_END){

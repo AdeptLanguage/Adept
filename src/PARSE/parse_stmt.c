@@ -270,7 +270,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 // Read ahead of newlines to check for 'else'
                 length_t i_readahead = *i;
-                while(tokens[i_readahead].id == TOKEN_NEWLINE) i_readahead++;
+                while(tokens[i_readahead].id == TOKEN_NEWLINE && i_readahead != ctx->tokenlist->length) i_readahead++;
 
                 if(tokens[i_readahead].id == TOKEN_ELSE){
                     *i = i_readahead;
@@ -684,11 +684,12 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         }
 
         // Continue over newline token
-        if(tokens[*i].id != TOKEN_ELSE && tokens[*i].id != TOKEN_NEWLINE && !(tokens[*i].id == TOKEN_META && (strcmp(tokens[*i].data, "else") == 0 || strcmp(tokens[*i].data, "elif") == 0))){
+        if(tokens[*i].id == TOKEN_NEWLINE){
+            (*i)++;
+        } else if(tokens[*i].id != TOKEN_ELSE && !(tokens[*i].id == TOKEN_META && (strcmp(tokens[*i].data, "else") == 0 || strcmp(tokens[*i].data, "elif") == 0))){
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at end of statement");
             return FAILURE;
-        }
-        (*i)++;
+        }    
 
         if(mode & PARSE_STMTS_SINGLE){
             defer_scope_fulfill(defer_scope, stmt_list);
