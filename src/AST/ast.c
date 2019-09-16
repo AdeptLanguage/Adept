@@ -308,13 +308,17 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 fprintf(file, ")\n");
             }
             break;
-        case EXPR_DECLARE: {
+        case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
+                bool is_undef = statements[s]->id == EXPR_DECLAREUNDEF;
+
                 ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) statements[s];
                 char *variable_type_str = ast_type_str(&declare_stmt->type);
-                fprintf(file, (declare_stmt->value == NULL) ? "%s %s\n" : "%s %s = ", declare_stmt->name, variable_type_str);
+                fprintf(file, (declare_stmt->value == NULL && !is_undef) ? "%s %s\n" : "%s %s = ", declare_stmt->name, variable_type_str);
                 free(variable_type_str);
 
-                if(declare_stmt->value != NULL){
+                if(is_undef){
+                    fprintf(file, "undef\n");
+                } else if(declare_stmt->value != NULL){
                     char *initial_value = ast_expr_str(declare_stmt->value);
                     fprintf(file, "%s\n", initial_value);
                     free(initial_value);
@@ -382,6 +386,31 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 char *delete_value_str = ast_expr_str(delete_value);
                 fprintf(file, "delete %s\n", delete_value_str);
                 free(delete_value_str);
+            }
+            break;
+        case EXPR_SWITCH: {
+                ast_expr_switch_t *switch_stmt = (ast_expr_switch_t*) statements[s];
+                strong_cstr_t value_str = ast_expr_str(switch_stmt->value);
+                fprintf(file, "switch (%s) {\n", value_str);
+                free(value_str);
+
+                for(length_t c = 0; c != switch_stmt->cases_length; c++){
+                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                    ast_case_t *expr_case = &switch_stmt->cases[c];
+                    strong_cstr_t condition_str = ast_expr_str(expr_case->condition);
+                    fprintf(file, "case (%s)\n", condition_str);
+                    free(condition_str);
+                    ast_dump_statements(file, expr_case->statements, expr_case->statements_length, indentation + 1);
+                }
+
+                if(switch_stmt->default_statements_length != 0){
+                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                    fprintf(file, "default\n");
+                    ast_dump_statements(file, switch_stmt->default_statements, switch_stmt->default_statements_length, indentation + 1);
+                }
+
+                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                fprintf(file, "}\n");
             }
             break;
         default:

@@ -782,6 +782,18 @@ void ast_expr_free(ast_expr_t *expr){
         ast_expr_free_fully(((ast_expr_repeat_t*) expr)->limit);
         ast_free_statements_fully(((ast_expr_repeat_t*) expr)->statements, ((ast_expr_repeat_t*) expr)->statements_length);
         break;
+    case EXPR_SWITCH:
+        ast_expr_free_fully(((ast_expr_switch_t*) expr)->value);
+        ast_free_statements_fully(((ast_expr_switch_t*) expr)->default_statements, ((ast_expr_switch_t*) expr)->default_statements_length);
+
+        for(length_t c = 0; c != ((ast_expr_switch_t*) expr)->cases_length; c++){
+            ast_case_t *expr_case = &((ast_expr_switch_t*) expr)->cases[c];
+            ast_expr_free_fully(expr_case->condition);
+            ast_free_statements_fully(expr_case->statements, expr_case->statements_length);
+        }
+
+        free(((ast_expr_switch_t*) expr)->cases);
+        break;
     }
 }
 
@@ -1227,6 +1239,41 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_break_to
         #undef clone_as_break_to
+    case EXPR_SWITCH:
+        #define expr_as_switch ((ast_expr_switch_t*) expr)
+        #define clone_as_switch ((ast_expr_switch_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_switch_t));
+        clone_as_switch->value = ast_expr_clone(expr_as_switch->value);
+
+        clone_as_switch->cases = malloc(sizeof(ast_case_t) * expr_as_switch->cases_length);
+        clone_as_switch->cases_length = expr_as_switch->cases_length;
+        clone_as_switch->cases_capacity = expr_as_switch->cases_length; // (on purpose)
+        for(length_t c = 0; c != expr_as_switch->cases_length; c++){
+            ast_case_t *expr_case = &expr_as_switch->cases[c];
+            ast_case_t *clone_case = &clone_as_switch->cases[c];
+
+            clone_case->condition = ast_expr_clone(expr_case->condition);
+            clone_case->source = expr_case->source;
+            clone_case->statements_length = expr_case->statements_length;
+            clone_case->statements_capacity = expr_case->statements_capacity; // (on purpose)
+
+            clone_case->statements = malloc(sizeof(ast_expr_t*) * expr_case->statements_length);
+            for(length_t s = 0; s != expr_case->statements_length; s++){
+                clone_case->statements[s] = ast_expr_clone(expr_case->statements[s]);
+            }
+        }
+
+        clone_as_switch->default_statements = malloc(sizeof(ast_expr_t*) * expr_as_switch->default_statements_length);
+        for(length_t s = 0; s != expr_as_switch->default_statements_length; s++){
+            clone_as_switch->default_statements[s] = ast_expr_clone(expr_as_switch->default_statements[s]);
+        }
+        
+        clone_as_switch->default_statements_length = expr_as_switch->default_statements_length;
+        clone_as_switch->default_statements_capacity = expr_as_switch->default_statements_length; // (on purpose)
+
+        #undef expr_as_switch
+        #undef clone_as_switch
     default:
         redprintf("INTERNAL ERROR: ast_expr_clone received unimplemented expression id 0x%08X\n", expr->id);
         redprintf("Returning NULL... a crash will probably follow\n");

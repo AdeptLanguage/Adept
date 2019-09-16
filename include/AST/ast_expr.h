@@ -111,6 +111,7 @@ extern "C" {
 #define EXPR_CONTINUE       0x00000056
 #define EXPR_BREAK_TO       0x00000057
 #define EXPR_CONTINUE_TO    0x00000058
+#define EXPR_SWITCH         0x00000059
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -527,6 +528,29 @@ typedef struct {
     source_t label_source;
     weak_cstr_t label;
 } ast_expr_break_to_t, ast_expr_continue_to_t;
+
+// ---------------- ast_case_t ----------------
+typedef struct {
+    ast_expr_t *condition;
+    source_t source;
+    ast_expr_t **statements;
+    length_t statements_length;
+    length_t statements_capacity;
+} ast_case_t;
+
+// ---------------- ast_expr_switch_t ----------------
+// Expression for switching based on a value
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_expr_t *value;
+    ast_case_t *cases;
+    length_t cases_length;
+    length_t cases_capacity;
+    ast_expr_t **default_statements;
+    length_t default_statements_length;
+    length_t default_statements_capacity;
+} ast_expr_switch_t;
 
 // ---------------- expr_is_mutable ----------------
 // Tests to see if the result of an expression will be mutable

@@ -673,6 +673,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_META:
             if(parse_meta(ctx)) return FAILURE;
             break;
+        case TOKEN_SWITCH:
+            if(parse_switch(ctx, stmt_list, defer_scope)) return FAILURE;
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
             return FAILURE;
@@ -867,5 +870,121 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     free(decl_names);
     free(decl_sources);
+    return SUCCESS;
+}
+
+errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *parent_defer_scope){
+    // switch <condition> { ... }
+    //    ^
+
+    source_t source = ctx->tokenlist->sources[*ctx->i];
+
+    if(parse_eat(ctx, TOKEN_SWITCH, "Expected 'switch' keyword when parsing switch statement"))
+        return FAILURE;
+
+    ast_expr_t *value;
+    if(parse_expr(ctx, &value)) return FAILURE;
+
+    ast_case_t *cases = NULL;
+    length_t cases_length = 0, cases_capacity = 0;
+
+    if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after value given to 'switch' statement")){
+        ast_expr_free_fully(value);
+        return FAILURE;
+    }
+
+    ast_expr_t **default_statements = NULL;
+    length_t default_statements_length = 0, default_statements_capacity = 0;
+
+    defer_scope_t current_defer_scope;
+    ast_expr_t ***list = &default_statements;
+    length_t *list_length = &default_statements_length;
+    length_t *list_capacity = &default_statements_capacity;
+
+    parse_ignore_newlines(ctx, "Expected '}' before end of file");
+    unsigned int token_id = ctx->tokenlist->tokens[*ctx->i].id;
+    bool failed = false;
+
+    defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, TRAIT_NONE);
+
+    while(token_id != TOKEN_END){
+        if(token_id == TOKEN_CASE){
+            ast_expr_t *condition;
+            source_t case_source = ctx->tokenlist->sources[*ctx->i];
+            failed = failed || parse_eat(ctx, TOKEN_CASE, "Expected 'case' keyword for switch case") || parse_expr(ctx, &condition);
+
+            // Skip over ',' if present
+            if(!failed && ctx->tokenlist->tokens[*ctx->i].id == TOKEN_NEXT) (*ctx->i)++;
+            failed = failed || parse_ignore_newlines(ctx, "Expected '}' before end of file");
+
+            if(!failed){
+                defer_scope_free(&current_defer_scope);
+                defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, TRAIT_NONE);
+
+                expand((void**) &cases, sizeof(ast_case_t), cases_length, &cases_capacity, 1, 4);
+                ast_case_t *expr_case = &cases[cases_length++];
+                expr_case->source = case_source;
+                expr_case->condition = condition;
+                list = &expr_case->statements;
+                list_length = &expr_case->statements_length;
+                list_capacity = &expr_case->statements_capacity;
+            }
+        } else if(token_id == TOKEN_DEFAULT){
+            defer_scope_free(&current_defer_scope);
+            defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, TRAIT_NONE);
+            list = &default_statements;
+            list_length = &default_statements_length;
+            list_capacity = &default_statements_capacity;
+
+            failed = failed || parse_eat(ctx, TOKEN_DEFAULT, "Expected 'default' keyword for switch default case")
+                            || parse_ignore_newlines(ctx, "Expected '}' before end of file");
+        }
+
+        ast_expr_list_t stmts_pass_list;
+        stmts_pass_list.statements = *list;
+        stmts_pass_list.length = *list_length;
+        stmts_pass_list.capacity = *list_capacity;
+
+        failed = failed || parse_stmts(ctx, &stmts_pass_list, &current_defer_scope, PARSE_STMTS_SINGLE) || parse_ignore_newlines(ctx, "Expected '}' before end of file");
+
+        // CLEANUP: Eww, but it works
+        *list = stmts_pass_list.statements;
+        *list_length = stmts_pass_list.length;
+        *list_capacity = stmts_pass_list.capacity;
+
+        if(failed){
+            ast_expr_free_fully(value);
+            for(length_t c = 0; c != cases_length; c++){
+                ast_case_t *expr_case = &cases[c];
+                ast_expr_free_fully(expr_case->condition);
+                ast_free_statements_fully(expr_case->statements, expr_case->statements_length);
+            }
+            free(cases);
+            ast_free_statements_fully(default_statements, default_statements_length);
+            defer_scope_free(&current_defer_scope);
+            return FAILURE;
+        }
+
+        token_id = ctx->tokenlist->tokens[*ctx->i].id;
+    }
+
+    // Skip over '}'
+    (*ctx->i)++;
+
+    defer_scope_free(&current_defer_scope);
+
+    ast_expr_switch_t *switch_expr = malloc(sizeof(ast_expr_switch_t));
+    switch_expr->id = EXPR_SWITCH;
+    switch_expr->source = source;
+    switch_expr->value = value;
+    switch_expr->cases = cases;
+    switch_expr->cases_length = cases_length;
+    switch_expr->cases_capacity = cases_capacity;
+    switch_expr->default_statements = default_statements;
+    switch_expr->default_statements_length = default_statements_length;
+    switch_expr->default_statements_capacity = default_statements_capacity;
+
+    // Append the created switch statement
+    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) switch_expr;
     return SUCCESS;
 }
