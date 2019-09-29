@@ -533,6 +533,23 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                         free(b);
                     }
                     break;
+                case INSTRUCTION_SWITCH: {
+                        ir_instr_switch_t *switch_instr = (ir_instr_switch_t*) functions[f].basicblocks[b].instructions[i];
+                        char *cond = ir_value_str(switch_instr->condition);
+                        fprintf(file, "    0x%08X switch %s\n", (int) i, cond);
+                        for(length_t i = 0; i != switch_instr->cases_length; i++){
+                            char *v = ir_value_str(switch_instr->case_values[i]);
+                            fprintf(file, "               (%s) -> |%d|\n", v, (int) switch_instr->case_block_ids[i]);
+                            free(v);
+                        }
+                        free(cond);
+
+                        if(switch_instr->default_block_id != switch_instr->resume_block_id){
+                            // Default case exists
+                            fprintf(file, "               default -> |%d|\n", (int) switch_instr->case_block_ids[i]);
+                        }
+                    }
+                    break;
                 default:
                     printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) functions[f].basicblocks[b].instructions[i]->id);
                     fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);

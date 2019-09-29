@@ -4,7 +4,7 @@
 void expand(void **inout_memory, length_t unit_size, length_t length, length_t *inout_capacity, length_t amount, length_t default_capacity){
     // Expands an array in memory to be able to fit more units
 
-    if(*inout_capacity == 0){
+    if(*inout_capacity == 0 && amount != 0){
         *inout_memory = malloc(unit_size * default_capacity);
         *inout_capacity = default_capacity;
     }
@@ -26,7 +26,7 @@ void expand(void **inout_memory, length_t unit_size, length_t length, length_t *
 void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, length_t unit_size2, length_t length, length_t *inout_capacity, length_t amount, length_t default_capacity){
     // Expands an array in memory to be able to fit more units
 
-    if(*inout_capacity == 0){
+    if(*inout_capacity == 0 && amount != 0){
         *inout_memory1 = malloc(unit_size1 * default_capacity);
         *inout_memory2 = malloc(unit_size2 * default_capacity);
         *inout_capacity = default_capacity;

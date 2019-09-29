@@ -94,6 +94,7 @@
 #define INSTRUCTION_FNEGATE        0x0000004E // ir_instr_unary_t
 #define INSTRUCTION_SELECT         0x0000004F
 #define INSTRUCTION_PHI2           0x00000050
+#define INSTRUCTION_SWITCH         0x00000051
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -410,6 +411,20 @@ typedef struct {
     length_t block_id_a;
     length_t block_id_b;
 } ir_instr_phi2_t;
+
+// ---------------- ir_instr_switch_t ----------------
+// IR instruction for general switch statement
+// NOTE: Default case exists if (default_block_id != resume_block_id)
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_value_t *condition;
+    ir_value_t **case_values;
+    length_t *case_block_ids;
+    length_t cases_length;
+    length_t default_block_id;
+    length_t resume_block_id;
+} ir_instr_switch_t;
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block

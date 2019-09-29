@@ -917,6 +917,20 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         catalog.blocks[b].value_references[i] = phi;
                     }
                     break;
+                case INSTRUCTION_SWITCH: {
+                        instr = basicblock->instructions[i];
+
+                        LLVMValueRef value = ir_to_llvm_value(llvm, ((ir_instr_switch_t*) instr)->condition);
+                        LLVMValueRef switch_val = LLVMBuildSwitch(builder, value, llvm_blocks[((ir_instr_switch_t*) instr)->default_block_id], ((ir_instr_switch_t*) instr)->cases_length);
+                        
+                        for(length_t i = 0; i != ((ir_instr_switch_t*) instr)->cases_length; i++){
+                            LLVMValueRef case_value = ir_to_llvm_value(llvm, ((ir_instr_switch_t*) instr)->case_values[i]);
+                            LLVMAddCase(switch_val, case_value, llvm_blocks[((ir_instr_switch_t*) instr)->case_block_ids[i]]);
+                        }
+
+                        catalog.blocks[b].value_references[i] = NULL;
+                    }
+                    break;
                 default:
                     redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", basicblocks[b].instructions[i]->id);
                     for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);

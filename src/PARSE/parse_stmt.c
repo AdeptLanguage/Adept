@@ -266,7 +266,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 defer_scope_free(&if_defer_scope);
 
-                if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
+                if(!(stmts_mode & PARSE_STMTS_SINGLE)) (*i)++;
 
                 // Read ahead of newlines to check for 'else'
                 length_t i_readahead = *i;
@@ -303,8 +303,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                     defer_scope_free(&if_defer_scope);
 
-                    if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
-                    else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
+                    if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
 
                     ast_expr_ifelse_t *stmt = malloc(sizeof(ast_expr_ifelse_t));
                     stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESSELSE : EXPR_IFELSE;
@@ -319,7 +318,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     stmt->else_statements_capacity = else_stmt_list.capacity;
                     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
                 } else {
-                    if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
+                    if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--;
                     ast_expr_if_t *stmt = malloc(sizeof(ast_expr_if_t));
                     stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESS : EXPR_IF;
                     stmt->source = source;
@@ -390,8 +389,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 
                 defer_scope_free(&while_defer_scope);
 
-                if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
-                else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
+                if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
 
                 if(conditional == NULL){
                     // 'while continue' or 'until break' loop
@@ -542,8 +540,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 defer_scope_free(&each_in_defer_scope);
 
-                if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
-                else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
+                if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
 
                 ast_expr_each_in_t *stmt = malloc(sizeof(ast_expr_each_in_t));
                 stmt->id = EXPR_EACH_IN;
@@ -597,8 +594,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 defer_scope_free(&repeat_defer_scope);
 
-                if(stmts_mode == PARSE_STMTS_STANDARD) (*i)++;
-                else if(stmts_mode == PARSE_STMTS_SINGLE) (*i)--;
+                if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
 
                 ast_expr_repeat_t *stmt = malloc(sizeof(ast_expr_repeat_t));
                 stmt->id = EXPR_REPEAT;
@@ -695,12 +691,17 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         }    
 
         if(mode & PARSE_STMTS_SINGLE){
-            defer_scope_fulfill(defer_scope, stmt_list);
+            if(!(mode & PARSE_STMTS_PARENT_DEFER_SCOPE)){
+                defer_scope_fulfill(defer_scope, stmt_list);
+            }
             return SUCCESS;
         }
     }
+    
+    if(!(mode & PARSE_STMTS_PARENT_DEFER_SCOPE)){
+        defer_scope_fulfill(defer_scope, stmt_list);
+    }
 
-    defer_scope_fulfill(defer_scope, stmt_list);
     return SUCCESS; // '}' was reached
 }
 
@@ -945,7 +946,8 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
         stmts_pass_list.length = *list_length;
         stmts_pass_list.capacity = *list_capacity;
 
-        failed = failed || parse_stmts(ctx, &stmts_pass_list, &current_defer_scope, PARSE_STMTS_SINGLE) || parse_ignore_newlines(ctx, "Expected '}' before end of file");
+        failed = failed || parse_stmts(ctx, &stmts_pass_list, &current_defer_scope, PARSE_STMTS_SINGLE | PARSE_STMTS_PARENT_DEFER_SCOPE)
+                        || parse_ignore_newlines(ctx, "Expected '}' before end of file");
 
         // CLEANUP: Eww, but it works
         *list = stmts_pass_list.statements;

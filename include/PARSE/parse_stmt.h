@@ -44,8 +44,9 @@ void defer_scope_fulfill(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list)
 // 'stmt_list' for standard statements
 // 'defer_scope' scope in which deferred statements will use
 // NOTE: On failure, stmt_list and defer_scope->list.statements may need to be freed
-#define PARSE_STMTS_STANDARD TRAIT_NONE // Standard mode (will parse multiple statements)
-#define PARSE_STMTS_SINGLE   TRAIT_1    // Single statement mode (will parse a single statement)
+#define PARSE_STMTS_STANDARD           TRAIT_NONE // Standard mode (will parse multiple statements)
+#define PARSE_STMTS_SINGLE             TRAIT_1    // Single statement mode (will parse a single statement)
+#define PARSE_STMTS_PARENT_DEFER_SCOPE TRAIT_2    // Parent defer scope mode (won't create a seperate defer scope for the statements)
 errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope, trait_t mode);
 
 // ------------------ parse_stmt_call ------------------

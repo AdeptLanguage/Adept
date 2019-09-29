@@ -56,6 +56,8 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             if(existing == NULL){
                 meta_definition_add(&ctx->ast->meta_definitions, &ctx->ast->meta_definitions_length, &ctx->ast->meta_definitions_capacity, definition_name, value);
+            } else {
+                meta_expr_free_fully(value);
             }
         }
         break;

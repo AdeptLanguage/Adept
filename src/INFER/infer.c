@@ -202,6 +202,31 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 infer_var_scope_pop(&scope);
             }
             break;
+        case EXPR_SWITCH: {
+                ast_expr_switch_t *expr_switch = (ast_expr_switch_t*) statements[s];
+                if(infer_expr(ctx, func, &expr_switch->value, EXPR_NONE, scope)) return FAILURE;
+
+                for(length_t c = 0; c != expr_switch->cases_length; c++){
+                    ast_case_t *expr_case = &expr_switch->cases[c];
+
+                    if(infer_expr(ctx, func, &expr_case->condition, EXPR_NONE, scope)) return FAILURE;
+
+                    infer_var_scope_push(&scope);
+                    if(infer_in_stmts(ctx, func, expr_case->statements, expr_case->statements_length, scope)){
+                        infer_var_scope_pop(&scope);
+                        return FAILURE;
+                    }
+                    infer_var_scope_pop(&scope);
+                }
+
+                infer_var_scope_push(&scope);
+                if(infer_in_stmts(ctx, func, expr_switch->default_statements, expr_switch->default_statements_length, scope)){
+                    infer_var_scope_pop(&scope);
+                    return FAILURE;
+                }
+                infer_var_scope_pop(&scope);
+            }
+            break;
         default: break;
             // Ignore this statement, it doesn't contain any expressions that we need to worry about
         }

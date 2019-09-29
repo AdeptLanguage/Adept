@@ -3,6 +3,7 @@
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
+#include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
@@ -1376,6 +1377,101 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 builder->break_block_id = prev_break_block_id;
                 builder->continue_block_id = prev_continue_block_id;
                 builder->break_continue_scope = prev_break_continue_scope;
+            }
+            break;
+        case EXPR_SWITCH: {
+                ast_expr_switch_t *switch_expr = (ast_expr_switch_t*) statements[s];
+
+                length_t default_block_id, resume_block_id;
+                length_t starting_block_id = builder->current_block_id;
+
+                ir_value_t *condition;
+                ast_type_t temp_ast_type;
+                if(ir_gen_expression(builder, switch_expr->value, &condition, false, &temp_ast_type)){
+                    return FAILURE;
+                }
+
+                // Make sure value AST type is suitable
+                maybe_index_t builtin;
+                if(temp_ast_type.elements_length != 1 || temp_ast_type.elements[0]->id != AST_ELEM_BASE
+                    || (builtin = typename_builtin_type(((ast_elem_base_t*) temp_ast_type.elements[0])->base)) == BUILTIN_TYPE_NONE
+                    || !(
+                        builtin == BUILTIN_TYPE_BYTE || builtin == BUILTIN_TYPE_SHORT || builtin == BUILTIN_TYPE_INT || builtin == BUILTIN_TYPE_LONG ||
+                        builtin == BUILTIN_TYPE_UBYTE || builtin == BUILTIN_TYPE_USHORT || builtin == BUILTIN_TYPE_UINT || builtin == BUILTIN_TYPE_ULONG
+                    )
+                ){
+                    char *typename = ast_type_str(&temp_ast_type);
+                    compiler_panicf(builder->compiler, switch_expr->source, "Cannot perform switch on type '%s'", typename);
+                    ast_type_free(&temp_ast_type);
+                    free(typename);
+                    return FAILURE;
+                }
+
+                ast_type_free(&temp_ast_type);
+
+                ir_value_t **case_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * switch_expr->cases_length);
+                length_t *case_block_ids = ir_pool_alloc(builder->pool, sizeof(length_t) * switch_expr->cases_length);
+
+                // Layout basicblocks for each case
+                for(length_t c = 0; c != switch_expr->cases_length; c++){
+                    case_block_ids[c] = build_basicblock(builder);
+                }
+                
+                // Create basicblocks for default case and/or resuming control flow
+                if(switch_expr->default_statements_length != 0){
+                    default_block_id = build_basicblock(builder);
+                    resume_block_id = build_basicblock(builder);
+                } else {
+                    resume_block_id = build_basicblock(builder);
+                    default_block_id = resume_block_id;
+                }
+
+                // Populate each case
+                for(length_t c = 0; c != switch_expr->cases_length; c++){
+                    ast_case_t *switch_case = &switch_expr->cases[c];
+
+                    if(ir_gen_expression(builder, switch_case->condition, &case_values[c], false, &temp_ast_type)){
+                        return FAILURE;
+                    }
+
+                    // TODO: ENSURE VALUE IS CONSTANT AND COMPATIBLE
+                    ast_type_free(&temp_ast_type);
+
+                    bool case_terminated;
+                    build_using_basicblock(builder, case_block_ids[c]);
+                    if(ir_gen_statements(builder, switch_case->statements, switch_case->statements_length, &case_terminated)){
+                        return FAILURE;
+                    }
+
+                    if(!case_terminated)
+                        build_break(builder, resume_block_id);
+                }
+
+                // Fill in statements for default block
+                if(default_block_id != resume_block_id){
+                    bool case_terminated;
+                    build_using_basicblock(builder, default_block_id);
+                    if(ir_gen_statements(builder, switch_expr->default_statements, switch_expr->default_statements_length, &case_terminated)){
+                        return FAILURE;
+                    }
+
+                    if(!case_terminated)
+                        build_break(builder, resume_block_id);
+                }
+
+                build_using_basicblock(builder, starting_block_id);
+                built_instr = build_instruction(builder, sizeof(ir_instr_switch_t));
+                ((ir_instr_switch_t*) built_instr)->id = INSTRUCTION_SWITCH;
+                ((ir_instr_switch_t*) built_instr)->result_type = condition->type;
+                ((ir_instr_switch_t*) built_instr)->condition = condition;
+                ((ir_instr_switch_t*) built_instr)->cases_length = switch_expr->cases_length;
+                ((ir_instr_switch_t*) built_instr)->case_values = case_values;
+                ((ir_instr_switch_t*) built_instr)->case_block_ids = case_block_ids;
+                ((ir_instr_switch_t*) built_instr)->default_block_id = default_block_id;
+                ((ir_instr_switch_t*) built_instr)->resume_block_id = resume_block_id;
+                build_using_basicblock(builder, resume_block_id);
+
+                compiler_warn(builder->compiler, statements[s]->source, "INTERNAL WARNING: Switch statement isn't completely implemented");
             }
             break;
         default:
