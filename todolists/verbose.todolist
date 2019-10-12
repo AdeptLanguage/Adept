@@ -27,7 +27,6 @@ TODO:
 * __defer__ __pass__ for fixed arrays maybe
 * dont allow void in places it doesn't make sense
 * __String__ function?
-* prevent 'each Type in my_list' from evaluating my_list twice?
 * allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
 * 'Super' keyword type which is the primary parent struct
 * 'super' keyword which is the same as  (this as *Super)
@@ -104,4 +103,5 @@ COMPLETED:
 + handle scopes, declarations and implicit __defer__ calls within cases for switch
 + bomb bool = (rand() as double / RAND_MAX as double) < 0.1 autocasting (prevent 0.1 from being implicitly casted to bool)
 + Have types merge for sides of 'EXPR_EQUALS', 'EXPR_NOTEQUALS', 'EXPR_GREATER', 'EXPR_LESSER', 'EXPR_GREATEREQ', 'EXPR_LESSEREQ'
-+ Maybe make it so 'uz' suffix isn't needed in '(additional + idx == 0 ? 10uz : idx)' where additional is a usize
++ maybe make it so 'uz' suffix isn't needed in '(additional + idx == 0 ? 10uz : idx)' where additional is a usize
++ prevent 'each Type in my_list' from evaluating my_list twice

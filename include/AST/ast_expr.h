@@ -84,34 +84,35 @@ extern "C" {
 #define EXPR_PREDECREMENT   0x0000003C
 #define EXPR_POSTINCREMENT  0x0000003D
 #define EXPR_POSTDECREMENT  0x0000003E
+#define EXPR_PHANTOM        0x0000003F
 // Exclusive statements --------------
-#define EXPR_DECLARE        0x0000003F
-#define EXPR_DECLAREUNDEF   0x00000040
-#define EXPR_ILDECLARE      0x00000041
-#define EXPR_ILDECLAREUNDEF 0x00000042
-#define EXPR_ASSIGN         0x00000043
-#define EXPR_ADDASSIGN      0x00000044
-#define EXPR_SUBTRACTASSIGN 0x00000045
-#define EXPR_MULTIPLYASSIGN 0x00000046
-#define EXPR_DIVIDEASSIGN   0x00000047
-#define EXPR_MODULUSASSIGN  0x00000048
-#define EXPR_RETURN         0x00000049
-#define EXPR_IF             0x0000004A
-#define EXPR_UNLESS         0x0000004B
-#define EXPR_IFELSE         0x0000004C
-#define EXPR_UNLESSELSE     0x0000004D
-#define EXPR_WHILE          0x0000004E
-#define EXPR_UNTIL          0x0000004F
-#define EXPR_WHILECONTINUE  0x00000050
-#define EXPR_UNTILBREAK     0x00000051
-#define EXPR_EACH_IN        0x00000052
-#define EXPR_REPEAT         0x00000053
-#define EXPR_DELETE         0x00000054
-#define EXPR_BREAK          0x00000055
-#define EXPR_CONTINUE       0x00000056
-#define EXPR_BREAK_TO       0x00000057
-#define EXPR_CONTINUE_TO    0x00000058
-#define EXPR_SWITCH         0x00000059
+#define EXPR_DECLARE        0x00000040
+#define EXPR_DECLAREUNDEF   0x00000041
+#define EXPR_ILDECLARE      0x00000042
+#define EXPR_ILDECLAREUNDEF 0x00000043
+#define EXPR_ASSIGN         0x00000044
+#define EXPR_ADDASSIGN      0x00000045
+#define EXPR_SUBTRACTASSIGN 0x00000046
+#define EXPR_MULTIPLYASSIGN 0x00000047
+#define EXPR_DIVIDEASSIGN   0x00000048
+#define EXPR_MODULUSASSIGN  0x00000049
+#define EXPR_RETURN         0x0000004A
+#define EXPR_IF             0x0000004B
+#define EXPR_UNLESS         0x0000004C
+#define EXPR_IFELSE         0x0000004D
+#define EXPR_UNLESSELSE     0x0000004E
+#define EXPR_WHILE          0x0000004F
+#define EXPR_UNTIL          0x00000050
+#define EXPR_WHILECONTINUE  0x00000051
+#define EXPR_UNTILBREAK     0x00000052
+#define EXPR_EACH_IN        0x00000053
+#define EXPR_REPEAT         0x00000054
+#define EXPR_DELETE         0x00000055
+#define EXPR_BREAK          0x00000056
+#define EXPR_CONTINUE       0x00000057
+#define EXPR_BREAK_TO       0x00000058
+#define EXPR_CONTINUE_TO    0x00000059
+#define EXPR_SWITCH         0x0000005A
 
 #define MAX_AST_EXPR EXPR_CONTINUE_TO
 
@@ -409,6 +410,16 @@ typedef struct {
     ast_type_t type;
 } ast_expr_sizeof_t;
 
+// ---------------- ast_expr_phantom_t ----------------
+// Expression for passing precomputed ir_value_t values into AST expressions
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_type_t type;
+    void *ir_value;
+    bool is_mutable;
+} ast_expr_phantom_t;
+
 // ---------------- ast_expr_call_method_t ----------------
 // Expression for calling a method
 typedef struct {
@@ -494,6 +505,7 @@ typedef struct {
     ast_type_t *it_type;
     ast_expr_t *length;
     ast_expr_t *low_array;
+    ast_expr_t *list;
     ast_expr_t **statements;
     length_t statements_length;
     length_t statements_capacity;

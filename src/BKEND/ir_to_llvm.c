@@ -217,11 +217,11 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
         LLVMTypeRef llvm_func_type = LLVMFunctionType(return_type, parameters, ir_func->arity, ir_func->traits & IR_FUNC_VARARG);
 
         const char *implementation_name;
+        char adept_implementation_name[256];
 
         if(ir_func->traits & IR_FUNC_FOREIGN || ir_func->traits & AST_FUNC_MAIN){
             implementation_name = ir_func->name;
         } else {
-            char adept_implementation_name[256];
             ir_implementation(ir_func_id, 'a', adept_implementation_name);
             implementation_name = adept_implementation_name;
         }
@@ -449,12 +449,12 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         }
 
                         const char *implementation_name;
+                        char adept_implementation_name[256];
                         ir_func_t *target_ir_func = &object->ir_module.funcs[((ir_instr_call_t*) instr)->ir_func_id];
 
                         if(target_ir_func->traits & IR_FUNC_FOREIGN || target_ir_func->traits & IR_FUNC_MAIN){
                             implementation_name = target_ir_func->name;
                         } else {
-                            char adept_implementation_name[256];
                             ir_implementation(((ir_instr_call_t*) instr)->ir_func_id, 'a', adept_implementation_name);
                             implementation_name = adept_implementation_name;
                         }

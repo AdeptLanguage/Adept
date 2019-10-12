@@ -27,7 +27,6 @@ COMPLETENESS:
 * Make struct domains work with polymorphic structs
 
 UNINTENDED:
-* Prevent 'each Type in my_list' from evaluating my_list twice?
 * Make continue & break correctly handle defer statements
 * More support for casting to enums from integers
 * More support for casting pointers to and from integers

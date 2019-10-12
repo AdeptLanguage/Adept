@@ -174,8 +174,10 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_EACH_IN: {
                 ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
                 if(infer_type(ctx, loop->it_type)) return FAILURE;
-                if(infer_expr(ctx, func, &loop->low_array, EXPR_NONE, scope)) return FAILURE;
-                if(infer_expr(ctx, func, &loop->length, EXPR_USIZE, scope)) return FAILURE;
+                
+                if(loop->low_array && infer_expr(ctx, func, &loop->low_array, EXPR_NONE, scope)) return FAILURE;
+                if(loop->length    && infer_expr(ctx, func, &loop->length, EXPR_USIZE, scope))   return FAILURE;
+                if(loop->list      && infer_expr(ctx, func, &loop->list, EXPR_USIZE, scope))     return FAILURE;
  
                 infer_var_scope_push(&scope);
                 infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));

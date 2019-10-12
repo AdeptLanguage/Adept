@@ -909,6 +909,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("usize"));
         }
         break;
+    case EXPR_PHANTOM: {
+            *ir_value = (ir_value_t*) ((ast_expr_phantom_t*) expr)->ir_value;
+            if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&((ast_expr_phantom_t*) expr)->type);
+        }
+        break;
     case EXPR_CALL_METHOD: {
             ast_expr_call_method_t *call_expr = (ast_expr_call_method_t*) expr;
             ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * (call_expr->arity + 1));

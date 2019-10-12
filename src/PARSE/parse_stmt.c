@@ -421,35 +421,40 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
             break;
         case TOKEN_EACH: {
                 source = sources[(*i)++];
-                ast_expr_t *length_limit = NULL;
-                ast_expr_t *low_array = NULL;
+
                 maybe_null_strong_cstr_t it_name = NULL;
                 ast_type_t *it_type = NULL;
                 trait_t stmts_mode;
                 maybe_null_weak_cstr_t label = NULL;
 
+                // Used for 'each in [array, length]'
+                ast_expr_t *length_limit = NULL;
+                ast_expr_t *low_array = NULL;
+
+                // Used for 'each in list'
+                ast_expr_t *list_expr = NULL;
+
+                // Attach label if present
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
                     label = tokens[*i].data; *i += 2;
                 }
                 
+                // Record override variable name for 'it' if present
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id != TOKEN_IN){
                     it_name = parse_take_word(ctx, "Expected name for 'it' variable");
-
-                    if(!it_name){
-                        // Should only reach this point when syntax is incorrect
-                        return FAILURE;
-                    }
+                    if(!it_name) return FAILURE;
                 }
 
                 it_type = malloc(sizeof(ast_type_t));
 
-                if(parse_type(ctx, it_type)
-                || parse_eat(ctx, TOKEN_IN, "Expected 'in' keyword")){
+                // Grab expected element type and pass over 'in' keyword
+                if(parse_type(ctx, it_type) || parse_eat(ctx, TOKEN_IN, "Expected 'in' keyword")){
                     free(it_name);
                     free(it_type);
                     return FAILURE;
                 }
 
+                // Handle values given for 'each in [array, length]' statement
                 if(tokens[*i].id == TOKEN_BRACKET_OPEN){
                     (*i)++;
 
@@ -481,35 +486,13 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                         free(it_name);
                         return FAILURE;
                     }
-                } else {
-                    ast_expr_t *list_expr;
+                }
 
-                    if(parse_expr(ctx, &list_expr)){
-                        ast_type_free_fully(it_type);
-                        free(it_name);
-                        return FAILURE;
-                    }
-                    
-                    ast_expr_call_method_t *array_call = malloc(sizeof(ast_expr_call_method_t));
-                    array_call->id = EXPR_CALL_METHOD;
-                    array_call->source = list_expr->source;
-                    array_call->name = "__array__";
-                    array_call->value = list_expr;
-                    array_call->args = NULL;
-                    array_call->arity = 0;
-                    array_call->is_tentative = false;
-
-                    ast_expr_call_method_t *length_call = malloc(sizeof(ast_expr_call_method_t));
-                    length_call->id = EXPR_CALL_METHOD;
-                    length_call->source = list_expr->source;
-                    length_call->name = "__length__";
-                    length_call->value = ast_expr_clone(list_expr);
-                    length_call->args = NULL;
-                    length_call->arity = 0;
-                    length_call->is_tentative = false;
-
-                    low_array = (ast_expr_t*) array_call;
-                    length_limit = (ast_expr_t*) length_call;
+                // Handle values given for 'each in list' statement
+                else if(parse_expr(ctx, &list_expr)){
+                    ast_type_free_fully(it_type);
+                    free(it_name);
+                    return FAILURE;
                 }
 
                 switch(tokens[(*i)++].id){
@@ -520,6 +503,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     ast_type_free_fully(it_type);
                     ast_expr_free_fully(low_array);
                     ast_expr_free_fully(length_limit);
+                    ast_expr_free_fully(list_expr);
                     free(it_name);
                     return FAILURE;
                 }
@@ -537,6 +521,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     ast_type_free_fully(it_type);
                     ast_expr_free_fully(low_array);
                     ast_expr_free_fully(length_limit);
+                    ast_expr_free_fully(list_expr);
                     free(it_name);
                     defer_scope_free(&each_in_defer_scope);
                     return FAILURE;
@@ -546,6 +531,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
 
+                // 'each in list' or 'each in [array, length]
                 ast_expr_each_in_t *stmt = malloc(sizeof(ast_expr_each_in_t));
                 stmt->id = EXPR_EACH_IN;
                 stmt->source = source;
@@ -554,6 +540,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt->it_type = it_type;
                 stmt->length = length_limit;
                 stmt->low_array = low_array;
+                stmt->list = list_expr;
                 stmt->statements = each_in_stmt_list.statements;
                 stmt->statements_length = each_in_stmt_list.length;
                 stmt->statements_capacity = each_in_stmt_list.capacity;

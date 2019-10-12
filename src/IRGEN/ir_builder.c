@@ -1277,8 +1277,9 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog
             ast_expr_each_in_t *loop = (ast_expr_each_in_t*) expr;
 
             if(resolve_type_polymorphics(compiler, catalog, loop->it_type, NULL)
-            || resolve_expr_polymorphics(compiler, catalog, loop->low_array)
-            || resolve_expr_polymorphics(compiler, catalog, loop->length)) return FAILURE;
+            || (loop->low_array && resolve_expr_polymorphics(compiler, catalog, loop->low_array))
+            || (loop->length && resolve_expr_polymorphics(compiler, catalog, loop->length))
+            || (loop->list && resolve_expr_polymorphics(compiler, catalog, loop->list))) return FAILURE;
 
             for(length_t i = 0; i != loop->statements_length; i++){
                 if(resolve_expr_polymorphics(compiler, catalog, loop->statements[i])) return FAILURE;

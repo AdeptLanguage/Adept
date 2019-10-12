@@ -1107,10 +1107,40 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 build_break(builder, prep_basicblock_id);
                 build_using_basicblock(builder, prep_basicblock_id);
 
+                // DANGEROUS: The following chunks of code assume that either 'each_in->list' isn't null or
+                //        'each_in->array' and 'each_in->length' aren't null
+                ir_value_t *list_precomputed = NULL;
+
+                // NOTE: 'phantom_list_value.type' must be passed to ast_type_free if list_precomputed isn't NULL
+                ast_expr_phantom_t phantom_list_value;
+
+                if(each_in->list){
+                    if(ir_gen_expression(builder, each_in->list, &list_precomputed, true, &phantom_list_value.type)){
+                        return FAILURE;
+                    }
+                    phantom_list_value.id = EXPR_PHANTOM;
+                    phantom_list_value.ir_value = list_precomputed;
+                    phantom_list_value.source = each_in->list->source;
+                    phantom_list_value.is_mutable = expr_is_mutable(each_in->list);
+                }
+                
                 // Generate length
                 ir_value_t *array_length;
+                if(list_precomputed){
+                    ast_expr_call_method_t length_call;
+                    length_call.id = EXPR_CALL_METHOD;
+                    length_call.source = phantom_list_value.source;
+                    length_call.name = "__length__";
+                    length_call.value = (ast_expr_t*) &phantom_list_value;
+                    length_call.args = NULL;
+                    length_call.arity = 0;
+                    length_call.is_tentative = false;
 
-                if(ir_gen_expression(builder, each_in->length, &array_length, false, &temporary_type)){
+                    if(ir_gen_expression(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
+                        ast_type_free(&phantom_list_value.type);
+                        return FAILURE;
+                    }
+                } else if(ir_gen_expression(builder, each_in->length, &array_length, false, &temporary_type)){
                     return FAILURE;
                 }
 
@@ -1118,6 +1148,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     char *a_type_str = ast_type_str(&temporary_type);
                     compiler_panicf(builder->compiler, each_in->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
+
+                    if(list_precomputed) ast_type_free(&phantom_list_value.type);
                     ast_type_free(&temporary_type);
                     return FAILURE;
                 }
@@ -1143,10 +1175,27 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 build_using_basicblock(builder, new_basicblock_id);
 
-                // Generate new_block statements to update 'it' variable
+                // Generate array value
                 ir_value_t *array;
+                if(list_precomputed){
+                    ast_expr_call_method_t array_call;
+                    array_call.id = EXPR_CALL_METHOD;
+                    array_call.source = phantom_list_value.source;
+                    array_call.name = "__array__";
+                    array_call.value = (ast_expr_t*) &phantom_list_value;
+                    array_call.args = NULL;
+                    array_call.arity = 0;
+                    array_call.is_tentative = false;
 
-                if(ir_gen_expression(builder, each_in->low_array, &array, false, &temporary_type)){
+                    if(ir_gen_expression(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
+                        ast_type_free(&phantom_list_value.type);
+                        close_scope(builder);
+                        return FAILURE;
+                    }
+
+                    // We don't need 'phantom_list_value' anymore, so free its type
+                    ast_type_free(&phantom_list_value.type);
+                } else if(ir_gen_expression(builder, each_in->low_array, &array, false, &temporary_type)){
                     close_scope(builder);
                     return FAILURE;
                 }
@@ -1185,6 +1234,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t it_var_id = builder->next_var_id;
                 char *it_name = each_in->it_name ? each_in->it_name : "it";
 
+                // Generate new block statements to update 'it' variable
                 add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE);
                 
                 ir_value_t *it_ptr = build_varptr(builder, array->type, it_var_id);

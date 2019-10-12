@@ -77,9 +77,9 @@ LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__ST
 # -lgtest_main -lgtest -lLLVMTestingSupport
 
 # -static-libgcc -static-libstdc++ -static
-CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O0 -DNDEBUG # -fmax-errors=5 -Werror
+CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O0 -DNDEBUG # -fmax-errors=5 -Werror -fsanitize=address
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
-LDFLAGS=$(LLVM_LINKER_FLAGS) 
+LDFLAGS=$(LLVM_LINKER_FLAGS) # -fsanitize=address
 SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c src/BRIDGE/bridge.c src/BRIDGE/type_table.c \
 	src/BRIDGE/rtti.c src/DRVR/compiler.c src/DRVR/main.c src/DRVR/object.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type_var.c src/IR/ir_type.c src/IR/ir.c src/IRGEN/ir_builder.c \
 	src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \

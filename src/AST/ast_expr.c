@@ -12,6 +12,8 @@ bool expr_is_mutable(ast_expr_t *expr){
         return expr_is_mutable(((ast_expr_ternary_t*) expr)->if_true) && expr_is_mutable(((ast_expr_ternary_t*) expr)->if_false);
     case EXPR_POSTINCREMENT: case EXPR_POSTDECREMENT:
         return expr_is_mutable(((ast_expr_unary_t*) expr)->value);
+    case EXPR_PHANTOM:
+        return ((ast_expr_phantom_t*) expr)->is_mutable;
     }
 
     return false;
@@ -461,6 +463,11 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(type_str);
             return representation;
         }
+    case EXPR_PHANTOM: {
+            representation = malloc(10);
+            sprintf(representation, "~phantom~");
+            return representation;
+        }
     case EXPR_CALL_METHOD: {
             // CLEANUP: This code is kinda scrappy, but hey it works
 
@@ -703,6 +710,9 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_SIZEOF:
         ast_type_free( &((ast_expr_sizeof_t*) expr)->type );
         break;
+    case EXPR_PHANTOM:
+        ast_type_free( &((ast_expr_phantom_t*) expr)->type );
+        break;
     case EXPR_CALL_METHOD:
         ast_expr_free_fully( ((ast_expr_call_method_t*) expr)->value );
         ast_exprs_free_fully(((ast_expr_call_method_t*) expr)->args, ((ast_expr_call_method_t*) expr)->arity);
@@ -776,6 +786,7 @@ void ast_expr_free(ast_expr_t *expr){
         }
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->low_array);
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->length);
+        ast_expr_free_fully(((ast_expr_each_in_t*) expr)->list);
         ast_free_statements_fully(((ast_expr_each_in_t*) expr)->statements, ((ast_expr_each_in_t*) expr)->statements_length);
         break;
     case EXPR_REPEAT:
@@ -1002,6 +1013,17 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_sizeof
         #undef clone_as_sizeof
+    case EXPR_PHANTOM:
+        #define expr_as_phantom ((ast_expr_phantom_t*) expr)
+        #define clone_as_phantom ((ast_expr_phantom_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_phantom_t));
+        clone_as_phantom->type = ast_type_clone(&expr_as_phantom->type);
+        clone_as_phantom->ir_value = expr_as_phantom->ir_value;
+        break;
+
+        #undef expr_as_phantom
+        #undef clone_as_phantom
     case EXPR_CALL_METHOD:
         #define expr_as_call_method ((ast_expr_call_method_t*) expr)
         #define clone_as_call_method ((ast_expr_call_method_t*) clone)
@@ -1196,8 +1218,9 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
             *clone_as_each_in->it_type = ast_type_clone(expr_as_each_in->it_type);
         }
 
-        clone_as_each_in->length = ast_expr_clone(expr_as_each_in->length);
-        clone_as_each_in->low_array = ast_expr_clone(expr_as_each_in->low_array);
+        clone_as_each_in->low_array = expr_as_each_in->low_array ? ast_expr_clone(expr_as_each_in->low_array) : NULL;
+        clone_as_each_in->length = expr_as_each_in->length ? ast_expr_clone(expr_as_each_in->length) : NULL;
+        clone_as_each_in->list = expr_as_each_in->list ? ast_expr_clone(expr_as_each_in->list) : NULL;
         clone_as_each_in->statements_length = expr_as_each_in->statements_length;
         clone_as_each_in->statements_capacity = expr_as_each_in->statements_length; // (statements_length is on purpose)
         clone_as_each_in->statements = malloc(sizeof(ast_expr_t*) * expr_as_each_in->statements_length);
