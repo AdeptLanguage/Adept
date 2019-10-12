@@ -51,7 +51,6 @@ TODO:
 * fallthrough
 * maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?
 * Dont search through global variables linearly
-* Fix '--null-checks' with PHI nodes
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -105,3 +104,5 @@ COMPLETED:
 + Have types merge for sides of 'EXPR_EQUALS', 'EXPR_NOTEQUALS', 'EXPR_GREATER', 'EXPR_LESSER', 'EXPR_GREATEREQ', 'EXPR_LESSEREQ'
 + maybe make it so 'uz' suffix isn't needed in '(additional + idx == 0 ? 10uz : idx)' where additional is a usize
 + prevent 'each Type in my_list' from evaluating my_list twice
++ pragma null_checks
++ fix '--null-checks' with PHI nodes

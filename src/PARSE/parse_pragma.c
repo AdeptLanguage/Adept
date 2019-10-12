@@ -23,8 +23,8 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     }
 
     const char * const directives[] = {
-        "compiler_supports", "compiler_version", "deprecated", "help", "mac_only", "no_type_info", "no_undef", "optimization", "options",
-        "package", "project_name", "unsupported", "windows_only"
+        "compiler_supports", "compiler_version", "deprecated", "help", "mac_only", "no_type_info", "no_undef", "null_checks",
+        "optimization", "options", "package", "project_name", "unsupported", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -87,7 +87,10 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     case 6: // 'no_undef' directive
         ctx->compiler->traits |= COMPILER_NO_UNDEF;
         return SUCCESS;
-    case 7: // 'optimization' directive
+    case 7: // 'null_checks' directive
+        ctx->compiler->checks |= COMPILER_NULL_CHECKS;
+        return SUCCESS;
+    case 8: // 'optimization' directive
         read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
@@ -107,22 +110,22 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             return FAILURE;
         }
         return SUCCESS;
-    case 8: // 'options' directive
+    case 9: // 'options' directive
         return parse_pragma_cloptions(ctx);
-    case 9: // 'package' directive
+    case 10: // 'package' directive
         if(ctx->compiler->traits & COMPILER_INFLATE_PACKAGE) return SUCCESS;
         if(compiler_create_package(ctx->compiler, ctx->object) == 0){
             ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         }
         return FAILURE;
-    case 10: // 'project_name' directive
+    case 11: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
         if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 11: // 'unsupported' directive
+    case 12: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -139,7 +142,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 12: // 'windows_only' directive
+    case 13: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;

@@ -30,7 +30,6 @@ UNINTENDED:
 * Make continue & break correctly handle defer statements
 * More support for casting to enums from integers
 * More support for casting pointers to and from integers
-* Fix '--null-checks' with PHI nodes
 
 TOOL:
 * pragma runtime_safe

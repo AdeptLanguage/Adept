@@ -268,6 +268,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         ir_instr_t *instr;
         LLVMValueRef llvm_result;
 
+        // If the true exit point of a block changed, its real value will be in here
+        // (Used for PHI instructions to have the proper end point)
+        LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+        memset(llvm_exit_blocks, 0, sizeof(LLVMBasicBlockRef) * basicblocks_length);
+
         for(length_t b = 0; b != basicblocks_length; b++) llvm_blocks[b] = LLVMAppendBasicBlock(func_skeletons[f], "");
 
         if(llvm->compiler->checks & COMPILER_NULL_CHECKS && basicblocks_length != 0){
@@ -336,6 +341,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         free(stack.values);
                         free(stack.types);
                         free(llvm_blocks);
+                        free(llvm_exit_blocks);
                         LLVMDisposeBuilder(builder);
                         return FAILURE;
                     }
@@ -348,6 +354,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         free(stack.values);
                         free(stack.types);
                         free(llvm_blocks);
+                        free(llvm_exit_blocks);
                         LLVMDisposeBuilder(builder);
                         return FAILURE;
                     }
@@ -504,6 +511,8 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 
                         if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
                             LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
+
+                            llvm_exit_blocks[b] = not_null_block;
 
                             LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, pointer, "");
                             LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
@@ -722,6 +731,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                             free(stack.values);
                             free(stack.types);
                             free(llvm_blocks);
+                            free(llvm_exit_blocks);
                             LLVMDisposeBuilder(builder);
                             return FAILURE;
                         }
@@ -909,8 +919,12 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 
                         LLVMValueRef when_a = ir_to_llvm_value(llvm, ((ir_instr_phi2_t*) instr)->a);
                         LLVMValueRef when_b = ir_to_llvm_value(llvm, ((ir_instr_phi2_t*) instr)->b);
-                        LLVMBasicBlockRef llvm_block_a = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_a];
-                        LLVMBasicBlockRef llvm_block_b = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_b];
+
+                        LLVMBasicBlockRef llvm_block_a = llvm_exit_blocks[((ir_instr_phi2_t*) instr)->block_id_a];
+                        LLVMBasicBlockRef llvm_block_b = llvm_exit_blocks[((ir_instr_phi2_t*) instr)->block_id_b];
+                        
+                        if(llvm_block_a == NULL) llvm_block_a = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_a];
+                        if(llvm_block_b == NULL) llvm_block_b = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_b];
 
                         LLVMAddIncoming(phi, &when_a, &llvm_block_a, 1);
                         LLVMAddIncoming(phi, &when_b, &llvm_block_b, 1);
@@ -938,6 +952,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     free(stack.values);
                     free(stack.types);
                     free(llvm_blocks);
+                    free(llvm_exit_blocks);
                     LLVMDisposeBuilder(builder);
                     return FAILURE;
                 }
@@ -949,6 +964,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         free(stack.values);
         free(stack.types);
         free(llvm_blocks);
+        free(llvm_exit_blocks);
         LLVMDisposeBuilder(builder);
     }
 
