@@ -1,0 +1,14 @@
+# TODOLIST FOR REDUCING ADEPT CODE REDUNDANCY
+#      CREATED SATURDAY MAY 4 2019
+# -------------------------------------------
+
+MINIMAL:
+* factor EXPR_CALL_METHOD for ir_gen_expr & ir_gen_stmt
+* ast_type_polymorphable & ast_types_identical
+
+MAJOR:
+* ir_gen_find_method_conforming & ir_gen_find_generic_base_method_conforming & others
+* stmt & expr handling for AST_EXPR_CALL
+* calling function elem
+
+COMPLETED:

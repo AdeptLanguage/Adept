@@ -1402,7 +1402,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             if(!ast_types_identical(&if_true_type, &if_false_type)){
                 char *if_true_typename = ast_type_str(&if_true_type);
                 char *if_false_typename = ast_type_str(&if_false_type);
-                compiler_panicf(builder->compiler, ternary->source, "ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
+                compiler_panicf(builder->compiler, ternary->source, "Ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
                 ast_type_free(&if_true_type);
                 ast_type_free(&if_false_type);
                 free(if_true_typename);

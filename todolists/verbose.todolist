@@ -1,0 +1,107 @@
+# TODOLIST THE III - ADEPT AFTER DEATH EDITION
+#      CREATED THURSDAY JANUARY 31 2019
+# --------------------------------------------
+
+MAYBE:
+
+TODO:
+* add ability to specifiy arguments to func & to get specific function
+* pragma runtime_safe
+* if $Unit Damagable
+* pragma project_root 'main.adept'
+* fill in offsets for AnyStructType types
+* allow for casting to Any from non-builtin types
+* allow member-containment prerequisites func damage(damagable $:Damagable)
+* allow similar-struct prerequisites
+    struct Damagable (health int)
+    struct Marine ~ Damagable (name String)
+    func damage(this *$:Damagable, amount int) {
+        this.health -= amount
+    }
+    func damage(this ~Damagable, amount int) {
+        this.health -= amount
+    }
+* improve compiler memory tracking (because freeing is slow during the middle of compilation rn)
+* ir_to_llvm_type circular containment detection
+* throw errors for fields with duplicate names in structs
+* __defer__ __pass__ for fixed arrays maybe
+* dont allow void in places it doesn't make sense
+* __String__ function?
+* prevent 'each Type in my_list' from evaluating my_list twice?
+* allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
+* 'Super' keyword type which is the primary parent struct
+* 'super' keyword which is the same as  (this as *Super)
+* override for [] operator
+* make x++ statement
+* make continue & break correctly handle defer statements
+* += -= *= /= %= etc. integration with management functions somehow
+* String.adept ideas: // prepare, ready, append, appendOnce, remove, fracture, distance, contains, getUntil, getUntilOneOf, atUntil, atUntilOneOf, deleteUntil, deleteUntilOneOf, getUntilLast, count, upper, lower, empty, in-place versions etc., removeFromFront, trim, extractDATATYPEs, words?, etc.
+* better error messages for 'Undeclared method'
+
+    echo "main.adept:5:67: Undeclared method 'add(*ubyte)' for type '<String> List'" && echo && echo "Potential Candidates:" && echo "    add(*<\$T> List, \$T) void" && echo "    add(*<String> List, String) void" && echo "    add(*<String> List, *ubyte, usize) void"
+
+* make struct domains work with polymorphic structs
+* 'repeat cache' and 'each Type in cache [array, length]'
+* more support for casting to enums from integers
+* more support for casting pointers to and from integers
+* option to print parameter names for function suggestions --more-info
+
+* prevent duplicate cases for switch
+* do constant casting when available and allow casting for switch cases
+* add support multiple value cases for switch
+* fallthrough
+* maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?
+* Dont search through global variables linearly
+* Fix '--null-checks' with PHI nodes
+
+COMPLETED:
++ Finish ! operator for meta directives ()
++ fix "if wrap_dir, wrap_color -= 1 else wrap_color += 1" all on same line not working
++ fix bug with "each Tile in [&globals.tiles, 256]," when globals.tiles is a fixed array
++ polymorphic functions
++ polymorphic structures
++ automatic conversion from function pointers to bool (for conditionals) [and other expressions]
++ arrays [standard library]
++ polymorphic type use inside of function bodies
++ polymorphic methods
++ zero initialization of memory allocated with 'new'
++ 'new undef' support (for avoiding zero-initialization of heap allocations on case-by-case basis w/o having to use malloc)
++ Internal Deference
++ Tentative Calls
++ #default meta directive
++ __pass__ for generic structs etc.
++ prevent pointers from auto-casting to booleans when calling functions
++ fix 'random.adept'
++ __equals__ management function
++ support for polymorphic management methods
++ ternary operator
++ increment ++ and decrement -- operators
++ struct integration
++ function-struct association
++ add dump for ++ and -- AST expressions (pre and post)
++ <$T> List
++ make it so only one of the result expressions given to ternary operator is evaluated
++ add short-circuting for logical expressions
++ fix ternary operator precedence
++ < instead of != for 'repeat' and 'each in' loops
++ change != in 'repeat' and 'each in' loops to < so that idx can be manipulated without having to end up exactly 'length'
++ allow for newlines in-between arguments to function calls
++ increase tolerance for newlines in unambiguous positions
++ one line functions
++ func something(x, y int) int = x + y
++ each Type in list
++ speed up type_table_reduce
++ use larger character implementation name encoding to improve searching speed during linking
++ fix issue with defer statements being executed before the expression within a return statement
++ fix issue with defer statements sometimes not being distributed when they should be
++ __defer__ calls for global variables
++ fix 'if mods & GLFW_MOD_CONTROL' because autocasting to bool?
++ unless macro
++ make it so that 'else' in 'if x, if y, do1() else do2()' applies to most recent 'if'
++ switch
++ switch statements?
++ prevent mutable values for cases for switch
++ handle scopes, declarations and implicit __defer__ calls within cases for switch
++ bomb bool = (rand() as double / RAND_MAX as double) < 0.1 autocasting (prevent 0.1 from being implicitly casted to bool)
++ Have types merge for sides of 'EXPR_EQUALS', 'EXPR_NOTEQUALS', 'EXPR_GREATER', 'EXPR_LESSER', 'EXPR_GREATEREQ', 'EXPR_LESSEREQ'
++ Maybe make it so 'uz' suffix isn't needed in '(additional + idx == 0 ? 10uz : idx)' where additional is a usize

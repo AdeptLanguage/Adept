@@ -29,9 +29,13 @@ length_t defer_scope_total(defer_scope_t *defer_scope){
 }
 
 void defer_scope_fulfill(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list){
-    expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, defer_scope->list.length, defer_scope->list.length);
+    defer_scope_fulfill_into(defer_scope, &stmt_list->statements, &stmt_list->length, &stmt_list->capacity);
+}
+
+void defer_scope_fulfill_into(defer_scope_t *defer_scope, ast_expr_t ***statements, length_t *length, length_t *capacity){
+    expand((void**) statements, sizeof(ast_expr_t*), *length, capacity, defer_scope->list.length, defer_scope->list.length);
     for(length_t r = defer_scope->list.length; r != 0; r--){
-        stmt_list->statements[stmt_list->length++] = defer_scope->list.statements[r - 1];
+        (*statements)[(*length)++] = defer_scope->list.statements[r - 1];
     }
     defer_scope->list.length = 0;
 }
@@ -919,18 +923,23 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
             failed = failed || parse_ignore_newlines(ctx, "Expected '}' before end of file");
 
             if(!failed){
+                defer_scope_fulfill_into(&current_defer_scope, list, list_length, list_capacity);
                 defer_scope_free(&current_defer_scope);
                 defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, TRAIT_NONE);
 
                 expand((void**) &cases, sizeof(ast_case_t), cases_length, &cases_capacity, 1, 4);
                 ast_case_t *expr_case = &cases[cases_length++];
-                expr_case->source = case_source;
                 expr_case->condition = condition;
+                expr_case->source = case_source;
+                expr_case->statements = NULL;
+                expr_case->statements_length = 0;
+                expr_case->statements_capacity = 0;
                 list = &expr_case->statements;
                 list_length = &expr_case->statements_length;
                 list_capacity = &expr_case->statements_capacity;
             }
         } else if(token_id == TOKEN_DEFAULT){
+            defer_scope_fulfill_into(&current_defer_scope, list, list_length, list_capacity);
             defer_scope_free(&current_defer_scope);
             defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, TRAIT_NONE);
             list = &default_statements;
@@ -973,6 +982,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
     // Skip over '}'
     (*ctx->i)++;
 
+    defer_scope_fulfill_into(&current_defer_scope, list, list_length, list_capacity);
     defer_scope_free(&current_defer_scope);
 
     ast_expr_switch_t *switch_expr = malloc(sizeof(ast_expr_switch_t));

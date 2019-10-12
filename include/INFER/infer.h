@@ -144,4 +144,8 @@ void infer_var_scope_nearest_inner(infer_var_scope_t *scope, const char *name, c
 // (NOTE: Minimum distance of 3 to count as near enough)
 void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out_nearest_name, int *out_distance);
 
+// ---------------- infer_mention_expression_literal_type ----------------
+// Mentions the type of a literal expression
+void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expression_literal_id);
+
 #endif // INFER_H

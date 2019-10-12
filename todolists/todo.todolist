@@ -1,0 +1,54 @@
+# GROUPED VERSION OF TODO SECTION OF VERBOSE.TODOLIST
+#        CREATED FRIDAY OCTOBER 11 2019
+# --------------------------------------------
+
+FEATURE:
+* Add ability to specifiy arguments to func & to get specific function
+* Test type of polymorphic type - 'if $Unit Damagable'
+* Similar-struct prerequisites
+* Finish 'Any'
+    * Fill in offsets for AnyStructType types
+    * Casting to Any from non-builtin types
+* __String__ function?
+* Override for [] += -= *= /= %= operators
+* Make x++ statement
+* fallthrough
+
+VERIFICATION:
+* ir_to_llvm_type circular containment detection
+* Throw errors for fields with duplicate names in structs
+* Dont allow void in places it doesn't make sense
+* Better error messages for 'Undeclared method'
+* Prevent duplicate cases for switch
+
+COMPLETENESS:
+* __defer__ __pass__ for fixed arrays maybe
+* Allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
+* Make struct domains work with polymorphic structs
+
+UNINTENDED:
+* Prevent 'each Type in my_list' from evaluating my_list twice?
+* Make continue & break correctly handle defer statements
+* More support for casting to enums from integers
+* More support for casting pointers to and from integers
+* Fix '--null-checks' with PHI nodes
+
+TOOL:
+* pragma runtime_safe
+* pragma project_root 'main.adept'
+
+DEBUG:
+* improve compiler memory tracking
+
+SPEED:
+* Dont search through global variables linearly
+
+IDEA:
+* 'Super' keyword type which is the primary parent struct
+* 'super' keyword which is the same as (this as *Super)
+* String.adept ideas: // prepare, ready, append, appendOnce, remove, fracture, distance, contains, getUntil, getUntilOneOf, atUntil, atUntilOneOf, deleteUntil, deleteUntilOneOf, getUntilLast, count, upper, lower, empty, in-place versions etc., removeFromFront, trim, extractDATATYPEs, words?, etc.
+* 'repeat cache' and 'each Type in cache [array, length]'
+* Option to print parameter names for function suggestions --more-info
+* Do constant casting when available and allow casting for switch cases
+* Add support multiple value cases for switch
+* Maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?

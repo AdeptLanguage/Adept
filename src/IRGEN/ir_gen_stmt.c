@@ -1386,28 +1386,30 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t starting_block_id = builder->current_block_id;
 
                 ir_value_t *condition;
-                ast_type_t temp_ast_type;
-                if(ir_gen_expression(builder, switch_expr->value, &condition, false, &temp_ast_type)){
+                ast_type_t master_ast_type;
+                if(ir_gen_expression(builder, switch_expr->value, &condition, false, &master_ast_type)){
                     return FAILURE;
                 }
 
-                // Make sure value AST type is suitable
-                maybe_index_t builtin;
-                if(temp_ast_type.elements_length != 1 || temp_ast_type.elements[0]->id != AST_ELEM_BASE
-                    || (builtin = typename_builtin_type(((ast_elem_base_t*) temp_ast_type.elements[0])->base)) == BUILTIN_TYPE_NONE
-                    || !(
-                        builtin == BUILTIN_TYPE_BYTE || builtin == BUILTIN_TYPE_SHORT || builtin == BUILTIN_TYPE_INT || builtin == BUILTIN_TYPE_LONG ||
-                        builtin == BUILTIN_TYPE_UBYTE || builtin == BUILTIN_TYPE_USHORT || builtin == BUILTIN_TYPE_UINT || builtin == BUILTIN_TYPE_ULONG
-                    )
-                ){
-                    char *typename = ast_type_str(&temp_ast_type);
+                // STATIC ASSERT: Ensure that all IR integer type kinds are in the expected range
+                #define tmp_range(v) (v >= 0x00000002 && v <= 0x00000009)
+                #if(!(tmp_range(TYPE_KIND_S8) || tmp_range(TYPE_KIND_S16) || tmp_range(TYPE_KIND_S32) || tmp_range(TYPE_KIND_S64) || \
+                    tmp_range(TYPE_KIND_U8) || tmp_range(TYPE_KIND_U16) || tmp_range(TYPE_KIND_U32) || tmp_range(TYPE_KIND_U64)))
+                #error "EXPR_SWITCH in ir_gen_stmt.c assumes IR integer type kinds are between 0x00000002 and 0x00000009"
+                #endif
+
+                // Use the assumtion that IR integer type kinds are in the expected range to check integer-ness
+                bool integer_like = tmp_range(condition->type->kind);
+                #undef tmp_range
+
+                // Make sure value type is suitable
+                if(!integer_like){
+                    char *typename = ast_type_str(&master_ast_type);
                     compiler_panicf(builder->compiler, switch_expr->source, "Cannot perform switch on type '%s'", typename);
-                    ast_type_free(&temp_ast_type);
+                    ast_type_free(&master_ast_type);
                     free(typename);
                     return FAILURE;
                 }
-
-                ast_type_free(&temp_ast_type);
 
                 ir_value_t **case_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * switch_expr->cases_length);
                 length_t *case_block_ids = ir_pool_alloc(builder->pool, sizeof(length_t) * switch_expr->cases_length);
@@ -1430,34 +1432,71 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 for(length_t c = 0; c != switch_expr->cases_length; c++){
                     ast_case_t *switch_case = &switch_expr->cases[c];
 
-                    if(ir_gen_expression(builder, switch_case->condition, &case_values[c], false, &temp_ast_type)){
+                    ast_type_t slave_ast_type;
+                    if(ir_gen_expression(builder, switch_case->condition, &case_values[c], false, &slave_ast_type)){
+                        ast_type_free(&master_ast_type);
                         return FAILURE;
                     }
 
-                    // TODO: ENSURE VALUE IS CONSTANT AND COMPATIBLE
-                    ast_type_free(&temp_ast_type);
+                    if(!ast_types_conform(builder, &case_values[c], &slave_ast_type, &master_ast_type, CONFORM_MODE_CALCULATION)){
+                        char *master_typename = ast_type_str(&master_ast_type);
+                        char *slave_typename = ast_type_str(&slave_ast_type);
+                        compiler_panicf(builder->compiler, switch_case->source, "Case type '%s' is incompatible with expected type '%s'", slave_typename, master_typename);
+                        free(master_typename);
+                        free(slave_typename);
+                        ast_type_free(&slave_ast_type);
+                        ast_type_free(&master_ast_type);
+                        return FAILURE;
+                    }
+
+                    ast_type_free(&slave_ast_type);
+
+                    unsigned int value_type = case_values[c]->value_type;
+                    if(!VALUE_TYPE_IS_CONSTANT(value_type)){
+                        compiler_panicf(builder->compiler, switch_case->source, "Value given to case must be constant");
+                        ast_type_free(&master_ast_type);
+                        return FAILURE;
+                    }
+
+                    open_scope(builder);
 
                     bool case_terminated;
                     build_using_basicblock(builder, case_block_ids[c]);
                     if(ir_gen_statements(builder, switch_case->statements, switch_case->statements_length, &case_terminated)){
+                        ast_type_free(&master_ast_type);
+                        close_scope(builder);
                         return FAILURE;
                     }
 
-                    if(!case_terminated)
+                    if(!case_terminated){
+                        handle_deference_for_variables(builder, &builder->scope->list);
                         build_break(builder, resume_block_id);
+                    }
+                    
+                    close_scope(builder);
                 }
 
                 // Fill in statements for default block
                 if(default_block_id != resume_block_id){
+                    open_scope(builder);
+
                     bool case_terminated;
                     build_using_basicblock(builder, default_block_id);
                     if(ir_gen_statements(builder, switch_expr->default_statements, switch_expr->default_statements_length, &case_terminated)){
+                        ast_type_free(&master_ast_type);
+                        close_scope(builder);
                         return FAILURE;
                     }
 
-                    if(!case_terminated)
+                    if(!case_terminated){
+                        handle_deference_for_variables(builder, &builder->scope->list);
                         build_break(builder, resume_block_id);
+                    }
+                    
+                    close_scope(builder);
                 }
+
+                ast_type_free(&master_ast_type);
 
                 build_using_basicblock(builder, starting_block_id);
                 built_instr = build_instruction(builder, sizeof(ir_instr_switch_t));
@@ -1470,8 +1509,6 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ((ir_instr_switch_t*) built_instr)->default_block_id = default_block_id;
                 ((ir_instr_switch_t*) built_instr)->resume_block_id = resume_block_id;
                 build_using_basicblock(builder, resume_block_id);
-
-                compiler_warn(builder->compiler, statements[s]->source, "INTERNAL WARNING: Switch statement isn't completely implemented");
             }
             break;
         default:

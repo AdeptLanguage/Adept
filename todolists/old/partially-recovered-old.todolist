@@ -1,0 +1,95 @@
+# THE LIST OF TODO NUMBER TWO - ADEPT TWO EDITION
+# -----------------------------------------------
+
+MAYBE:
+- Error for duplicate global variables (maybe?)
+- Enforce in/inout/out rules (maybe? haven't decided)
+- Init and free functionality
+- for loops (maybe? don't really need cause other lang features)
+- 'weak' or another keyword for single statements {...} in expressions
+- increament and decreament operators?
+- power '**' operator?
+
+TODO:
+* Add argument support for function address operator
+* Enums
+* Higher level arrays
+* Fixed level arrays
+* string
+* Allow for array allocation with new (high and low level)
+* Constant array literals
+* switch
+* binary operators
+* statements within expressions with {...} and statement 'weak' return values
+* subfunctions
+* 'if while else' and 'while until else' loops
+* pragma if_windows etc.
+* pragma print, error, die, name, output, execute, package, debug, optimization
+* pragma no_undef, no_pragma, no_foreign, no_autocast
+* update meta pragma build system
+* add auto void-return if no return type specified
+
+* support for declarations like: func create(x, y, z float) void { ... }
+* support for 'x, y, z float' type declarations in structs
+* 'did you mean' for constants
+* fix bug with 'ATLAS_TILE_OFFSET_X  == 2.0f' not existing when declared
+* better error messages for when wrong arguments are given
+* better debugging
+* more escape codes including \b and \t and \\
+* fix weird auto casting with constants
+
+* -----------------------------------------------------------------------
+* NOTE: This doesn't show the full extent of what todo.todolist had,
+* this was just the latest version I had backed up in google drive and had access to.
+* because of the death of my laptop, i lost the full todo.todolist ;(
+* this is backup is probably from 4-5 months earlier
+* dated as from July 2018. (Isaac - January 2019)
+* most of the things todo on this list have already been completed as of now
+* -----------------------------------------------------------------------
+
+COMPLETED:
++ Don't import a file if it's already been imported
++ Array access operator
++ Add function address operator
++ Finish function argument conforming
++ Finish conforming for declaration and assignment
++ Allow calling expressions of function pointer types
++ Attempt to merge ast_expr_t and ast_stmt_t (maybe set a bit on id?)
++ Update expression table
++ Better function organization for finding
++ Improve function searching and add function mangling
++ Global variables
++ Linking to C files
++ Add constants
++ Support for hexadecimal
++ and / or
++ && and ||
++ true / false
++ cast
++ Single line if, unless, while, until statements
++ Join statements operator ';'
++ Add else if / else unless
++ Multiple variable declaration
++ aliases
++ stdcall
++ Make memory_free function faster
++ sizeof operator
++ struct 'packed' keyword
++ Structure methods
++ Complete type checking and conforming for calling function pointers
++ defer
++ Clean up compiler_run()
++ Fix bool casting so that bool == int != 0 (general & add cast to if/unless/while/until/and/or)
++ Not operator '!'
++ Implement the -o flag
++ 'new' and 'delete' operators
++ Support for cloning all expression types
++ break & continue
++ multilayer break & continue as well as labels
++ 'until break [label]' and 'while continue [label]' loop
++ character literals
++ add 'undef' keyword to replace default unaccessed memory and have auto initialization
++ undef for globals
++ pragma
++ add and update code documentation
++ Don't have all .dep files automatically use the object index 0
