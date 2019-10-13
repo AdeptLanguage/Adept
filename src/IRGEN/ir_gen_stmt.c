@@ -82,6 +82,11 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
             module_func->basicblocks = builder.basicblocks;
             module_func->basicblocks_length = builder.basicblocks_length;
+
+            free(builder.block_stack_labels);
+            free(builder.block_stack_break_ids);
+            free(builder.block_stack_continue_ids);
+            free(builder.block_stack_scopes);
             return FAILURE;
         }
         
@@ -99,6 +104,11 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         if(ir_gen_globals_init(&builder)){
             module_func->basicblocks = builder.basicblocks;
             module_func->basicblocks_length = builder.basicblocks_length;
+
+            free(builder.block_stack_labels);
+            free(builder.block_stack_break_ids);
+            free(builder.block_stack_continue_ids);
+            free(builder.block_stack_scopes);
             return FAILURE;
         }
     }
@@ -109,6 +119,11 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         module_func = &object->ir_module.funcs[ir_func_id];
         module_func->basicblocks = builder.basicblocks;
         module_func->basicblocks_length = builder.basicblocks_length;
+
+        free(builder.block_stack_labels);
+        free(builder.block_stack_break_ids);
+        free(builder.block_stack_continue_ids);
+        free(builder.block_stack_scopes);
         return FAILURE;
     }
 
@@ -125,6 +140,10 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 
         if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(&builder)){
             // Failed to auto-generate __defer__() calls to children of parent type
+            free(builder.block_stack_labels);
+            free(builder.block_stack_break_ids);
+            free(builder.block_stack_continue_ids);
+            free(builder.block_stack_scopes);
             return FAILURE;
         }
 
@@ -147,8 +166,14 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
             char *return_typename = ast_type_str(&ast_func->return_type);
             compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func->name);
             free(return_typename);
+
             module_func->basicblocks = builder.basicblocks;
             module_func->basicblocks_length = builder.basicblocks_length;
+
+            free(builder.block_stack_labels);
+            free(builder.block_stack_break_ids);
+            free(builder.block_stack_continue_ids);
+            free(builder.block_stack_scopes);
             return FAILURE;
         }
     }

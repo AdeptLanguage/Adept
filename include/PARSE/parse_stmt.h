@@ -40,6 +40,11 @@ length_t defer_scope_total(defer_scope_t *defer_scope);
 void defer_scope_fulfill(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list);
 void defer_scope_fulfill_into(defer_scope_t *defer_scope, ast_expr_t ***statements, length_t *length, length_t *capacity);
 
+// ------------------ defer_scope_rewind ------------------
+// Fulfill current scope's deferred statements and duplicate parent scopes' deferred statements that would
+// normally be skipped over by 'break' or 'continue'
+void defer_scope_rewind(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list, trait_t scope_trait, weak_cstr_t label);
+
 // ------------------ parse_stmts ------------------
 // Parses one or more statements into two lists.
 // 'stmt_list' for standard statements

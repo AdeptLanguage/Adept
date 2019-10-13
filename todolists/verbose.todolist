@@ -32,7 +32,6 @@ TODO:
 * 'super' keyword which is the same as  (this as *Super)
 * override for [] operator
 * make x++ statement
-* make continue & break correctly handle defer statements
 * += -= *= /= %= etc. integration with management functions somehow
 * String.adept ideas: // prepare, ready, append, appendOnce, remove, fracture, distance, contains, getUntil, getUntilOneOf, atUntil, atUntilOneOf, deleteUntil, deleteUntilOneOf, getUntilLast, count, upper, lower, empty, in-place versions etc., removeFromFront, trim, extractDATATYPEs, words?, etc.
 * better error messages for 'Undeclared method'
@@ -106,3 +105,4 @@ COMPLETED:
 + prevent 'each Type in my_list' from evaluating my_list twice
 + pragma null_checks
 + fix '--null-checks' with PHI nodes
++ make continue & break correctly handle defer statements
