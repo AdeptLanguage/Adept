@@ -1,10 +1,12 @@
 
 import 'sys/cstdio.adept'
 
-enum EyeColor (GREEN, BLUE, BROWN, HAZEL, OTHER)
+enum EyeColor (GREEN, BLUE, BROWN, HAZEL, OTHER, __length__)
 
 func main(in argc int, in argv **ubyte) int {
     eyecolor EyeColor = EyeColor::BLUE
+    
+    eyecolor = eyecolor as int as EyeColor
 
     names 5 *ubyte = undef
     names[0] = 'Green'

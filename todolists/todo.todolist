@@ -27,7 +27,6 @@ COMPLETENESS:
 * Make struct domains work with polymorphic structs
 
 UNINTENDED:
-* More support for casting to enums from integers
 * More support for casting pointers to and from integers
 
 TOOL:

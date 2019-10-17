@@ -456,6 +456,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     }
 
     if(mode & CONFORM_MODE_INTENUM){
+        // Convert enum to integer
         if((*ir_value)->type->kind == TYPE_KIND_U64 && to_traits & TYPE_TRAIT_INTEGER){
             // Don't bother casting the value when they are the same underlying type
             if(to_type_kind == TYPE_KIND_U64) return true;
@@ -624,6 +625,34 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         
         *ir_value = build_struct_construction(builder->pool, any_type, values, 2);
         return true;
+    }
+
+    if(mode & CONFORM_MODE_INTENUM && from_traits & TYPE_TRAIT_INTEGER){
+        ir_type_t *to_as_ir_type;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &to_as_ir_type)) return false;
+
+        // If the type boils down to a u64 we'll consider it an enum
+        bool to_type_is_enum = to_as_ir_type->kind == TYPE_KIND_U64;
+
+        // Convert integer to enum
+        if(to_type_is_enum){
+            // Don't bother casting the value when they are the same underlying type
+            if(from_type_kind == TYPE_KIND_U64) return true;
+
+            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+            instr->result_type = to_as_ir_type;
+            instr->value = *ir_value;
+
+            if(global_type_kind_sizes_64[to_type_kind] == global_type_kind_sizes_64[from_type_kind]){
+                instr->id = INSTRUCTION_REINTERPRET; // They are the same size
+                *ir_value = build_value_from_prev_instruction(builder);
+                return true;
+            }
+
+            instr->id = INSTRUCTION_ZEXT;
+            *ir_value = build_value_from_prev_instruction(builder);
+            return true;
+        }
     }
 
     #undef TYPE_TRAIT_POINTER
