@@ -183,6 +183,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             sprintf(value_str, "cbc %s to %s", from, to);
             free(to);
             free(from);
+            free(typename);
             return value_str;
         }
         break;
@@ -192,14 +193,17 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             value_str = malloc(40 + strlen(of));
             sprintf(value_str, "construct %s (from %d values)", of, (int) construction->length);
             free(of);
+            free(typename);
             return value_str;
         }
         break;
     default:
         redprintf("INTERNAL ERROR: Unexpected value type of value in ir_value_str function\n");
+        free(typename);
         return NULL;
     }
 
+    free(typename);
     return NULL; // Should never get here
 }
 
@@ -259,6 +263,7 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
         char *ret_type_str = ir_type_str(functions[f].return_type);
         ir_implementation(f, 'a', implementation_buffer);
         fprintf(file, "fn %s %s -> %s\n", functions[f].name, implementation_buffer, ret_type_str);
+        free(ret_type_str);
 
         // Count the total number of instructions
         length_t total_instructions = 0;
@@ -556,8 +561,6 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                 }
             }
         }
-
-        free(ret_type_str);
     }
 }
 

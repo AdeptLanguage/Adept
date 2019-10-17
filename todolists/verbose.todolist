@@ -40,7 +40,6 @@ TODO:
 
 * make struct domains work with polymorphic structs
 * 'repeat cache' and 'each Type in cache [array, length]'
-* more support for casting pointers to and from integers
 * option to print parameter names for function suggestions --more-info
 
 * prevent duplicate cases for switch
@@ -106,3 +105,4 @@ COMPLETED:
 + fix '--null-checks' with PHI nodes
 + make continue & break correctly handle defer statements
 + more support for casting to enums from integers
++ more support for casting pointers to and from integers

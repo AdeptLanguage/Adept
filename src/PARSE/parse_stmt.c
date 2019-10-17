@@ -43,7 +43,7 @@ void defer_scope_fulfill_into(defer_scope_t *defer_scope, ast_expr_t ***statemen
 void defer_scope_rewind(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list, trait_t scope_trait, weak_cstr_t label){
     defer_scope_fulfill_into(defer_scope, &stmt_list->statements, &stmt_list->length, &stmt_list->capacity);
     
-    while((!(defer_scope->traits & scope_trait) || (label && strcmp(defer_scope->label, label) != 0)) && defer_scope->parent != NULL){
+    while((!(defer_scope->traits & scope_trait) || (label && defer_scope->label && strcmp(defer_scope->label, label) != 0)) && defer_scope->parent != NULL){
         defer_scope = defer_scope->parent;
 
         expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, defer_scope->list.length, defer_scope->list.length);

@@ -1600,7 +1600,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
                 // Variable declaration without default value
                 add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
-
+                
                 // Zero initialize the variable
                 instruction = build_instruction(builder, sizeof(ir_instr_varzeroinit_t));
                 ((ir_instr_varzeroinit_t*) instruction)->id = INSTRUCTION_VARZEROINIT;

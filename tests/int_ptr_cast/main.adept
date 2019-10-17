@@ -2,8 +2,89 @@
 import 'sys/cstdio.adept'
 
 func main(in argc int, in argv **ubyte) void {
-    argv_int usize = cast usize argv
-    argv_ptr **ubyte = cast **ubyte argv_int
+    toIntegerTests()
+    toPointerTests()
+    transmissionTest(argc, argv)
+}
 
-    each *ubyte in [argv_ptr, argc as usize], puts(it)
+func transmissionTest(in argc int, in argv **ubyte) {
+    represented_as_integer usize = cast usize argv
+    again_as_ptr **ubyte = cast **ubyte represented_as_integer
+    each *ubyte in [again_as_ptr, argc as usize], puts(it)
+}
+
+func toIntegerTests {
+    pointer1 ptr = null
+    pointer2 *int = null
+
+    b1 bool = pointer1 as bool
+    b2 bool = pointer2 as bool
+
+    sb1 byte = pointer1 as byte
+    sb2 byte = pointer2 as byte
+
+    ub1 ubyte = pointer1 as ubyte
+    ub2 ubyte = pointer2 as ubyte
+
+    ss1 short = pointer1 as short
+    ss2 short = pointer2 as short
+
+    us1 ushort = pointer1 as ushort
+    us2 ushort = pointer2 as ushort
+
+    si1 int = pointer1 as int
+    si2 int = pointer2 as int
+
+    ui1 uint = pointer1 as uint
+    ui2 uint = pointer2 as uint
+
+    sl1 long = pointer1 as long
+    sl2 long = pointer2 as long
+
+    ul1 long = pointer1 as ulong
+    ul2 long = pointer2 as ulong
+
+    uz1 usize = pointer1 as usize
+    uz2 usize = pointer2 as usize
+}
+
+func toPointerTests {
+    pointer1 ptr = null
+    pointer2 *int = null
+
+    sb byte = 0
+    pointer1 = sb as ptr
+    pointer2 = sb as *int
+
+    ub ubyte = 0
+    pointer1 = ub as ptr
+    pointer2 = ub as *int
+
+    ss short = 0
+    pointer1 = ss as ptr
+    pointer2 = ss as *int
+
+    us ushort = 0
+    pointer1 = us as ptr
+    pointer2 = us as *int
+
+    si int = 0
+    pointer1 = si as ptr
+    pointer2 = si as *int
+
+    ui uint = 0
+    pointer1 = ui as ptr
+    pointer2 = ui as *int
+
+    sl long = 0
+    pointer1 = sl as ptr
+    pointer2 = sl as *int
+
+    ul ulong = 0
+    pointer1 = ul as ptr
+    pointer2 = ul as *int
+
+    uz usize = 0
+    pointer1 = uz as ptr
+    pointer2 = uz as *int
 }
