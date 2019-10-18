@@ -310,6 +310,7 @@ func main(in argc int, in argv **ubyte) int {
 - [(2.1) HexGL](https://github.com/IsaacShelton/HexGL)
 - [(2.1) Minesweeper](https://github.com/IsaacShelton/AdeptMinesweeper)
 - [(2.2) Another 2D Platformer](https://github.com/IsaacShelton/Tangent)
+- [(2.2) A* Path Finding](https://github.com/IsaacShelton/AdeptPathFinding)
 
 # Syntax Examples
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
