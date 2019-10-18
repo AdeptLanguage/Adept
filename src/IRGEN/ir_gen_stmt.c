@@ -1488,6 +1488,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 ir_value_t **case_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * switch_expr->cases_length);
                 length_t *case_block_ids = ir_pool_alloc(builder->pool, sizeof(length_t) * switch_expr->cases_length);
+                unsigned long long *uniqueness = malloc(sizeof(unsigned long long) * switch_expr->cases_length);
 
                 // Layout basicblocks for each case
                 for(length_t c = 0; c != switch_expr->cases_length; c++){
@@ -1510,6 +1511,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ast_type_t slave_ast_type;
                     if(ir_gen_expression(builder, switch_case->condition, &case_values[c], false, &slave_ast_type)){
                         ast_type_free(&master_ast_type);
+                        free(uniqueness);
                         return FAILURE;
                     }
 
@@ -1521,6 +1523,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         free(slave_typename);
                         ast_type_free(&slave_ast_type);
                         ast_type_free(&master_ast_type);
+                        free(uniqueness);
                         return FAILURE;
                     }
 
@@ -1530,9 +1533,23 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     if(!VALUE_TYPE_IS_CONSTANT(value_type)){
                         compiler_panicf(builder->compiler, switch_case->source, "Value given to case must be constant");
                         ast_type_free(&master_ast_type);
+                        free(uniqueness);
                         return FAILURE;
                     }
 
+                    unsigned long long uniqueness_value = ir_value_uniqueness_value(case_values[c]);
+                    uniqueness[c] = uniqueness_value;
+
+                    for(length_t u = 0; u != c; u++){
+                        if(uniqueness_value == uniqueness[u]){
+                            compiler_panicf(builder->compiler, switch_expr->cases[u].condition->source, "Non-unique case value");
+                            compiler_panicf(builder->compiler, switch_case->condition->source, "Duplicate here");
+                            ast_type_free(&master_ast_type);
+                            free(uniqueness);
+                            return FAILURE;
+                        }
+                    }
+                    
                     open_scope(builder);
 
                     bool case_terminated;
@@ -1540,6 +1557,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     if(ir_gen_statements(builder, switch_case->statements, switch_case->statements_length, &case_terminated)){
                         ast_type_free(&master_ast_type);
                         close_scope(builder);
+                        free(uniqueness);
                         return FAILURE;
                     }
 
@@ -1550,6 +1568,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     
                     close_scope(builder);
                 }
+
+                free(uniqueness);
 
                 // Fill in statements for default block
                 if(default_block_id != resume_block_id){

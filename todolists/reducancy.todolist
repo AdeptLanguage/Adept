@@ -6,6 +6,7 @@ MINIMAL:
 * factor EXPR_CALL_METHOD for ir_gen_expr & ir_gen_stmt
 * ast_type_polymorphable & ast_types_identical
 * create ast_type_dereference to replace occurrences of manual ast type dereference
+* create constant definitions for storage types of each literal value type S8_STORAGE, S16_STORAGE, U64_STORAGE, etc.
 
 MAJOR:
 * ir_gen_find_method_conforming & ir_gen_find_generic_base_method_conforming & others

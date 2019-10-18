@@ -608,4 +608,12 @@ void ir_implementation_setup();
 // NOTE: output_buffer is assumed to be able to hold 32 characters
 void ir_implementation(length_t id, char prefix, char *output_buffer);
 
+// ---------------- ir_value_uniqueness_value ----------------
+// Maps a literal IR value to a uniqueness value.
+// If two IR values of the same IR type have the same uniqueness value, then
+// they also have the same literal value.
+// If two IR values of the same IR type have different uniqueness values, then
+// they do not share the same literal value.
+unsigned long long ir_value_uniqueness_value(ir_value_t *value);
+
 #endif // IR_H

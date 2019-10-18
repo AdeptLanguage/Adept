@@ -623,9 +623,6 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     lex_state.buildup = malloc(256);
                     lex_state.buildup_capacity = 256;
                 }
-                (*sources)[tokenlist->length].index = i;
-                (*sources)[tokenlist->length].object_index = object_index;
-                (*sources)[tokenlist->length].stride = 0;
                 lex_state.buildup_length = 2;
                 lex_state.buildup_inner_stride = 2;
                 lex_state.buildup[0] = '-';

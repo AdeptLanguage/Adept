@@ -42,7 +42,6 @@ TODO:
 * 'repeat cache' and 'each Type in cache [array, length]'
 * option to print parameter names for function suggestions --more-info
 
-* prevent duplicate cases for switch
 * do constant casting when available and allow casting for switch cases
 * add support multiple value cases for switch
 * fallthrough
@@ -106,3 +105,4 @@ COMPLETED:
 + make continue & break correctly handle defer statements
 + more support for casting to enums from integers
 + more support for casting pointers to and from integers
++ prevent duplicate cases for switch

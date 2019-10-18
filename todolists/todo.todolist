@@ -19,7 +19,6 @@ VERIFICATION:
 * Throw errors for fields with duplicate names in structs
 * Dont allow void in places it doesn't make sense
 * Better error messages for 'Undeclared method'
-* Prevent duplicate cases for switch
 
 COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe

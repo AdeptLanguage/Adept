@@ -517,7 +517,7 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
     int line, column;
 
     if(object->traits & OBJECT_PACKAGE){
-        redprintf("%s: %s!\n", filename_name_const(object->filename), message);
+        redprintf("%s:?:?: %s!\n", filename_name_const(object->filename), message);
     } else {
         lex_get_location(object->buffer, source.index, &line, &column);
         redprintf("%s:%d:%d: %s!\n", filename_name_const(object->filename), line, column, message);
@@ -538,7 +538,7 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
     if(object->traits & OBJECT_PACKAGE){
         line = 1;
         column = 1;
-        printf("%s: ", filename_name_const(object->filename));
+        printf("%s:?:?: ", filename_name_const(object->filename));
     } else {
         lex_get_location(object->buffer, source.index, &line, &column);
         printf("%s:%d:%d: ", filename_name_const(object->filename), line, column);

@@ -1,0 +1,100 @@
+
+#default stage 4
+#default test_duplicate_cases false
+
+import 'sys/cstdio.adept'
+
+func main {
+    fruit Fruit = Fruit::APPLE
+    
+    value int = undef
+    mode DrivingGear = DrivingGear::NEUTRAL
+    
+    printf('Enter value: ')
+    scanf('%d', &value)
+
+    #if stage > 0
+    switch value {
+    case 0, printf('zero\n')
+    case 1, printf('one\n')
+    case 2, printf('two\n')
+    case 3, printf('three\n')
+    case -1, printf('negative one\n')
+    default printf('less than negative one or greater than three\n')
+
+    #if test_duplicate_cases
+    case -1si, printf('this should throw an error\n')
+    #end
+
+    }
+    #end
+    
+    #if stage > 1
+    switch fruit {
+    case Fruit::APPLE,  printf('Apple\n')
+    case Fruit::ORANGE, printf('Orange\n')
+    case Fruit::BANANA, printf('Banana\n')
+    }
+    #end
+
+    #if stage > 2
+    switch value {
+        defer printf('x < -1 || x > 3\n')
+        printf('waiting...\n')
+        printf('waiting...\n')
+        printf('waiting...\n')
+        printf('waiting...\n')
+    case 1
+        defer printf('1one1\n')
+        printf('waiting...\n')
+    case 2
+        defer printf('2two2\n')
+        printf('waiting...\n')
+        printf('waiting...\n')
+    case 3
+        defer printf('3three3\n')
+        printf('waiting...\n')
+        printf('waiting...\n')
+        printf('waiting...\n')
+    }
+    #end
+    
+    #if stage > 3
+    switch value {
+        // Despite 'm Bomb' being declared up here for the default case,
+        // its __defer__() method will still be called at the proper time
+        m Bomb
+    case 1
+        m Bomb
+        m.value = 'bomb 1'
+    case 2
+        m Bomb
+        m.value = 'bomb2'
+    case 3
+        m Bomb
+        m.value = 'bomb3'
+        printf('hi\n')
+    default
+        m.value = 'default bomb'
+    }
+    #end
+
+    #if stage > 4
+    switch mode {
+    case PARK,    printf('Parked\n')
+    case REVERSE, printf('Driving in reverse\n')
+    case NEUTRAL, printf('In neutral\n')
+    case DRIVE_1 or DRIVE_2 or DRIVE_3
+        printf('Driving\n')
+    }
+    #end
+}
+
+enum Fruit (APPLE, ORANGE, BANANA)
+enum DrivingGear (PARK, REVERSE, NEUTRAL, DRIVE_1, DRIVE_2, DRIVE_3)
+
+struct Bomb (value *ubyte) {
+    func __defer__ {
+        printf('%s\n', this.value)
+    }
+}
