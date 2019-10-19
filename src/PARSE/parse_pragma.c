@@ -23,8 +23,8 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     }
 
     const char * const directives[] = {
-        "compiler_supports", "compiler_version", "deprecated", "help", "mac_only", "no_type_info", "no_undef", "null_checks",
-        "optimization", "options", "package", "project_name", "unsafe_new", "unsupported", "windows_only"
+        "compiler_supports", "compiler_version", "deprecated", "disable_warnings", "enable_warnings", "help", "mac_only", "no_type_info",
+        "no_undef", "null_checks", "optimization", "options", "package", "project_name", "unsafe_new", "unsupported", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -71,26 +71,32 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "This file is deprecated and may be removed in the future");
         }
         return SUCCESS;
-    case 3: // 'help' directive
+    case 3: // 'disable_warnings' directive
+        ctx->compiler->traits |= COMPILER_NO_WARN;
+        return SUCCESS;
+    case 4: // 'enable_warnings' directive
+        ctx->compiler->traits &= ~COMPILER_NO_WARN;
+        return SUCCESS;
+    case 5: // 'help' directive
         show_help();
         return FAILURE;
-    case 4: // 'mac_only' directive
+    case 6: // 'mac_only' directive
         #if !defined(__APPLE__) || !TARGET_OS_MAC
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
         return FAILURE;
         #else
         return SUCCESS;
         #endif
-    case 5: // 'no_type_info' directive
+    case 7: // 'no_type_info' directive
         ctx->compiler->traits |= COMPILER_NO_TYPE_INFO;
         return SUCCESS;
-    case 6: // 'no_undef' directive
+    case 8: // 'no_undef' directive
         ctx->compiler->traits |= COMPILER_NO_UNDEF;
         return SUCCESS;
-    case 7: // 'null_checks' directive
+    case 9: // 'null_checks' directive
         ctx->compiler->checks |= COMPILER_NULL_CHECKS;
         return SUCCESS;
-    case 8: // 'optimization' directive
+    case 10: // 'optimization' directive
         read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
@@ -110,25 +116,25 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             return FAILURE;
         }
         return SUCCESS;
-    case 9: // 'options' directive
+    case 11: // 'options' directive
         return parse_pragma_cloptions(ctx);
-    case 10: // 'package' directive
+    case 12: // 'package' directive
         if(ctx->compiler->traits & COMPILER_INFLATE_PACKAGE) return SUCCESS;
         if(compiler_create_package(ctx->compiler, ctx->object) == 0){
             ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         }
         return FAILURE;
-    case 11: // 'project_name' directive
+    case 13: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
         if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 12: // 'unsafe_new' directive
+    case 14: // 'unsafe_new' directive
         ctx->compiler->checks |= COMPILER_UNSAFE_NEW;
         return SUCCESS;
-    case 13: // 'unsupported' directive
+    case 15: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -145,7 +151,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 14: // 'windows_only' directive
+    case 16: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;

@@ -107,3 +107,4 @@ COMPLETED:
 + prevent duplicate cases for switch
 + add ability to specify arguments to func & to get specific function
 + add 'pragma unsafe_new'
++ add 'pragma enable_warnings' and 'pragma disable_warnings'
