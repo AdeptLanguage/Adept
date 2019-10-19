@@ -106,3 +106,4 @@ COMPLETED:
 + more support for casting pointers to and from integers
 + prevent duplicate cases for switch
 + add ability to specify arguments to func & to get specific function
++ add 'pragma unsafe_new'

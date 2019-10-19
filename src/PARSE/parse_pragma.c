@@ -24,7 +24,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
 
     const char * const directives[] = {
         "compiler_supports", "compiler_version", "deprecated", "help", "mac_only", "no_type_info", "no_undef", "null_checks",
-        "optimization", "options", "package", "project_name", "unsupported", "windows_only"
+        "optimization", "options", "package", "project_name", "unsafe_new", "unsupported", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -125,7 +125,10 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 12: // 'unsupported' directive
+    case 12: // 'unsafe_new' directive
+        ctx->compiler->checks |= COMPILER_UNSAFE_NEW;
+        return SUCCESS;
+    case 13: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -142,7 +145,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 13: // 'windows_only' directive
+    case 14: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;
