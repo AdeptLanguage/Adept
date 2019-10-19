@@ -74,6 +74,8 @@ call :compile fixed_array
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array_assign
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile funcaddr
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcptr
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile functions
@@ -191,6 +193,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile struct_association
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile successful
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile switch
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile tentative_function_calls
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

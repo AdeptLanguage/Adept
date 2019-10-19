@@ -1,0 +1,26 @@
+
+import 'sys/cmath.adept'
+import "sys/cstdio.adept"
+
+func main(in argc int, in argv **ubyte) int {
+    int_operation func(int, int) int
+    double_operation func(double, double) double
+    myprint func(*ubyte, ...) int = func &printf(*ubyte)
+
+    int_operation = func &math(int, int)
+    myprint('>>> 8 + 13 = %d\n', int_operation(8, 13))
+
+    double_operation = func &math(double, double)
+    myprint('>>> 8 * 13 = %f\n', double_operation(8.0, 13.0))
+    return 0
+}
+
+func math(in a int, in b int) int {
+    printf('[Sum Version was Called]\n')
+    return a + b
+}
+
+func math(in a double, in b double) double {
+    printf('[Product Version was Called]\n')
+    return a * b
+}

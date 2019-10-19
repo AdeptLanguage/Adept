@@ -3,7 +3,6 @@
 # --------------------------------------------
 
 FEATURE:
-* Add ability to specifiy arguments to func & to get specific function
 * Test type of polymorphic type - 'if $Unit Damagable'
 * Similar-struct prerequisites
 * Finish 'Any'

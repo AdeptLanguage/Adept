@@ -24,6 +24,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
 
     while(++index != ir_module->funcs_length){
         mapping = &ir_module->func_mappings[index];
+        ast_func = &object->ast.funcs[mapping->ast_func_id];
 
         if(mapping->is_beginning_of_group == -1){
             mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
@@ -43,11 +44,23 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
 }
 
 errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
-        const char *name, funcpair_t *result){
+        const char *name, bool *out_is_unique, funcpair_t *result){
     ir_module_t *ir_module = &object->ir_module;
 
     maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
     if(index == -1) return FAILURE;
+
+    if(out_is_unique){
+        *out_is_unique = true;
+
+        if(index + 1 != ir_module->funcs_length){
+            ir_func_mapping_t *mapping = &ir_module->func_mappings[index + 1];
+            if(mapping->is_beginning_of_group == -1){
+                mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index].name) != 0);
+            }
+            if(mapping->is_beginning_of_group == 0) *out_is_unique = false;
+        }
+    }
 
     ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
     result->ast_func = &object->ast.funcs[mapping->ast_func_id];

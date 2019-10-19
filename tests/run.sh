@@ -44,6 +44,7 @@ compile equals_func || exit $?
 compile external || exit $?
 compile fixed_array || exit $?
 compile fixed_array_assign || exit $?
+compile funcaddr || exit $?
 compile funcptr || exit $?
 compile functions || exit $?
 compile globals || exit $?
@@ -106,6 +107,7 @@ compile string || exit $?
 compile structs || exit $?
 compile struct_association || exit $?
 compile successful || exit $?
+compile switch || exit $?
 compile tentative_function_calls || exit $?
 compile tentative_method_calls || exit $?
 compile terminate_join || exit $?

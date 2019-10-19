@@ -673,9 +673,14 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             funcpair_t pair;
 
             if(func_addr_expr->match_args == NULL){
-                if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &pair)){
+                bool is_unique;
+                if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &is_unique, &pair)){
                     compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", func_addr_expr->name);
                     return FAILURE;
+                }
+                
+                if(!is_unique){
+                    compiler_warnf(builder->compiler, func_addr_expr->source, "Multiple functions named '%s', using the first of them", func_addr_expr->name);
                 }
             } else if(ir_gen_find_func(builder->compiler, builder->object, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length, &pair)){
                 compiler_undeclared_function(builder->compiler, builder->object, func_addr_expr->source, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length);

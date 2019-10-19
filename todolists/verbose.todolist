@@ -5,7 +5,6 @@
 MAYBE:
 
 TODO:
-* add ability to specifiy arguments to func & to get specific function
 * pragma runtime_safe
 * if $Unit Damagable
 * pragma project_root 'main.adept'
@@ -46,7 +45,7 @@ TODO:
 * add support multiple value cases for switch
 * fallthrough
 * maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?
-* Dont search through global variables linearly
+* dont search through global variables linearly
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -106,3 +105,4 @@ COMPLETED:
 + more support for casting to enums from integers
 + more support for casting pointers to and from integers
 + prevent duplicate cases for switch
++ add ability to specify arguments to func & to get specific function

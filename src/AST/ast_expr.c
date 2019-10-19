@@ -729,6 +729,10 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_POSTDECREMENT:
         ast_expr_free_fully( ((ast_expr_unary_t*) expr)->value );
         break;
+    case EXPR_FUNC_ADDR:
+        if(((ast_expr_func_addr_t*) expr)->match_args)
+            ast_types_free_fully(((ast_expr_func_addr_t*) expr)->match_args, ((ast_expr_func_addr_t*) expr)->match_args_length);
+        break;
     case EXPR_NEW:
         ast_type_free( &((ast_expr_new_t*) expr)->type );
         if(((ast_expr_new_t*) expr)->amount != NULL) ast_expr_free_fully( ((ast_expr_new_t*) expr)->amount );

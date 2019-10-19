@@ -1296,6 +1296,26 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog
             }
         }
         break;
+    case EXPR_SWITCH: {
+            ast_expr_switch_t *switch_stmt = (ast_expr_switch_t*) expr;
+
+            if(resolve_expr_polymorphics(compiler, catalog, switch_stmt->value)) return FAILURE;
+
+            for(length_t i = 0; i != switch_stmt->default_statements_length; i++){
+                if(resolve_expr_polymorphics(compiler, catalog, switch_stmt->default_statements[i])) return FAILURE;
+            }
+
+            for(length_t c = 0; c != switch_stmt->cases_length; c++){
+                ast_case_t *expr_case = &switch_stmt->cases[c];
+
+                if(resolve_expr_polymorphics(compiler, catalog, expr_case->condition)) return FAILURE;
+
+                for(length_t i = 0; i != expr_case->statements_length; i++){
+                    if(resolve_expr_polymorphics(compiler, catalog, expr_case->statements[i])) return FAILURE;
+                }
+            }
+        }
+        break;
     case EXPR_ADD:
     case EXPR_SUBTRACT:
     case EXPR_MULTIPLY:
