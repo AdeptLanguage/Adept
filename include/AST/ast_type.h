@@ -179,6 +179,10 @@ void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base);
 // Prepends a pointer to an AST type
 void ast_type_prepend_ptr(ast_type_t *type);
 
+// ---------------- ast_type_make_base_ptr_ptr ----------------
+// Takes ownership of 'name' and creates a polymorphic type variable
+void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name);
+
 // ---------------- ast_type_make_generic_int ----------------
 // Creates a generic integer type
 void ast_type_make_generic_int(ast_type_t *type);

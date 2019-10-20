@@ -22,7 +22,6 @@ VERIFICATION:
 COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe
 * Allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
-* Make struct domains work with polymorphic structs
 
 UNINTENDED:
 

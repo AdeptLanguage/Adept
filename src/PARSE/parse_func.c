@@ -232,8 +232,38 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
 
     if(ctx->struct_association){
         parse_func_grow_arguments(func, backfill, &capacity);
+
+        if(ctx->struct_association_is_polymorphic){
+            // Insert 'this *<$A, $B, $C, ...> AssociatedStruct' as first argument to function
+
+            ast_elem_pointer_t *pointer = malloc(sizeof(ast_elem_pointer_t));
+            pointer->id = AST_ELEM_POINTER;
+            pointer->source = NULL_SOURCE;
+
+            ast_elem_generic_base_t *generic_base = malloc(sizeof(ast_elem_generic_base_t));
+            generic_base->id = AST_ELEM_GENERIC_BASE;
+            generic_base->source = NULL_SOURCE;
+            generic_base->name = strclone(ctx->struct_association->name);
+            generic_base->generics = malloc(sizeof(ast_type_t) * ctx->struct_association->generics_length);
+
+            for(length_t i = 0; i != ctx->struct_association->generics_length; i++){
+                ast_type_make_polymorph(&generic_base->generics[i], strclone(ctx->struct_association->generics[i]));
+            }
+
+            generic_base->generics_length = ctx->struct_association->generics_length;
+            generic_base->name_is_polymorphic = false;
+    
+            func->arg_types[0].elements = malloc(sizeof(ast_elem_t*) * 2);
+            func->arg_types[0].elements[0] = (ast_elem_t*) pointer;
+            func->arg_types[0].elements[1] = (ast_elem_t*) generic_base;
+            func->arg_types[0].elements_length = 2;
+            func->arg_types[0].source = NULL_SOURCE;
+        } else {
+            // Insert 'this *AssociatedStruct' as first argument to function
+            ast_type_make_base_ptr(&func->arg_types[0], strclone(ctx->struct_association->name));
+        }
+
         func->arg_names[0] = strclone("this");
-        ast_type_make_base_ptr(&func->arg_types[0], strclone(ctx->struct_association->name));
         func->arg_sources[0] = ctx->struct_association->source;
         func->arg_flows[0] = FLOW_IN;
         func->arg_type_traits[0] = TRAIT_NONE;

@@ -58,7 +58,8 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
         scan_i++;
     
     if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
-        ctx->struct_association = domain;
+        ctx->struct_association = (ast_polymorphic_struct_t*) domain;
+        ctx->struct_association_is_polymorphic = generics != NULL;
         *ctx->i = scan_i;
     }
 

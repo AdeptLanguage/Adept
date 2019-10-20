@@ -31,7 +31,8 @@ typedef struct {
     length_t angle_bracket_repeat;
 
     // Used to automatically promote functions into methods
-    ast_struct_t *struct_association;
+    ast_polymorphic_struct_t *struct_association;
+    bool struct_association_is_polymorphic;
 
     // Used to allow parse_expr and friends to ignore newlines within expressions
     length_t ignore_newlines_in_expr_depth;

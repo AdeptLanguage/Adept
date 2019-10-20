@@ -311,7 +311,11 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
         if(found_compatible){
             ir_func_mapping_t instance;
 
-            if(instantiate_polymorphic_func(builder, poly_template, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
+            if(instantiate_polymorphic_func(builder, poly_template, arg_types, type_list_length, &using_catalog, &instance)){
+                ast_type_var_catalog_free(&using_catalog);
+                return ALT_FAILURE;
+            }
+            
             ast_type_var_catalog_free(&using_catalog);
 
             result->ast_func = &builder->object->ast.funcs[instance.ast_func_id];
@@ -538,15 +542,13 @@ bool func_args_polymorphable(ast_func_t *poly_template, ast_type_t *arg_types, l
 
     // Ensure argument supplied meet length requirements
     if(poly_template->traits & AST_FUNC_VARARG ? poly_template->arity > type_length : poly_template->arity != type_length){
-        if(out_catalog) *out_catalog = catalog;
-        else ast_type_var_catalog_free(&catalog);
+        ast_type_var_catalog_free(&catalog);
         return false;
     }
 
     for(length_t i = 0; i != type_length; i++){
         if(!ast_type_polymorphable(&poly_template->arg_types[i], &arg_types[i], &catalog)){
-            if(out_catalog) *out_catalog = catalog;
-            else ast_type_var_catalog_free(&catalog);
+            ast_type_var_catalog_free(&catalog);
             return false;
         }
     }

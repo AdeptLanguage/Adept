@@ -4,10 +4,19 @@ import 'sys/cstdio.adept'
 func main {
     greeter Greeter
     greeter.greet()
+
+    welcomer <int> Welcomer
+    welcomer.welcome(10)
 }
 
 struct Greeter () {
     func greet {
         printf('Hello World!\n')
+    }
+}
+
+struct <$T> Welcomer () {
+    func welcome(value $T) {
+        printf('Welcome! [x%d]\n', value as int)
     }
 }

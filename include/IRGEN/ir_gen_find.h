@@ -84,6 +84,7 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 
 // ---------------- func_args_polymorphable ----------------
 // Returns whether the given types work with a polymorphic function template
+// NOTE: 'out_catalog' is only returned if the function is polymorphable
 // NOTE: 'out_catalog' may be NULL
 bool func_args_polymorphable(ast_func_t *poly_template, ast_type_t *arg_types, length_t type_length,
     ast_type_var_catalog_t *out_catalog);

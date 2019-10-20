@@ -37,7 +37,6 @@ TODO:
 
     echo "main.adept:5:67: Undeclared method 'add(*ubyte)' for type '<String> List'" && echo && echo "Potential Candidates:" && echo "    add(*<\$T> List, \$T) void" && echo "    add(*<String> List, String) void" && echo "    add(*<String> List, *ubyte, usize) void"
 
-* make struct domains work with polymorphic structs
 * 'repeat cache' and 'each Type in cache [array, length]'
 * option to print parameter names for function suggestions --more-info
 
@@ -108,3 +107,4 @@ COMPLETED:
 + add ability to specify arguments to func & to get specific function
 + add 'pragma unsafe_new'
 + add 'pragma enable_warnings' and 'pragma disable_warnings'
++ make struct domains work with polymorphic structs
