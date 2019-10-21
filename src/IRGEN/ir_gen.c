@@ -92,8 +92,12 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
 
     if(preserve_sortedness){
-        // TODO: Don't resort the entire array
+        // SPEED: LAZY: TODO: Don't resort the entire array
         qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
+
+        // SPEED: LAZY: TODO: Don't invalidate the entire array
+        for(size_t i = 0; i != module->func_mappings_length; i++)
+            module->func_mappings[i].is_beginning_of_group = -1;
     }
 
     if(!(ast_func->traits & AST_FUNC_FOREIGN)){
@@ -133,8 +137,12 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     method->is_beginning_of_group = -1;
 
                     if(preserve_sortedness){
-                        // TODO: Don't resort the entire array
+                        // SPEED: LAZY: TODO: Don't resort the entire array
                         qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
+
+                        // SPEED: LAZY: TODO: Don't invalidate the entire array
+                        for(size_t i = 0; i != module->methods_length; i++)
+                            module->methods[i].is_beginning_of_group = -1;
                     }
                 }
                 break;
@@ -212,9 +220,7 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
 
     while(jobs.length != 0){
         ir_func_mapping_t *job = &jobs.jobs[--jobs.length];
-
-        ast_func_t *ast_func = &(*ast_funcs)[job->ast_func_id];
-        if(ast_func->traits & AST_FUNC_FOREIGN) continue;
+        if((*ast_funcs)[job->ast_func_id].traits & AST_FUNC_FOREIGN) continue;
 
         if(ir_gen_func_statements(compiler, object, job->ast_func_id, job->ir_func_id, &jobs)){
             free(jobs.jobs);

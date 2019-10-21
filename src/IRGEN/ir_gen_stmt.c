@@ -914,7 +914,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                                 break;
                             }
 
-                            compiler_panicf(builder->compiler, call_stmt->source, "Undeclared method '%s'", call_stmt->name);
+                            compiler_undeclared_method(builder->compiler, builder->object, call_stmt->source, call_stmt->name, arg_types, call_stmt->arity);
                             ast_types_free_fully(arg_types, call_stmt->arity + 1);
                             return FAILURE;
                         }
@@ -941,7 +941,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                                 break;
                             }
 
-                            compiler_panicf(builder->compiler, call_stmt->source, "Undeclared method '%s'", call_stmt->name);
+                            compiler_undeclared_method(builder->compiler, builder->object, call_stmt->source, call_stmt->name, arg_types, call_stmt->arity);
                             ast_types_free_fully(arg_types, call_stmt->arity + 1);
                             return FAILURE;
                         }

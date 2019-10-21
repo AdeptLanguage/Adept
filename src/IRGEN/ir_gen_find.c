@@ -130,6 +130,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
                 found_compatible = true;
+                break;
             }
         }
 
@@ -202,7 +203,7 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
         ast_type_var_catalog_t using_catalog;
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
-            found_compatible = true;
+            found_compatible = poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0;
         } else while(++poly_index != ast->polymorphic_methods_length){
             poly_func = &ast->polymorphic_methods[poly_index];
             poly_template = &ast->funcs[poly_func->ast_func_id];
@@ -213,7 +214,8 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
             if(poly_func->is_beginning_of_group == 1) break;
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
-                found_compatible = true;
+                found_compatible = poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0;
+                if(found_compatible) break;
             }
         }
 
@@ -293,7 +295,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
         ast_type_var_catalog_t using_catalog;
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
-            found_compatible = true;
+            found_compatible = poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0;
         } else while(++poly_index != ast->polymorphic_methods_length){
             poly_func = &ast->polymorphic_methods[poly_index];
             poly_template = &ast->funcs[poly_func->ast_func_id];
@@ -304,7 +306,8 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
             if(poly_func->is_beginning_of_group == 1) break;
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && func_args_polymorphable(poly_template, arg_types, type_list_length, &using_catalog)){
-                found_compatible = true;
+                found_compatible = poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0;
+                if(found_compatible) break;
             }
         }
 

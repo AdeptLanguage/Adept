@@ -612,15 +612,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         }
         if(mapping->is_beginning_of_group == 1 && index != original_index) return;
 
-        ast_func_t *ast_func = &object->ast.funcs[mapping->ast_func_id];
-
-        char *return_type_string = ast_type_str(&ast_func->return_type);
-        char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);
-
-        printf("    %s(%s) %s\n", ast_func->name, args_string, return_type_string);
-
-        free(args_string);
-        free(return_type_string);
+        print_candidate(&object->ast.funcs[mapping->ast_func_id]);
     } while(++index != ir_module->funcs_length);
 
     index = poly_index;
@@ -629,22 +621,160 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
         
         if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = index == 0 ? 1 : (strcmp(poly->name, ir_module->func_mappings[index - 1].name) != 0);
+            poly->is_beginning_of_group = (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
         }
-        if(poly->is_beginning_of_group == 1 && index != poly_index) return;
+        if(poly->is_beginning_of_group == 1 && index != poly_index) break;
+
+        print_candidate(&object->ast.funcs[poly->ast_func_id]);
+    } while(++index != object->ast.polymorphic_funcs_length);
+}
+
+void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t source,
+        const char *name, ast_type_t *types, length_t method_arity){
+    
+    // NOTE: Assuming that types_length == method_arity + 1
+    ast_type_t this_type = types[0];
+
+    // Ensure the type given for 'this_type' is valid
+    if(this_type.elements_length != 2 || this_type.elements[0]->id != AST_ELEM_POINTER ||
+        !(this_type.elements[1]->id == AST_ELEM_BASE || this_type.elements[1]->id == AST_ELEM_GENERIC_BASE)
+    ){
+        printf("INTERNAL ERROR: compiler_undeclared_method received invalid this_type\n");
+        return;
+    }
+
+    // Modify ast_type_t to remove a pointer element from the front
+    // NOTE: We don't take ownership of 'this_type' or its data
+    // NOTE: This change doesn't propogate to outside this function
+    // DANGEROUS: Manually removing ast_elem_pointer_t
+    this_type.elements = &this_type.elements[1];
+    this_type.elements_length--; // Reduce length accordingly
+
+    maybe_index_t original_index;
+    ir_module_t *ir_module = &object->ir_module;
+    unsigned int kind = this_type.elements[0]->id;
+    ast_elem_generic_base_t *maybe_generic_base = NULL;
+
+    if(kind == AST_ELEM_BASE){
+        original_index = find_beginning_of_method_group(ir_module->methods, ir_module->methods_length, ((ast_elem_base_t*) this_type.elements[0])->base, name);
+    } else if(kind == AST_ELEM_GENERIC_BASE){
+        maybe_generic_base = (ast_elem_generic_base_t*) this_type.elements[0];
+        original_index = find_beginning_of_generic_base_method_group(ir_module->generic_base_methods, ir_module->generic_base_methods_length,
+            maybe_generic_base->name, name);
+    } else {
+        original_index = -1;
+    }
+
+    if(original_index == -1){
+        // No method with that name exists for that struct
+        char *this_core_typename = ast_type_str(&this_type);
+        compiler_panicf(compiler, source, "Undeclared method '%s' for type '%s'", name, this_core_typename);
+        free(this_core_typename);
+        return;
+    } else {
+        // Other methods for that struct have the same name
+        char *args_string = make_args_string(types, method_arity + 1);
+        compiler_panicf(compiler, source, "Undeclared method %s(%s)", name, args_string ? args_string : "");
+        free(args_string);
+
+        printf("\nPotential Candidates:\n");
+    }
+
+    maybe_index_t index = original_index;
+
+    // Print potential candidates for basic struct
+    if(kind == AST_ELEM_BASE) do {
+        ir_method_t *method = &ir_module->methods[index];
+
+        if(method->is_beginning_of_group == -1){
+            method->is_beginning_of_group = (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
+        }
+        if(method->is_beginning_of_group == 1 && index != original_index) return;
+
+        // Print method candidate for basic struct type
+        print_candidate(&object->ast.funcs[method->ast_func_id]);
+    } while(++index != ir_module->methods_length);
+
+    // Print potential candidates for generic struct
+    else if(kind == AST_ELEM_GENERIC_BASE) do {
+        ir_generic_base_method_t *generic_base_method = &ir_module->generic_base_methods[index];
+        
+        if(generic_base_method->is_beginning_of_group == -1){
+            generic_base_method->is_beginning_of_group = (strcmp(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
+        }
+        if(generic_base_method->is_beginning_of_group == 1 && index != original_index) break;
+
+        // Ensure the generics of the generic base match up
+        bool generics_match_up = maybe_generic_base->generics_length == generic_base_method->generics_length;
+        if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
+            if(!ast_types_identical(&maybe_generic_base->generics[i], &generic_base_method->generics[i])){
+                // && !ast_type_has_polymorph(&generic_base_method->generics[i])
+                // is unnessary because generic_base_methods my themselves will never contain polymorphic type variables
+                generics_match_up = false;
+                break;
+            }
+        }
+
+        // Print method candidate for generic struct type (if the generics match up)
+        if(generics_match_up){
+            print_candidate(&object->ast.funcs[generic_base_method->ast_func_id]);
+        }
+    } while(++index != ir_module->generic_base_methods_length);
+
+    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
+    index = poly_index;
+
+    if(index != -1) do {
+        ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
+
+        if(poly->is_beginning_of_group == -1){
+            poly->is_beginning_of_group = (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
+        }
+        if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 
         ast_func_t *ast_func = &object->ast.funcs[poly->ast_func_id];
 
-        char *return_type_string = ast_type_str(&ast_func->return_type);
-        char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);
+        // Ensure this function could possibly a method
+        if(ast_func->arity == 0 || strcmp(ast_func->arg_names[0], "this") != 0) continue;
 
-        printf("    %s(%s) %s\n", ast_func->name, args_string, return_type_string);
+        // Ensure the first type is valid for a method
+        if(ast_func->arity == 0) continue;
+        ast_type_t *first_arg_type = &ast_func->arg_types[0];
+        if(first_arg_type->elements_length != 2 || first_arg_type->elements[0]->id != AST_ELEM_POINTER) continue;
+        unsigned int elem_kind = first_arg_type->elements[1]->id;
+        if(kind != elem_kind && elem_kind != AST_ELEM_POLYMORPH) continue;
 
-        free(args_string);
-        free(return_type_string);
-    } while(++index != ir_module->funcs_length);
+        // If it's a pointer-to-generic-struct method, then make sure the generics match
+        if(elem_kind == AST_ELEM_GENERIC_BASE){
+            ast_elem_generic_base_t *first_arg_generic_base = (ast_elem_generic_base_t*) first_arg_type->elements[1];
+
+            // Ensure the generics of the generic base match up
+            bool generics_match_up = maybe_generic_base->generics_length == first_arg_generic_base->generics_length;
+            if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
+                if(!(ast_types_identical(&maybe_generic_base->generics[i], &first_arg_generic_base->generics[i]) || ast_type_has_polymorph(&first_arg_generic_base->generics[i]))){
+                    generics_match_up = false;
+                    break;
+                }
+            }
+
+            if(!generics_match_up) continue;
+        }
+
+        print_candidate(ast_func);
+    } while(++index != object->ast.polymorphic_funcs_length);
 }
 #endif
+
+void print_candidate(ast_func_t *ast_func){
+    // NOTE: If the function is a method, we assume that it was constructed correctly and that
+    // the first type is either a pointer to a base or a pointer to a generic base
+
+    char *return_type_string = ast_type_str(&ast_func->return_type);
+    char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);
+    printf("    %s(%s) %s\n", ast_func->name, args_string ? args_string : "", return_type_string);
+    free(args_string);
+    free(return_type_string);
+}
 
 strong_cstr_t make_args_string(ast_type_t *types, length_t arity){
     char *args_string = NULL;

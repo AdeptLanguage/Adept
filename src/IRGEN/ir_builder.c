@@ -958,7 +958,8 @@ ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
 errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
         length_t types_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping){
-    if(types_length < poly_func->arity) return FAILURE;
+    
+    if(types_length != poly_func->arity && !(poly_func->traits & AST_FUNC_VARARG)) return FAILURE;
 
     ast_t *ast = &builder->object->ast;
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);

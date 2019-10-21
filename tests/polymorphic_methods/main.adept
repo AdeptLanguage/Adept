@@ -1,4 +1,6 @@
 
+#set test_undeclared_method_dialog false
+
 import '2.1/basics.adept'
 
 struct <$T> Printable (value $T)
@@ -10,6 +12,20 @@ func print(this *<$T> Printable) {
 func print(this *<int> Printable) {
     print("INTEGER: %" % this.value)
 }
+
+#if test_undeclared_method_dialog
+    func print(this *<$T> Printable, x $T) {
+        print("dummy method, cause $T's must match\n")
+    }
+
+    func print(this *<String> Printable, x $T, y $T) {
+        print("dummy method\n")
+    }
+
+    func print(this *<double> Printable, x $T) {
+        print("dummy method\n")
+    }
+#end
 
 struct RuntimeTest (test_kind int, test_id int)
 struct CustomTestCase (test_kind int, test_id int, name String, occurrences int)
@@ -44,5 +60,10 @@ func main {
 
     x.print()
     y.print()
-    z.print()
+
+    #if test_undeclared_method_dialog
+        z.print(1234)
+    #else
+        z.print()
+    #end
 }

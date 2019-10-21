@@ -826,10 +826,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             if(array_value->type->kind != TYPE_KIND_POINTER || array_type.elements_length < 2 || array_type.elements[0]->id != AST_ELEM_POINTER){
                 char *given_type = ast_type_str(&array_type);
 
-                char *s = ir_type_str(array_value->type);
-                puts(s);
-                free(s);
-
                 compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on non-array type '%s'",
                     expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", given_type);
 
@@ -991,7 +987,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                             break;
                         }
 
-                        compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
+                        compiler_undeclared_method(builder->compiler, builder->object, expr->source, call_expr->name, arg_types, call_expr->arity);
                         ast_types_free_fully(arg_types, call_expr->arity + 1);
                         return FAILURE;
                     }
@@ -1007,8 +1003,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                             break;
                         }
 
-                        compiler_panic(builder->compiler, generic_base->source, "Can't call method on struct value with unresolved polymorphic name");
                         ast_types_free_fully(arg_types, call_expr->arity + 1);
+                        compiler_panic(builder->compiler, generic_base->source, "Can't call method on struct value with unresolved polymorphic name");
                         return FAILURE;
                     }
 
@@ -1018,7 +1014,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                             break;
                         }
 
-                        compiler_panicf(builder->compiler, call_expr->source, "Undeclared method '%s'", call_expr->name);
+                        compiler_undeclared_method(builder->compiler, builder->object, expr->source, call_expr->name, arg_types, call_expr->arity);
                         ast_types_free_fully(arg_types, call_expr->arity + 1);
                         return FAILURE;
                     }

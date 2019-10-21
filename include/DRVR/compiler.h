@@ -131,12 +131,21 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_warn(compiler_t *compiler, source_t source, const char *message);
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...);
 
+#ifndef ADEPT_INSIGHT_BUILD
 // ---------------- compiler_undeclared_function ----------------
 // Prints an error message for an undeclared function
-#ifndef ADEPT_INSIGHT_BUILD
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
     const char *name, ast_type_t *types, length_t arity);
+
+// ---------------- compiler_undeclared_method ----------------
+// Prints an error message for an undeclared method
+void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t source,
+    const char *name, ast_type_t *types, length_t method_arity);
 #endif
+
+// ---------------- print_candidate ----------------
+// Prints a function/method candidate
+void print_candidate(ast_func_t *ast_func);
 
 // ---------------- make_args_string ----------------
 // Helper function for generating a string for function arguments

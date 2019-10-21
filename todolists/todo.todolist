@@ -17,7 +17,6 @@ VERIFICATION:
 * ir_to_llvm_type circular containment detection
 * Throw errors for fields with duplicate names in structs
 * Dont allow void in places it doesn't make sense
-* Better error messages for 'Undeclared method'
 
 COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe
