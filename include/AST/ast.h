@@ -73,7 +73,7 @@ typedef struct {
     length_t field_count;
     trait_t traits;
     source_t source;
-
+    // ---------------------------
     strong_cstr_t *generics;
     length_t generics_length;
 } ast_polymorphic_struct_t;

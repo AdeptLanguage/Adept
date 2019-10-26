@@ -273,20 +273,30 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     if(tokens[*i].id != TOKEN_OPEN) return SUCCESS;
     (*i)++; // Eat '('
 
+    // Allow polymorphic prerequisites for function arguments
+    ctx->allow_polymorphic_prereqs = true;
+
     while(tokens[*i].id != TOKEN_CLOSE){
         if(parse_ignore_newlines(ctx, "Expected function argument")){
             parse_free_unbackfilled_arguments(func, backfill);
+            ctx->allow_polymorphic_prereqs = false;
             return FAILURE;
         }
 
         parse_func_grow_arguments(func, backfill, &capacity);
-        if(parse_func_argument(ctx, func, &backfill, &is_solid)) return FAILURE;
+
+        if(parse_func_argument(ctx, func, &backfill, &is_solid)){
+            ctx->allow_polymorphic_prereqs = false;
+            return FAILURE;
+        }
+        
         if(!is_solid) continue;
 
         if(tokens[*i].id == TOKEN_NEXT){
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
                 parse_free_unbackfilled_arguments(func, backfill);
+                ctx->allow_polymorphic_prereqs = false;
                 return FAILURE;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
@@ -295,9 +305,13 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
                     : "Expected ',' after argument type";
             compiler_panic(ctx->compiler, sources[*i], error_message);
             parse_free_unbackfilled_arguments(func, backfill);
+            ctx->allow_polymorphic_prereqs = false;
             return FAILURE;
         }
     }
+
+    // Stop allowing polymorphic prerequisites
+    ctx->allow_polymorphic_prereqs = false;
     
     if(backfill != 0){
         compiler_panic(ctx->compiler, sources[*i], "Expected argument type before end of argument list");

@@ -1,0 +1,22 @@
+
+import 'sys/cstdio.adept'
+
+struct Damagable (health int, blows_taken int)
+struct BadGuy (name *ubyte, struct Damagable)
+
+func main {
+    badguy BadGuy
+    badguy.name = 'Smith'
+    badguy.health = 10
+    badguy.damage(6)
+    badguy.damage(1)
+    badguy.damage(3)
+}
+
+func damage(this *$D~Damagable, amount int) bool {
+    this.health -= amount
+    this.blows_taken++
+    printf('Health decreased from %d to %d\n', this.health + amount, this.health)
+    printf('    (Blows taken increased to %d)\n', this.blows_taken)
+    return this.health < 0
+}

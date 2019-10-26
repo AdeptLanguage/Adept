@@ -21,16 +21,17 @@ extern "C" {
 #include "UTIL/ground.h"
 
 // Possible AST type elements
-#define AST_ELEM_NONE          0x00
-#define AST_ELEM_BASE          0x01
-#define AST_ELEM_POINTER       0x02
-#define AST_ELEM_ARRAY         0x03
-#define AST_ELEM_FIXED_ARRAY   0x04
-#define AST_ELEM_GENERIC_INT   0x05
-#define AST_ELEM_GENERIC_FLOAT 0x06
-#define AST_ELEM_FUNC          0x07
-#define AST_ELEM_POLYMORPH     0x08
-#define AST_ELEM_GENERIC_BASE  0x09
+#define AST_ELEM_NONE             0x00
+#define AST_ELEM_BASE             0x01
+#define AST_ELEM_POINTER          0x02
+#define AST_ELEM_ARRAY            0x03
+#define AST_ELEM_FIXED_ARRAY      0x04
+#define AST_ELEM_GENERIC_INT      0x05
+#define AST_ELEM_GENERIC_FLOAT    0x06
+#define AST_ELEM_FUNC             0x07
+#define AST_ELEM_POLYMORPH        0x08
+#define AST_ELEM_POLYMORPH_PREREQ 0x09
+#define AST_ELEM_GENERIC_BASE     0x0A
 
 // Possible data flow patterns
 #define FLOW_NONE  0x00
@@ -102,6 +103,18 @@ typedef struct {
     source_t source;
     strong_cstr_t name;
 } ast_elem_polymorph_t;
+
+// ---------------- ast_elem_polymorph_prereq_t ----------------
+// Type element for a polymorphic type variable which only fits
+// for structs that match the similarity prerequisite
+// NOTE: Must overlap with 'ast_elem_polymorph_t'
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_t name;
+    // ----------------------------
+    strong_cstr_t similarity_prerequisite;
+} ast_elem_polymorph_prereq_t;
 
 // ---------------- ast_elem_generic_base_t ----------------
 // Type element for a varient of a generic base
@@ -246,10 +259,6 @@ bool ast_type_is_generic_base_ptr(const ast_type_t *type);
 // ---------------- ast_type_has_polymorph ----------------
 // Returns whether an AST type contains a polymorphic type
 bool ast_type_has_polymorph(const ast_type_t *type);
-
-// ---------------- ast_type_has_polymorph ----------------
-// Returns whether a concrete AST type is valid for a given polymorphic type
-bool ast_type_polymorphable(const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog);
 
 // ---------------- ast_type_var_catalog_init ----------------
 // Initializes an AST type var catalog

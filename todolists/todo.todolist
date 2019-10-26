@@ -4,7 +4,6 @@
 
 FEATURE:
 * Test type of polymorphic type - 'if $Unit Damagable'
-* Similar-struct prerequisites
 * Finish 'Any'
     * Fill in offsets for AnyStructType types
     * Casting to Any from non-builtin types
@@ -20,6 +19,7 @@ VERIFICATION:
 COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe
 * Allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
+* Allow polymorphic names for generic bases
 
 UNINTENDED:
 

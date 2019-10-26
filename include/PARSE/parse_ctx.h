@@ -36,6 +36,9 @@ typedef struct {
 
     // Used to allow parse_expr and friends to ignore newlines within expressions
     length_t ignore_newlines_in_expr_depth;
+
+    // Used to allow parse_type to parse polymorphic types that have prerequisites
+    bool allow_polymorphic_prereqs;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------

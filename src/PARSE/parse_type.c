@@ -76,12 +76,41 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         }
         break;
     case TOKEN_POLYMORPH: {
-            ast_elem_polymorph_t *base_elem = malloc(sizeof(ast_elem_base_t));
-            base_elem->id = AST_ELEM_POLYMORPH;
-            base_elem->name = tokens[*i].data;
-            base_elem->source = sources[*i];
+            strong_cstr_t name = tokens[*i].data;
+            source_t source = sources[*i];
             tokens[(*i)++].data = NULL; // Take ownership
-            out_type->elements[out_type->elements_length] = (ast_elem_t*) base_elem;
+
+            if(tokens[*i].id == TOKEN_BIT_COMPLEMENT){
+                if(!ctx->allow_polymorphic_prereqs){
+                    free(name);
+                    compiler_panicf(ctx->compiler, sources[*i], "Polymorphic prerequisites are not allowed here");
+                    ast_type_free(out_type);
+                    return FAILURE;
+                }
+
+                // Skip over '~'
+                (*i)++;
+                
+                maybe_null_strong_cstr_t similar = parse_take_word(ctx, "Expected struct name after '~' in polymorphic prerequisite");
+                if(!similar){
+                    free(name);
+                    ast_type_free(out_type);
+                    return FAILURE;
+                }
+
+                ast_elem_polymorph_prereq_t *polymorph_elem = malloc(sizeof(ast_elem_polymorph_prereq_t));
+                polymorph_elem->id = AST_ELEM_POLYMORPH_PREREQ;
+                polymorph_elem->name = name;
+                polymorph_elem->source = source;
+                polymorph_elem->similarity_prerequisite = similar;
+                out_type->elements[out_type->elements_length] = (ast_elem_t*) polymorph_elem;
+            } else {
+                ast_elem_polymorph_t *polymorph_elem = malloc(sizeof(ast_elem_polymorph_t));
+                polymorph_elem->id = AST_ELEM_POLYMORPH;
+                polymorph_elem->name = name;
+                polymorph_elem->source = source;
+                out_type->elements[out_type->elements_length] = (ast_elem_t*) polymorph_elem;
+            }
         }
         break;
     case TOKEN_LESSTHAN: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_LGC_LSHIFT: {

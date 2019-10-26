@@ -63,6 +63,14 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
             ((ast_elem_polymorph_t*) new_element)->name = strclone(((ast_elem_polymorph_t*) element)->name);
             break;
         }
+    case AST_ELEM_POLYMORPH_PREREQ: {
+            new_element = malloc(sizeof(ast_elem_polymorph_prereq_t));
+            ((ast_elem_polymorph_prereq_t*) new_element)->id = AST_ELEM_POLYMORPH;
+            ((ast_elem_polymorph_prereq_t*) new_element)->source = element->source;
+            ((ast_elem_polymorph_prereq_t*) new_element)->name = strclone(((ast_elem_polymorph_prereq_t*) element)->name);
+            ((ast_elem_polymorph_prereq_t*) new_element)->similarity_prerequisite = strclone(((ast_elem_polymorph_prereq_t*) element)->similarity_prerequisite);
+            break;
+        }
     case AST_ELEM_GENERIC_BASE: {
             new_element = malloc(sizeof(ast_elem_generic_base_t));
             ((ast_elem_generic_base_t*) new_element)->id = AST_ELEM_GENERIC_BASE;
@@ -123,6 +131,11 @@ void ast_type_free(ast_type_t *type){
             break;
         case AST_ELEM_POLYMORPH:
             free(((ast_elem_polymorph_t*) type->elements[i])->name);
+            free(type->elements[i]);
+            break;
+        case AST_ELEM_POLYMORPH_PREREQ:
+            free(((ast_elem_polymorph_prereq_t*) type->elements[i])->name);
+            free(((ast_elem_polymorph_prereq_t*) type->elements[i])->similarity_prerequisite);
             free(type->elements[i]);
             break;
         case AST_ELEM_GENERIC_BASE: {
@@ -369,6 +382,22 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 name_length += polyname_length + 1;
             }
             break;
+        case AST_ELEM_POLYMORPH_PREREQ: {
+                const char *polyname = ((ast_elem_polymorph_prereq_t*) type->elements[i])->name;
+                const char *prereqname = ((ast_elem_polymorph_prereq_t*) type->elements[i])->similarity_prerequisite;
+
+                length_t polyname_length = strlen(polyname);
+                length_t prereqname_length = strlen(prereqname);
+
+                EXTEND_NAME_MACRO(polyname_length + prereqname_length + 2);
+
+                name[name_length] = '$';
+                memcpy(&name[name_length + 1], polyname, polyname_length);
+                name[name_length + 1 + polyname_length] = '~';
+                memcpy(&name[name_length + 2 + polyname_length], prereqname, prereqname_length + 1);
+                name_length += polyname_length + prereqname_length + 2;
+            }
+            break;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) type->elements[i];
 
@@ -489,6 +518,13 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 if(strcmp(polymorph_a->name, polymorph_b->name) != 0) return false;
             }
             break;
+        case AST_ELEM_POLYMORPH_PREREQ: {
+                ast_elem_polymorph_prereq_t *polymorph_a = (ast_elem_polymorph_prereq_t*) a->elements[i];
+                ast_elem_polymorph_prereq_t *polymorph_b = (ast_elem_polymorph_prereq_t*) b->elements[i];
+                if(strcmp(polymorph_a->name, polymorph_b->name) != 0 ||
+                    strcmp(polymorph_a->similarity_prerequisite, polymorph_b->similarity_prerequisite) != 0) return false;
+            }
+            break;
         default:
             redprintf("INTERNAL ERROR: ast_types_identical received unknown element id\n");
             return false;
@@ -589,6 +625,7 @@ bool ast_type_has_polymorph(const ast_type_t *type){
             }
             break;
         case AST_ELEM_POLYMORPH:
+        case AST_ELEM_POLYMORPH_PREREQ:
             return true;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) type->elements[i];
@@ -604,108 +641,6 @@ bool ast_type_has_polymorph(const ast_type_t *type){
         }
     }
     return false;
-}
-
-bool ast_type_polymorphable(const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog){
-    if(polymorphic_type->elements_length > concrete_type->elements_length) return false;
-
-    for(length_t i = 0; i != concrete_type->elements_length; i++){
-        length_t poly_elem_id = polymorphic_type->elements[i]->id;
-
-        // Check whether element is a polymorphic element
-        if(poly_elem_id == AST_ELEM_POLYMORPH){
-            // Ensure there aren't other elements following the polymorphic element
-            if(i + 1 != polymorphic_type->elements_length){
-                redprintf("INTERNAL ERROR: ast_type_polymorphable encountered polymorphic element in middle of AST type\n");
-                return false;
-            }
-
-            // DANGEROUS: Manually managed AST type with semi-ownership
-            // DANGEROUS: Potentially bad memory tricks
-            ast_type_t replacement;
-            replacement.elements_length = concrete_type->elements_length - i;
-            replacement.elements = malloc(sizeof(ast_elem_t*) * replacement.elements_length);
-            memcpy(replacement.elements, &concrete_type->elements[i], sizeof(ast_elem_t*) * replacement.elements_length);
-            replacement.source = replacement.elements[0]->source;
-
-            // Ensure consistency with catalog
-            ast_elem_polymorph_t *polymorphic_elem = (ast_elem_polymorph_t*) polymorphic_type->elements[i];
-            ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, polymorphic_elem->name);
-
-            if(type_var){
-                if(!ast_types_identical(&replacement, &type_var->binding)){
-                    // Given arguments don't meet consistency requirements of type variables
-                    free(replacement.elements);
-                    return false;
-                }
-            } else {
-                // Add to catalog since it's not already present
-                ast_type_var_catalog_add(catalog, polymorphic_elem->name, &replacement);
-            }
-
-            i = concrete_type->elements_length - 1;
-            free(replacement.elements);
-            continue;
-        }
-
-        // If the polymorphic type doesn't have a polymorphic element for the current element,
-        // then the type element ids must match
-        if(poly_elem_id != concrete_type->elements[i]->id) return false;
-        
-        // Ensure the two non-polymorphic elements match
-        switch(poly_elem_id){
-        case AST_ELEM_BASE:
-            if(strcmp(((ast_elem_base_t*) polymorphic_type->elements[i])->base, ((ast_elem_base_t*) concrete_type->elements[i])->base) != 0)
-                return false;
-            break;
-        case AST_ELEM_POINTER:
-        case AST_ELEM_GENERIC_INT:
-        case AST_ELEM_GENERIC_FLOAT:
-            // Always considered matching
-            break;
-        case AST_ELEM_FIXED_ARRAY:
-            if(((ast_elem_fixed_array_t*) polymorphic_type->elements[i])->length != ((ast_elem_fixed_array_t*) concrete_type->elements[i])->length) return false;
-            break;
-        case AST_ELEM_FUNC: {
-                ast_elem_func_t *func_elem_a = (ast_elem_func_t*) polymorphic_type->elements[i];
-                ast_elem_func_t *func_elem_b = (ast_elem_func_t*) concrete_type->elements[i];
-                if((func_elem_a->traits & AST_FUNC_VARARG) != (func_elem_b->traits & AST_FUNC_VARARG)) return false;
-                if((func_elem_a->traits & AST_FUNC_STDCALL) != (func_elem_b->traits & AST_FUNC_STDCALL)) return false;
-                if(func_elem_a->arity != func_elem_b->arity) return false;
-                if(!ast_type_polymorphable(func_elem_a->return_type, func_elem_b->return_type, catalog)) return false;
-
-                for(length_t a = 0; a != func_elem_a->arity; a++){
-                    if(!ast_type_polymorphable(&func_elem_a->arg_types[a], &func_elem_b->arg_types[a], catalog)) return false;
-                }
-            }
-            break;
-        case AST_ELEM_GENERIC_BASE: {
-                ast_elem_generic_base_t *generic_base_a = (ast_elem_generic_base_t*) polymorphic_type->elements[i];
-                ast_elem_generic_base_t *generic_base_b = (ast_elem_generic_base_t*) concrete_type->elements[i];
-
-                if(generic_base_a->name_is_polymorphic || generic_base_b->name_is_polymorphic){
-                    redprintf("INTERNAL ERROR: polymorphic names for generic structs not implemented in ast_type_polymorphable\n");
-                    return false;
-                }
-
-                if(generic_base_a->generics_length != generic_base_b->generics_length) return false;
-                if(strcmp(generic_base_a->name, generic_base_b->name) != 0) return false;
-
-                for(length_t i = 0; i != generic_base_a->generics_length; i++){
-                    if(!ast_type_polymorphable(&generic_base_a->generics[i], &generic_base_b->generics[i], catalog)) return false;
-                }
-            }
-            break;
-        case AST_ELEM_POLYMORPH:
-            redprintf("INTERNAL ERROR: ast_type_polymorphable encountered uncaught polymorphic type element\n");
-            return false;
-        default:
-            redprintf("INTERNAL ERROR: ast_type_polymorphable encountered unknown element id 0x%8X\n", polymorphic_type->elements[i]->id);
-            return false;
-        }
-    }
-
-    return true;
 }
 
 void ast_type_var_catalog_init(ast_type_var_catalog_t *catalog){

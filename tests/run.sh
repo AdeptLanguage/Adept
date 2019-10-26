@@ -98,6 +98,7 @@ compile repeat_args || exit $?
 compile repeat_fields || exit $?
 compile return_ten || exit $?
 compile scoped_variables || exit $?
+compile similar || exit $?
 compile sizeof || exit $?
 compile small_functions || exit $?
 compile standard || exit $?

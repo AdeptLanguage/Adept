@@ -11,15 +11,6 @@ TODO:
 * fill in offsets for AnyStructType types
 * allow for casting to Any from non-builtin types
 * allow member-containment prerequisites func damage(damagable $:Damagable)
-* allow similar-struct prerequisites
-    struct Damagable (health int)
-    struct Marine ~ Damagable (name String)
-    func damage(this *$:Damagable, amount int) {
-        this.health -= amount
-    }
-    func damage(this ~Damagable, amount int) {
-        this.health -= amount
-    }
 * improve compiler memory tracking (because freeing is slow during the middle of compilation rn)
 * ir_to_llvm_type circular containment detection
 * throw errors for fields with duplicate names in structs
@@ -43,6 +34,7 @@ TODO:
 * fallthrough
 * maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?
 * dont search through global variables linearly
+* breakout & continueout maybe?
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -107,4 +99,5 @@ COMPLETED:
 + add 'pragma enable_warnings' and 'pragma disable_warnings'
 + make struct domains work with polymorphic structs
 + better error messages for 'Undeclared method'
-* make x++ statement
++ make x++ statement
++ allow similar-struct prerequisites
