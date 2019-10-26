@@ -134,7 +134,11 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                         if(parse_expr(ctx, &mutable_expression)) return FAILURE;
 
                         // If it's a call method expression, bypass and treat as statement
-                        if(mutable_expression->id == EXPR_CALL_METHOD){
+                        if(mutable_expression->id == EXPR_CALL_METHOD
+                                || mutable_expression->id == EXPR_POSTINCREMENT
+                                || mutable_expression->id == EXPR_POSTDECREMENT
+                                || mutable_expression->id == EXPR_PREINCREMENT
+                                || mutable_expression->id == EXPR_PREDECREMENT){
                             stmt_list->statements[stmt_list->length++] = (ast_expr_t*) mutable_expression;
                             break;
                         }
@@ -194,10 +198,20 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 }
             }
             break;
-        case TOKEN_MULTIPLY: case TOKEN_OPEN: {
+        case TOKEN_MULTIPLY: case TOKEN_OPEN: case TOKEN_INCREMENT: case TOKEN_DECREMENT: {
                 source = sources[*i];
                 ast_expr_t *mutable_expression;
                 if(parse_expr(ctx, &mutable_expression)) return FAILURE;
+
+                // If it's a call method expression, bypass and treat as statement
+                if(mutable_expression->id == EXPR_CALL_METHOD
+                        || mutable_expression->id == EXPR_POSTINCREMENT
+                        || mutable_expression->id == EXPR_POSTDECREMENT
+                        || mutable_expression->id == EXPR_PREINCREMENT
+                        || mutable_expression->id == EXPR_PREDECREMENT){
+                    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) mutable_expression;
+                    break;
+                }
 
                 unsigned int id = tokens[(*i)++].id;
                 if(id != TOKEN_ASSIGN && id != TOKEN_ADDASSIGN && id != TOKEN_SUBTRACTASSIGN &&

@@ -13,5 +13,6 @@ MAJOR:
 * ir_gen_find_method_conforming & ir_gen_find_generic_base_method_conforming & others
 * stmt & expr handling for AST_EXPR_CALL
 * calling function elem
+* increment and decrement operators in ir_gen_expr and ir_gen_statements
 
 COMPLETED:

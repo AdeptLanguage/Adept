@@ -30,7 +30,6 @@ TODO:
 * 'Super' keyword type which is the primary parent struct
 * 'super' keyword which is the same as  (this as *Super)
 * override for [] operator
-* make x++ statement
 * += -= *= /= %= etc. integration with management functions somehow
 * String.adept ideas: // prepare, ready, append, appendOnce, remove, fracture, distance, contains, getUntil, getUntilOneOf, atUntil, atUntilOneOf, deleteUntil, deleteUntilOneOf, getUntilLast, count, upper, lower, empty, in-place versions etc., removeFromFront, trim, extractDATATYPEs, words?, etc.
 
@@ -108,3 +107,4 @@ COMPLETED:
 + add 'pragma enable_warnings' and 'pragma disable_warnings'
 + make struct domains work with polymorphic structs
 + better error messages for 'Undeclared method'
+* make x++ statement

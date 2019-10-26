@@ -55,6 +55,7 @@ compile if || exit $?
 compile ifelse || exit $?
 compile import || exit $?
 compile increment || exit $?
+compile increment_stmt || exit $?
 compile inline_declaration || exit $?
 compile inner_struct || exit $?
 compile int_ptr_cast || exit $?

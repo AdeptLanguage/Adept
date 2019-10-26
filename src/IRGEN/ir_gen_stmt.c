@@ -979,6 +979,105 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_types_free_fully(arg_types, call_stmt->arity + 1);
             }
             break;
+        case EXPR_PREINCREMENT: case EXPR_PREDECREMENT:
+        case EXPR_POSTINCREMENT: case EXPR_POSTDECREMENT: {
+                ir_value_t *before_value;
+                ast_type_t before_ast_type;
+                ast_expr_unary_t *unary = (ast_expr_unary_t*) statements[s];
+
+                // NOTE: unary->value is guaranteed to be a mutable expression
+                if(ir_gen_expression(builder, unary->value, &before_value, true, &before_ast_type))
+                    return FAILURE;
+                
+                if(before_value->type->kind != TYPE_KIND_POINTER){
+                    compiler_panic(builder->compiler, unary->value->source, "INTERNAL ERROR: ir_gen_expr() EXPR_xCREMENT expected mutable value");
+                    ast_type_free(&before_ast_type);
+                    return FAILURE;
+                }
+
+                ir_value_t *one = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+                one->value_type = VALUE_TYPE_LITERAL;
+                one->type = (ir_type_t*) before_value->type->extra;
+                one->extra = NULL;
+                
+                switch(one->type->kind){
+                case TYPE_KIND_S8:
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(char));
+                    *((char*) one->extra) = 1;
+                    break;
+                case TYPE_KIND_U8:
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned char));
+                    *((unsigned char*) one->extra) = 1;
+                    break;
+                case TYPE_KIND_S16:
+                    // stored w/ extra precision
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(int));
+                    *((int*) one->extra) = 1;
+                    break;
+                case TYPE_KIND_U16:
+                    // stored w/ extra precision
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned int));
+                    *((unsigned int*) one->extra) = 1;
+                    break;
+                case TYPE_KIND_S32:
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(long long));
+                    *((long long*) one->extra) = 1;
+                    break;
+                case TYPE_KIND_U32:
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
+                    *((unsigned long long*) one->extra) = 1;
+                    break;
+                case TYPE_KIND_S64:
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(long long));
+                    *((long long*) one->extra) = 1;
+                    break;
+                case TYPE_KIND_U64:
+                    one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
+                    *((unsigned long long*) one->extra) = 1;
+                    break;
+                }
+
+                if(one->extra == NULL){
+                    char *typename = ast_type_str(&before_ast_type);
+                    compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'",
+                        unary->id == EXPR_PREINCREMENT || unary->id == EXPR_POSTINCREMENT ? "increment" : "decrement", typename);
+                    ast_type_free(&before_ast_type);
+                    free(typename);
+                    return FAILURE;
+                }
+
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_math_t));
+                ((ir_instr_math_t*) instruction)->id = INSTRUCTION_NONE; // Will be determined
+                ((ir_instr_math_t*) instruction)->a = build_load(builder, before_value);
+                ((ir_instr_math_t*) instruction)->b = one;
+                ((ir_instr_math_t*) instruction)->result_type = before_value->type; 
+
+                if(unary->id == EXPR_PREINCREMENT || unary->id == EXPR_POSTINCREMENT){
+                    if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_ADD, INSTRUCTION_FADD)){
+                        char *typename = ast_type_str(&before_ast_type);
+                        compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "increment", typename);
+                        ast_type_free(&before_ast_type);
+                        free(typename);
+                        return FAILURE;
+                    }
+                } else {
+                    if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
+                        char *typename = ast_type_str(&before_ast_type);
+                        compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "decrement", typename);
+                        ast_type_free(&before_ast_type);
+                        free(typename);
+                        return FAILURE;
+                    }
+                }
+
+                ast_type_free(&before_ast_type);
+
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                ir_value_t *modified = build_value_from_prev_instruction(builder);
+                build_store(builder, modified, before_value);
+            }
+            break;
         case EXPR_DELETE: {
                 ast_expr_unary_t *delete_expr = (ast_expr_unary_t*) statements[s];
                 if(ir_gen_expression(builder, delete_expr->value, &expression_value, false, &temporary_type)) return FAILURE;
