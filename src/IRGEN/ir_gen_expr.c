@@ -16,6 +16,14 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     // NOTE: Will write determined ast_type_t to 'out_expr_type' (Can use NULL to ignore)
 
     ir_instr_t *instruction;
+    ir_value_t *dummy_temporary_ir_value;
+
+    if(ir_value == NULL){
+        // If it's a statement (it doesn't care about the resulting value), then
+        // use a dummy for usage for ir value
+        ir_value = &dummy_temporary_ir_value;
+        leave_mutable = true;
+    }
 
     #define BUILD_MATH_OP_IvF_MACRO(i, f, o, E) { \
         instruction = ir_gen_math_operands(builder, expr, ir_value, o, out_expr_type); \
@@ -431,13 +439,16 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ((ir_instr_call_t*) instruction)->values_length = call_expr->arity;
                 ((ir_instr_call_t*) instruction)->ir_func_id = pair.ir_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
+
+                // Don't even bother with result unless we care about the it
+                if(ir_value){
+                    *ir_value = build_value_from_prev_instruction(builder);
+                }
 
                 if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&pair.ast_func->return_type);
                 ast_types_free_fully(arg_types, call_expr->arity);
                 break;
             }
-
 
             // If no function exists, look for global
             // TODO: SPEED: Make this so it isn't slow
@@ -1546,10 +1557,13 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ast_type_free(&before_ast_type);
             }
 
-            if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_PREDECREMENT){
-                *ir_value = leave_mutable ? before_value : build_load(builder, before_value);
-            } else {
-                *ir_value = leave_mutable ? before_value : ((ir_instr_math_t*) instruction)->a;
+            // Don't even bother with result unless we care about the it
+            if(ir_value){
+                if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_PREDECREMENT){
+                    *ir_value = leave_mutable ? before_value : build_load(builder, before_value);
+                } else {
+                    *ir_value = leave_mutable ? before_value : ((ir_instr_math_t*) instruction)->a;
+                }
             }
         }
         break;
