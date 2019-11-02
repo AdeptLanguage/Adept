@@ -178,7 +178,7 @@ void memory_scan(){
 
             // strclone() helper
             if(strcmp("src/UTIL/util.c", global_memblocks[i].filename) == 0 && global_memblocks[i].line_number == 72)
-                printf("strclone() leak: '%s'\n", global_memblocks[i].pointer);
+                printf("strclone() leak: '%s'\n", (char*) global_memblocks[i].pointer);
             
             #else // TRACK_MEMORY_FILE_AND_LINE
             printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: 0x%p)\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer);
