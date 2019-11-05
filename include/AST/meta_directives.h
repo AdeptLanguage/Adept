@@ -90,6 +90,7 @@ strong_cstr_t meta_expr_into_string(meta_definition_t *definitions, length_t def
 
 void meta_definition_add(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, meta_expr_t *value);
 void meta_definition_add_bool(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, bool boolean);
+void meta_definition_add_str(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, strong_cstr_t content);
 
 meta_definition_t *meta_definition_find(meta_definition_t *definitions, length_t length, weak_cstr_t name);
 

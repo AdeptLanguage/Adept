@@ -1251,7 +1251,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_BIT_LSHIFT:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
     case EXPR_BIT_RSHIFT:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
+        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
     case EXPR_BIT_LGC_LSHIFT:
         BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
     case EXPR_BIT_LGC_RSHIFT:

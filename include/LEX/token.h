@@ -22,7 +22,7 @@ extern "C" {
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x00000010
+#define TOKEN_ITERATION_VERSION 0x00000011
 
 typedef unsigned short tokenid_t;
 
@@ -161,29 +161,28 @@ extern const char *global_token_name_table[];
 #define TOKEN_IMPORT           0x00000058
 #define TOKEN_IN               0x00000059
 #define TOKEN_INOUT            0x0000005A
-#define TOKEN_LINK             0x0000005B
-#define TOKEN_NEW              0x0000005C
-#define TOKEN_NULL             0x0000005D
-#define TOKEN_OR               0x0000005E
-#define TOKEN_OUT              0x0000005F
-#define TOKEN_PACKED           0x00000060
-#define TOKEN_PRAGMA           0x00000061
-#define TOKEN_PRIVATE          0x00000062
-#define TOKEN_PUBLIC           0x00000063
-#define TOKEN_REPEAT           0x00000064
-#define TOKEN_RETURN           0x00000065
-#define TOKEN_SIZEOF           0x00000066
-#define TOKEN_STATIC           0x00000067
-#define TOKEN_STDCALL          0x00000068
-#define TOKEN_STRUCT           0x00000069
-#define TOKEN_SWITCH           0x0000006A
-#define TOKEN_TRUE             0x0000006B
-#define TOKEN_TYPEINFO         0x0000006C
-#define TOKEN_UNDEF            0x0000006D
-#define TOKEN_UNLESS           0x0000006E
-#define TOKEN_UNTIL            0x0000006F
-#define TOKEN_WHILE            0x00000070
-// 71..7F
+#define TOKEN_NEW              0x0000005B
+#define TOKEN_NULL             0x0000005C
+#define TOKEN_OR               0x0000005D
+#define TOKEN_OUT              0x0000005E
+#define TOKEN_PACKED           0x0000005F
+#define TOKEN_PRAGMA           0x00000060
+#define TOKEN_PRIVATE          0x00000061
+#define TOKEN_PUBLIC           0x00000062
+#define TOKEN_REPEAT           0x00000063
+#define TOKEN_RETURN           0x00000064
+#define TOKEN_SIZEOF           0x00000065
+#define TOKEN_STATIC           0x00000066
+#define TOKEN_STDCALL          0x00000067
+#define TOKEN_STRUCT           0x00000068
+#define TOKEN_SWITCH           0x00000069
+#define TOKEN_TRUE             0x0000006A
+#define TOKEN_TYPEINFO         0x0000006B
+#define TOKEN_UNDEF            0x0000006C
+#define TOKEN_UNLESS           0x0000006D
+#define TOKEN_UNTIL            0x0000006E
+#define TOKEN_WHILE            0x0000006F
+// 70..7F
 #define MAX_LEX_TOKEN          TOKEN_WHILE
 
 // Shorthand tokens for common sequences in packages; Not recognized by parser

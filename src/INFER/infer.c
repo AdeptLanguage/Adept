@@ -91,6 +91,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_RETURN: {
                 ast_expr_return_t *return_stmt = (ast_expr_return_t*) statements[s];
                 if(return_stmt->value != NULL && infer_expr(ctx, func, &return_stmt->value, ast_primitive_from_ast_type(&func->return_type), scope)) return FAILURE;
+                if(infer_in_stmts(ctx, func, return_stmt->last_minute.statements, return_stmt->last_minute.length, scope)) return FAILURE;
             }
             break;
         case EXPR_CALL: {

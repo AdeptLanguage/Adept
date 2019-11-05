@@ -35,6 +35,16 @@ TODO:
 * maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?
 * dont search through global variables linearly
 * breakout & continueout maybe?
+* allow polymorphic names for generic bases
+* prevent inline functions returning void
+* fix bug with #if as statement for single line if - 'if it.kind == BuildingKind::OUTPOST && it.progress == 0.0f,
+    #if fast_build_times
+        it.progress = 0.9f; return
+    #else
+        it.progress = 0.002f; return
+    #end'
+* add '__compiler_version__' as a builtin meta value
+* allow for self-referencing pointers
 
 COMPLETED:
 + Finish ! operator for meta directives ()

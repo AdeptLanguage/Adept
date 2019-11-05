@@ -20,8 +20,12 @@ COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe
 * Allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
 * Allow polymorphic names for generic bases
+* Add '__compiler_version__' as a builtin meta value
+* Allow for self-referencing pointers
 
 UNINTENDED:
+* Prevent inline functions returning void
+* Fix bug with #if as statement for single line if
 
 TOOL:
 * pragma runtime_safe

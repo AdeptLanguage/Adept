@@ -141,7 +141,6 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_IMPORT:         printf("Keyword: import\n"); break;
         case TOKEN_IN:             printf("Keyword: in\n"); break;
         case TOKEN_INOUT:          printf("Keyword: inout\n"); break;
-        case TOKEN_LINK:           printf("Keyword: link\n"); break;
         case TOKEN_NEW:            printf("Keyword: new\n"); break;
         case TOKEN_NULL:           printf("Keyword: null\n"); break;
         case TOKEN_OR:             printf("Keyword: or\n"); break;
@@ -281,28 +280,28 @@ const char *global_token_name_table[] = {
     "import keyword",         // 0x00000058
     "in keyword",             // 0x00000059
     "inout keyword",          // 0x0000005A
-    "link keyword",           // 0x0000005B
-    "new keyword",            // 0x0000005C
-    "null keyword",           // 0x0000005D
-    "or keyword",             // 0x0000005E
-    "out keyword",            // 0x0000005F
-    "packed keyword",         // 0x00000060
-    "pragma keyword",         // 0x00000061
-    "private keyword",        // 0x00000062
-    "public keyword",         // 0x00000063
-    "repeat keyword",         // 0x00000064
-    "return keyword",         // 0x00000065
-    "sizeof keyword",         // 0x00000066
-    "static keyword",         // 0x00000067
-    "stdcall keyword",        // 0x00000068
-    "struct keyword",         // 0x00000069
-    "switch keyword",         // 0x0000006A
-    "true keyword",           // 0x0000006B
-    "typeinfo keyword",       // 0x0000006C
-    "undef keyword",          // 0x0000006D
-    "unless keyword",         // 0x0000006E
-    "until keyword",          // 0x0000006F
-    "while keyword",          // 0x00000070
+    "new keyword",            // 0x0000005B
+    "null keyword",           // 0x0000005C
+    "or keyword",             // 0x0000005D
+    "out keyword",            // 0x0000005E
+    "packed keyword",         // 0x0000005F
+    "pragma keyword",         // 0x00000060
+    "private keyword",        // 0x00000061
+    "public keyword",         // 0x00000062
+    "repeat keyword",         // 0x00000063
+    "return keyword",         // 0x00000064
+    "sizeof keyword",         // 0x00000065
+    "static keyword",         // 0x00000066
+    "stdcall keyword",        // 0x00000067
+    "struct keyword",         // 0x00000068
+    "switch keyword",         // 0x00000069
+    "true keyword",           // 0x0000006A
+    "typeinfo keyword",       // 0x0000006B
+    "undef keyword",          // 0x0000006C
+    "unless keyword",         // 0x0000006D
+    "until keyword",          // 0x0000006E
+    "while keyword",          // 0x0000006F
+    "reserved",               // 0x00000070
     "reserved",               // 0x00000071
     "reserved",               // 0x00000072
     "reserved",               // 0x00000073

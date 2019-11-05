@@ -522,6 +522,13 @@ void meta_definition_add_bool(meta_definition_t **definitions, length_t *length,
     meta_definition_add(definitions, length, capacity, name, value);
 }
 
+void meta_definition_add_str(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, strong_cstr_t content){
+    meta_expr_str_t *value = (meta_expr_str_t*) malloc(sizeof(meta_expr_str_t));
+    value->id = META_EXPR_STR;
+    value->value = content;
+    meta_definition_add(definitions, length, capacity, name, (meta_expr_t*) value);
+}
+
 meta_definition_t *meta_definition_find(meta_definition_t *definitions, length_t length, weak_cstr_t name){
     for(length_t i = 0; i != length; i++){
         if(strcmp(definitions[i].name, name) == 0) return &definitions[i];

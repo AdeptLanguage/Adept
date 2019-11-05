@@ -57,6 +57,17 @@ void ast_init(ast_t *ast){
     #if defined(__linux__) || defined(__linux) || defined(linux)
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__linux__", true);
     #endif
+
+    unsigned short x = 0xEEFF;
+    if (*((unsigned char*) &x) == 0xFF){
+        // Little Endian
+        meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__little_endian__", true);
+        meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__endianness__", strclone("little"));
+    } else {
+        // Big Endian
+        meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__big_endian__", true);
+        meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__endianness__", strclone("big"));
+    }
 }
 
 void ast_free(ast_t *ast){

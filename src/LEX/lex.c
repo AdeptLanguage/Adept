@@ -232,9 +232,9 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 const char * const keywords[] = {
                     "POD", "alias", "and", "as", "at", "break", "case", "cast", "continue", "def", "default", "defer",
                     "delete", "each", "else", "enum", "external", "false", "for", "foreign", "func", "funcptr",
-                    "global", "if", "import", "in", "inout", "link", "new", "null", "or", "out",
-                    "packed", "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct",
-                    "switch", "true", "typeinfo", "undef", "unless", "until", "while"
+                    "global", "if", "import", "in", "inout", "new", "null", "or", "out", "packed",
+                    "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch", 
+                    "true", "typeinfo", "undef", "unless", "until", "while"
                 };
 
                 const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
