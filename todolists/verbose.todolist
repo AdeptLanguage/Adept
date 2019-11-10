@@ -45,6 +45,12 @@ TODO:
     #end'
 * add '__compiler_version__' as a builtin meta value
 * allow for self-referencing pointers
+* better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements
+* != management function
+* maybe allow custom integer types for enums
+* allow '==' constants to be given to 'case'
+* finish '=' and 'donate' for <$T> List
+* bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 
 COMPLETED:
 + Finish ! operator for meta directives ()

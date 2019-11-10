@@ -15,6 +15,7 @@ VERIFICATION:
 * ir_to_llvm_type circular containment detection
 * Throw errors for fields with duplicate names in structs
 * Dont allow void in places it doesn't make sense
+* Make meta directives less error prone
 
 COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe
@@ -22,10 +23,15 @@ COMPLETENESS:
 * Allow polymorphic names for generic bases
 * Add '__compiler_version__' as a builtin meta value
 * Allow for self-referencing pointers
+* != management function
+* Allow '==' constants to be given to 'case'
+* Finish '=' and 'donate' for <$T> List
+* Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 
 UNINTENDED:
 * Prevent inline functions returning void
 * Fix bug with #if as statement for single line if
+* Better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements
 
 TOOL:
 * pragma runtime_safe
