@@ -540,7 +540,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                         default:
                             t->id = TOKEN_SHORT;
                             t->data = malloc(sizeof(short));
-                            *((short*) t->data) = strtol(lex_state.buildup, NULL, base);
+                            *((short*) t->data) = strtoll(lex_state.buildup, NULL, base);
                             (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
                         }
                     } else {
@@ -609,7 +609,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     } else {
                         t->id = TOKEN_GENERIC_INT;
                         t->data = malloc(sizeof(long long));
-                        *((long long*) t->data) = strtol(lex_state.buildup, NULL, base);
+                        *((long long*) t->data) = strtol(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
                     }
                     break;
                 }

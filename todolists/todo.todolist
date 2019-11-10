@@ -27,6 +27,7 @@ COMPLETENESS:
 * Allow '==' constants to be given to 'case'
 * Finish '=' and 'donate' for <$T> List
 * Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
+* Support 64-bit numeric literals without suffixes
 
 UNINTENDED:
 * Prevent inline functions returning void

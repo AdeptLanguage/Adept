@@ -51,6 +51,7 @@ TODO:
 * allow '==' constants to be given to 'case'
 * finish '=' and 'donate' for <$T> List
 * bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
+* support 64-bit numeric literals without suffixes
 
 COMPLETED:
 + Finish ! operator for meta directives ()
