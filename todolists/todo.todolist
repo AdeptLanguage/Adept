@@ -22,6 +22,7 @@ COMPLETENESS:
 * Allow polymorphic names for generic bases
 * Add '__compiler_version__' as a builtin meta value
 * Allow for self-referencing pointers
+* Support 64-bit numeric literals without suffixes
 
 UNINTENDED:
 * Prevent inline functions returning void

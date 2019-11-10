@@ -45,6 +45,7 @@ TODO:
     #end'
 * add '__compiler_version__' as a builtin meta value
 * allow for self-referencing pointers
+* support 64-bit numeric literals without suffixes
 
 COMPLETED:
 + Finish ! operator for meta directives ()
