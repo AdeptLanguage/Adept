@@ -69,6 +69,10 @@ errorcode_t parse_expr_cast(parse_ctx_t *ctx, ast_expr_t **out_expr);
 // Parses a 'as' expression
 errorcode_t parse_expr_as(parse_ctx_t *ctx, ast_expr_t **inout_expr);
 
+// ------------------ parse_expr_at ------------------
+// Parses a 'at' expression
+errorcode_t parse_expr_at(parse_ctx_t *ctx, ast_expr_t **inout_expr);
+
 // ------------------ parse_expr_sizeof ------------------
 // Parses a 'sizeof' expression
 errorcode_t parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr);

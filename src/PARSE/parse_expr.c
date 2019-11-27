@@ -296,21 +296,8 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 }
             }
             break;
-        case TOKEN_AT: {
-                ast_expr_t *index_expr;
-                ast_expr_array_access_t *at_expr = malloc(sizeof(ast_expr_array_access_t));
-                at_expr->source = sources[(*i)++];
-
-                if(parse_primary_expr(ctx, &index_expr)){
-                    free(at_expr);
-                    return FAILURE;
-                }
-
-                at_expr->id = EXPR_AT;
-                at_expr->value = *inout_expr;
-                at_expr->index = index_expr;
-                *inout_expr = (ast_expr_t*) at_expr;
-            }
+        case TOKEN_AT:
+            if(parse_expr_at(ctx, inout_expr)) return FAILURE;
             break;
         case TOKEN_INCREMENT: case TOKEN_DECREMENT: {
                 if(!expr_is_mutable(*inout_expr)){
@@ -424,6 +411,9 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
         case TOKEN_UBEROR:         BUILD_MATH_EXPR_MACRO(EXPR_OR);             break;
         case TOKEN_AS:
             if(parse_expr_as(ctx, inout_left)) return FAILURE;
+            break;
+        case TOKEN_AT:
+            if(parse_expr_at(ctx, inout_left)) return FAILURE;
             break;
         case TOKEN_MAYBE: {
                 (*i)++;
@@ -746,6 +736,26 @@ errorcode_t parse_expr_as(parse_ctx_t *ctx, ast_expr_t **inout_expr){
     if(parse_type(ctx, &to)) return FAILURE;
 
     ast_expr_create_cast(inout_expr, to, *inout_expr, source);
+    return SUCCESS;
+}
+
+errorcode_t parse_expr_at(parse_ctx_t *ctx, ast_expr_t **inout_expr){
+    // (value) at <index>
+    //         ^
+
+    ast_expr_t *index_expr;
+    ast_expr_array_access_t *at_expr = malloc(sizeof(ast_expr_array_access_t));
+    at_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    if(parse_primary_expr(ctx, &index_expr)){
+        free(at_expr);
+        return FAILURE;
+    }
+
+    at_expr->id = EXPR_AT;
+    at_expr->value = *inout_expr;
+    at_expr->index = index_expr;
+    *inout_expr = (ast_expr_t*) at_expr;
     return SUCCESS;
 }
 

@@ -33,6 +33,7 @@ UNINTENDED:
 * Prevent inline functions returning void
 * Fix bug with #if as statement for single line if
 * Better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements
+* Fix bug with defer statements being unfufilled if function ends with #end
 
 TOOL:
 * pragma runtime_safe
