@@ -198,8 +198,7 @@ errorcode_t parse_struct_body(parse_ctx_t *ctx, strong_cstr_t **names, ast_type_
             ast_type_t *end_type_ptr = &((*types)[*length - 1]);
 
             if(parse_type(ctx, end_type_ptr)){
-                parse_struct_free_fields(*names, *types, *length - 1, backfill);
-                free((*names)[*length - 1]);
+                parse_struct_free_fields(*names, *types, *length, backfill + 1);
                 return FAILURE;
             }
 

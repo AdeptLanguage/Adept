@@ -28,9 +28,11 @@ COMPLETENESS:
 * Finish '=' and 'donate' for <$T> List
 * Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * Support 64-bit numeric literals without suffixes
+* Allow 'data as *Type.method()'
+* Better error messages for when not using 'usize' for <$T> List.remove()
 
 UNINTENDED:
-* Prevent inline functions returning void
+* Prevent single line functions returning void
 * Fix bug with #if as statement for single line if
 * Better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements
 * Fix bug with defer statements being unfufilled if function ends with #end

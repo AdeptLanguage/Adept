@@ -210,6 +210,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_expr_return_t *return_stmt = (ast_expr_return_t*) statements[s];
 
                 if(return_stmt->value != NULL){
+                    if(ast_type_is_void(return_type)){
+                        compiler_panicf(builder->compiler, statements[s]->source, "Can't return value from function that returns void");
+                        return FAILURE;
+                    }
+
                     // Return non-void value
                     if(ir_gen_expression(builder, return_stmt->value, &expression_value, false, &temporary_type)) return FAILURE;
 

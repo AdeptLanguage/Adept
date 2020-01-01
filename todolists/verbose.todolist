@@ -36,7 +36,7 @@ TODO:
 * dont search through global variables linearly
 * breakout & continueout maybe?
 * allow polymorphic names for generic bases
-* prevent inline functions returning void
+* prevent single line functions returning void
 * fix bug with #if as statement for single line if - 'if it.kind == BuildingKind::OUTPOST && it.progress == 0.0f,
     #if fast_build_times
         it.progress = 0.9f; return
@@ -52,6 +52,8 @@ TODO:
 * finish '=' and 'donate' for <$T> List
 * bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * support 64-bit numeric literals without suffixes
+* allow 'typeinfo Textures as *AnyStructType.length' instead of having to use '(typeinfo Textures as *AnyStructType).length'
+* better error messages for when not using 'usize' for <$T> List.remove()
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -118,3 +120,4 @@ COMPLETED:
 + better error messages for 'Undeclared method'
 + make x++ statement
 + allow similar-struct prerequisites
++ don't allow returning values from 'func main {'
