@@ -155,6 +155,11 @@ strong_cstr_t make_args_string(ast_type_t *types, length_t arity);
 // Prints a plain compiler error given an object
 void object_panic_plain(object_t *object, const char *message);
 
+
+// ---------------- object_panic_plain ----------------
+// Prints a plain compiler error given an object
+void object_panicf_plain(object_t *object, const char *message, ...);
+
 #ifdef __cplusplus
 }
 #endif

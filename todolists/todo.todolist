@@ -16,6 +16,7 @@ VERIFICATION:
 * Throw errors for fields with duplicate names in structs
 * Dont allow void in places it doesn't make sense
 * Make meta directives less error prone
+* Don't allow multiple polymorphic types with the same name and number of parameters
 
 COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe
@@ -28,7 +29,6 @@ COMPLETENESS:
 * Finish '=' and 'donate' for <$T> List
 * Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * Support 64-bit numeric literals without suffixes
-* Allow 'data as *Type.method()'
 * Better error messages for when not using 'usize' for <$T> List.remove()
 
 UNINTENDED:

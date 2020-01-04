@@ -410,10 +410,10 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
         case TOKEN_OR:
         case TOKEN_UBEROR:         BUILD_MATH_EXPR_MACRO(EXPR_OR);             break;
         case TOKEN_AS:
-            if(parse_expr_as(ctx, inout_left)) return FAILURE;
+            if(parse_expr_as(ctx, inout_left) || parse_expr_post(ctx, inout_left)) return FAILURE;
             break;
         case TOKEN_AT:
-            if(parse_expr_at(ctx, inout_left)) return FAILURE;
+            if(parse_expr_at(ctx, inout_left) || parse_expr_post(ctx, inout_left)) return FAILURE;
             break;
         case TOKEN_MAYBE: {
                 (*i)++;

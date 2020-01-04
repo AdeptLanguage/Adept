@@ -10,7 +10,6 @@ TODO:
 * pragma project_root 'main.adept'
 * fill in offsets for AnyStructType types
 * allow for casting to Any from non-builtin types
-* allow member-containment prerequisites func damage(damagable $:Damagable)
 * improve compiler memory tracking (because freeing is slow during the middle of compilation rn)
 * ir_to_llvm_type circular containment detection
 * throw errors for fields with duplicate names in structs
@@ -19,7 +18,7 @@ TODO:
 * __String__ function?
 * allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
 * 'Super' keyword type which is the primary parent struct
-* 'super' keyword which is the same as  (this as *Super)
+* 'super' keyword which is the same as (this as *Super)
 * override for [] operator
 * += -= *= /= %= etc. integration with management functions somehow
 * String.adept ideas: // prepare, ready, append, appendOnce, remove, fracture, distance, contains, getUntil, getUntilOneOf, atUntil, atUntilOneOf, deleteUntil, deleteUntilOneOf, getUntilLast, count, upper, lower, empty, in-place versions etc., removeFromFront, trim, extractDATATYPEs, words?, etc.
@@ -52,7 +51,6 @@ TODO:
 * finish '=' and 'donate' for <$T> List
 * bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * support 64-bit numeric literals without suffixes
-* allow 'typeinfo Textures as *AnyStructType.length' instead of having to use '(typeinfo Textures as *AnyStructType).length'
 * better error messages for when not using 'usize' for <$T> List.remove()
 
 COMPLETED:
@@ -121,3 +119,5 @@ COMPLETED:
 + make x++ statement
 + allow similar-struct prerequisites
 + don't allow returning values from 'func main {'
++ allow 'typeinfo Textures as *AnyStructType.length' instead of having to use '(typeinfo Textures as *AnyStructType).length'
++ allow member-containment prerequisites func damage(damagable $:Damagable) [different syntax used]

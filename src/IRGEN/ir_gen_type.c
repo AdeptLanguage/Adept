@@ -83,6 +83,29 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     qsort(mappings, type_map->mappings_length, sizeof(ir_type_mapping_t), (void*) ir_type_mapping_cmp);
     type_map->mappings = mappings;
 
+    // EXPERIMENTAL: Make sure each identifier is unique
+    for(length_t i = 1; i < type_map->mappings_length; i++){
+        if(strcmp(mappings[i - 1].name, mappings[i].name) == 0){
+            // ERROR: Multiple types with the same name
+            weak_cstr_t name = mappings[i].name;
+            object_panicf_plain(object, "Multiple definitions of type '%s'", name);
+
+            // Find every struct with that name
+            for(length_t s = 0; s != ast->structs_length; s++){
+                if(strcmp(ast->structs[s].name, name) == 0)
+                    compiler_panic(compiler, ast->structs[s].source, "Here");
+            }
+
+            // Find every enum with that name
+            for(length_t e = 0; e != ast->enums_length; e++){
+                if(strcmp(ast->enums[e].name, name) == 0)
+                    compiler_panic(compiler, ast->enums[e].source, "Here");
+            }
+
+            return FAILURE;
+        }
+    }
+
     for(length_t i = 0; i != type_map->mappings_length; i++){
         // Fill in bodies for struct type maps
         if(mappings[i].type.kind != TYPE_KIND_STRUCTURE) continue;

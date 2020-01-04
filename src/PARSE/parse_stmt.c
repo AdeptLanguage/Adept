@@ -198,7 +198,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 }
             }
             break;
-        case TOKEN_MULTIPLY: case TOKEN_OPEN: case TOKEN_INCREMENT: case TOKEN_DECREMENT: {
+        case TOKEN_MULTIPLY: case TOKEN_OPEN: case TOKEN_INCREMENT: case TOKEN_DECREMENT: case TOKEN_ADDRESS: {
                 source = sources[*i];
                 ast_expr_t *mutable_expression;
                 if(parse_expr(ctx, &mutable_expression)) return FAILURE;

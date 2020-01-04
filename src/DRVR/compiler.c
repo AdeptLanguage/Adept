@@ -516,6 +516,17 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
     object_t *object = compiler->objects[source.object_index];
     int line, column;
 
+    if(message == NULL){
+        if(object->traits & OBJECT_PACKAGE){
+            redprintf("%s:?:?:\n", filename_name_const(object->filename));
+        } else {
+            lex_get_location(object->buffer, source.index, &line, &column);
+            redprintf("%s:%d:%d:\n", filename_name_const(object->filename), line, column);
+            compiler_print_source(compiler, line, column, source);
+        }
+        return;
+    }
+
     if(object->traits & OBJECT_PACKAGE){
         redprintf("%s:?:?: %s!\n", filename_name_const(object->filename), message);
     } else {
@@ -534,6 +545,17 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
 
     va_start(args, format);
     terminal_set_color(TERMINAL_COLOR_RED);
+
+    if(format == NULL){
+        if(object->traits & OBJECT_PACKAGE){
+            redprintf("%s:?:?:\n", filename_name_const(object->filename));
+        } else {
+            lex_get_location(object->buffer, source.index, &line, &column);
+            redprintf("%s:%d:%d:\n", filename_name_const(object->filename), line, column);
+            compiler_print_source(compiler, line, column, source);
+        }
+        return;
+    }
 
     if(object->traits & OBJECT_PACKAGE){
         line = 1;
@@ -804,5 +826,24 @@ strong_cstr_t make_args_string(ast_type_t *types, length_t arity){
 }
 
 void object_panic_plain(object_t *object, const char *message){
+    #ifndef ADEPT_INSIGHT_BUILD
     redprintf("%s: %s\n", filename_name_const(object->filename), message);
+    #endif
+}
+
+void object_panicf_plain(object_t *object, const char *format, ...){
+    #ifndef ADEPT_INSIGHT_BUILD
+    va_list args;
+
+    va_start(args, format);
+    terminal_set_color(TERMINAL_COLOR_RED);
+
+    printf("%s: ", filename_name_const(object->filename));
+
+    vprintf(format, args);
+    printf("!\n");
+    terminal_set_color(TERMINAL_COLOR_DEFAULT);
+
+    va_end(args);
+    #endif
 }
