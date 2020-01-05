@@ -47,7 +47,6 @@ TODO:
 * != management function
 * maybe allow custom integer types for enums
 * allow '==' constants to be given to 'case'
-* finish '=' and 'donate' for <$T> List
 * bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * support 64-bit numeric literals without suffixes
 * better error messages for when not using 'usize' for <$T> List.remove()
@@ -123,3 +122,4 @@ COMPLETED:
 + allow 'typeinfo Textures as *AnyStructType.length' instead of having to use '(typeinfo Textures as *AnyStructType).length'
 + allow member-containment prerequisites func damage(damagable $:Damagable) [different syntax used]
 + better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements
++ finish '=' and 'donate' for <$T> List

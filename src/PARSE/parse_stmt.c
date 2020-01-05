@@ -970,20 +970,20 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
 
             failed = failed || parse_eat(ctx, TOKEN_DEFAULT, "Expected 'default' keyword for switch default case")
                             || parse_ignore_newlines(ctx, "Expected '}' before end of file");
+        } else {
+            ast_expr_list_t stmts_pass_list;
+            stmts_pass_list.statements = *list;
+            stmts_pass_list.length = *list_length;
+            stmts_pass_list.capacity = *list_capacity;
+
+            failed = failed || parse_stmts(ctx, &stmts_pass_list, &current_defer_scope, PARSE_STMTS_SINGLE | PARSE_STMTS_PARENT_DEFER_SCOPE)
+                            || parse_ignore_newlines(ctx, "Expected '}' before end of file");
+
+            // CLEANUP: Eww, but it works
+            *list = stmts_pass_list.statements;
+            *list_length = stmts_pass_list.length;
+            *list_capacity = stmts_pass_list.capacity;
         }
-
-        ast_expr_list_t stmts_pass_list;
-        stmts_pass_list.statements = *list;
-        stmts_pass_list.length = *list_length;
-        stmts_pass_list.capacity = *list_capacity;
-
-        failed = failed || parse_stmts(ctx, &stmts_pass_list, &current_defer_scope, PARSE_STMTS_SINGLE | PARSE_STMTS_PARENT_DEFER_SCOPE)
-                        || parse_ignore_newlines(ctx, "Expected '}' before end of file");
-
-        // CLEANUP: Eww, but it works
-        *list = stmts_pass_list.statements;
-        *list_length = stmts_pass_list.length;
-        *list_capacity = stmts_pass_list.capacity;
 
         if(failed){
             ast_expr_free_fully(value);
