@@ -44,7 +44,6 @@ TODO:
     #end'
 * add '__compiler_version__' as a builtin meta value
 * allow for self-referencing pointers
-* better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements
 * != management function
 * maybe allow custom integer types for enums
 * allow '==' constants to be given to 'case'
@@ -52,6 +51,8 @@ TODO:
 * bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * support 64-bit numeric literals without suffixes
 * better error messages for when not using 'usize' for <$T> List.remove()
+* add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
+* add way to do "synergy"s between modules
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -121,3 +122,4 @@ COMPLETED:
 + don't allow returning values from 'func main {'
 + allow 'typeinfo Textures as *AnyStructType.length' instead of having to use '(typeinfo Textures as *AnyStructType).length'
 + allow member-containment prerequisites func damage(damagable $:Damagable) [different syntax used]
++ better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements

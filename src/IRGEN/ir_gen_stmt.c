@@ -162,7 +162,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
             ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
             ((ir_instr_ret_t*) built_instr)->value = build_literal_int(builder.pool, 0);
         } else {
-            source_t where = (statements_length != 0) ? statements[statements_length - 1]->source : ast_func->source;
+            source_t where = ast_func->return_type.source;
             char *return_typename = ast_type_str(&ast_func->return_type);
             compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func->name);
             free(return_typename);
