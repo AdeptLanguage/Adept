@@ -20,7 +20,6 @@ VERIFICATION:
 
 COMPLETENESS:
 * __defer__ __pass__ for fixed arrays maybe
-* Allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
 * Allow polymorphic names for generic bases
 * Add '__compiler_version__' as a builtin meta value
 * Allow for self-referencing pointers

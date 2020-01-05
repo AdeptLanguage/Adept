@@ -117,7 +117,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
         bool found_compatible = false;
         ast_type_var_catalog_t using_catalog;
 
-        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_types, type_list_length, &using_catalog);
+        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -131,7 +131,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
-            res = func_args_polymorphable(builder, poly_template, arg_types, type_list_length, &using_catalog);
+            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog);
             if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -208,7 +208,7 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
         bool found_compatible = false;
         ast_type_var_catalog_t using_catalog;
 
-        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_types, type_list_length, &using_catalog);
+        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -222,7 +222,7 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
-            res = func_args_polymorphable(builder, poly_template, arg_types, type_list_length, &using_catalog);
+            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog);
             if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res){
@@ -306,7 +306,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
         bool found_compatible = false;
         ast_type_var_catalog_t using_catalog;
 
-        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_types, type_list_length, &using_catalog);
+        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -320,7 +320,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
-            res = func_args_polymorphable(builder, poly_template, arg_types, type_list_length, &using_catalog);
+            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog);
             if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -557,19 +557,39 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     return true;
 }
 
-errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ast_type_t *arg_types, length_t type_length, ast_type_var_catalog_t *out_catalog){
-    ast_type_var_catalog_t catalog;
-    ast_type_var_catalog_init(&catalog);
+errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
+        length_t type_length, ast_type_var_catalog_t *out_catalog){
 
     // Ensure argument supplied meet length requirements
     if(poly_template->traits & AST_FUNC_VARARG ? poly_template->arity > type_length : poly_template->arity != type_length){
-        ast_type_var_catalog_free(&catalog);
         return FAILURE;
     }
+    
+    ast_type_var_catalog_t catalog;
+    ast_type_var_catalog_init(&catalog);
 
-    for(length_t i = 0; i != type_length; i++){
-        errorcode_t res = arg_type_polymorphable(builder, &poly_template->arg_types[i], &arg_types[i], &catalog);
+    ir_pool_snapshot_t snapshot;
+    ir_pool_snapshot_capture(builder->pool, &snapshot);
+
+    // Store a copy of the unmodifed function argument values
+    ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_length);
+    memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_length);
+
+    for(length_t i = 0; i != poly_template->arity; i++){
+        errorcode_t res;
+
+        if(ast_type_has_polymorph(&poly_template->arg_types[i]))
+            res = arg_type_polymorphable(builder, &poly_template->arg_types[i], &arg_types[i], &catalog);
+        else
+            res = ast_types_conform(builder, &arg_value_list[i], &arg_types[i], &poly_template->arg_types[i], CONFORM_MODE_CALL_ARGUMENTS) ? SUCCESS : FAILURE;
+
         if(res != SUCCESS){
+            // Restore pool snapshot
+            ir_pool_snapshot_restore(builder->pool, &snapshot);
+
+            // Undo any modifications to the function arguments
+            memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * (i + 1));
+            free(arg_value_list_unmodified);
             ast_type_var_catalog_free(&catalog);
             return res;
         }
@@ -577,6 +597,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 
     if(out_catalog) *out_catalog = catalog;
     else ast_type_var_catalog_free(&catalog);
+    free(arg_value_list_unmodified);
     return SUCCESS;
 }
 

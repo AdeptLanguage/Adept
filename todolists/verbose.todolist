@@ -16,7 +16,6 @@ TODO:
 * __defer__ __pass__ for fixed arrays maybe
 * dont allow void in places it doesn't make sense
 * __String__ function?
-* allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
 * 'Super' keyword type which is the primary parent struct
 * 'super' keyword which is the same as (this as *Super)
 * override for [] operator
@@ -123,3 +122,4 @@ COMPLETED:
 + allow member-containment prerequisites func damage(damagable $:Damagable) [different syntax used]
 + better error messages for 'Must return a value of type 'T' before exiting function' when there's defer statements
 + finish '=' and 'donate' for <$T> List
++ allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'

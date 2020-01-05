@@ -89,8 +89,8 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 // NOTE: Returns SUCCESS if true
 // NOTE: Returns ALT_FAILURE if false
 // NOTE: Returns FAILURE if couldn't fully resolve
-errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ast_type_t *arg_types, length_t type_length,
-    ast_type_var_catalog_t *out_catalog);
+errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
+        length_t type_length, ast_type_var_catalog_t *out_catalog);
 
 // ---------------- ast_type_has_polymorph ----------------
 // Finds whether a concrete AST type is valid for a given polymorphic type

@@ -977,8 +977,9 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
 
     for(length_t i = 0; i != poly_func->arity; i++){
+        ast_type_t *template_ast_type = &poly_func->arg_types[i];
         func->arg_names[i] = strclone(poly_func->arg_names[i]);
-        func->arg_types[i] = ast_type_clone(&types[i]);
+        func->arg_types[i] = ast_type_has_polymorph(template_ast_type) ? ast_type_clone(&types[i]) : ast_type_clone(template_ast_type);
     }
 
     memcpy(func->arg_sources, poly_func->arg_sources, sizeof(source_t) * poly_func->arity);
