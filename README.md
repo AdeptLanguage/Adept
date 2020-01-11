@@ -2,6 +2,10 @@
 # Adept
 A blazing fast language for general purpose programming.
 
+[Download Adept v2.2 for Windows](https://github.com/IsaacShelton/Adept/releases)
+
+[Download Adept v2.2 for MacOS](https://github.com/IsaacShelton/Adept/releases)
+
 ## Command-Line Usage
 `adept [filename] [options]`
 
