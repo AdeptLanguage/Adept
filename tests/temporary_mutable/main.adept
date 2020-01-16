@@ -1,0 +1,7 @@
+
+import '2.2/basics.adept'
+
+func main {
+	name String = "Isaac Shelton".clone()
+	print("Hello " + name" + "!")
+}
