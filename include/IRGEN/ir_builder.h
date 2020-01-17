@@ -47,6 +47,7 @@ typedef struct {
     ast_type_t static_bool;
     ast_elem_base_t static_bool_base;
     ast_elem_t *static_bool_elems;
+    ir_type_t *stack_pointer_type;
 } ir_builder_t;
 
 // ---------------- build_basicblock ----------------
@@ -181,6 +182,19 @@ ir_value_t* build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to)
 ir_value_t* build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
 ir_value_t* build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
 
+// ---------------- build_alloc ----------------
+// Allocates space on the stack for a variable of a type
+// NOTE: This is only used for dynamic allocations w/ STACK_SAVE and STACK_RESTORE
+ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type);
+
+// ---------------- build_stack_restore ----------------
+// Saves the current position of the stack by returning the stack pointer
+ir_value_t *build_stack_save(ir_builder_t *builder);
+
+// ---------------- build_stack_restore ----------------
+// Restores the stack to a previous position
+void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer);
+
 // ---------------- build_math ----------------
 // Builds a basic math instruction
 ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result);
@@ -221,7 +235,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder);
 // NOTE: Returns SUCCESS if value was utilized in deference
 //       Returns FAILURE if value was not utilized in deference
 //       Returns ALT_FAILURE if a compiler time error occured
-errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *value);
+errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value);
 
 errorcode_t handle_children_deference(ir_builder_t *builder);
 

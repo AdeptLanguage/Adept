@@ -945,6 +945,51 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         catalog.blocks[b].value_references[i] = NULL;
                     }
                     break;
+                case INSTRUCTION_ALLOC: {
+                        instr = basicblock->instructions[i];
+
+                        ir_type_t *target_result_type = ((ir_instr_alloc_t*) instr)->result_type;
+
+                        if(target_result_type->kind != TYPE_KIND_POINTER){
+                            redprintf("INTERNAL ERROR: INSTRUCTION_ALLOC got non-pointer result type when exporting ir to llvm\n");
+                            catalog.blocks[b].value_references[i] = LLVMConstPointerNull(ir_to_llvm_type(target_result_type));
+                            break;
+                        }
+
+                        catalog.blocks[b].value_references[i] = LLVMBuildAlloca(llvm->builder, ir_to_llvm_type(target_result_type->extra), "");
+                    }
+                    break;
+                case INSTRUCTION_STACK_SAVE: {
+                        LLVMValueRef *stacksave_intrinsic = &llvm->stacksave_intrinsic;
+
+                        if(*stacksave_intrinsic == NULL){
+                            LLVMTypeRef stacksave_intrinsic_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), NULL, 0, 0);
+                            *stacksave_intrinsic = LLVMAddFunction(llvm->module, "llvm.stacksave", stacksave_intrinsic_type);
+                        }
+
+                        catalog.blocks[b].value_references[i] = LLVMBuildCall(builder, *stacksave_intrinsic, NULL, 0, "");
+                    }
+                    break;
+                case INSTRUCTION_STACK_RESTORE: {
+                        instr = basicblock->instructions[i];
+
+                        LLVMValueRef *stackrestore_intrinsic = &llvm->stackrestore_intrinsic;
+
+                        if(*stackrestore_intrinsic == NULL){
+                            LLVMTypeRef arg_types[1];
+                            arg_types[0] = LLVMPointerType(LLVMInt8Type(), 0);
+
+                            LLVMTypeRef stackrestore_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 1, 0);
+                            *stackrestore_intrinsic = LLVMAddFunction(llvm->module, "llvm.stackrestore", stackrestore_intrinsic_type);
+                        }
+
+                        LLVMValueRef args[1];
+                        args[0] = ir_to_llvm_value(llvm, ((ir_instr_stack_restore_t*) instr)->stack_pointer);
+
+                        LLVMBuildCall(builder, *stackrestore_intrinsic, args, 1, "");
+                        catalog.blocks[b].value_references[i] = NULL;
+                    }
+                    break;
                 default:
                     redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", basicblocks[b].instructions[i]->id);
                     for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
@@ -1022,6 +1067,8 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.module = LLVMModuleCreateWithName(filename_name_const(object->filename));
     llvm.memcpy_intrinsic = NULL;
     llvm.memset_intrinsic = NULL;
+    llvm.stacksave_intrinsic = NULL;
+    llvm.stackrestore_intrinsic = NULL;
     llvm.compiler = compiler;
 
     bool disposeTriple = false;

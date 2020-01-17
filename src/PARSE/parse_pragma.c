@@ -42,16 +42,16 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
                 : "Expected compiler version string after 'pragma compiler_version'");
 
         if(read == NULL){
-            printf("\nDid you mean: pragma %s '2.2'?\n", directive == 0 ? "compiler_supports" : "compiler_version");
+            printf("\nDid you mean: pragma %s '2.3'?\n", directive == 0 ? "compiler_supports" : "compiler_version");
             return FAILURE;
         }
 
         // Check to make sure we support the target version
         if(strcmp(read, "2.0") == 0 || strcmp(read, "2.1") == 0){
             compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read);
-        } else if(strcmp(read, "2.2") != 0){
+        } else if(strcmp(read, "2.2") != 0 && strcmp(read, "2.3") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
-            puts("\nSupported Versions: '2.2', '2.1', '2.0'");
+            puts("\nSupported Versions: '2.3', '2.2', '2.1', '2.0'");
             return FAILURE;
         }
         return SUCCESS;

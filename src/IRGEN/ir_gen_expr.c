@@ -930,6 +930,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_call_method_t *call_expr = (ast_expr_call_method_t*) expr;
             ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * (call_expr->arity + 1));
             ast_type_t *arg_types = malloc(sizeof(ast_type_t) * (call_expr->arity + 1));
+            ir_value_t *stack_pointer = NULL;
 
             // Generate primary argument
             if(ir_gen_expression(builder, call_expr->value, &arg_values[0], true, &arg_types[0])){
@@ -947,11 +948,20 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
                         break;
                     }
-                    
-                    compiler_panic(builder->compiler, call_expr->source, "Can't call method on immutable value");
-                    ast_type_free(&arg_types[0]);
-                    free(arg_types);
-                    return FAILURE;
+
+                    if(builder->stack_pointer_type == NULL){
+                        ir_type_t *i8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                        i8_type->kind = TYPE_KIND_S8;
+                        i8_type->extra = NULL;
+                        builder->stack_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                        builder->stack_pointer_type->kind = TYPE_KIND_POINTER;
+                        builder->stack_pointer_type->extra = i8_type;
+                    }
+
+                    stack_pointer = build_stack_save(builder);
+                    ir_value_t *temporary_mutable = build_alloc(builder, arg_values[0]->type);
+                    build_store(builder, arg_values[0], temporary_mutable);
+                    arg_values[0] = temporary_mutable;
                 }
 
                 ast_type_prepend_ptr(&arg_types[0]);
@@ -1062,6 +1072,23 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ((ir_instr_call_t*) instruction)->ir_func_id = pair.ir_func_id;
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
+
+            if(stack_pointer){
+                // Dereference arg_types[0] and call __defer__ on arg_values[0]
+                if(arg_types[0].elements_length == 0 || arg_types[0].elements[0]->id != AST_ELEM_POINTER){
+                    compiler_panicf(builder->compiler, call_expr->source, "INTERNAL ERROR: Temporary mutable value location has non-pointer type");
+                    return FAILURE;
+                }
+
+                // Modify ast_type_t to remove a pointer element from the front
+                // DANGEROUS: Manually deleting ast_elem_pointer_t
+                free(arg_types[0].elements[0]);
+                memmove(arg_types[0].elements, &arg_types[0].elements[1], sizeof(ast_elem_t*) * (arg_types[0].elements_length - 1));
+                arg_types[0].elements_length--; // Reduce length accordingly
+                
+                if(handle_single_deference(builder, &arg_types[0], arg_values[0]) == ALT_FAILURE) return FAILURE;
+                build_stack_restore(builder, stack_pointer);
+            }
 
             ast_types_free_fully(arg_types, call_expr->arity + 1);
             if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&pair.ast_func->return_type);

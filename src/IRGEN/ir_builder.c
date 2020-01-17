@@ -419,6 +419,26 @@ ir_value_t* build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to)
     return build_value_from_prev_instruction(builder);
 }
 
+ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
+    ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
+    instr->id = INSTRUCTION_ALLOC;
+    instr->result_type = ir_type_pointer_to(builder->pool, type);
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t *build_stack_save(ir_builder_t *builder){
+    ir_instr_t *instr = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
+    instr->id = INSTRUCTION_STACK_SAVE;
+    instr->result_type = builder->stack_pointer_type;
+    return build_value_from_prev_instruction(builder);
+}
+
+void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer){
+    ir_instr_stack_restore_t *instr = (ir_instr_stack_restore_t*) build_instruction(builder, sizeof(ir_instr_stack_restore_t));
+    instr->id = INSTRUCTION_STACK_RESTORE;
+    instr->stack_pointer = stack_pointer;
+}
+
 ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result){
     ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
     instruction->id = instr_id;
@@ -578,11 +598,11 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
     return SUCCESS;
 }
 
-errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *value){
-    // Calls __defer__ method on a value and it's children if the method exists
+errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value){
+    // Calls __defer__ method on a mutable value and it's children if the method exists
     // NOTE: Assumes (ast_type->elements_length == 1)
-    // NOTE: Returns SUCCESS if value was utilized in deference
-    //       Returns FAILURE if value was not utilized in deference
+    // NOTE: Returns SUCCESS if mutable_value was utilized in deference
+    //       Returns FAILURE if mutable_value was not utilized in deference
     //       Returns ALT_FAILURE if a compiler time error occured
 
     funcpair_t defer_func;
@@ -592,7 +612,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     ast_elem_t ast_type_ptr_elem;
 
     ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
-    arguments[0] = value;
+    arguments[0] = mutable_value;
 
     switch(ast_type->elements[0]->id){
     case AST_ELEM_BASE: {

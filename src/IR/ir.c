@@ -555,6 +555,25 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                         }
                     }
                     break;
+                case INSTRUCTION_ALLOC: {
+                        ir_type_t *alloc_result_type = ((ir_instr_alloc_t*) functions[f].basicblocks[b].instructions[i])->result_type;
+                        if(alloc_result_type->kind != TYPE_KIND_POINTER){
+                            fprintf(file, "    0x%08X alloc (malformed)\n", (int) i);
+                        } else {
+                            char *typename = ir_type_str(alloc_result_type->extra);
+                            fprintf(file, "    0x%08X alloc %s\n", (int) i, typename);
+                            free(typename);
+                        }
+                    }
+                    break;
+                case INSTRUCTION_STACK_SAVE:
+                    fprintf(file, "    0x%08X ssave\n", (int) i);
+                    break;
+                case INSTRUCTION_STACK_RESTORE:
+                    val_str = ir_value_str(((ir_instr_stack_restore_t*) functions[f].basicblocks[b].instructions[i])->stack_pointer);
+                    fprintf(file, "    0x%08X srestore %s\n", (int) i, val_str);
+                    free(val_str);
+                    break;
                 default:
                     printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) functions[f].basicblocks[b].instructions[i]->id);
                     fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);

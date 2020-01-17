@@ -35,7 +35,7 @@
 #define INSTRUCTION_RET            0x0000000D
 #define INSTRUCTION_CALL           0x0000000E
 #define INSTRUCTION_CALL_ADDRESS   0x0000000F
-#define INSTRUCTION_ALLOC          0x00000010 // [UNUSED AND OBSOLETE]
+#define INSTRUCTION_ALLOC          0x00000010 // ir_instr_alloc_t
 #define INSTRUCTION_MALLOC         0x00000011
 #define INSTRUCTION_FREE           0x00000012
 #define INSTRUCTION_STORE          0x00000013
@@ -95,6 +95,8 @@
 #define INSTRUCTION_SELECT         0x0000004F
 #define INSTRUCTION_PHI2           0x00000050
 #define INSTRUCTION_SWITCH         0x00000051
+#define INSTRUCTION_STACK_SAVE     0x00000052
+#define INSTRUCTION_STACK_RESTORE  0x00000053 // ir_instr_stack_restore_t
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -247,8 +249,6 @@ typedef struct {
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
-    ir_type_t *type;
-    unsigned int amount;
 } ir_instr_alloc_t;
 
 // ---------------- ir_instr_malloc_t ----------------
@@ -390,6 +390,13 @@ typedef struct {
     ir_value_t *bytes;
     bool is_volatile;
 } ir_instr_memcpy_t;
+
+// ---------------- ir_instr_stack_restore_t ----------------
+// An IR for restoring the stack pointer
+typedef struct {
+    unsigned int id;
+    ir_value_t *stack_pointer;
+} ir_instr_stack_restore_t;
 
 // ---------------- ir_instr_select_t ----------------
 // An IR for conditionally selecting between two values

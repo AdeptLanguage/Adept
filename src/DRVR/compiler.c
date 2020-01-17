@@ -413,7 +413,7 @@ void break_into_arguments(const char *s, int *out_argc, char ***out_argv){
 }
 
 void show_help(){
-    printf("The Adept Compiler v2.2 - (c) 2016-2020 Isaac Shelton\n\n");
+    printf("The Adept Compiler v2.3 - (c) 2016-2020 Isaac Shelton\n\n");
     printf("Usage: adept [options] <filename>\n\n");
     printf("Options:\n");
     printf("    -h, --help        Display this message\n");
