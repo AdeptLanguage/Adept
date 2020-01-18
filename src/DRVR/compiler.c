@@ -26,7 +26,7 @@
 #endif
 
 errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv){
-    // A wrapper function around 'compiler_execute'
+    // A wrapper function around 'compiler_invoke'
     compiler_invoke(compiler, argc, argv);
     return !(compiler->result_flags & COMPILER_RESULT_SUCCESS);
 }
@@ -340,7 +340,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
 }
 
 void break_into_arguments(const char *s, int *out_argc, char ***out_argv){
-    // Breaks a string into arguments (quote and backslashes allowed)
+    // Breaks a string into arguments (quotes and backslashes allowed)
     // TODO: Clean up this function because it's all over the place
 
     bool in_quote = false;

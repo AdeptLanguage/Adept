@@ -127,3 +127,4 @@ COMPLETED:
 + allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
 + allow for temporary mutable values so you can do stuff like "Hello World".clone()
 + __defer__ for dropped values
++ #print_warning & #place_warning

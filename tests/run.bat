@@ -200,6 +200,10 @@ call :compile successful
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile switch
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile temporary_dropped
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile temporary_mutable
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile tentative_function_calls
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile tentative_method_calls

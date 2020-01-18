@@ -8,6 +8,8 @@
 // #place
 // #print_error
 // #place_error
+// #print_warning
+// #place_warning
 // #input
 // #halt
 // #import
