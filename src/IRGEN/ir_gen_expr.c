@@ -563,7 +563,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     ast_struct_t *target = ast_struct_find(&builder->object->ast, struct_name);
 
                     if(target == NULL){
-                        if(typename_builtin_type(struct_name) != BUILTIN_TYPE_NONE){
+                        if(typename_is_entended_builtin_type(struct_name)){
                             compiler_panicf(builder->compiler, expr->source, "Can't use member operator on built-in type '%s'", struct_name);
                         } else {
                             compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", struct_name);
@@ -947,15 +947,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     if(call_expr->is_tentative){
                         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
                         break;
-                    }
-
-                    if(builder->stack_pointer_type == NULL){
-                        ir_type_t *i8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                        i8_type->kind = TYPE_KIND_S8;
-                        i8_type->extra = NULL;
-                        builder->stack_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                        builder->stack_pointer_type->kind = TYPE_KIND_POINTER;
-                        builder->stack_pointer_type->extra = i8_type;
                     }
 
                     stack_pointer = build_stack_save(builder);

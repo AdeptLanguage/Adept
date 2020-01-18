@@ -290,7 +290,44 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             return SUCCESS; // Return because no other statements can be after this one
         case EXPR_CALL:
-        case EXPR_CALL_METHOD:
+        case EXPR_CALL_METHOD: {
+                // Handle dropped values from call expressions
+                ast_type_t dropped_type;
+                ir_value_t *dropped_value;
+
+                if(ir_gen_expression(builder, statements[s], &dropped_value, true, &dropped_type)) return FAILURE;
+
+                if(dropped_type.elements_length == 0){
+                    compiler_panicf(builder->compiler, statements[s]->source, "INTERNAL ERROR: Dropped value has type with zero elements");
+                    ast_type_free(&dropped_type);
+                    return FAILURE;
+                }
+
+                unsigned int elem_id = dropped_type.elements[0]->id;
+                weak_cstr_t base = NULL;
+
+                if(elem_id == AST_ELEM_BASE){
+                    base = ((ast_elem_base_t*) dropped_type.elements[0])->base;
+                } else if(elem_id == AST_ELEM_GENERIC_BASE){
+                    base = ((ast_elem_generic_base_t*) dropped_type.elements[0])->name;
+                }
+                
+                if(base && !typename_is_entended_builtin_type(base)){
+                    ir_value_t *stack_pointer = build_stack_save(builder);
+                    ir_value_t *temporary_mutable = build_alloc(builder, dropped_value->type);
+                    build_store(builder, dropped_value, temporary_mutable);
+
+                    if(handle_single_deference(builder, &dropped_type, temporary_mutable) == ALT_FAILURE){
+                        ast_type_free(&dropped_type);
+                        return FAILURE;
+                    }
+
+                    build_stack_restore(builder, stack_pointer);
+                }
+
+                ast_type_free(&dropped_type);
+            }
+            break;
         case EXPR_PREINCREMENT:
         case EXPR_PREDECREMENT:
         case EXPR_POSTINCREMENT:

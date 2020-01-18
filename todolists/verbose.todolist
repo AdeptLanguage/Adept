@@ -51,7 +51,8 @@ TODO:
 * better error messages for when not using 'usize' for <$T> List.remove()
 * add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
 * add way to do "synergy"s between modules
-* __defer__ for dropped values
+* keep track of which bases have which __defer__ methods to reduce search time
+* allow functionCall().methodCall().methodCall() like statements
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -125,3 +126,4 @@ COMPLETED:
 + finish '=' and 'donate' for <$T> List
 + allow statements such as '&it as *Region.adjustPosition(xAdjustment, yAdjustment)'
 + allow for temporary mutable values so you can do stuff like "Hello World".clone()
++ __defer__ for dropped values

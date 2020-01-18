@@ -115,7 +115,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
             case AST_ELEM_BASE: {
                     // Check that the base isn't a primitive
                     char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
-                    if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
+                    if(typename_is_entended_builtin_type(base)){
                         compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
                         return FAILURE;
                     }

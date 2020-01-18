@@ -429,6 +429,16 @@ ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
 ir_value_t *build_stack_save(ir_builder_t *builder){
     ir_instr_t *instr = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
     instr->id = INSTRUCTION_STACK_SAVE;
+
+    if(builder->stack_pointer_type == NULL){
+        ir_type_t *i8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        i8_type->kind = TYPE_KIND_S8;
+        i8_type->extra = NULL;
+        builder->stack_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        builder->stack_pointer_type->kind = TYPE_KIND_POINTER;
+        builder->stack_pointer_type->extra = i8_type;
+    }
+
     instr->result_type = builder->stack_pointer_type;
     return build_value_from_prev_instruction(builder);
 }

@@ -1,0 +1,32 @@
+
+#set log_string_deletion true
+
+import '2.3/basics.adept'
+
+struct Bomb () {
+    func __defer__ {
+        printf('Bomb dropped!\n')
+    }
+    
+    func dropAgain Bomb {
+        return *this
+    }
+}
+
+func main {
+    // Value of type 'Bomb' ignored and __defer__ is called
+    accidentlyDropBomb()
+    
+    // "Shelton".clone() is destroyed
+    // The string that "Isaac ".clone() becomes, which is "Isaac Shelton" is destroyed
+    // "Isaac ".clone() is never destroyed because it because "Isaac Shelton"
+    "Isaac ".clone().append("Shelton".clone())
+    
+    // Each returned value of 'Bomb' has __defer__ called on it because none are stored in a variable
+    (accidentlyDropBomb()).dropAgain().dropAgain()
+}
+
+func accidentlyDropBomb Bomb {
+    bomb POD Bomb
+    return bomb
+}

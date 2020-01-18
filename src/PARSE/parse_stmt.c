@@ -105,6 +105,19 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;
+        case TOKEN_STRING: {
+                ast_expr_t *expression;
+                if(parse_expr(ctx, &expression)) return FAILURE;
+                
+                if(expression->id != EXPR_CALL_METHOD){
+                    compiler_panicf(ctx->compiler, expression->source, "Expression not supported as a statement");
+                    ast_expr_free(expression);
+                    return FAILURE;
+                }
+
+                stmt_list->statements[stmt_list->length++] = expression;
+            }
+            break;
         case TOKEN_WORD: {
                 source = sources[(*i)++]; // Read ahead to see what type of statement this is
 

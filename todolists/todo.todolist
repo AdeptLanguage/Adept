@@ -28,7 +28,7 @@ COMPLETENESS:
 * Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * Support 64-bit numeric literals without suffixes
 * Better error messages for when not using 'usize' for <$T> List.remove()
-* __defer__ for dropped values
+* Allow functionCall().methodCall().methodCall() like statements
 
 UNINTENDED:
 * Prevent single line functions returning void
@@ -44,6 +44,7 @@ DEBUG:
 
 SPEED:
 * Dont search through global variables linearly
+* Keep track of which bases have which __defer__ methods to reduce search time
 
 IDEA:
 * 'Super' keyword type which is the primary parent struct

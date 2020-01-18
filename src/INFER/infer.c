@@ -538,7 +538,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             ast_struct_t *structure = ast_struct_find(ctx->ast, base);
 
             if(structure == NULL){
-                if(typename_builtin_type(base) != BUILTIN_TYPE_NONE){
+                if(typename_is_entended_builtin_type(base)){
                     compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for built-in type '%s'", base);
                 } else {
                     compiler_panicf(ctx->compiler, static_data->type.source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", base);
