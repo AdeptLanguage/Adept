@@ -239,6 +239,10 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
 
 errorcode_t handle_children_deference(ir_builder_t *builder);
 
+// ---------------- could_have_deference ----------------
+// Returns whether a type could have __defer__ methods that need calling
+bool could_have_deference(ast_type_t *ast_type);
+
 // ---------------- handle_pass_management ----------------
 // Handles '__pass__' management function calls for passing arguments
 // NOTE: 'arg_type_traits' can be NULL

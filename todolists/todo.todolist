@@ -19,7 +19,8 @@ VERIFICATION:
 * Don't allow multiple polymorphic types with the same name and number of parameters
 
 COMPLETENESS:
-* __defer__ __pass__ for fixed arrays maybe
+* __pass__ for fixed arrays maybe
+* __assign__ for fixed arrays maybe
 * Allow polymorphic names for generic bases
 * Add '__compiler_version__' as a builtin meta value
 * Allow for self-referencing pointers
@@ -29,6 +30,7 @@ COMPLETENESS:
 * Support 64-bit numeric literals without suffixes
 * Better error messages for when not using 'usize' for <$T> List.remove()
 * Allow functionCall().methodCall().methodCall() like statements
+* Allow 'each in' for fixed arrays
 
 UNINTENDED:
 * Prevent single line functions returning void

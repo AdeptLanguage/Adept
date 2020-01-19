@@ -44,6 +44,7 @@ compile equals_func || exit $?
 compile external || exit $?
 compile fixed_array || exit $?
 compile fixed_array_assign || exit $?
+compile fixed_array_deference || exit $?
 compile funcaddr || exit $?
 compile funcptr || exit $?
 compile functions || exit $?

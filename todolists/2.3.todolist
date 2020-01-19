@@ -6,8 +6,10 @@ REQUIREMENTS:
     * Casting to Any from non-builtin types
 * Override for [] += -= *= /= %= operators
 * Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
-* __defer__ __pass__ for fixed arrays maybe
+* __pass__ for fixed arrays maybe
+* __assign__ for fixed arrays maybe
 
 COMPLETED:
 + Allow for temporary mutable values so you can do stuff like "Hello World".clone()
 + __defer__ for dropped values
++ __defer__ for fixed arrays

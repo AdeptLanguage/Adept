@@ -1,0 +1,10 @@
+
+#set log_string_deletion true
+
+import '2.3/basics.adept'
+
+func main {
+    strings 10 String
+    repeat 10, strings[idx] = "%" % cast int idx
+    // __defer__() is called on each item of 'strings' before going out of scope
+}
