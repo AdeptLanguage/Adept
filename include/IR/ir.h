@@ -623,4 +623,12 @@ void ir_implementation(length_t id, char prefix, char *output_buffer);
 // they do not share the same literal value.
 unsigned long long ir_value_uniqueness_value(ir_value_t *value);
 
+// ---------------- ir_print_value ----------------
+// Prints a value to stdout
+void ir_print_value(ir_value_t *value);
+
+// ---------------- ir_print_type ----------------
+// Prints a type to stdout
+void ir_print_type(ir_type_t *type);
+
 #endif // IR_H

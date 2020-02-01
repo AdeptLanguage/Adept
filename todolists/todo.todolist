@@ -31,6 +31,7 @@ COMPLETENESS:
 * Better error messages for when not using 'usize' for <$T> List.remove()
 * Allow functionCall().methodCall().methodCall() like statements
 * Allow 'each in' for fixed arrays
+* Allow skipping __pass__ calls with functionCall(POD value1, POD value2)
 
 UNINTENDED:
 * Prevent single line functions returning void

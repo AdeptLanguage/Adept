@@ -779,3 +779,15 @@ unsigned long long ir_value_uniqueness_value(ir_value_t *value){
         return 0xFFFFFFFF;
     }
 }
+
+void ir_print_value(ir_value_t *value){
+    char *s = ir_value_str(value);
+    printf("%s\n", s);
+    free(s);
+}
+
+void ir_print_type(ir_type_t *type){
+    char *s = ir_type_str(type);
+    printf("%s\n", s);
+    free(s);
+}

@@ -161,6 +161,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_UNDEF:          printf("Keyword: undef\n"); break;
         case TOKEN_UNLESS:         printf("Keyword: unless\n"); break;
         case TOKEN_UNTIL:          printf("Keyword: until\n"); break;
+        case TOKEN_VERBATIM:       printf("Keyword: verbatim\n"); break;
         case TOKEN_WHILE:          printf("Keyword: while\n"); break;
         case TOKEN_META:
             printf("Meta: \"%s\"\n", (char*) tokenlist->tokens[i].data);
@@ -300,8 +301,8 @@ const char *global_token_name_table[] = {
     "undef keyword",          // 0x0000006C
     "unless keyword",         // 0x0000006D
     "until keyword",          // 0x0000006E
-    "while keyword",          // 0x0000006F
-    "reserved",               // 0x00000070
+    "verbatim keyword",       // 0x0000006F
+    "while keyword",          // 0x00000070
     "reserved",               // 0x00000071
     "reserved",               // 0x00000072
     "reserved",               // 0x00000073

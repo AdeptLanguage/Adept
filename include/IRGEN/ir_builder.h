@@ -96,6 +96,11 @@ void build_cond_break(ir_builder_t *builder, ir_value_t *condition, length_t tru
 // Builds an equals instruction
 ir_value_t* build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);
 
+// ---------------- build_array_access ----------------
+// Builds an array access instruction
+ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index);
+ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type);
+
 // ---------------- build_static_struct ----------------
 // Builds a static struct
 ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable);
@@ -248,6 +253,21 @@ bool could_have_deference(ast_type_t *ast_type);
 // NOTE: 'arg_type_traits' can be NULL
 void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity);
 
+// ---------------- handle_single_deference ----------------
+// Calls __pass__ function for a value and it's children if the function exists
+// NOTE: Assumes (ast_type->elements_length == 1)
+// NOTE: Returns SUCCESS if value was utilized in passing
+//       Returns FAILURE if value was not utilized in passing
+//       Returns ALT_FAILURE if a compiler time error occured
+errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value);
+
+errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_return);
+errorcode_t handle_children_pass(ir_builder_t *builder);
+
+// ---------------- could_have_pass ----------------
+// Returns whether a type could have __pass__ methods that need calling
+bool could_have_pass(ast_type_t *ast_type);
+
 // ---------------- handle_assign_management ----------------
 // Handles '__assign__' management method calls
 // NOTE: 'ast_destination_type' is not a pointer, but value provided is mutable
@@ -269,6 +289,13 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
 // NOTE: Does NOT check for existing suitable __defer__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
 errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
+        length_t type_list_length, funcpair_t *result);
+
+// ---------------- attempt_autogen___pass__ ----------------
+// Attempts to auto-generate __pass__ management function
+// NOTE: Does NOT check for existing suitable __pass__ functions
+// NOTE: Returns FAILURE if couldn't auto generate
+errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result);
 
 // ---------------- resolve_type_polymorphics ----------------

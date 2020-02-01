@@ -13,7 +13,6 @@ TODO:
 * improve compiler memory tracking (because freeing is slow during the middle of compilation rn)
 * ir_to_llvm_type circular containment detection
 * throw errors for fields with duplicate names in structs
-* __pass__ for fixed arrays maybe
 * __assign__ for fixed arrays maybe
 * dont allow void in places it doesn't make sense
 * __String__ function?
@@ -55,6 +54,7 @@ TODO:
 * keep track of which bases have which __defer__ methods to reduce search time
 * allow functionCall().methodCall().methodCall() like statements
 * allow 'each in' for fixed arrays
+* allow skipping __pass__ calls with functionCall(POD value1, POD value2)
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -131,3 +131,5 @@ COMPLETED:
 + __defer__ for dropped values
 + #print_warning & #place_warning
 + __defer__ for fixed arrays
++ __pass__ for fixed arrays
++ add way to avoid autogeneration of statements in __pass__ and __defer__ functions [added 'verbatim' keyword]

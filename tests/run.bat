@@ -76,6 +76,8 @@ call :compile fixed_array_assign
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array_deference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile fixed_array_pass
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddr
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcptr

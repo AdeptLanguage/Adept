@@ -29,17 +29,7 @@ ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *target, source_t sourceO
     }
 
     ir_global_t *global = &builder->object->ir_module.globals[var_index];
-
-    ir_value_t *rtti = build_gvarptr(builder, ir_type_pointer_to(builder->pool, global->type), var_index);
-    rtti = build_load(builder, rtti);
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_array_access_t));
-    ((ir_instr_array_access_t*) instruction)->id = INSTRUCTION_ARRAY_ACCESS;
-    ((ir_instr_array_access_t*) instruction)->result_type = rtti->type;
-    ((ir_instr_array_access_t*) instruction)->value = rtti;
-    ((ir_instr_array_access_t*) instruction)->index = build_literal_usize(builder->pool, found_type_index);
-    builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-    rtti = build_value_from_prev_instruction(builder);
-    rtti = build_load(builder, rtti);
+    ir_value_t *rtti = build_load(builder, build_gvarptr(builder, ir_type_pointer_to(builder->pool, global->type), var_index));
+    rtti = build_load(builder, build_array_access(builder, rtti, build_literal_usize(builder->pool, found_type_index)));
     return rtti;
 }

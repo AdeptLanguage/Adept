@@ -256,6 +256,10 @@ bool ast_type_is_generic_base(const ast_type_t *type);
 // Returns whether an AST type is a pointer to a plain generic base type
 bool ast_type_is_generic_base_ptr(const ast_type_t *type);
 
+// ---------------- ast_type_is_fixed_array ----------------
+// Returns whether an AST type is a fixed array
+bool ast_type_is_fixed_array(const ast_type_t *type);
+
 // ---------------- ast_type_has_polymorph ----------------
 // Returns whether an AST type contains a polymorphic type
 bool ast_type_has_polymorph(const ast_type_t *type);

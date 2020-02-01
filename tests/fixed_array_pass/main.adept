@@ -1,0 +1,49 @@
+
+pragma no_type_info
+
+#set autogen___pass__ false
+import 'sys/cstdio.adept'
+
+func main {
+    h ContainsTwoDeferable
+    x POD 10 ContainsTwoDeferable
+    doSomethingWithStruct(h)
+    doSomethingWithFixedArray(x)
+}
+
+struct Deferable (dont_print bool) {
+    func __defer__ {
+        unless this.dont_print, printf('Deferable.__defer__\n')
+    }
+}
+
+func __pass__(deferable POD Deferable) Deferable {
+    deferable.dont_print = true
+    return deferable
+}
+
+#unless autogen___pass__
+verbatim func __pass__(h POD ContainsTwoDeferable) ContainsTwoDeferable {
+    printf('Manually declared __pass__(h POD ContainsTwoDeferable) called!\n')
+    h.deferable1 = POD __pass__(h.deferable1)
+    h.deferable2 = POD __pass__(h.deferable2)
+    return h
+}
+
+verbatim func __pass__(h POD 10 ContainsTwoDeferable) 10 ContainsTwoDeferable  {
+    printf('Manually declared __pass__(h POD 10 ContainsTwoDeferable) called! {\n')
+    repeat 10, h[idx] = POD __pass__(h[idx])
+    printf('}\n')
+    return h
+}
+#end
+
+struct ContainsTwoDeferable (deferable1, deferable2 Deferable)
+
+func doSomethingWithStruct(h ContainsTwoDeferable) {
+    // Nothing should happen since 'h' was '__pass__'d
+}
+
+func doSomethingWithFixedArray(x 10 ContainsTwoDeferable) {
+    // Nothing should happen since 'x' was '__pass__'d
+}

@@ -138,43 +138,59 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         // Make sure to update references that may have been invalidated
         ast_func = &object->ast.funcs[ast_func_id];
 
-        if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(&builder)){
-            // Failed to auto-generate __defer__() calls to children of parent type
-            free(builder.block_stack_labels);
-            free(builder.block_stack_break_ids);
-            free(builder.block_stack_continue_ids);
-            free(builder.block_stack_scopes);
-            return FAILURE;
+        // TODO: CLEANUP: Clean up this messy code
+        if(ast_func->traits & AST_FUNC_AUTOGEN){
+            bool failed = false;
+
+            if(ast_func->traits & AST_FUNC_DEFER){
+                failed = handle_children_deference(&builder);
+            } else if(ast_func->traits & AST_FUNC_PASS){
+                failed = handle_children_pass_root(&builder, false);
+                if(!failed) terminated = true;
+            }
+
+            if(failed){
+                // Failed to auto-generate __defer__() or __pass__() calls to children of parent type
+                free(builder.block_stack_labels);
+                free(builder.block_stack_break_ids);
+                free(builder.block_stack_continue_ids);
+                free(builder.block_stack_scopes);
+                return FAILURE;
+            }
         }
 
-        // Ensure latest version of module_func reference
-        ast_func = &object->ast.funcs[ast_func_id];
-        module_func = &object->ir_module.funcs[ir_func_id];
+        // TODO: CLEANUP: Clean this up
+        // We have to recheck whether the function was terminated because of 'handle_children_pass_root(&builder)'
+        if(!terminated){
+            // Ensure latest version of module_func reference
+            ast_func = &object->ast.funcs[ast_func_id];
+            module_func = &object->ir_module.funcs[ir_func_id];
 
-        if(module_func->return_type->kind == TYPE_KIND_VOID){
-            ir_instr_t *built_instr = build_instruction(&builder, sizeof(ir_instr_ret_t));
-            ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
-            ((ir_instr_ret_t*) built_instr)->value = NULL;
-        } else if(ast_func->traits & AST_FUNC_MAIN && module_func->return_type->kind == TYPE_KIND_S32
-                    && ast_type_is_void(&ast_func->return_type)){
-            // Return an int under the hood for 'func main void'
-            ir_instr_t *built_instr = build_instruction(&builder, sizeof(ir_instr_ret_t));
-            ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
-            ((ir_instr_ret_t*) built_instr)->value = build_literal_int(builder.pool, 0);
-        } else {
-            source_t where = ast_func->return_type.source;
-            char *return_typename = ast_type_str(&ast_func->return_type);
-            compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func->name);
-            free(return_typename);
+            if(module_func->return_type->kind == TYPE_KIND_VOID){
+                ir_instr_t *built_instr = build_instruction(&builder, sizeof(ir_instr_ret_t));
+                ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
+                ((ir_instr_ret_t*) built_instr)->value = NULL;
+            } else if(ast_func->traits & AST_FUNC_MAIN && module_func->return_type->kind == TYPE_KIND_S32
+                        && ast_type_is_void(&ast_func->return_type)){
+                // Return an int under the hood for 'func main void'
+                ir_instr_t *built_instr = build_instruction(&builder, sizeof(ir_instr_ret_t));
+                ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
+                ((ir_instr_ret_t*) built_instr)->value = build_literal_int(builder.pool, 0);
+            } else {
+                source_t where = ast_func->return_type.source;
+                char *return_typename = ast_type_str(&ast_func->return_type);
+                compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func->name);
+                free(return_typename);
 
-            module_func->basicblocks = builder.basicblocks;
-            module_func->basicblocks_length = builder.basicblocks_length;
+                module_func->basicblocks = builder.basicblocks;
+                module_func->basicblocks_length = builder.basicblocks_length;
 
-            free(builder.block_stack_labels);
-            free(builder.block_stack_break_ids);
-            free(builder.block_stack_continue_ids);
-            free(builder.block_stack_scopes);
-            return FAILURE;
+                free(builder.block_stack_labels);
+                free(builder.block_stack_break_ids);
+                free(builder.block_stack_continue_ids);
+                free(builder.block_stack_scopes);
+                return FAILURE;
+            }
         }
     }
 
@@ -272,9 +288,17 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     handle_deference_for_globals(builder);
                 }
 
-                if(ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder)){
-                    // Failed to auto-generate __defer__() calls to children of parent type
-                    return FAILURE;
+                // TODO: CLEANUP: Clean up this messy code
+                if(ast_func->traits & AST_FUNC_AUTOGEN){
+                    if(ast_func->traits & AST_FUNC_PASS){
+                        if(handle_children_pass_root(builder, true)){
+                            // Failed to auto-generate __pass__() calls to children of parent type
+                            return FAILURE;
+                        } else if(out_is_terminated) *out_is_terminated = true;
+                    } else if((ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder))){
+                        // Failed to auto-generate __defer__() calls to children of parent type
+                        return FAILURE;
+                    }
                 }
 
                 built_instr = build_instruction(builder, sizeof(ir_instr_ret_t));
@@ -1054,14 +1078,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *it_ptr = build_varptr(builder, array->type, it_var_id);
                 ir_value_t *it_idx = build_load(builder, idx_ptr);
 
-                built_instr = build_instruction(builder, sizeof(ir_instr_array_access_t));
-                ((ir_instr_array_access_t*) built_instr)->id = INSTRUCTION_ARRAY_ACCESS;
-                ((ir_instr_array_access_t*) built_instr)->result_type = array->type;
-                ((ir_instr_array_access_t*) built_instr)->index = it_idx;
-                ((ir_instr_array_access_t*) built_instr)->value = array;
-                ir_value_t *current_it = build_value_from_prev_instruction(builder);
-
-                build_store(builder, current_it, it_ptr);
+                // Update 'it' value
+                build_store(builder, build_array_access(builder, array, it_idx), it_ptr);
 
                 // Generate new_block user-defined statements
                 bool terminated;

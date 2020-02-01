@@ -13,9 +13,9 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     source_t source = ctx->tokenlist->sources[*ctx->i];
 
     strong_cstr_t name;
-    bool is_stdcall, is_foreign;
-
-    if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign)) return FAILURE;
+    bool is_stdcall, is_foreign, is_verbatim;
+    
+    if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign, &is_verbatim)) return FAILURE;
 
     if(is_foreign && ctx->struct_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
@@ -26,7 +26,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, name, is_stdcall, is_foreign, source);
+    ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, source);
 
     if(parse_func_arguments(ctx, func)) return FAILURE;
     if(parse_ignore_newlines(ctx, "Expected '{' after function head")) return FAILURE;
@@ -46,8 +46,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     
     // enforce specific arguements for special functions & methods
     if(func->traits == AST_FUNC_DEFER && (
-        strcmp(func->name, "__defer__") != 0
-        || !ast_type_is_void(&func->return_type)
+        !ast_type_is_void(&func->return_type)
         || func->arity != 1
         || strcmp(func->arg_names[0], "this") != 0
         || !(  ast_type_is_base_ptr(&func->arg_types[0])
@@ -60,11 +59,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    if(strcmp(func->name, "__pass__") == 0 && (
-        func->traits != TRAIT_NONE
-        || !(  ast_type_is_base(&func->return_type)
+    if(func->traits == AST_FUNC_PASS && (
+           !(  ast_type_is_base(&func->return_type)
             || ast_type_is_polymorph(&func->return_type)
             || ast_type_is_generic_base(&func->return_type)
+            || ast_type_is_fixed_array(&func->return_type)
             )
         || func->arity != 1
         || !ast_types_identical(&func->return_type, &func->arg_types[0])
@@ -143,8 +142,8 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_stdcall, bool *out_is_foreign){
-    *out_is_stdcall = parse_func_is_stdcall(ctx);
+errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_stdcall, bool *out_is_foreign, bool *out_is_verbatim){
+    parse_func_prefixes(ctx, out_is_stdcall, out_is_verbatim);
 
     tokenid_t id = ctx->tokenlist->tokens[(*ctx->i)++].id;
     *out_is_foreign = (id == TOKEN_FOREIGN);
@@ -438,12 +437,28 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
     grow((void**) &func->arg_type_traits, sizeof(trait_t),    func->arity + backfill, *capacity);
 }
 
-bool parse_func_is_stdcall(parse_ctx_t *ctx){
-    if(ctx->tokenlist->tokens[*ctx->i].id == TOKEN_STDCALL){
-        *ctx->i += 1;
-        return true;
+void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim){
+    tokenid_t token_id = ctx->tokenlist->tokens[*ctx->i].id;
+
+    *out_is_stdcall = false;
+    *out_is_verbatim = false;
+
+    // NOTE: Duplicates are allowed, maybe they shouldn't be or does it really matter?
+    while(true){
+        if(token_id == TOKEN_STDCALL){
+            token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
+            *out_is_stdcall = true;
+            continue;
+        }
+        if(token_id == TOKEN_VERBATIM){
+            token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
+            *out_is_verbatim = true;
+            continue;
+        }
+        return;
     }
-    return false;
+
+    return;
 }
 
 void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill){

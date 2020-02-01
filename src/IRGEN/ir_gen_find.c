@@ -154,6 +154,12 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
         }
     }
 
+    if(strcmp(name, "__pass__") == 0
+    && attempt_autogen___pass__(builder, arg_values, arg_types, type_list_length, result) == SUCCESS){
+        // Auto-generate __pass__ method if possible
+        return SUCCESS;
+    }
+
     return FAILURE; // No function with that definition found
 }
 
