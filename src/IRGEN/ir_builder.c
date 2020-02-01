@@ -63,7 +63,7 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
     return ir_value;
 }
 
-ir_value_t* build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
+ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
     ir_basicblock_new_instructions(builder->current_block, 1);
     ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
     instruction->id = INSTRUCTION_VARPTR;
@@ -73,7 +73,7 @@ ir_value_t* build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t va
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
+ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
     ir_basicblock_new_instructions(builder->current_block, 1);
     ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
     instruction->id = INSTRUCTION_GLOBALVARPTR;
@@ -83,7 +83,7 @@ ir_value_t* build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_load(ir_builder_t *builder, ir_value_t *value){
+ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value){
     ir_type_t *dereferenced_type = ir_type_dereference(value->type);
     if(dereferenced_type == NULL) return NULL;
 
@@ -119,7 +119,7 @@ void build_cond_break(ir_builder_t *builder, ir_value_t *condition, length_t tru
     built_instr->false_block_id = false_block_id;
 }
 
-ir_value_t* build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
+ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
     ir_instr_math_t *built_instr = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
     built_instr->id = INSTRUCTION_EQUALS;
     built_instr->a = a;
@@ -148,7 +148,23 @@ ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_v
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable){
+ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type){
+    ir_instr_member_t *built_instr = (ir_instr_member_t*) build_instruction(builder, sizeof(ir_instr_member_t));
+    built_instr->id = INSTRUCTION_MEMBER;
+    built_instr->result_type = result_type;
+    built_instr->value = value;
+    built_instr->member = member;
+    return build_value_from_prev_instruction(builder);
+}
+
+void build_return(ir_builder_t *builder, ir_value_t *value){
+    ir_instr_ret_t *built_instr = (ir_instr_ret_t*) build_instruction(builder, sizeof(ir_instr_ret_t));
+    built_instr->id = INSTRUCTION_RET;
+    built_instr->result_type = NULL;
+    built_instr->value = value;
+}
+
+ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable){
     ir_value_t *value = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_STRUCT_LITERAL;
     value->type = type;
@@ -166,7 +182,7 @@ ir_value_t* build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t
     return value;
 }
 
-ir_value_t* build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
+ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_STRUCT_CONSTRUCTION;
     value->type = type;
@@ -179,7 +195,7 @@ ir_value_t* build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value
     return value;
 }
 
-ir_value_t* build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
+ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_ARRAY_LITERAL;
     value->type = ir_type_pointer_to(pool, type);
@@ -190,7 +206,7 @@ ir_value_t* build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **va
     return value;
 }
 
-ir_value_t* build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
+ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
     expand((void**) &module->anon_globals, sizeof(ir_anon_global_t), module->anon_globals_length, &module->anon_globals_capacity, 1, 4);
 
     ir_anon_global_t *anon_global = &module->anon_globals[module->anon_globals_length++];
@@ -232,9 +248,7 @@ ir_type_t* ir_builder_usize_ptr(ir_builder_t *builder){
     ir_type_t **shared_type = &builder->object->ir_module.common.ir_usize_ptr;
 
     if(*shared_type == NULL){
-        (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        (*shared_type)->kind = TYPE_KIND_POINTER;
-        (*shared_type)->extra = ir_builder_usize(builder);
+        *shared_type = ir_type_pointer_to(builder->pool, ir_builder_usize(builder));
     }
 
     return *shared_type;
@@ -251,7 +265,7 @@ ir_type_t* ir_builder_bool(ir_builder_t *builder){
     return *shared_type;
 }
 
-ir_value_t* build_literal_int(ir_pool_t *pool, long long literal_value){
+ir_value_t *build_literal_int(ir_pool_t *pool, long long literal_value){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
 
     value->value_type = VALUE_TYPE_LITERAL;
@@ -264,7 +278,7 @@ ir_value_t* build_literal_int(ir_pool_t *pool, long long literal_value){
     return value;
 }
 
-ir_value_t* build_literal_usize(ir_pool_t *pool, length_t literal_value){
+ir_value_t *build_literal_usize(ir_pool_t *pool, length_t literal_value){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
 
     value->value_type = VALUE_TYPE_LITERAL;
@@ -277,7 +291,7 @@ ir_value_t* build_literal_usize(ir_pool_t *pool, length_t literal_value){
     return value;
 }
 
-ir_value_t* build_literal_str(ir_builder_t *builder, char *array, length_t length){
+ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length){
     if(builder->object->ir_module.common.ir_string_struct == NULL){
         redprintf("Can't create string literal without String type present");
         printf("\nTry importing '2.1/String.adept'\n");
@@ -302,26 +316,24 @@ ir_value_t* build_literal_str(ir_builder_t *builder, char *array, length_t lengt
     return value;
 }
 
-ir_value_t* build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
+ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
     return build_literal_cstr_of_length(builder, value, strlen(value) + 1);
 }
 
-ir_value_t* build_literal_cstr_of_length(ir_builder_t *builder, char *array, length_t length){
+ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, char *array, length_t length){
     // NOTE: Builds a null-terminated string literal value
     ir_value_t *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
     ir_value->value_type = VALUE_TYPE_CSTR_OF_LEN;
     ir_type_t *ubyte_type;
     ir_type_map_find(builder->type_map, "ubyte", &ubyte_type);
-    ir_value->type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    ir_value->type->kind = TYPE_KIND_POINTER;
-    ir_value->type->extra = ubyte_type;
+    ir_value->type = ir_type_pointer_to(builder->pool, ubyte_type);
     ir_value->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_cstr_of_len_t));
     ((ir_value_cstr_of_len_t*) ir_value->extra)->array = array;
     ((ir_value_cstr_of_len_t*) ir_value->extra)->length = length;
     return ir_value;
 }
 
-ir_value_t* build_null_pointer(ir_pool_t *pool){
+ir_value_t *build_null_pointer(ir_pool_t *pool){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_NULLPTR;
     // neglect value->extra
@@ -335,7 +347,7 @@ ir_value_t* build_null_pointer(ir_pool_t *pool){
     return value;
 }
 
-ir_value_t* build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
+ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_NULLPTR_OF_TYPE;
     value->type = type;
@@ -343,7 +355,7 @@ ir_value_t* build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
     return value;
 }
 
-ir_value_t* build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t* to){
+ir_value_t *build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t* to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_BITCAST;
     instr->result_type = to;
@@ -351,7 +363,7 @@ ir_value_t* build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t* to
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_CONST_BITCAST;
     value->type = to;
@@ -359,7 +371,7 @@ ir_value_t* build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to
     return value;
 }
 
-ir_value_t* build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_ZEXT;
     instr->result_type = to;
@@ -367,7 +379,7 @@ ir_value_t* build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_TRUNC;
     instr->result_type = to;
@@ -375,7 +387,7 @@ ir_value_t* build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_FEXT;
     instr->result_type = to;
@@ -383,7 +395,7 @@ ir_value_t* build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_FTRUNC;
     instr->result_type = to;
@@ -391,7 +403,7 @@ ir_value_t* build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to)
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_INTTOPTR;
     instr->result_type = to;
@@ -399,7 +411,7 @@ ir_value_t* build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *t
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_PTRTOINT;
     instr->result_type = to;
@@ -407,7 +419,7 @@ ir_value_t* build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *t
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_FPTOUI;
     instr->result_type = to;
@@ -415,7 +427,7 @@ ir_value_t* build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to)
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_FPTOSI;
     instr->result_type = to;
@@ -423,7 +435,7 @@ ir_value_t* build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to)
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_UITOFP;
     instr->result_type = to;
@@ -431,7 +443,7 @@ ir_value_t* build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to)
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t* build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
     instr->id = INSTRUCTION_SITOFP;
     instr->result_type = to;
@@ -713,9 +725,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             assert(mutable_value->type->kind == TYPE_KIND_POINTER);
             assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
 
-            ir_type_t *casted_ir_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            casted_ir_type->kind = TYPE_KIND_POINTER;
-            casted_ir_type->extra = ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype;
+            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
             mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
 
             for(length_t i = 0; i != count; i++){
@@ -802,19 +812,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
 
                 ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0));
 
-                ir_type_t *ir_field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                ir_field_ptr_type->kind = TYPE_KIND_POINTER;
-                ir_field_ptr_type->extra = ir_field_type;
-
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_member_t));
-                ((ir_instr_member_t*) instruction)->id = INSTRUCTION_MEMBER;
-                ((ir_instr_member_t*) instruction)->result_type = ir_field_ptr_type;
-                ((ir_instr_member_t*) instruction)->value = this_ir_value;
-                ((ir_instr_member_t*) instruction)->member = f;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                ir_value_t *ir_field_value = build_value_from_prev_instruction(builder);
-
+                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
                 errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value);
 
                 if(failed){
@@ -878,19 +876,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
 
                 ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0));
 
-                ir_type_t *ir_field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                ir_field_ptr_type->kind = TYPE_KIND_POINTER;
-                ir_field_ptr_type->extra = ir_field_type;
-
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_member_t));
-                ((ir_instr_member_t*) instruction)->id = INSTRUCTION_MEMBER;
-                ((ir_instr_member_t*) instruction)->result_type = ir_field_ptr_type;
-                ((ir_instr_member_t*) instruction)->value = this_ir_value;
-                ((ir_instr_member_t*) instruction)->member = f;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                ir_value_t *ir_field_value = build_value_from_prev_instruction(builder);
-
+                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
                 errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value);
                 ast_type_free(&ast_field_type);
 
@@ -1016,9 +1002,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
             assert(mutable_value->type->kind == TYPE_KIND_POINTER);
             assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
 
-            ir_type_t *casted_ir_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            casted_ir_type->kind = TYPE_KIND_POINTER;
-            casted_ir_type->extra = ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype;
+            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
             mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
 
             for(length_t i = 0; i != count; i++){
@@ -1082,10 +1066,7 @@ errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_re
 
     // Return modified value
     if(!already_has_return){
-        ir_instr_ret_t *instruction = (ir_instr_ret_t*) build_instruction(builder, sizeof(ir_instr_ret_t));
-        instruction->id = INSTRUCTION_RET;
-        instruction->result_type = NULL;
-        instruction->value = return_value;
+        build_return(builder, return_value);
     }
     return SUCCESS;
 }
@@ -1140,19 +1121,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 ir_value_t *mutable_passed_ir_value = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
-                ir_type_t *ir_field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                ir_field_ptr_type->kind = TYPE_KIND_POINTER;
-                ir_field_ptr_type->extra = ir_field_type;
-
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_member_t));
-                ((ir_instr_member_t*) instruction)->id = INSTRUCTION_MEMBER;
-                ((ir_instr_member_t*) instruction)->result_type = ir_field_ptr_type;
-                ((ir_instr_member_t*) instruction)->value = mutable_passed_ir_value;
-                ((ir_instr_member_t*) instruction)->member = f;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                ir_value_t *ir_field_reference = build_value_from_prev_instruction(builder);
-
+                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
                 errorcode_t failed = handle_single_pass(builder, ast_field_type, ir_field_reference);
 
                 if(failed){
@@ -1222,19 +1191,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 ir_value_t *mutable_passed_ir_value = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
-                ir_type_t *ir_field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                ir_field_ptr_type->kind = TYPE_KIND_POINTER;
-                ir_field_ptr_type->extra = ir_field_type;
-
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                ir_instr_t *instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_member_t));
-                ((ir_instr_member_t*) instruction)->id = INSTRUCTION_MEMBER;
-                ((ir_instr_member_t*) instruction)->result_type = ir_field_ptr_type;
-                ((ir_instr_member_t*) instruction)->value = mutable_passed_ir_value;
-                ((ir_instr_member_t*) instruction)->member = f;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                ir_value_t *ir_field_reference = build_value_from_prev_instruction(builder);
-
+                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
                 errorcode_t failed = handle_single_pass(builder, &ast_field_type, ir_field_reference);
                 ast_type_free(&ast_field_type);
 
@@ -1403,7 +1360,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     return SUCCESSFUL;
 }
 
-ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name){
+ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name){
     if(lhs->type->kind == TYPE_KIND_STRUCTURE){
         if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
             funcpair_t result;

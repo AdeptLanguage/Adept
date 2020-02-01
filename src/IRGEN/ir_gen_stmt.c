@@ -167,15 +167,11 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
             module_func = &object->ir_module.funcs[ir_func_id];
 
             if(module_func->return_type->kind == TYPE_KIND_VOID){
-                ir_instr_t *built_instr = build_instruction(&builder, sizeof(ir_instr_ret_t));
-                ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
-                ((ir_instr_ret_t*) built_instr)->value = NULL;
+                build_return(&builder, NULL);
             } else if(ast_func->traits & AST_FUNC_MAIN && module_func->return_type->kind == TYPE_KIND_S32
                         && ast_type_is_void(&ast_func->return_type)){
                 // Return an int under the hood for 'func main void'
-                ir_instr_t *built_instr = build_instruction(&builder, sizeof(ir_instr_ret_t));
-                ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
-                ((ir_instr_ret_t*) built_instr)->value = build_literal_int(builder.pool, 0);
+                build_return(&builder, build_literal_int(builder.pool, 0));
             } else {
                 source_t where = ast_func->return_type.source;
                 char *return_typename = ast_type_str(&ast_func->return_type);
@@ -301,11 +297,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
                 }
 
-                built_instr = build_instruction(builder, sizeof(ir_instr_ret_t));
-                ((ir_instr_ret_t*) built_instr)->id = INSTRUCTION_RET;
-                ((ir_instr_ret_t*) built_instr)->result_type = NULL;
-                ((ir_instr_ret_t*) built_instr)->value = expression_value;
-
+                build_return(builder, expression_value);
+                
                 if(s + 1 != statements_length){
                     compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", builder->object->ast.funcs[builder->ast_func_id].name);
                 }
@@ -374,10 +367,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(declare_stmt->value != NULL){
                     // Regular declare statement initial assign value
                     ir_value_t *initial;
-                    ir_value_t *destination = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-                    ir_type_t *var_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                    var_pointer_type->kind = TYPE_KIND_POINTER;
-                    var_pointer_type->extra = ir_decl_type;
+                    ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
 
                     if(ir_gen_expression(builder, declare_stmt->value, &initial, false, &temporary_type)) return FAILURE;
 
@@ -391,20 +381,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         return FAILURE;
                     }
 
-
-                    ir_basicblock_new_instructions(builder->current_block, 2);
-                    instr = &builder->current_block->instructions[builder->current_block->instructions_length++];
-                    *instr = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
-                    ((ir_instr_varptr_t*) *instr)->id = INSTRUCTION_VARPTR;
-                    ((ir_instr_varptr_t*) *instr)->index = builder->next_var_id;
-                    ((ir_instr_varptr_t*) *instr)->result_type = var_pointer_type;
-
-                    destination->value_type = VALUE_TYPE_RESULT;
-                    destination->type = var_pointer_type;
-                    destination->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
-                    ((ir_value_result_t*) (destination)->extra)->block_id = builder->current_block_id;
-                    ((ir_value_result_t*) (destination)->extra)->instruction_id = builder->current_block->instructions_length - 1;
-
+                    ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
                     if(declare_stmt->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &declare_stmt->type, true)){

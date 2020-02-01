@@ -70,15 +70,15 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
 
 // ---------------- build_varptr ----------------
 // Builds a varptr instruction
-ir_value_t* build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
+ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
 // ---------------- build_varptr ----------------
 // Builds a globalvarptr instruction
-ir_value_t* build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
+ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
 // ---------------- build_load ----------------
 // Builds a load instruction
-ir_value_t* build_load(ir_builder_t *builder, ir_value_t *value);
+ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value);
 
 // ---------------- build_store ----------------
 // Builds a store instruction
@@ -94,12 +94,20 @@ void build_cond_break(ir_builder_t *builder, ir_value_t *condition, length_t tru
 
 // ---------------- build_equals ----------------
 // Builds an equals instruction
-ir_value_t* build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);
+ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);
 
 // ---------------- build_array_access ----------------
 // Builds an array access instruction
 ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index);
 ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type);
+
+// ---------------- build_member ----------------
+// Builds a member access instruction
+ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type);
+
+// ---------------- build_return ----------------
+// Builds a return instruction
+void build_return(ir_builder_t *builder, ir_value_t *value);
 
 // ---------------- build_static_struct ----------------
 // Builds a static struct
@@ -123,69 +131,69 @@ void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global,
 
 // ---------------- ir_builder_funcptr ----------------
 // Gets a shared IR function pointer type
-ir_type_t* ir_builder_funcptr(ir_builder_t *builder);
+ir_type_t *ir_builder_funcptr(ir_builder_t *builder);
 
 // ---------------- ir_builder_usize ----------------
 // Gets a shared IR usize type
-ir_type_t* ir_builder_usize(ir_builder_t *builder);
+ir_type_t *ir_builder_usize(ir_builder_t *builder);
 
 // ---------------- ir_builder_usize_ptr ----------------
 // Gets a shared IR usize pointer type
-ir_type_t* ir_builder_usize_ptr(ir_builder_t *builder);
+ir_type_t *ir_builder_usize_ptr(ir_builder_t *builder);
 
 // ---------------- ir_builder_bool ----------------
 // Gets a shared IR boolean type
-ir_type_t* ir_builder_bool(ir_builder_t *builder);
+ir_type_t *ir_builder_bool(ir_builder_t *builder);
 
 // ---------------- build_literal_int ----------------
 // Builds a literal int value
-ir_value_t* build_literal_int(ir_pool_t *pool, long long value);
+ir_value_t *build_literal_int(ir_pool_t *pool, long long value);
 
 // ---------------- build_literal_usize ----------------
 // Builds a literal usize value
-ir_value_t* build_literal_usize(ir_pool_t *pool, length_t value);
+ir_value_t *build_literal_usize(ir_pool_t *pool, length_t value);
 
 // ---------------- build_literal_str ----------------
 // Builds a literal string value
 // NOTE: If no 'String' type is present, an error will be printed and NULL will be returned
-ir_value_t* build_literal_str(ir_builder_t *builder, char *array, length_t length);
+ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length);
 
 // ---------------- build_literal_cstr ----------------
 // Builds a literal c-string value
-ir_value_t* build_literal_cstr(ir_builder_t *builder, weak_cstr_t value);
+ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value);
 
 // ---------------- build_literal_cstr ----------------
 // Builds a literal c-string value
-ir_value_t* build_literal_cstr_of_length(ir_builder_t *builder, weak_cstr_t value, length_t length);
+ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, weak_cstr_t value, length_t length);
 
 // ---------------- build_null_pointer ----------------
 // Builds a literal null pointer value
-ir_value_t* build_null_pointer(ir_pool_t *pool);
+ir_value_t *build_null_pointer(ir_pool_t *pool);
 
 // ---------------- build_null_pointer_of_type ----------------
 // Builds a literal null pointer value
-ir_value_t* build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type);
+ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type);
 
 // ---------------- build_bitcast ----------------
 // Builds a bitcast instruction
-ir_value_t* build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
 
 // ---------------- build_const_bitcast ----------------
 // Builds a const bitcast value
-ir_value_t* build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to);
 
 // ---------------- build_<cast> ----------------
 // Builds a specialized value cast
-ir_value_t* build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t* build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+ir_value_t *build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
 
 // ---------------- build_alloc ----------------
 // Allocates space on the stack for a variable of a type
@@ -276,7 +284,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
 
 // ---------------- handle_math_management ----------------
 // Handles basic math management function calls
-ir_value_t* handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
+ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
     ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name);
 
 // ---------------- instantiate_polymorphic_func ----------------

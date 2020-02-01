@@ -391,11 +391,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         if(VALUE_TYPE_IS_CONSTANT(value_type)){
             *ir_value = build_const_bitcast(builder->pool, *ir_value, ir_to_type);
         } else {
-            ir_instr_cast_t *bitcast_instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-            bitcast_instr->id = INSTRUCTION_BITCAST;
-            bitcast_instr->result_type = ir_to_type;
-            bitcast_instr->value = *ir_value;
-            *ir_value = build_value_from_prev_instruction(builder);
+            *ir_value = build_bitcast(builder, *ir_value, ir_to_type);
         }
 
         return true;

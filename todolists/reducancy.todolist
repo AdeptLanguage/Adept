@@ -8,6 +8,7 @@ MINIMAL:
 * create constant definitions for storage types of each literal value type S8_STORAGE, S16_STORAGE, U64_STORAGE, etc.
 * create helper functions to handle calculating is_beginning_of_group values
 * combine expression-statement parsing in EXPR_WORD with other EXPR_* expression-statement parsing
+* cache 'ubyte' and '*ubyte' IR types
 
 MAJOR:
 * ir_gen_find_method_conforming & ir_gen_find_generic_base_method_conforming & others

@@ -283,10 +283,7 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
 
         ast_type_free(&value_ast_type);
 
-        ir_type_t *ptr_to_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        ptr_to_type->kind = TYPE_KIND_POINTER;
-        ptr_to_type->extra = builder->object->ir_module.globals[g].type;
-
+        ir_type_t *ptr_to_type = ir_type_pointer_to(builder->pool, builder->object->ir_module.globals[g].type);
         ir_value_t *destination = build_gvarptr(builder, ptr_to_type, g);
         build_store(builder, value, destination);
     }
@@ -298,7 +295,12 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
 
     ir_type_t *ptr_to_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
     ptr_to_type->kind = TYPE_KIND_POINTER;
-    ptr_to_type->extra = &ast_global->type;
+    ptr_to_type->extra = NULL;
+
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_global->type, (ir_type_t**) &ptr_to_type->extra)){
+        redprintf("INTERNAL ERROR: Failed to get IR type for special global variable\n");
+        return FAILURE;
+    }
 
     ir_value_t *destination = build_gvarptr(builder, ptr_to_type, global_variable_id);
 

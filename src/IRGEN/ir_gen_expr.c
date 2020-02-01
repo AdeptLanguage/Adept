@@ -343,11 +343,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
 
                 ir_global_t *global = &ir_module->globals[var_index];
-                ir_type_t *global_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                global_pointer_type->kind = TYPE_KIND_POINTER;
-                global_pointer_type->extra = global->type;
-
-                *ir_value = build_gvarptr(builder, global_pointer_type, var_index);
+                *ir_value = build_gvarptr(builder, ir_type_pointer_to(builder->pool, global->type), var_index);
 
                 // If not requested to leave the expression mutable, dereference it
                 if(!leave_mutable){
@@ -651,18 +647,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
             }
 
-            ir_type_t *field_ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            field_ptr_type->kind = TYPE_KIND_POINTER;
-            field_ptr_type->extra = field_type;
-
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_member_t));
-            ((ir_instr_member_t*) instruction)->id = INSTRUCTION_MEMBER;
-            ((ir_instr_member_t*) instruction)->result_type = field_ptr_type;
-            ((ir_instr_member_t*) instruction)->value = struct_value;
-            ((ir_instr_member_t*) instruction)->member = field_index;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
+            *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type));
 
             // If not requested to leave the expression mutable, dereference it
             if(!leave_mutable){
@@ -814,11 +799,9 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 // (*)  [10] int -> *int
 
                 assert(array_type.elements_length != 0);
-
-                ir_type_t *casted_ir_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                casted_ir_type->kind = TYPE_KIND_POINTER;
-                casted_ir_type->extra = ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype;
                 array_type.elements[0]->id = AST_ELEM_POINTER;
+
+                ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
                 array_value = build_bitcast(builder, array_value, casted_ir_type);
             } else if(expr_is_mutable(array_access_expr->value)){
                 // Load value reference
@@ -1178,10 +1161,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_type_t *ubyte = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
             ubyte->kind = TYPE_KIND_U8;
 
-            ir_type_t *ubyte_ptr = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ubyte_ptr->kind = TYPE_KIND_POINTER;
-            ubyte_ptr->extra = ubyte;
-
+            ir_type_t *ubyte_ptr = ir_type_pointer_to(builder->pool, ubyte);
             length_t value_length = strlen(new_cstring_expr->value);
 
             ir_value_t *bytes_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
