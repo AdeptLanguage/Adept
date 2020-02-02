@@ -10,6 +10,7 @@ FEATURE:
 * __String__ function?
 * Override for [] += -= *= /= %= operators
 * fallthrough
+* Make __defer__ for fixed arrays be a function/method
 
 VERIFICATION:
 * ir_to_llvm_type circular containment detection

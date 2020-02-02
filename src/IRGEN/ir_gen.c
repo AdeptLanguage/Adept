@@ -381,12 +381,8 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                     // HACK: We really shouldn't be doing this
                     if(table->entries[i].ast_type.elements_length > 1){
                         ast_type_t dereferenced = ast_type_clone(&table->entries[i].ast_type);
-
-                        // Modify ast_type_t to remove a pointer element from the front
-                        // DANGEROUS: Manually deleting ast_elem_pointer_t
-                        free(dereferenced.elements[0]);
-                        memmove(dereferenced.elements, &dereferenced.elements[1], sizeof(ast_elem_t*) * (dereferenced.elements_length - 1));
-                        dereferenced.elements_length--; // Reduce length accordingly
+                        
+                        ast_type_dereference(&dereferenced);
 
                         char *dereferenced_name = ast_type_str(&dereferenced);
                         subtype_index = type_table_find(table, dereferenced_name);

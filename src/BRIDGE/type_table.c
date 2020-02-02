@@ -95,12 +95,7 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
     // Mention sub types to the type table
     if(type->elements_length != 0 && type->elements[0]->id == AST_ELEM_POINTER){
         ast_type_t subtype = ast_type_clone(type);
-        // Modify ast_type_t to remove a pointer element from the front
-        // DANGEROUS: Manually deleting ast_elem_pointer_t
-        free(subtype.elements[0]);
-        memmove(subtype.elements, &subtype.elements[1], sizeof(ast_elem_t*) * (subtype.elements_length - 1));
-        subtype.elements_length--; // Reduce length accordingly
-
+        ast_type_dereference(&subtype);
         type_table_give(table, &subtype, NULL); // TODO: Maybe determine whether or not subtype is alias??
         ast_type_free(&subtype);
     }

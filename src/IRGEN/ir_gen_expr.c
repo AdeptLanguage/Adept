@@ -422,9 +422,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     trait_t arg_type_traits[call_expr->arity];
                     memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
                     memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_expr->arity - pair.ast_func->arity));
-                    handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity);
-                } else {
-                    handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity);
+                }
+                
+                if(handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity)){
+                    ast_types_free_fully(arg_types, call_expr->arity);
+                    return FAILURE;
                 }
 
                 ir_basicblock_new_instructions(builder->current_block, 1);
@@ -530,13 +532,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // Auto-derefernce '*something' types
             if(struct_value_ast_type.elements_length > 1 && struct_value_ast_type.elements[0]->id == AST_ELEM_POINTER
-                && struct_value_ast_type.elements[1]->id != AST_ELEM_POINTER){
-                // Modify ast_type_t to remove a pointer element from the front
-                // DANGEROUS: Manually deleting ast_elem_pointer_t
-                free(struct_value_ast_type.elements[0]);
-                memmove(struct_value_ast_type.elements, &struct_value_ast_type.elements[1], sizeof(ast_elem_t*) * (struct_value_ast_type.elements_length - 1));
-                struct_value_ast_type.elements_length--; // Reduce length accordingly
+                    && struct_value_ast_type.elements[1]->id != AST_ELEM_POINTER){
 
+                ast_type_dereference(&struct_value_ast_type);
+                
                 if(expr_is_mutable(member_expr->value)){
                     struct_value = build_load(builder, struct_value);
                 }
@@ -739,11 +738,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
-            // Modify ast_type_t to remove a pointer element from the front
-            // DANGEROUS: Manually deleting ast_elem_pointer_t
-            free(expr_type.elements[0]);
-            memmove(expr_type.elements, &expr_type.elements[1], sizeof(ast_elem_t*) * (expr_type.elements_length - 1));
-            expr_type.elements_length--; // Reduce length accordingly
+            ast_type_dereference(&expr_type);
 
             // If not requested to leave the expression mutable, dereference it
             if(!leave_mutable){
@@ -833,13 +828,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             *ir_value = build_array_access(builder, array_value, index_value);
 
             if(expr->id != EXPR_AT){
-                // Change 'array_type' to be the type of an element instead of the whole array
-                // Modify ast_type_t to remove a pointer element from the front
-                // DANGEROUS: Manually deleting ast_elem_pointer_t
-                free(array_type.elements[0]);
-                memmove(array_type.elements, &array_type.elements[1], sizeof(ast_elem_t*) * (array_type.elements_length - 1));
-                array_type.elements_length--; // Reduce length accordingly
-
+                ast_type_dereference(&array_type);
+                
                 // If not requested to leave the expression mutable, dereference it
                 if(!leave_mutable){
                     *ir_value = build_load(builder, *ir_value);
@@ -1017,9 +1007,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 trait_t arg_type_traits[call_expr->arity + 1];
                 memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
                 memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_expr->arity + 1 - pair.ast_func->arity));
-                handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity + 1);
-            } else {
-                handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity + 1);
+            }
+
+            if(handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity + 1)){
+                ast_types_free_fully(arg_types, call_expr->arity + 1);
+                return FAILURE;
             }
 
             ir_basicblock_new_instructions(builder->current_block, 1);
@@ -1036,14 +1028,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 // Dereference arg_types[0] and call __defer__ on arg_values[0]
                 if(arg_types[0].elements_length == 0 || arg_types[0].elements[0]->id != AST_ELEM_POINTER){
                     compiler_panicf(builder->compiler, call_expr->source, "INTERNAL ERROR: Temporary mutable value location has non-pointer type");
+                    ast_types_free_fully(arg_types, call_expr->arity + 1);
                     return FAILURE;
                 }
-
-                // Modify ast_type_t to remove a pointer element from the front
-                // DANGEROUS: Manually deleting ast_elem_pointer_t
-                free(arg_types[0].elements[0]);
-                memmove(arg_types[0].elements, &arg_types[0].elements[1], sizeof(ast_elem_t*) * (arg_types[0].elements_length - 1));
-                arg_types[0].elements_length--; // Reduce length accordingly
+                
+                ast_type_dereference(&arg_types[0]);
                 
                 if(handle_single_deference(builder, &arg_types[0], arg_values[0]) == ALT_FAILURE) return FAILURE;
                 build_stack_restore(builder, stack_pointer);
@@ -1864,7 +1853,8 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
         }
     }
 
-    handle_pass_management(builder, arg_values, arg_types, NULL, call->arity);
+    // Handle __pass__ management for values that need it
+    if(handle_pass_management(builder, arg_values, arg_types, NULL, call->arity)) return FAILURE;
 
     ir_basicblock_new_instructions(builder->current_block, 1);
     ir_instr_call_address_t *instruction = (ir_instr_call_address_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_call_address_t));

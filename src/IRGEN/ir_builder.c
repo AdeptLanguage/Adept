@@ -650,54 +650,17 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
     funcpair_t defer_func;
-
-    ast_type_t ast_type_ptr;
-    ast_elem_t *ast_type_ptr_elems[2];
-    ast_elem_t ast_type_ptr_elem;
-
     ir_pool_snapshot_t pool_snapshot;
     ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
 
     ir_value_t **arguments = NULL;
 
     switch(ast_type->elements[0]->id){
-    case AST_ELEM_BASE: {
-            weak_cstr_t struct_name = ((ast_elem_base_t*) ast_type->elements[0])->base;
-
-            // Create temporary AST pointer type
-            ast_type_ptr_elem.id = AST_ELEM_POINTER;
-            ast_type_ptr_elem.source = ast_type->source;
-            ast_type_ptr_elems[0] = &ast_type_ptr_elem;
-            ast_type_ptr_elems[1] = ast_type->elements[0];
-            ast_type_ptr.elements = ast_type_ptr_elems;
-            ast_type_ptr.elements_length = 2;
-            ast_type_ptr.source = ast_type->source;
-
+    case AST_ELEM_BASE: case AST_ELEM_GENERIC_BASE: {
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
             arguments[0] = mutable_value;
 
-            if(ir_gen_find_method_conforming(builder, struct_name, "__defer__", arguments, &ast_type_ptr, 1, &defer_func)){
-                ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-                return FAILURE;
-            }
-        }
-        break;
-    case AST_ELEM_GENERIC_BASE: {
-            weak_cstr_t struct_name = ((ast_elem_generic_base_t*) ast_type->elements[0])->name;
-
-            // Create temporary AST pointer type
-            ast_type_ptr_elem.id = AST_ELEM_POINTER;
-            ast_type_ptr_elem.source = ast_type->source;
-            ast_type_ptr_elems[0] = &ast_type_ptr_elem;
-            ast_type_ptr_elems[1] = ast_type->elements[0];
-            ast_type_ptr.elements = ast_type_ptr_elems;
-            ast_type_ptr.elements_length = 2;
-            ast_type_ptr.source = ast_type->source;
-
-            arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
-            arguments[0] = mutable_value;
-
-            if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__defer__", arguments, &ast_type_ptr, 1, &defer_func)){
+            if(ir_gen_find_defer_func(builder, arguments, ast_type, &defer_func)){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
                 return FAILURE;
             }
@@ -915,7 +878,7 @@ bool could_have_deference(ast_type_t *ast_type){
     return false;
 }
 
-void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity){
+errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity){
     for(length_t i = 0; i != arity; i++){
         if(arg_type_traits != NULL && arg_type_traits[i] & AST_FUNC_ARG_TYPE_TRAIT_POD) continue;
         
@@ -933,11 +896,19 @@ void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type
                 ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
                 arguments[0] = values[i];
 
-                if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, &result) == FAILURE){
+                // if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, &result) == FAILURE){
+                //     ir_pool_snapshot_restore(builder->pool, &snapshot);
+                //     continue;
+                // }
+
+                errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &result);
+                if(errorcode == ALT_FAILURE) return FAILURE;
+
+                if(errorcode == FAILURE){
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
                     continue;
                 }
-                
+
                 ir_basicblock_new_instructions(builder->current_block, 1);
                 ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
                 instruction->id = INSTRUCTION_CALL;
@@ -950,6 +921,8 @@ void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type
             }
         }
     }
+
+    return SUCCESS;
 }
 
 errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value){
@@ -1376,7 +1349,9 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
                 return NULL;
             }
 
-            handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2);
+            if(handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2)){
+                return NULL;
+            }
 
             ir_basicblock_new_instructions(builder->current_block, 1);
             ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
@@ -1701,13 +1676,9 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
         }
     }
 
-    if(out_type == NULL){
-        out_type = in_type;
-    }
-    
-    if(out_type == in_type){
-        ast_type_free(in_type);
-    }
+    // If output destination is the same place as the input location, clear input before writing
+    if(out_type == NULL)    out_type = in_type;
+    if(out_type == in_type) ast_type_free(in_type);
 
     out_type->elements = elements;
     out_type->elements_length = length;

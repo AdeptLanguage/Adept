@@ -55,6 +55,7 @@ TODO:
 * allow functionCall().methodCall().methodCall() like statements
 * allow 'each in' for fixed arrays
 * allow skipping __pass__ calls with functionCall(POD value1, POD value2)
+* make __defer__ for fixed arrays be a function/method
 
 COMPLETED:
 + Finish ! operator for meta directives ()

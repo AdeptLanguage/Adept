@@ -4,7 +4,6 @@
 
 MINIMAL:
 * arg_type_polymorphable & ast_types_identical
-* create ast_type_dereference to replace occurrences of manual ast type dereference
 * create constant definitions for storage types of each literal value type S8_STORAGE, S16_STORAGE, U64_STORAGE, etc.
 * create helper functions to handle calculating is_beginning_of_group values
 * combine expression-statement parsing in EXPR_WORD with other EXPR_* expression-statement parsing
@@ -14,8 +13,10 @@ MAJOR:
 * ir_gen_find_method_conforming & ir_gen_find_generic_base_method_conforming & others
 * calling function elem
 * handle_children_deference/handle_children_pass and handle_single_deference/handle_single_pass
+* remove unused 'ir_type_var' code
 
 COMPLETED:
 + stmt & expr handling for EXPR_CALL
 + stmt & expr handling for EXPR_CALL_METHOD
 + stmt & expr handling for EXPR_P(RE/OST)(IN/DE)CREMENT
++ ast_type_dereference to replace occurrences of manual ast type dereference

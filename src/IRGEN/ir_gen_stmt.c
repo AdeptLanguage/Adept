@@ -1023,11 +1023,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                // Modify ast_type_t to remove a pointer element from the front
-                // DANGEROUS: Manually deleting ast_elem_pointer_t
-                free(temporary_type.elements[0]);
-                memmove(temporary_type.elements, &temporary_type.elements[1], sizeof(ast_elem_t*) * (temporary_type.elements_length - 1));
-                temporary_type.elements_length--; // Reduce length accordingly
+                ast_type_dereference(&temporary_type);
 
                 if(!ast_types_identical(&temporary_type, each_in->it_type)){
                     compiler_panic(builder->compiler, each_in->it_type->source,

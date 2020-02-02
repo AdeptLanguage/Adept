@@ -14,6 +14,7 @@
 #include "UTIL/ground.h"
 #include "DRVR/compiler.h"
 #include "BRIDGE/funcpair.h"
+#include "IRGEN/ir_cache.h"
 #include "IRGEN/ir_builder.h"
 
 // ---------------- ir_gen_find_func ----------------
@@ -38,6 +39,20 @@ errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
 //               ALT_FAILURE when something goes wrong
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, funcpair_t *result);
+
+// ---------------- ir_gen_find_pass_func ----------------
+// Finds the correct __pass__ function for a type
+// NOTE: Returns SUCCESS when a function was found,
+//               FAILURE when a function wasn't found and
+//               ALT_FAILURE when something goes wrong
+errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result);
+
+// ---------------- ir_gen_find_defer_func ----------------
+// Finds the correct __defer__ function for a type
+// NOTE: Returns SUCCESS when a function was found,
+//               FAILURE when a function wasn't found and
+//               ALT_FAILURE when something goes wrong
+errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result);
 
 // ---------------- ir_gen_find_method_conforming ----------------
 // Finds a method that has the given name and conforms

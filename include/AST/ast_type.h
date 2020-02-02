@@ -17,6 +17,7 @@ extern "C" {
     ---------------------------------------------------------------------------
 */
 
+#include "UTIL/hash.h"
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
 
@@ -264,6 +265,12 @@ bool ast_type_is_fixed_array(const ast_type_t *type);
 // Returns whether an AST type contains a polymorphic type
 bool ast_type_has_polymorph(const ast_type_t *type);
 
+// ---------------- ast_type_dereference ----------------
+// Removes the first pointer element of a pointer type
+// NOTE: Assumes inout_type has ownership of AST type elements
+// NOTE: Frees memory allocated for the pointer element
+void ast_type_dereference(ast_type_t *inout_type);
+
 // ---------------- ast_type_var_catalog_init ----------------
 // Initializes an AST type var catalog
 void ast_type_var_catalog_init(ast_type_var_catalog_t *catalog);
@@ -280,6 +287,14 @@ void ast_type_var_catalog_add(ast_type_var_catalog_t *catalog, weak_cstr_t name,
 // ---------------- ast_type_var_catalog_find ----------------
 // Finds an AST type variable binding within an AST type var catalog
 ast_type_var_t *ast_type_var_catalog_find(ast_type_var_catalog_t *catalog, weak_cstr_t name);
+
+// ---------------- ast_type_hash ----------------
+// Hashes an AST type
+hash_t ast_type_hash(ast_type_t *type);
+
+// ---------------- ast_elem_hash ----------------
+// Hashes an AST type element
+hash_t ast_elem_hash(ast_elem_t *element);
 
 #ifdef __cplusplus
 }

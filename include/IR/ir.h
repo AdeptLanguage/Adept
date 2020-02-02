@@ -15,6 +15,7 @@
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "IR/ir_type_var.h"
+#include "IRGEN/ir_cache.h"
 
 // =============================================================
 // ---------------- Possible IR instruction IDs ----------------
@@ -566,6 +567,7 @@ typedef struct {
     length_t anon_globals_length;
     length_t anon_globals_capacity;
     ir_type_var_stack_t type_var_stack;
+    ir_gen_sf_cache_t sf_cache;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------

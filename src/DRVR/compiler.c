@@ -668,6 +668,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
     // Modify ast_type_t to remove a pointer element from the front
     // NOTE: We don't take ownership of 'this_type' or its data
     // NOTE: This change doesn't propogate to outside this function
+    // NOTE: 'ast_type_dereference' isn't used because 'this_type' doesn't own it's elements
     // DANGEROUS: Manually removing ast_elem_pointer_t
     this_type.elements = &this_type.elements[1];
     this_type.elements_length--; // Reduce length accordingly

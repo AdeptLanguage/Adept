@@ -247,7 +247,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder);
 // NOTE: Assumes (ast_type->elements_length == 1)
 // NOTE: Returns SUCCESS if value was utilized in deference
 //       Returns FAILURE if value was not utilized in deference
-//       Returns ALT_FAILURE if a compiler time error occured
+//       Returns ALT_FAILURE if a compile time error occured
 errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value);
 
 errorcode_t handle_children_deference(ir_builder_t *builder);
@@ -259,7 +259,9 @@ bool could_have_deference(ast_type_t *ast_type);
 // ---------------- handle_pass_management ----------------
 // Handles '__pass__' management function calls for passing arguments
 // NOTE: 'arg_type_traits' can be NULL
-void handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity);
+// NOTE: Returns SUCCESS if nothing went wrong
+// NOTE: Returns FAILURE if compile time error occured
+errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity);
 
 // ---------------- handle_single_deference ----------------
 // Calls __pass__ function for a value and it's children if the function exists

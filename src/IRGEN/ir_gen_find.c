@@ -163,6 +163,111 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
     return FAILURE; // No function with that definition found
 }
 
+errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result){
+    // Finds the correct __pass__ function for a type
+    // NOTE: Returns SUCCESS when a function was found,
+    //               FAILURE when a function wasn't found and
+    //               ALT_FAILURE when something goes wrong
+
+    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate(&builder->object->ir_module.sf_cache, *arg_type);
+
+    if(!cache_entry){
+        compiler_panicf(builder->compiler, arg_type->source, "INTERNAL ERROR: sf_cache failed to create/locate entry for type");
+        return ALT_FAILURE;
+    }
+
+    if(cache_entry->has_pass_func == TROOLEAN_TRUE){
+        result->ast_func_id = cache_entry->pass_ast_func_id;
+        result->ir_func_id = cache_entry->pass_ir_func_id;
+        result->ast_func = &builder->object->ast.funcs[result->ast_func_id];
+        result->ir_func = &builder->object->ir_module.funcs[result->ir_func_id];
+        return SUCCESS;
+    } else if(cache_entry->has_pass_func == TROOLEAN_FALSE){
+        return FAILURE;
+    }
+
+    // Whether we have a __pass__ function is unknown, so lets try to see if we have one
+    errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, result);
+    if(errorcode != SUCCESS){
+        if(errorcode == FAILURE) cache_entry->has_pass_func = TROOLEAN_FALSE;
+        return errorcode;
+    }
+
+    // Found / Generated __pass__ function for that type successfully
+    // NOTE: 'result' already has the correct values, we only have to cache them
+    cache_entry->has_pass_func = TROOLEAN_TRUE;
+    cache_entry->pass_ast_func_id = result->ast_func_id;
+    cache_entry->pass_ir_func_id = result->ir_func_id;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result){
+    // Finds the correct __defer__ function for a type
+    // NOTE: Returns SUCCESS when a function was found,
+    //               FAILURE when a function wasn't found and
+    //               ALT_FAILURE when something goes wrong
+
+    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate(&builder->object->ir_module.sf_cache, *arg_type);
+
+    if(!cache_entry){
+        compiler_panicf(builder->compiler, arg_type->source, "INTERNAL ERROR: sf_cache failed to create/locate entry for type");
+        return ALT_FAILURE;
+    }
+
+    if(cache_entry->has_defer_func == TROOLEAN_TRUE){
+        result->ast_func_id = cache_entry->defer_ast_func_id;
+        result->ir_func_id = cache_entry->defer_ir_func_id;
+        result->ast_func = &builder->object->ast.funcs[result->ast_func_id];
+        result->ir_func = &builder->object->ir_module.funcs[result->ir_func_id];
+        return SUCCESS;
+    } else if(cache_entry->has_defer_func == TROOLEAN_FALSE){
+        return FAILURE;
+    }
+
+    // Create temporary AST pointer type
+    ast_type_t ast_type_ptr;
+    ast_elem_t *ast_type_ptr_elems[2];
+    ast_elem_t ast_type_ptr_elem;
+    ast_type_ptr_elem.id = AST_ELEM_POINTER;
+    ast_type_ptr_elem.source = arg_type->source;
+    ast_type_ptr_elems[0] = &ast_type_ptr_elem;
+    ast_type_ptr_elems[1] = arg_type->elements[0];
+    ast_type_ptr.elements = ast_type_ptr_elems;
+    ast_type_ptr.elements_length = 2;
+    ast_type_ptr.source = arg_type->source;
+
+    // Whether we have a __defer__ function is unknown, so lets try to see if we have one
+    errorcode_t errorcode = FAILURE;
+    
+    switch(arg_type->elements[0]->id){
+    case AST_ELEM_BASE: {
+            weak_cstr_t struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
+            errorcode = ir_gen_find_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, result);
+        }
+        break;
+    case AST_ELEM_GENERIC_BASE: {
+            weak_cstr_t struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
+            errorcode = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, result);
+        }
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_gen_find_defer_func got unknown first element kind for arg_type\n");
+        return ALT_FAILURE;
+    }
+    
+    if(errorcode != SUCCESS){
+        if(errorcode == FAILURE) cache_entry->has_defer_func = TROOLEAN_FALSE;
+        return errorcode;
+    }
+
+    // Found / Generated __pass__ function for that type successfully
+    // NOTE: 'result' already has the correct values, we only have to cache them
+    cache_entry->has_defer_func = TROOLEAN_TRUE;
+    cache_entry->defer_ast_func_id = result->ast_func_id;
+    cache_entry->defer_ir_func_id = result->ir_func_id;
+    return SUCCESS;
+}
+
 errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
         const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result){

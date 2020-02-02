@@ -695,6 +695,7 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->anon_globals_length = 0;
     ir_module->anon_globals_capacity = 0;
     ir_type_var_stack_init(&ir_module->type_var_stack);
+    ir_gen_sf_cache_init(&ir_module->sf_cache);
 
     // Initialize common data
     ir_module->common.ir_usize = NULL;
@@ -712,6 +713,8 @@ void ir_module_free(ir_module_t *ir_module){
     free(ir_module->globals);
     free(ir_module->anon_globals);
     ir_pool_free(&ir_module->pool);
+    ir_type_var_stack_free(&ir_module->type_var_stack);
+    ir_gen_sf_cache_free(&ir_module->sf_cache);
 }
 
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
