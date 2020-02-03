@@ -27,7 +27,6 @@ COMPLETENESS:
 * Allow for self-referencing pointers
 * != management function
 * Allow '==' constants to be given to 'case'
-* Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * Support 64-bit numeric literals without suffixes
 * Better error messages for when not using 'usize' for <$T> List.remove()
 * Allow functionCall().methodCall().methodCall() like statements

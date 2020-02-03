@@ -338,21 +338,28 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
             
             // NOTE: Must be sorted
             const static int op_termination_tokens[] = {
-                TOKEN_ASSIGN,         // 0x00000008
-                TOKEN_CLOSE,          // 0x00000011
-                TOKEN_BEGIN,          // 0x00000012
-                TOKEN_END,            // 0x00000013
-                TOKEN_NEWLINE,        // 0x00000014
-                TOKEN_NEXT,           // 0x00000021
-                TOKEN_BRACKET_CLOSE,  // 0x00000023
-                TOKEN_ADDASSIGN,      // 0x00000027
-                TOKEN_SUBTRACTASSIGN, // 0x00000028
-                TOKEN_MULTIPLYASSIGN, // 0x00000029
-                TOKEN_DIVIDEASSIGN,   // 0x0000002A
-                TOKEN_MODULUSASSIGN,  // 0x0000002B
-                TOKEN_TERMINATE_JOIN, // 0x0000002F
-                TOKEN_COLON,          // 0x00000030
-                TOKEN_ELSE            // 0x0000004E
+                TOKEN_ASSIGN,             // 0x00000008
+                TOKEN_CLOSE,              // 0x00000011
+                TOKEN_BEGIN,              // 0x00000012
+                TOKEN_END,                // 0x00000013
+                TOKEN_NEWLINE,            // 0x00000014
+                TOKEN_NEXT,               // 0x00000022
+                TOKEN_BRACKET_CLOSE,      // 0x00000024
+                TOKEN_ADD_ASSIGN,         // 0x00000028
+                TOKEN_SUBTRACT_ASSIGN,    // 0x00000029
+                TOKEN_MULTIPLY_ASSIGN,    // 0x0000002A
+                TOKEN_DIVIDE_ASSIGN,      // 0x0000002B
+                TOKEN_MODULUS_ASSIGN,     // 0x0000002C
+                TOKEN_BIT_AND_ASSIGN,     // 0x0000002D
+                TOKEN_BIT_OR_ASSIGN,      // 0x0000002E
+                TOKEN_BIT_XOR_ASSIGN,     // 0x0000002F
+                TOKEN_BIT_LS_ASSIGN,      // 0x00000030
+                TOKEN_BIT_RS_ASSIGN,      // 0x00000031
+                TOKEN_BIT_LGC_LS_ASSIGN,  // 0x00000032 
+                TOKEN_BIT_LGC_RS_ASSIGN,  // 0x00000033
+                TOKEN_TERMINATE_JOIN,     // 0x00000037
+                TOKEN_COLON,              // 0x00000038
+                TOKEN_ELSE                // 0x0000005E
             };
 
             // Terminate operator expression portion if termination operator encountered
@@ -363,11 +370,10 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
                 
                 // Terminate for newlines if not ignoring them
                 if(ctx->ignore_newlines_in_expr_depth == 0) return SUCCESS;
-                else {
-                    // Otherwise skip over newlines
-                    if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
-                    continue;
-                }
+
+                // Otherwise skip over newlines
+                if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
+                continue;
             }
 
             break;

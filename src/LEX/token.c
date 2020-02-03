@@ -97,72 +97,79 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_DOUBLE:
             printf("Double: %f\n", *((double*) tokenlist->tokens[i].data));
             break;
-        case TOKEN_MEMBER:         printf("Member\n"); break;
-        case TOKEN_ADDRESS:        printf("Address\n"); break;
-        case TOKEN_NEXT:           printf("Next\n"); break;
-        case TOKEN_BRACKET_OPEN:   printf("Square Bracket Open\n"); break;
-        case TOKEN_BRACKET_CLOSE:  printf("Square Bracket Cpen\n"); break;
-        case TOKEN_MODULUS:        printf("Modulus\n"); break;
-        case TOKEN_GENERIC_INT:    printf("Generic Integer Value\n"); break;
-        case TOKEN_GENERIC_FLOAT:  printf("Generic Float Value\n"); break;
-        case TOKEN_ADDASSIGN:      printf("Addition Assignment\n"); break;
-        case TOKEN_SUBTRACTASSIGN: printf("Subtraction Assignment\n"); break;
-        case TOKEN_MULTIPLYASSIGN: printf("Multiplication Assignment\n"); break;
-        case TOKEN_DIVIDEASSIGN:   printf("Division Assignment\n"); break;
-        case TOKEN_MODULUSASSIGN:  printf("Modulus Assignment\n"); break;
-        case TOKEN_ELLIPSIS:       printf("Ellipsis\n"); break;
-        case TOKEN_UBERAND:        printf("Uber and\n"); break;
-        case TOKEN_UBEROR:         printf("Uber or\n"); break;
-        case TOKEN_TERMINATE_JOIN: printf("Terminate Join\n"); break;
-        case TOKEN_COLON:          printf("Colon\n"); break;
-        case TOKEN_POD:            printf("Keyword: POD\n"); break;
-        case TOKEN_ALIAS:          printf("Keyword: alias\n"); break;
-        case TOKEN_AND:            printf("Keyword: and\n"); break;
-        case TOKEN_AS:             printf("Keyword: as\n"); break;
-        case TOKEN_AT:             printf("Keyword: at\n"); break;
-        case TOKEN_BREAK:          printf("Keyword: break\n"); break;
-        case TOKEN_CASE:           printf("Keyword: case\n"); break;
-        case TOKEN_CAST:           printf("Keyword: cast\n"); break;
-        case TOKEN_CONTINUE:       printf("Keyword: continue\n"); break;
-        case TOKEN_DEF:            printf("Keyword: def\n"); break;
-        case TOKEN_DEFAULT:        printf("Keyword: default\n"); break;
-        case TOKEN_DEFER:          printf("Keyword: defer\n"); break;
-        case TOKEN_DELETE:         printf("Keyword: delete\n"); break;
-        case TOKEN_ELSE:           printf("Keyword: else\n"); break;
-        case TOKEN_ENUM:           printf("Keyword: enum\n"); break;
-        case TOKEN_EXTERNAL:       printf("Keyword: external\n"); break;
-        case TOKEN_FALSE:          printf("Keyword: false\n"); break;
-        case TOKEN_FOR:            printf("Keyword: for\n"); break;
-        case TOKEN_FOREIGN:        printf("Keyword: foreign\n"); break;
-        case TOKEN_FUNC:           printf("Keyword: func\n"); break;
-        case TOKEN_FUNCPTR:        printf("Keyword: funcptr\n"); break;
-        case TOKEN_GLOBAL:         printf("Keyword: global\n"); break;
-        case TOKEN_IF:             printf("Keyword: if\n"); break;
-        case TOKEN_IMPORT:         printf("Keyword: import\n"); break;
-        case TOKEN_IN:             printf("Keyword: in\n"); break;
-        case TOKEN_INOUT:          printf("Keyword: inout\n"); break;
-        case TOKEN_NEW:            printf("Keyword: new\n"); break;
-        case TOKEN_NULL:           printf("Keyword: null\n"); break;
-        case TOKEN_OR:             printf("Keyword: or\n"); break;
-        case TOKEN_OUT:            printf("Keyword: out\n"); break;
-        case TOKEN_PACKED:         printf("Keyword: packed\n"); break;
-        case TOKEN_PRAGMA:         printf("Keyword: pragma\n"); break;
-        case TOKEN_PRIVATE:        printf("Keyword: private\n"); break;
-        case TOKEN_PUBLIC:         printf("Keyword: public\n"); break;
-        case TOKEN_REPEAT:         printf("Keyword: repeat\n"); break;
-        case TOKEN_RETURN:         printf("Keyword: return\n"); break;
-        case TOKEN_SIZEOF:         printf("Keyword: sizeof\n"); break;
-        case TOKEN_STATIC:         printf("Keyword: sizeof\n"); break;
-        case TOKEN_STDCALL:        printf("Keyword: stdcall\n"); break;
-        case TOKEN_STRUCT:         printf("Keyword: struct\n"); break;
-        case TOKEN_SWITCH:         printf("Keyword: switch\n"); break;
-        case TOKEN_TRUE:           printf("Keyword: true\n"); break;
-        case TOKEN_TYPEINFO:       printf("Keyword: typeinfo\n"); break;
-        case TOKEN_UNDEF:          printf("Keyword: undef\n"); break;
-        case TOKEN_UNLESS:         printf("Keyword: unless\n"); break;
-        case TOKEN_UNTIL:          printf("Keyword: until\n"); break;
-        case TOKEN_VERBATIM:       printf("Keyword: verbatim\n"); break;
-        case TOKEN_WHILE:          printf("Keyword: while\n"); break;
+        case TOKEN_MEMBER:            printf("Member\n"); break;
+        case TOKEN_ADDRESS:           printf("Address\n"); break;
+        case TOKEN_NEXT:              printf("Next\n"); break;
+        case TOKEN_BRACKET_OPEN:      printf("Square Bracket Open\n"); break;
+        case TOKEN_BRACKET_CLOSE:     printf("Square Bracket Cpen\n"); break;
+        case TOKEN_MODULUS:           printf("Modulus\n"); break;
+        case TOKEN_GENERIC_INT:       printf("Generic Integer Value\n"); break;
+        case TOKEN_GENERIC_FLOAT:     printf("Generic Float Value\n"); break;
+        case TOKEN_ADD_ASSIGN:        printf("Addition Assignment\n"); break;
+        case TOKEN_SUBTRACT_ASSIGN:   printf("Subtraction Assignment\n"); break;
+        case TOKEN_MULTIPLY_ASSIGN:   printf("Multiplication Assignment\n"); break;
+        case TOKEN_DIVIDE_ASSIGN:     printf("Division Assignment\n"); break;
+        case TOKEN_MODULUS_ASSIGN:    printf("Modulus Assignment\n"); break;
+        case TOKEN_BIT_AND_ASSIGN:    printf("Bitwise And Assignment\n"); break;
+        case TOKEN_BIT_OR_ASSIGN:     printf("Bitwise Or Assignment\n"); break;
+        case TOKEN_BIT_XOR_ASSIGN:    printf("Bitwise Xor Assignment\n"); break;
+        case TOKEN_BIT_LS_ASSIGN:     printf("Bitwise Left Shift Assignment\n"); break;
+        case TOKEN_BIT_RS_ASSIGN:     printf("Bitwise Right Shift Assignment\n"); break;
+        case TOKEN_BIT_LGC_LS_ASSIGN: printf("Bitwise Logical Left Shift Assignment\n"); break;
+        case TOKEN_BIT_LGC_RS_ASSIGN: printf("Bitwise Logical Right Shift Assignment\n"); break;
+        case TOKEN_ELLIPSIS:          printf("Ellipsis\n"); break;
+        case TOKEN_UBERAND:           printf("Uber and\n"); break;
+        case TOKEN_UBEROR:            printf("Uber or\n"); break;
+        case TOKEN_TERMINATE_JOIN:    printf("Terminate Join\n"); break;
+        case TOKEN_COLON:             printf("Colon\n"); break;
+        case TOKEN_POD:               printf("Keyword: POD\n"); break;
+        case TOKEN_ALIAS:             printf("Keyword: alias\n"); break;
+        case TOKEN_AND:               printf("Keyword: and\n"); break;
+        case TOKEN_AS:                printf("Keyword: as\n"); break;
+        case TOKEN_AT:                printf("Keyword: at\n"); break;
+        case TOKEN_BREAK:             printf("Keyword: break\n"); break;
+        case TOKEN_CASE:              printf("Keyword: case\n"); break;
+        case TOKEN_CAST:              printf("Keyword: cast\n"); break;
+        case TOKEN_CONTINUE:          printf("Keyword: continue\n"); break;
+        case TOKEN_DEF:               printf("Keyword: def\n"); break;
+        case TOKEN_DEFAULT:           printf("Keyword: default\n"); break;
+        case TOKEN_DEFER:             printf("Keyword: defer\n"); break;
+        case TOKEN_DELETE:            printf("Keyword: delete\n"); break;
+        case TOKEN_ELSE:              printf("Keyword: else\n"); break;
+        case TOKEN_ENUM:              printf("Keyword: enum\n"); break;
+        case TOKEN_EXTERNAL:          printf("Keyword: external\n"); break;
+        case TOKEN_FALSE:             printf("Keyword: false\n"); break;
+        case TOKEN_FOR:               printf("Keyword: for\n"); break;
+        case TOKEN_FOREIGN:           printf("Keyword: foreign\n"); break;
+        case TOKEN_FUNC:              printf("Keyword: func\n"); break;
+        case TOKEN_FUNCPTR:           printf("Keyword: funcptr\n"); break;
+        case TOKEN_GLOBAL:            printf("Keyword: global\n"); break;
+        case TOKEN_IF:                printf("Keyword: if\n"); break;
+        case TOKEN_IMPORT:            printf("Keyword: import\n"); break;
+        case TOKEN_IN:                printf("Keyword: in\n"); break;
+        case TOKEN_INOUT:             printf("Keyword: inout\n"); break;
+        case TOKEN_NEW:               printf("Keyword: new\n"); break;
+        case TOKEN_NULL:              printf("Keyword: null\n"); break;
+        case TOKEN_OR:                printf("Keyword: or\n"); break;
+        case TOKEN_OUT:               printf("Keyword: out\n"); break;
+        case TOKEN_PACKED:            printf("Keyword: packed\n"); break;
+        case TOKEN_PRAGMA:            printf("Keyword: pragma\n"); break;
+        case TOKEN_PRIVATE:           printf("Keyword: private\n"); break;
+        case TOKEN_PUBLIC:            printf("Keyword: public\n"); break;
+        case TOKEN_REPEAT:            printf("Keyword: repeat\n"); break;
+        case TOKEN_RETURN:            printf("Keyword: return\n"); break;
+        case TOKEN_SIZEOF:            printf("Keyword: sizeof\n"); break;
+        case TOKEN_STATIC:            printf("Keyword: sizeof\n"); break;
+        case TOKEN_STDCALL:           printf("Keyword: stdcall\n"); break;
+        case TOKEN_STRUCT:            printf("Keyword: struct\n"); break;
+        case TOKEN_SWITCH:            printf("Keyword: switch\n"); break;
+        case TOKEN_TRUE:              printf("Keyword: true\n"); break;
+        case TOKEN_TYPEINFO:          printf("Keyword: typeinfo\n"); break;
+        case TOKEN_UNDEF:             printf("Keyword: undef\n"); break;
+        case TOKEN_UNLESS:            printf("Keyword: unless\n"); break;
+        case TOKEN_UNTIL:             printf("Keyword: until\n"); break;
+        case TOKEN_VERBATIM:          printf("Keyword: verbatim\n"); break;
+        case TOKEN_WHILE:             printf("Keyword: while\n"); break;
         case TOKEN_META:
             printf("Meta: \"%s\"\n", (char*) tokenlist->tokens[i].data);
             break;
@@ -190,132 +197,148 @@ void tokenlist_free(tokenlist_t *tokenlist){
 }
 
 const char *global_token_name_table[] = {
-    "none",                   // 0x00000000
-    "identifier",             // 0x00000001
-    "string literal",         // 0x00000002
-    "null-terminated string", // 0x00000003
-    "add",                    // 0x00000004
-    "subtract",               // 0x00000005
-    "multiply",               // 0x00000006
-    "divide",                 // 0x00000007
-    "assign",                 // 0x00000008
-    "equals",                 // 0x00000009
-    "not equal",              // 0x0000000A
-    "less than",              // 0x0000000B
-    "greater than",           // 0x0000000C
-    "less than or equal",     // 0x0000000D
-    "greater than or equal",  // 0x0000000E
-    "not",                    // 0x0000000F
-    "opening parenthesis",    // 0x00000010
-    "closing parenthesis",    // 0x00000011
-    "beginning brace",        // 0x00000012
-    "ending brace",           // 0x00000013
-    "newline",                // 0x00000014
-    "byte literal",           // 0x00000015
-    "ubyte literal",          // 0x00000016
-    "short literal",          // 0x00000017
-    "ushort literal",         // 0x00000018
-    "int literal",            // 0x00000019
-    "uint literal",           // 0x0000001A
-    "long literal",           // 0x0000001B
-    "ulong literal",          // 0x0000001C
-    "usize literal",          // 0x0000001D
-    "float literal",          // 0x0000001E
-    "double literal",         // 0x0000001F
-    "member access operator", // 0x00000021
-    "address operator",       // 0x00000020
-    "next operator",          // 0x00000022
-    "square bracket open",    // 0x00000023
-    "square bracket close",   // 0x00000024
-    "modulus",                // 0x00000025
-    "generic integer value",  // 0x00000026
-    "generic float value",    // 0x00000027
-    "add assign",             // 0x00000028
-    "subtract assign",        // 0x00000029
-    "multiply assign",        // 0x0000002A
-    "divide assign",          // 0x0000002B
-    "modulus assign",         // 0x0000002C
-    "ellipsis",               // 0x0000002D
-    "uber and",               // 0x0000002E
-    "uber or",                // 0x0000002F
-    "terminate join",         // 0x00000030
-    "colon",                  // 0x00000031
-    "bit or",                 // 0x00000032
-    "bit and",                // 0x00000033
-    "left shift",             // 0x00000034
-    "right shift",            // 0x00000035
-    "complement",             // 0x00000036
-    "logical left shift",     // 0x00000037
-    "logical right shift",    // 0x00000038
-    "namespace",              // 0x00000039
-    "meta directive",         // 0x0000003A
-    "polymorph",              // 0x0000003B
-    "maybe",                  // 0x0000003C
-    "increment",              // 0x0000003D
-    "decrement",              // 0x0000003E
-    "reserved",               // 0x0000003F
-    "POD keyword",            // 0x00000040
-    "alias keyword",          // 0x00000041
-    "and keyword",            // 0x00000042
-    "as keyword",             // 0x00000043
-    "at keyword",             // 0x00000044
-    "break keyword",          // 0x00000045
-    "case keyword",           // 0x00000046
-    "cast keyword",           // 0x00000047
-    "continue keyword",       // 0x00000048
-    "def keyword",            // 0x00000049
-    "default keyword",        // 0x0000004A
-    "defer keyword",          // 0x0000004B
-    "delete keyword",         // 0x0000004C
-    "each keyword",           // 0x0000004D
-    "else keyword",           // 0x0000004E
-    "enum keyword",           // 0x0000004F
-    "external keyword",       // 0x00000050
-    "false keyword",          // 0x00000051
-    "for keyword",            // 0x00000052
-    "foreign keyword",        // 0x00000053
-    "func keyword",           // 0x00000054
-    "funcptr keyword",        // 0x00000055
-    "global keyword",         // 0x00000056
-    "if keyword",             // 0x00000057
-    "import keyword",         // 0x00000058
-    "in keyword",             // 0x00000059
-    "inout keyword",          // 0x0000005A
-    "new keyword",            // 0x0000005B
-    "null keyword",           // 0x0000005C
-    "or keyword",             // 0x0000005D
-    "out keyword",            // 0x0000005E
-    "packed keyword",         // 0x0000005F
-    "pragma keyword",         // 0x00000060
-    "private keyword",        // 0x00000061
-    "public keyword",         // 0x00000062
-    "repeat keyword",         // 0x00000063
-    "return keyword",         // 0x00000064
-    "sizeof keyword",         // 0x00000065
-    "static keyword",         // 0x00000066
-    "stdcall keyword",        // 0x00000067
-    "struct keyword",         // 0x00000068
-    "switch keyword",         // 0x00000069
-    "true keyword",           // 0x0000006A
-    "typeinfo keyword",       // 0x0000006B
-    "undef keyword",          // 0x0000006C
-    "unless keyword",         // 0x0000006D
-    "until keyword",          // 0x0000006E
-    "verbatim keyword",       // 0x0000006F
-    "while keyword",          // 0x00000070
-    "reserved",               // 0x00000071
-    "reserved",               // 0x00000072
-    "reserved",               // 0x00000073
-    "reserved",               // 0x00000074
-    "reserved",               // 0x00000075
-    "reserved",               // 0x00000076
-    "reserved",               // 0x00000077
-    "reserved",               // 0x00000078
-    "reserved",               // 0x00000079
-    "reserved",               // 0x0000007A
-    "reserved",               // 0x0000007B
-    "reserved",               // 0x0000007C
-    "reserved",               // 0x0000007D
-    "reserved",               // 0x0000007E
-    "reserved",               // 0x0000007F
+    "none",                               // 0x00000000
+    "identifier",                         // 0x00000001
+    "string literal",                     // 0x00000002
+    "null-terminated string",             // 0x00000003
+    "add",                                // 0x00000004
+    "subtract",                           // 0x00000005
+    "multiply",                           // 0x00000006
+    "divide",                             // 0x00000007
+    "assign",                             // 0x00000008
+    "equals",                             // 0x00000009
+    "not equal",                          // 0x0000000A
+    "less than",                          // 0x0000000B
+    "greater than",                       // 0x0000000C
+    "less than or equal",                 // 0x0000000D
+    "greater than or equal",              // 0x0000000E
+    "not",                                // 0x0000000F
+    "opening parenthesis",                // 0x00000010
+    "closing parenthesis",                // 0x00000011
+    "beginning brace",                    // 0x00000012
+    "ending brace",                       // 0x00000013
+    "newline",                            // 0x00000014
+    "byte literal",                       // 0x00000015
+    "ubyte literal",                      // 0x00000016
+    "short literal",                      // 0x00000017
+    "ushort literal",                     // 0x00000018
+    "int literal",                        // 0x00000019
+    "uint literal",                       // 0x0000001A
+    "long literal",                       // 0x0000001B
+    "ulong literal",                      // 0x0000001C
+    "usize literal",                      // 0x0000001D
+    "float literal",                      // 0x0000001E
+    "double literal",                     // 0x0000001F
+    "member access operator",             // 0x00000021
+    "address operator",                   // 0x00000020
+    "next operator",                      // 0x00000022
+    "square bracket open",                // 0x00000023
+    "square bracket close",               // 0x00000024
+    "modulus",                            // 0x00000025
+    "generic integer value",              // 0x00000026
+    "generic float value",                // 0x00000027
+    "add assign",                         // 0x00000028
+    "subtract assign",                    // 0x00000029
+    "multiply assign",                    // 0x0000002A
+    "divide assign",                      // 0x0000002B
+    "modulus assign",                     // 0x0000002C
+    "bitwise-and assign",                 // 0x0000002D
+    "bitwise-or assign",                  // 0x0000002E
+    "bitwise-xor assign",                 // 0x0000002F
+    "bitwise left shift assign",          // 0x00000030
+    "bitwise right shift assign",         // 0x00000031
+    "bitwise logical left shift assign",  // 0x00000032
+    "bitwise logical right shift assign", // 0x00000033
+    "ellipsis",                           // 0x00000034
+    "uber and",                           // 0x00000035
+    "uber or",                            // 0x00000036
+    "terminate join",                     // 0x00000037
+    "colon",                              // 0x00000038
+    "bit or",                             // 0x00000039
+    "bit and",                            // 0x0000003A
+    "left shift",                         // 0x0000003B
+    "right shift",                        // 0x0000003C
+    "complement",                         // 0x0000003D
+    "logical left shift",                 // 0x0000003E
+    "logical right shift",                // 0x0000003F
+    "namespace",                          // 0x00000040
+    "meta directive",                     // 0x00000041
+    "polymorph",                          // 0x00000042
+    "maybe",                              // 0x00000043
+    "increment",                          // 0x00000044
+    "decrement",                          // 0x00000045
+    "reserved",                           // 0x00000046
+    "reserved",                           // 0x00000047
+    "reserved",                           // 0x00000048
+    "reserved",                           // 0x00000049
+    "reserved",                           // 0x0000004A
+    "reserved",                           // 0x0000004B
+    "reserved",                           // 0x0000004C
+    "reserved",                           // 0x0000004D
+    "reserved",                           // 0x0000004E
+    "reserved",                           // 0x0000004F
+    "POD keyword",                        // 0x00000050
+    "alias keyword",                      // 0x00000051
+    "and keyword",                        // 0x00000052
+    "as keyword",                         // 0x00000053
+    "at keyword",                         // 0x00000054
+    "break keyword",                      // 0x00000055
+    "case keyword",                       // 0x00000056
+    "cast keyword",                       // 0x00000057
+    "continue keyword",                   // 0x00000058
+    "def keyword",                        // 0x00000059
+    "default keyword",                    // 0x0000005A
+    "defer keyword",                      // 0x0000005B
+    "delete keyword",                     // 0x0000005C
+    "each keyword",                       // 0x0000005D
+    "else keyword",                       // 0x0000005E
+    "enum keyword",                       // 0x0000005F
+    "external keyword",                   // 0x00000060
+    "false keyword",                      // 0x00000061
+    "for keyword",                        // 0x00000062
+    "foreign keyword",                    // 0x00000063
+    "func keyword",                       // 0x00000064
+    "funcptr keyword",                    // 0x00000065
+    "global keyword",                     // 0x00000066
+    "if keyword",                         // 0x00000067
+    "import keyword",                     // 0x00000068
+    "in keyword",                         // 0x00000069
+    "inout keyword",                      // 0x0000006A
+    "new keyword",                        // 0x0000006B
+    "null keyword",                       // 0x0000006C
+    "or keyword",                         // 0x0000006D
+    "out keyword",                        // 0x0000006E
+    "packed keyword",                     // 0x0000006F
+    "pragma keyword",                     // 0x00000070
+    "private keyword",                    // 0x00000071
+    "public keyword",                     // 0x00000072
+    "repeat keyword",                     // 0x00000073
+    "return keyword",                     // 0x00000074
+    "sizeof keyword",                     // 0x00000075
+    "static keyword",                     // 0x00000076
+    "stdcall keyword",                    // 0x00000077
+    "struct keyword",                     // 0x00000078
+    "switch keyword",                     // 0x00000079
+    "true keyword",                       // 0x0000007A
+    "typeinfo keyword",                   // 0x0000007B
+    "undef keyword",                      // 0x0000007C
+    "unless keyword",                     // 0x0000007D
+    "until keyword",                      // 0x0000007E
+    "verbatim keyword",                   // 0x0000007F
+    "while keyword",                      // 0x00000080
+    "reserved",                           // 0x00000081
+    "reserved",                           // 0x00000082
+    "reserved",                           // 0x00000083
+    "reserved",                           // 0x00000084
+    "reserved",                           // 0x00000085
+    "reserved",                           // 0x00000086
+    "reserved",                           // 0x00000087
+    "reserved",                           // 0x00000088
+    "reserved",                           // 0x00000089
+    "reserved",                           // 0x0000008A
+    "reserved",                           // 0x0000008B
+    "reserved",                           // 0x0000008C
+    "reserved",                           // 0x0000008D
+    "reserved",                           // 0x0000008E
+    "reserved",                           // 0x0000008F
 };

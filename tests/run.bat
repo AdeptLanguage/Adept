@@ -31,6 +31,8 @@ call :compile at
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile bitwise
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile bitwise_assign
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile break
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile break_to

@@ -138,7 +138,6 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         // Make sure to update references that may have been invalidated
         ast_func = &object->ast.funcs[ast_func_id];
 
-        // TODO: CLEANUP: Clean up this messy code
         if(ast_func->traits & AST_FUNC_AUTOGEN){
             bool failed = false;
 
@@ -284,17 +283,12 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     handle_deference_for_globals(builder);
                 }
 
-                // TODO: CLEANUP: Clean up this messy code
-                if(ast_func->traits & AST_FUNC_AUTOGEN){
-                    if(ast_func->traits & AST_FUNC_PASS){
-                        if(handle_children_pass_root(builder, true)){
-                            // Failed to auto-generate __pass__() calls to children of parent type
-                            return FAILURE;
-                        } else if(out_is_terminated) *out_is_terminated = true;
-                    } else if((ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder))){
-                        // Failed to auto-generate __defer__() calls to children of parent type
-                        return FAILURE;
-                    }
+                if(ast_func->traits & AST_FUNC_AUTOGEN) if(
+                    (ast_func->traits & AST_FUNC_PASS  && handle_children_pass_root(builder, true)) ||
+                    (ast_func->traits & AST_FUNC_DEFER && handle_children_deference(builder))
+                ){
+                    // Failed to auto-generate __defer__() or __pass__() calls to children of parent type
+                    return FAILURE;
                 }
 
                 build_return(builder, expression_value);
@@ -406,8 +400,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
             }
             break;
-        case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
-        case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN: {
+        case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
+        case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
+        case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
+        case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
+        case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
                 unsigned int assignment_type = statements[s]->id;
                 ast_expr_assign_t *assign_stmt = ((ast_expr_assign_t*) statements[s]);
                 ir_value_t *destination;
@@ -455,33 +452,75 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ((ir_instr_math_t*) built_instr)->b = expression_value;
 
                     switch(assignment_type){
-                    case EXPR_ADDASSIGN:
+                    case EXPR_ADD_ASSIGN:
                         if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_ADD, INSTRUCTION_FADD)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't add those types");
                             return FAILURE;
                         }
                         break;
-                    case EXPR_SUBTRACTASSIGN:
+                    case EXPR_SUBTRACT_ASSIGN:
                         if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't subtract those types");
                             return FAILURE;
                         }
                         break;
-                    case EXPR_MULTIPLYASSIGN:
+                    case EXPR_MULTIPLY_ASSIGN:
                         if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't multiply those types");
                             return FAILURE;
                         }
                         break;
-                    case EXPR_DIVIDEASSIGN:
+                    case EXPR_DIVIDE_ASSIGN:
                         if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't divide those types");
                             return FAILURE;
                         }
                         break;
-                    case EXPR_MODULUSASSIGN:
+                    case EXPR_MODULUS_ASSIGN:
                         if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't take the modulus of those types");
+                            return FAILURE;
+                        }
+                        break;
+                    case EXPR_AND_ASSIGN:
+                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_AND, INSTRUCTION_NONE)){
+                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'and' on those types");
+                            return FAILURE;
+                        }
+                        break;
+                    case EXPR_OR_ASSIGN:
+                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_OR, INSTRUCTION_NONE)){
+                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'or' on those types");
+                            return FAILURE;
+                        }
+                        break;
+                    case EXPR_XOR_ASSIGN:
+                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE)){
+                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'xor' on those types");
+                            return FAILURE;
+                        }
+                        break;
+                    case EXPR_LS_ASSIGN:
+                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
+                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'left shift' on those types");
+                            return FAILURE;
+                        }
+                        break;
+                    case EXPR_RS_ASSIGN:
+                        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS)){
+                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'right shift' on those types");
+                            return FAILURE;
+                        }
+                        break;
+                    case EXPR_LGC_LS_ASSIGN:
+                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
+                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'logical left shift' on those types");
+                            return FAILURE;
+                        }
+                        break;
+                    case EXPR_LGC_RS_ASSIGN:
+                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE)){
+                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'logical right shift' on those types");
                             return FAILURE;
                         }
                         break;
@@ -490,12 +529,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         return FAILURE;
                     }
 
-                    instr_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-                    instr_value->value_type = VALUE_TYPE_RESULT;
-                    instr_value->type = expression_value->type;
-                    instr_value->extra = value_result;
-
-                    build_store(builder, instr_value, destination);
+                    build_store(builder, build_value_from_prev_instruction(builder), destination);
                 }
             }
             break;

@@ -24,6 +24,7 @@ compile assign_func || exit $?
 compile assignment || exit $?
 compile at || exit $?
 compile bitwise || exit $?
+compile bitwise_assign || exit $?
 compile break || exit $?
 compile break_to || exit $?
 compile cast || exit $?

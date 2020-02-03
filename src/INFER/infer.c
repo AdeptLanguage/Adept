@@ -111,8 +111,11 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 infer_var_scope_add_variable(scope, declare_stmt->name, &declare_stmt->type);
             }
             break;
-        case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
-        case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN: {
+        case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
+        case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
+        case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
+        case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
+        case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
                 ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) statements[s];
                 if(infer_expr(ctx, func, &assign_stmt->destination, EXPR_NONE, scope)) return FAILURE;
                 if(infer_expr(ctx, func, &assign_stmt->value, EXPR_NONE, scope)) return FAILURE;

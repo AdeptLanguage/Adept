@@ -46,7 +46,6 @@ TODO:
 * != management function
 * maybe allow custom integer types for enums
 * allow '==' constants to be given to 'case'
-* bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * support 64-bit numeric literals without suffixes
 * better error messages for when not using 'usize' for <$T> List.remove()
 * add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
@@ -134,3 +133,4 @@ COMPLETED:
 + __defer__ for fixed arrays
 + __pass__ for fixed arrays
 + add way to avoid autogeneration of statements in __pass__ and __defer__ functions [added 'verbatim' keyword]
++ bitwise assignment operators '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='

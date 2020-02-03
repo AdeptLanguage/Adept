@@ -4,8 +4,6 @@ REQUIREMENTS:
 * Finish 'Any'
     * Fill in offsets for AnyStructType types
     * Casting to Any from non-builtin types
-* Override for [] += -= *= /= %= operators
-* Bitwise assignment operators '&=' '|=' '^=', '<<=', '>>=', '<<<=', '>>>='
 * __assign__ autogeneration
 * __assign__ for fixed arrays maybe
 * Allow polymorphic names for generic bases
@@ -17,3 +15,4 @@ COMPLETED:
 + __pass__ autogeneration
 + __pass__ for fixed arrays
 + Keyword 'verbatim' to prevent function autogeneration
++ Bitwise assignment operators '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='

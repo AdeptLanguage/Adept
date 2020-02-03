@@ -129,6 +129,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             case '>': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_GREATER);          break;
             case '!': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_NOT);              break;
             case ':': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_COLON);            break;
+            case '^': LEX_SINGLE_STATE_MAPPING_MACRO(LEX_STATE_BIT_XOR);          break;
             //--------------------------------------------------------------------------
             case '(': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_OPEN, i, 1);           break;
             case ')': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_CLOSE, i, 1);          break;
@@ -138,7 +139,6 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             case '[': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_OPEN, i, 1);   break;
             case ']': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BRACKET_CLOSE, i, 1);  break;
             case ';': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_TERMINATE_JOIN, i, 1); break;
-            case '^': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_XOR, i, 1);        break;
             case '~': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_COMPLEMENT, i, 1); break;
             case '?': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_MAYBE, i, 1);          break;
             case '\n': LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_NEWLINE, i, 1);       break;
@@ -256,7 +256,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 } else {
                     // Is a keyword, figure out token index from array index
                     t = &((*tokens)[tokenlist->length]);
-                    t->id = 0x00000040 + (unsigned int) array_index; // Values 0x00000040..0x0000007F are reserved for keywords
+                    t->id = BEGINNING_OF_KEYWORD_TOKENS + (unsigned int) array_index; // Values 0x00000050..0x0000009F are reserved for keywords
                     t->data = NULL;
                 }
 
@@ -383,19 +383,31 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         case LEX_STATE_NOT:      LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_NOTEQUALS, TOKEN_NOT);             break;
         case LEX_STATE_COLON:    LEX_OPTIONAL_MOD_TOKEN_MAPPING(':', TOKEN_NAMESPACE, TOKEN_COLON);           break;
         case LEX_STATE_ADD:
-            LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_ADDASSIGN, '+', TOKEN_INCREMENT, TOKEN_ADD);
+            LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_ADD_ASSIGN, '+', TOKEN_INCREMENT, TOKEN_ADD);
             break;
-        case LEX_STATE_MULTIPLY: LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MULTIPLYASSIGN, TOKEN_MULTIPLY);   break;
-        case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUSASSIGN, TOKEN_MODULUS);     break;
+        case LEX_STATE_MULTIPLY: LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MULTIPLY_ASSIGN, TOKEN_MULTIPLY);   break;
+        case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUS_ASSIGN,  TOKEN_MODULUS);     break;
+        case LEX_STATE_BIT_XOR:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_BIT_XOR_ASSIGN,  TOKEN_BIT_XOR);    break;
         case LEX_STATE_LESS:
             if(buffer[i] == '<'){
                 // We don't need to check whether i + 1 exceeds the buffer length because we
                 // know that the final character in the buffer is a newline
                 if(buffer[i + 1] == '<'){
-                    // Logical Left Shift
-                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_LSHIFT, i - 1, 3);
+                    if(buffer[i + 2] == '='){
+                        // Logical Left Shift Assign
+                        LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_LS_ASSIGN, i - 1, 4);
+                        i += 2;
+                    } else {
+                        // Logical Left Shift
+                        LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_LSHIFT, i - 1, 3);
+                        i++;
+                    }
+                } else if(buffer[i + 1] == '='){
+                    // Left Shift Assign
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LS_ASSIGN, i - 1, 3);
                     i++;
                 } else {
+                    // Logical Left Shift
                     LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LSHIFT, i - 1, 2);
                 }
             } else if(buffer[i] == '='){
@@ -410,10 +422,21 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 // We don't need to check whether i + 1 exceeds the buffer length because we
                 // know that the final character in the buffer is a newline
                 if(buffer[i + 1] == '>'){
-                    // Logical Left Shift
-                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_RSHIFT, i - 1, 3);
+                    if(buffer[i + 2] == '='){
+                        // Logical Right Shift
+                        LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_RS_ASSIGN, i - 1, 3);
+                        i += 2;
+                    } else {
+                        // Logical Right Shift
+                        LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_LGC_RSHIFT, i - 1, 3);
+                        i++;
+                    }
+                } else if(buffer[i + 1] == '='){
+                    // Right Shift Assign
+                    LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_RS_ASSIGN, i - 1, 3);
                     i++;
                 } else {
+                    // Logical Right Shift
                     LEX_SINGLE_TOKEN_MAPPING_MACRO(TOKEN_BIT_RSHIFT, i - 1, 2);
                 }
             } else if(buffer[i] == '='){
@@ -423,8 +446,8 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             }
             lex_state.state = LEX_STATE_IDLE;
             break;
-        case LEX_STATE_UBERAND:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('&', TOKEN_UBERAND, TOKEN_ADDRESS);           break;
-        case LEX_STATE_UBEROR:   LEX_OPTIONAL_MOD_TOKEN_MAPPING('|', TOKEN_UBEROR, TOKEN_BIT_OR);             break;
+        case LEX_STATE_UBERAND: LEX_OPTIONAL_2MODS_TOKEN_MAPPING('&', TOKEN_UBERAND, '=', TOKEN_BIT_AND_ASSIGN, TOKEN_ADDRESS); break;
+        case LEX_STATE_UBEROR:  LEX_OPTIONAL_2MODS_TOKEN_MAPPING('|', TOKEN_UBEROR,  '=', TOKEN_BIT_OR_ASSIGN,  TOKEN_BIT_OR); break;
         case LEX_STATE_NUMBER:
             expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
 
@@ -636,7 +659,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             lex_state.state = LEX_STATE_IDLE;
             t->data = NULL;
             if(buffer[i] == '='){
-                t->id = TOKEN_SUBTRACTASSIGN;
+                t->id = TOKEN_SUBTRACT_ASSIGN;
                 (*sources)[tokenlist->length++].stride = 2;
             } else if(buffer[i] == '-'){
                 t->id = TOKEN_DECREMENT;
@@ -658,7 +681,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             case '=':
                 lex_state.state = LEX_STATE_IDLE;
                 t = &((*tokens)[tokenlist->length]);
-                t->id = TOKEN_DIVIDEASSIGN;
+                t->id = TOKEN_DIVIDE_ASSIGN;
                 t->data = NULL;
                 (*sources)[tokenlist->length++].stride = 2;
                 break;

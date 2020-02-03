@@ -479,8 +479,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         return FAILURE;
                     }
 
-                    *ir_value = build_gvarptr(builder, ir_var_type, g);
-                    *ir_value = build_load(builder, *ir_value);
+                    *ir_value = build_load(builder, build_gvarptr(builder, ir_var_type, g));
 
                     errorcode_t error = ir_gen_call_function_value(builder, ast_var_type, ir_var_type, call_expr, arg_values, arg_types, ir_value, out_expr_type);
                     ast_types_free_fully(arg_types, call_expr->arity);

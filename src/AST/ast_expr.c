@@ -766,8 +766,11 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_DECLAREUNDEF: case EXPR_ILDECLAREUNDEF:
         ast_type_free(&((ast_expr_declare_t*) expr)->type);
         break;
-    case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
-    case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN:
+    case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
+    case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
+    case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
+    case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
+    case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN:
         ast_expr_free_fully(((ast_expr_assign_t*) expr)->destination);
         ast_expr_free_fully(((ast_expr_assign_t*) expr)->value);
         break;
@@ -1130,8 +1133,11 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_declare
         #undef clone_as_declare
-    case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
-    case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN:
+    case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
+    case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
+    case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
+    case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
+    case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN:
         #define expr_as_assign ((ast_expr_assign_t*) expr)
         #define clone_as_assign ((ast_expr_assign_t*) clone)
 
@@ -1456,30 +1462,39 @@ const char *global_expression_rep_table[] = {
     "<pre-decrement>",            // 0x0000003C
     "<post-increment>",           // 0x0000003D
     "<post-decrement>",           // 0x0000003E
-    "<declaration>",              // 0x0000003F
-    "<undef declaration>",        // 0x00000040
-    "<inline declaration>",       // 0x00000041
-    "<inline undef declaration>", // 0x00000042
-    "=",                          // 0x00000043
-    "+=",                         // 0x00000044
-    "-=",                         // 0x00000045
-    "*=",                         // 0x00000046
-    "/=",                         // 0x00000047
-    "%=",                         // 0x00000048
-    "<return>",                   // 0x00000049
-    "<if>",                       // 0x0000004A
-    "<unless>",                   // 0x0000004B
-    "<if else>",                  // 0x0000004C
-    "<unless else>",              // 0x0000004D
-    "<while>",                    // 0x0000004E
-    "<until>",                    // 0x0000004F
-    "<while continue>",           // 0x00000050
-    "<until break>",              // 0x00000051
-    "<each in>",                  // 0x00000052
-    "<repeat>",                   // 0x00000053
-    "<delete>",                   // 0x00000054
-    "<break>",                    // 0x00000055
-    "<continue>",                 // 0x00000056
-    "<break to>",                 // 0x00000057
-    "<continue to>",              // 0x00000058
+    "<phantom>",                  // 0x0000003F
+    "<declaration>",              // 0x00000040
+    "<undef declaration>",        // 0x00000041
+    "<inline declaration>",       // 0x00000042
+    "<inline undef declaration>", // 0x00000043
+    "=",                          // 0x00000044
+    "+=",                         // 0x00000045
+    "-=",                         // 0x00000046
+    "*=",                         // 0x00000047
+    "/=",                         // 0x00000048
+    "%=",                         // 0x00000049
+    "&=",                         // 0x0000004A
+    "|=",                         // 0x0000004B
+    "^=",                         // 0x0000004C
+    "<<=",                        // 0x0000004D
+    ">>=",                        // 0x0000004E
+    "<<<=",                       // 0x0000004F
+    ">>>=",                       // 0x00000050
+    "<return>",                   // 0x00000051
+    "<if>",                       // 0x00000052
+    "<unless>",                   // 0x00000053
+    "<if else>",                  // 0x00000054
+    "<unless else>",              // 0x00000055
+    "<while>",                    // 0x00000056
+    "<until>",                    // 0x00000057
+    "<while continue>",           // 0x00000058
+    "<until break>",              // 0x00000059
+    "<each in>",                  // 0x0000005A
+    "<repeat>",                   // 0x0000005B
+    "<delete>",                   // 0x0000005C
+    "<break>",                    // 0x0000005D
+    "<continue>",                 // 0x0000005E
+    "<break to>",                 // 0x0000005F
+    "<continue to>",              // 0x00000060
+    "<switch>",                   // 0x00000061
 };

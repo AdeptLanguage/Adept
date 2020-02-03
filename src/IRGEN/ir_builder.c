@@ -1710,8 +1710,11 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog
             }
         }
         break;
-    case EXPR_ASSIGN: case EXPR_ADDASSIGN: case EXPR_SUBTRACTASSIGN:
-    case EXPR_MULTIPLYASSIGN: case EXPR_DIVIDEASSIGN: case EXPR_MODULUSASSIGN: {
+    case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
+    case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
+    case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
+    case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
+    case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
             ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) expr;
 
             if(resolve_expr_polymorphics(compiler, catalog, assign_stmt->destination)
