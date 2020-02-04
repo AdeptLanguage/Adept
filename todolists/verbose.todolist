@@ -8,7 +8,6 @@ TODO:
 * pragma runtime_safe
 * if $Unit Damagable
 * pragma project_root 'main.adept'
-* fill in offsets for AnyStructType types
 * allow for casting to Any from non-builtin types
 * improve compiler memory tracking (because freeing is slow during the middle of compilation rn)
 * ir_to_llvm_type circular containment detection
@@ -55,6 +54,7 @@ TODO:
 * allow 'each in' for fixed arrays
 * allow skipping __pass__ calls with functionCall(POD value1, POD value2)
 * make __defer__ for fixed arrays be a function/method
+* make 'sizeof' instruction into a constant value instead
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -134,3 +134,4 @@ COMPLETED:
 + __pass__ for fixed arrays
 + add way to avoid autogeneration of statements in __pass__ and __defer__ functions [added 'verbatim' keyword]
 + bitwise assignment operators '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='
++ fill in offsets for AnyStructType types

@@ -19,6 +19,8 @@ call :compile any_type_kind
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile any_type_list
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile any_type_offsets
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile array_access
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile as

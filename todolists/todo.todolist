@@ -5,7 +5,6 @@
 FEATURE:
 * Test type of polymorphic type - 'if $Unit Damagable'
 * Finish 'Any'
-    * Fill in offsets for AnyStructType types
     * Casting to Any from non-builtin types
 * __String__ function?
 * Override for [] += -= *= /= %= operators

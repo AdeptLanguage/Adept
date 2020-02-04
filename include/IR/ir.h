@@ -114,6 +114,7 @@
 #define VALUE_TYPE_CSTR_OF_LEN         0x00000009 // data = pointer to an 'ir_value_cstr_of_len_t'
 #define VALUE_TYPE_CONST_BITCAST       0x0000000A // data = pointer to an 'ir_value_t'
 #define VALUE_TYPE_STRUCT_CONSTRUCTION 0x0000000B // data = pointer to an 'ir_value_struct_construction_t'
+#define VALUE_TYPE_OFFSETOF            0x0000000C // data = pointer to an 'ir_value_offsetof_t'
 
 #define VALUE_TYPE_IS_CONSTANT(a) (a == VALUE_TYPE_LITERAL || a == VALUE_TYPE_NULLPTR || a == VALUE_TYPE_ARRAY_LITERAL || a == VALUE_TYPE_STRUCT_LITERAL || a == VALUE_TYPE_CONST_ANON_GLOBAL || a == VALUE_TYPE_CSTR_OF_LEN)
 
@@ -187,6 +188,14 @@ typedef struct {
     ir_value_t **values;
     length_t length;
 } ir_value_struct_construction_t;
+
+// ---------------- ir_value_offsetof_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if
+// the value is a construction of a structure
+typedef struct {
+    ir_type_t *type;
+    length_t index;
+} ir_value_offsetof_t;
 
 // ---------------- ir_instr_t ----------------
 // General structure for intermediate

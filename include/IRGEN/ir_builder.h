@@ -117,6 +117,10 @@ ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t
 // Builds a struct construction
 ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);
 
+// ---------------- build_offsetof ----------------
+// Builds an 'offsetof' value
+ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index);
+
 // ---------------- build_static_array ----------------
 // Builds a static array
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);

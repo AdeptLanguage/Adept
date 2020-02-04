@@ -188,6 +188,11 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
 
             return constructed;
         }
+    case VALUE_TYPE_OFFSETOF: {
+            ir_value_offsetof_t *offsetof = (ir_value_offsetof_t*) value->extra;
+            unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(offsetof->type), offsetof->index);
+            return LLVMConstInt(LLVMInt64Type(), offset, false);
+        }
     default:
         redprintf("INTERNAL ERROR: Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
         return NULL;
@@ -771,11 +776,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     }
                     break;
                 case INSTRUCTION_OFFSETOF: {
-                    instr = basicblock->instructions[i];
-                    unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(((ir_instr_offsetof_t*) instr)->type), ((ir_instr_offsetof_t*) instr)->index);
-                    catalog.blocks[b].value_references[i] = LLVMConstInt(LLVMInt64Type(), offset, false);;
+                        instr = basicblock->instructions[i];
+                        unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(((ir_instr_offsetof_t*) instr)->type), ((ir_instr_offsetof_t*) instr)->index);
+                        catalog.blocks[b].value_references[i] = LLVMConstInt(LLVMInt64Type(), offset, false);
+                    }
                     break;
-                }
                 case INSTRUCTION_VARZEROINIT: {
                         instr = basicblock->instructions[i];
                         LLVMValueRef var_to_init = llvm->stack->values[((ir_instr_varzeroinit_t*) instr)->index];

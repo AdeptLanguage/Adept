@@ -487,7 +487,20 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                                 composite_members[s] = build_const_bitcast(builder->pool, array_values[subtype_index], any_type_ptr_type); // members[s]
                             }
 
-                            composite_offsets[s] = build_literal_usize(builder->pool, 0);
+                            // SPEED: TODO: Make 'struct_ast_type' not dynamically allocated
+                            ast_type_t struct_ast_type;
+                            ast_type_make_base(&struct_ast_type, strclone(struct_name));
+
+                            ir_type_t *struct_ir_type;
+                            if(ir_gen_resolve_type(builder->compiler, builder->object, &struct_ast_type, &struct_ir_type)){
+                                redprintf("INTERNAL ERROR: ir_gen_resolve_type for RTTI composite offset computation failed!\n");
+                                ast_type_free(&struct_ast_type);
+                                return FAILURE;
+                            }
+
+                            ast_type_free(&struct_ast_type);
+
+                            composite_offsets[s] = build_offsetof(builder, struct_ir_type, s);
                             composite_member_names[s] = build_literal_cstr(builder, structure->field_names[s]);
                         }
                     } else {

@@ -195,6 +195,23 @@ ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value
     return value;
 }
 
+ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index){
+    ir_value_t *value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_OFFSETOF;
+    value->type = ir_builder_usize(builder);
+
+    if(type->kind != TYPE_KIND_STRUCTURE){
+        redprintf("INTENRAL ERROR: build_offsetof got non-struct as 'type'\n");
+    }
+
+    ir_value_offsetof_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_value_offsetof_t));
+    extra->type = type;
+    extra->index = index;
+    value->extra = extra;
+
+    return value;
+}
+
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_ARRAY_LITERAL;

@@ -1,0 +1,19 @@
+
+import '2.3/basics.adept'
+
+struct Test1 (a, b, c int)
+struct Test2 (a, b, c ulong)
+struct Test3 (a, b, c ubyte)
+
+func main {
+    printOffsets(typeinfo Test1 as *AnyStructType, sizeof Test1)
+    printOffsets(typeinfo Test2 as *AnyStructType, sizeof Test2)
+    printOffsets(typeinfo Test3 as *AnyStructType, sizeof Test3)
+}
+
+func printOffsets(type *AnyStructType, size usize) {
+    each usize in [type.offsets, type.length] {
+        printf('%d - %d\n', idx as int, it as int)
+    }
+    printf('sizeof = %d\n', size as int)
+}
