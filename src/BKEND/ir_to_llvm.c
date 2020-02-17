@@ -300,7 +300,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 printf_fn = LLVMAddFunction(llvm->module, "printf", printf_fn_type);
             }
 
-            const char *error_msg = "===== RUNTIME ERROR: DEREFERENCED NULL POINTER IN FUNCTION '%s'! =====\n";
+            const char *error_msg = "===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS IN FUNCTION '%s'! =====\n";
             length_t error_msg_length = strlen(error_msg) + 1;
             LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), error_msg_length), ".str");
             LLVMSetLinkage(global_data, LLVMInternalLinkage);
@@ -311,8 +311,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
             LLVMValueRef arg = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
 
-            const char *func_name = module_funcs[f].name;
+            const char *func_name = module_funcs[f].maybe_definition_string;
+            if(func_name == NULL) func_name = module_funcs[f].name;
+
             length_t func_name_len = strlen(func_name) + 1;
+
             global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), func_name_len), ".str");
             LLVMSetLinkage(global_data, LLVMInternalLinkage);
             LLVMSetGlobalConstant(global_data, true);
@@ -624,15 +627,36 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     break;
                 case INSTRUCTION_MEMBER: {
                         instr = basicblock->instructions[i];
+
+                        LLVMValueRef foundation = ir_to_llvm_value(llvm, ((ir_instr_member_t*) instr)->value);
+
+                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
+                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
+
+                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, foundation, "");
+                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
+                            LLVMPositionBuilderAtEnd(builder, not_null_block);
+                        }
+
                         LLVMValueRef gep_indices[2];
                         gep_indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
                         gep_indices[1] = LLVMConstInt(LLVMInt32Type(), ((ir_instr_member_t*) instr)->member, true);
-                        llvm_result = LLVMBuildGEP(builder, ir_to_llvm_value(llvm, ((ir_instr_member_t*) instr)->value), gep_indices, 2, "");
-                        catalog.blocks[b].value_references[i] = llvm_result;
+                        catalog.blocks[b].value_references[i] = LLVMBuildGEP(builder, foundation, gep_indices, 2, "");
                     }
                     break;
                 case INSTRUCTION_ARRAY_ACCESS: {
                         instr = basicblock->instructions[i];
+
+                        LLVMValueRef foundation = ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->value);
+
+                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
+                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
+
+                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, foundation, "");
+                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
+                            LLVMPositionBuilderAtEnd(builder, not_null_block);
+                        }
+                        
                         LLVMValueRef gep_index = ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->index);
                         llvm_result = LLVMBuildGEP(builder, ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->value), &gep_index, 1, "");
                         catalog.blocks[b].value_references[i] = llvm_result;

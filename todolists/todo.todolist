@@ -42,7 +42,8 @@ TOOL:
 * pragma project_root 'main.adept'
 
 DEBUG:
-* improve compiler memory tracking
+* Improve compiler memory tracking
+* Specify line number and specific reason for when null checks fail
 
 SPEED:
 * Dont search through global variables linearly

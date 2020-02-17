@@ -15,6 +15,7 @@ func main {
     x.x = 1234
     x.y = 5678
     show(&x)
+    show('\n'ub)
 }
 
 func show(in any Any) {
@@ -30,6 +31,8 @@ func show(in any Any) {
         printf('bool: %d\n', cast int *cast *bool &any.placeholder)
     } else if any.type == typeinfo *ubyte {
         printf('cstring: \'%s\'\n', *cast **ubyte &any.placeholder)
+    } else if any.type.kind == AnyTypeKind::PTR {
+        printf('pointer: %p\n', *cast *ptr &any.placeholder)
     } else {
         printf('unknown value\n')
     }

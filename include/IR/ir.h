@@ -456,6 +456,7 @@ typedef struct {
 // An intermediate representation function
 typedef struct {
     const char *name;
+    const char *maybe_definition_string;
     trait_t traits;
     ir_type_t *return_type;
     ir_type_t **argument_types;

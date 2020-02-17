@@ -201,7 +201,7 @@ ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t inde
     value->type = ir_builder_usize(builder);
 
     if(type->kind != TYPE_KIND_STRUCTURE){
-        redprintf("INTENRAL ERROR: build_offsetof got non-struct as 'type'\n");
+        redprintf("INTENRAL ERROR: build_offsetof got non-struct type as type\n");
     }
 
     ir_value_offsetof_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_value_offsetof_t));

@@ -44,6 +44,10 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder);
 // Generates IR instructions for initializing special global variables
 errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_global, length_t global_variable_id);
 
+// ---------------- ir_gen_ast_definition_string ----------------
+// Makes a string containing the textual definition of an AST function using an IR memory pool
+const char *ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func);
+
 // ---------------- ir_func_mapping_cmp ----------------
 // Compares two 'ir_func_mapping_t' structures.
 // Used for qsort()

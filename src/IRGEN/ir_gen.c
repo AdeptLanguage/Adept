@@ -56,6 +56,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     length_t ir_func_id = module->funcs_length;
 
     module_func->name = ast_func->name;
+    module_func->maybe_definition_string = NULL;
     module_func->traits = TRAIT_NONE;
     module_func->return_type = NULL;
     module_func->argument_types = malloc(sizeof(ir_type_t*) * ast_func->arity);
@@ -64,6 +65,10 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
     module_func->scope = NULL;
     module_func->variable_count = 0;
+
+    if(compiler->checks & COMPILER_NULL_CHECKS){
+        module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);
+    }
 
     #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN  && \
         AST_FUNC_VARARG      == IR_FUNC_VARARG   && \
@@ -438,15 +443,23 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                             ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
                         }
 
+                        ast_type_t container_ast_type;
+                        if(resolve_type_polymorphics(builder->compiler, &catalog, &table->entries[i].ast_type, &container_ast_type)){
+                            ast_type_var_catalog_free(&catalog);
+                            return FAILURE;
+                        }
+
                         // Generate meta data
                         for(length_t s = 0; s != composite->subtypes_length; s++){
-                            ast_type_t tmp_ast_type;
-                            if(resolve_type_polymorphics(builder->compiler, &catalog, &template->field_types[s], &tmp_ast_type)){
+                            ast_type_t member_ast_type;
+
+                            // DANGEROUS: WARNING: Accessing 'template->field_types' based on index going to 'composite->subtypes_length'
+                            if(resolve_type_polymorphics(builder->compiler, &catalog, &template->field_types[s], &member_ast_type)){
                                 ast_type_var_catalog_free(&catalog);
                                 return FAILURE;
                             }
-
-                            char *member_type_name = ast_type_str(&tmp_ast_type);
+                            
+                            char *member_type_name = ast_type_str(&member_ast_type);
                             maybe_index_t subtype_index = type_table_find(table, member_type_name);
                             free(member_type_name);
 
@@ -456,11 +469,20 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
                                 composite_members[s] = build_const_bitcast(builder->pool, array_values[subtype_index], any_type_ptr_type); // members[s]
                             }
 
-                            composite_offsets[s] = build_literal_usize(builder->pool, 0);
+                            ir_type_t *struct_ir_type;
+                            if(ir_gen_resolve_type(builder->compiler, builder->object, &container_ast_type, &struct_ir_type)){
+                                redprintf("INTERNAL ERROR: ir_gen_resolve_type for RTTI composite offset computation failed!\n");
+                                ast_type_free(&container_ast_type);
+                                ast_type_free(&member_ast_type);
+                                return FAILURE;
+                            }
+
+                            composite_offsets[s] = build_offsetof(builder, struct_ir_type, s);
                             composite_member_names[s] = build_literal_cstr(builder, template->field_names[s]);
-                            ast_type_free(&tmp_ast_type);
+                            ast_type_free(&member_ast_type);
                         }
 
+                        ast_type_free(&container_ast_type);
                         ast_type_var_catalog_free(&catalog);
                     } else if(elem->id == AST_ELEM_BASE){
                         const char *struct_name = ((ast_elem_base_t*) elem)->base;
@@ -628,6 +650,68 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
     // Should never reach
     redprintf("INTERNAL ERROR: Encountered unknown special global variable '%s'!\n", ast_global->name);
     return FAILURE;
+}
+
+const char *ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
+    length_t length = 0;
+    length_t capacity = 96;
+    strong_cstr_t string = malloc(capacity);
+
+    // TODO: CLEANUP: Clean up this messy code
+    // TODO: CLEANUP: Factor out a lot of this garbage
+
+    {
+        // Append function name
+        length_t name_length = strlen(ast_func->name);
+        expand((void**) &string, sizeof(char), length, &capacity, name_length, capacity);
+        memcpy(&string[length], ast_func->name, name_length);
+        length += name_length;
+    }
+
+    // Append '('
+    expand((void**) &string, sizeof(char), length, &capacity, 1, capacity);
+    string[length++] = '(';
+
+    // Append argument list
+    for(length_t i = 0; i != ast_func->arity; i++){
+        char *type_str = ast_type_str(&ast_func->arg_types[i]);
+        length_t type_str_len = strlen(type_str);
+        expand((void**) &string, sizeof(char), length, &capacity, type_str_len, capacity);
+        memcpy(&string[length], type_str, type_str_len);
+        length += type_str_len;
+        free(type_str);
+
+        if(i + 1 != ast_func->arity){
+            expand((void**) &string, sizeof(char), length, &capacity, 2, capacity);
+            string[length++] = ',';
+            string[length++] = ' ';
+        }
+    }
+
+    // Append '( '
+    expand((void**) &string, sizeof(char), length, &capacity, 2, capacity);
+    string[length++] = ')';
+    string[length++] = ' ';
+
+    {
+        // Append return type
+        char *type_str = ast_type_str(&ast_func->return_type);
+        length_t type_str_len = strlen(type_str);
+        expand((void**) &string, sizeof(char), length, &capacity, type_str_len, capacity);
+        memcpy(&string[length], type_str, type_str_len);
+        length += type_str_len;
+        free(type_str);
+    }
+
+    // Terminate string
+    expand((void**) &string, sizeof(char), length, &capacity, 1, capacity);
+    string[length++] = '\0';
+
+    // Trade heap allocated string for IR memory pooled string
+    char *destination = ir_pool_alloc(pool, length);
+    memcpy(destination, string, length);
+    free(string);
+    return destination;
 }
 
 int ir_func_mapping_cmp(const void *a, const void *b){
