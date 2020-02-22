@@ -149,6 +149,10 @@ ir_type_t *ir_builder_usize_ptr(ir_builder_t *builder);
 // Gets a shared IR boolean type
 ir_type_t *ir_builder_bool(ir_builder_t *builder);
 
+// ---------------- ir_builder___types__ ----------------
+// Gets the global variable index for the runtime type information array '__types__'
+maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_failure);
+
 // ---------------- build_literal_int ----------------
 // Builds a literal int value
 ir_value_t *build_literal_int(ir_pool_t *pool, long long value);
@@ -219,6 +223,12 @@ ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t 
 // ---------------- build_bool ----------------
 // Builds a literal boolean value
 ir_value_t *build_bool(ir_pool_t *pool, bool value);
+
+// ---------------- build_rtti_relocation ----------------
+// Adds an RTTI index that requires resolution to the rtti_relocations array
+// NOTE: Despite its name, this function does not add any instructions,
+//       it simply marks an RTTI index to be filled in later
+errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, unsigned long long *id_ref, source_t source_on_failure);
 
 // ---------------- prepare_for_new_label ----------------
 // Ensures there's enough room for another label

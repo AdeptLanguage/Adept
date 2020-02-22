@@ -282,6 +282,37 @@ ir_type_t* ir_builder_bool(ir_builder_t *builder){
     return *shared_type;
 }
 
+maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_failure){
+    if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+        compiler_panic(builder->compiler, source_on_failure, "Runtime type information cannot be disabled because of this");
+        return -1;
+    }
+
+    ir_module_t *ir_module = &builder->object->ir_module;
+
+    switch(ir_module->common.has_rtti_array){
+    case TROOLEAN_TRUE:
+        return ir_module->common.rtti_array_index;
+    case TROOLEAN_FALSE:
+        compiler_panic(builder->compiler, source_on_failure, "Failed to find __types__ global variable");
+        return -1;
+    case TROOLEAN_UNKNOWN:
+        // TODO: SPEED: It works, but the global variable lookup could be faster
+        for(length_t index = 0; index != ir_module->globals_length; index++){
+            if(strcmp("__types__", ir_module->globals[index].name) == 0){
+                ir_module->common.rtti_array_index = index;
+                ir_module->common.has_rtti_array = TROOLEAN_TRUE;
+                return index;
+            }
+        }
+        break;
+    }
+
+    ir_module->common.has_rtti_array = TROOLEAN_FALSE;
+    compiler_panic(builder->compiler, source_on_failure, "Failed to find __types__ global variable");
+    return -1;
+}
+
 ir_value_t *build_literal_int(ir_pool_t *pool, long long literal_value){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
 
@@ -518,6 +549,17 @@ ir_value_t *build_bool(ir_pool_t *pool, bool value){
     ir_value->extra = ir_pool_alloc(pool, sizeof(bool));
     *((bool*) ir_value->extra) = value;
     return ir_value;
+}
+
+errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, unsigned long long *id_ref, source_t source_on_failure){
+    ir_module_t *ir_module = &builder->object->ir_module;
+    expand((void**) &ir_module->rtti_relocations, sizeof(rtti_relocation_t), ir_module->rtti_relocations_length, &ir_module->rtti_relocations_capacity, 1, 4);
+
+    rtti_relocation_t *relocation = &ir_module->rtti_relocations[ir_module->rtti_relocations_length++];
+    relocation->human_notation = human_notation;
+    relocation->id_ref = id_ref;
+    relocation->source_on_failure = source_on_failure;
+    return SUCCESS;
 }
 
 void prepare_for_new_label(ir_builder_t *builder){

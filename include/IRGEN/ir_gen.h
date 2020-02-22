@@ -44,6 +44,10 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder);
 // Generates IR instructions for initializing special global variables
 errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_global, length_t global_variable_id);
 
+// ---------------- ir_gen_fill_in_rtti ----------------
+// Fills in generated IR runtime type information data
+errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object);
+
 // ---------------- ir_gen_ast_definition_string ----------------
 // Makes a string containing the textual definition of an AST function using an IR memory pool
 const char *ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func);

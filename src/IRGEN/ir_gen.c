@@ -23,7 +23,8 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     if(ir_gen_type_mappings(compiler, object)
     || ir_gen_globals(compiler, object)
     || ir_gen_functions(compiler, object)
-    || ir_gen_functions_body(compiler, object)) return FAILURE;
+    || ir_gen_functions_body(compiler, object)
+    || ir_gen_fill_in_rtti(compiler, object)) return FAILURE;
 
     return SUCCESS;
 }
@@ -650,6 +651,22 @@ errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_globa
     // Should never reach
     redprintf("INTERNAL ERROR: Encountered unknown special global variable '%s'!\n", ast_global->name);
     return FAILURE;
+}
+
+errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object){
+    ir_module_t *ir_module = &object->ir_module;
+
+    type_table_t *type_table = object->ast.type_table;
+    if(type_table == NULL) return FAILURE;
+
+    rtti_relocation_t *relocations = ir_module->rtti_relocations;
+    length_t relocations_length = ir_module->rtti_relocations_length;
+
+    for(length_t i = 0; i != relocations_length; i++){
+        if(rtti_resolve(compiler, type_table, &relocations[i])) return FAILURE;
+    }
+
+    return SUCCESS;
 }
 
 const char *ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){

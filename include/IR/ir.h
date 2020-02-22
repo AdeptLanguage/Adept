@@ -536,6 +536,14 @@ typedef struct {
 // Possible traits for 'ir_anon_global_t'
 #define IR_ANON_GLOBAL_CONSTANT TRAIT_1
 
+// ---------------- rtti_relocation_t ----------------
+// Represents an RTTI index that requires resolution
+typedef struct {
+    strong_cstr_t human_notation;
+    unsigned long long *id_ref;
+    source_t source_on_failure;
+} rtti_relocation_t;
+
 // ---------------- ir_metadata_t ----------------
 // General global IR metadata
 typedef struct {
@@ -550,6 +558,8 @@ typedef struct {
     ir_type_t *ir_usize_ptr;
     ir_type_t *ir_bool;
     ir_type_t *ir_string_struct;
+    length_t rtti_array_index;
+    troolean has_rtti_array;
 } ir_shared_common_t;
 
 // ---------------- ir_module_t ----------------
@@ -578,6 +588,9 @@ typedef struct {
     length_t anon_globals_capacity;
     ir_type_var_stack_t type_var_stack;
     ir_gen_sf_cache_t sf_cache;
+    rtti_relocation_t *rtti_relocations;
+    length_t rtti_relocations_length;
+    length_t rtti_relocations_capacity;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------

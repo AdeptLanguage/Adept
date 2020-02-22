@@ -8,6 +8,11 @@
 
 // ---------------- rtti_for ----------------
 // NOTE: Returns NULL on failure
-ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *target, source_t sourceOnFailure);
+ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t source_on_failure);
+
+// ---------------- rtti_resolve ----------------
+// Resolves a single RTTI relocation
+// NOTE: Used to fill in requested indices for the __types__ runtime array
+errorcode_t rtti_resolve(compiler_t *compiler, type_table_t *type_table, rtti_relocation_t *relocation);
 
 #endif // RTTI_H

@@ -696,11 +696,16 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->anon_globals_capacity = 0;
     ir_type_var_stack_init(&ir_module->type_var_stack);
     ir_gen_sf_cache_init(&ir_module->sf_cache);
+    ir_module->rtti_relocations = NULL;
+    ir_module->rtti_relocations_length = 0;
+    ir_module->rtti_relocations_capacity = 0;
 
     // Initialize common data
     ir_module->common.ir_usize = NULL;
     ir_module->common.ir_usize_ptr = NULL;
     ir_module->common.ir_bool = NULL;
+    ir_module->common.rtti_array_index = 0;
+    ir_module->common.has_rtti_array = TROOLEAN_UNKNOWN;
 }
 
 void ir_module_free(ir_module_t *ir_module){
@@ -715,6 +720,11 @@ void ir_module_free(ir_module_t *ir_module){
     ir_pool_free(&ir_module->pool);
     ir_type_var_stack_free(&ir_module->type_var_stack);
     ir_gen_sf_cache_free(&ir_module->sf_cache);
+    
+    for(length_t i = 0; i != ir_module->rtti_relocations_length; i++){
+        free(ir_module->rtti_relocations[i].human_notation);
+    }
+    free(ir_module->rtti_relocations);
 }
 
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
