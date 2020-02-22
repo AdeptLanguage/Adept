@@ -618,7 +618,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     }
 
                     ast_type_t ast_field_type;
-                    if(resolve_type_polymorphics(builder->compiler, &catalog, &template->field_types[field_index], &ast_field_type)){
+                    if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &template->field_types[field_index], &ast_field_type)){
                         ast_type_free(&struct_value_ast_type);
                         ast_type_var_catalog_free(&catalog);
                         return FAILURE;

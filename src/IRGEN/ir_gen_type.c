@@ -240,7 +240,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
 
             for(length_t i = 0; i != extra->subtypes_length; i++){
                 ast_type_t tmp_ast_type;
-                if(resolve_type_polymorphics(compiler, &catalog, &template->field_types[i], &tmp_ast_type)){
+                if(resolve_type_polymorphics(compiler, object->ast.type_table, &catalog, &template->field_types[i], &tmp_ast_type)){
                     ast_type_var_catalog_free(&catalog);
                     return FAILURE;
                 }

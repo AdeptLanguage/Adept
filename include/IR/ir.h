@@ -521,6 +521,10 @@ typedef struct {
     const char *name;
     ir_type_t *type;
     trait_t traits;
+
+    // Non-user static value initializer
+    // (Used for __types__ and __types_length__)
+    ir_value_t *trusted_static_initializer;
 } ir_global_t;
 
 #define IR_GLOBAL_EXTERNAL TRAIT_1

@@ -78,6 +78,9 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     builder.static_bool.source = NULL_SOURCE;
     builder.static_bool.source.object_index = builder.object->index;
 
+    builder.stack_pointer_type = NULL;
+    builder.type_table = object->ast.type_table;
+
     while(module_func->arity != ast_func->arity){
         if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
             module_func->basicblocks = builder.basicblocks;

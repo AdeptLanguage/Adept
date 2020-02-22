@@ -41,8 +41,9 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object);
 errorcode_t ir_gen_globals_init(ir_builder_t *builder);
 
 // ---------------- ir_gen_special_global ----------------
-// Generates IR instructions for initializing special global variables
-errorcode_t ir_gen_special_global(ir_builder_t *builder, ast_global_t *ast_global, length_t global_variable_id);
+// Generates initializers for special global variables
+errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_global_t *ast_global, length_t global_variable_id);
+errorcode_t ir_gen_special_globals(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_fill_in_rtti ----------------
 // Fills in generated IR runtime type information data

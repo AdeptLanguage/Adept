@@ -196,19 +196,22 @@ ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value
 }
 
 ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index){
-    ir_value_t *value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+    return build_offsetof_ex(builder->pool, ir_builder_usize(builder), type, index);
+}
+
+ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type, length_t index){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_OFFSETOF;
-    value->type = ir_builder_usize(builder);
+    value->type = usize_type;
 
     if(type->kind != TYPE_KIND_STRUCTURE){
         redprintf("INTENRAL ERROR: build_offsetof got non-struct type as type\n");
     }
 
-    ir_value_offsetof_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_value_offsetof_t));
+    ir_value_offsetof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_offsetof_t));
     extra->type = type;
     extra->index = index;
     value->extra = extra;
-
     return value;
 }
 
@@ -368,14 +371,27 @@ ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
     return build_literal_cstr_of_length(builder, value, strlen(value) + 1);
 }
 
+ir_value_t *build_literal_cstr_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value){
+    return build_literal_cstr_of_length_ex(pool, type_map, value, strlen(value) + 1);
+}
+
 ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, char *array, length_t length){
+    return build_literal_cstr_of_length_ex(builder->pool, builder->type_map, array, length);
+}
+
+ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t length){
     // NOTE: Builds a null-terminated string literal value
-    ir_value_t *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+    ir_value_t *ir_value = ir_pool_alloc(pool, sizeof(ir_value_t));
     ir_value->value_type = VALUE_TYPE_CSTR_OF_LEN;
     ir_type_t *ubyte_type;
-    ir_type_map_find(builder->type_map, "ubyte", &ubyte_type);
-    ir_value->type = ir_type_pointer_to(builder->pool, ubyte_type);
-    ir_value->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_cstr_of_len_t));
+
+    if(!ir_type_map_find(type_map, "ubyte", &ubyte_type)){
+        redprintf("INTERNAL ERROR: ir_type_map_find failed to find mapping for ubyte for build_literal_cstr_of_length_ex!\n");
+        return NULL;
+    }
+
+    ir_value->type = ir_type_pointer_to(pool, ubyte_type);
+    ir_value->extra = ir_pool_alloc(pool, sizeof(ir_value_cstr_of_len_t));
     ((ir_value_cstr_of_len_t*) ir_value->extra)->array = array;
     ((ir_value_cstr_of_len_t*) ir_value->extra)->length = length;
     return ir_value;
@@ -878,7 +894,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 ast_type_t *ast_unresolved_field_type = &template->field_types[f];
                 ast_type_t ast_field_type;
 
-                if(resolve_type_polymorphics(builder->compiler, &catalog, ast_unresolved_field_type, &ast_field_type)){
+                if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
                     ast_type_var_catalog_free(&catalog);
                     return ALT_FAILURE;
                 }
@@ -1197,7 +1213,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ast_type_t *ast_unresolved_field_type = &template->field_types[f];
                 ast_type_t ast_field_type;
 
-                if(resolve_type_polymorphics(builder->compiler, &catalog, ast_unresolved_field_type, &ast_field_type)){
+                if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
                     ast_type_var_catalog_free(&catalog);
                     return ALT_FAILURE;
                 }
@@ -1460,7 +1476,7 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     memcpy(func->arg_type_traits, poly_func->arg_type_traits, sizeof(trait_t) * poly_func->arity);
 
     func->arity = poly_func->arity;
-    if(resolve_type_polymorphics(builder->compiler, catalog, &poly_func->return_type, &func->return_type)){
+    if(resolve_type_polymorphics(builder->compiler, builder->type_table, catalog, &poly_func->return_type, &func->return_type)){
         func->return_type.elements = NULL;
         func->return_type.elements_length = 0;
         func->return_type.source = NULL_SOURCE;
@@ -1473,7 +1489,7 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
 
     for(length_t s = 0; s != poly_func->statements_length; s++){
         func->statements[s] = ast_expr_clone(poly_func->statements[s]);
-        if(resolve_expr_polymorphics(builder->compiler, catalog, func->statements[s])) return FAILURE;
+        if(resolve_expr_polymorphics(builder->compiler, builder->type_table, catalog, func->statements[s])) return FAILURE;
     }
 
     ir_func_mapping_t newest_mapping;
@@ -1642,7 +1658,7 @@ errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ir_value_t **arg_val
     return SUCCESS;
 }
 
-errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){
+errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){
     ast_elem_t **elements = NULL;
     length_t length = 0;
     length_t capacity = 0;
@@ -1667,7 +1683,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
                 resolved->ownership = true;
 
                 for(length_t i = 0; i != func->arity; i++){
-                    if(resolve_type_polymorphics(compiler, catalog, &func->arg_types[i], &resolved->arg_types[i])){
+                    if(resolve_type_polymorphics(compiler, type_table, catalog, &func->arg_types[i], &resolved->arg_types[i])){
                         ast_types_free_fully(resolved->arg_types, i);
                         free(resolved->return_type);
                         free(resolved);
@@ -1675,7 +1691,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
                     }
                 }
 
-                if(resolve_type_polymorphics(compiler, catalog, func->return_type, resolved->return_type)){
+                if(resolve_type_polymorphics(compiler, type_table, catalog, func->return_type, resolved->return_type)){
                     ast_types_free_fully(resolved->arg_types, i);
                     free(resolved->return_type);
                     free(resolved);
@@ -1696,7 +1712,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
                 ast_type_t *resolved = malloc(sizeof(ast_type_t) * generic_base_elem->generics_length);
 
                 for(length_t i = 0; i != generic_base_elem->generics_length; i++){
-                    if(resolve_type_polymorphics(compiler, catalog, &generic_base_elem->generics[i], &resolved[i])){
+                    if(resolve_type_polymorphics(compiler, type_table, catalog, &generic_base_elem->generics[i], &resolved[i])){
                         ast_types_free_fully(resolved, i);
                         return FAILURE;
                     }
@@ -1742,30 +1758,35 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog
     out_type->elements = elements;
     out_type->elements_length = length;
     out_type->source = in_type->source;
+
+    // Since we are past the parsing phase, we can check that RTTI isn't disabled
+    if(type_table && !(compiler->traits & COMPILER_NO_TYPE_INFO)){
+        type_table_give(type_table, out_type, NULL);
+    }
     return SUCCESS;
 }
 
-errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_expr_t *expr){
+errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_expr_t *expr){
     switch(expr->id){
     case EXPR_RETURN: {
             ast_expr_return_t *return_stmt = (ast_expr_return_t*) expr;
-            if(return_stmt->value != NULL && resolve_expr_polymorphics(compiler, catalog, return_stmt->value)) return FAILURE;
+            if(return_stmt->value != NULL && resolve_expr_polymorphics(compiler, type_table, catalog, return_stmt->value)) return FAILURE;
         }
         break;
     case EXPR_CALL: {
             ast_expr_call_t *call_stmt = (ast_expr_call_t*) expr;
             for(length_t a = 0; a != call_stmt->arity; a++){
-                if(resolve_expr_polymorphics(compiler, catalog, call_stmt->args[a])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, call_stmt->args[a])) return FAILURE;
             }
         }
         break;
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
             ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) expr;
 
-            if(resolve_type_polymorphics(compiler, catalog, &declare_stmt->type, NULL)) return FAILURE;
+            if(resolve_type_polymorphics(compiler, type_table, catalog, &declare_stmt->type, NULL)) return FAILURE;
 
             if(declare_stmt->value != NULL){
-                if(resolve_expr_polymorphics(compiler, catalog, declare_stmt->value)) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, declare_stmt->value)) return FAILURE;
             }
         }
         break;
@@ -1776,31 +1797,31 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog
     case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
             ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) expr;
 
-            if(resolve_expr_polymorphics(compiler, catalog, assign_stmt->destination)
-            || resolve_expr_polymorphics(compiler, catalog, assign_stmt->value)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, assign_stmt->destination)
+            || resolve_expr_polymorphics(compiler, type_table, catalog, assign_stmt->value)) return FAILURE;
         }
         break;
     case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {
             ast_expr_if_t *conditional = (ast_expr_if_t*) expr;
 
-            if(resolve_expr_polymorphics(compiler, catalog, conditional->value)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, conditional->value)) return FAILURE;
 
             for(length_t i = 0; i != conditional->statements_length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, conditional->statements[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, conditional->statements[i])) return FAILURE;
             }
         }
         break;
     case EXPR_IFELSE: case EXPR_UNLESSELSE: {
             ast_expr_ifelse_t *complex_conditional = (ast_expr_ifelse_t*) expr;
 
-            if(resolve_expr_polymorphics(compiler, catalog, complex_conditional->value)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, complex_conditional->value)) return FAILURE;
 
             for(length_t i = 0; i != complex_conditional->statements_length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, complex_conditional->statements[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, complex_conditional->statements[i])) return FAILURE;
             }
 
             for(length_t i = 0; i != complex_conditional->else_statements_length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, complex_conditional->else_statements[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, complex_conditional->else_statements[i])) return FAILURE;
             }
         }
         break;
@@ -1808,64 +1829,64 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog
             ast_expr_whilecontinue_t *conditional = (ast_expr_whilecontinue_t*) expr;
 
             for(length_t i = 0; i != conditional->statements_length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, conditional->statements[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, conditional->statements[i])) return FAILURE;
             }
         }
         break;
     case EXPR_CALL_METHOD: {
             ast_expr_call_method_t *call_stmt = (ast_expr_call_method_t*) expr;
 
-            if(resolve_expr_polymorphics(compiler, catalog, call_stmt->value)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, call_stmt->value)) return FAILURE;
 
             for(length_t a = 0; a != call_stmt->arity; a++){
-                if(resolve_expr_polymorphics(compiler, catalog, call_stmt->args[a])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, call_stmt->args[a])) return FAILURE;
             }
         }
         break;
     case EXPR_DELETE: {
             ast_expr_unary_t *delete_stmt = (ast_expr_unary_t*) expr;
-            if(resolve_expr_polymorphics(compiler, catalog, delete_stmt->value)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, delete_stmt->value)) return FAILURE;
         }
         break;
     case EXPR_EACH_IN: {
             ast_expr_each_in_t *loop = (ast_expr_each_in_t*) expr;
 
-            if(resolve_type_polymorphics(compiler, catalog, loop->it_type, NULL)
-            || (loop->low_array && resolve_expr_polymorphics(compiler, catalog, loop->low_array))
-            || (loop->length && resolve_expr_polymorphics(compiler, catalog, loop->length))
-            || (loop->list && resolve_expr_polymorphics(compiler, catalog, loop->list))) return FAILURE;
+            if(resolve_type_polymorphics(compiler, type_table, catalog, loop->it_type, NULL)
+            || (loop->low_array && resolve_expr_polymorphics(compiler, type_table, catalog, loop->low_array))
+            || (loop->length && resolve_expr_polymorphics(compiler, type_table, catalog, loop->length))
+            || (loop->list && resolve_expr_polymorphics(compiler, type_table, catalog, loop->list))) return FAILURE;
 
             for(length_t i = 0; i != loop->statements_length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, loop->statements[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, loop->statements[i])) return FAILURE;
             }
         }
         break;
     case EXPR_REPEAT: {
             ast_expr_repeat_t *loop = (ast_expr_repeat_t*) expr;
 
-            if(resolve_expr_polymorphics(compiler, catalog, loop->limit)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, loop->limit)) return FAILURE;
 
             for(length_t i = 0; i != loop->statements_length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, loop->statements[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, loop->statements[i])) return FAILURE;
             }
         }
         break;
     case EXPR_SWITCH: {
             ast_expr_switch_t *switch_stmt = (ast_expr_switch_t*) expr;
 
-            if(resolve_expr_polymorphics(compiler, catalog, switch_stmt->value)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, switch_stmt->value)) return FAILURE;
 
             for(length_t i = 0; i != switch_stmt->default_statements_length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, switch_stmt->default_statements[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, switch_stmt->default_statements[i])) return FAILURE;
             }
 
             for(length_t c = 0; c != switch_stmt->cases_length; c++){
                 ast_case_t *expr_case = &switch_stmt->cases[c];
 
-                if(resolve_expr_polymorphics(compiler, catalog, expr_case->condition)) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, expr_case->condition)) return FAILURE;
 
                 for(length_t i = 0; i != expr_case->statements_length; i++){
-                    if(resolve_expr_polymorphics(compiler, catalog, expr_case->statements[i])) return FAILURE;
+                    if(resolve_expr_polymorphics(compiler, type_table, catalog, expr_case->statements[i])) return FAILURE;
                 }
             }
         }
@@ -1890,66 +1911,66 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog
     case EXPR_BIT_LGC_RSHIFT:
     case EXPR_AND:
     case EXPR_OR:
-        if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_math_t*) expr)->a)
-        || resolve_expr_polymorphics(compiler, catalog, ((ast_expr_math_t*) expr)->b)) return FAILURE;
+        if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_math_t*) expr)->a)
+        || resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_math_t*) expr)->b)) return FAILURE;
         break;
     case EXPR_MEMBER:
-        if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_member_t*) expr)->value)) return FAILURE;
+        if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_member_t*) expr)->value)) return FAILURE;
         break;
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
-        if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_unary_t*) expr)->value)) return FAILURE;
+        if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_unary_t*) expr)->value)) return FAILURE;
         break;
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr = (ast_expr_func_addr_t*) expr;
 
             if(func_addr->match_args != NULL) for(length_t a = 0; a != func_addr->match_args_length; a++){
-                if(resolve_type_polymorphics(compiler, catalog, &func_addr->match_args[a], NULL)) return FAILURE;
+                if(resolve_type_polymorphics(compiler, type_table, catalog, &func_addr->match_args[a], NULL)) return FAILURE;
             }
         }
         break;
     case EXPR_AT:
     case EXPR_ARRAY_ACCESS:
-        if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_array_access_t*) expr)->index)) return FAILURE;
-        if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_array_access_t*) expr)->value)) return FAILURE;
+        if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_array_access_t*) expr)->index)) return FAILURE;
+        if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_array_access_t*) expr)->value)) return FAILURE;
         break;
     case EXPR_CAST:
-        if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_cast_t*) expr)->to, NULL)) return FAILURE;
-        if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_cast_t*) expr)->from)) return FAILURE;
+        if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_cast_t*) expr)->to, NULL)) return FAILURE;
+        if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_cast_t*) expr)->from)) return FAILURE;
         break;
     case EXPR_SIZEOF:
-        if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_sizeof_t*) expr)->type, NULL)) return FAILURE;
+        if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_sizeof_t*) expr)->type, NULL)) return FAILURE;
         break;
     case EXPR_NEW:
-        if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_new_t*) expr)->type, NULL)) return FAILURE;
-        if(((ast_expr_new_t*) expr)->amount != NULL && resolve_expr_polymorphics(compiler, catalog, ((ast_expr_new_t*) expr)->amount)) return FAILURE;
+        if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_new_t*) expr)->type, NULL)) return FAILURE;
+        if(((ast_expr_new_t*) expr)->amount != NULL && resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_new_t*) expr)->amount)) return FAILURE;
         break;
     case EXPR_NOT:
     case EXPR_BIT_COMPLEMENT:
     case EXPR_NEGATE:
-        if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_unary_t*) expr)->value)) return FAILURE;
+        if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_unary_t*) expr)->value)) return FAILURE;
         break;
     case EXPR_STATIC_ARRAY: {
-            if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_static_data_t*) expr)->type, NULL)) return FAILURE;
+            if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_static_data_t*) expr)->type, NULL)) return FAILURE;
 
             for(length_t i = 0; i != ((ast_expr_static_data_t*) expr)->length; i++){
-                if(resolve_expr_polymorphics(compiler, catalog, ((ast_expr_static_data_t*) expr)->values[i])) return FAILURE;
+                if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_static_data_t*) expr)->values[i])) return FAILURE;
             }
         }
         break;
     case EXPR_STATIC_STRUCT: {
-            if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_static_data_t*) expr)->type, NULL)) return FAILURE;
+            if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_static_data_t*) expr)->type, NULL)) return FAILURE;
         }
         break;
     case EXPR_TYPEINFO: {
-            if(resolve_type_polymorphics(compiler, catalog, &((ast_expr_typeinfo_t*) expr)->target, NULL)) return FAILURE;
+            if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_typeinfo_t*) expr)->target, NULL)) return FAILURE;
         }
         break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = (ast_expr_inline_declare_t*) expr;
 
-            if(resolve_type_polymorphics(compiler, catalog, &def->type, NULL)
-            ||(def->value != NULL && resolve_expr_polymorphics(compiler, catalog, def->value))){
+            if(resolve_type_polymorphics(compiler, type_table, catalog, &def->type, NULL)
+            ||(def->value != NULL && resolve_expr_polymorphics(compiler, type_table, catalog, def->value))){
                 return FAILURE;
             }
         }

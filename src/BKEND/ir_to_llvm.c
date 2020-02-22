@@ -1054,20 +1054,6 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
     LLVMModuleRef module = llvm->module;
     char global_implementation_name[256];
 
-    for(length_t i = 0; i != globals_length; i++){
-        bool is_external = globals[i].traits & IR_GLOBAL_EXTERNAL;
-        LLVMTypeRef global_llvm_type = ir_to_llvm_type(globals[i].type);
-
-        if(is_external)
-            ir_implementation(i, 'g', global_implementation_name);
-
-        llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, is_external ? globals[i].name : global_implementation_name);
-        LLVMSetLinkage(llvm->global_variables[i], LLVMExternalLinkage);
-
-        if(!is_external)
-            LLVMSetInitializer(llvm->global_variables[i], LLVMGetUndef(global_llvm_type));
-    }
-
     for(length_t i = 0; i != anon_globals_length; i++){
         LLVMTypeRef anon_global_llvm_type = ir_to_llvm_type(anon_globals[i].type);
         llvm->anon_global_variables[i] = LLVMAddGlobal(module, anon_global_llvm_type, "");
@@ -1078,6 +1064,25 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
     for(length_t i = 0; i != anon_globals_length; i++){
         if(anon_globals[i].initializer == NULL) continue;
         LLVMSetInitializer(llvm->anon_global_variables[i], ir_to_llvm_value(llvm, anon_globals[i].initializer));
+    }
+
+    for(length_t i = 0; i != globals_length; i++){
+        bool is_external = globals[i].traits & IR_GLOBAL_EXTERNAL;
+        LLVMTypeRef global_llvm_type = ir_to_llvm_type(globals[i].type);
+
+        if(is_external)
+            ir_implementation(i, 'g', global_implementation_name);
+
+        llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, is_external ? globals[i].name : global_implementation_name);
+        LLVMSetLinkage(llvm->global_variables[i], LLVMExternalLinkage);
+
+        if(globals[i].trusted_static_initializer){
+            // Non-user static value initializer
+            // (Used for __types__ and __types_length__)
+            LLVMSetInitializer(llvm->global_variables[i], ir_to_llvm_value(llvm, globals[i].trusted_static_initializer));
+        } else if(!is_external){
+            LLVMSetInitializer(llvm->global_variables[i], LLVMGetUndef(global_llvm_type));
+        }
     }
 
     return SUCCESS;

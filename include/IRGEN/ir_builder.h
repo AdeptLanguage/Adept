@@ -48,6 +48,7 @@ typedef struct {
     ast_elem_base_t static_bool_base;
     ast_elem_t *static_bool_elems;
     ir_type_t *stack_pointer_type;
+    type_table_t *type_table;
 } ir_builder_t;
 
 // ---------------- build_basicblock ----------------
@@ -120,6 +121,7 @@ ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value
 // ---------------- build_offsetof ----------------
 // Builds an 'offsetof' value
 ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index);
+ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type, length_t index);
 
 // ---------------- build_static_array ----------------
 // Builds a static array
@@ -169,10 +171,12 @@ ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t lengt
 // ---------------- build_literal_cstr ----------------
 // Builds a literal c-string value
 ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value);
+ir_value_t *build_literal_cstr_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value);
 
 // ---------------- build_literal_cstr ----------------
 // Builds a literal c-string value
 ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, weak_cstr_t value, length_t length);
+ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value, length_t length);
 
 // ---------------- build_null_pointer ----------------
 // Builds a literal null pointer value
@@ -327,10 +331,11 @@ errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ir_value_t **arg_val
 // NOTE: Will show error messages on failure
 // NOTE: in_type == out_type is allowed
 // NOTE: out_type is same as in_type if out_type == null
-errorcode_t resolve_type_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
+// NOTE: Will also give result to type_table if not NULL and !(compiler->traits & COMPILER_NO_TYPE_INFO)
+errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
 
 // ---------------- resolve_expr_polymorphics ----------------
 // Resovles any polymorphic type variables within an AST expression
-errorcode_t resolve_expr_polymorphics(compiler_t *compiler, ast_type_var_catalog_t *catalog, ast_expr_t *expr);
+errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_expr_t *expr);
 
 #endif // IR_BUILDER_H
