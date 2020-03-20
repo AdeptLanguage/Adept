@@ -34,7 +34,6 @@ COMPLETENESS:
 * Fix lazy 'e'/'E' lexing for doubles
 
 UNINTENDED:
-* Prevent single line functions returning void
 * Fix bug with #if as statement for single line if
 * Fix bug with defer statements being unfufilled if function ends with #end
 

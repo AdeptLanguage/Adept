@@ -33,7 +33,6 @@ TODO:
 * dont search through global variables linearly
 * breakout & continueout maybe?
 * allow polymorphic names for generic bases
-* prevent single line functions returning void
 * fix bug with #if as statement for single line if - 'if it.kind == BuildingKind::OUTPOST && it.progress == 0.0f,
     #if fast_build_times
         it.progress = 0.9f; return
@@ -136,3 +135,4 @@ COMPLETED:
 + add way to avoid autogeneration of statements in __pass__ and __defer__ functions [added 'verbatim' keyword]
 + bitwise assignment operators '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='
 + fill in offsets for AnyStructType types
++ prevent single line functions returning void

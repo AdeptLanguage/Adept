@@ -172,6 +172,11 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     defer_scope_init(&defer_scope, NULL, NULL, TRAIT_NONE);
 
     if(ctx->tokenlist->tokens[*ctx->i].id == TOKEN_ASSIGN){
+        if(ast_type_is_void(&func->return_type)){
+            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot return 'void' from single line function");
+            return FAILURE;
+        }
+
         (*ctx->i)++;
         ctx->func = func;
         
