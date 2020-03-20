@@ -454,7 +454,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             tmp = buffer[i];
             if(tmp == '_') break; // Ignore underscores in numbers
 
-            if((tmp >= '0' && tmp <= '9') || tmp == '.' || (lex_state.is_hexadecimal
+            if((tmp >= '0' && tmp <= '9') || tmp == '.' || tmp == 'e' || tmp == 'E' || (lex_state.is_hexadecimal
             &&((tmp >= 'A' && tmp <= 'F') || (tmp >= 'a' && tmp <= 'f'))) ){
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
             } else if(lex_state.buildup[0] == '0' && lex_state.buildup_length == 1 && (tmp == 'x' || tmp == 'X')){

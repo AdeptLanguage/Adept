@@ -144,6 +144,7 @@ insight: $(SOURCES)
 	@cp include/UTIL/builtin_type.h $(INSIGHT_OUT_DIR)/include/UTIL/builtin_type.h
 	@cp include/UTIL/color.h $(INSIGHT_OUT_DIR)/include/UTIL/color.h
 	@cp include/UTIL/filename.h $(INSIGHT_OUT_DIR)/include/UTIL/filename.h
+	@cp include/UTIL/hash.h $(INSIGHT_OUT_DIR)/include/UTIL/hash.h
 	@cp include/UTIL/ground.h $(INSIGHT_OUT_DIR)/include/UTIL/ground.h
 	@cp include/UTIL/levenshtein.h $(INSIGHT_OUT_DIR)/include/UTIL/levenshtein.h
 	@cp include/UTIL/memory.h $(INSIGHT_OUT_DIR)/include/UTIL/memory.h
@@ -182,6 +183,7 @@ insight: $(SOURCES)
 	@cp src/UTIL/builtin_type.c $(INSIGHT_OUT_DIR)/src/UTIL/builtin_type.c
 	@cp src/UTIL/color.c $(INSIGHT_OUT_DIR)/src/UTIL/color.c
 	@cp src/UTIL/filename.c $(INSIGHT_OUT_DIR)/src/UTIL/filename.c
+	@cp src/UTIL/hash.c $(INSIGHT_OUT_DIR)/src/UTIL/hash.c
 	@cp src/UTIL/levenshtein.c $(INSIGHT_OUT_DIR)/src/UTIL/levenshtein.c
 	@cp src/UTIL/search.c $(INSIGHT_OUT_DIR)/src/UTIL/search.c
 	@cp src/UTIL/util.c $(INSIGHT_OUT_DIR)/src/UTIL/util.c

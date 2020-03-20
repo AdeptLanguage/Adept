@@ -407,8 +407,20 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     break;
                 case INSTRUCTION_SUBTRACT:
                     instr = basicblock->instructions[i];
-                    llvm_result = LLVMBuildSub(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
-                    catalog.blocks[b].value_references[i] = llvm_result;
+
+                    // Do excess instructions for subtracting pointers to get llvm to shut up
+                    if(((ir_instr_math_t*) instr)->a->type->kind == TYPE_KIND_POINTER){
+                        LLVMValueRef val_a = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
+                        LLVMValueRef val_b = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b);
+                        val_a = LLVMBuildPtrToInt(builder, val_a, LLVMInt64Type(), "");
+                        val_b = LLVMBuildPtrToInt(builder, val_b, LLVMInt64Type(), "");
+                        llvm_result = LLVMBuildSub(builder, val_a, val_b, "");
+                        llvm_result = LLVMBuildIntToPtr(builder, llvm_result, ir_to_llvm_type(((ir_instr_math_t*) instr)->a->type), "");
+                        catalog.blocks[b].value_references[i] = llvm_result;
+                    } else {
+                        llvm_result = LLVMBuildSub(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
+                        catalog.blocks[b].value_references[i] = llvm_result;    
+                    }
                     break;
                 case INSTRUCTION_FSUBTRACT:
                     instr = basicblock->instructions[i];
