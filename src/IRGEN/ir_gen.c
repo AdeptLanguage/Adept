@@ -1,4 +1,5 @@
 
+#include "LEX/lex.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
@@ -58,7 +59,10 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     length_t ir_func_id = module->funcs_length;
 
     module_func->name = ast_func->name;
+    module_func->maybe_filename = NULL;
     module_func->maybe_definition_string = NULL;
+    module_func->maybe_line_number = 0;
+    module_func->maybe_column_number = 0;
     module_func->traits = TRAIT_NONE;
     module_func->return_type = NULL;
     module_func->argument_types = malloc(sizeof(ir_type_t*) * ast_func->arity);
@@ -70,6 +74,12 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
     if(compiler->checks & COMPILER_NULL_CHECKS){
         module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);
+        module_func->maybe_filename = object->filename;
+
+        int line, column;
+        lex_get_location(object->buffer, ast_func->source.index, &line, &column);
+        module_func->maybe_line_number = line;
+        module_func->maybe_column_number = column;
     }
 
     #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN  && \
@@ -288,7 +298,7 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
 
         ir_type_t *ptr_to_type = ir_type_pointer_to(builder->pool, builder->object->ir_module.globals[g].type);
         ir_value_t *destination = build_gvarptr(builder, ptr_to_type, g);
-        build_store(builder, value, destination);
+        build_store(builder, value, destination, ast_global->source);
     }
     return SUCCESS;
 }

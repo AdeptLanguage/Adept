@@ -42,8 +42,12 @@ typedef struct {
     LLVMValueRef stackrestore_intrinsic;
     compiler_t *compiler;
 
-    LLVMValueRef null_check_on_fail_func;
+    // Variables only used for compilation with null checks
     LLVMBasicBlockRef null_check_on_fail_block;
+    LLVMValueRef line_phi;
+    LLVMValueRef column_phi;
+    LLVMValueRef null_check_failure_message_bytes;
+    bool has_null_check_failure_message_bytes;
 } llvm_context_t;
 
 // ---------------- ir_to_llvm_type ----------------
@@ -65,6 +69,10 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object);
 // ---------------- ir_to_llvm_globals ----------------
 // Generates LLVM globals for IR globals
 errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object);
+
+// ---------------- ir_to_llvm_null_check ----------------
+// Generates LLVM instructions to check for null pointer
+void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column);
 
 // ---------------- ir_to_llvm_config_optlvl ----------------
 // Converts optimization level to LLVM optimization constant

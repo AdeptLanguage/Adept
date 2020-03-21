@@ -216,16 +216,18 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
     if(out_is_terminated) *out_is_terminated = false;
 
     for(length_t s = 0; s != statements_length; s++){
-        switch(statements[s]->id){
+        ast_expr_t *stmt = statements[s];
+
+        switch(stmt->id){
         case EXPR_RETURN: {        
                 // DANGEROUS: Could be invalidated by 'ir_gen_expression' call, in which case it should no longer be used
                 ast_func_t *ast_func = &builder->object->ast.funcs[builder->ast_func_id];
                 ast_type_t *return_type = &ast_func->return_type;
-                ast_expr_return_t *return_stmt = (ast_expr_return_t*) statements[s];
+                ast_expr_return_t *return_stmt = (ast_expr_return_t*) stmt;
 
                 if(return_stmt->value != NULL){
                     if(ast_type_is_void(return_type)){
-                        compiler_panicf(builder->compiler, statements[s]->source, "Can't return a value from function that returns void");
+                        compiler_panicf(builder->compiler, stmt->source, "Can't return a value from function that returns void");
                         return FAILURE;
                     }
 
@@ -235,7 +237,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     if(!ast_types_conform(builder, &expression_value, &temporary_type, return_type, CONFORM_MODE_CALCULATION)){
                         char *a_type_str = ast_type_str(&temporary_type);
                         char *b_type_str = ast_type_str(return_type);
-                        compiler_panicf(builder->compiler, statements[s]->source, "Attempting to return type '%s' when function expects type '%s'", a_type_str, b_type_str);
+                        compiler_panicf(builder->compiler, stmt->source, "Attempting to return type '%s' when function expects type '%s'", a_type_str, b_type_str);
                         free(a_type_str);
                         free(b_type_str);
                         ast_type_free(&temporary_type);
@@ -309,10 +311,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_type_t dropped_type;
                 ir_value_t *dropped_value;
 
-                if(ir_gen_expression(builder, statements[s], &dropped_value, true, &dropped_type)) return FAILURE;
+                if(ir_gen_expression(builder, stmt, &dropped_value, true, &dropped_type)) return FAILURE;
 
                 if(dropped_type.elements_length == 0){
-                    compiler_panicf(builder->compiler, statements[s]->source, "INTERNAL ERROR: Dropped value has type with zero elements");
+                    compiler_panicf(builder->compiler, stmt->source, "INTERNAL ERROR: Dropped value has type with zero elements");
                     ast_type_free(&dropped_type);
                     return FAILURE;
                 }
@@ -329,7 +331,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(base && !typename_is_entended_builtin_type(base)){
                     ir_value_t *stack_pointer = build_stack_save(builder);
                     ir_value_t *temporary_mutable = build_alloc(builder, dropped_value->type);
-                    build_store(builder, dropped_value, temporary_mutable);
+                    build_store(builder, dropped_value, temporary_mutable, stmt->source);
 
                     if(handle_single_deference(builder, &dropped_type, temporary_mutable) == ALT_FAILURE){
                         ast_type_free(&dropped_type);
@@ -347,14 +349,14 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_POSTINCREMENT:
         case EXPR_POSTDECREMENT:
             // Expression-statements will be processed elsewhere
-            if(ir_gen_expression(builder, statements[s], NULL, true, NULL)) return FAILURE;
+            if(ir_gen_expression(builder, stmt, NULL, true, NULL)) return FAILURE;
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
-                ast_expr_declare_t *declare_stmt = ((ast_expr_declare_t*) statements[s]);
+                ast_expr_declare_t *declare_stmt = ((ast_expr_declare_t*) stmt);
 
                 // Search for existing variable named that
                 if(bridge_scope_var_already_in_list(builder->scope, declare_stmt->name)){
-                    compiler_panicf(builder->compiler, statements[s]->source, "Variable '%s' already declared", declare_stmt->name);
+                    compiler_panicf(builder->compiler, stmt->source, "Variable '%s' already declared", declare_stmt->name);
                     return FAILURE;
                 }
 
@@ -382,11 +384,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
                     if(declare_stmt->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &declare_stmt->type, true)){
-                        build_store(builder, initial, destination);
+                        build_store(builder, initial, destination, stmt->source);
                     }
 
                     ast_type_free(&temporary_type);
-                } else if(statements[s]->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
+                } else if(stmt->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
                     // Mark the variable as undefined memory so it isn't auto-initialized later on
                     add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
                 } else /* plain DECLARE or --no-undef DECLAREUNDEF */ {
@@ -408,8 +410,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
         case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
         case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
-                unsigned int assignment_type = statements[s]->id;
-                ast_expr_assign_t *assign_stmt = ((ast_expr_assign_t*) statements[s]);
+                unsigned int assignment_type = stmt->id;
+                ast_expr_assign_t *assign_stmt = ((ast_expr_assign_t*) stmt);
                 ir_value_t *destination;
                 ast_type_t destination_type, expression_value_type;
                 if(ir_gen_expression(builder, assign_stmt->value, &expression_value, false, &expression_value_type)) return FAILURE;
@@ -433,7 +435,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 if(assignment_type == EXPR_ASSIGN){
                     if(assign_stmt->is_pod || !handle_assign_management(builder, expression_value, &expression_value_type, destination, &destination_type, false)){
-                        build_store(builder, expression_value, destination);
+                        build_store(builder, expression_value, destination, stmt->source);
                     }
 
                     ast_type_free(&destination_type);
@@ -442,7 +444,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ast_type_free(&destination_type);
                     ast_type_free(&expression_value_type);
 
-                    instr_value = build_load(builder, destination);
+                    instr_value = build_load(builder, destination, stmt->source);
 
                     ir_value_result_t *value_result;
                     value_result = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
@@ -532,18 +534,18 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         return FAILURE;
                     }
 
-                    build_store(builder, build_value_from_prev_instruction(builder), destination);
+                    build_store(builder, build_value_from_prev_instruction(builder), destination, stmt->source);
                 }
             }
             break;
         case EXPR_IF: case EXPR_UNLESS: {
-                unsigned int conditional_type = statements[s]->id;
-                if(ir_gen_expression(builder, ((ast_expr_if_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
+                unsigned int conditional_type = stmt->id;
+                if(ir_gen_expression(builder, ((ast_expr_if_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&builder->static_bool);
-                    compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
+                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
                     free(a_type_str);
                     free(b_type_str);
                     ast_type_free(&temporary_type);
@@ -568,8 +570,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
                 }
 
-                ast_expr_t **if_stmts = ((ast_expr_if_t*) statements[s])->statements;
-                length_t if_stmts_length = ((ast_expr_if_t*) statements[s])->statements_length;
+                ast_expr_t **if_stmts = ((ast_expr_if_t*) stmt)->statements;
+                length_t if_stmts_length = ((ast_expr_if_t*) stmt)->statements_length;
                 bool terminated;
 
                 open_scope(builder);
@@ -589,13 +591,13 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
-                unsigned int conditional_type = statements[s]->id;
-                if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
+                unsigned int conditional_type = stmt->id;
+                if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&builder->static_bool);
-                    compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
+                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
                     free(a_type_str);
                     free(b_type_str);
                     ast_type_free(&temporary_type);
@@ -621,8 +623,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
                 }
 
-                ast_expr_t **if_stmts = ((ast_expr_ifelse_t*) statements[s])->statements;
-                length_t if_stmts_length = ((ast_expr_ifelse_t*) statements[s])->statements_length;
+                ast_expr_t **if_stmts = ((ast_expr_ifelse_t*) stmt)->statements;
+                length_t if_stmts_length = ((ast_expr_ifelse_t*) stmt)->statements_length;
                 bool terminated;
 
                 open_scope(builder);
@@ -640,8 +642,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 close_scope(builder);
 
-                ast_expr_t **else_stmts = ((ast_expr_ifelse_t*) statements[s])->else_statements;
-                length_t else_stmts_length = ((ast_expr_ifelse_t*) statements[s])->else_statements_length;
+                ast_expr_t **else_stmts = ((ast_expr_ifelse_t*) stmt)->else_statements;
+                length_t else_stmts_length = ((ast_expr_ifelse_t*) stmt)->else_statements_length;
 
                 open_scope(builder);
                 build_using_basicblock(builder, else_basicblock_id);
@@ -664,9 +666,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t new_basicblock_id = build_basicblock(builder);
                 length_t end_basicblock_id = build_basicblock(builder);
 
-                if(((ast_expr_while_t*) statements[s])->label != NULL){
+                if(((ast_expr_while_t*) stmt)->label != NULL){
                     prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_while_t*) statements[s])->label;
+                    builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_while_t*) stmt)->label;
                     builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
                     builder->block_stack_continue_ids[builder->block_stack_length] = test_basicblock_id;
                     builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
@@ -684,8 +686,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 build_break(builder, test_basicblock_id);
                 build_using_basicblock(builder, test_basicblock_id);
 
-                unsigned int conditional_type = statements[s]->id;
-                if(ir_gen_expression(builder, ((ast_expr_while_t*) statements[s])->value, &expression_value, false, &temporary_type)) return FAILURE;
+                unsigned int conditional_type = stmt->id;
+                if(ir_gen_expression(builder, ((ast_expr_while_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
@@ -703,7 +705,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &bool_type, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
                     char *b_type_str = ast_type_str(&bool_type);
-                    compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
+                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
                     free(a_type_str);
                     free(b_type_str);
                     ast_type_free(&temporary_type);
@@ -725,8 +727,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
                 }
 
-                ast_expr_t **while_stmts = ((ast_expr_while_t*) statements[s])->statements;
-                length_t while_stmts_length = ((ast_expr_while_t*) statements[s])->statements_length;
+                ast_expr_t **while_stmts = ((ast_expr_while_t*) stmt)->statements;
+                length_t while_stmts_length = ((ast_expr_while_t*) stmt)->statements_length;
                 bool terminated;
 
                 open_scope(builder);
@@ -741,7 +743,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     build_break(builder, test_basicblock_id);
                 }
 
-                if(((ast_expr_while_t*) statements[s])->label != NULL) builder->block_stack_length--;
+                if(((ast_expr_while_t*) stmt)->label != NULL) builder->block_stack_length--;
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
@@ -754,9 +756,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t new_basicblock_id = build_basicblock(builder);
                 length_t end_basicblock_id = build_basicblock(builder);
 
-                if(((ast_expr_whilecontinue_t*) statements[s])->label != NULL){
+                if(((ast_expr_whilecontinue_t*) stmt)->label != NULL){
                     prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_whilecontinue_t*) statements[s])->label;
+                    builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_whilecontinue_t*) stmt)->label;
                     builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
                     builder->block_stack_continue_ids[builder->block_stack_length] = new_basicblock_id;
                     builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
@@ -774,8 +776,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 build_break(builder, new_basicblock_id);
                 build_using_basicblock(builder, new_basicblock_id);
 
-                ast_expr_t **loop_stmts = ((ast_expr_whilecontinue_t*) statements[s])->statements;
-                length_t loop_stmts_length = ((ast_expr_whilecontinue_t*) statements[s])->statements_length;
+                ast_expr_t **loop_stmts = ((ast_expr_whilecontinue_t*) stmt)->statements;
+                length_t loop_stmts_length = ((ast_expr_whilecontinue_t*) stmt)->statements_length;
                 bool terminated;
 
                 open_scope(builder);
@@ -788,7 +790,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(!terminated){
                     handle_deference_for_variables(builder, &builder->scope->list);
 
-                    if(statements[s]->id == EXPR_WHILECONTINUE){
+                    if(stmt->id == EXPR_WHILECONTINUE){
                         // 'while continue'
                         build_break(builder, end_basicblock_id);
                     } else {
@@ -797,7 +799,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
                 }
 
-                if(((ast_expr_whilecontinue_t*) statements[s])->label != NULL) builder->block_stack_length--;
+                if(((ast_expr_whilecontinue_t*) stmt)->label != NULL) builder->block_stack_length--;
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
@@ -807,7 +809,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             break;
         case EXPR_DELETE: {
-                ast_expr_unary_t *delete_expr = (ast_expr_unary_t*) statements[s];
+                ast_expr_unary_t *delete_expr = (ast_expr_unary_t*) stmt;
                 if(ir_gen_expression(builder, delete_expr->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(temporary_type.elements_length == 0 || ( temporary_type.elements[0]->id != AST_ELEM_POINTER &&
@@ -829,7 +831,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             break;
         case EXPR_BREAK: {
                 if(builder->break_block_id == 0){
-                    compiler_panicf(builder->compiler, statements[s]->source, "Nowhere to break to");
+                    compiler_panicf(builder->compiler, stmt->source, "Nowhere to break to");
                     return FAILURE;
                 }
 
@@ -844,7 +846,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             return SUCCESS;
         case EXPR_CONTINUE: {
                 if(builder->continue_block_id == 0){
-                    compiler_panicf(builder->compiler, statements[s]->source, "Nowhere to continue to");
+                    compiler_panicf(builder->compiler, stmt->source, "Nowhere to continue to");
                     return FAILURE;
                 }
 
@@ -858,7 +860,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             return SUCCESS;
         case EXPR_BREAK_TO: {
-                char *target_label = ((ast_expr_break_to_t*) statements[s])->label;
+                char *target_label = ((ast_expr_break_to_t*) stmt)->label;
                 length_t target_block_id = 0;
                 bridge_scope_t *block_scope;
 
@@ -871,7 +873,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(target_block_id == 0){
-                    compiler_panicf(builder->compiler, ((ast_expr_break_to_t*) statements[s])->label_source, "Undeclared label '%s'", target_label);
+                    compiler_panicf(builder->compiler, ((ast_expr_break_to_t*) stmt)->label_source, "Undeclared label '%s'", target_label);
                     return FAILURE;
                 }
 
@@ -885,7 +887,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             return SUCCESS;
         case EXPR_CONTINUE_TO: {
-                char *target_label = ((ast_expr_continue_to_t*) statements[s])->label;
+                char *target_label = ((ast_expr_continue_to_t*) stmt)->label;
                 length_t target_block_id = 0;
                 bridge_scope_t *block_scope;
 
@@ -898,7 +900,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 if(target_block_id == 0){
-                    compiler_panicf(builder->compiler, ((ast_expr_continue_to_t*) statements[s])->label_source, "Undeclared label '%s'", target_label);
+                    compiler_panicf(builder->compiler, ((ast_expr_continue_to_t*) stmt)->label_source, "Undeclared label '%s'", target_label);
                     return FAILURE;
                 }
 
@@ -912,7 +914,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             return SUCCESS;
         case EXPR_EACH_IN: {
-                ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) statements[s];
+                ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) stmt;
 
                 length_t prep_basicblock_id = build_basicblock(builder);
                 length_t new_basicblock_id  = build_basicblock(builder);
@@ -955,7 +957,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 initial_idx->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
                 *((unsigned long long*) initial_idx->extra) = 0;
 
-                build_store(builder, initial_idx, idx_ptr);
+                build_store(builder, initial_idx, idx_ptr, stmt->source);
                 build_break(builder, prep_basicblock_id);
                 build_using_basicblock(builder, prep_basicblock_id);
 
@@ -1009,7 +1011,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_type_free(&temporary_type);
 
                 // Generate (idx < length)
-                ir_value_t *idx_value = build_load(builder, idx_ptr);
+                ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
                 built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
                 ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ULESSER;
                 ((ir_instr_math_t*) built_instr)->result_type = ir_builder_bool(builder);
@@ -1086,10 +1088,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE);
                 
                 ir_value_t *it_ptr = build_varptr(builder, array->type, it_var_id);
-                ir_value_t *it_idx = build_load(builder, idx_ptr);
+                ir_value_t *it_idx = build_load(builder, idx_ptr, stmt->source);
 
                 // Update 'it' value
-                build_store(builder, build_array_access(builder, array, it_idx), it_ptr);
+                build_store(builder, build_array_access(builder, array, it_idx, stmt->source), it_ptr, stmt->source);
 
                 // Generate new_block user-defined statements
                 bool terminated;
@@ -1107,7 +1109,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Generate jump inc_block
                 build_using_basicblock(builder, inc_basicblock_id);
 
-                ir_value_t *current_idx = build_load(builder, idx_ptr);
+                ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
                 ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
                 ir_one_value->value_type = VALUE_TYPE_LITERAL;
                 ir_type_map_find(builder->type_map, "usize", &(ir_one_value->type));
@@ -1123,7 +1125,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *increamented = build_value_from_prev_instruction(builder);
 
                 // Store
-                build_store(builder, increamented, idx_ptr);
+                build_store(builder, increamented, idx_ptr, stmt->source);
 
                 // Jump Prep
                 build_break(builder, prep_basicblock_id);
@@ -1139,7 +1141,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             break;
         case EXPR_REPEAT: {
-                ast_expr_repeat_t *repeat = (ast_expr_repeat_t*) statements[s];
+                ast_expr_repeat_t *repeat = (ast_expr_repeat_t*) stmt;
 
                 length_t prep_basicblock_id = build_basicblock(builder);
                 length_t new_basicblock_id  = build_basicblock(builder);
@@ -1182,7 +1184,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 initial_idx->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
                 *((unsigned long long*) initial_idx->extra) = 0;
 
-                build_store(builder, initial_idx, idx_ptr);
+                build_store(builder, initial_idx, idx_ptr, stmt->source);
                 build_break(builder, prep_basicblock_id);
                 build_using_basicblock(builder, prep_basicblock_id);
 
@@ -1196,7 +1198,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 if(!ast_types_conform(builder, &limit, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
-                    compiler_panicf(builder->compiler, statements[s]->source, "Received type '%s' when array length should be 'usize'", a_type_str);
+                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when array length should be 'usize'", a_type_str);
                     free(a_type_str);
                     ast_type_free(&temporary_type);
                     close_scope(builder);
@@ -1206,7 +1208,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_type_free(&temporary_type);
 
                 // Generate (idx < length)
-                ir_value_t *idx_value = build_load(builder, idx_ptr);
+                ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
                 built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
                 ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ULESSER;
                 ((ir_instr_math_t*) built_instr)->result_type = ir_builder_bool(builder);
@@ -1240,7 +1242,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Generate jump inc_block
                 build_using_basicblock(builder, inc_basicblock_id);
 
-                ir_value_t *current_idx = build_load(builder, idx_ptr);
+                ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
                 ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
                 ir_one_value->value_type = VALUE_TYPE_LITERAL;
                 ir_type_map_find(builder->type_map, "usize", &(ir_one_value->type));
@@ -1256,7 +1258,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *increamented = build_value_from_prev_instruction(builder);
 
                 // Store
-                build_store(builder, increamented, idx_ptr);
+                build_store(builder, increamented, idx_ptr, stmt->source);
 
                 // Jump Prep
                 build_break(builder, prep_basicblock_id);
@@ -1272,7 +1274,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             break;
         case EXPR_SWITCH: {
-                ast_expr_switch_t *switch_expr = (ast_expr_switch_t*) statements[s];
+                ast_expr_switch_t *switch_expr = (ast_expr_switch_t*) stmt;
 
                 length_t default_block_id, resume_block_id;
                 length_t starting_block_id = builder->current_block_id;
@@ -1424,7 +1426,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             break;
         default:
-            compiler_panic(builder->compiler, statements[s]->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_statements()");
+            compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_statements()");
             return FAILURE;
         }
     }

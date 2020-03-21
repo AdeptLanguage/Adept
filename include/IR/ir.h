@@ -286,6 +286,8 @@ typedef struct {
     ir_type_t *result_type;
     ir_value_t *value;
     ir_value_t *destination;
+    int maybe_line_number;
+    int maybe_column_number;
 } ir_instr_store_t;
 
 // ---------------- ir_instr_load_t ----------------
@@ -294,6 +296,8 @@ typedef struct {
     unsigned int id;
     ir_type_t *result_type;
     ir_value_t *value;
+    int maybe_line_number;
+    int maybe_column_number;
 } ir_instr_load_t;
 
 // ---------------- ir_instr_varptr_t ----------------
@@ -334,6 +338,8 @@ typedef struct {
     ir_type_t *result_type;
     ir_value_t *value;
     length_t member;
+    int maybe_line_number;
+    int maybe_column_number;
 } ir_instr_member_t;
 
 // ---------------- ir_instr_array_access_t ----------------
@@ -343,6 +349,8 @@ typedef struct {
     ir_type_t *result_type;
     ir_value_t *value;
     ir_value_t *index;
+    int maybe_line_number;
+    int maybe_column_number;
 } ir_instr_array_access_t;
 
 // ---------------- ir_instr_func_address_t ----------------
@@ -456,7 +464,10 @@ typedef struct {
 // An intermediate representation function
 typedef struct {
     const char *name;
+    const char *maybe_filename;
     const char *maybe_definition_string;
+    length_t maybe_line_number;
+    length_t maybe_column_number;
     trait_t traits;
     ir_type_t *return_type;
     ir_type_t **argument_types;

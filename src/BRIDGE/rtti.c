@@ -10,8 +10,8 @@ ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t sourc
     if(build_rtti_relocation(builder, ast_type_str(ast_type), ((unsigned long long*) index->extra), source_on_failure)) return NULL;
 
     ir_global_t *global = &builder->object->ir_module.globals[__types__];
-    ir_value_t *rtti_array = build_load(builder, build_gvarptr(builder, ir_type_pointer_to(builder->pool, global->type), __types__));
-    return build_load(builder, build_array_access(builder, rtti_array, index));
+    ir_value_t *rtti_array = build_load(builder, build_gvarptr(builder, ir_type_pointer_to(builder->pool, global->type), __types__), NULL_SOURCE);
+    return build_load(builder, build_array_access(builder, rtti_array, index, NULL_SOURCE), NULL_SOURCE);
 }
 
 errorcode_t rtti_resolve(compiler_t *compiler, type_table_t *type_table, rtti_relocation_t *relocation){

@@ -290,12 +290,12 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_STR:
         if(builder->object->ir_module.common.ir_string_struct == NULL){
             compiler_panic(builder->compiler, expr->source, "Can't create string literal without String type present");
-            printf("\nTry importing '2.1/String.adept'\n");
+            printf("\nTry importing '2.3/String.adept'\n");
             return FAILURE;
         }
         
-        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("String"));
         *ir_value = build_literal_str(builder, ((ast_expr_str_t*) expr)->array, ((ast_expr_str_t*) expr)->length);
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("String"));
         // NOTE: build_literal_str shouldn't return NULL since we verified that 'String' type is present
         break;
     case EXPR_CSTR:
@@ -315,10 +315,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 *ir_value = build_varptr(builder, ir_ptr_type, variable->id);
 
                 // Load if the variable is a reference
-                if(variable->traits & BRIDGE_VAR_REFERENCE) *ir_value = build_load(builder, *ir_value);
+                if(variable->traits & BRIDGE_VAR_REFERENCE) *ir_value = build_load(builder, *ir_value, expr->source);
 
                 // Unless requested to leave the expression mutable, dereference it
-                if(!leave_mutable) *ir_value = build_load(builder, *ir_value);
+                if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
                 break;
             }
 
@@ -347,7 +347,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
                 // If not requested to leave the expression mutable, dereference it
                 if(!leave_mutable){
-                    *ir_value = build_load(builder, *ir_value);
+                    *ir_value = build_load(builder, *ir_value, expr->source);
                 }
                 break;
             }
@@ -394,7 +394,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
 
                 *ir_value = build_varptr(builder, ir_var_type, var->id);
-                *ir_value = build_load(builder, *ir_value);
+                *ir_value = build_load(builder, *ir_value, expr->source);
 
                 errorcode_t error = ir_gen_call_function_value(builder, ast_var_type, ir_var_type, call_expr, arg_values, arg_types, ir_value, out_expr_type);
                 ast_types_free_fully(arg_types, call_expr->arity);
@@ -479,7 +479,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         return FAILURE;
                     }
 
-                    *ir_value = build_load(builder, build_gvarptr(builder, ir_var_type, g));
+                    *ir_value = build_load(builder, build_gvarptr(builder, ir_var_type, g), expr->source);
 
                     errorcode_t error = ir_gen_call_function_value(builder, ast_var_type, ir_var_type, call_expr, arg_values, arg_types, ir_value, out_expr_type);
                     ast_types_free_fully(arg_types, call_expr->arity);
@@ -536,7 +536,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ast_type_dereference(&struct_value_ast_type);
                 
                 if(expr_is_mutable(member_expr->value)){
-                    struct_value = build_load(builder, struct_value);
+                    struct_value = build_load(builder, struct_value, expr->source);
                 }
             }
 
@@ -645,11 +645,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
             }
 
-            *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type));
+            *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
 
             // If not requested to leave the expression mutable, dereference it
             if(!leave_mutable){
-                *ir_value = build_load(builder, *ir_value);
+                *ir_value = build_load(builder, *ir_value, expr->source);
             }
 
             ast_type_free(&struct_value_ast_type);
@@ -749,7 +749,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
 
                 // Build and append a load instruction
-                *ir_value = build_load(builder, expr_value);
+                *ir_value = build_load(builder, expr_value, expr->source);
 
                 // ir_type_t is expected to be of kind pointer
                 if(expr_value->type->kind != TYPE_KIND_POINTER){
@@ -800,7 +800,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             } else if(expr_is_mutable(array_access_expr->value)){
                 // Load value reference
                 // (*)  int -> int
-                array_value = build_load(builder, array_value);
+                array_value = build_load(builder, array_value, expr->source);
             }
 
             if(index_value->type->kind < TYPE_KIND_S8 || index_value->type->kind > TYPE_KIND_U64){
@@ -824,14 +824,14 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             // Access array
-            *ir_value = build_array_access(builder, array_value, index_value);
+            *ir_value = build_array_access(builder, array_value, index_value, expr->source);
 
             if(expr->id != EXPR_AT){
                 ast_type_dereference(&array_type);
                 
                 // If not requested to leave the expression mutable, dereference it
                 if(!leave_mutable){
-                    *ir_value = build_load(builder, *ir_value);
+                    *ir_value = build_load(builder, *ir_value, expr->source);
                 }
             }
 
@@ -908,7 +908,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
                     stack_pointer = build_stack_save(builder);
                     ir_value_t *temporary_mutable = build_alloc(builder, arg_values[0]->type);
-                    build_store(builder, arg_values[0], temporary_mutable);
+                    build_store(builder, arg_values[0], temporary_mutable, expr->source);
                     arg_values[0] = temporary_mutable;
                 }
 
@@ -917,7 +917,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     && (type_elems[1]->id == AST_ELEM_BASE || type_elems[1]->id == AST_ELEM_GENERIC_BASE)){
                 // Load the value that's being called on if the expression is mutable
                 if(expr_is_mutable(call_expr->value)){
-                    arg_values[0] = build_load(builder, arg_values[0]);
+                    arg_values[0] = build_load(builder, arg_values[0], expr->source);
                 }
             } else {
                 if(call_expr->is_tentative){
@@ -1496,7 +1496,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_math_t));
 
             ((ir_instr_math_t*) instruction)->id = INSTRUCTION_NONE; // Will be determined
-            ((ir_instr_math_t*) instruction)->a = build_load(builder, before_value);
+            ((ir_instr_math_t*) instruction)->a = build_load(builder, before_value, expr->source);
             ((ir_instr_math_t*) instruction)->b = one;
             ((ir_instr_math_t*) instruction)->result_type = before_value->type; 
 
@@ -1520,7 +1520,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             ir_value_t *modified = build_value_from_prev_instruction(builder);
-            build_store(builder, modified, before_value);
+            build_store(builder, modified, before_value, expr->source);
 
             if(out_expr_type){
                 *out_expr_type = before_ast_type;
@@ -1531,7 +1531,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             // Don't even bother with result unless we care about the it
             if(ir_value){
                 if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_PREDECREMENT){
-                    *ir_value = leave_mutable ? before_value : build_load(builder, before_value);
+                    *ir_value = leave_mutable ? before_value : build_load(builder, before_value, expr->source);
                 } else {
                     *ir_value = leave_mutable ? before_value : ((ir_instr_math_t*) instruction)->a;
                 }
@@ -1573,7 +1573,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
                 if(def->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
-                    build_store(builder, initial, destination);
+                    build_store(builder, initial, destination, expr->source);
                 }
 
                 ast_type_free(&temporary_type);

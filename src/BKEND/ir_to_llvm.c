@@ -278,12 +278,17 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
         memset(llvm_exit_blocks, 0, sizeof(LLVMBasicBlockRef) * basicblocks_length);
 
+        // Create basicblocks
         for(length_t b = 0; b != basicblocks_length; b++) llvm_blocks[b] = LLVMAppendBasicBlock(func_skeletons[f], "");
 
         if(llvm->compiler->checks & COMPILER_NULL_CHECKS && basicblocks_length != 0){
+            // Create local variables to hold line number and column number for
+            // when we call pseudo-function to handle null check failures
+            // Create pseudo-function
             llvm->null_check_on_fail_block = LLVMAppendBasicBlock(func_skeletons[f], "");
             LLVMPositionBuilderAtEnd(builder, llvm->null_check_on_fail_block);
 
+            // Establish dependencies and define them if necessary
             LLVMValueRef printf_fn = LLVMGetNamedFunction(llvm->module, "printf");
             LLVMValueRef exit_fn = LLVMGetNamedFunction(llvm->module, "exit");
 
@@ -300,22 +305,45 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 printf_fn = LLVMAddFunction(llvm->module, "printf", printf_fn_type);
             }
 
-            const char *error_msg = "===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS IN FUNCTION '%s'! =====\n";
-            length_t error_msg_length = strlen(error_msg) + 1;
-            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), error_msg_length), ".str");
-            LLVMSetLinkage(global_data, LLVMInternalLinkage);
-            LLVMSetGlobalConstant(global_data, true);
-            LLVMSetInitializer(global_data, LLVMConstString(error_msg, error_msg_length, true));
+            LLVMValueRef global_data;
+
+            // Create template error message
+            if(!llvm->has_null_check_failure_message_bytes){
+                const char *error_msg = "===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS! =====\nIn file:\t%s\nIn function:\t%s\nLine:\t%d\nColumn:\t%d\n";
+                length_t error_msg_length = strlen(error_msg) + 1;
+                global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), error_msg_length), ".str");
+                LLVMSetLinkage(global_data, LLVMInternalLinkage);
+                LLVMSetGlobalConstant(global_data, true);
+                LLVMSetInitializer(global_data, LLVMConstString(error_msg, error_msg_length, true));
+                llvm->null_check_failure_message_bytes = global_data;
+                llvm->has_null_check_failure_message_bytes = true;
+            }
+            
             LLVMValueRef indices[2];
             indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-            LLVMValueRef arg = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+            LLVMValueRef arg = LLVMBuildGEP(llvm->builder, llvm->null_check_failure_message_bytes, indices, 2, "");
 
+            // Decide on filename to use for error message
+            const char *filename = module_funcs[f].maybe_filename;
+            if(filename == NULL) filename = "<unknown file>";
+
+            // Decide on function definition string to use for error function
             const char *func_name = module_funcs[f].maybe_definition_string;
             if(func_name == NULL) func_name = module_funcs[f].name;
 
-            length_t func_name_len = strlen(func_name) + 1;
+            // Define filename string
+            length_t filename_len = strlen(filename) + 1;
+            global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), filename_len), ".str");
+            LLVMSetLinkage(global_data, LLVMInternalLinkage);
+            LLVMSetGlobalConstant(global_data, true);
+            LLVMSetInitializer(global_data, LLVMConstString(filename, filename_len, true));
+            indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
+            LLVMValueRef filename_str = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
 
+            // Define function definition string
+            length_t func_name_len = strlen(func_name) + 1;
             global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), func_name_len), ".str");
             LLVMSetLinkage(global_data, LLVMInternalLinkage);
             LLVMSetGlobalConstant(global_data, true);
@@ -324,10 +352,16 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
             LLVMValueRef func_name_str = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
 
-            LLVMValueRef args[] = {arg, func_name_str};
+            llvm->line_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
+            llvm->column_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
 
-            LLVMBuildCall(builder, printf_fn, args, 2, "");
+            // Create argument list
+            LLVMValueRef args[] = {arg, filename_str, func_name_str, llvm->line_phi, llvm->column_phi};
 
+            // Print the error message
+            LLVMBuildCall(builder, printf_fn, args, 5, "");
+
+            // Exit the program
             arg = LLVMConstInt(LLVMInt32Type(), 1, true);
             LLVMBuildCall(builder, exit_fn, &arg, 1, "");
             LLVMBuildUnreachable(builder);
@@ -510,15 +544,9 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 case INSTRUCTION_STORE: {
                         instr = basicblock->instructions[i];
 
-                        LLVMValueRef destination = ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->destination);
-
-                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
-                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
-
-                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, destination, "");
-                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
-                            LLVMPositionBuilderAtEnd(builder, not_null_block);
-                        }
+                        ir_instr_store_t *store_instr = (ir_instr_store_t*) instr;
+                        LLVMValueRef destination = ir_to_llvm_value(llvm, store_instr->destination);
+                        ir_to_llvm_null_check(llvm, f, destination, store_instr->maybe_line_number, store_instr->maybe_column_number);
 
                         llvm_result = LLVMBuildStore(builder, ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->value), destination);
                         catalog.blocks[b].value_references[i] = llvm_result;
@@ -527,17 +555,9 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 case INSTRUCTION_LOAD: {
                         instr = basicblock->instructions[i];
 
-                        LLVMValueRef pointer = ir_to_llvm_value(llvm, ((ir_instr_load_t*) instr)->value);
-
-                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
-                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
-
-                            llvm_exit_blocks[b] = not_null_block;
-
-                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, pointer, "");
-                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
-                            LLVMPositionBuilderAtEnd(builder, not_null_block);
-                        }
+                        ir_instr_load_t *load_instr = (ir_instr_load_t*) instr;
+                        LLVMValueRef pointer = ir_to_llvm_value(llvm, load_instr->value);
+                        ir_to_llvm_null_check(llvm, f, pointer, load_instr->maybe_line_number, load_instr->maybe_column_number);
 
                         llvm_result = LLVMBuildLoad(builder, pointer, "");
                         catalog.blocks[b].value_references[i] = llvm_result;
@@ -640,15 +660,10 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 case INSTRUCTION_MEMBER: {
                         instr = basicblock->instructions[i];
 
-                        LLVMValueRef foundation = ir_to_llvm_value(llvm, ((ir_instr_member_t*) instr)->value);
+                        ir_instr_member_t *member_instr = (ir_instr_member_t*) instr;
+                        LLVMValueRef foundation = ir_to_llvm_value(llvm, member_instr->value);
 
-                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
-                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
-
-                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, foundation, "");
-                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
-                            LLVMPositionBuilderAtEnd(builder, not_null_block);
-                        }
+                        ir_to_llvm_null_check(llvm, f, foundation, member_instr->maybe_line_number, member_instr->maybe_column_number);
 
                         LLVMValueRef gep_indices[2];
                         gep_indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
@@ -659,16 +674,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 case INSTRUCTION_ARRAY_ACCESS: {
                         instr = basicblock->instructions[i];
 
-                        LLVMValueRef foundation = ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->value);
+                        ir_instr_array_access_t *array_access_instr = (ir_instr_array_access_t*) instr;
+                        LLVMValueRef foundation = ir_to_llvm_value(llvm, array_access_instr->value);
 
-                        if(llvm->compiler->checks & COMPILER_NULL_CHECKS){
-                            LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(func_skeletons[f], "");
+                        ir_to_llvm_null_check(llvm, f, foundation, array_access_instr->maybe_line_number, array_access_instr->maybe_column_number);
 
-                            LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, foundation, "");
-                            LLVMBuildCondBr(builder, if_null, llvm->null_check_on_fail_block, not_null_block);
-                            LLVMPositionBuilderAtEnd(builder, not_null_block);
-                        }
-                        
                         LLVMValueRef gep_index = ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->index);
                         llvm_result = LLVMBuildGEP(builder, ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->value), &gep_index, 1, "");
                         catalog.blocks[b].value_references[i] = llvm_result;
@@ -1158,6 +1168,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.func_skeletons = malloc(sizeof(LLVMValueRef) * module->funcs_length);
     llvm.global_variables = malloc(sizeof(LLVMValueRef) * module->globals_length);
     llvm.anon_global_variables = malloc(sizeof(LLVMValueRef) * module->anon_globals_length);
+    llvm.has_null_check_failure_message_bytes = false;
 
     if(ir_to_llvm_globals(&llvm, object) || ir_to_llvm_functions(&llvm, object)
     || ir_to_llvm_function_bodies(&llvm, object)){
@@ -1284,6 +1295,23 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     free(object_filename);
     free(link_command);
     return SUCCESS;
+}
+
+void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column){
+    if(!(llvm->compiler->checks & COMPILER_NULL_CHECKS)) return;
+
+    LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(llvm->func_skeletons[func_skeleton_index], "");
+
+    LLVMBasicBlockRef current_block = LLVMGetInsertBlock(llvm->builder);
+    LLVMValueRef line_value = LLVMConstInt(LLVMInt32Type(), line, true);
+    LLVMValueRef column_value = LLVMConstInt(LLVMInt32Type(), column, true);
+
+    LLVMAddIncoming(llvm->line_phi, &line_value, &current_block, 1);
+    LLVMAddIncoming(llvm->column_phi, &column_value, &current_block, 1);
+
+    LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, pointer, "");
+    LLVMBuildCondBr(llvm->builder, if_null, llvm->null_check_on_fail_block, not_null_block);
+    LLVMPositionBuilderAtEnd(llvm->builder, not_null_block);
 }
 
 LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler){

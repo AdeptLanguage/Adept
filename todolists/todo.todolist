@@ -35,7 +35,6 @@ COMPLETENESS:
 
 UNINTENDED:
 * Fix bug with #if as statement for single line if
-* Fix bug with defer statements being unfufilled if function ends with #end
 
 TOOL:
 * pragma runtime_safe
@@ -43,7 +42,7 @@ TOOL:
 
 DEBUG:
 * Improve compiler memory tracking
-* Specify line number and specific reason for when null checks fail
+* Specify specific reason for when null checks fail
 
 SPEED:
 * Dont search through global variables linearly

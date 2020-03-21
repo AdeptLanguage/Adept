@@ -54,7 +54,7 @@ TODO:
 * allow skipping __pass__ calls with functionCall(POD value1, POD value2)
 * make __defer__ for fixed arrays be a function/method
 * make 'sizeof' instruction into a constant value instead
-* specify line number and specific reason for when null checks fail
+* specify specific reason for when null checks fail
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -136,3 +136,4 @@ COMPLETED:
 + bitwise assignment operators '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='
 + fill in offsets for AnyStructType types
 + prevent single line functions returning void
++ specify line number and column number when null checks fail

@@ -79,11 +79,11 @@ ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
 
 // ---------------- build_load ----------------
 // Builds a load instruction
-ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value);
+ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source);
 
 // ---------------- build_store ----------------
 // Builds a store instruction
-void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination);
+void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source);
 
 // ---------------- build_break ----------------
 // Builds a break instruction
@@ -99,12 +99,12 @@ ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);
 
 // ---------------- build_array_access ----------------
 // Builds an array access instruction
-ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index);
-ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type);
+ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source);
+ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type, source_t code_source);
 
 // ---------------- build_member ----------------
 // Builds a member access instruction
-ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type);
+ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type, source_t code_source);
 
 // ---------------- build_return ----------------
 // Builds a return instruction

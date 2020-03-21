@@ -1,4 +1,5 @@
 
+#include "LEX/lex.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "IRGEN/ir_builder.h"
@@ -83,7 +84,7 @@ ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value){
+ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source){
     ir_type_t *dereferenced_type = ir_type_dereference(value->type);
     if(dereferenced_type == NULL) return NULL;
 
@@ -92,16 +93,31 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value){
     instruction->id = INSTRUCTION_LOAD;
     instruction->result_type = dereferenced_type;
     instruction->value = value;
+    
+    if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
+        // If we're doing null checks, then give line/column to IR load instruction.
+        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &instruction->maybe_line_number, &instruction->maybe_column_number);
+    }
+
+    // Otherwise, we just ignore line/column fields
     builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
     return build_value_from_prev_instruction(builder);
 }
 
-void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination){
+void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source){
     ir_instr_store_t *built_instr = (ir_instr_store_t*) build_instruction(builder, sizeof(ir_instr_store_t));
     built_instr->id = INSTRUCTION_STORE;
     built_instr->result_type = NULL;
     built_instr->value = value;
     built_instr->destination = destination;
+
+    if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
+        // If we're doing null checks, then give line/column to IR load instruction.
+        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &built_instr->maybe_line_number, &built_instr->maybe_column_number);
+    }
+
+    // Otherwise, we just ignore line/column fields
+    return;
 }
 
 void build_break(ir_builder_t *builder, length_t basicblock_id){
@@ -110,6 +126,7 @@ void build_break(ir_builder_t *builder, length_t basicblock_id){
     built_instr->result_type = NULL;
     built_instr->block_id = basicblock_id;
 }
+
 void build_cond_break(ir_builder_t *builder, ir_value_t *condition, length_t true_block_id, length_t false_block_id){
     ir_instr_cond_break_t *built_instr = (ir_instr_cond_break_t*) build_instruction(builder, sizeof(ir_instr_cond_break_t));
     built_instr->id = INSTRUCTION_CONDBREAK;
@@ -128,7 +145,7 @@ ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index){
+ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source){
     // NOTE: Array access is only for pointer values
     if(value->type->kind != TYPE_KIND_POINTER){
         redprintf("INTERNAL ERROR: build_array_access called on non-pointer value\n");
@@ -136,24 +153,38 @@ ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_valu
         return value;
     }
 
-    return build_array_access_ex(builder, value, index, value->type);
+    return build_array_access_ex(builder, value, index, value->type, code_source);
 }
 
-ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type){
+ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type, source_t code_source){
     ir_instr_array_access_t *built_instr = (ir_instr_array_access_t*) build_instruction(builder, sizeof(ir_instr_array_access_t));
     built_instr->id = INSTRUCTION_ARRAY_ACCESS;
     built_instr->result_type = result_type;
     built_instr->value = value;
     built_instr->index = index;
+
+    if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
+        // If we're doing null checks, then give line/column to IR load instruction.
+        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &built_instr->maybe_line_number, &built_instr->maybe_column_number);
+    }
+
+    // Otherwise, we just ignore line/column fields
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type){
+ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type, source_t code_source){
     ir_instr_member_t *built_instr = (ir_instr_member_t*) build_instruction(builder, sizeof(ir_instr_member_t));
     built_instr->id = INSTRUCTION_MEMBER;
     built_instr->result_type = result_type;
     built_instr->value = value;
     built_instr->member = member;
+
+    if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
+        // If we're doing null checks, then give line/column to IR load instruction.
+        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &built_instr->maybe_line_number, &built_instr->maybe_column_number);
+    }
+
+    // Otherwise, we just ignore line/column fields
     return build_value_from_prev_instruction(builder);
 }
 
@@ -345,7 +376,7 @@ ir_value_t *build_literal_usize(ir_pool_t *pool, length_t literal_value){
 ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length){
     if(builder->object->ir_module.common.ir_string_struct == NULL){
         redprintf("Can't create string literal without String type present");
-        printf("\nTry importing '2.1/String.adept'\n");
+        printf("\nTry importing '2.3/String.adept'\n");
         return NULL;
     }
 
@@ -770,7 +801,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
                 // Call handle_single_dereference() on each item else restore snapshots
 
                 // Access at 'i'
-                ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i));
+                ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
                 
                 // Handle deference for that single item
                 errorcode_t res = handle_single_deference(builder, &temporary_rest_of_type, mutable_item_value);
@@ -848,9 +879,9 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     return ALT_FAILURE;
                 }
 
-                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0));
+                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
-                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
+                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
                 errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value);
 
                 if(failed){
@@ -912,9 +943,9 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     return ALT_FAILURE;
                 }
 
-                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0));
+                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
-                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
+                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
                 errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value);
                 ast_type_free(&ast_field_type);
 
@@ -1020,7 +1051,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     case AST_ELEM_BASE:
     case AST_ELEM_GENERIC_BASE: {
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
-            arguments[0] = build_load(builder, mutable_value);
+            arguments[0] = build_load(builder, mutable_value, ast_type->source);
 
             if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, &pass_func)){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
@@ -1057,7 +1088,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
                 // Call handle_single_pass() on each item else restore snapshots
 
                 // Access at 'i'
-                ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i));
+                ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
                 
                 // Handle passing for that single item
                 errorcode_t res = handle_single_pass(builder, &temporary_rest_of_type, mutable_item_value);
@@ -1089,7 +1120,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     ir_value_t *passed = build_value_from_prev_instruction(builder);
 
     // Store result back into mutable value
-    build_store(builder, passed, mutable_value);
+    build_store(builder, passed, mutable_value, ast_type->source);
     return SUCCESS;
 }
 
@@ -1110,7 +1141,7 @@ errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_re
     }
 
     ir_value_t *variable_reference = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
-    ir_value_t *return_value = build_load(builder, variable_reference);
+    ir_value_t *return_value = build_load(builder, variable_reference, passed_ast_type->source);
 
     // Return modified value
     if(!already_has_return){
@@ -1169,7 +1200,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 ir_value_t *mutable_passed_ir_value = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
-                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
+                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type->source);
                 errorcode_t failed = handle_single_pass(builder, ast_field_type, ir_field_reference);
 
                 if(failed){
@@ -1239,7 +1270,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 ir_value_t *mutable_passed_ir_value = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
-                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type));
+                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type.source);
                 errorcode_t failed = handle_single_pass(builder, &ast_field_type, ir_field_reference);
                 ast_type_free(&ast_field_type);
 
@@ -1301,7 +1332,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 mutable_passed_ir_value = build_bitcast(builder, mutable_passed_ir_value, ir_element_ptr_type);
 
                 // Access 'e'th element
-                ir_value_t *ir_element_reference = build_array_access(builder, mutable_passed_ir_value, build_literal_usize(builder->pool, e));
+                ir_value_t *ir_element_reference = build_array_access(builder, mutable_passed_ir_value, build_literal_usize(builder->pool, e), ast_element_type.source);
 
                 // Handle passing for that element
                 errorcode_t failed = handle_single_pass(builder, &ast_element_type, ir_element_reference);
