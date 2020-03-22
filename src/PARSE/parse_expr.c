@@ -613,6 +613,13 @@ int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
     func_addr_expr->traits = TRAIT_NONE;
     func_addr_expr->match_args = NULL;
     func_addr_expr->match_args_length = 0;
+    func_addr_expr->tentative = false;
+
+    // Optionally enable tentative function lookup: 'func null &functionName'
+    if(tokens[*i].id == TOKEN_NULL){
+        func_addr_expr->tentative = true;
+        (*i)++;
+    }
 
     if(parse_eat(ctx, TOKEN_ADDRESS, "Expected '&' after 'func' keyword in expression")){
         free(func_addr_expr);

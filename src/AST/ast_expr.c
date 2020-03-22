@@ -418,7 +418,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr_expr = (ast_expr_func_addr_t*) expr;
             representation = malloc(strlen(func_addr_expr->name) + 7);
-            sprintf(representation, "func &%s", func_addr_expr->name);
+            sprintf(representation, "func %s&%s", func_addr_expr->tentative ? "null " : "", func_addr_expr->name);
             return representation;
         }
         break;
@@ -973,6 +973,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_func_addr->name = expr_as_func_addr->name;
         clone_as_func_addr->traits = expr_as_func_addr->traits;
         clone_as_func_addr->match_args_length = expr_as_func_addr->match_args_length;
+        clone_as_func_addr->tentative = expr_as_func_addr->tentative;
 
         if(expr_as_func_addr->match_args == NULL){
             clone_as_func_addr->match_args = NULL;

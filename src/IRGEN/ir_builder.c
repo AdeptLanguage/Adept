@@ -1997,6 +1997,12 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
             if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_typeinfo_t*) expr)->target, NULL)) return FAILURE;
         }
         break;
+    case EXPR_TERNARY: {
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_ternary_t*) expr)->condition)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_ternary_t*) expr)->if_true))   return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_ternary_t*) expr)->if_false))  return FAILURE;
+        }
+        break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = (ast_expr_inline_declare_t*) expr;
 

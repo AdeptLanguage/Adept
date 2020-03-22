@@ -665,59 +665,80 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_func_addr_t *func_addr_expr = (ast_expr_func_addr_t*) expr;
 
             funcpair_t pair;
+            bool failed_tentatively = false;        
 
             if(func_addr_expr->match_args == NULL){
                 bool is_unique;
                 if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &is_unique, &pair)){
-                    compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", func_addr_expr->name);
-                    return FAILURE;
+                    if(func_addr_expr->tentative){
+                        failed_tentatively = true;
+                    } else {
+                        compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", func_addr_expr->name);
+                        return FAILURE;
+                    }    
                 }
                 
                 if(!is_unique){
                     compiler_warnf(builder->compiler, func_addr_expr->source, "Multiple functions named '%s', using the first of them", func_addr_expr->name);
                 }
             } else if(ir_gen_find_func(builder->compiler, builder->object, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length, &pair)){
-                compiler_undeclared_function(builder->compiler, builder->object, func_addr_expr->source, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length);
-                return FAILURE;
+                if(func_addr_expr->tentative){
+                    failed_tentatively = true;
+                } else {
+                    compiler_undeclared_function(builder->compiler, builder->object, func_addr_expr->source, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length);
+                    return FAILURE;
+                }
             }
 
-            ir_type_extra_function_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
-            extra->arg_types = pair.ir_func->argument_types;
-            extra->arity = pair.ast_func->arity;
-            extra->return_type = pair.ir_func->return_type;
-            extra->traits = func_addr_expr->traits;
+            if(failed_tentatively){
+                // Since we cannot know the exact type of the function returned (because none exist)
+                // we must return a generic null pointer of type 'ptr'
+                // I'm not sure whether this is the best choice, but it feels right
+                // - Isaac (Mar 21 2020)
+                *ir_value = build_null_pointer(builder->pool);
+            } else {
+                ir_type_extra_function_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
+                extra->arg_types = pair.ir_func->argument_types;
+                extra->arity = pair.ast_func->arity;
+                extra->return_type = pair.ir_func->return_type;
+                extra->traits = func_addr_expr->traits;
 
-            ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
-            ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
-            ir_funcptr_type->extra = extra;
+                ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
+                ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
+                ir_funcptr_type->extra = extra;
 
-            const char *maybe_name = pair.ast_func->traits & AST_FUNC_FOREIGN ||
-                pair.ast_func->traits & AST_FUNC_MAIN ? func_addr_expr->name : NULL;
+                const char *maybe_name = pair.ast_func->traits & AST_FUNC_FOREIGN ||
+                    pair.ast_func->traits & AST_FUNC_MAIN ? func_addr_expr->name : NULL;
 
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
-            ((ir_instr_func_address_t*) instruction)->id = INSTRUCTION_FUNC_ADDRESS;
-            ((ir_instr_func_address_t*) instruction)->result_type = ir_funcptr_type;
-            ((ir_instr_func_address_t*) instruction)->name = maybe_name;
-            ((ir_instr_func_address_t*) instruction)->ir_func_id = pair.ir_func_id;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
+                ir_basicblock_new_instructions(builder->current_block, 1);
+                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
+                ((ir_instr_func_address_t*) instruction)->id = INSTRUCTION_FUNC_ADDRESS;
+                ((ir_instr_func_address_t*) instruction)->result_type = ir_funcptr_type;
+                ((ir_instr_func_address_t*) instruction)->name = maybe_name;
+                ((ir_instr_func_address_t*) instruction)->ir_func_id = pair.ir_func_id;
+                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+                *ir_value = build_value_from_prev_instruction(builder);
+            }
 
             if(out_expr_type != NULL){
-                out_expr_type->elements = malloc(sizeof(ast_elem_t*));
-                out_expr_type->elements_length = 1;
-                out_expr_type->source = func_addr_expr->source;
+                if(failed_tentatively){
+                    ast_type_make_base(out_expr_type, strclone("ptr"));
+                } else {
+                    out_expr_type->elements = malloc(sizeof(ast_elem_t*));
+                    out_expr_type->elements_length = 1;
+                    out_expr_type->source = func_addr_expr->source;
 
-                ast_elem_func_t *function_elem = malloc(sizeof(ast_elem_func_t));
-                function_elem->id = AST_ELEM_FUNC;
-                function_elem->source = func_addr_expr->source;
-                function_elem->arg_types = pair.ast_func->arg_types;
-                function_elem->arity = pair.ast_func->arity;
-                function_elem->return_type = &pair.ast_func->return_type;
-                function_elem->traits = pair.ast_func->traits;
-                function_elem->ownership = false;
+                    ast_elem_func_t *function_elem = malloc(sizeof(ast_elem_func_t));
+                    function_elem->id = AST_ELEM_FUNC;
+                    function_elem->source = func_addr_expr->source;
+                    function_elem->arg_types = pair.ast_func->arg_types;
+                    function_elem->arity = pair.ast_func->arity;
+                    function_elem->return_type = &pair.ast_func->return_type;
+                    function_elem->traits = pair.ast_func->traits;
+                    function_elem->ownership = false;
 
-                out_expr_type->elements[0] = (ast_elem_t*) function_elem;
+                    out_expr_type->elements[0] = (ast_elem_t*) function_elem;
+                }
             }
         }
         break;

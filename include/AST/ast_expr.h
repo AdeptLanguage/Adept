@@ -388,6 +388,7 @@ typedef struct {
     ast_type_t *match_args; // Can be NULL to indicate name-only
     length_t match_args_length;
     trait_t traits;
+    bool tentative;
 } ast_expr_func_addr_t;
 
 // ---------------- ast_expr_array_access_t ----------------
