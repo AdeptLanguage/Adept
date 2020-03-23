@@ -50,7 +50,6 @@ TODO:
 * add way to do "synergy"s between modules
 * keep track of which bases have which __defer__ methods to reduce search time
 * allow functionCall().methodCall().methodCall() like statements
-* allow 'each in' for fixed arrays
 * allow skipping __pass__ calls with functionCall(POD value1, POD value2)
 * make __defer__ for fixed arrays be a function/method
 * make 'sizeof' instruction into a constant value instead
@@ -137,3 +136,4 @@ COMPLETED:
 + fill in offsets for AnyStructType types
 + prevent single line functions returning void
 + specify line number and column number when null checks fail
++ allow 'each in' for fixed arrays

@@ -1,0 +1,13 @@
+
+pragma compiler_version '2.3'
+import 'sys/cstdio.adept'
+
+func main {
+    my_ints 10 int
+    each int in my_ints {
+        it = idx * idx
+    }
+    each int in my_ints {
+        printf('%d => %d\n', idx, it)
+    }
+}

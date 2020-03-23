@@ -978,37 +978,95 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     phantom_list_value.is_mutable = expr_is_mutable(each_in->list);
                 }
                 
+                ir_value_t *fixed_array_value = NULL;
+
                 // Generate length
                 ir_value_t *array_length;
                 if(list_precomputed){
-                    ast_expr_call_method_t length_call;
-                    length_call.id = EXPR_CALL_METHOD;
-                    length_call.source = phantom_list_value.source;
-                    length_call.name = "__length__";
-                    length_call.value = (ast_expr_t*) &phantom_list_value;
-                    length_call.args = NULL;
-                    length_call.arity = 0;
-                    length_call.is_tentative = false;
+                    if(ast_type_is_fixed_array(&phantom_list_value.type)){
+                        // FIXED ARRAY
+                        // Get array length from the type signature of the fixed array
+                        // NOTE: Assumes element->id == AST_ELEM_FIXED_ARRAY because of earlier 'ast_type_is_fixed_array' call should've verified
+                        ast_elem_fixed_array_t *fixed_array_element = (ast_elem_fixed_array_t*) phantom_list_value.type.elements[0];
 
-                    if(ir_gen_expression(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
-                        ast_type_free(&phantom_list_value.type);
-                        return FAILURE;
+                        // Verify that the fixed array type we got is good (just in case)
+                        if(phantom_list_value.type.elements_length < 2){
+                            compiler_panicf(builder->compiler, phantom_list_value.type.source, "INTERNAL ERROR: EXPR_EACH_IN got bad fixed array type in ir_gen_statements");
+                            ast_type_free(&phantom_list_value.type);
+                            return FAILURE;
+                        }
+
+                        // DANGEROUS: Creating AST type that is a reference to parts of another
+                        ast_type_t remaining_type;
+                        remaining_type.elements = &phantom_list_value.type.elements[1];
+                        remaining_type.elements_length = phantom_list_value.type.elements_length - 1;
+                        remaining_type.source = phantom_list_value.type.elements[1]->source;
+
+                        // Verify that the item type matches the item type provided
+                        if(!ast_types_identical(&remaining_type, each_in->it_type)){
+                            compiler_panic(builder->compiler, each_in->it_type->source,
+                                "Element type doesn't match given array's element type");
+        
+                            char *s1 = ast_type_str(each_in->it_type);
+                            char *s2 = ast_type_str(&remaining_type);
+                            printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
+                            free(s1);
+                            free(s2);
+        
+                            ast_type_free(&temporary_type);
+                            return FAILURE;
+                        }
+
+                        // Verify that the value that was given is mutable
+                        if(!phantom_list_value.is_mutable){
+                            compiler_panicf(builder->compiler, phantom_list_value.type.source, "Fixed array given to 'each in' statement must be mutable");
+                            ast_type_free(&phantom_list_value.type);
+                            return FAILURE;
+                        }
+
+                        ir_type_t *item_ir_type;
+                        if(ir_gen_resolve_type(builder->compiler, builder->object, &remaining_type, &item_ir_type)){
+                            ast_type_free(&phantom_list_value.type);
+                            return FAILURE;
+                        }
+
+                        fixed_array_value = build_bitcast(builder, list_precomputed, ir_type_pointer_to(builder->pool, item_ir_type));
+                        array_length = build_literal_usize(builder->pool, fixed_array_element->length);
+                    } else {
+                        // STRUCTURE
+                        // Get array length by calling the __length__() method
+                        ast_expr_call_method_t length_call;
+                        length_call.id = EXPR_CALL_METHOD;
+                        length_call.source = phantom_list_value.source;
+                        length_call.name = "__length__";
+                        length_call.value = (ast_expr_t*) &phantom_list_value;
+                        length_call.args = NULL;
+                        length_call.arity = 0;
+                        length_call.is_tentative = false;
+
+                        if(ir_gen_expression(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
+                            ast_type_free(&phantom_list_value.type);
+                            return FAILURE;
+                        }
                     }
                 } else if(ir_gen_expression(builder, each_in->length, &array_length, false, &temporary_type)){
                     return FAILURE;
                 }
 
-                if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
-                    char *a_type_str = ast_type_str(&temporary_type);
-                    compiler_panicf(builder->compiler, each_in->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
-                    free(a_type_str);
+                if(!fixed_array_value){
+                    // Ensure the given value for the array length is of type 'usize'
+                    if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
+                        char *a_type_str = ast_type_str(&temporary_type);
+                        compiler_panicf(builder->compiler, each_in->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
+                        free(a_type_str);
 
-                    if(list_precomputed) ast_type_free(&phantom_list_value.type);
+                        if(list_precomputed) ast_type_free(&phantom_list_value.type);
+                        ast_type_free(&temporary_type);
+                        return FAILURE;
+                    }
+
                     ast_type_free(&temporary_type);
-                    return FAILURE;
                 }
-
-                ast_type_free(&temporary_type);
 
                 // Generate (idx < length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
@@ -1031,7 +1089,13 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Generate array value
                 ir_value_t *array;
-                if(list_precomputed){
+                if(fixed_array_value){
+                    // FIXED ARRAY
+                    // We already have the value for the array (since we calculated it when doing fixed-array stuff)
+                    array = fixed_array_value;
+                } else if(list_precomputed){
+                    // STRUCTURE
+                    // Call the '__array__()' method to get the value for the array
                     ast_expr_call_method_t array_call;
                     array_call.id = EXPR_CALL_METHOD;
                     array_call.source = phantom_list_value.source;
@@ -1054,32 +1118,37 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
-                if(temporary_type.elements_length == 0 || temporary_type.elements[0]->id != AST_ELEM_POINTER){
-                    compiler_panic(builder->compiler, each_in->low_array->source,
-                        "Low-level array type for 'each in' statement must be a pointer");
+                if(!fixed_array_value){
+                    // Ensure the given value for the array is of a pointer type
+                    if(temporary_type.elements_length == 0 || temporary_type.elements[0]->id != AST_ELEM_POINTER){
+                        compiler_panic(builder->compiler, each_in->low_array->source,
+                            "Low-level array type for 'each in' statement must be a pointer");
+                        ast_type_free(&temporary_type);
+                        close_scope(builder);
+                        return FAILURE;
+                    }
+
+                    // Get the item type
+                    ast_type_dereference(&temporary_type);
+
+                    // Ensure the item type matches the item type provided
+                    if(!ast_types_identical(&temporary_type, each_in->it_type)){
+                        compiler_panic(builder->compiler, each_in->it_type->source,
+                            "Element type doesn't match given array's element type");
+
+                        char *s1 = ast_type_str(each_in->it_type);
+                        char *s2 = ast_type_str(&temporary_type);
+                        printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
+                        free(s1);
+                        free(s2);
+
+                        ast_type_free(&temporary_type);
+                        close_scope(builder);
+                        return FAILURE;
+                    }
+
                     ast_type_free(&temporary_type);
-                    close_scope(builder);
-                    return FAILURE;
                 }
-
-                ast_type_dereference(&temporary_type);
-
-                if(!ast_types_identical(&temporary_type, each_in->it_type)){
-                    compiler_panic(builder->compiler, each_in->it_type->source,
-                        "Element type doesn't match given array's element type");
-
-                    char *s1 = ast_type_str(each_in->it_type);
-                    char *s2 = ast_type_str(&temporary_type);
-                    printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
-                    free(s1);
-                    free(s2);
-
-                    ast_type_free(&temporary_type);
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                ast_type_free(&temporary_type);
 
                 length_t it_var_id = builder->next_var_id;
                 char *it_name = each_in->it_name ? each_in->it_name : "it";

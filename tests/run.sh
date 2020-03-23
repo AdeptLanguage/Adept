@@ -40,6 +40,7 @@ compile defer_global || exit $?
 compile deprecated || exit $?
 compile dereference || exit $?
 compile each_in || exit $?
+compile each_in_fixed || exit $?
 compile each_in_list || exit $?
 compile enums || exit $?
 compile equals_func || exit $?

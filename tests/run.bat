@@ -63,6 +63,8 @@ call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile each_in
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile each_in_fixed
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile each_in_list
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile enums

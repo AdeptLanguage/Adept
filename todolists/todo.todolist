@@ -29,7 +29,6 @@ COMPLETENESS:
 * Support 64-bit numeric literals without suffixes
 * Better error messages for when not using 'usize' for <$T> List.remove()
 * Allow functionCall().methodCall().methodCall() like statements
-* Allow 'each in' for fixed arrays
 * Allow skipping __pass__ calls with functionCall(POD value1, POD value2)
 * Fix lazy 'e'/'E' lexing for doubles
 
