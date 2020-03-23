@@ -42,21 +42,53 @@ void ast_init(ast_t *ast){
     ast->polymorphic_structs_capacity = 0;
 
     // Add relevant standard meta definitions
+
+    // __compiler__
+    weak_cstr_t build_date = __DATE__;
+    weak_cstr_t build_time = __TIME__;
+    strong_cstr_t compiler_string = malloc(21 + strlen(ADEPT_VERSION_STRING) + strlen(build_date) + strlen(build_time));
+    sprintf(compiler_string, "Adept %s - Build %s %s CDT", ADEPT_VERSION_STRING, build_date, build_time);
+    meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler__", compiler_string);
+    // (we don't have to worry about freeing 'compiler_string' because meta_definition_add_str takes ownership of strong_cstr_t)
+
+    // __compiler_version__
+    meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_version__", strclone(ADEPT_VERSION_STRING));
+
+    // __windows__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__windows__",
     #ifdef _WIN32
-    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__windows__", true);
+        true
+    #else
+        false
     #endif
+    );
 
+    // __macos__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__macos__",
     #if defined(__APPLE__) || defined(__MACH__)
-    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__macos__", true);
+        true
+    #else
+        false
     #endif
+    );
 
+    // __unix__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__unix__",
     #if defined(__unix__) || defined(__unix) || defined(unix)
-    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__unix__", true);
+        true
+    #else
+        false
     #endif
+    );
 
+    // __linux__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__linux__",
     #if defined(__linux__) || defined(__linux) || defined(linux)
-    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__linux__", true);
+        true
+    #else
+        false
     #endif
+    );
 
     unsigned short x = 0xEEFF;
     if (*((unsigned char*) &x) == 0xFF){

@@ -12,6 +12,7 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
+#define ADEPT_VERSION_STRING "2.3"
 
 #include <stdio.h>
 #include <assert.h>

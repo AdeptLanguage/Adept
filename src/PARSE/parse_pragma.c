@@ -24,7 +24,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
 
     const char * const directives[] = {
         "compiler_supports", "compiler_version", "deprecated", "disable_warnings", "enable_warnings", "help", "mac_only", "no_type_info",
-        "no_undef", "null_checks", "optimization", "options", "package", "project_name", "unsafe_new", "unsupported", "windows_only"
+        "no_undef", "null_checks", "optimization", "options", "package", "project_name", "unsafe_meta", "unsafe_new", "unsupported", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -42,7 +42,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
                 : "Expected compiler version string after 'pragma compiler_version'");
 
         if(read == NULL){
-            printf("\nDid you mean: pragma %s '2.3'?\n", directive == 0 ? "compiler_supports" : "compiler_version");
+            printf("\nDid you mean: pragma %s '%s'?\n", directive == 0 ? "compiler_supports" : "compiler_version", ADEPT_VERSION_STRING);
             return FAILURE;
         }
 
@@ -131,10 +131,13 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 14: // 'unsafe_new' directive
-        ctx->compiler->checks |= COMPILER_UNSAFE_NEW;
+    case 14: // 'unsafe_meta' directive
+        ctx->compiler->traits |= COMPILER_UNSAFE_META;
         return SUCCESS;
-    case 15: // 'unsupported' directive
+    case 15: // 'unsafe_new' directive
+        ctx->compiler->traits |= COMPILER_UNSAFE_NEW;
+        return SUCCESS;
+    case 16: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -151,7 +154,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 16: // 'windows_only' directive
+    case 17: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;

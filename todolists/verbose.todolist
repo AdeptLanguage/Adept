@@ -39,7 +39,6 @@ TODO:
     #else
         it.progress = 0.002f; return
     #end'
-* add '__compiler_version__' as a builtin meta value
 * allow for self-referencing pointers
 * != management function
 * maybe allow custom integer types for enums
@@ -137,3 +136,5 @@ COMPLETED:
 + prevent single line functions returning void
 + specify line number and column number when null checks fail
 + allow 'each in' for fixed arrays
++ add '__compiler_version__' as a builtin meta value
++ make meta directives less error prone by adding a warning when undefined transcendant variables are used [can be disabled using '--unsafe-meta' or 'pragma unsafe_meta']

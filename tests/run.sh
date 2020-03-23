@@ -133,6 +133,7 @@ compile until || exit $?
 compile until_break || exit $?
 compile varargs || exit $?
 compile variables || exit $?
+compile version || exit $?
 compile while || exit $?
 compile while_continue || exit $?
 

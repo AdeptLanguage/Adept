@@ -376,7 +376,7 @@ ir_value_t *build_literal_usize(ir_pool_t *pool, length_t literal_value){
 ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length){
     if(builder->object->ir_module.common.ir_string_struct == NULL){
         redprintf("Can't create string literal without String type present");
-        printf("\nTry importing '2.3/String.adept'\n");
+        printf("\nTry importing '%s/String.adept'\n", ADEPT_VERSION_STRING);
         return NULL;
     }
 

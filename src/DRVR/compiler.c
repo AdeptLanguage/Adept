@@ -251,6 +251,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_NO_UNDEF;
             } else if(strcmp(argv[arg_index], "--no-type-info") == 0){
                 compiler->traits |= COMPILER_NO_TYPE_INFO;
+            } else if(strcmp(argv[arg_index], "--unsafe-meta") == 0){
+                compiler->traits |= COMPILER_UNSAFE_META;
             } else if(strcmp(argv[arg_index], "--unsafe-new") == 0){
                 compiler->traits |= COMPILER_UNSAFE_NEW;
             } else if(strcmp(argv[arg_index], "--null-checks") == 0){
@@ -413,7 +415,7 @@ void break_into_arguments(const char *s, int *out_argc, char ***out_argv){
 }
 
 void show_help(){
-    printf("The Adept Compiler v2.3 - (c) 2016-2020 Isaac Shelton\n\n");
+    printf("The Adept Compiler v%s - (c) 2016-2020 Isaac Shelton\n\n", ADEPT_VERSION_STRING);
     printf("Usage: adept [options] <filename>\n\n");
     printf("Options:\n");
     printf("    -h, --help        Display this message\n");
@@ -430,6 +432,7 @@ void show_help(){
     printf("\nLanguage Options:\n");
     printf("    --no-type-info    Disable runtime type information\n");
     printf("    --no-undef        Force initialize for 'undef'\n");
+    printf("    --unsafe-meta     Allow unsafe usage of meta constructs\n");
     printf("    --unsafe-new      Disables zero-initialization of memory allocated with 'new'\n");
     printf("    --null-checks     Enable runtime null-checks\n");
 

@@ -15,14 +15,12 @@ VERIFICATION:
 * ir_to_llvm_type circular containment detection
 * Throw errors for fields with duplicate names in structs
 * Dont allow void in places it doesn't make sense
-* Make meta directives less error prone
 * Don't allow multiple polymorphic types with the same name and number of parameters
 
 COMPLETENESS:
 * __pass__ for fixed arrays maybe
 * __assign__ for fixed arrays maybe
 * Allow polymorphic names for generic bases
-* Add '__compiler_version__' as a builtin meta value
 * Allow for self-referencing pointers
 * != management function
 * Allow '==' constants to be given to 'case'

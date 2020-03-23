@@ -290,7 +290,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_STR:
         if(builder->object->ir_module.common.ir_string_struct == NULL){
             compiler_panic(builder->compiler, expr->source, "Can't create string literal without String type present");
-            printf("\nTry importing '2.3/String.adept'\n");
+            printf("\nTry importing '%s/String.adept'\n", ADEPT_VERSION_STRING);
             return FAILURE;
         }
         

@@ -26,8 +26,9 @@ extern "C" {
 #define COMPILER_NO_UNDEF         TRAIT_7
 #define COMPILER_NO_TYPE_INFO     TRAIT_8
 #define COMPILER_NO_REMOVE_OBJECT TRAIT_A
-#define COMPILER_UNSAFE_NEW       TRAIT_B
-#define COMPILER_FUSSY            TRAIT_C
+#define COMPILER_UNSAFE_META      TRAIT_B
+#define COMPILER_UNSAFE_NEW       TRAIT_C
+#define COMPILER_FUSSY            TRAIT_D
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
@@ -54,7 +55,7 @@ extern "C" {
 
 // ---------------- compiler_t ----------------
 // Structure that encapsulates the compiler
-typedef struct {
+typedef struct compiler {
     char *location;      // Compiler Filename
     char *root;          // Compiler Root Directory (with /)
 

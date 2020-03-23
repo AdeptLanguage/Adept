@@ -8,6 +8,8 @@ extern "C" {
 
 #include "UTIL/ground.h"
 
+struct compiler;
+
 #define META_EXPR_UNDEF 0x00
 #define META_EXPR_TRUE  0x01
 #define META_EXPR_FALSE 0x02
@@ -54,6 +56,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     strong_cstr_t name;
+    source_t source;
 } meta_expr_var_t;
 
 typedef struct {
@@ -82,11 +85,11 @@ void meta_expr_free_fully(meta_expr_t *expr);
 
 meta_expr_t *meta_expr_clone(meta_expr_t *expr);
 
-void meta_collapse(meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-bool meta_expr_into_bool(meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-long long meta_expr_into_int(meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-double meta_expr_into_float(meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-strong_cstr_t meta_expr_into_string(meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
+void meta_collapse(struct compiler *compiler, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
+bool meta_expr_into_bool(struct compiler *compiler, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
+long long meta_expr_into_int(struct compiler *compiler, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
+double meta_expr_into_float(struct compiler *compiler, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
+strong_cstr_t meta_expr_into_string(struct compiler *compiler, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
 
 void meta_definition_add(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, meta_expr_t *value);
 void meta_definition_add_bool(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, bool boolean);
