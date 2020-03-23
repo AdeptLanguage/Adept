@@ -49,6 +49,7 @@ compile fixed_array_assign || exit $?
 compile fixed_array_deference || exit $?
 compile fixed_array_pass || exit $?
 compile funcaddr || exit $?
+compile funcaddrnull || exit $?
 compile funcptr || exit $?
 compile functions || exit $?
 compile globals || exit $?

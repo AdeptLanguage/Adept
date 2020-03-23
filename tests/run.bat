@@ -84,6 +84,8 @@ call :compile fixed_array_pass
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddr
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile funcaddrnull
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcptr
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile functions

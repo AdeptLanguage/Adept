@@ -1055,6 +1055,14 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
             }
         }
 
+        if(llvm->compiler->checks & COMPILER_NULL_CHECKS) {
+            // Remove basicblock and PHI nodes for null check failure pseudo-function if not used
+            // NOTE: Assumes (LLVMCountIncoming(llvm->line_phi) == LLVMCountIncoming(llvm->column_phi))
+            if(llvm->line_phi && LLVMCountIncoming(llvm->line_phi) == 0 && llvm->null_check_on_fail_block){
+                LLVMDeleteBasicBlock(llvm->null_check_on_fail_block);
+            }
+        }
+
         for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
         free(catalog.blocks);
         free(stack.values);

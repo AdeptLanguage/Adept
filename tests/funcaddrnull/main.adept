@@ -1,0 +1,17 @@
+
+#default define_f false
+import 'sys/cstdio.adept'
+
+func main {
+    function_address func() void = func null &f
+
+    #if define_f
+    printf('%p should not be null because the function f() does exist\n', function_address)
+    #else
+    printf('%p should be null because the function f() does not exist\n', function_address)
+    #end
+}
+
+#if define_f
+func f {}
+#end
