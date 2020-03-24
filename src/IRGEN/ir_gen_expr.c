@@ -414,6 +414,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             // If no non-global variable exists, look for function
             funcpair_t pair;
             errorcode_t error = ir_gen_find_func_conforming(builder, call_expr->name, arg_values, arg_types, call_expr->arity, &pair);
+            
+            if(error == ALT_FAILURE){
+                ast_types_free_fully(arg_types, call_expr->arity);
+                return FAILURE;
+            }
 
             if(error == SUCCESS){
                 // Found function that fits given name and arguments

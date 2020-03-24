@@ -39,7 +39,6 @@ TOOL:
 
 DEBUG:
 * Improve compiler memory tracking
-* Specify specific reason for when null checks fail
 
 SPEED:
 * Dont search through global variables linearly

@@ -1002,11 +1002,6 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                 ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
                 arguments[0] = values[i];
 
-                // if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, &result) == FAILURE){
-                //     ir_pool_snapshot_restore(builder->pool, &snapshot);
-                //     continue;
-                // }
-
                 errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &result);
                 if(errorcode == ALT_FAILURE) return FAILURE;
 

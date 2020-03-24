@@ -32,6 +32,7 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
 
     if(binary_string_search(invalid_names, invalid_names_length, name) != -1){
         compiler_panicf(ctx->compiler, source, "Reserved type name '%s' can't be used to create a struct", name);
+        free(name);
         return FAILURE;
     }
 

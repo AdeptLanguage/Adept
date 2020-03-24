@@ -66,7 +66,7 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
         }
     case AST_ELEM_POLYMORPH_PREREQ: {
             new_element = malloc(sizeof(ast_elem_polymorph_prereq_t));
-            ((ast_elem_polymorph_prereq_t*) new_element)->id = AST_ELEM_POLYMORPH;
+            ((ast_elem_polymorph_prereq_t*) new_element)->id = AST_ELEM_POLYMORPH_PREREQ;
             ((ast_elem_polymorph_prereq_t*) new_element)->source = element->source;
             ((ast_elem_polymorph_prereq_t*) new_element)->name = strclone(((ast_elem_polymorph_prereq_t*) element)->name);
             ((ast_elem_polymorph_prereq_t*) new_element)->similarity_prerequisite = strclone(((ast_elem_polymorph_prereq_t*) element)->similarity_prerequisite);

@@ -1,6 +1,7 @@
 
 #include "UTIL/color.h"
 #include "UTIL/search.h"
+#include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
 
@@ -722,57 +723,84 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
         if(poly_elem_id == AST_ELEM_POLYMORPH_PREREQ){
             ast_elem_polymorph_prereq_t *prereq = (ast_elem_polymorph_prereq_t*) polymorphic_type->elements[i];
 
-            ast_struct_t *similar = ast_struct_find(&builder->object->ast, prereq->similarity_prerequisite);
-
-            if(similar == NULL){
-                compiler_panicf(builder->compiler, prereq->source, "Undeclared struct '%s'", similar);
-                return ALT_FAILURE;
-            }
-
+            // Verify that we are at the final element of the concrete type, otherwise it
+            // isn't possible for the prerequisite to be fulfilled
             if(i + 1 != concrete_type->elements_length) return FAILURE;
 
-            if(concrete_type->elements[i]->id == AST_ELEM_BASE){
-                char *given_name = ((ast_elem_base_t*) concrete_type->elements[i])->base;
-                ast_struct_t *given = ast_struct_find(&builder->object->ast, given_name);
+            // NOTE: Must be presorted
+            const char *reserved_prereqs[] = {
+                "__number__", "__primitive__", "__struct__"
+            };
+            const length_t reserved_prereqs_length = sizeof(reserved_prereqs) / sizeof(weak_cstr_t*);
+            maybe_index_t special_prereq = binary_string_search(reserved_prereqs, reserved_prereqs_length, prereq->similarity_prerequisite);
+            bool meets_special_prereq = false;
 
-                if(given == NULL){
-                    redprintf("INTERNAL ERROR: arg_type_polymorphable failed to find struct '%s' which should exist\n", given_name);
-                    return FAILURE;
-                }
+            switch(special_prereq){
+            case 0: // __number__
+                meets_special_prereq = concrete_type->elements[i]->id == AST_ELEM_BASE && typename_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base) != BUILTIN_TYPE_NONE;
+                break;
+            case 1: // __primitive__
+                meets_special_prereq = concrete_type->elements[i]->id == AST_ELEM_BASE && typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
+                break;
+            case 2: // __struct__
+                meets_special_prereq = concrete_type->elements[i]->id != AST_ELEM_BASE || !typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
+                break;
+            }
 
-                // Ensure polymorphic prerequisite met
-                length_t dummy_field_index;
-                for(length_t f = 0; f != similar->field_count; f++){
-                    if(!ast_struct_find_field(given, similar->field_names[f], &dummy_field_index)) return FAILURE;
-                }
+            if(!meets_special_prereq){
+                // If we failed a special prereq, then return false
+                if(special_prereq != - 1) return FAILURE;
 
-                // All fields of struct 'similar' exist in struct 'given'
-                // therefore 'given' is similar to 'similar' and the prerequisite is met
-            } else if(concrete_type->elements[i]->id != AST_ELEM_GENERIC_BASE){
-                if(((ast_elem_generic_base_t*) concrete_type->elements[i])->name_is_polymorphic){
-                    redprintf("INTERNAL ERROR: arg_type_polymorphable encountered polymorphic generic struct name in middle of AST type\n");
+                ast_struct_t *similar = ast_struct_find(&builder->object->ast, prereq->similarity_prerequisite);
+
+                if(similar == NULL){
+                    compiler_panicf(builder->compiler, prereq->source, "Undeclared struct '%s'", prereq->similarity_prerequisite);
                     return ALT_FAILURE;
                 }
 
-                char *given_name = ((ast_elem_generic_base_t*) concrete_type->elements[i])->name;
-                ast_polymorphic_struct_t *given = ast_polymorphic_struct_find(&builder->object->ast, given_name);
+                if(concrete_type->elements[i]->id == AST_ELEM_BASE){
+                    char *given_name = ((ast_elem_base_t*) concrete_type->elements[i])->base;
+                    ast_struct_t *given = ast_struct_find(&builder->object->ast, given_name);
 
-                if(given == NULL){
-                    redprintf("INTERNAL ERROR: arg_type_polymorphable failed to find polymophic struct '%s' which should exist\n", given_name);
+                    if(given == NULL){
+                        // Undeclared struct given, no error should be necessary
+                        return FAILURE;
+                    }
+
+                    // Ensure polymorphic prerequisite met
+                    length_t dummy_field_index;
+                    for(length_t f = 0; f != similar->field_count; f++){
+                        if(!ast_struct_find_field(given, similar->field_names[f], &dummy_field_index)) return FAILURE;
+                    }
+
+                    // All fields of struct 'similar' exist in struct 'given'
+                    // therefore 'given' is similar to 'similar' and the prerequisite is met
+                } else if(concrete_type->elements[i]->id != AST_ELEM_GENERIC_BASE){
+                    if(((ast_elem_generic_base_t*) concrete_type->elements[i])->name_is_polymorphic){
+                        redprintf("INTERNAL ERROR: arg_type_polymorphable encountered polymorphic generic struct name in middle of AST type\n");
+                        return ALT_FAILURE;
+                    }
+
+                    char *given_name = ((ast_elem_generic_base_t*) concrete_type->elements[i])->name;
+                    ast_polymorphic_struct_t *given = ast_polymorphic_struct_find(&builder->object->ast, given_name);
+
+                    if(given == NULL){
+                        redprintf("INTERNAL ERROR: arg_type_polymorphable failed to find polymophic struct '%s' which should exist\n", given_name);
+                        return FAILURE;
+                    }
+
+                    // Ensure polymorphic prerequisite met
+                    length_t dummy_field_index;
+                    for(length_t f = 0; f != similar->field_count; f++){
+                        // NOTE: Assuming 'ast_polymorphic_struct_t' overlaps with 'ast_struct_t'
+                        if(!ast_struct_find_field((ast_struct_t*) given, similar->field_names[f], &dummy_field_index)) return FAILURE;
+                    }
+
+                    // All fields of struct 'similar' exist in struct 'given'
+                    // therefore 'given' is similar to 'similar' and the prerequisite is met
+                } else {
                     return FAILURE;
                 }
-
-                // Ensure polymorphic prerequisite met
-                length_t dummy_field_index;
-                for(length_t f = 0; f != similar->field_count; f++){
-                    // NOTE: Assuming 'ast_polymorphic_struct_t' overlaps with 'ast_struct_t'
-                    if(!ast_struct_find_field((ast_struct_t*) given, similar->field_names[f], &dummy_field_index)) return FAILURE;
-                }
-
-                // All fields of struct 'similar' exist in struct 'given'
-                // therefore 'given' is similar to 'similar' and the prerequisite is met
-            } else {
-                return FAILURE;
             }
             
             // Ensure there aren't other elements following the polymorphic element
@@ -888,7 +916,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
 
                 if(generic_base_a->name_is_polymorphic || generic_base_b->name_is_polymorphic){
                     redprintf("INTERNAL ERROR: polymorphic names for generic structs not implemented in arg_type_polymorphable\n");
-                    return FAILURE;
+                    return ALT_FAILURE;
                 }
 
                 if(generic_base_a->generics_length != generic_base_b->generics_length) return FAILURE;
