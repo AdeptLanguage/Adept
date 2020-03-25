@@ -45,7 +45,6 @@ TODO:
 * allow '==' constants to be given to 'case'
 * support 64-bit numeric literals without suffixes
 * better error messages for when not using 'usize' for <$T> List.remove()
-* add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
 * add way to do "synergy"s between modules
 * keep track of which bases have which __defer__ methods to reduce search time
 * allow functionCall().methodCall().methodCall() like statements
@@ -53,6 +52,7 @@ TODO:
 * make __defer__ for fixed arrays be a function/method
 * make 'sizeof' instruction into a constant value instead
 * specify specific reason for when null checks fail
+* ~__8__ ~__16__ ~__32__ ~__64__
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -138,3 +138,4 @@ COMPLETED:
 + allow 'each in' for fixed arrays
 + add '__compiler_version__' as a builtin meta value
 + make meta directives less error prone by adding a warning when undefined transcendant variables are used [can be disabled using '--unsafe-meta' or 'pragma unsafe_meta']
++ add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.

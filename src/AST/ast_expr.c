@@ -417,7 +417,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         }
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr_expr = (ast_expr_func_addr_t*) expr;
-            representation = malloc(strlen(func_addr_expr->name) + 7);
+            representation = malloc(strlen(func_addr_expr->name) + 12);
             sprintf(representation, "func %s&%s", func_addr_expr->tentative ? "null " : "", func_addr_expr->name);
             return representation;
         }

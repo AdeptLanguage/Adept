@@ -53,5 +53,4 @@ IDEA:
 * Do constant casting when available and allow casting for switch cases
 * Add support multiple value cases for switch
 * Maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?
-* Add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
 * Add way to do "synergy"s between modules

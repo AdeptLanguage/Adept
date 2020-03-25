@@ -785,5 +785,7 @@ int ast_enums_cmp(const void *a, const void *b){
 }
 
 int ast_polymorphic_funcs_cmp(const void *a, const void *b){
-    return strcmp(((ast_polymorphic_func_t*) a)->name, ((ast_polymorphic_func_t*) b)->name);
+    int diff = strcmp(((ast_polymorphic_func_t*) a)->name, ((ast_polymorphic_func_t*) b)->name);
+    if(diff != 0) return diff;
+    return (int) ((ast_polymorphic_func_t*) a)->ast_func_id - (int) ((ast_polymorphic_func_t*) b)->ast_func_id;
 }
