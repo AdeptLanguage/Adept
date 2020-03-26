@@ -1,0 +1,6 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    printf('%f %f %f\n', 3.14159265e5, 3.14159265e-3, 3.1415265e2)
+}

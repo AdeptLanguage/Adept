@@ -103,6 +103,7 @@ compile repeat || exit $?
 compile repeat_args || exit $?
 compile repeat_fields || exit $?
 compile return_ten || exit $?
+compile scientific || exit $?
 compile scoped_variables || exit $?
 compile similar || exit $?
 compile sizeof || exit $?

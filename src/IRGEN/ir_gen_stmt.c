@@ -1093,6 +1093,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     // FIXED ARRAY
                     // We already have the value for the array (since we calculated it when doing fixed-array stuff)
                     array = fixed_array_value;
+
+                    // We don't need 'phantom_list_value' anymore, so free its type
+                    ast_type_free(&phantom_list_value.type);
                 } else if(list_precomputed){
                     // STRUCTURE
                     // Call the '__array__()' method to get the value for the array

@@ -158,7 +158,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
         (*i)++;
         break;
     case META_DIRECTIVE_HALT: // halt
-        ctx->compiler->traits |= COMPILER_RESULT_SUCCESS;
+        ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         return FAILURE;
     case META_DIRECTIVE_IF: case META_DIRECTIVE_UNLESS: { // if, unless
             bool is_unless = standard == META_DIRECTIVE_UNLESS;

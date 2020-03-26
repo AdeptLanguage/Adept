@@ -186,6 +186,8 @@ call :compile repeat_fields
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile return_ten
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile scientific
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile scoped_variables
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile similar
