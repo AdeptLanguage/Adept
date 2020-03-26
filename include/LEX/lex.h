@@ -25,6 +25,7 @@ typedef struct {
     length_t buildup_capacity;
     length_t buildup_inner_stride;
     bool is_hexadecimal;
+    bool can_exp;
 } lex_state_t;
 
 // ==============================================================

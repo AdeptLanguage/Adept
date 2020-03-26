@@ -28,7 +28,6 @@ COMPLETENESS:
 * Better error messages for when not using 'usize' for <$T> List.remove()
 * Allow functionCall().methodCall().methodCall() like statements
 * Allow skipping __pass__ calls with functionCall(POD value1, POD value2)
-* Fix lazy 'e'/'E' lexing for doubles
 
 UNINTENDED:
 * Fix bug with #if as statement for single line if

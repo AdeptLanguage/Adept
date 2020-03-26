@@ -205,6 +205,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     lex_state.buildup[0] = buffer[i];
                     lex_state.state = LEX_STATE_NUMBER;
                     lex_state.is_hexadecimal = false;
+                    lex_state.can_exp = true;
                     break;
                 }
 
@@ -454,7 +455,10 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             tmp = buffer[i];
             if(tmp == '_') break; // Ignore underscores in numbers
 
-            if((tmp >= '0' && tmp <= '9') || tmp == '.' || tmp == 'e' || tmp == 'E' || (lex_state.is_hexadecimal
+            bool exp = lex_state.can_exp && (tmp == 'e' || tmp == 'E') && lex_state.buildup_length != 0;
+            if(exp) lex_state.can_exp = false;
+
+            if((tmp >= '0' && tmp <= '9') || tmp == '.' || exp || (lex_state.is_hexadecimal
             &&((tmp >= 'A' && tmp <= 'F') || (tmp >= 'a' && tmp <= 'f'))) ){
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
             } else if(lex_state.buildup[0] == '0' && lex_state.buildup_length == 1 && (tmp == 'x' || tmp == 'X')){
@@ -652,6 +656,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 lex_state.buildup[1] = buffer[i];
                 lex_state.state = LEX_STATE_NUMBER;
                 lex_state.is_hexadecimal = false;
+                lex_state.can_exp = true;
                 break;
             }
 
