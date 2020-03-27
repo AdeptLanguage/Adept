@@ -1684,7 +1684,7 @@ errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t 
     instruction->a = lhs;
     instruction->b = rhs;
     instruction->id = INSTRUCTION_NONE; // For safety
-    instruction->result_type = lhs->type;
+    instruction->result_type = result_is_boolean ? ir_builder_bool(builder) : lhs->type;
 
     if(instr3 == INSTRUCTION_NONE
             ? i_vs_f_instruction((ir_instr_math_t*) instruction, instr1, instr2) == FAILURE

@@ -310,7 +310,7 @@ ir_type_t* ir_builder_bool(ir_builder_t *builder){
 
     if(*shared_type == NULL){
         (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        (*shared_type)->kind = TYPE_KIND_U64;
+        (*shared_type)->kind = TYPE_KIND_BOOLEAN;
     }
 
     return *shared_type;
