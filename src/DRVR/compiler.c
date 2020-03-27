@@ -635,7 +635,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         if(mapping->is_beginning_of_group == -1){
             mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
         }
-        if(mapping->is_beginning_of_group == 1 && index != original_index) return;
+        if(mapping->is_beginning_of_group == 1 && index != original_index) break;
 
         print_candidate(&object->ast.funcs[mapping->ast_func_id]);
     } while(++index != ir_module->funcs_length);
@@ -646,7 +646,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
         
         if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
+            poly->is_beginning_of_group = index == 0 ? 1 : (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
         }
         if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 
@@ -691,7 +691,9 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         original_index = -1;
     }
 
-    if(original_index == -1){
+    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
+
+    if(original_index == -1 && poly_index == -1){
         // No method with that name exists for that struct
         char *this_core_typename = ast_type_str(&this_type);
         compiler_panicf(compiler, source, "Undeclared method '%s' for type '%s'", name, this_core_typename);
@@ -713,9 +715,9 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         ir_method_t *method = &ir_module->methods[index];
 
         if(method->is_beginning_of_group == -1){
-            method->is_beginning_of_group = (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
+            method->is_beginning_of_group = index == 0 ? 1 : (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
         }
-        if(method->is_beginning_of_group == 1 && index != original_index) return;
+        if(method->is_beginning_of_group == 1 && index != original_index) break;
 
         // Print method candidate for basic struct type
         print_candidate(&object->ast.funcs[method->ast_func_id]);
@@ -726,7 +728,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         ir_generic_base_method_t *generic_base_method = &ir_module->generic_base_methods[index];
         
         if(generic_base_method->is_beginning_of_group == -1){
-            generic_base_method->is_beginning_of_group = (strcmp(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
+            generic_base_method->is_beginning_of_group = index == 0 ? 1 : (strcmp(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
         }
         if(generic_base_method->is_beginning_of_group == 1 && index != original_index) break;
 
@@ -747,14 +749,13 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         }
     } while(++index != ir_module->generic_base_methods_length);
 
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
     index = poly_index;
 
     if(index != -1) do {
         ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
 
         if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
+            poly->is_beginning_of_group = index == 0 ? 1 : (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
         }
         if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 

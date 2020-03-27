@@ -116,7 +116,15 @@
 #define VALUE_TYPE_STRUCT_CONSTRUCTION 0x0000000B // data = pointer to an 'ir_value_struct_construction_t'
 #define VALUE_TYPE_OFFSETOF            0x0000000C // data = pointer to an 'ir_value_offsetof_t'
 
-#define VALUE_TYPE_IS_CONSTANT(a) (a == VALUE_TYPE_LITERAL || a == VALUE_TYPE_NULLPTR || a == VALUE_TYPE_ARRAY_LITERAL || a == VALUE_TYPE_STRUCT_LITERAL || a == VALUE_TYPE_CONST_ANON_GLOBAL || a == VALUE_TYPE_CSTR_OF_LEN)
+#define VALUE_TYPE_IS_CONSTANT(a) ( \
+    a == VALUE_TYPE_LITERAL || \
+    a == VALUE_TYPE_NULLPTR || \
+    a == VALUE_TYPE_ARRAY_LITERAL || \
+    a == VALUE_TYPE_STRUCT_LITERAL || \
+    a == VALUE_TYPE_CONST_ANON_GLOBAL || \
+    a == VALUE_TYPE_CSTR_OF_LEN || \
+    a == VALUE_TYPE_CONST_BITCAST \
+)
 
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type

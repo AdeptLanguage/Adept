@@ -28,7 +28,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
         ast_func = &object->ast.funcs[mapping->ast_func_id];
 
         if(mapping->is_beginning_of_group == -1){
-            mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
+            mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
         }
         if(mapping->is_beginning_of_group == 1) return FAILURE;
 
@@ -57,7 +57,7 @@ errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
         if(index + 1 != ir_module->funcs_length){
             ir_func_mapping_t *mapping = &ir_module->func_mappings[index + 1];
             if(mapping->is_beginning_of_group == -1){
-                mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index].name) != 0);
+                mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index].name) != 0);
             }
             if(mapping->is_beginning_of_group == 0) *out_is_unique = false;
         }
@@ -94,7 +94,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
             ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
 
             if(mapping->is_beginning_of_group == -1){
-                mapping->is_beginning_of_group = (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
+                mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
             }
             if(mapping->is_beginning_of_group == 1) break;
 
@@ -128,7 +128,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
             poly_template = &ast->funcs[poly_func->ast_func_id];
 
             if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = (strcmp(poly_func->name, ast->polymorphic_funcs[poly_index - 1].name) != 0);
+                poly_func->is_beginning_of_group = poly_index == 0 ? 1 : (strcmp(poly_func->name, ast->polymorphic_funcs[poly_index - 1].name) != 0);
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
@@ -296,7 +296,7 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
             ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
             if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
+                method->is_beginning_of_group = index == 0 ? 1 : (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
             }
             if(method->is_beginning_of_group == 1) break;
 
@@ -330,7 +330,7 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
             poly_template = &ast->funcs[poly_func->ast_func_id];
 
             if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = (strcmp(poly_func->name, ast->polymorphic_methods[poly_index - 1].name) != 0);
+                poly_func->is_beginning_of_group = poly_index == 0 ? 1 : (strcmp(poly_func->name, ast->polymorphic_methods[poly_index - 1].name) != 0);
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
@@ -394,7 +394,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
             ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
             if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = (strcmp(method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
+                method->is_beginning_of_group = index == 0 ? 1 : (strcmp(method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
             }
             if(method->is_beginning_of_group == 1) break;
 
@@ -428,7 +428,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, co
             poly_template = &ast->funcs[poly_func->ast_func_id];
 
             if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = (strcmp(poly_func->name, ast->polymorphic_methods[poly_index - 1].name) != 0);
+                poly_func->is_beginning_of_group = poly_index == 0 ? 1 : (strcmp(poly_func->name, ast->polymorphic_methods[poly_index - 1].name) != 0);
             }
             if(poly_func->is_beginning_of_group == 1) break;
 

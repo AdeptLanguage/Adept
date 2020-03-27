@@ -42,9 +42,7 @@ TODO:
 * allow for self-referencing pointers
 * != management function
 * maybe allow custom integer types for enums
-* allow '==' constants to be given to 'case'
 * support 64-bit numeric literals without suffixes
-* better error messages for when not using 'usize' for <$T> List.remove()
 * add way to do "synergy"s between modules
 * keep track of which bases have which __defer__ methods to reduce search time
 * allow functionCall().methodCall().methodCall() like statements
@@ -140,3 +138,4 @@ COMPLETED:
 + add '__compiler_version__' as a builtin meta value
 + make meta directives less error prone by adding a warning when undefined transcendant variables are used [can be disabled using '--unsafe-meta' or 'pragma unsafe_meta']
 + add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
++ allow '==' constants to be given to 'case'
