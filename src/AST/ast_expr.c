@@ -864,6 +864,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_NULL:
     case EXPR_BREAK:
     case EXPR_CONTINUE:
+    case EXPR_FALLTHROUGH:
         clone = malloc(sizeof(ast_expr_t));
         break;
     case EXPR_STR:
@@ -1495,7 +1496,8 @@ const char *global_expression_rep_table[] = {
     "<delete>",                   // 0x0000005C
     "<break>",                    // 0x0000005D
     "<continue>",                 // 0x0000005E
-    "<break to>",                 // 0x0000005F
-    "<continue to>",              // 0x00000060
-    "<switch>",                   // 0x00000061
+    "<fallthrough>",              // 0x0000005F
+    "<break to>",                 // 0x00000060
+    "<continue to>",              // 0x00000061
+    "<switch>",                   // 0x00000062
 };

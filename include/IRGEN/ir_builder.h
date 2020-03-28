@@ -26,7 +26,9 @@ typedef struct {
     length_t current_block_id;
     length_t break_block_id; // 0 == none
     length_t continue_block_id; // 0 == none
+    length_t fallthrough_block_id; // 0 == none
     bridge_scope_t *break_continue_scope;
+    bridge_scope_t *fallthrough_scope;
     strong_cstr_t *block_stack_labels;
     length_t *block_stack_break_ids;
     length_t *block_stack_continue_ids;

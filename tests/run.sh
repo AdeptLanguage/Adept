@@ -45,6 +45,7 @@ compile each_in_list || exit $?
 compile enums || exit $?
 compile equals_func || exit $?
 compile external || exit $?
+compile fallthrough || exit $?
 compile fixed_array || exit $?
 compile fixed_array_assign || exit $?
 compile fixed_array_deference || exit $?

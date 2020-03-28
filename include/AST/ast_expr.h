@@ -117,9 +117,10 @@ extern "C" {
 #define EXPR_DELETE          0x0000005C
 #define EXPR_BREAK           0x0000005D
 #define EXPR_CONTINUE        0x0000005E
-#define EXPR_BREAK_TO        0x0000005F
-#define EXPR_CONTINUE_TO     0x00000060
-#define EXPR_SWITCH          0x00000061
+#define EXPR_FALLTHROUGH     0x0000005F
+#define EXPR_BREAK_TO        0x00000060
+#define EXPR_CONTINUE_TO     0x00000061
+#define EXPR_SWITCH          0x00000062
 
 #define MAX_AST_EXPR EXPR_SWITCH
 
@@ -539,6 +540,10 @@ typedef ast_expr_t ast_expr_break_t;
 // ---------------- ast_expr_continue_t ----------------
 // Expression for continuing in the nearest enclosure
 typedef ast_expr_t ast_expr_continue_t;
+
+// ---------------- ast_expr_fallthrough_t ----------------
+// Expression for falling through a case in the nearest switch enclosure
+typedef ast_expr_t ast_expr_fallthrough_t;
 
 // ---------------- ast_expr_break_to_t (and friends) ----------------
 // Expressions for performing a specific operation given a label

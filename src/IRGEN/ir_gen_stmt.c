@@ -52,6 +52,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     // Zero indicates no block to continue/break to since block 0 would make no sense
     builder.break_block_id = 0;
     builder.continue_block_id = 0;
+    builder.fallthrough_block_id = 0;
 
     // Block stack, used for breaking and continuing by label
     // NOTE: Unlabeled blocks won't go in this array
@@ -859,6 +860,21 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(out_is_terminated) *out_is_terminated = true;
             }
             return SUCCESS;
+        case EXPR_FALLTHROUGH: {
+                if(builder->fallthrough_block_id == 0){
+                    compiler_panicf(builder->compiler, stmt->source, "Nowhere to fall through to");
+                    return FAILURE;
+                }
+
+                bridge_scope_t *visit_scope;
+                for(visit_scope = builder->scope; visit_scope->parent != builder->fallthrough_scope; visit_scope = visit_scope->parent){
+                    handle_deference_for_variables(builder, &visit_scope->list);
+                }
+                handle_deference_for_variables(builder, &visit_scope->list);
+                build_break(builder, builder->fallthrough_block_id);
+                if(out_is_terminated) *out_is_terminated = true;
+            }
+            return SUCCESS;
         case EXPR_BREAK_TO: {
                 char *target_label = ((ast_expr_break_to_t*) stmt)->label;
                 length_t target_block_id = 0;
@@ -1441,6 +1457,13 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         }
                     }
                     
+                    length_t prev_fallthrough_block_id = builder->fallthrough_block_id;
+                    bridge_scope_t *prev_fallthrough_scope = builder->fallthrough_scope;
+
+                    // For 'fallthrough' statements, go to the next case, if it doesn't exist go to the default/resume case
+                    builder->fallthrough_block_id = c + 1 == switch_expr->cases_length ? default_block_id : case_block_ids[c + 1];
+                    builder->fallthrough_scope = builder->scope;
+
                     open_scope(builder);
 
                     bool case_terminated;
@@ -1458,6 +1481,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
                     
                     close_scope(builder);
+                    builder->fallthrough_block_id = prev_fallthrough_block_id;
+                    builder->fallthrough_scope = prev_fallthrough_scope;
                 }
 
                 free(uniqueness);
@@ -1465,6 +1490,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Fill in statements for default block
                 if(default_block_id != resume_block_id){
                     open_scope(builder);
+
+                    // Fallthrough statements are not allowed inside 'default' case
+                    builder->fallthrough_block_id = 0;
 
                     bool case_terminated;
                     build_using_basicblock(builder, default_block_id);

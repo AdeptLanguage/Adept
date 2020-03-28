@@ -8,7 +8,6 @@ FEATURE:
     * Casting to Any from non-builtin types
 * __String__ function?
 * Override for [] += -= *= /= %= operators
-* fallthrough
 * Make __defer__ for fixed arrays be a function/method
 
 VERIFICATION:

@@ -583,6 +583,15 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 }
             }
             break;
+        case TOKEN_FALLTHROUGH: {
+                ast_expr_fallthrough_t *stmt = malloc(sizeof(ast_expr_fallthrough_t));
+                stmt->id = EXPR_FALLTHROUGH;
+                stmt->source = sources[(*i)++];
+
+                defer_scope_rewind(defer_scope, stmt_list, FALLTHROUGHABLE, NULL);
+                stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+            }
+            break;
         case TOKEN_META:
             if(parse_meta(ctx)) return FAILURE;
             break;
@@ -823,7 +832,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
     unsigned int token_id = ctx->tokenlist->tokens[*ctx->i].id;
     bool failed = false;
 
-    defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, TRAIT_NONE);
+    defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, FALLTHROUGHABLE);
 
     while(token_id != TOKEN_END){
         if(token_id == TOKEN_CASE){
@@ -838,7 +847,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
             if(!failed){
                 defer_scope_fulfill_into(&current_defer_scope, list, list_length, list_capacity);
                 defer_scope_free(&current_defer_scope);
-                defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, TRAIT_NONE);
+                defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, FALLTHROUGHABLE);
 
                 expand((void**) &cases, sizeof(ast_case_t), cases_length, &cases_capacity, 1, 4);
                 ast_case_t *expr_case = &cases[cases_length++];

@@ -13,8 +13,9 @@ extern "C" {
 // ------------------ defer_scope_t ------------------
 // A single scope for containing defer statements
 struct defer_scope;
-#define BREAKABLE   TRAIT_1
-#define CONTINUABLE TRAIT_2
+#define BREAKABLE       TRAIT_1
+#define CONTINUABLE     TRAIT_2
+#define FALLTHROUGHABLE TRAIT_3
 
 typedef struct defer_scope {
     ast_expr_list_t list;

@@ -76,6 +76,8 @@ echo Skipping 'external' test program
 REM call :compile external
 REM if %errorlevel% neq 0 popd & exit /b %errorlevel%
 
+call :compile fallthrough
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array_assign

@@ -138,6 +138,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_ELSE:              printf("Keyword: else\n"); break;
         case TOKEN_ENUM:              printf("Keyword: enum\n"); break;
         case TOKEN_EXTERNAL:          printf("Keyword: external\n"); break;
+        case TOKEN_FALLTHROUGH:       printf("Keyword: fallthrough\n"); break;
         case TOKEN_FALSE:             printf("Keyword: false\n"); break;
         case TOKEN_FOR:               printf("Keyword: for\n"); break;
         case TOKEN_FOREIGN:           printf("Keyword: foreign\n"); break;
@@ -294,39 +295,39 @@ const char *global_token_name_table[] = {
     "else keyword",                       // 0x0000005E
     "enum keyword",                       // 0x0000005F
     "external keyword",                   // 0x00000060
-    "false keyword",                      // 0x00000061
-    "for keyword",                        // 0x00000062
-    "foreign keyword",                    // 0x00000063
-    "func keyword",                       // 0x00000064
-    "funcptr keyword",                    // 0x00000065
-    "global keyword",                     // 0x00000066
-    "if keyword",                         // 0x00000067
-    "import keyword",                     // 0x00000068
-    "in keyword",                         // 0x00000069
-    "inout keyword",                      // 0x0000006A
-    "new keyword",                        // 0x0000006B
-    "null keyword",                       // 0x0000006C
-    "or keyword",                         // 0x0000006D
-    "out keyword",                        // 0x0000006E
-    "packed keyword",                     // 0x0000006F
-    "pragma keyword",                     // 0x00000070
-    "private keyword",                    // 0x00000071
-    "public keyword",                     // 0x00000072
-    "repeat keyword",                     // 0x00000073
-    "return keyword",                     // 0x00000074
-    "sizeof keyword",                     // 0x00000075
-    "static keyword",                     // 0x00000076
-    "stdcall keyword",                    // 0x00000077
-    "struct keyword",                     // 0x00000078
-    "switch keyword",                     // 0x00000079
-    "true keyword",                       // 0x0000007A
-    "typeinfo keyword",                   // 0x0000007B
-    "undef keyword",                      // 0x0000007C
-    "unless keyword",                     // 0x0000007D
-    "until keyword",                      // 0x0000007E
-    "verbatim keyword",                   // 0x0000007F
-    "while keyword",                      // 0x00000080
-    "reserved",                           // 0x00000081
+    "fallthrough keyword",                // 0x00000061
+    "false keyword",                      // 0x00000062
+    "for keyword",                        // 0x00000063
+    "foreign keyword",                    // 0x00000064
+    "func keyword",                       // 0x00000065
+    "funcptr keyword",                    // 0x00000066
+    "global keyword",                     // 0x00000067
+    "if keyword",                         // 0x00000068
+    "import keyword",                     // 0x00000069
+    "in keyword",                         // 0x0000006A
+    "inout keyword",                      // 0x0000006B
+    "new keyword",                        // 0x0000006C
+    "null keyword",                       // 0x0000006D
+    "or keyword",                         // 0x0000006E
+    "out keyword",                        // 0x0000006F
+    "packed keyword",                     // 0x00000070
+    "pragma keyword",                     // 0x00000071
+    "private keyword",                    // 0x00000072
+    "public keyword",                     // 0x00000073
+    "repeat keyword",                     // 0x00000074
+    "return keyword",                     // 0x00000075
+    "sizeof keyword",                     // 0x00000076
+    "static keyword",                     // 0x00000077
+    "stdcall keyword",                    // 0x00000078
+    "struct keyword",                     // 0x00000079
+    "switch keyword",                     // 0x0000007A
+    "true keyword",                       // 0x0000007B
+    "typeinfo keyword",                   // 0x0000007C
+    "undef keyword",                      // 0x0000007D
+    "unless keyword",                     // 0x0000007E
+    "until keyword",                      // 0x0000007F
+    "verbatim keyword",                   // 0x00000080
+    "while keyword",                      // 0x00000081
     "reserved",                           // 0x00000082
     "reserved",                           // 0x00000083
     "reserved",                           // 0x00000084

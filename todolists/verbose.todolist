@@ -28,7 +28,6 @@ TODO:
 
 * do constant casting when available and allow casting for switch cases
 * add support multiple value cases for switch
-* fallthrough
 * maybe have a 'break' like thing for skipping over the rest of a case in a switch statement?
 * dont search through global variables linearly
 * breakout & continueout maybe?
@@ -139,3 +138,4 @@ COMPLETED:
 + make meta directives less error prone by adding a warning when undefined transcendant variables are used [can be disabled using '--unsafe-meta' or 'pragma unsafe_meta']
 + add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
 + allow '==' constants to be given to 'case'
++ fallthrough

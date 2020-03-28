@@ -1,0 +1,25 @@
+
+import 'sys/ctime.adept'
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+func main {
+    srand(time(null))
+
+    switch 0 {
+    case 0
+        printf('zero\n')
+        if rand() % 2 == 0, fallthrough
+    case 1
+        printf('one\n')
+        if rand() % 2 == 0, fallthrough
+    case 2
+        printf('two\n')
+        if rand() % 2 == 0, fallthrough
+    case 3
+        printf('three\n')
+        if rand() % 2 == 0, fallthrough
+    default
+        printf('more\n')
+    }
+}
