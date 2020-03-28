@@ -1,0 +1,20 @@
+
+import 'sys/ctime.adept'
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+import '2.3/basics.adept'
+import '2.3/TypeInfo.adept'
+
+func main {
+    srand(time(null))
+    repeat getAmount() {}
+    printf('-------------------------\n')
+    repeat static getAmount() {}
+}
+
+func getAmount usize {
+    amount usize = cast usize (rand() % 8)
+    printf('getAmount() called! returning %d\n', amount as int)
+    return amount
+}

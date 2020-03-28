@@ -1273,8 +1273,12 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 *((unsigned long long*) initial_idx->extra) = 0;
 
                 build_store(builder, initial_idx, idx_ptr, stmt->source);
-                build_break(builder, prep_basicblock_id);
-                build_using_basicblock(builder, prep_basicblock_id);
+
+                if(!repeat->is_static){
+                    // Use prep block to calculate limit
+                    build_break(builder, prep_basicblock_id);
+                    build_using_basicblock(builder, prep_basicblock_id);
+                }
 
                 // Generate length
                 ir_value_t *limit;
@@ -1294,6 +1298,12 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 ast_type_free(&temporary_type);
+
+                if(repeat->is_static){
+                    // Use prep block after calculating limit
+                    build_break(builder, prep_basicblock_id);
+                    build_using_basicblock(builder, prep_basicblock_id);
+                }
 
                 // Generate (idx < length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
@@ -1490,9 +1500,6 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Fill in statements for default block
                 if(default_block_id != resume_block_id){
                     open_scope(builder);
-
-                    // Fallthrough statements are not allowed inside 'default' case
-                    builder->fallthrough_block_id = 0;
 
                     bool case_terminated;
                     build_using_basicblock(builder, default_block_id);

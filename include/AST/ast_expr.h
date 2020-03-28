@@ -531,6 +531,7 @@ typedef struct {
     ast_expr_t **statements;
     length_t statements_length;
     length_t statements_capacity;
+    bool is_static;
 } ast_expr_repeat_t;
 
 // ---------------- ast_expr_break_t ----------------

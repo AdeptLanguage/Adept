@@ -474,6 +474,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
                     label = tokens[*i].data; *i += 2;
                 }
+
+                bool is_static = tokens[*i].id == TOKEN_STATIC;
+                if(is_static) *i += 1;
                 
                 if(parse_expr(ctx, &limit)) return FAILURE;
 
@@ -513,6 +516,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt->statements = repeat_stmt_list.statements;
                 stmt->statements_length = repeat_stmt_list.length;
                 stmt->statements_capacity = repeat_stmt_list.capacity;
+                stmt->is_static = is_static;
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;

@@ -23,7 +23,7 @@ TODO:
 
     echo "main.adept:5:67: Undeclared method 'add(*ubyte)' for type '<String> List'" && echo && echo "Potential Candidates:" && echo "    add(*<\$T> List, \$T) void" && echo "    add(*<String> List, String) void" && echo "    add(*<String> List, *ubyte, usize) void"
 
-* 'repeat cache' and 'each Type in cache [array, length]'
+* 'each Type in cache [array, length]'
 * option to print parameter names for function suggestions --more-info
 
 * do constant casting when available and allow casting for switch cases
@@ -139,3 +139,4 @@ COMPLETED:
 + add type """classes""" to catagorizes types such as ~__primitive__, ~__enum__, ~__struct__, etc.
 + allow '==' constants to be given to 'case'
 + fallthrough
+* 'repeat cache' [used 'repeat static' syntax instead]
