@@ -1,0 +1,91 @@
+
+pragma compiler_version '2.3'
+pragma null_checks
+
+#default test_static true
+import 'sys/cstdio.adept'
+
+struct DummyIterable () {
+    func __array__ *ubyte {
+        printf('DummyIterable.__array__() called!\n')
+        return 'abcdef'
+    }
+
+    func __length__ usize {
+        printf('DummyIterable.__length__() called!\n')
+        return 6
+    }
+}
+
+func main {
+    ints_length usize = 10
+    ints *int = new int * ints_length
+
+    backup *int = ints
+    defer delete backup
+
+    dummy DummyIterable
+
+    fixed_array 10 int
+
+    // Setup ints
+    repeat ints_length, ints[idx] = (idx * 2) as int
+
+    // Setup fixed array
+    repeat 10, fixed_array[idx] = (idx * idx) as int
+
+    // Use 'each in static'
+    #if test_static
+        // [array, length] version
+        each int in static [ints, ints_length] {
+            // Invalidate initial data
+            if ints != null {
+                ints = null
+                ints_length = 0
+            }
+            printf('ints = %p, ints_length = %d\n', ints, ints_length)
+            printf('ints[%d] = %d\n', idx as int, backup[idx])
+        }
+
+        // iterable version
+        each ubyte in static *getDummy(&dummy) {
+            printf('%c\n', it)
+        }
+
+        // fixed array version
+        each int in static *getFixedArray(&fixed_array) {
+            printf('%d\n', it)
+        }
+    #else
+        // [array, length] version
+        each int in [ints, ints_length] {
+            // Invalidate initial data
+            if ints != null {
+                ints = null
+                ints_length = 0
+            }
+            printf('ints = %p, ints_length = %d\n', ints, ints_length)
+            printf('ints[%d] = %d\n', idx as int, backup[idx])
+        }
+
+        // iterable version
+        each ubyte in *getDummy(&dummy) {
+            printf('%c\n', it)
+        }
+
+        // fixed array version
+        each int in *getFixedArray(&fixed_array) {
+            printf('%d\n', it)
+        }
+    #end
+}
+
+func getDummy(dummy *DummyIterable) *DummyIterable {
+    printf('getDummy() called!\n')
+    return dummy
+}
+
+func getFixedArray(array *10 int) *10 int {
+    printf('getFixedArray() called!\n')
+    return array
+}

@@ -50,6 +50,14 @@ typedef struct {
     bool has_null_check_failure_message_bytes;
 } llvm_context_t;
 
+typedef struct {
+    LLVMValueRef phi;
+    LLVMValueRef a;
+    LLVMValueRef b;
+    length_t basicblock_a;
+    length_t basicblock_b;
+} llvm_phi2_relocation_t;
+
 // ---------------- ir_to_llvm_type ----------------
 // Converts an IR type to an LLVM type
 LLVMTypeRef ir_to_llvm_type(ir_type_t *ir_type);
@@ -72,7 +80,7 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object);
 
 // ---------------- ir_to_llvm_null_check ----------------
 // Generates LLVM instructions to check for null pointer
-void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column);
+void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock);
 
 // ---------------- ir_to_llvm_config_optlvl ----------------
 // Converts optimization level to LLVM optimization constant

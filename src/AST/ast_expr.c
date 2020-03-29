@@ -1236,6 +1236,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_each_in->statements_length = expr_as_each_in->statements_length;
         clone_as_each_in->statements_capacity = expr_as_each_in->statements_length; // (statements_length is on purpose)
         clone_as_each_in->statements = malloc(sizeof(ast_expr_t*) * expr_as_each_in->statements_length);
+        clone_as_each_in->is_static = expr_as_each_in->is_static;
 
         for(length_t s = 0; s != expr_as_each_in->statements_length; s++){
             clone_as_each_in->statements[s] = ast_expr_clone(expr_as_each_in->statements[s]);

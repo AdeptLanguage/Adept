@@ -932,6 +932,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_EACH_IN: {
                 ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) stmt;
 
+                length_t initial_basicblock_id = builder->current_block_id;
                 length_t prep_basicblock_id = build_basicblock(builder);
                 length_t new_basicblock_id  = build_basicblock(builder);
                 length_t inc_basicblock_id  = build_basicblock(builder);
@@ -974,9 +975,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 *((unsigned long long*) initial_idx->extra) = 0;
 
                 build_store(builder, initial_idx, idx_ptr, stmt->source);
-                build_break(builder, prep_basicblock_id);
-                build_using_basicblock(builder, prep_basicblock_id);
 
+                if(!each_in->is_static){
+                    build_using_basicblock(builder, prep_basicblock_id);
+                }
+                
                 // DANGEROUS: The following chunks of code assume that either 'each_in->list' isn't null or
                 //        'each_in->array' and 'each_in->length' aren't null
                 ir_value_t *list_precomputed = NULL;
@@ -1084,6 +1087,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ast_type_free(&temporary_type);
                 }
 
+                if(each_in->is_static){
+                    // Finally move ahead to prep basicblock for static each-in
+                    build_using_basicblock(builder, prep_basicblock_id);
+                }
+
                 // Generate (idx < length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
                 built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
@@ -1101,7 +1109,13 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
                 ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
 
-                build_using_basicblock(builder, new_basicblock_id);
+                if(each_in->is_static){
+                    // Calculate array inside initial basicblock if static
+                    build_using_basicblock(builder, initial_basicblock_id);
+                } else {
+                    // Calculate array inside new basicblock otherwise
+                    build_using_basicblock(builder, new_basicblock_id);
+                }
 
                 // Generate array value
                 ir_value_t *array;
@@ -1169,6 +1183,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ast_type_free(&temporary_type);
                 }
 
+                // Update 'it' inside new basicblock
+                build_using_basicblock(builder, new_basicblock_id);
+
                 length_t it_var_id = builder->next_var_id;
                 char *it_name = each_in->it_name ? each_in->it_name : "it";
 
@@ -1193,6 +1210,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     handle_deference_for_variables(builder, &builder->scope->list);
                     build_break(builder, inc_basicblock_id);
                 }
+
+                // Finish off initial basic block
+                build_using_basicblock(builder, initial_basicblock_id);
+                build_break(builder, prep_basicblock_id);
 
                 // Generate jump inc_block
                 build_using_basicblock(builder, inc_basicblock_id);

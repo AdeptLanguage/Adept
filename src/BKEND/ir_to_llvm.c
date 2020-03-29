@@ -249,6 +249,10 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
     length_t module_funcs_length = object->ir_module.funcs_length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
+    llvm_phi2_relocation_t *unrelocated_phis = NULL;
+    length_t unrelocated_phis_length = 0;
+    length_t unrelocated_phis_capacity = 0;
+
     for(length_t f = 0; f != module_funcs_length; f++){
         LLVMBuilderRef builder = LLVMCreateBuilder();
         ir_basicblock_t *basicblocks = module_funcs[f].basicblocks;
@@ -276,10 +280,19 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         // If the true exit point of a block changed, its real value will be in here
         // (Used for PHI instructions to have the proper end point)
         LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
-        memset(llvm_exit_blocks, 0, sizeof(LLVMBasicBlockRef) * basicblocks_length);
+
+        // Information about PHI instructions that need to have their incoming blocks delayed
+        unrelocated_phis_length = 0;
 
         // Create basicblocks
-        for(length_t b = 0; b != basicblocks_length; b++) llvm_blocks[b] = LLVMAppendBasicBlock(func_skeletons[f], "");
+        for(length_t b = 0; b != basicblocks_length; b++){
+            llvm_blocks[b] = LLVMAppendBasicBlock(func_skeletons[f], "");
+            llvm_exit_blocks[b] = llvm_blocks[b];
+        }
+
+        // Drop references to any old PHIs
+        llvm->line_phi = NULL;
+        llvm->column_phi = NULL;
 
         if(llvm->compiler->checks & COMPILER_NULL_CHECKS && basicblocks_length != 0){
             // Create local variables to hold line number and column number for
@@ -384,6 +397,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         free(stack.types);
                         free(llvm_blocks);
                         free(llvm_exit_blocks);
+                        free(unrelocated_phis);
                         LLVMDisposeBuilder(builder);
                         return FAILURE;
                     }
@@ -397,6 +411,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         free(stack.types);
                         free(llvm_blocks);
                         free(llvm_exit_blocks);
+                        free(unrelocated_phis);
                         LLVMDisposeBuilder(builder);
                         return FAILURE;
                     }
@@ -546,7 +561,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 
                         ir_instr_store_t *store_instr = (ir_instr_store_t*) instr;
                         LLVMValueRef destination = ir_to_llvm_value(llvm, store_instr->destination);
-                        ir_to_llvm_null_check(llvm, f, destination, store_instr->maybe_line_number, store_instr->maybe_column_number);
+                        ir_to_llvm_null_check(llvm, f, destination, store_instr->maybe_line_number, store_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
                         llvm_result = LLVMBuildStore(builder, ir_to_llvm_value(llvm, ((ir_instr_store_t*) instr)->value), destination);
                         catalog.blocks[b].value_references[i] = llvm_result;
@@ -557,7 +572,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
 
                         ir_instr_load_t *load_instr = (ir_instr_load_t*) instr;
                         LLVMValueRef pointer = ir_to_llvm_value(llvm, load_instr->value);
-                        ir_to_llvm_null_check(llvm, f, pointer, load_instr->maybe_line_number, load_instr->maybe_column_number);
+                        ir_to_llvm_null_check(llvm, f, pointer, load_instr->maybe_line_number, load_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
                         llvm_result = LLVMBuildLoad(builder, pointer, "");
                         catalog.blocks[b].value_references[i] = llvm_result;
@@ -663,7 +678,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         ir_instr_member_t *member_instr = (ir_instr_member_t*) instr;
                         LLVMValueRef foundation = ir_to_llvm_value(llvm, member_instr->value);
 
-                        ir_to_llvm_null_check(llvm, f, foundation, member_instr->maybe_line_number, member_instr->maybe_column_number);
+                        ir_to_llvm_null_check(llvm, f, foundation, member_instr->maybe_line_number, member_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
                         LLVMValueRef gep_indices[2];
                         gep_indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
@@ -677,7 +692,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         ir_instr_array_access_t *array_access_instr = (ir_instr_array_access_t*) instr;
                         LLVMValueRef foundation = ir_to_llvm_value(llvm, array_access_instr->value);
 
-                        ir_to_llvm_null_check(llvm, f, foundation, array_access_instr->maybe_line_number, array_access_instr->maybe_column_number);
+                        ir_to_llvm_null_check(llvm, f, foundation, array_access_instr->maybe_line_number, array_access_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
                         LLVMValueRef gep_index = ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->index);
                         llvm_result = LLVMBuildGEP(builder, ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->value), &gep_index, 1, "");
@@ -783,6 +798,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                             free(stack.types);
                             free(llvm_blocks);
                             free(llvm_exit_blocks);
+                            free(unrelocated_phis);
                             LLVMDisposeBuilder(builder);
                             return FAILURE;
                         }
@@ -971,14 +987,14 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         LLVMValueRef when_a = ir_to_llvm_value(llvm, ((ir_instr_phi2_t*) instr)->a);
                         LLVMValueRef when_b = ir_to_llvm_value(llvm, ((ir_instr_phi2_t*) instr)->b);
 
-                        LLVMBasicBlockRef llvm_block_a = llvm_exit_blocks[((ir_instr_phi2_t*) instr)->block_id_a];
-                        LLVMBasicBlockRef llvm_block_b = llvm_exit_blocks[((ir_instr_phi2_t*) instr)->block_id_b];
-                        
-                        if(llvm_block_a == NULL) llvm_block_a = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_a];
-                        if(llvm_block_b == NULL) llvm_block_b = llvm_blocks[((ir_instr_phi2_t*) instr)->block_id_b];
+                        expand((void**) &unrelocated_phis, sizeof(llvm_phi2_relocation_t), unrelocated_phis_length, &unrelocated_phis_capacity, 1, 4);
+                        llvm_phi2_relocation_t *delayed = &unrelocated_phis[unrelocated_phis_length++];
+                        delayed->phi = phi;
+                        delayed->a = when_a;
+                        delayed->b = when_b;
+                        delayed->basicblock_a = ((ir_instr_phi2_t*) instr)->block_id_a;
+                        delayed->basicblock_b = ((ir_instr_phi2_t*) instr)->block_id_b;
 
-                        LLVMAddIncoming(phi, &when_a, &llvm_block_a, 1);
-                        LLVMAddIncoming(phi, &when_b, &llvm_block_b, 1);
                         catalog.blocks[b].value_references[i] = phi;
                     }
                     break;
@@ -1049,10 +1065,21 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     free(stack.types);
                     free(llvm_blocks);
                     free(llvm_exit_blocks);
+                    free(unrelocated_phis);
                     LLVMDisposeBuilder(builder);
                     return FAILURE;
                 }
             }
+        }
+
+        // Relocate incoming references for basicblocks
+        for(length_t i = 0; i != unrelocated_phis_length; i++){
+            llvm_phi2_relocation_t *relocation = &unrelocated_phis[i];
+
+            // Now that we have information about the correct exit blocks, we can fill in
+            // the incoming blocks
+            LLVMAddIncoming(relocation->phi, &relocation->a, &llvm_exit_blocks[relocation->basicblock_a], 1);
+            LLVMAddIncoming(relocation->phi, &relocation->b, &llvm_exit_blocks[relocation->basicblock_b], 1);
         }
 
         if(llvm->compiler->checks & COMPILER_NULL_CHECKS) {
@@ -1072,6 +1099,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         LLVMDisposeBuilder(builder);
     }
 
+    free(unrelocated_phis);
     return SUCCESS;
 }
 
@@ -1305,7 +1333,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     return SUCCESS;
 }
 
-void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column){
+void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock){
     if(!(llvm->compiler->checks & COMPILER_NULL_CHECKS)) return;
 
     LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(llvm->func_skeletons[func_skeleton_index], "");
@@ -1320,6 +1348,9 @@ void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, L
     LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, pointer, "");
     LLVMBuildCondBr(llvm->builder, if_null, llvm->null_check_on_fail_block, not_null_block);
     LLVMPositionBuilderAtEnd(llvm->builder, not_null_block);
+
+    // Set landing basicblock output to be the not-null case block
+    if(out_landing_basicblock) *out_landing_basicblock = not_null_block;
 }
 
 LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler){

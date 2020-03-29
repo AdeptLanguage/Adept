@@ -130,8 +130,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_AND: {
             ir_value_t *a, *b;
             ast_type_t ast_type_a, ast_type_b;
-            *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-            (*ir_value)->value_type = VALUE_TYPE_RESULT;
 
             // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
             // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
@@ -184,10 +182,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             length_t landing_b_block_id = builder->current_block_id;
-
-            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
-            ((ir_value_result_t*) (*ir_value)->extra)->block_id = builder->current_block_id;
-            ((ir_value_result_t*) (*ir_value)->extra)->instruction_id = builder->current_block->instructions_length;
 
             // Merge evaluation
             length_t merge_block_id = build_basicblock(builder);
@@ -198,8 +192,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             instruction = build_instruction(builder, sizeof(ir_instr_phi2_t));
             ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
-            ((ir_instr_phi2_t*) instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ((ir_instr_phi2_t*) instruction)->result_type->kind = TYPE_KIND_BOOLEAN;
+            ((ir_instr_phi2_t*) instruction)->result_type = ir_builder_bool(builder);
             ((ir_instr_phi2_t*) instruction)->a = build_bool(builder->pool, false);
             ((ir_instr_phi2_t*) instruction)->b = b;
             ((ir_instr_phi2_t*) instruction)->block_id_a = landing_a_block_id;
@@ -210,8 +203,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_OR: {
             ir_value_t *a, *b;
             ast_type_t ast_type_a, ast_type_b;
-            *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-            (*ir_value)->value_type = VALUE_TYPE_RESULT;
 
             // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
             // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
@@ -264,10 +255,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             length_t landing_b_block_id = builder->current_block_id;
-
-            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
-            ((ir_value_result_t*) (*ir_value)->extra)->block_id = builder->current_block_id;
-            ((ir_value_result_t*) (*ir_value)->extra)->instruction_id = builder->current_block->instructions_length;
 
             // Merge evaluation
             length_t merge_block_id = build_basicblock(builder);

@@ -42,6 +42,7 @@ compile dereference || exit $?
 compile each_in || exit $?
 compile each_in_fixed || exit $?
 compile each_in_list || exit $?
+compile each_in_static || exit $?
 compile enums || exit $?
 compile equals_func || exit $?
 compile external || exit $?

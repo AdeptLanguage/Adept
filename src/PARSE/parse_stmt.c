@@ -372,6 +372,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     return FAILURE;
                 }
 
+                bool is_static = tokens[*i].id == TOKEN_STATIC;
+                if(is_static) *i += 1;
+
                 // Handle values given for 'each in [array, length]' statement
                 if(tokens[*i].id == TOKEN_BRACKET_OPEN){
                     (*i)++;
@@ -462,6 +465,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt->statements = each_in_stmt_list.statements;
                 stmt->statements_length = each_in_stmt_list.length;
                 stmt->statements_capacity = each_in_stmt_list.capacity;
+                stmt->is_static = is_static;
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;
