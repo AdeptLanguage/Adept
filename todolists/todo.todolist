@@ -44,7 +44,6 @@ IDEA:
 * 'Super' keyword type which is the primary parent struct
 * 'super' keyword which is the same as (this as *Super)
 * String.adept ideas: // prepare, ready, append, appendOnce, remove, fracture, distance, contains, getUntil, getUntilOneOf, atUntil, atUntilOneOf, deleteUntil, deleteUntilOneOf, getUntilLast, count, upper, lower, empty, in-place versions etc., removeFromFront, trim, extractDATATYPEs, words?, etc.
-* 'each Type in cache [array, length]'
 * Option to print parameter names for function suggestions --more-info
 * Do constant casting when available and allow casting for switch cases
 * Add support multiple value cases for switch

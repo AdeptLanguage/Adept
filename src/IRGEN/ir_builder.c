@@ -1623,7 +1623,7 @@ errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ir_value_t **arg_val
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[0])->base;
         if(ast_struct_find(ast, struct_name) == NULL) return FAILURE; // Require structure to exist
     } else if(is_generic_base){
-        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
+        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[0];
         weak_cstr_t struct_name = generic_base->name;
         ast_polymorphic_struct_t *polymorphic_struct = ast_polymorphic_struct_find(ast, struct_name);
         if(polymorphic_struct == NULL) return FAILURE; // Require generic structure to exist
