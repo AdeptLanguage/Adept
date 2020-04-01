@@ -414,13 +414,17 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     trait_t arg_type_traits[call_expr->arity];
                     memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
                     memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_expr->arity - pair.ast_func->arity));
-                }
-                
-                if(handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity)){
+
+                    // Use padded 'arg_type_traits' with TRAIT_NONE for variable argument functions    
+                    if(handle_pass_management(builder, arg_values, arg_types, arg_type_traits, call_expr->arity)){
+                        ast_types_free_fully(arg_types, call_expr->arity);
+                        return FAILURE;
+                    }
+                } else if(handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity)){
                     ast_types_free_fully(arg_types, call_expr->arity);
                     return FAILURE;
                 }
-
+                
                 ir_basicblock_new_instructions(builder->current_block, 1);
                 instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
                 ((ir_instr_call_t*) instruction)->id = INSTRUCTION_CALL;
@@ -1853,7 +1857,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
     }
 
     for(length_t a = 0; a != function_elem->arity; a++){
-        if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_CALL_ARGUMENTS)){
+        if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
             if(call->is_tentative) return ALT_FAILURE;
 
             char *s1 = ast_type_str(&function_elem->arg_types[a]);

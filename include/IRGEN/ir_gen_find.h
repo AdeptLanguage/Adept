@@ -40,6 +40,10 @@ errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, funcpair_t *result);
 
+errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
+        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result, trait_t conform_mode);
+
+
 // ---------------- ir_gen_find_pass_func ----------------
 // Finds the correct __pass__ function for a type
 // NOTE: Returns SUCCESS when a function was found,
@@ -61,12 +65,20 @@ errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *str
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
     length_t type_list_length, funcpair_t *result);
 
+errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *struct_name,
+    const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
+    length_t type_list_length, funcpair_t *result, trait_t conform_mode);
+
 // ---------------- ir_gen_find_generic_base_method_conforming ----------------
 // Finds a method that has the matches a generic base and conforms
 // to the arguments given. Result info stored 'result'
 errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, const char *generic_base,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
     length_t type_list_length, funcpair_t *result);
+
+errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder, const char *generic_base,
+    const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
+    length_t type_list_length, funcpair_t *result, trait_t conform_mode);
 
 // ---------------- find_beginning_of_func_group ----------------
 // Searches for beginning of function group in a list of mappings
@@ -95,7 +107,7 @@ successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t t
 // Returns whether a function's arguments conform
 // to the arguments supplied.
 successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
-        ast_type_t *arg_type_list, length_t type_list_length);
+        ast_type_t *arg_type_list, length_t type_list_length, trait_t conform_mode);
 
 // ---------------- func_args_polymorphable ----------------
 // Returns whether the given types work with a polymorphic function template
@@ -105,7 +117,7 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 // NOTE: Returns ALT_FAILURE if false
 // NOTE: Returns FAILURE if couldn't fully resolve
 errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
-        length_t type_length, ast_type_var_catalog_t *out_catalog);
+        length_t type_length, ast_type_var_catalog_t *out_catalog, trait_t conform_mode);
 
 // ---------------- ast_type_has_polymorph ----------------
 // Finds whether a concrete AST type is valid for a given polymorphic type

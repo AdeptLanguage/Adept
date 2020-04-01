@@ -1,6 +1,7 @@
 
 #include "AST/ast.h"
 #include "UTIL/util.h"
+#include "DRVR/compiler.h"
 
 void ast_init(ast_t *ast){
     ast->funcs = malloc(sizeof(ast_func_t) * 8);
@@ -44,12 +45,9 @@ void ast_init(ast_t *ast){
     // Add relevant standard meta definitions
 
     // __compiler__
-    weak_cstr_t build_date = __DATE__;
-    weak_cstr_t build_time = __TIME__;
-    strong_cstr_t compiler_string = malloc(21 + strlen(ADEPT_VERSION_STRING) + strlen(build_date) + strlen(build_time));
-    sprintf(compiler_string, "Adept %s - Build %s %s CDT", ADEPT_VERSION_STRING, build_date, build_time);
-    meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler__", compiler_string);
-    // (we don't have to worry about freeing 'compiler_string' because meta_definition_add_str takes ownership of strong_cstr_t)
+    // NOTE: We don't have to worry about freeing what we get from 'compiler_get_string()'
+    // because meta_definition_add_str takes ownership of strong_cstr_t
+    meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler__", compiler_get_string());
 
     // __compiler_version__
     meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_version__", strclone(ADEPT_VERSION_STRING));

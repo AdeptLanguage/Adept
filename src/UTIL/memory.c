@@ -91,9 +91,9 @@ void memory_free(void* data){
     }
 
     #ifdef TRACK_MEMORY_FILE_AND_LINE
-    printf("INTERNAL ERROR: Tried to free memory that isn't in the global memblocks table! (Address: 0x%p) - %s %d\n", data, file, line);
+    printf("INTERNAL ERROR: Tried to free memory that isn't in the global memblocks table! (Address: %p) - %s %d\n", data, file, line);
     #else // TRACK_MEMORY_FILE_AND_LINE
-    printf("INTERNAL ERROR: Tried to free memory that isn't in the global memblocks table! (Address: 0x%p)\n", data);
+    printf("INTERNAL ERROR: Tried to free memory that isn't in the global memblocks table! (Address: %p)\n", data);
     #endif
     return;
 }
@@ -128,9 +128,9 @@ void memory_free_fast(void* data){
     }
 
     #ifdef TRACK_MEMORY_FILE_AND_LINE
-    printf("INTERNAL ERROR: FAST FREE: Tried to free memory that isn't in the global memblocks table! (Address: 0x%p) - %s %d\n", data, file, line);
+    printf("INTERNAL ERROR: FAST FREE: Tried to free memory that isn't in the global memblocks table! (Address: %p) - %s %d\n", data, file, line);
     #else // TRACK_MEMORY_FILE_AND_LINE
-    printf("INTERNAL ERROR: FAST FREE: Tried to free memory that isn't in the global memblocks table! (Address: 0x%p)\n", data);
+    printf("INTERNAL ERROR: FAST FREE: Tried to free memory that isn't in the global memblocks table! (Address: %p)\n", data);
     #endif
     return;
 }
@@ -174,14 +174,14 @@ void memory_scan(){
             found_unfreed = true;
 
             #ifdef TRACK_MEMORY_FILE_AND_LINE
-            printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: 0x%p) - %s %d\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer, global_memblocks[i].filename, global_memblocks[i].line_number);
+            printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: %p) - %s %d\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer, global_memblocks[i].filename, global_memblocks[i].line_number);
 
             // strclone() helper
             if(strcmp("src/UTIL/util.c", global_memblocks[i].filename) == 0 && global_memblocks[i].line_number == 72)
                 printf("strclone() leak: '%s'\n", (char*) global_memblocks[i].pointer);
             
             #else // TRACK_MEMORY_FILE_AND_LINE
-            printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: 0x%p)\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer);
+            printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: %p)\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer);
             #endif // TRACK_MEMORY_FILE_AND_LINE
 
             free(global_memblocks[i].pointer);

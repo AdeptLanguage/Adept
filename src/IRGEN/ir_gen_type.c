@@ -360,8 +360,9 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     }
 
     // Integer or pointer to boolean
-    if(to_type_kind == TYPE_KIND_BOOLEAN && (from_traits & TYPE_TRAIT_INTEGER ||
-        (/*mode & CONFORM_MODE_BOOLPTR && */ from_traits & TYPE_TRAIT_POINTER || from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_FUNC_PTR)
+    if(to_type_kind == TYPE_KIND_BOOLEAN && (
+        (mode & CONFORM_MODE_INT_TO_BOOL && from_traits & TYPE_TRAIT_INTEGER) ||
+        (/*mode & CONFORM_MODE_PTR_TO_BOOL && */ from_traits & TYPE_TRAIT_POINTER || from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_FUNC_PTR)
     )){
         ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         instr->id = INSTRUCTION_ISNTZERO;

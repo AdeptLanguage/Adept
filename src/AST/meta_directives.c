@@ -172,7 +172,7 @@ void meta_collapse(compiler_t *compiler, meta_definition_t *definitions, length_
                 } else {
                     if(!(compiler->traits & COMPILER_UNSAFE_META)){
                         compiler_warnf(compiler, var->source, "Warning: Usage of undefined transcendant variable '%s'", var->name);
-                        printf("    (you can disable this warning with '--unsafe-meta' and/or 'pragma unsafe_meta')\n");
+                        printf("    (you can disable this warning with '--unsafe-meta' or 'pragma unsafe_meta')\n");
                     }
                     (*expr)->id = META_EXPR_UNDEF;
                 }

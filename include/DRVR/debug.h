@@ -17,6 +17,8 @@
 #define DEBUG_SIGNAL_AT_ASSEMBLY           0x06 // data = NULL
 #define DEBUG_SIGNAL_AT_IR_MODULE_DUMP     0x07 // data = ir_module_t*
 #define DEBUG_SIGNAL_AT_EXPORT             0x08 // data = NULL
+#define DEBUG_SIGNAL_AT_OUT                0x09 // data = NULL
+#define DEBUG_SIGNAL_AT_LINKING            0x0A // data = NULL
 
 #ifdef ENABLE_DEBUG_FEATURES
 

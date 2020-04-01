@@ -110,6 +110,10 @@ void break_into_arguments(const char *s, int *out_argc, char ***out_argv);
 // Displays program help information
 void show_help();
 
+// ---------------- compiler_get_string ----------------
+// Gets the string identifier of the compiler
+strong_cstr_t compiler_get_string();
+
 // ---------------- compiler_create_package ----------------
 // Creates and exports a package
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object);

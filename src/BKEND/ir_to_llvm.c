@@ -10,6 +10,7 @@
 #include "UTIL/color.h"
 #include "UTIL/filename.h"
 #include "BKEND/ir_to_llvm.h"
+#include "DRVR/debug.h"
 #include "DRVR/object.h"
 
 LLVMTypeRef ir_to_llvm_type(ir_type_t *ir_type){
@@ -1286,6 +1287,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     }
     #endif
 
+    debug_signal(compiler, DEBUG_SIGNAL_AT_OUT, NULL);
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();
     LLVMCodeGenFileType codegen = LLVMObjectFile;
 
@@ -1300,6 +1302,8 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMDisposeTargetMachine(target_machine);
     LLVMDisposePassManager(pass_manager);
     if(disposeTriple) LLVMDisposeMessage(triple);
+
+    debug_signal(compiler, DEBUG_SIGNAL_AT_LINKING, NULL);
 
     if(system(link_command) != 0){
         redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);

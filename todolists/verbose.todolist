@@ -38,7 +38,7 @@ TODO:
         it.progress = 0.002f; return
     #end'
 * allow for self-referencing pointers
-* != management function
+* replace != management function with !__equals__
 * maybe allow custom integer types for enums
 * support 64-bit numeric literals without suffixes
 * add way to do "synergy"s between modules

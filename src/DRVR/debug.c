@@ -22,6 +22,8 @@ void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data){
     case DEBUG_SIGNAL_AT_INFERENCE:          OPTIONAL_NOTIF_MACRO(COMPILER_DEBUG_STAGES, "STAGE: INFERENCE");  break;
     case DEBUG_SIGNAL_AT_ASSEMBLY:           OPTIONAL_NOTIF_MACRO(COMPILER_DEBUG_STAGES, "STAGE: ASSEMBLY");   break;
     case DEBUG_SIGNAL_AT_EXPORT:             OPTIONAL_NOTIF_MACRO(COMPILER_DEBUG_STAGES, "STAGE: EXPORT");     break;
+    case DEBUG_SIGNAL_AT_OUT:                OPTIONAL_NOTIF_MACRO(COMPILER_DEBUG_STAGES, "STAGE: OBJECT OUT"); break;
+    case DEBUG_SIGNAL_AT_LINKING:            OPTIONAL_NOTIF_MACRO(COMPILER_DEBUG_STAGES, "STAGE: LINKING");    break;
     case DEBUG_SIGNAL_AT_AST_DUMP:
         if(compiler->debug_traits & COMPILER_DEBUG_DUMP) ast_dump((ast_t*) data, "ast.txt");
         break;

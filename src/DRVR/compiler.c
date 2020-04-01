@@ -247,6 +247,12 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->optimization = OPTIMIZATION_AGGRESSIVE;
             } else if(strcmp(argv[arg_index], "--fussy") == 0){
                 compiler->traits |= COMPILER_FUSSY;
+            } else if(strcmp(argv[arg_index], "--version") == 0){
+                strong_cstr_t compiler_string = compiler_get_string();
+                printf("Adept Build:\t%s\n", compiler_string);
+                printf("Adept Version:\t%s\n", ADEPT_VERSION_STRING);
+                free(compiler_string);
+                return FAILURE;
             } else if(strcmp(argv[arg_index], "--no-undef") == 0){
                 compiler->traits |= COMPILER_NO_UNDEF;
             } else if(strcmp(argv[arg_index], "--no-type-info") == 0){
@@ -428,6 +434,7 @@ void show_help(){
     printf("    -j                Preserve generated object file\n");
     printf("    -O                Set optimization level\n");
     printf("    --fussy           Show typically insignificant warnings\n");
+    printf("    --version         Display compiler version information\n");
 
     printf("\nLanguage Options:\n");
     printf("    --no-type-info    Disable runtime type information\n");
@@ -445,6 +452,14 @@ void show_help(){
     printf("    --llvmir          Show generated LLVM representation\n");
     printf("    --no-verification Don't verify backend output\n");
     #endif // ENABLE_DEBUG_FEATURES
+}
+
+strong_cstr_t compiler_get_string(){
+    weak_cstr_t build_date = __DATE__;
+    weak_cstr_t build_time = __TIME__;
+    strong_cstr_t compiler_string = malloc(21 + strlen(ADEPT_VERSION_STRING) + strlen(build_date) + strlen(build_time));
+    sprintf(compiler_string, "Adept %s - Build %s %s CDT", ADEPT_VERSION_STRING, build_date, build_time);
+    return compiler_string;
 }
 
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){
