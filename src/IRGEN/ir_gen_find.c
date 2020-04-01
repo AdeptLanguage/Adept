@@ -75,8 +75,8 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
         ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
     
     // Do strict argument type conforming rules first
-    //errorcode_t strict_errorcode = ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS);
-    //if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
+    errorcode_t strict_errorcode = ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS);
+    if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
 
     // If no strict match was found, try a looser match
     return ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
