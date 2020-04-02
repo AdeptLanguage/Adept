@@ -11,6 +11,7 @@ FEATURE:
 * Make __defer__ for fixed arrays be a function/method
 * Local functions
 * Function aliases
+* Scoped constants
 
 VERIFICATION:
 * ir_to_llvm_type circular containment detection

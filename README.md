@@ -1,5 +1,5 @@
-
 # Adept
+
 A blazing fast language for general purpose programming.
 
 [Download Adept v2.2 for Windows](https://github.com/IsaacShelton/Adept/releases)
@@ -7,6 +7,7 @@ A blazing fast language for general purpose programming.
 [Download Adept v2.2 for MacOS](https://github.com/IsaacShelton/Adept/releases)
 
 ## Command-Line Usage
+
 `adept [filename] [options]`
 
 - filename - default is 'main.adept'
@@ -15,210 +16,279 @@ A blazing fast language for general purpose programming.
 You can optionally use `adept2` instead of `adept` if you have multiple versions installed.
 
 ## Basic Functionality
-### Variables
-```
-import 'sys/cstdio.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    my_name *ubyte = 'Isaac'
-    printf('My name is %s\n', my_name)
-    return 0
+### Hello World
+
+```
+import '2.2/basics.adept'
+
+func main {
+    print("Hello World!")
+}
+```
+
+### Variables
+
+```
+import '2.2/basics.adept'
+
+func main {
+    name String = "Isaac"
+    print("My name is " + name)
 }
 ```
 
 ### Functions
-```
-import 'sys/cstdio.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    greet()
-    return 0
+```
+import '2.2/basics.adept'
+
+func main {
+    greet("Isaac")
 }
 
-func greet() void {
-    printf('Hello There!\n')
+func greet(name String) {
+    print("Welcome " + name)
 }
 ```
 
 ### Structures
+
 ```
-import 'sys/cstdio.adept'
+import '2.2/basics.adept'
 
-struct Person (name *ubyte, age int)
+struct Person (name String, age int)
 
-func main(in argc int, in argv **ubyte) int {
-    john_smith Person; john_smith.create('John Smith', 36)
+func main {
+    john_smith Person = person("John Smith", 36)
     john_smith.print()
-    return 0
 }
 
-func create(this *Person, name *ubyte, age int) void {
-    this.name = name
-    this.age = age
+func person(name String, age int) Person {
+    person POD Person
+    person.name = name.commit()
+    person.age = age
+    return person
 }
 
-func print(this *Person) void {
-    printf('%s is %d years old\n', this.name, this.age)
-}
-```
-
-### Dynamic Memory Allocation (using malloc/free)
-```
-import 'sys/cstdio.adept'
-import 'sys/cstdlib.adept'
-import 'sys/cstring.adept'
-
-func main(in argc int, in argv **ubyte) int {
-    firstname *ubyte = 'Will'
-    lastname *ubyte = 'Johnson'
-
-    fullname *ubyte = malloc(strlen(firstname) + strlen(lastname) + 2)
-    defer free(fullname)
-
-    sprintf(fullname, '%s %s', firstname, lastname)
-    printf('Fullname is: %s\n', fullname)
-    return 0
+func print(this *Person) {
+    print("% is % years old" % this.name % this.age)
 }
 ```
 
-### Dynamic Memory Allocation (using new/delete)
+### Pointers
+
 ```
-import 'sys/cstdio.adept'
-import 'sys/cstring.adept'
+import '2.2/basics.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    firstname *ubyte = 'Will'
-    lastname *ubyte = 'Johnson'
+func main {
+    width, height int
+    getWidthAndHeight(&width, &height)
+    print("Width = %, Height = %" % width % height)
+}
 
-    fullname *ubyte = new ubyte * (strlen(firstname) + strlen(lastname) + 2)
-    defer delete fullname
-
-    sprintf(fullname, '%s %s', firstname, lastname)
-    printf('Fullname is: %s\n', fullname)
-    return 0
+func getWidthAndHeight(out width, height *int) {
+    *width = 640
+    *height = 480
 }
 ```
 
 ### Conditionals
+
 ```
-import 'sys/cstdio.adept'
+import '2.2/basics.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    if argc == 1 {
-        printf('Please pass in some arguments\n')
-        return 1
+func main {
+    name String = scan("What is your name? ")
+    age int = skimInt("How old are you? ")
+    
+    if name == "Isaac" {
+        print("Hello Isaac :)")
+    } else {
+        print("Nice to meet you " + name)
     }
-
-    i int = 0; while i != argc {
-        printf('Argument %d is "%s"\n', i, argv[i])
-        i += 1
+    
+    unless age > 21 {
+        print("You are too young to drink")
     }
-    return 0
+    
+    while age < 18 {
+        print("**birthday**")
+        age += 1
+    }
+    
+    print("You are now old enough to smoke")
+    
+    until age >= 21 {
+        print("**birthday**")
+        age += 1
+    }
+    
+    print("You are now old enough to drink")
 }
 ```
 
-### Negated Conditionals
+### Lists
+
 ```
-import 'sys/cstdio.adept'
+import '2.2/basics.adept'
+import '2.2/List.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    unless argc != 1 {
-        printf('Please pass in some arguments\n')
-        return 1
-    }
+func main {
+    invites <Invitation> List
+    invites.add(invitation("Isaac", "Peter", 4))
+    invites.add(invitation("Mr. Smith", "Mrs. Smith", 12))
+    invites.add(invitation("James", "Paul", 3))
+}
 
-    i int = 0; until i == argc {
-        printf('Argument %d is "%s"\n', i, argv[i])
-        i += 1
+struct Invitation (to, from String, priority int)
+
+func invitation(to, from String, priority int) Invitation {
+    invitation POD Invitation
+    invitation.to = to.commit()
+    invitation.from = from.commit()
+    invitation.priority = priority
+    return invitation
+}
+```
+
+### Ownership
+
+```
+import '2.2/basics.adept'
+
+list_of_everyone <String> List
+
+func main {
+    populateListOfEveryone()
+    
+    each String in list_of_everyone {
+        print("=> " + it)
     }
-    return 0
+}
+
+func populateListOfEveryone {
+    fullname1 String = getFullnameVersion1("Isaac", "Shelton")
+    fullname2 String = getFullnameVersion2("Isaac", "Shelton")
+    
+    list_of_everyone.add(fullname1.commit())
+    list_of_everyone.add(fullname2.commit())
+}
+
+func getFullnameVersion1(firstname, lastname String) String {
+    return firstname + " " + lastname
+}
+
+func getFullnameVersion2(firstname, lastname String) String {
+    fullname String = firstname + " " + lastname
+    // ... other statements ...
+    return fullname.commit()
 }
 ```
 
 ### Loop Labels
-```
-import 'sys/cstdio.adept'
 
-func main(in argc int, in argv **ubyte) int {
+```
+import '2.2/basics.adept'
+
+func main {
     countdown int = 0
-    prepare(&countdown); launch(&countdown)
-    return 0
+    prepare(&countdown)
+    launch(&countdown)
 }
 
-func prepare(inout countdown *int) void {
+func prepare(inout countdown *int) {
     while continue preparing {
         *countdown += 1
         if *countdown != 10, continue preparing
     }
 }
 
-func launch(inout countdown *int) void {
+func launch(inout countdown *int) {
     bad_launch bool = false
 
     until ready_to_launch : *countdown == 0 {
         *countdown -= 1
-        printf('Counting Down... %d\n', *countdown)
-
+        print("Counting Down... %" % *countdown)
         if bad_launch, break ready_to_launch
     }
 
-    unless bad_launch, printf('Lift Off!\n')
+    unless bad_launch, print("Lift Off!")
 }
 ```
 
 ### Constant Values
+
 ```
-import 'sys/cstdio.adept'
+import '2.2/basics.adept'
 
 PI == 3.14159265
 TAU == PI * 2
 
+func main {
+    print("PI is %" % PI)
+    print("TAU is %" % TAU)
+}
+```
+
+### Dynamic Memory Allocation
+
+```
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+import 'sys/cstring.adept'
+
 func main(in argc int, in argv **ubyte) int {
-    printf('PI is %f\n', PI)
-    printf('TAU is %f\n', TAU)
+    usingMallocAndFree('Will', 'Johnson')
+    usingNewAndDelete('John', 'Wilson')
     return 0
+}
+
+func usingMallocAndFree(firstname, lastname *ubyte) void {
+    fullname *ubyte = malloc(strlen(firstname) + strlen(lastname) + 2)
+    defer free(fullname)
+
+    sprintf(fullname, '%s %s', firstname, lastname)
+    printf('Fullname is: %s\n', fullname)
+}
+
+func usingNewAndDelete(firstname, lastname *ubyte) void {
+    fullname *ubyte = new ubyte * (strlen(firstname) + strlen(lastname) + 2)
+    defer delete fullname
+
+    sprintf(fullname, '%s %s', firstname, lastname)
+    printf('Fullname is: %s\n', fullname)
 }
 ```
 
 ### Function Pointers
-```
-import 'sys/cstdio.adept'
 
-func main(in argc int, in argv **ubyte) int {
+```
+import '2.2/basics.adept'
+
+func sum(a, b int) int = a + b
+
+func main {
     calculate func(int, int) int = func &sum
-    printf('calculate(13, 8) == %d\n', calculate(13, 8))
-    return 0
-}
-
-func sum(in a int, in b int) int {
-    return a + b
-}
-```
-
-### Multiple Declaration
-```
-import 'sys/cstdio.adept'
-
-func main(in argc int, in argv **ubyte) int {
-    a, b int = 13
-    return a + b
+    print("calculate(8, 13) = %" % caclulate(8, 13))
 }
 ```
 
 ### Defer Statements
-```
-import 'sys/cstdio.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    defer printf('I will be printed last\n')
-    defer printf('I will be printed second\n')
-    defer printf('I will be printed first\n')
-    printf('I will be printed before anyone else\n')
-    return 0
+```
+import '2.2/basics.adept'
+
+func main {
+    defer print("I will be printed last")
+    defer print("I will be printed second")
+    defer print("I will be printed first")
+    print("I will be printed before anyone else")
 }
 ```
 
 ### Undef Keyword
+
 ```
 import 'sys/cstdio.adept'
 
@@ -240,25 +310,27 @@ func main(in argc int, in argv **ubyte) int {
 ```
 
 ### Pragma Directives
+
 ```
-pragma compiler_version '2.0'
+pragma compiler_version '2.2'
 pragma project_name 'pragma_directives_example'
 pragma optimization aggressive
 
-import 'sys/cstdio.adept'
+import '2.2/basics.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    printf('Hello World\n')
-    return 0
+func main {
+    print("Hello World")
 }
 ```
 
 ### Primitive Types
+
 ```
 import 'sys/cstdio.adept'
 
 func main(in argc int, in argv **ubyte) int {
     // 8-bit Types
+    a_bool   bool   = false
     a_byte   byte   = 0sb
     a_ubyte  ubyte  = 0ub
 
@@ -286,28 +358,156 @@ func main(in argc int, in argv **ubyte) int {
 ```
 
 ### Type Casting
+
 ```
-import 'sys/cstdio.adept'
+import '2.2/basics.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    x int = 8
-    y int = 13
-
+func main {
+    value int = 1234
+    
     // Primitive value casting
-    positionX double = cast double x
-    positionY double = cast double y
-
+    result1 double = value as double
+    result2 double = cast double value
+    
     // Arbitrary pointer casting
-    ptr_cast_result *uint = cast *uint &x
-
+    result3 *uint = &value as *uint
+    result4 *uint = cast *uint &value
+    
     // Expression result casting
-    sum usize = cast usize (positionX + positionY)
-
-    return 0
+    result5 usize = (value + 1) as usize
+    result6 usize = cast usize (value + 1)
 }
 ```
 
+### Runtime Type Information
+
+```
+import '2.2/basics.adept'
+
+func main {
+    print("Every type used in this program: ")
+    
+    each *AnyType in [__types__, __types_length__] {
+        print(" => " + stringConstant(it.name))
+    }
+    
+    print("...")
+    print("Each member of type 'String':")
+    
+    string_type *AnyStructType = typeinfo String as *AnyStructType
+    repeat string_type.length {
+        field_name String = stringConstant(string_type.member_names[idx])
+        field_type String = stringConstant(string_type.members[idx].name)
+        print(" => " + field_name + " " + field_type)
+    }
+}
+```
+
+### Conditional Compilation
+
+```
+#default should_fake_windows   false
+#default should_fake_macos     false
+#default enable_secret_feature false
+
+#if enable_secret_feature
+    #print "Doing super secret feature stuff..."
+    #set should_fake_windows true
+    #set should_fake_macos   true
+#end
+
+import '2.2/basics.adept'
+
+func main {
+    #if should_fake_windows && should_fake_macos
+        print("Hello from Windows and MacOS???")
+    #elif __windows__ || should_fake_windows
+        print("Hello on Windows!")
+    #elif __macos__ || should_fake_macos
+        print("Hello on MacOS!")
+    #end
+}
+```
+
+### Polymorphism
+
+```
+import '2.2/basics.adept'
+
+func sum(a, b $T) $T = a + b
+
+func main {
+    print("%" % sum(8, 13))
+    print("%" % sum(3.14159, 0.57721))
+    print("%" % sum(' 'ub, '!'ub))
+    print("%" % sum(true, false))
+    print("%" % sum("Hello", "World"))
+}
+```
+
+### Polymorphic Structures
+
+```
+import '2.2/basics.adept'
+
+struct <$T> Couple (first, second $T)
+
+func main {
+    socks <String> Couple
+    socks.first = "Left Sock"
+    socks.second = "Right Sock"
+}
+```
+
+### Delayed Method Declaration
+
+```
+import '2.2/basics.adept'
+
+struct Unit (health int) {
+    func damage(amount int) {
+        this.health -= amount
+    }
+}
+
+func heal(this *Unit, amount int) {
+    this.health += amount
+}
+
+func main {
+    unit Unit
+    unit.health = 10
+    unit.damage(7)
+    unit.heal(4)
+}
+```
+
+### Intrinsic Loop Variables
+
+```
+import '2.2/basics.adept'
+import '2.2/List.adept'
+
+func main {
+    my_integers <int> List
+    
+    // Add number 0..9 inclusive to list
+    repeat 10, my_integers.add(idx)
+    
+    // Square each number in the list
+    each int in my_integers, it = it * it
+    
+    // Print each number
+    each int in my_integers {
+        print("my_integers[%] = %" % idx % it)
+    }
+}
+```
+
+
+
 # Applications in Adept 2.0
+
 - [(2.0) Tic-Tac-Toe](https://github.com/IsaacShelton/AdeptTicTacToe)
 - [(2.0) Neural Network](https://github.com/IsaacShelton/AdeptNeuralNetwork)
 - [(2.0) 2D Platformer](https://github.com/IsaacShelton/Adept2DPlatformer)
