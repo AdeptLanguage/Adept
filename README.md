@@ -504,7 +504,36 @@ func main {
 }
 ```
 
+### Spontaneous Variable Declarations
 
+```
+import '2.2/basics.adept'
+import '2.2/List.adept'
+import '2.2/random.adept'
+
+func main {
+    //   def variable_name Type   -  Zero-Initialized Spontaneous Variable
+    // undef variable_name Type   -  Undefined Spontaneous Variable
+    
+    color int = 0x112233FF
+    getColorComponents(color, undef r int, undef g int, undef b int)
+    print("Color Components: % % %" % r % g % b)
+    
+    randomize()
+    maybeGetAlphaChannel(color, def a int)
+    print("Alpha Channel: %" % a)
+}
+
+func getColorComponents(color int, out r, g, b *int) void {
+    *r = (color & 0xFF000000) >> 24
+    *g = (color & 0x00FF0000) >> 16
+    *b = (color & 0x0000FF00) >> 8
+}
+
+func maybeGetAlphaChannel(color int, out a *int) void {
+    if random() < 0.5, *a = (color & 0x000000FF)
+}
+```
 
 # Applications in Adept 2.0
 
