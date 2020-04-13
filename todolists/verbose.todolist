@@ -50,6 +50,11 @@ TODO:
 * specify specific reason for when null checks fail
 * ~__8__ ~__16__ ~__32__ ~__64__
 * ~!__primitive__
+* local functions
+* function aliases
+* scoped constants
+* reverse repeat
+* vararg bindings
 
 COMPLETED:
 + Finish ! operator for meta directives ()

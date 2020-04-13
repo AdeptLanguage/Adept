@@ -12,12 +12,15 @@ FEATURE:
 * Local functions
 * Function aliases
 * Scoped constants
+* Reverse repeat
+* Vararg bindings
 
 VERIFICATION:
 * ir_to_llvm_type circular containment detection
 * Throw errors for fields with duplicate names in structs
 * Dont allow void in places it doesn't make sense
 * Don't allow multiple polymorphic types with the same name and number of parameters
+* Add some type of warning for returning 'String's and 'List's without 'commit()'ing them
 
 COMPLETENESS:
 * __pass__ for fixed arrays maybe

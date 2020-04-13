@@ -514,6 +514,35 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                 case INSTRUCTION_VARZEROINIT:
                     fprintf(file, "    0x%08X varzi 0x%08X\n", (int) i, (int) ((ir_instr_varptr_t*) functions[f].basicblocks[b].instructions[i])->index);
                     break;
+                case INSTRUCTION_MEMCPY: {
+                        ir_instr_memcpy_t *memcpy_instr = (ir_instr_memcpy_t*) functions[f].basicblocks[b].instructions[i];
+                        strong_cstr_t destination = ir_value_str(memcpy_instr->destination);
+                        strong_cstr_t value = ir_value_str(memcpy_instr->value);
+                        strong_cstr_t bytes = ir_value_str(memcpy_instr->bytes);
+                        fprintf(file, "    0x%08X memcpy %s, %s, %s\n", (int) i, destination, value, bytes);
+                        free(destination);
+                        free(value);
+                        free(bytes);
+                    }
+                    break;
+                case INSTRUCTION_BIT_AND:
+                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "band");
+                    break;
+                case INSTRUCTION_BIT_OR:
+                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "bor");
+                    break;
+                case INSTRUCTION_BIT_XOR:
+                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "bxor");
+                    break;
+                case INSTRUCTION_BIT_LSHIFT:
+                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "lshift");
+                    break;
+                case INSTRUCTION_BIT_RSHIFT:
+                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "rshift");
+                    break;
+                case INSTRUCTION_BIT_LGC_RSHIFT:
+                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "lgcrshift");
+                    break;
                 case INSTRUCTION_BIT_COMPLEMENT:
                     val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
                     fprintf(file, "    0x%08X compl %s\n", (int) i, val_str);

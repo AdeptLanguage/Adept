@@ -491,7 +491,7 @@ import '2.2/List.adept'
 func main {
     my_integers <int> List
     
-    // Add number 0..9 inclusive to list
+    // Add numbers 0..9 inclusive to list
     repeat 10, my_integers.add(idx)
     
     // Square each number in the list
