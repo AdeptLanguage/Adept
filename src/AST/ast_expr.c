@@ -35,43 +35,43 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         sprintf(representation, "0x%02Xub", (unsigned int) ((ast_expr_ubyte_t*) expr)->value);
         return representation;
     case EXPR_SHORT:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%ldss", (long int) ((ast_expr_short_t*) expr)->value);
         return representation;
     case EXPR_USHORT:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%ldus", (long int) ((ast_expr_ushort_t*) expr)->value);
         return representation;
     case EXPR_INT:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%ldsi", (long int) ((ast_expr_int_t*) expr)->value);
         return representation;
     case EXPR_UINT:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%ldui", (long int) ((ast_expr_uint_t*) expr)->value);
         return representation;
     case EXPR_LONG:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%ldsl", (long int) ((ast_expr_long_t*) expr)->value);
         return representation;
     case EXPR_ULONG:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%ldul", (long int) ((ast_expr_ulong_t*) expr)->value);
         return representation;
     case EXPR_USIZE:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%lduz", (long int) ((ast_expr_usize_t*) expr)->value);
         return representation;
     case EXPR_GENERIC_INT:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%ldgi", (long int) ((ast_expr_generic_int_t*) expr)->value);
         return representation;
     case EXPR_FLOAT:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%06.6ff", ((ast_expr_float_t*) expr)->value);
         return representation;
     case EXPR_DOUBLE:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%06.6fd", ((ast_expr_float_t*) expr)->value);
         return representation;
     case EXPR_BOOLEAN:
@@ -79,7 +79,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         strcpy(representation, ((ast_expr_boolean_t*) expr)->value ? "true" : "false");
         return representation;
     case EXPR_GENERIC_FLOAT:
-        representation = malloc(21);
+        representation = malloc(23);
         sprintf(representation, "%06.6fgf", ((ast_expr_generic_float_t*) expr)->value);
         return representation;
     case EXPR_NULL:

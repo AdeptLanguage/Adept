@@ -1213,6 +1213,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         free(llvm.func_skeletons);
         free(llvm.global_variables);
         free(llvm.anon_global_variables);
+        LLVMDisposeTargetData(data_layout);
         LLVMDisposeTargetMachine(target_machine);
         return FAILURE;
     }
@@ -1225,9 +1226,6 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     free(llvm.func_skeletons);
     free(llvm.global_variables);
     free(llvm.anon_global_variables);
-
-    const char *root = compiler->root;
-    length_t root_length = strlen(root);
 
 	char *link_command; // Will be determined based on system
 
@@ -1257,7 +1255,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 
 	#ifdef _WIN32
-	// Windows Linkering
+	// Windows Linking
     // TODO: SECURITY: Stop using system(3) call to invoke linker
     const char *linker = "ld.exe"; // May need to change depending on system etc.
     length_t linker_length = strlen(linker);
@@ -1265,16 +1263,19 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     const char *linker_options = "--start-group";
     length_t linker_options_length = strlen(linker_options);
 
+    const char *root = compiler->root;
+    length_t root_length = strlen(root);
+
     // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
-    link_command = malloc(linker_length + root_length * 18 + 14 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
+    link_command = malloc(linker_length + root_length + 18 + 14 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
     sprintf(link_command, "\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
 	#else
-	// UNIX Linkering
+	// UNIX Linking
 	
     const char *linker = "gcc"; // May need to change depending on system etc.
     length_t linker_length = strlen(linker);
 	
-	link_command = malloc(linker_length + root_length * 18 + 14 + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
+	link_command = malloc(linker_length + 2 + strlen(object_filename) + 1 + strlen(linker_additional) + 5 + strlen(compiler->output_filename) + 2);
 
     sprintf(link_command, "%s \"%s\"%s -o \"%s\"", linker, object_filename, linker_additional, compiler->output_filename);
 	#endif
@@ -1293,11 +1294,18 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     if(LLVMTargetMachineEmitToFile(target_machine, llvm.module, object_filename, codegen, &error_message)){
         redprintf("INTERNAL ERROR: LLVMTargetMachineEmitToFile failed: %s\n", error_message);
+        LLVMDisposeTargetData(data_layout);
+        LLVMRunPassManager(pass_manager, llvm.module);
         LLVMDisposeTargetMachine(target_machine);
+        LLVMDisposePassManager(pass_manager);
+        if(disposeTriple) LLVMDisposeMessage(triple);
+        
         LLVMDisposeMessage(error_message);
         free(object_filename);
+        return FAILURE;
     }
 
+    LLVMDisposeTargetData(data_layout);
     LLVMRunPassManager(pass_manager, llvm.module);
     LLVMDisposeTargetMachine(target_machine);
     LLVMDisposePassManager(pass_manager);

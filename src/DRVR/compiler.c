@@ -538,7 +538,7 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
         if(object->traits & OBJECT_PACKAGE){
             redprintf("%s:?:?:\n", filename_name_const(object->filename));
         } else {
-            lex_get_location(object->buffer, source.index, &line, &column);
+            lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
             redprintf("%s:%d:%d:\n", filename_name_const(object->filename), line, column);
             compiler_print_source(compiler, line, column, source);
         }
@@ -548,7 +548,7 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
     if(object->traits & OBJECT_PACKAGE){
         redprintf("%s:?:?: %s!\n", filename_name_const(object->filename), message);
     } else {
-        lex_get_location(object->buffer, source.index, &line, &column);
+        lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
         redprintf("%s:%d:%d: %s!\n", filename_name_const(object->filename), line, column, message);
         compiler_print_source(compiler, line, column, source);
     }
@@ -568,7 +568,7 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
         if(object->traits & OBJECT_PACKAGE){
             redprintf("%s:?:?:\n", filename_name_const(object->filename));
         } else {
-            lex_get_location(object->buffer, source.index, &line, &column);
+            lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
             redprintf("%s:%d:%d:\n", filename_name_const(object->filename), line, column);
             compiler_print_source(compiler, line, column, source);
         }
@@ -580,7 +580,7 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
         column = 1;
         printf("%s:?:?: ", filename_name_const(object->filename));
     } else {
-        lex_get_location(object->buffer, source.index, &line, &column);
+        lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
         printf("%s:%d:%d: ", filename_name_const(object->filename), line, column);
     }
 
@@ -598,7 +598,7 @@ void compiler_warn(compiler_t *compiler, source_t source, const char *message){
 
     object_t *object = compiler->objects[source.object_index];
     int line, column;
-    lex_get_location(object->buffer, source.index, &line, &column);
+    lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
     yellowprintf("%s:%d:%d: %s\n", filename_name_const(object->filename), line, column, message);
 }
 
@@ -612,7 +612,7 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
     terminal_set_color(TERMINAL_COLOR_YELLOW);
     va_start(args, format);
 
-    lex_get_location(object->buffer, source.index, &line, &column);
+    lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
     printf("%s:%d:%d: ", filename_name_const(object->filename), line, column);
     vprintf(format, args);
     printf("\n");

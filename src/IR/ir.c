@@ -74,7 +74,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             free(typename);
             return value_str;
         case TYPE_KIND_BOOLEAN:
-            value_str = malloc(typename_length + 6);
+            value_str = malloc(typename_length + 7);
             sprintf(value_str, "%s %s", typename, *((bool*) value->extra) ? "true" : "false");
             free(typename);
             return value_str;
@@ -704,7 +704,7 @@ void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope){
 
 void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length){
     ir_pool_init(&ir_module->pool);
-
+    
     ir_module->funcs = malloc(sizeof(ir_func_t) * funcs_capacity);
     ir_module->funcs_length = 0;
     ir_module->funcs_capacity = funcs_capacity;

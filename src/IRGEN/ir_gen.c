@@ -77,7 +77,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         module_func->maybe_filename = object->filename;
 
         int line, column;
-        lex_get_location(object->buffer, ast_func->source.index, &line, &column);
+        lex_get_location(compiler->objects[ast_func->source.object_index]->buffer, ast_func->source.index, &line, &column);
         module_func->maybe_line_number = line;
         module_func->maybe_column_number = column;
     }

@@ -18,7 +18,7 @@
 
 // Always enable memory tracking for debug builds
 #ifdef ENABLE_DEBUG_FEATURES
-#define TRACK_MEMORY_USAGE
+//#define TRACK_MEMORY_USAGE
 #endif // ENABLE_DEBUG_FEATURES
 
 // ================= OPTIONS =================

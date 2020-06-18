@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #include "UTIL/memory.h"
-
+ 
 #ifdef TRACK_MEMORY_USAGE
 
 #undef malloc
@@ -155,6 +155,8 @@ void memory_track_external_allocation(void *pointer, size_t size, const char *op
     memblock->filename = optional_filename ? optional_filename : "external_allocation";
     memblock->line_number = optional_line;
     #endif // TRACK_MEMORY_FILE_AND_LINE
+    
+    global_memory_size += size;
 }
 
 void memory_scan(){

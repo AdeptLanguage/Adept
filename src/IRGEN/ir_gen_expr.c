@@ -920,6 +920,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 if(!expr_is_mutable(call_expr->value)){
                     if(call_expr->is_tentative){
                         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
+                        ast_types_free_fully(arg_types, 1);
                         break;
                     }
 
@@ -939,13 +940,13 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             } else {
                 if(call_expr->is_tentative){
                     if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
+                    ast_types_free_fully(arg_types, 1);
                     break;
                 }
                 
                 char *s = ast_type_str(&arg_types[0]);
                 compiler_panicf(builder->compiler, call_expr->source, "Can't call methods on type '%s'", s);
-                ast_type_free(&arg_types[0]);
-                free(arg_types);
+                ast_types_free_fully(arg_types, 1);
                 free(s);
                 return FAILURE;
             }
