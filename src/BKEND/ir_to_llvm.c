@@ -1252,32 +1252,23 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
             linker_additional[linker_additional_index++] = '\"';
         }
         linker_additional[linker_additional_index] = '\0';
+    } else {
+        linker_additional = malloc(1);
+        *linker_additional = '\0';
     }
 
 	#ifdef _WIN32
 	// Windows Linking
     // TODO: SECURITY: Stop using system(3) call to invoke linker
     const char *linker = "ld.exe"; // May need to change depending on system etc.
-    length_t linker_length = strlen(linker);
-
     const char *linker_options = "--start-group";
-    length_t linker_options_length = strlen(linker_options);
-
     const char *root = compiler->root;
-    length_t root_length = strlen(root);
-
-    // linker + " \"" + object_filename + "\" -o " + compiler->output_filename + "\""
-    link_command = malloc(linker_length + root_length + 18 + 14 + linker_options_length + linker_additional_length + 2 + strlen(object_filename) + 59 + strlen(compiler->output_filename) + 2);
-    sprintf(link_command, "\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
+    link_command = mallocandsprintf("\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
 	#else
 	// UNIX Linking
 	
     const char *linker = "gcc"; // May need to change depending on system etc.
-    length_t linker_length = strlen(linker);
-	
-	link_command = malloc(linker_length + 2 + strlen(object_filename) + 1 + strlen(linker_additional) + 5 + strlen(compiler->output_filename) + 2);
-
-    sprintf(link_command, "%s \"%s\"%s -o \"%s\"", linker, object_filename, linker_additional, compiler->output_filename);
+    link_command = mallocandsprintf("%s \"%s\"%s -o \"%s\"", linker, object_filename, linker_additional, compiler->output_filename);
 	#endif
 
     if(linker_additional_length != 0) free(linker_additional);
