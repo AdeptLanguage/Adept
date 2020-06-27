@@ -1532,7 +1532,7 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
+errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result){
     if(type_list_length != 1) return FAILURE; // Require single argument ('this') for auto-generated __defer__
 
@@ -1604,7 +1604,7 @@ errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_va
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
+errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result){
     if(type_list_length != 1) return FAILURE; // Require single argument for auto-generated __pass__
 

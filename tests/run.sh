@@ -39,6 +39,7 @@ compile defer || exit $?
 compile defer_global || exit $?
 compile deprecated || exit $?
 compile dereference || exit $?
+compile dropped_values || exit $?
 compile each_in || exit $?
 compile each_in_fixed || exit $?
 compile each_in_list || exit $?
@@ -52,6 +53,7 @@ compile fixed_array_assign || exit $?
 compile fixed_array_deference || exit $?
 compile fixed_array_pass || exit $?
 compile funcaddr || exit $?
+compile funcaddr_autogen || exit $?
 compile funcaddrnull || exit $?
 compile funcptr || exit $?
 compile functions || exit $?
@@ -120,7 +122,6 @@ compile structs || exit $?
 compile struct_association || exit $?
 compile successful || exit $?
 compile switch || exit $?
-compile temporary_dropped || exit $?
 compile temporary_mutable || exit $?
 compile tentative_function_calls || exit $?
 compile tentative_method_calls || exit $?

@@ -61,6 +61,8 @@ call :compile deprecated
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile dropped_values
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile each_in
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile each_in_fixed
@@ -89,6 +91,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array_pass
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddr
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile funcaddr_autogen
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddrnull
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
@@ -219,8 +223,6 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile successful
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile switch
-if %errorlevel% neq 0 popd & exit /b %errorlevel%
-call :compile temporary_dropped
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile temporary_mutable
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

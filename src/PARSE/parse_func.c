@@ -84,12 +84,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
             )
         || !ast_type_is_pointer_to(&func->arg_types[0], &func->arg_types[1])
         || func->arg_type_traits[0] != TRAIT_NONE
-        || func->arg_type_traits[1] != AST_FUNC_ARG_TYPE_TRAIT_POD
     )){
-        compiler_panic(ctx->compiler, source, "Management method __assign__ must be declared as 'func __assign__(this *T, other POD T) void'");
+        compiler_panic(ctx->compiler, source, "Management method __assign__ must be declared like 'func __assign__(this *T, other T) void'");
         return FAILURE;
     }
-
+    
     static const char *math_management_funcs[] = {
         "__add__", "__divide__", "__equals__", "__greater_than__",
         "__greater_than_or_equal__", "__less_than__", "__less_than_or_equal__",

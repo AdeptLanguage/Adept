@@ -318,14 +318,14 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
 // Attempts to auto-generate __defer__ management method
 // NOTE: Does NOT check for existing suitable __defer__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
+errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result);
 
 // ---------------- attempt_autogen___pass__ ----------------
 // Attempts to auto-generate __pass__ management function
 // NOTE: Does NOT check for existing suitable __pass__ functions
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ir_value_t **arg_values, ast_type_t *arg_types,
+errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ast_type_t *arg_types,
         length_t type_list_length, funcpair_t *result);
 
 // ---------------- resolve_type_polymorphics ----------------

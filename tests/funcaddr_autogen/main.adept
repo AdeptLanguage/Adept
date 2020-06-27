@@ -1,0 +1,9 @@
+
+import 'sys/cstdio.adept'
+
+struct Thing ()
+
+func main {
+    printf('%p\n', func &__defer__(*Thing))
+    printf('%p\n', func null &__defer__(*int))
+}
