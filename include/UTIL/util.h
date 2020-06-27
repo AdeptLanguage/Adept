@@ -49,6 +49,12 @@ strong_cstr_t strclone(const char *src);
 // Frees every string in an array, and then the array
 void freestrs(strong_cstr_t *array, length_t length);
 
+// ---------------- mallocandsprintf ----------------
+// Allocates an array capable of holding the result
+// of a sprintf() and then runs sprintf() and
+// returns the byte array
+char *mallocandsprintf(const char *format, ...);
+
 #ifdef __cplusplus
 }
 #endif

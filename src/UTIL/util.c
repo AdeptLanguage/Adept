@@ -1,4 +1,5 @@
 
+#include <stdarg.h>
 #include "UTIL/util.h"
 
 void expand(void **inout_memory, length_t unit_size, length_t length, length_t *inout_capacity, length_t amount, length_t default_capacity){
@@ -77,4 +78,35 @@ strong_cstr_t strclone(const char *src){
 void freestrs(strong_cstr_t *array, length_t length){
     for(length_t i = 0; i != length; i++) free(array[i]);
     free(array);
+}
+
+char *mallocandsprintf(const char *format, ...){
+    // TODO: Add support for things other than %s
+    char *destination = NULL;
+    va_list args;
+    va_list transverse;
+    va_start(args, format);
+    va_copy(transverse, args);
+    const char *p = format;
+    size_t size = 1;
+    while(*p != '\0'){
+        if(*(p++) == '%'){
+            switch(*(p++)){
+            case '%':
+                size++;
+                break;
+            case 's':
+                size += strlen(va_arg(transverse, char*));
+                break;
+            default:
+                printf("WARNING: mallocandsprintf() received non %%s in format\n");
+                size += 50; // Assume whatever it is, it will fit in 50 bytes
+            }
+        } else size++;
+    }
+    va_end(transverse);
+    destination = malloc(size);
+    vsprintf(destination, format, args);
+    va_end(args);
+    return destination;
 }
