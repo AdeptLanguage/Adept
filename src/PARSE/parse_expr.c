@@ -614,6 +614,7 @@ int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
     func_addr_expr->match_args = NULL;
     func_addr_expr->match_args_length = 0;
     func_addr_expr->tentative = false;
+    func_addr_expr->has_match_args = false;
 
     // Optionally enable tentative function lookup: 'func null &functionName'
     if(tokens[*i].id == TOKEN_NULL){
@@ -639,7 +640,8 @@ int parse_expr_func_address(parse_ctx_t *ctx, ast_expr_t **out_expr){
 
         ast_type_t *args = NULL;
         length_t arity = 0;
-
+        
+        func_addr_expr->has_match_args = true;
         (*i)++;
 
         while(*i != ctx->tokenlist->length && tokens[*i].id != TOKEN_CLOSE){

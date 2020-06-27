@@ -975,7 +975,8 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_func_addr->traits = expr_as_func_addr->traits;
         clone_as_func_addr->match_args_length = expr_as_func_addr->match_args_length;
         clone_as_func_addr->tentative = expr_as_func_addr->tentative;
-
+        clone_as_func_addr->has_match_args = expr_as_func_addr->has_match_args;
+        
         if(expr_as_func_addr->match_args == NULL){
             clone_as_func_addr->match_args = NULL;
         } else {

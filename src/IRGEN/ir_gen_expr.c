@@ -663,7 +663,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             funcpair_t pair;
             bool failed_tentatively = false;        
 
-            if(func_addr_expr->match_args == NULL){
+            if(func_addr_expr->has_match_args == false){
                 bool is_unique;
                 if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &is_unique, &pair)){
                     if(func_addr_expr->tentative){

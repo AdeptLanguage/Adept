@@ -73,8 +73,8 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     module_func->variable_count = 0;
 
     if(compiler->checks & COMPILER_NULL_CHECKS){
-        module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);
-        module_func->maybe_filename = object->filename;
+        module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);        
+        module_func->maybe_filename = compiler->objects[ast_func->source.object_index]->filename;
 
         int line, column;
         lex_get_location(compiler->objects[ast_func->source.object_index]->buffer, ast_func->source.index, &line, &column);

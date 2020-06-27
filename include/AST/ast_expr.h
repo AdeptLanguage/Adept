@@ -386,10 +386,11 @@ typedef struct {
     unsigned int id;
     source_t source;
     weak_cstr_t name;
-    ast_type_t *match_args; // Can be NULL to indicate name-only
+    ast_type_t *match_args;
     length_t match_args_length;
     trait_t traits;
     bool tentative;
+    bool has_match_args; // Indicates whether name-only
 } ast_expr_func_addr_t;
 
 // ---------------- ast_expr_array_access_t ----------------
