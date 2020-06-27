@@ -32,6 +32,7 @@ typedef struct {
     LLVMBuilderRef builder;
     value_catalog_t *catalog;
     varstack_t *stack;
+    LLVMTypeRef *indexed_types;
     LLVMValueRef *func_skeletons;
     LLVMValueRef *global_variables;
     LLVMValueRef *anon_global_variables;
@@ -41,13 +42,18 @@ typedef struct {
     LLVMValueRef stacksave_intrinsic;
     LLVMValueRef stackrestore_intrinsic;
     compiler_t *compiler;
-
+    object_t *object;
+    
     // Variables only used for compilation with null checks
     LLVMBasicBlockRef null_check_on_fail_block;
     LLVMValueRef line_phi;
     LLVMValueRef column_phi;
     LLVMValueRef null_check_failure_message_bytes;
     bool has_null_check_failure_message_bytes;
+
+    // Variables only used for generating type map
+    bool should_name_structs;
+    length_t struct_index;
 } llvm_context_t;
 
 typedef struct {
@@ -60,7 +66,7 @@ typedef struct {
 
 // ---------------- ir_to_llvm_type ----------------
 // Converts an IR type to an LLVM type
-LLVMTypeRef ir_to_llvm_type(ir_type_t *ir_type);
+LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type);
 
 // ---------------- ir_to_llvm_value ----------------
 // Converts an IR value to an LLVM value

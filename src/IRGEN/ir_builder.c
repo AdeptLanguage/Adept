@@ -85,7 +85,7 @@ ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
 }
 
 ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source){
-    ir_type_t *dereferenced_type = ir_type_dereference(value->type);
+    ir_type_t *dereferenced_type = ir_type_dereference(builder->type_map, value->type);
     if(dereferenced_type == NULL) return NULL;
 
     ir_basicblock_new_instructions(builder->current_block, 1);
@@ -146,10 +146,12 @@ ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
 }
 
 ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source){
-    // NOTE: Array access is only for pointer values
-    if(value->type->kind != TYPE_KIND_POINTER){
-        redprintf("INTERNAL ERROR: build_array_access called on non-pointer value\n");
-        redprintf("                (value left unmodified)");
+    // NOTE: Array access is only for pointer values and fixed arrays
+    unsigned int value_type_kind = ir_type_kind(builder->type_map, value->type);
+
+    if(value_type_kind != TYPE_KIND_POINTER && value_type_kind != TYPE_KIND_FIXED_ARRAY){
+        compiler_panicf(builder->compiler, code_source, "INTERNAL ERROR: build_array_access called on non-pointer value\n");
+        redprintf("                (type kind was 0x%08X, value left unmodified)\n", value_type_kind);
         return value;
     }
 
@@ -227,15 +229,15 @@ ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value
 }
 
 ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index){
-    return build_offsetof_ex(builder->pool, ir_builder_usize(builder), type, index);
+    return build_offsetof_ex(builder->pool, builder->type_map, ir_builder_usize(builder), type, index);
 }
 
-ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type, length_t index){
+ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_map_t *type_map, ir_type_t *usize_type, ir_type_t *type, length_t index){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_OFFSETOF;
     value->type = usize_type;
 
-    if(type->kind != TYPE_KIND_STRUCTURE){
+    if(ir_type_kind(type_map, type) != TYPE_KIND_STRUCTURE){
         redprintf("INTENRAL ERROR: build_offsetof got non-struct type as type\n");
     }
 
@@ -289,7 +291,7 @@ ir_type_t* ir_builder_usize(ir_builder_t *builder){
 
     if(*shared_type == NULL){
         (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        (*shared_type)->kind = TYPE_KIND_U64;
+        (*shared_type)->_kind = TYPE_KIND_U64;
     }
 
     return *shared_type;
@@ -310,7 +312,7 @@ ir_type_t* ir_builder_bool(ir_builder_t *builder){
 
     if(*shared_type == NULL){
         (*shared_type) = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        (*shared_type)->kind = TYPE_KIND_BOOLEAN;
+        (*shared_type)->_kind = TYPE_KIND_BOOLEAN;
     }
 
     return *shared_type;
@@ -352,8 +354,8 @@ ir_value_t *build_literal_int(ir_pool_t *pool, long long literal_value){
 
     value->value_type = VALUE_TYPE_LITERAL;
     value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    value->type->kind = TYPE_KIND_S32;
-    // neglect ir_value->type->extra
+    value->type->_kind = TYPE_KIND_S32;
+    // neglect ir_value->type->_extra
     
     value->extra = ir_pool_alloc(pool, sizeof(long long));
     *((long long*) value->extra) = literal_value;
@@ -365,8 +367,8 @@ ir_value_t *build_literal_usize(ir_pool_t *pool, length_t literal_value){
 
     value->value_type = VALUE_TYPE_LITERAL;
     value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    value->type->kind = TYPE_KIND_U64;
-    // neglect ir_value->type->extra
+    value->type->_kind = TYPE_KIND_U64;
+    // neglect ir_value->type->_extra
     
     value->extra = ir_pool_alloc(pool, sizeof(unsigned long long));
     *((unsigned long long*) value->extra) = literal_value;
@@ -416,7 +418,7 @@ ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type
     ir_value->value_type = VALUE_TYPE_CSTR_OF_LEN;
     ir_type_t *ubyte_type;
 
-    if(!ir_type_map_find(type_map, "ubyte", &ubyte_type)){
+    if(!ir_type_map_find(pool, type_map, "ubyte", &ubyte_type)){
         redprintf("INTERNAL ERROR: ir_type_map_find failed to find mapping for ubyte for build_literal_cstr_of_length_ex!\n");
         return NULL;
     }
@@ -434,10 +436,10 @@ ir_value_t *build_null_pointer(ir_pool_t *pool){
     // neglect value->extra
 
     value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    value->type->kind = TYPE_KIND_POINTER;
-    value->type->extra = ir_pool_alloc(pool, sizeof(ir_type_t));
-    ((ir_type_t*) value->type->extra)->kind = TYPE_KIND_S8;
-    // neglect ((ir_type_t*) value->type->extra)->extra
+    value->type->_kind = TYPE_KIND_POINTER;
+    value->type->_extra = ir_pool_alloc(pool, sizeof(ir_type_t));
+    ((ir_type_t*) value->type->_extra)->_kind = TYPE_KIND_S8;
+    // neglect ((ir_type_t*) value->type->_extra)->extra
 
     return value;
 }
@@ -559,11 +561,11 @@ ir_value_t *build_stack_save(ir_builder_t *builder){
 
     if(builder->stack_pointer_type == NULL){
         ir_type_t *i8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        i8_type->kind = TYPE_KIND_S8;
-        i8_type->extra = NULL;
+        i8_type->_kind = TYPE_KIND_S8;
+        i8_type->_extra = NULL;
         builder->stack_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        builder->stack_pointer_type->kind = TYPE_KIND_POINTER;
-        builder->stack_pointer_type->extra = i8_type;
+        builder->stack_pointer_type->_kind = TYPE_KIND_POINTER;
+        builder->stack_pointer_type->_extra = i8_type;
     }
 
     instr->result_type = builder->stack_pointer_type;
@@ -590,8 +592,8 @@ ir_value_t *build_bool(ir_pool_t *pool, bool value){
     ir_value->value_type = VALUE_TYPE_LITERAL;
 
     ir_value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    ir_value->type->kind = TYPE_KIND_BOOLEAN;
-    // neglect ir_value->type->extra
+    ir_value->type->_kind = TYPE_KIND_BOOLEAN;
+    // neglect ir_value->type->_extra
 
     ir_value->extra = ir_pool_alloc(pool, sizeof(bool));
     *((bool*) ir_value->extra) = value;
@@ -672,13 +674,15 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
     for(length_t i = 0; i != list->length; i++){
         bridge_var_t *variable = &list->variables[i];
 
+        unsigned int type_kind = ir_type_kind(builder->type_map, variable->ir_type);
+
         // Don't perform defer management on POD variables or non-struct types
         trait_t traits = variable->traits;
         if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE ||
-            !(variable->ir_type->kind == TYPE_KIND_STRUCTURE || variable->ir_type->kind == TYPE_KIND_FIXED_ARRAY)) continue;
+            !(type_kind == TYPE_KIND_STRUCTURE || type_kind == TYPE_KIND_FIXED_ARRAY)) continue;
 
         // Ensure we're working with a single AST type element in the type for structs
-        if(variable->ir_type->kind == TYPE_KIND_STRUCTURE && variable->ast_type->elements_length != 1) continue;
+        if(type_kind == TYPE_KIND_STRUCTURE && variable->ast_type->elements_length != 1) continue;
 
         // Capture snapshot of current pool state (for if we need to revert allocations)
         ir_pool_snapshot_t snapshot;
@@ -723,7 +727,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
         ir_pool_snapshot_capture(builder->pool, &snapshot);
 
         ir_type_t *ir_type;
-        if(ir_gen_resolve_type(builder->compiler, builder->object, &global->type, &ir_type)){
+        if(ir_gen_resolve_type(builder->compiler, builder->object, &global->type, &ir_type, true)){
             // Revert recent pool allocations
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             return FAILURE;
@@ -791,10 +795,13 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
 
             // Bitcast to '*T' from '*n T'
             // NOTE: Assumes that the IR type of 'mutable_value' is a pointer to a fixed array
-            assert(mutable_value->type->kind == TYPE_KIND_POINTER);
-            assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
+            assert(ir_type_kind(builder->type_map, mutable_value->type) == TYPE_KIND_POINTER);
+            assert(ir_type_kind(builder->type_map, (ir_type_t*) ir_type_extra(builder->type_map, mutable_value->type)) == TYPE_KIND_FIXED_ARRAY);
 
-            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
+            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool,
+                ((ir_type_extra_fixed_array_t*) ir_type_extra(builder->type_map, (ir_type_t*) ir_type_extra(builder->type_map, mutable_value->type)))->subtype
+            );
+
             mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
 
             for(length_t i = 0; i != count; i++){
@@ -873,8 +880,8 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 
                 ir_type_t *ir_field_type, *this_ir_type;
                 if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type)
+                    ir_gen_resolve_type(builder->compiler, builder->object, ast_field_type, &ir_field_type, true) ||
+                    ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type, true)
                 ){
                     return ALT_FAILURE;
                 }
@@ -935,8 +942,8 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 
                 ir_type_t *ir_field_type, *this_ir_type;
                 if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type)
+                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type, true) ||
+                    ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type, true)
                 ){
                     ast_type_var_catalog_free(&catalog);
                     ast_type_free(&ast_field_type);
@@ -988,7 +995,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
     for(length_t i = 0; i != arity; i++){
         if(arg_type_traits != NULL && arg_type_traits[i] & AST_FUNC_ARG_TYPE_TRAIT_POD) continue;
         
-        unsigned int value_type_kind = values[i]->type->kind;
+        unsigned int value_type_kind = ir_type_kind(builder->type_map, values[i]->type);
 
         if(value_type_kind == TYPE_KIND_STRUCTURE || value_type_kind == TYPE_KIND_FIXED_ARRAY){
             ast_type_t *ast_type = &types[i];
@@ -1073,10 +1080,12 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
 
             // Bitcast to '*T' from '*n T'
             // NOTE: Assumes that the IR type of 'mutable_value' is a pointer to a fixed array
-            assert(mutable_value->type->kind == TYPE_KIND_POINTER);
-            assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
-
-            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
+            assert(ir_type_kind(builder->type_map, mutable_value->type) == TYPE_KIND_POINTER);
+            assert(ir_type_kind(builder->type_map, (ir_type_t*) ir_type_extra(builder->type_map, mutable_value->type)) == TYPE_KIND_FIXED_ARRAY);
+            
+            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool,
+                ((ir_type_extra_fixed_array_t*) ir_type_extra(builder->type_map, ((ir_type_t*) ir_type_extra(builder->type_map, mutable_value->type))))->subtype
+            );
             mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
 
             for(length_t i = 0; i != count; i++){
@@ -1131,7 +1140,7 @@ errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_re
     if(passed_ast_type == NULL) return FAILURE;
 
     ir_type_t *passed_ir_type;
-    if(ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type)){
+    if(ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type, true)){
         return FAILURE;
     }
 
@@ -1182,13 +1191,15 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 
                 ir_type_t *ir_field_type, *passed_ir_type;
                 if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type)
+                    ir_gen_resolve_type(builder->compiler, builder->object, ast_field_type, &ir_field_type, true) ||
+                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type, true)
                 ){
                     return ALT_FAILURE;
                 }
 
-                if(ir_field_type->kind != TYPE_KIND_STRUCTURE && ir_field_type->kind != TYPE_KIND_FIXED_ARRAY){
+                unsigned int ir_field_type_kind = ir_type_kind(builder->type_map, ir_field_type);
+
+                if(ir_field_type_kind != TYPE_KIND_STRUCTURE && ir_field_type_kind != TYPE_KIND_FIXED_ARRAY){
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
                     continue;
                 }
@@ -1249,15 +1260,17 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 ir_type_t *ir_field_type, *passed_ir_type;
                 if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type)
+                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type, true) ||
+                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type, true)
                 ){
                     ast_type_var_catalog_free(&catalog);
                     ast_type_free(&ast_field_type);
                     return ALT_FAILURE;
                 }
 
-                if(ir_field_type->kind != TYPE_KIND_STRUCTURE && ir_field_type->kind != TYPE_KIND_FIXED_ARRAY){
+                unsigned int ir_field_type_kind = ir_type_kind(builder->type_map, ir_field_type);
+
+                if(ir_field_type_kind != TYPE_KIND_STRUCTURE && ir_field_type_kind != TYPE_KIND_FIXED_ARRAY){
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
                     ast_type_free(&ast_field_type);
                     continue;
@@ -1308,13 +1321,15 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 ir_type_t *ir_element_type, *passed_ir_type;
                 if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_element_type, &ir_element_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type)
+                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_element_type, &ir_element_type, true) ||
+                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type, true)
                 ){
                     return ALT_FAILURE;
                 }
 
-                if(ir_element_type->kind != TYPE_KIND_STRUCTURE && ir_element_type->kind != TYPE_KIND_FIXED_ARRAY){
+                unsigned int ir_element_type_kind = ir_type_kind(builder->type_map, ir_element_type);
+
+                if(ir_element_type_kind != TYPE_KIND_STRUCTURE && ir_element_type_kind != TYPE_KIND_FIXED_ARRAY){
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
                     continue;
                 }
@@ -1366,7 +1381,7 @@ bool could_have_pass(ast_type_t *ast_type){
 successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_value_type, ir_value_t *destination,
         ast_type_t *ast_destination_type, bool zero_initialize){
 
-    if(value->type->kind != TYPE_KIND_STRUCTURE || ast_destination_type->elements_length != 1) return UNSUCCESSFUL;
+    if(ir_type_kind(builder->type_map, value->type) != TYPE_KIND_STRUCTURE || ast_destination_type->elements_length != 1) return UNSUCCESSFUL;
 
     funcpair_t result;
     weak_cstr_t struct_name;
@@ -1435,7 +1450,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
 }
 
 ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name){
-    if(lhs->type->kind == TYPE_KIND_STRUCTURE){
+    if(ir_type_kind(builder->type_map, lhs->type) == TYPE_KIND_STRUCTURE){
         if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
             funcpair_t result;
 

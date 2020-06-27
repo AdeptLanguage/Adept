@@ -2,6 +2,8 @@
 #ifndef GROUND_H
 #define GROUND_H
 
+#define DISABLE_LLVM_TYPE_NAMING true
+
 #ifdef __cplusplus
 extern "C" {
 #endif

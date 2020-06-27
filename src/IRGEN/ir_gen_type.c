@@ -18,66 +18,55 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
 
     // Base types:
     // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize, successful
-    #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 15
+    weak_cstr_t base_types[] = {
+        "byte", "ubyte", "short", "ushort", "int", "uint", "long", "ulong", "half", "float", "double", "bool", "ptr", "usize", "successful"
+    };
+    unsigned int base_type_kinds[] = {
+        TYPE_KIND_S8, TYPE_KIND_U8, TYPE_KIND_S16, TYPE_KIND_U16, TYPE_KIND_S32, TYPE_KIND_U32,
+        TYPE_KIND_S64, TYPE_KIND_U64, TYPE_KIND_HALF, TYPE_KIND_FLOAT, TYPE_KIND_DOUBLE, TYPE_KIND_BOOLEAN,
+        TYPE_KIND_POINTER, TYPE_KIND_U64, TYPE_KIND_BOOLEAN
+    };
 
-    ir_type_t *tmp_type;
+    length_t base_types_length = sizeof(base_types) / sizeof(weak_cstr_t);
+    assert(base_types_length == sizeof(base_type_kinds) / sizeof(unsigned int));
+
     ir_type_map_t *type_map = &module->type_map;
-    type_map->mappings_length = ast->structs_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
+
+    // Allocate memory to hold every type mapping
+    type_map->mappings_length = ast->structs_length + ast->enums_length + base_types_length;
     ir_type_mapping_t *mappings = malloc(sizeof(ir_type_mapping_t) * type_map->mappings_length);
 
-    mappings[0].name = "byte";
-    mappings[0].type.kind = TYPE_KIND_S8;
-    // <dont bother setting 'mappings[0].type.extra' because it will never be accessed>
-    mappings[1].name = "ubyte";
-    mappings[1].type.kind = TYPE_KIND_U8;
-    mappings[2].name = "short";
-    mappings[2].type.kind = TYPE_KIND_S16;
-    mappings[3].name = "ushort";
-    mappings[3].type.kind = TYPE_KIND_U16;
-    mappings[4].name = "int";
-    mappings[4].type.kind = TYPE_KIND_S32;
-    mappings[5].name = "uint";
-    mappings[5].type.kind = TYPE_KIND_U32;
-    mappings[6].name = "long";
-    mappings[6].type.kind = TYPE_KIND_S64;
-    mappings[7].name = "ulong";
-    mappings[7].type.kind = TYPE_KIND_U64;
-    mappings[8].name = "half";
-    mappings[8].type.kind = TYPE_KIND_HALF;
-    mappings[9].name = "float";
-    mappings[9].type.kind = TYPE_KIND_FLOAT;
-    mappings[10].name = "double";
-    mappings[10].type.kind = TYPE_KIND_DOUBLE;
-    mappings[11].name = "bool";
-    mappings[11].type.kind = TYPE_KIND_BOOLEAN;
-    mappings[12].name = "ptr";
-    mappings[12].type.kind = TYPE_KIND_POINTER;
-    tmp_type = ir_pool_alloc(pool, sizeof(ir_type_t*));
-    tmp_type->kind = TYPE_KIND_S8;
-    mappings[12].type.extra = tmp_type; 
-    mappings[13].name = "usize";
-    mappings[13].type.kind = TYPE_KIND_U64;
-    mappings[14].name = "successful";
-    mappings[14].type.kind = TYPE_KIND_BOOLEAN;
+    // Add standard type mappings
+    for(length_t i = 0; i != base_types_length; i++){
+        mappings[i].name = base_types[i];
+        mappings[i].type._kind = base_type_kinds[i];
 
-    length_t beginning_of_structs = IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
+        // Make pointers be void pointers
+        if(base_type_kinds[i] == TYPE_KIND_POINTER){
+            ir_type_t *tmp_type = ir_pool_alloc(pool, sizeof(ir_type_t*));
+            tmp_type->_kind = TYPE_KIND_S8;
+            mappings[i].type._extra = tmp_type;
+        }
+    }
+
+    length_t beginning_of_structs = base_types_length;
     length_t beginning_of_enums = type_map->mappings_length - ast->enums_length;
 
     for(length_t i = beginning_of_structs; i != beginning_of_enums; i++){
         // Create skeletons for struct type maps
-        ast_struct_t *structure = &ast->structs[i - IR_GEN_BASE_TYPE_MAPPINGS_COUNT];
+        ast_struct_t *structure = &ast->structs[i - base_types_length];
         mappings[i].name = structure->name; // Will live on
-        mappings[i].type.kind = TYPE_KIND_STRUCTURE;
+        mappings[i].type._kind = TYPE_KIND_STRUCTURE;
 
         // Temporary use mappings[i].type.extra as a pointer to reference the ast_struct_t used
         // It will later be changed to the required composite data after this mappings have been sorted
-        mappings[i].type.extra = structure;
+        mappings[i].type._extra = structure;
     }
 
     for(length_t i = beginning_of_enums; i != type_map->mappings_length; i++){
         ast_enum_t *inum = &ast->enums[i - beginning_of_enums];
         mappings[i].name = inum->name;
-        mappings[i].type.kind = TYPE_KIND_U64;
+        mappings[i].type._kind = TYPE_KIND_U64;
     }
 
     qsort(mappings, type_map->mappings_length, sizeof(ir_type_mapping_t), (void*) ir_type_mapping_cmp);
@@ -108,10 +97,12 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
 
     for(length_t i = 0; i != type_map->mappings_length; i++){
         // Fill in bodies for struct type maps
-        if(mappings[i].type.kind != TYPE_KIND_STRUCTURE) continue;
+        // NOTE: We can use '_kind' because the mappings cannot be or contain indexed types
+        if(mappings[i].type._kind != TYPE_KIND_STRUCTURE) continue;
 
         // NOTE: mappings[i].type.extra is used temporary to store the ast_struct_t* used
-        ast_struct_t *structure = mappings[i].type.extra;
+        // NOTE: We can use '_extra' because the mappings cannot be or contain indexed types
+        ast_struct_t *structure = mappings[i].type._extra;
 
         // Special enforcement of type 'String'
         if(strcmp(structure->name, "String") == 0){
@@ -126,32 +117,41 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
                 return FAILURE;
             }
 
-            module->common.ir_string_struct = &mappings[i].type;
+            if(DISABLE_LLVM_TYPE_NAMING){
+                module->common.ir_string_struct = &mappings[i].type;
+            } else {
+                module->common.ir_string_struct = ir_pool_alloc(pool, sizeof(ir_type_indexed_t));
+                module->common.ir_string_struct->_kind = TYPE_KIND_INDEXED;
+                ((ir_type_indexed_t*) module->common.ir_string_struct)->father = i;
+            }
         }
-
+        
         // NOTE: This composite information will replace mappings[i].type.extra
         ir_type_extra_composite_t *composite = ir_pool_alloc(pool, sizeof(ir_type_extra_composite_t));
         composite->subtypes_length = structure->field_count;
         composite->subtypes = ir_pool_alloc(pool, sizeof(ir_type_t*) * structure->field_count);
         composite->traits = structure->traits & AST_STRUCT_PACKED ? TYPE_KIND_COMPOSITE_PACKED : TRAIT_NONE;
-        mappings[i].type.extra = composite;
+
+        // NOTE: We can use '_extra' because the mappings cannot be or contain indexed types
+        mappings[i].type._extra = composite;
 
         // Resolve composite subtypes
         for(length_t s = 0; s != structure->field_count; s++){
-            if(ir_gen_resolve_type(compiler, object, &structure->field_types[s], &composite->subtypes[s])) return FAILURE;
+            if(ir_gen_resolve_type(compiler, object, &structure->field_types[s], &composite->subtypes[s], true)) return FAILURE;
         }
     }
 
     return SUCCESS;
 }
 
-errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type){
+errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type, bool allow_indexed){
     // NOTE: Stores resolved type into 'resolved_type'
+    // NOTE: If 'allow_indexed' is false, the resolved type will not be or contain indexed types
     // NOTE: If this function fails, 'resolved_type' is not guaranteed to be the same.
     //       However, no memory will have to be manually freed after this call since
     //       everything that is allocated is allocated inside the memory pool 'object->ir_module->pool'
     // NOTE: Therefore, don't call this function if you expect it to fail, because it will pollute the pool
-    //       will inactive and unused memory.
+    //       with inactive and unused memory.
     // TODO: Add ability to handle cases with dynamic arrays etc.
 
     ir_module_t *ir_module = &object->ir_module;
@@ -161,7 +161,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
     if(unresolved_type->elements_length == 1 && unresolved_type->elements[0]->id == AST_ELEM_BASE && strcmp(((ast_elem_base_t*) unresolved_type->elements[0])->base, "void") == 0){
         // Special void type
         *resolved_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-        (*resolved_type)->kind = TYPE_KIND_VOID;
+        (*resolved_type)->_kind = TYPE_KIND_VOID;
         return SUCCESS;
     }
 
@@ -175,9 +175,19 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
     case AST_ELEM_BASE: {
             // Apply pointers to resolved base
             char *base_name = ((ast_elem_base_t*) unresolved_type->elements[non_concrete_layers])->base;
+            ir_type_index_t index;
 
             // Resolve type from type map
-            if(!ir_type_map_find(type_map, base_name, resolved_type)){
+            if(!DISABLE_LLVM_TYPE_NAMING && allow_indexed){
+                if(!ir_type_map_find_index(type_map, base_name, &index)){
+                    compiler_panicf(compiler, unresolved_type->source, "Undeclared type '%s'", base_name);
+                    return FAILURE;
+                }
+                
+                *resolved_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
+                ((ir_type_indexed_t*) (*resolved_type))->_kind = TYPE_KIND_INDEXED;
+                ((ir_type_indexed_t*) (*resolved_type))->father = index;
+            } else if(!ir_type_map_find(&ir_module->pool, type_map, base_name, resolved_type)){
                 compiler_panicf(compiler, unresolved_type->source, "Undeclared type '%s'", base_name);
                 return FAILURE;
             }
@@ -188,8 +198,8 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
             ir_type_extra_function_t *extra = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_function_t));
 
             *resolved_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-            (*resolved_type)->kind = TYPE_KIND_FUNCPTR;
-            (*resolved_type)->extra = extra;
+            (*resolved_type)->_kind = TYPE_KIND_FUNCPTR;
+            (*resolved_type)->_extra = extra;
 
             extra->traits = TRAIT_NONE;
             if(function->traits & AST_FUNC_VARARG)  extra->traits |= TYPE_KIND_FUNC_VARARG;
@@ -199,18 +209,18 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
             extra->arg_types = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t*) * extra->arity);
 
             for(length_t a = 0; a != function->arity; a++){
-                if(ir_gen_resolve_type(compiler, object, &function->arg_types[a], &extra->arg_types[a])) return FAILURE;
+                if(ir_gen_resolve_type(compiler, object, &function->arg_types[a], &extra->arg_types[a], allow_indexed)) return FAILURE;
             }
 
-            if(ir_gen_resolve_type(compiler, object, function->return_type, &extra->return_type)) return FAILURE;
+            if(ir_gen_resolve_type(compiler, object, function->return_type, &extra->return_type, allow_indexed)) return FAILURE;
         }
         break;
     case AST_ELEM_GENERIC_BASE: {
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
             ir_type_t *created_type = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t));
             ir_type_extra_composite_t *extra = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_extra_composite_t));
-            created_type->kind = TYPE_KIND_STRUCTURE;
-            created_type->extra = extra;
+            created_type->_kind = TYPE_KIND_STRUCTURE;
+            created_type->_extra = extra;
 
             // Find polymorphic structure
             ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
@@ -245,7 +255,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
                     return FAILURE;
                 }
 
-                if(ir_gen_resolve_type(compiler, object, &tmp_ast_type, &extra->subtypes[i])){
+                if(ir_gen_resolve_type(compiler, object, &tmp_ast_type, &extra->subtypes[i], allow_indexed)){
                     ast_type_free(&tmp_ast_type);
                     ast_type_var_catalog_free(&catalog);
                     return FAILURE;
@@ -271,14 +281,14 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type
         unsigned int non_concrete_element_id = unresolved_type->elements[i - 1]->id;
 
         if(non_concrete_element_id == AST_ELEM_POINTER){
-            wrapped_type->kind = TYPE_KIND_POINTER;
-            wrapped_type->extra = *resolved_type;
+            wrapped_type->_kind = TYPE_KIND_POINTER;
+            wrapped_type->_extra = *resolved_type;
         } else if(non_concrete_element_id == AST_ELEM_FIXED_ARRAY){
             ir_type_extra_fixed_array_t *fixed_array = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_fixed_array_t));
             fixed_array->subtype = *resolved_type;
             fixed_array->length = ((ast_elem_fixed_array_t*) unresolved_type->elements[i - 1])->length;
-            wrapped_type->kind = TYPE_KIND_FIXED_ARRAY;
-            wrapped_type->extra = fixed_array;
+            wrapped_type->_kind = TYPE_KIND_FIXED_ARRAY;
+            wrapped_type->_extra = fixed_array;
         } else {
             char *unresolved_str_rep = ast_type_str(unresolved_type);
             compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown non-concrete type element id in type '%s'", unresolved_str_rep);
@@ -366,7 +376,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     )){
         ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         instr->id = INSTRUCTION_ISNTZERO;
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type, true)) return false;
         instr->result_type = ir_to_type;
         instr->value = *ir_value;
         *ir_value = build_value_from_prev_instruction(builder);
@@ -385,7 +395,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         )
     ){
         // Casting pointers
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type, true)) return false;
 
         unsigned int value_type = (*ir_value)->value_type;
         
@@ -404,7 +414,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         || to_traits & TYPE_TRAIT_BASE_PTR)){
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
             instr->id = INSTRUCTION_INTTOPTR;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type, true)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -414,7 +424,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         || from_traits & TYPE_TRAIT_BASE_PTR)){
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
             instr->id = INSTRUCTION_PTRTOINT;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type, true)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -436,7 +446,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
             if(global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind]){
                 instr->id = INSTRUCTION_REINTERPRET; // They are the same size
-                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type, true)) return false;
                 instr->result_type = ir_to_type;
                 instr->value = *ir_value;
                 *ir_value = build_value_from_prev_instruction(builder);
@@ -448,7 +458,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
                 (from_is_float ? INSTRUCTION_FEXT   : INSTRUCTION_ZEXT) :
                 (from_is_float ? INSTRUCTION_FTRUNC : INSTRUCTION_TRUNC);
 
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type, true)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -467,7 +477,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
                 (to_is_signed   ? INSTRUCTION_FPTOSI : INSTRUCTION_FPTOUI):
                 (from_is_signed ? INSTRUCTION_SITOFP : INSTRUCTION_UITOFP);
 
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type, true)) return false;
             instr->result_type = ir_to_type;
             instr->value = *ir_value;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -477,14 +487,14 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     if(mode & CONFORM_MODE_INTENUM){
         // Convert enum to integer
-        if((*ir_value)->type->kind == TYPE_KIND_U64 && to_traits & TYPE_TRAIT_INTEGER){
+        if(ir_type_kind(builder->type_map, (*ir_value)->type) == TYPE_KIND_U64 && to_traits & TYPE_TRAIT_INTEGER){
             // Don't bother casting the value when they are the same underlying type
             if(to_type_kind == TYPE_KIND_U64) return true;
 
             ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
 
             // Set result type of instruction
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &instr->result_type)) return false;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &instr->result_type, true)) return false;
 
             // Set 'from' value for instruction
             instr->value = *ir_value;
@@ -512,7 +522,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
 
         ir_type_t *placeholder_actual_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t*));
-        placeholder_actual_type->kind = TYPE_KIND_U64;
+        placeholder_actual_type->_kind = TYPE_KIND_U64;
 
         // type *AnyType
         values[0] = rtti_for(builder, ast_from_type, ast_to_type->source);
@@ -600,7 +610,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
                     break;
                 case BUILTIN_TYPE_FLOAT: {
                         ir_type_t *uint_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t*));
-                        uint_type->kind = TYPE_KIND_U32;
+                        uint_type->_kind = TYPE_KIND_U32;
                         values[1] = build_zext(builder, build_bitcast(builder, *ir_value, uint_type), placeholder_actual_type);
 
                         // For weird compatibility purposes, we have the ability to copy
@@ -638,7 +648,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             values[1] = build_literal_usize(builder->pool, 0);
         }
 
-        if(!ir_type_map_find(builder->type_map, "Any", &any_type)){
+        if(!ir_type_map_find(builder->pool, builder->type_map, "Any", &any_type)){
             redprintf("INTERNAL ERROR: Failed to find 'Any' type used by the runtime type table that should've been injected\n");
             return false;
         }
@@ -649,10 +659,10 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     if(mode & CONFORM_MODE_INTENUM && from_traits & TYPE_TRAIT_INTEGER){
         ir_type_t *to_as_ir_type;
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &to_as_ir_type)) return false;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &to_as_ir_type, true)) return false;
 
         // If the type boils down to a u64 we'll consider it an enum
-        bool to_type_is_enum = to_as_ir_type->kind == TYPE_KIND_U64;
+        bool to_type_is_enum = ir_type_kind(builder->type_map, to_as_ir_type) == TYPE_KIND_U64;
 
         // Convert integer to enum
         if(to_type_is_enum){

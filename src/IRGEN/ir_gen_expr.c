@@ -28,7 +28,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     #define BUILD_MATH_OP_IvF_MACRO(i, f, o, E) { \
         instruction = ir_gen_math_operands(builder, expr, ir_value, o, out_expr_type); \
         if(instruction == NULL) return FAILURE; \
-        if(i_vs_f_instruction((ir_instr_math_t*) instruction, i, f)){ \
+        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) instruction, i, f)){ \
             compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, E); \
             ast_type_free(out_expr_type); \
             return FAILURE; \
@@ -38,7 +38,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     #define BUILD_MATH_OP_UvSvF_MACRO(u, s, f, o, E) { \
         instruction = ir_gen_math_operands(builder, expr, ir_value, o, out_expr_type); \
         if(instruction == NULL) return FAILURE; \
-        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, u, s, f)){ \
+        if(u_vs_s_vs_float_instruction(builder->type_map, (ir_instr_math_t*) instruction, u, s, f)){ \
             compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, E); \
             ast_type_free(out_expr_type); \
             return FAILURE; \
@@ -49,7 +49,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(typename)); \
         *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t)); \
         (*ir_value)->value_type = VALUE_TYPE_LITERAL; \
-        ir_type_map_find(builder->type_map, typename, &((*ir_value)->type)); \
+        ir_type_map_find(builder->pool, builder->type_map, typename, &((*ir_value)->type)); \
         (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(storage_type)); \
         *((storage_type*) (*ir_value)->extra) = ((ast_expr_type*) expr)->value; \
     }
@@ -266,7 +266,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             instruction = build_instruction(builder, sizeof(ir_instr_phi2_t));
             ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
             ((ir_instr_phi2_t*) instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ((ir_instr_phi2_t*) instruction)->result_type->kind = TYPE_KIND_BOOLEAN;
+            ((ir_instr_phi2_t*) instruction)->result_type->_kind = TYPE_KIND_BOOLEAN;
             ((ir_instr_phi2_t*) instruction)->a = build_bool(builder->pool, true);
             ((ir_instr_phi2_t*) instruction)->b = b;
             ((ir_instr_phi2_t*) instruction)->block_id_a = landing_a_block_id;
@@ -453,9 +453,9 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     // We could search the ir var map, but this is easier
                     // TODO: Create easy way to get between ast and ir var maps
                     ir_var_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                    ir_var_type->kind = TYPE_KIND_POINTER;
+                    ir_var_type->_kind = TYPE_KIND_POINTER;
 
-                    if(ir_gen_resolve_type(builder->compiler, builder->object, ast_var_type, (ir_type_t**) &ir_var_type->extra)){
+                    if(ir_gen_resolve_type(builder->compiler, builder->object, ast_var_type, (ir_type_t**) &ir_var_type->_extra, true)){
                         ast_types_free_fully(arg_types, call_expr->arity);
                         return FAILURE;
                     }
@@ -517,7 +517,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             // This expression should be able to be mutable (Checked during parsing)
             if(ir_gen_expression(builder, member_expr->value, &struct_value, true, &struct_value_ast_type)) return FAILURE;
 
-            if(struct_value->type->kind != TYPE_KIND_POINTER){
+            if(ir_type_kind(builder->type_map, struct_value->type) != TYPE_KIND_POINTER){
                 char *given_type = ast_type_str(&struct_value_ast_type);
                 compiler_panicf(builder->compiler, member_expr->source, "Can't use member operator '.' on temporary value of type '%s'", given_type);
                 free(given_type);
@@ -570,7 +570,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         return FAILURE;
                     }
 
-                    if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[field_index], &field_type)){
+                    if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[field_index], &field_type, true)){
                         ast_type_free(&struct_value_ast_type);
                         return FAILURE;
                     }
@@ -620,7 +620,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         return FAILURE;
                     }
 
-                    if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &field_type)){
+                    if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &field_type, true)){
                         ast_type_free(&struct_value_ast_type);
                         ast_type_var_catalog_free(&catalog);
                         return FAILURE;
@@ -700,8 +700,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 extra->traits = func_addr_expr->traits;
 
                 ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
-                ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
-                ir_funcptr_type->extra = extra;
+                ir_funcptr_type->_kind = TYPE_KIND_FUNCPTR;
+                ir_funcptr_type->_extra = extra;
 
                 const char *maybe_name = pair.ast_func->traits & AST_FUNC_FOREIGN ||
                     pair.ast_func->traits & AST_FUNC_MAIN ? func_addr_expr->name : NULL;
@@ -759,7 +759,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             // If not requested to leave the expression mutable, dereference it
             if(!leave_mutable){
                 // ir_type_t is expected to be of kind pointer
-                if(expr_value->type->kind != TYPE_KIND_POINTER){
+                if(ir_type_kind(builder->type_map, expr_value->type) != TYPE_KIND_POINTER){
                     compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expression()");
                     ast_type_free(&expr_type);
                     return FAILURE;
@@ -769,7 +769,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 *ir_value = build_load(builder, expr_value, expr->source);
 
                 // ir_type_t is expected to be of kind pointer
-                if(expr_value->type->kind != TYPE_KIND_POINTER){
+                if(ir_type_kind(builder->type_map, expr_value->type) != TYPE_KIND_POINTER){
                     compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expression()");
                     ast_type_free(&expr_type);
                     return FAILURE;
@@ -793,7 +793,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
-            if(array_value->type->kind != TYPE_KIND_POINTER){
+            if(ir_type_kind(builder->type_map, array_value->type) != TYPE_KIND_POINTER){
                 char *given_type = ast_type_str(&array_type);
 
                 compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on temporary value of type '%s'",
@@ -805,14 +805,14 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
-            if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY){
+            if(ir_type_kind(builder->type_map, (ir_type_t*) ir_type_extra(builder->type_map, array_value->type)) == TYPE_KIND_FIXED_ARRAY){
                 // Bitcast reference (that's to a fixed array of element) to pointer of element
                 // (*)  [10] int -> *int
 
                 assert(array_type.elements_length != 0);
                 array_type.elements[0]->id = AST_ELEM_POINTER;
 
-                ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
+                ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ir_type_extra(builder->type_map, (ir_type_t*) ir_type_extra(builder->type_map, array_value->type)))->subtype);
                 array_value = build_bitcast(builder, array_value, casted_ir_type);
             } else if(expr_is_mutable(array_access_expr->value)){
                 // Load value reference
@@ -820,15 +820,17 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 array_value = build_load(builder, array_value, expr->source);
             }
 
-            if(index_value->type->kind < TYPE_KIND_S8 || index_value->type->kind > TYPE_KIND_U64){
+            unsigned int index_value_type_kind = ir_type_kind(builder->type_map, index_value->type);
+
+            if(index_value_type_kind < TYPE_KIND_S8 || index_value_type_kind > TYPE_KIND_U64){
                 compiler_panic(builder->compiler, array_access_expr->index->source, "Array index value must be an integer type");
                 ast_type_free(&array_type);
                 ast_type_free(&index_type);
                 return FAILURE;
             }
-            
+
             // Ensure array type is a pointer
-            if(array_value->type->kind != TYPE_KIND_POINTER || array_type.elements_length < 2 || array_type.elements[0]->id != AST_ELEM_POINTER){
+            if(ir_type_kind(builder->type_map, array_value->type) != TYPE_KIND_POINTER || array_type.elements_length < 2 || array_type.elements[0]->id != AST_ELEM_POINTER){
                 char *given_type = ast_type_str(&array_type);
 
                 compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on non-array type '%s'",
@@ -882,12 +884,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_basicblock_new_instructions(builder->current_block, 1);
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_sizeof_t));
             ((ir_instr_sizeof_t*) instruction)->id = INSTRUCTION_SIZEOF;
-            ((ir_instr_sizeof_t*) instruction)->result_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ((ir_instr_sizeof_t*) instruction)->result_type->kind = TYPE_KIND_U64;
-            // result_type->extra should never be accessed
+            ((ir_instr_sizeof_t*) instruction)->result_type = ir_builder_usize(builder);
 
             if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_sizeof_t*) expr)->type,
-                    &((ir_instr_sizeof_t*) instruction)->type)) return FAILURE;
+                    &((ir_instr_sizeof_t*) instruction)->type, true)) return FAILURE;
 
             builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
             *ir_value = build_value_from_prev_instruction(builder);
@@ -1068,7 +1068,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             if(ir_gen_expression(builder, unary_expr->value, &expr_value, false, &expr_type)) return FAILURE;
 
-            if(ir_type_get_catagory(expr_value->type) == PRIMITIVE_NA){
+            if(ir_type_get_catagory(builder->type_map, expr_value->type) == PRIMITIVE_NA){
                 char *s = ast_type_str(&expr_type);
                 compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
                 ast_type_free(&expr_type);
@@ -1089,7 +1089,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 // Build and append an 'negate' instruction
                 ((ir_instr_unary_t*) instruction)->result_type = expr_value->type;
 
-                switch(((ir_instr_unary_t*) instruction)->value->type->kind){
+                switch(ir_type_kind(builder->type_map, ((ir_instr_unary_t*) instruction)->value->type)){
                 case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
                 case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
                 case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
@@ -1125,11 +1125,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_type_t *ir_type;
             ast_type_t multiplier_type;
             ir_value_t *amount = NULL;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_new_t*) expr)->type, &ir_type)) return FAILURE;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_new_t*) expr)->type, &ir_type, true)) return FAILURE;
 
             if( ((ast_expr_new_t*) expr)->amount != NULL ){
                 if(ir_gen_expression(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return FAILURE;
-                unsigned int multiplier_typekind = amount->type->kind;
+                unsigned int multiplier_typekind = ir_type_kind(builder->type_map, amount->type);
 
                 if(multiplier_typekind < TYPE_KIND_S8 || multiplier_typekind > TYPE_KIND_U64){
                     char *typename = ast_type_str(&multiplier_type);
@@ -1145,9 +1145,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_basicblock_new_instructions(builder->current_block, 1);
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_malloc_t));
             ((ir_instr_malloc_t*) instruction)->id = INSTRUCTION_MALLOC;
-            ((ir_instr_malloc_t*) instruction)->result_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ((ir_instr_malloc_t*) instruction)->result_type->kind = TYPE_KIND_POINTER;
-            ((ir_instr_malloc_t*) instruction)->result_type->extra = ir_type;
+            ((ir_instr_malloc_t*) instruction)->result_type = ir_type_pointer_to(builder->pool, ir_type);
             ((ir_instr_malloc_t*) instruction)->type = ir_type;
             ((ir_instr_malloc_t*) instruction)->amount = amount;
             ((ir_instr_malloc_t*) instruction)->is_undef = ((ast_expr_new_t*) expr)->is_undef;
@@ -1165,7 +1163,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_new_cstring_t *new_cstring_expr = (ast_expr_new_cstring_t*) expr;
             
             ir_type_t *ubyte = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ubyte->kind = TYPE_KIND_U8;
+            ubyte->_kind = TYPE_KIND_U8;
 
             ir_type_t *ubyte_ptr = ir_type_pointer_to(builder->pool, ubyte);
             length_t value_length = strlen(new_cstring_expr->value);
@@ -1224,7 +1222,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
             (*ir_value)->value_type = VALUE_TYPE_LITERAL;
-            ir_type_map_find(builder->type_map, enum_value_expr->enum_name, &((*ir_value)->type));
+            ir_type_map_find(builder->pool, builder->type_map, enum_value_expr->enum_name, &((*ir_value)->type));
             (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
             *((unsigned long long*) (*ir_value)->extra) = enum_kind_id;
 
@@ -1249,7 +1247,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_static_data_t *static_array_expr = (ast_expr_static_data_t*) expr;
 
             ir_type_t *array_ir_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_array_expr->type, &array_ir_type)){
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_array_expr->type, &array_ir_type, true)){
                 return FAILURE;
             }
 
@@ -1298,7 +1296,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_static_data_t *static_struct_expr = (ast_expr_static_data_t*) expr;
 
             ir_type_t *struct_ir_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_struct_expr->type, &struct_ir_type)){
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_struct_expr->type, &struct_ir_type, true)){
                 return FAILURE;
             }
 
@@ -1417,7 +1415,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             ir_type_t *result_ir_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &if_true_type, &result_ir_type)){
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &if_true_type, &result_ir_type, true)){
                 ast_type_free(&if_true_type);
                 ast_type_free(&if_false_type);
                 return FAILURE;
@@ -1453,7 +1451,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             if(ir_gen_expression(builder, unary->value, &before_value, true, &before_ast_type))
                 return FAILURE;
             
-            if(before_value->type->kind != TYPE_KIND_POINTER){
+            if(ir_type_kind(builder->type_map, before_value->type) != TYPE_KIND_POINTER){
                 compiler_panic(builder->compiler, unary->value->source, "INTERNAL ERROR: ir_gen_expr() EXPR_xCREMENT expected mutable value");
                 ast_type_free(&before_ast_type);
                 return FAILURE;
@@ -1461,10 +1459,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             ir_value_t *one = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
             one->value_type = VALUE_TYPE_LITERAL;
-            one->type = (ir_type_t*) before_value->type->extra;
+            one->type = (ir_type_t*) ir_type_extra(builder->type_map, before_value->type);
             one->extra = NULL;
             
-            switch(one->type->kind){
+            switch(ir_type_kind(builder->type_map, one->type)){
             case TYPE_KIND_S8:
                 one->extra = ir_pool_alloc(builder->pool, sizeof(char));
                 *((char*) one->extra) = 1;
@@ -1519,7 +1517,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ((ir_instr_math_t*) instruction)->result_type = before_value->type; 
 
             if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT){
-                if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_ADD, INSTRUCTION_FADD)){
+                if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) instruction, INSTRUCTION_ADD, INSTRUCTION_FADD)){
                     char *typename = ast_type_str(&before_ast_type);
                     compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "increment", typename);
                     ast_type_free(&before_ast_type);
@@ -1527,7 +1525,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     return FAILURE;
                 }
             } else {
-                if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
+                if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) instruction, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
                     char *typename = ast_type_str(&before_ast_type);
                     compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "decrement", typename);
                     ast_type_free(&before_ast_type);
@@ -1566,7 +1564,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &def->type, &ir_decl_type)) return FAILURE;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &def->type, &ir_decl_type, true)) return FAILURE;
 
             ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
 
@@ -1679,8 +1677,8 @@ errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t 
     instruction->result_type = result_is_boolean ? ir_builder_bool(builder) : lhs->type;
 
     if(instr3 == INSTRUCTION_NONE
-            ? i_vs_f_instruction((ir_instr_math_t*) instruction, instr1, instr2) == FAILURE
-            : u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, instr1, instr2, instr3) == FAILURE
+            ? i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) instruction, instr1, instr2) == FAILURE
+            : u_vs_s_vs_float_instruction(builder->type_map, (ir_instr_math_t*) instruction, instr1, instr2, instr3) == FAILURE
     ){
         // Remove math instruction template
         ir_pool_snapshot_restore(builder->pool, &tmp_pool_snapshot);
@@ -1797,12 +1795,11 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
     case MATH_OP_RESULT_BOOL:
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("bool"));
         // Fall through to MATH_OP_ALL_BOOL
-    case MATH_OP_ALL_BOOL:
-        ((ir_instr_math_t*) *instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        ((ir_instr_math_t*) *instruction)->result_type->kind = TYPE_KIND_BOOLEAN;
-        (*ir_value)->type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        (*ir_value)->type->kind = TYPE_KIND_BOOLEAN;
-        // Assigning result_type->extra to null is unnecessary
+    case MATH_OP_ALL_BOOL: {
+            ir_type_t *boolean_type = ir_builder_bool(builder);
+            ((ir_instr_math_t*) *instruction)->result_type = boolean_type;
+            (*ir_value)->type = boolean_type;
+        }
         break;
     default:
         compiler_panic(builder->compiler, expr->source, "ir_gen_math_operands() got invalid op_res value");
@@ -1841,7 +1838,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
     ast_type_t *ast_function_return_type = function_elem->return_type;
 
     ir_type_t *ir_return_type;
-    if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type)){
+    if(ir_gen_resolve_type(builder->compiler, builder->object, ast_function_return_type, &ir_return_type, true)){
         return FAILURE;
     }
 
@@ -1887,13 +1884,13 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
     return SUCCESS;
 }
 
-errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsigned int f_instr){
+errorcode_t i_vs_f_instruction(ir_type_map_t *type_map, ir_instr_math_t *instruction, unsigned int i_instr, unsigned int f_instr){
     // NOTE: Sets the instruction id to 'i_instr' if operating on intergers
     //       Sets the instruction id to 'f_instr' if operating on floats
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
     // NOTE: Returns 1 if unsupported type
 
-    switch(instruction->a->type->kind){
+    switch(ir_type_kind(type_map, instruction->a->type)){
     case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
     case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
@@ -1907,14 +1904,14 @@ errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_inst
     return SUCCESS;
 }
 
-errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
+errorcode_t u_vs_s_vs_float_instruction(ir_type_map_t *type_map, ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
     // NOTE: Sets the instruction id to 'u_instr' if operating on unsigned intergers
     //       Sets the instruction id to 's_instr' if operating on signed intergers
     //       Sets the instruction id to 'f_instr' if operating on floats
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
     // NOTE: Returns 1 if unsupported type
 
-    switch(instruction->a->type->kind){
+    switch(ir_type_kind(type_map, instruction->a->type)){
     case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
         if(u_instr == INSTRUCTION_NONE) return FAILURE;
@@ -1930,8 +1927,8 @@ errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned i
     return SUCCESS;
 }
 
-char ir_type_get_catagory(ir_type_t *type){
-    switch(type->kind){
+char ir_type_get_catagory(ir_type_map_t *type_map, ir_type_t *type){
+    switch(ir_type_kind(type_map, type)){
     case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
         return PRIMITIVE_UI;

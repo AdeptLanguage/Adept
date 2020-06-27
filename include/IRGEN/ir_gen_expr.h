@@ -58,7 +58,7 @@ errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t 
 // instruction id changed based on what it operates on.
 // 'int_instr' if it operates on integers.
 // 'float_instr' if it operates on floating point values.
-errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int int_instr, unsigned int float_instr);
+errorcode_t i_vs_f_instruction(ir_type_map_t *type_map, ir_instr_math_t *instruction, unsigned int int_instr, unsigned int float_instr);
 
 // ---------------- u_vs_s_vs_float_instruction ----------------
 // If the math instruction given will have it's
@@ -66,7 +66,7 @@ errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int int_in
 // 'u_instr' if it operates on unsigned integers.
 // 's_instr' if it operates on signed integers.
 // 'float_instr' if it operates on floating point values.
-errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr);
+errorcode_t u_vs_s_vs_float_instruction(ir_type_map_t *type_map, ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr);
 
 // Primitive catagory indicators returned by 'ir_type_get_catagory'
 #define PRIMITIVE_NA 0x00 // N/A
@@ -77,6 +77,6 @@ errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned i
 // ---------------- ir_type_get_catagory ----------------
 // Returns a general catagory for an IR type.
 // (either signed, unsigned, or float)
-char ir_type_get_catagory(ir_type_t *type);
+char ir_type_get_catagory(ir_type_map_t *type_map, ir_type_t *type);
 
 #endif // IR_GEN_EXPR_H

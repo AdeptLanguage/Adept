@@ -205,7 +205,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         }
     } else {
         while(module_func->arity != ast_func->arity){
-            if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
+            if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity], true)) return FAILURE;
             module_func->arity++;
         }
     }
@@ -213,10 +213,10 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&ast_func->return_type)){
         // If it's the main function and returns void, return int under the hood
         module_func->return_type = ir_pool_alloc(&module->pool, sizeof(ir_type_t));
-        module_func->return_type->kind = TYPE_KIND_S32;
+        module_func->return_type->_kind = TYPE_KIND_S32;
         // neglect 'module_func->return_type->extra'
     } else {
-        if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
+        if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type, true)) return FAILURE;
     }
 
     return SUCCESS;
@@ -260,7 +260,7 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
         global->traits = ast->globals[g].traits & AST_GLOBAL_EXTERNAL ? IR_GLOBAL_EXTERNAL : TRAIT_NONE;
         global->trusted_static_initializer = NULL;
 
-        if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &global->type)){
+        if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &global->type, true)){
             return FAILURE;
         }
 
@@ -322,12 +322,13 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
     type_table_t *type_table = object->ast.type_table;
+    ir_type_map_t *type_map = &ir_module->type_map;
 
     ir_type_t *ptr_to_type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    ptr_to_type->kind = TYPE_KIND_POINTER;
-    ptr_to_type->extra = NULL;
+    ptr_to_type->_kind = TYPE_KIND_POINTER;
+    ptr_to_type->_extra = NULL;
 
-    if(ir_gen_resolve_type(compiler, object, &ast_global->type, (ir_type_t**) &ptr_to_type->extra)){
+    if(ir_gen_resolve_type(compiler, object, &ast_global->type, (ir_type_t**) &ptr_to_type->_extra, true)){
         redprintf("INTERNAL ERROR: Failed to get IR type for special global variable\n");
         return FAILURE;
     }
@@ -340,7 +341,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             *any_type_ptr_type = NULL, *ubyte_ptr_type;
         
         if(compiler->traits & COMPILER_NO_TYPE_INFO){
-            if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)){
+            if(!ir_type_map_find(pool, type_map, "AnyType", &any_type_type)){
                 redprintf("INTERNAL ERROR: Failed to get 'AnyType' which should've been injected\n");
                 redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)\n")
                 return FAILURE;
@@ -351,17 +352,17 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             return SUCCESS;
         }
 
-        if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)
-        || !ir_type_map_find(&ir_module->type_map, "AnyStructType", &any_struct_type_type)
-        || !ir_type_map_find(&ir_module->type_map, "AnyPtrType", &any_ptr_type_type)
-        || !ir_type_map_find(&ir_module->type_map, "ubyte", &ubyte_ptr_type)){
+        if(!ir_type_map_find(pool, type_map, "AnyType", &any_type_type)
+        || !ir_type_map_find(pool, type_map, "AnyStructType", &any_struct_type_type)
+        || !ir_type_map_find(pool, type_map, "AnyPtrType", &any_ptr_type_type)
+        || !ir_type_map_find(pool, type_map, "ubyte", &ubyte_ptr_type)){
             redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
             return FAILURE;
         }
 
         ir_type_t *usize_type = ir_pool_alloc(pool, sizeof(ir_type_t));
-        usize_type->kind = TYPE_KIND_U64;
-
+        usize_type->_kind = TYPE_KIND_U64;
+        
         any_type_ptr_type = ir_type_pointer_to(pool, any_type_type);
         ubyte_ptr_type = ir_type_pointer_to(pool, ubyte_ptr_type);
 
@@ -377,11 +378,11 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         ir_value_t **array_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * type_table->length);
 
         for(length_t i = 0; i != type_table->length; i++){
-            if(ir_gen_resolve_type(compiler, object, &type_table->entries[i].ast_type, &type_table->entries[i].ir_type)){
+            if(ir_gen_resolve_type(compiler, object, &type_table->entries[i].ast_type, &type_table->entries[i].ir_type, true)){
                 return FAILURE;
             }
 
-            switch(type_table->entries[i].ir_type->kind){
+            switch(ir_type_kind(type_map, type_table->entries[i].ir_type)){
             case TYPE_KIND_POINTER:
                 array_values[i] = build_anon_global(ir_module, any_ptr_type_type, true);
                 break;
@@ -398,7 +399,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             ir_value_t **initializer_members;
             length_t initializer_members_length;
             unsigned int any_type_kind_id = ANY_TYPE_KIND_VOID;
-            unsigned int type_type_kind = type_table->entries[i].ir_type->kind;
+            unsigned int type_type_kind = ir_type_kind(type_map, type_table->entries[i].ir_type);
 
             switch(type_type_kind){
             case TYPE_KIND_POINTER: {
@@ -434,7 +435,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             case TYPE_KIND_STRUCTURE: {
                     /* struct AnyStructType (kind AnyTypeKind, name *ubyte, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
 
-                    ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) type_table->entries[i].ir_type->extra;
+                    ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) ir_type_extra(type_map, type_table->entries[i].ir_type);
                     initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 8);
                     initializer_members_length = 8;
 
@@ -496,15 +497,15 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                             }
 
                             ir_type_t *struct_ir_type;
-                            if(ir_gen_resolve_type(compiler, object, &container_ast_type, &struct_ir_type)){
+                            if(ir_gen_resolve_type(compiler, object, &container_ast_type, &struct_ir_type, true)){
                                 redprintf("INTERNAL ERROR: ir_gen_resolve_type for RTTI composite offset computation failed!\n");
                                 ast_type_free(&container_ast_type);
                                 ast_type_free(&member_ast_type);
                                 return FAILURE;
                             }
 
-                            composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);;
-                            composite_member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, template->field_names[s]);
+                            composite_offsets[s] = build_offsetof_ex(pool, type_map, usize_type, struct_ir_type, s);;
+                            composite_member_names[s] = build_literal_cstr_ex(pool, type_map, template->field_names[s]);
                             ast_type_free(&member_ast_type);
                         }
 
@@ -540,7 +541,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                             ast_type_make_base(&struct_ast_type, strclone(struct_name));
 
                             ir_type_t *struct_ir_type;
-                            if(ir_gen_resolve_type(compiler, object, &struct_ast_type, &struct_ir_type)){
+                            if(ir_gen_resolve_type(compiler, object, &struct_ast_type, &struct_ir_type, true)){
                                 redprintf("INTERNAL ERROR: ir_gen_resolve_type for RTTI composite offset computation failed!\n");
                                 ast_type_free(&struct_ast_type);
                                 return FAILURE;
@@ -548,8 +549,8 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                             ast_type_free(&struct_ast_type);
 
-                            composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
-                            composite_member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, structure->field_names[s]);
+                            composite_offsets[s] = build_offsetof_ex(pool, type_map, usize_type, struct_ir_type, s);
+                            composite_member_names[s] = build_literal_cstr_ex(pool, type_map, structure->field_names[s]);
                         }
                     } else {
                         redprintf("INTERNAL ERROR: Unknown AST type element for TYPE_KIND_STRUCTURE when generating runtime type information!\n");
@@ -628,7 +629,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     if(ast_global->traits & AST_GLOBAL___TYPE_KINDS__){
         ir_type_t *ubyte_ptr_type, *ubyte_ptr_ptr_type;
 
-        if(!ir_type_map_find(&ir_module->type_map, "ubyte", &ubyte_ptr_type)){
+        if(!ir_type_map_find(&ir_module->pool, &ir_module->type_map, "ubyte", &ubyte_ptr_type)){
             redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
             return FAILURE;
         }

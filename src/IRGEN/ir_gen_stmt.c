@@ -83,7 +83,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     builder.type_table = object->ast.type_table;
 
     while(module_func->arity != ast_func->arity){
-        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
+        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity], true)){
             module_func->basicblocks = builder.basicblocks;
             module_func->basicblocks_length = builder.basicblocks_length;
 
@@ -169,9 +169,11 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
             ast_func = &object->ast.funcs[ast_func_id];
             module_func = &object->ir_module.funcs[ir_func_id];
 
-            if(module_func->return_type->kind == TYPE_KIND_VOID){
+            unsigned int return_type_kind = ir_type_kind(builder.type_map, module_func->return_type);
+
+            if(return_type_kind == TYPE_KIND_VOID){
                 build_return(&builder, NULL);
-            } else if(ast_func->traits & AST_FUNC_MAIN && module_func->return_type->kind == TYPE_KIND_S32
+            } else if(ast_func->traits & AST_FUNC_MAIN && return_type_kind == TYPE_KIND_S32
                         && ast_type_is_void(&ast_func->return_type)){
                 // Return an int under the hood for 'func main void'
                 build_return(&builder, build_literal_int(builder.pool, 0));
@@ -362,7 +364,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 }
 
                 ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-                if(ir_gen_resolve_type(builder->compiler, builder->object, &declare_stmt->type, &ir_decl_type)) return FAILURE;
+                if(ir_gen_resolve_type(builder->compiler, builder->object, &declare_stmt->type, &ir_decl_type, true)) return FAILURE;
 
                 if(declare_stmt->value != NULL){
                     // Regular declare statement initial assign value
@@ -459,73 +461,73 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                     switch(assignment_type){
                     case EXPR_ADD_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_ADD, INSTRUCTION_FADD)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_ADD, INSTRUCTION_FADD)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't add those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_SUBTRACT_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't subtract those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_MULTIPLY_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't multiply those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_DIVIDE_ASSIGN:
-                        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE)){
+                        if(u_vs_s_vs_float_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't divide those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_MODULUS_ASSIGN:
-                        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS)){
+                        if(u_vs_s_vs_float_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't take the modulus of those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_AND_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_AND, INSTRUCTION_NONE)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_BIT_AND, INSTRUCTION_NONE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'and' on those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_OR_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_OR, INSTRUCTION_NONE)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_BIT_OR, INSTRUCTION_NONE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'or' on those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_XOR_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'xor' on those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_LS_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'left shift' on those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_RS_ASSIGN:
-                        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS)){
+                        if(u_vs_s_vs_float_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'right shift' on those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_LGC_LS_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'logical left shift' on those types");
                             return FAILURE;
                         }
                         break;
                     case EXPR_LGC_RS_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE)){
+                        if(i_vs_f_instruction(builder->type_map, (ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE)){
                             compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'logical right shift' on those types");
                             return FAILURE;
                         }
@@ -1044,7 +1046,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         }
 
                         ir_type_t *item_ir_type;
-                        if(ir_gen_resolve_type(builder->compiler, builder->object, &remaining_type, &item_ir_type)){
+                        if(ir_gen_resolve_type(builder->compiler, builder->object, &remaining_type, &item_ir_type, true)){
                             ast_type_free(&phantom_list_value.type);
                             return FAILURE;
                         }
@@ -1221,7 +1223,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
                 ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
                 ir_one_value->value_type = VALUE_TYPE_LITERAL;
-                ir_type_map_find(builder->type_map, "usize", &(ir_one_value->type));
+                ir_type_map_find(builder->pool, builder->type_map, "usize", &(ir_one_value->type));
                 ir_one_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
                 *((unsigned long long*) ir_one_value->extra) = 1;
 
@@ -1364,7 +1366,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
                 ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
                 ir_one_value->value_type = VALUE_TYPE_LITERAL;
-                ir_type_map_find(builder->type_map, "usize", &(ir_one_value->type));
+                ir_type_map_find(builder->pool, builder->type_map, "usize", &(ir_one_value->type));
                 ir_one_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
                 *((unsigned long long*) ir_one_value->extra) = 1;
 
@@ -1412,7 +1414,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 #endif
 
                 // Use the assumtion that IR integer type kinds are in the expected range to check integer-ness
-                bool integer_like = tmp_range(condition->type->kind);
+                unsigned int condition_type_kind = ir_type_kind(builder->type_map, condition->type);
+                bool integer_like = tmp_range(condition_type_kind);
                 #undef tmp_range
 
                 // Make sure value type is suitable
@@ -1475,7 +1478,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         return FAILURE;
                     }
 
-                    unsigned long long uniqueness_value = ir_value_uniqueness_value(case_values[c]);
+                    unsigned long long uniqueness_value = ir_value_uniqueness_value(builder->type_map, case_values[c]);
                     uniqueness[c] = uniqueness_value;
 
                     for(length_t u = 0; u != c; u++){

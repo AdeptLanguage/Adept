@@ -14,6 +14,7 @@
 #include "BRIDGE/bridge.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
+#include "IR/ir_type_map.h"
 #include "IR/ir_type_var.h"
 #include "IRGEN/ir_cache.h"
 
@@ -125,20 +126,6 @@
     a == VALUE_TYPE_CSTR_OF_LEN || \
     a == VALUE_TYPE_CONST_BITCAST \
 )
-
-// ---------------- ir_type_mapping_t ----------------
-// Mapping for a name to an IR type
-typedef struct {
-    weak_cstr_t name;
-    ir_type_t type;
-} ir_type_mapping_t;
-
-// ---------------- ir_type_map_t ----------------
-// A list of mappings from names to IR types
-typedef struct {
-    ir_type_mapping_t *mappings;
-    length_t mappings_length;
-} ir_type_map_t;
 
 // ---------------- ir_value_t ----------------
 // An intermediate representation value
@@ -619,11 +606,7 @@ typedef struct {
 // ---------------- ir_value_str ----------------
 // Generates a c-string representation from
 // an intermediate representation value
-strong_cstr_t ir_value_str(ir_value_t *value);
-
-// ---------------- ir_type_map_find ----------------
-// Finds a type inside an IR type map by name
-successful_t ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr);
+strong_cstr_t ir_value_str(ir_type_map_t *type_map, ir_value_t *value);
 
 // ---------------- ir_basicblock_new_instructions ----------------
 // Ensures that there is enough room for 'amount' more instructions
@@ -636,11 +619,11 @@ void ir_module_dump(ir_module_t *ir_module, const char *filename);
 
 // ---------------- ir_dump_functions (and friends) ----------------
 // Dumps a specific part of an IR module
-void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_length);
-void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, const char *instruction_name);
-void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, const char *real_name);
-void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instruction, int i);
-void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope);
+void ir_dump_functions(FILE *file, ir_type_map_t *type_map, ir_func_t *functions, length_t functions_length);
+void ir_dump_math_instruction(FILE *file, ir_type_map_t *type_map, ir_instr_math_t *instruction, int i, const char *instruction_name);
+void ir_dump_call_instruction(FILE *file, ir_type_map_t *type_map, ir_instr_call_t *instruction, int i, const char *real_name);
+void ir_dump_call_address_instruction(FILE *file, ir_type_map_t *type_map, ir_instr_call_address_t *instruction, int i);
+void ir_dump_var_scope_layout(FILE *file, ir_type_map_t *type_map, bridge_scope_t *scope);
 
 // ---------------- ir_module_free ----------------
 // Initializes an IR module for use
@@ -669,14 +652,14 @@ void ir_implementation(length_t id, char prefix, char *output_buffer);
 // they also have the same literal value.
 // If two IR values of the same IR type have different uniqueness values, then
 // they do not share the same literal value.
-unsigned long long ir_value_uniqueness_value(ir_value_t *value);
+unsigned long long ir_value_uniqueness_value(ir_type_map_t *type_map, ir_value_t *value);
 
 // ---------------- ir_print_value ----------------
 // Prints a value to stdout
-void ir_print_value(ir_value_t *value);
+void ir_print_value(ir_type_map_t *type_map, ir_value_t *value);
 
 // ---------------- ir_print_type ----------------
 // Prints a type to stdout
-void ir_print_type(ir_type_t *type);
+void ir_print_type(ir_type_map_t *type_map, ir_type_t *type);
 
 #endif // IR_H

@@ -28,6 +28,13 @@
 #define TYPE_KIND_VOID        0x00000010 // extra = NULL
 #define TYPE_KIND_FUNCPTR     0x00000011 // extra = *ir_type_extra_function_t
 #define TYPE_KIND_FIXED_ARRAY 0x00000012 // extra = *ir_type_extra_fixed_array_t;
+#define TYPE_KIND_INDEXED     0x00000013 // extra = ir_type_index_t
+
+// ---------------- ir_type_id_t ----------------
+// An ID used to reference an existing IR type that is in the module's type map.
+// NOTE: This is equal to the index inside 'ir_module->type_map.mappings' array
+//       which the father type being referenced is stored
+typedef length_t ir_type_index_t;
 
 // ---------------- ir_type_t ----------------
 // An intermediate representation type
@@ -35,9 +42,26 @@
 // 'ir_type_t', 'ir_type_extra_composite_t', or 'ir_type_extra_function_t'
 typedef struct ir_type_t ir_type_t;
 
+// NOTE: '_kind' and '_extra' may not be indicative of the
+// actual type represented because type indexing. In order to find
+// the real type kind and real extra data, you must call
+// 'ir_type_kind()' or 'ir_type_extra()' respectively
 struct ir_type_t {
-    unsigned int kind;
-    void *extra;
+    unsigned int _kind;
+    void *_extra;
+};
+
+// ---------------- ir_type_indexed_t ----------------
+// An intermediate representation type, which has kind TYPE_KIND_INDEXED
+// NOTE: This type is made to overlap with ir_type_t, so that an ir_type_t
+// that has kind TYPE_KIND_INDEXED can be treated as this structure.
+// NOTE: 'father' is used to reference the "real" existing type that this type
+// stand in place of
+typedef struct ir_type_indexed_t ir_type_indexed_t;
+
+struct ir_type_indexed_t {
+    unsigned int _kind;
+    ir_type_index_t father;
 };
 
 // ---------------- ir_type_extra_composite_t ----------------
@@ -73,22 +97,9 @@ typedef struct {
     length_t length;
 } ir_type_extra_fixed_array_t;
 
-// ---------------- ir_type_str ----------------
-// Generates a c-string representation from
-// an intermediate representation type
-strong_cstr_t ir_type_str(ir_type_t *type);
-
-// ---------------- ir_types_identical ----------------
-// Returns whether two IR types are identical
-bool ir_types_identical(ir_type_t *a, ir_type_t *b);
-
 // ---------------- ir_type_pointer_to ----------------
 // Gets the type of a pointer to a type
 ir_type_t* ir_type_pointer_to(ir_pool_t *pool, ir_type_t *base);
-
-// ---------------- ir_type_dereference ----------------
-// Gets the type pointed to by a pointer type
-ir_type_t* ir_type_dereference(ir_type_t *type);
 
 // ---------------- global_type_kind_sizes_64 ----------------
 // Contains the general sizes of each TYPE_KIND_*

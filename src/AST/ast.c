@@ -51,7 +51,7 @@ void ast_init(ast_t *ast){
 
     // __compiler_version__
     meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_version__", strclone(ADEPT_VERSION_STRING));
-
+    
     // __windows__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__windows__",
     #ifdef _WIN32
