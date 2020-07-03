@@ -13,6 +13,7 @@ extern "C" {
 */
 
 int levenshtein(const char *s1, const char *s2);
+int levenshtein_overlapping(const char *s1, const char *s2);
 
 #ifdef __cplusplus
 }

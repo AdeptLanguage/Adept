@@ -1410,9 +1410,6 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
         return UNSUCCESSFUL;
     }
 
-    ast_type_free(&arg_types[0]);
-    // NOTE: Don't free arg_types[1] because we don't have ownership
-
     if(zero_initialize){
         // Zero initialize for declaration assignments
         ir_basicblock_new_instructions(builder->current_block, 1);
@@ -1422,6 +1419,15 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
         zero_instr->index = builder->next_var_id - 1;
         builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) zero_instr;
     }
+
+    if(handle_pass_management(builder, arguments, arg_types, result.ast_func->arg_type_traits, 2)){
+        ast_type_free(&arg_types[0]);
+        // NOTE: Don't free arg_types[1] because we don't have ownership
+        return NULL;
+    }
+
+    ast_type_free(&arg_types[0]);
+    // NOTE: Don't free arg_types[1] because we don't have ownership
 
     ir_basicblock_new_instructions(builder->current_block, 1);
     ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
@@ -1508,7 +1514,7 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
         func->return_type.source = NULL_SOURCE;
         return FAILURE;
     }
-
+    
     func->statements_length = poly_func->statements_length;
     func->statements_capacity = poly_func->statements_length; // (statements_length is on purpose)
     func->statements = malloc(sizeof(ast_expr_t*) * poly_func->statements_length);
