@@ -423,7 +423,8 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
             break;
         case TOKEN_MAYBE: {
                 (*i)++;
-
+                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
+                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
                 ast_expr_t *expr_a, *expr_b;
                 if(parse_expr(ctx, &expr_a)) return FAILURE;
 
@@ -433,6 +434,8 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
                     ast_expr_free_fully(expr_a);
                     return FAILURE;
                 }
+
+                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
 
                 if(parse_expr(ctx, &expr_b)){
                     ast_expr_free_fully(*inout_left);
