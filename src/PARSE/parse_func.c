@@ -365,24 +365,31 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         }
 
         func->arg_names[func->arity + *backfill] = name;
-
-        if(tokens[*i].id == TOKEN_NEXT){
-            if(tokens[++(*i)].id == TOKEN_CLOSE){
-                compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
-                parse_free_unbackfilled_arguments(func, *backfill);
-                free(name);
-                return FAILURE;
-            }
-
-            *backfill += 1;
-            *out_is_solid = false;
-            return SUCCESS;
-        }
-
     }
 
-    if(parse_ignore_newlines(ctx, "Expected type")) return FAILURE;
+    if(
+        parse_ignore_newlines(ctx, "Expected type") ||
+        (tokens[*i].id == TOKEN_ASSIGN && parse_func_default_arg_value(ctx, func, capacity, backfill)) ||
+        parse_ignore_newlines(ctx, "Expected type")
+    ){
+        free(func->arg_names[func->arity + *backfill]);
+        parse_free_unbackfilled_arguments(func, *backfill);
+        return FAILURE;
+    }
 
+    if(!(func->traits & AST_FUNC_FOREIGN) && tokens[*i].id == TOKEN_NEXT){
+        if(tokens[++(*i)].id == TOKEN_CLOSE){
+            compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
+            free(func->arg_names[func->arity + *backfill]);
+            parse_free_unbackfilled_arguments(func, *backfill);
+            return FAILURE;
+        }
+
+        *backfill += 1;
+        *out_is_solid = false;
+        return SUCCESS;
+    }
+    
     if(tokens[*i].id == TOKEN_POD){
         func->arg_type_traits[func->arity + *backfill] = AST_FUNC_ARG_TYPE_TRAIT_POD;
         (*i)++;
@@ -390,34 +397,15 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         func->arg_type_traits[func->arity + *backfill] = TRAIT_NONE;
     }
 
-    if(parse_ignore_newlines(ctx, "Expected type")) return FAILURE;
-
-    if(parse_type(ctx, &func->arg_types[func->arity + *backfill])){
+    if(
+        parse_ignore_newlines(ctx, "Expected type") ||
+        parse_type(ctx, &func->arg_types[func->arity + *backfill]) ||
+        parse_ignore_newlines(ctx, "Expected type") ||
+        (tokens[*i].id == TOKEN_ASSIGN && parse_func_default_arg_value(ctx, func, capacity, backfill))
+    ){
         free(func->arg_names[func->arity + *backfill]);
         parse_free_unbackfilled_arguments(func, *backfill);
         return FAILURE;
-    }
-
-    if(parse_ignore_newlines(ctx, "Expected ')'")) return FAILURE;
-
-    if(tokens[*i].id == TOKEN_ASSIGN){
-        // Create default argument array if it doesn't already exist
-        if(func->arg_defaults == NULL){
-            func->arg_defaults = malloc(sizeof(ast_expr_t*) * capacity);
-
-            // NOTE: Previous arguments must have their default argument set to nothing
-            for(length_t i = 0; i != func->arity + *backfill; i++){
-                func->arg_defaults[i] = NULL;
-            }
-        }
-
-        // Skip over '=' token
-        (*i)++;
-
-        if(parse_expr(ctx, &func->arg_defaults[func->arity + *backfill])){
-            parse_free_unbackfilled_arguments(func, *backfill);
-            return FAILURE;
-        }
     }
 
     parse_func_backfill_arguments(func, backfill);
@@ -427,13 +415,54 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
     return SUCCESS;
 }
 
+errorcode_t parse_func_default_arg_value(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill){
+    // my_argument float = 0.0f
+    //                   ^
+
+    if(func->arg_defaults && func->arg_defaults[func->arity + *backfill]){
+        compiler_panic(ctx->compiler, func->arg_sources[func->arity + *backfill], "Function argument already has default value");
+        return FAILURE;
+    }
+
+    // Skip over '=' token
+    if(parse_eat(ctx, TOKEN_ASSIGN, "INTERNAL ERROR: parse_func_default_arg_value() expected '=' token")) return FAILURE;
+
+    // Create default argument array if it doesn't already exist
+    if(func->arg_defaults == NULL){
+        func->arg_defaults = malloc(sizeof(ast_expr_t*) * capacity);
+
+        // NOTE: Previous arguments must have their default argument set to nothing
+        for(length_t i = 0; i != func->arity + *backfill; i++){
+            func->arg_defaults[i] = NULL;
+        }
+    }
+
+    if(parse_expr(ctx, &func->arg_defaults[func->arity + *backfill])) return FAILURE;
+    return SUCCESS;
+}
+
 void parse_func_backfill_arguments(ast_func_t *func, length_t *backfill){
-    ast_type_t *master_type = &func->arg_types[func->arity + *backfill];
-    trait_t master_type_trait = func->arg_type_traits[func->arity + *backfill];
+    length_t master_arg_index = func->arity + *backfill;
+    ast_type_t *master_type = &func->arg_types[master_arg_index];
+    trait_t master_type_trait = func->arg_type_traits[master_arg_index];
+    ast_expr_t *master_default = func->arg_defaults == NULL ? NULL : func->arg_defaults[master_arg_index];
+
+    bool backfill_default_values = true;
 
     for(length_t i = 0; *backfill != 0; i++){
-        func->arg_types[func->arity + *backfill - i - 1] = ast_type_clone(master_type);
-        func->arg_type_traits[func->arity + *backfill - i - 1] = master_type_trait;
+        length_t arg_index = func->arity + *backfill - i - 1;
+        func->arg_types[arg_index] = ast_type_clone(master_type);
+        func->arg_type_traits[arg_index] = master_type_trait;
+
+        // Backfill for default values only until an argument has a default value set
+        if(backfill_default_values){
+            if(master_default && func->arg_defaults[arg_index] == NULL){
+                func->arg_defaults[arg_index] = ast_expr_clone(master_default);
+            } else {
+                backfill_default_values = false;
+            }
+        }
+
         func->arity++;
         *backfill -= 1;
     }

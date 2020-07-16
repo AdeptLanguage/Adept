@@ -3,14 +3,18 @@ import 'sys/cstdio.adept'
 
 func main {
     printf('%f %f %f\n', sum(), sum(10.0), sum(10.0, 11.0))
+    printf('%f %f %f\n', sumB(), sumB(10.0), sumB(10.0, 11.0))
+    printf('%f %f %f\n', sumC(), sumC(10.0), sumC(10.0, 11.0))
 }
 
 func sum(a double = 0.0, b double = 0.0, c double = 0.0) double {
     return a + b + c
 }
 
-// UNIMPLEMENTED: More condensed syntax is not implemented yet
-/*
-func sumB(a, b, c float = 0.0f) float = a + b + c
-func sumC(a = 1.0f, b = 2.0f, c float = 3.0f) float = a + b + c
-*/
+func sumB(a, b, c double = 0.0) double {
+    return a + b + c
+}
+
+func sumC(a = 1.0, b = 2.0, c double = 3.0) double {
+    return a + b + c
+}

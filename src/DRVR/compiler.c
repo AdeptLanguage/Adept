@@ -492,12 +492,12 @@ errorcode_t compiler_read_file(compiler_t *compiler, object_t *object){
 }
 
 void compiler_print_source(compiler_t *compiler, int line, int column, source_t source){
-    object_t *object = compiler->objects[source.object_index];
-    if(object->buffer == NULL || object->traits & OBJECT_PACKAGE) return;
+    object_t *relevant_object = compiler->objects[source.object_index];
+    if(relevant_object->buffer == NULL || relevant_object->traits & OBJECT_PACKAGE) return;
 
     length_t line_index = 0;
     for(length_t current_line = 1; current_line != line; line_index++){
-        if(object->buffer[line_index] == '\n') current_line++;
+        if(relevant_object->buffer[line_index] == '\n') current_line++;
     }
 
     char prefix[128];
@@ -505,24 +505,24 @@ void compiler_print_source(compiler_t *compiler, int line, int column, source_t 
     length_t prefix_length = strlen(prefix);
     printf("%s", prefix);
 
-    while(object->buffer[line_index] == '\t'){
+    while(relevant_object->buffer[line_index] == '\t'){
         printf("    "); line_index++; prefix_length += 4;
     }
 
     length_t line_length = 0;
     while(true){
-        if(object->buffer[line_index + line_length] == '\n') break;
+        if(relevant_object->buffer[line_index + line_length] == '\n') break;
         line_length++;
     }
 
     char *line_text = malloc(line_length + 1);
-    line_text = memcpy(line_text, &object->buffer[line_index], line_length);
+    line_text = memcpy(line_text, &relevant_object->buffer[line_index], line_length);
     line_text[line_length] = '\0';
     printf("%s\n", line_text);
     free(line_text);
 
     for(length_t i = 0; i != prefix_length; i++) printf(" ");
-    for(length_t i = line_index; i != source.index; i++) printf(object->buffer[i] != '\t' ? " " : "    ");
+    for(length_t i = line_index; i != source.index; i++) printf(relevant_object->buffer[i] != '\t' ? " " : "    ");
 
     for(length_t i = 0; i != source.stride; i++)
         printf("^");
@@ -531,25 +531,25 @@ void compiler_print_source(compiler_t *compiler, int line, int column, source_t 
 
 void compiler_panic(compiler_t *compiler, source_t source, const char *message){
     #ifndef ADEPT_INSIGHT_BUILD
-    object_t *object = compiler->objects[source.object_index];
+    object_t *relevant_object = compiler->objects[source.object_index];
     int line, column;
 
     if(message == NULL){
-        if(object->traits & OBJECT_PACKAGE){
-            redprintf("%s:?:?:\n", filename_name_const(object->filename));
+        if(relevant_object->traits & OBJECT_PACKAGE){
+            redprintf("%s:?:?:\n", filename_name_const(relevant_object->filename));
         } else {
-            lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
-            redprintf("%s:%d:%d:\n", filename_name_const(object->filename), line, column);
+            lex_get_location(relevant_object->buffer, source.index, &line, &column);
+            redprintf("%s:%d:%d:\n", filename_name_const(relevant_object->filename), line, column);
             compiler_print_source(compiler, line, column, source);
         }
         return;
     }
 
-    if(object->traits & OBJECT_PACKAGE){
-        redprintf("%s:?:?: %s!\n", filename_name_const(object->filename), message);
+    if(relevant_object->traits & OBJECT_PACKAGE){
+        redprintf("%s:?:?: %s!\n", filename_name_const(relevant_object->filename), message);
     } else {
-        lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
-        redprintf("%s:%d:%d: %s!\n", filename_name_const(object->filename), line, column, message);
+        lex_get_location(relevant_object->buffer, source.index, &line, &column);
+        redprintf("%s:%d:%d: %s!\n", filename_name_const(relevant_object->filename), line, column, message);
         compiler_print_source(compiler, line, column, source);
     }
     #endif
@@ -557,7 +557,7 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
 
 void compiler_panicf(compiler_t *compiler, source_t source, const char *format, ...){
     #ifndef ADEPT_INSIGHT_BUILD
-    object_t *object = compiler->objects[source.object_index];
+    object_t *relevant_object = compiler->objects[source.object_index];
     int line, column;
     va_list args;
 
@@ -565,23 +565,23 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
     terminal_set_color(TERMINAL_COLOR_RED);
 
     if(format == NULL){
-        if(object->traits & OBJECT_PACKAGE){
-            redprintf("%s:?:?:\n", filename_name_const(object->filename));
+        if(relevant_object->traits & OBJECT_PACKAGE){
+            redprintf("%s:?:?:\n", filename_name_const(relevant_object->filename));
         } else {
-            lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
-            redprintf("%s:%d:%d:\n", filename_name_const(object->filename), line, column);
+            lex_get_location(relevant_object->buffer, source.index, &line, &column);
+            redprintf("%s:%d:%d:\n", filename_name_const(relevant_object->filename), line, column);
             compiler_print_source(compiler, line, column, source);
         }
         return;
     }
 
-    if(object->traits & OBJECT_PACKAGE){
+    if(relevant_object->traits & OBJECT_PACKAGE){
         line = 1;
         column = 1;
-        printf("%s:?:?: ", filename_name_const(object->filename));
+        printf("%s:?:?: ", filename_name_const(relevant_object->filename));
     } else {
-        lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
-        printf("%s:%d:%d: ", filename_name_const(object->filename), line, column);
+        lex_get_location(relevant_object->buffer, source.index, &line, &column);
+        printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
     }
 
     vprintf(format, args);
@@ -596,24 +596,24 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_warn(compiler_t *compiler, source_t source, const char *message){
     if(compiler->traits & COMPILER_NO_WARN) return;
 
-    object_t *object = compiler->objects[source.object_index];
+    object_t *relevant_object = compiler->objects[source.object_index];
     int line, column;
-    lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
-    yellowprintf("%s:%d:%d: %s\n", filename_name_const(object->filename), line, column, message);
+    lex_get_location(relevant_object->buffer, source.index, &line, &column);
+    yellowprintf("%s:%d:%d: %s\n", filename_name_const(relevant_object->filename), line, column, message);
 }
 
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){
     if(compiler->traits & COMPILER_NO_WARN) return;
 
-    object_t *object = compiler->objects[source.object_index];
+    object_t *relevant_object = compiler->objects[source.object_index];
     va_list args;
     int line, column;
 
     terminal_set_color(TERMINAL_COLOR_YELLOW);
     va_start(args, format);
 
-    lex_get_location(compiler->objects[source.object_index]->buffer, source.index, &line, &column);
-    printf("%s:%d:%d: ", filename_name_const(object->filename), line, column);
+    lex_get_location(relevant_object->buffer, source.index, &line, &column);
+    printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
     vprintf(format, args);
     printf("\n");
 
