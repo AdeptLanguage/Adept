@@ -635,7 +635,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         return;
     } else {
         // Other functions have the same name
-        char *args_string = make_args_string(types, arity);
+        char *args_string = make_args_string(types, NULL, arity);
         compiler_panicf(compiler, source, "Undeclared function %s(%s)", name, args_string ? args_string : "");
         free(args_string);
 
@@ -716,7 +716,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         return;
     } else {
         // Other methods for that struct have the same name
-        char *args_string = make_args_string(types, method_arity + 1);
+        char *args_string = make_args_string(types, NULL, method_arity + 1);
         compiler_panicf(compiler, source, "Undeclared method %s(%s)", name, args_string ? args_string : "");
         free(args_string);
 
@@ -812,13 +812,13 @@ void print_candidate(ast_func_t *ast_func){
     // the first type is either a pointer to a base or a pointer to a generic base
 
     char *return_type_string = ast_type_str(&ast_func->return_type);
-    char *args_string = make_args_string(ast_func->arg_types, ast_func->arity);
+    char *args_string = make_args_string(ast_func->arg_types, ast_func->arg_defaults, ast_func->arity);
     printf("    %s(%s) %s\n", ast_func->name, args_string ? args_string : "", return_type_string);
     free(args_string);
     free(return_type_string);
 }
 
-strong_cstr_t make_args_string(ast_type_t *types, length_t arity){
+strong_cstr_t make_args_string(ast_type_t *types, ast_expr_t **defaults, length_t arity){
     char *args_string = NULL;
     length_t args_string_length = 0;
     length_t args_string_capacity = 0;
@@ -828,9 +828,22 @@ strong_cstr_t make_args_string(ast_type_t *types, length_t arity){
         length_t type_string_length = strlen(type_string);
 
         expand((void**) &args_string, sizeof(char), args_string_length, &args_string_capacity, type_string_length + 3, 256);
-
         memcpy(&args_string[args_string_length], type_string, type_string_length);
         args_string_length += type_string_length;
+
+        if(defaults && defaults[i]){
+            char *expr_string = ast_expr_str(defaults[i]);
+            length_t expr_string_length = strlen(expr_string);
+
+            expand((void**) &args_string, sizeof(char), args_string_length, &args_string_capacity, expr_string_length + 3, 256);
+
+            memcpy(&args_string[args_string_length], " = ", 3);
+            args_string_length += 3;
+            
+            memcpy(&args_string[args_string_length], expr_string, expr_string_length);
+            args_string_length += expr_string_length;
+            free(expr_string);
+        }
 
         if(i + 1 != arity){
             memcpy(&args_string[args_string_length], ", ", 2);

@@ -15,6 +15,7 @@ FEATURE:
 * Reverse repeat
 * Vararg bindings
 * Import sources "#repo List '2.3/List.adept'   import List"
+* default arguments
 
 VERIFICATION:
 * ir_to_llvm_type circular containment detection

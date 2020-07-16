@@ -673,15 +673,15 @@ maybe_index_t find_beginning_of_poly_func_group(ast_polymorphic_func_t *polymorp
 
 successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t type_list_length){
     ast_type_t *arg_types = func->arg_types;
-    length_t args_count = func->arity;
+    length_t arity = func->arity;
 
     if(func->traits & AST_FUNC_VARARG){
         if(func->arity > type_list_length) return false;
     } else {
-        if(args_count != type_list_length) return false;
+        if(arity != type_list_length) return false;
     }
 
-    for(length_t a = 0; a != args_count; a++){
+    for(length_t a = 0; a != arity; a++){
         if(!ast_types_identical(&arg_types[a], &type_list[a])) return false;
     }
 
@@ -689,14 +689,34 @@ successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t t
 }
 
 successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
-        ast_type_t *arg_type_list, length_t type_list_length, trait_t conform_mode){
+            ast_type_t *arg_type_list, length_t type_list_length, trait_t conform_mode){
+    
     ast_type_t *arg_types = func->arg_types;
-    length_t args_count = func->arity;
+    length_t required_arity = func->arity;
 
-    if(func->traits & AST_FUNC_VARARG){
-        if(func->arity > type_list_length) return false;
-    } else {
-        if(args_count != type_list_length) return false;
+    // In no world is more arguments than allowed for non-vararg functions valid Adept code
+    if(!(func->traits & AST_FUNC_VARARG) && required_arity < type_list_length) return false;
+
+    // Determine whether we are missing arguments
+    bool requires_use_of_defaults = required_arity > type_list_length;
+
+    if(requires_use_of_defaults){
+        // Check to make sure that we have the necessary default values available to later
+        // fill in the missing arguments
+        
+        ast_expr_t **arg_defaults = func->arg_defaults;
+
+        // No default arguments are available to use to attempt to meet the arity requirement
+        if(arg_defaults == NULL) return false;
+
+        for(length_t i = type_list_length; i != required_arity; i++){
+            // We are missing a necessary default argument value
+            if(arg_defaults[i] == NULL) return false;
+        }
+
+        // Otherwise, we met the arity requirement.
+        // We will then only process the argument values we already have
+        // and leave processing and conforming the default arguments to higher level functions
     }
 
     ir_pool_snapshot_t snapshot;
@@ -706,7 +726,11 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
     memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
 
-    for(length_t a = 0; a != args_count; a++){
+    // If the number of arguments supplied exceeds the amount that's required (only the case if varargs), then
+    // only conform the non-varargs arguments.
+    length_t min_arity = func->arity < type_list_length ? func->arity : type_list_length;
+
+    for(length_t a = 0; a != min_arity; a++){
         if(!ast_types_conform(builder, &arg_value_list[a], &arg_type_list[a], &arg_types[a], conform_mode)){
             // Restore pool snapshot
             ir_pool_snapshot_restore(builder->pool, &snapshot);

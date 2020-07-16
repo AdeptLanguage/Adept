@@ -168,6 +168,9 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
         free(func->arg_sources);
         free(func->arg_flows);
         free(func->arg_type_traits);
+
+        if(func->arg_defaults) ast_exprs_free_fully(func->arg_defaults, func->arity);
+
         ast_free_statements(func->statements, func->statements_length);
         free(func->statements);
         ast_type_free(&func->return_type);
@@ -559,6 +562,7 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     func->arg_sources = NULL;
     func->arg_flows = NULL;
     func->arg_type_traits = NULL;
+    func->arg_defaults = NULL;
     func->arity = 0;
     func->return_type.elements = NULL;
     func->return_type.elements_length = 0;

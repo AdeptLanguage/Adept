@@ -28,6 +28,7 @@ typedef struct {
     source_t *arg_sources;
     char *arg_flows; // in | out | inout
     trait_t *arg_type_traits;
+    ast_expr_t **arg_defaults; // maybe null array of maybe null pointers
     length_t arity;
     ast_type_t return_type;
     trait_t traits;

@@ -348,8 +348,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         break;
     case EXPR_CALL: {
             ast_expr_call_t *call_expr = (ast_expr_call_t*) expr;
-            ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * call_expr->arity);
-            ast_type_t *arg_types = malloc(sizeof(ast_type_t) * call_expr->arity);
+            length_t arity = call_expr->arity;
+
+            ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
+            ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
 
             ast_type_t *ast_var_type;
             ir_type_t *ir_var_type;
@@ -357,7 +359,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             bool hard_break = false;
 
             // Resolve & ir_gen function arguments
-            for(length_t a = 0; a != call_expr->arity; a++){
+            for(length_t a = 0; a != arity; a++){
                 if(ir_gen_expression(builder, call_expr->args[a], &arg_values[a], false, &arg_types[a])){
                     ast_types_free_fully(arg_types, a);
                     return FAILURE;
@@ -375,7 +377,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     if(call_expr->is_tentative) break;
                     char *s = ast_type_str(ast_var_type);
                     compiler_panicf(builder->compiler, call_expr->source, "Can't call value of non function type '%s'", s);
-                    ast_types_free_fully(arg_types, call_expr->arity);
+                    ast_types_free_fully(arg_types, arity);
                     free(s);
                     return FAILURE;
                 }
@@ -384,7 +386,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 *ir_value = build_load(builder, *ir_value, expr->source);
 
                 errorcode_t error = ir_gen_call_function_value(builder, ast_var_type, ir_var_type, call_expr, arg_values, arg_types, ir_value, out_expr_type);
-                ast_types_free_fully(arg_types, call_expr->arity);
+                ast_types_free_fully(arg_types, arity);
 
                 if(error){
                     if(error == ALT_FAILURE){
@@ -400,28 +402,76 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // If no non-global variable exists, look for function
             funcpair_t pair;
-            errorcode_t error = ir_gen_find_func_conforming(builder, call_expr->name, arg_values, arg_types, call_expr->arity, &pair);
+            errorcode_t error = ir_gen_find_func_conforming(builder, call_expr->name, arg_values, arg_types, arity, &pair);
             
             if(error == ALT_FAILURE){
-                ast_types_free_fully(arg_types, call_expr->arity);
+                ast_types_free_fully(arg_types, arity);
                 return FAILURE;
             }
 
             if(error == SUCCESS){
                 // Found function that fits given name and arguments
 
+                // If the found function has default arguments and we are missing arguments, fill them in
+                if(pair.ast_func->arg_defaults && arity != pair.ast_func->arity){
+                    // ------------------------------------------------
+                    // | 0 | 1 | 2 |                    Supplied
+                    // | 0 | 1 | 2 | 3 | 4 |            Required
+                    // |   | 1 |   | 3 | 4 |            Defaults
+                    // ------------------------------------------------
+                    
+                    ir_value_t **new_args = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * pair.ast_func->arity);
+                    ast_type_t *new_arg_types = malloc(sizeof(ast_type_t) * pair.ast_func->arity);
+                    ast_expr_t **arg_defaults = pair.ast_func->arg_defaults;
+
+                    // Copy given argument values into new array
+                    memcpy(new_args, arg_values, sizeof(ir_value_t*) * arity);
+
+                    // Copy AST types of given arguments into new array
+                    memcpy(new_arg_types, arg_types, sizeof(ast_type_t) * arity);
+
+                    // Attempt to fill in missing values
+                    for(length_t i = arity; i != pair.ast_func->arity; i++){
+                        if(arg_defaults[i] == NULL){
+                            // NOTE: We should have never received a function that can't be completed using its default values
+                            compiler_panicf(builder->compiler, call_expr->source, "INTERNAL ERROR: Failed to fill in default value for argument %d", i);
+                            ast_types_free(&new_arg_types[arity], i - arity);
+                            ast_types_free_fully(arg_types, call_expr->arity);
+                            return FAILURE;
+                        }
+
+                        if(ir_gen_expression(builder, arg_defaults[i], &new_args[i], false, &new_arg_types[i])){
+                            ast_types_free(&new_arg_types[arity], i - arity);
+                            ast_types_free_fully(arg_types, call_expr->arity);
+                            return FAILURE;
+                        }
+                    }
+
+                    // NOTE: We are discarding the memory held by 'arg_values'
+                    //       Since it is a part of the pool, it'll just remain stagnant until
+                    //       the pool is freed. As far as I can tell, the costs of trying to reuse
+                    //       the memory isn't worth it ('cause it's only like 8 bytes per entry and memory is cheap)
+                    // TODO: CLEANUP: Maybe not abandon this memory
+                    arg_values = new_args;
+                    arity = pair.ast_func->arity;
+
+                    // Replace argument types array
+                    free(arg_types);
+                    arg_types = new_arg_types;
+                }
+                
                 if(pair.ast_func->traits & AST_FUNC_VARARG){
-                    trait_t arg_type_traits[call_expr->arity];
+                    trait_t arg_type_traits[arity];
                     memcpy(arg_type_traits, pair.ast_func->arg_type_traits, sizeof(trait_t) * pair.ast_func->arity);
-                    memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (call_expr->arity - pair.ast_func->arity));
+                    memset(&arg_type_traits[pair.ast_func->arity], TRAIT_NONE, sizeof(trait_t) * (arity - pair.ast_func->arity));
 
                     // Use padded 'arg_type_traits' with TRAIT_NONE for variable argument functions    
-                    if(handle_pass_management(builder, arg_values, arg_types, arg_type_traits, call_expr->arity)){
-                        ast_types_free_fully(arg_types, call_expr->arity);
+                    if(handle_pass_management(builder, arg_values, arg_types, arg_type_traits, arity)){
+                        ast_types_free_fully(arg_types, arity);
                         return FAILURE;
                     }
-                } else if(handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, call_expr->arity)){
-                    ast_types_free_fully(arg_types, call_expr->arity);
+                } else if(handle_pass_management(builder, arg_values, arg_types, pair.ast_func->arg_type_traits, arity)){
+                    ast_types_free_fully(arg_types, arity);
                     return FAILURE;
                 }
                 
@@ -430,7 +480,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ((ir_instr_call_t*) instruction)->id = INSTRUCTION_CALL;
                 ((ir_instr_call_t*) instruction)->result_type = pair.ir_func->return_type;
                 ((ir_instr_call_t*) instruction)->values = arg_values;
-                ((ir_instr_call_t*) instruction)->values_length = call_expr->arity;
+                ((ir_instr_call_t*) instruction)->values_length = arity;
                 ((ir_instr_call_t*) instruction)->ir_func_id = pair.ir_func_id;
                 builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
 
@@ -440,7 +490,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
 
                 if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&pair.ast_func->return_type);
-                ast_types_free_fully(arg_types, call_expr->arity);
+                ast_types_free_fully(arg_types, arity);
                 break;
             }
 

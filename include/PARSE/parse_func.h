@@ -28,7 +28,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func);
 
 // ------------------ parse_func_argument ------------------
 // Parses a single argument that a function takes
-errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, bool *out_is_solid);
+errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill, bool *out_is_solid);
 
 // ------------------ parse_func_backfill_arguments ------------------
 // Backfills arguments that weren't initially given a type

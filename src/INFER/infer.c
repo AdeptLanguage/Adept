@@ -61,22 +61,32 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
         infer_var_scope_t func_scope;
         infer_var_scope_init(&func_scope, NULL);
 
+        ast_func_t *function = &funcs[f];
+
         // Resolve aliases in function return type
-        if(infer_type(ctx, &funcs[f].return_type)) return FAILURE;
+        if(infer_type(ctx, &function->return_type)) return FAILURE;
 
         // Resolve aliases in function arguments
-        for(length_t a = 0; a != funcs[f].arity; a++){
-            if(infer_type(ctx, &funcs[f].arg_types[a])) {
+        for(length_t a = 0; a != function->arity; a++){
+            if(infer_type(ctx, &function->arg_types[a])) {
                 return FAILURE;
             }
 
-            if(!(funcs[f].traits & AST_FUNC_FOREIGN)){
-                infer_var_scope_add_variable(&func_scope, funcs[f].arg_names[a], &funcs[f].arg_types[a]);
+            if(function->arg_defaults && function->arg_defaults[a]){
+                unsigned int default_primitive = ast_primitive_from_ast_type(&funcs[f].arg_types[a]);
+                if(infer_expr(ctx, function, &function->arg_defaults[a], default_primitive, &func_scope)){
+                    infer_var_scope_free(&func_scope);
+                    return FAILURE;
+                }
+            }
+
+            if(!(function->traits & AST_FUNC_FOREIGN)){
+                infer_var_scope_add_variable(&func_scope, function->arg_names[a], &function->arg_types[a]);
             }
         }
 
         // Infer expressions in statements
-        if(infer_in_stmts(ctx, &funcs[f], funcs[f].statements, funcs[f].statements_length, &func_scope)){
+        if(infer_in_stmts(ctx, function, function->statements, function->statements_length, &func_scope)){
             infer_var_scope_free(&func_scope);
             return FAILURE;
         }

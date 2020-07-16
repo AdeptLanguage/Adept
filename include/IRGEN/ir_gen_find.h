@@ -106,6 +106,8 @@ successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t t
 // ---------------- func_args_conform ----------------
 // Returns whether a function's arguments conform
 // to the arguments supplied.
+// NOTE: Just because this function returns true, does NOT mean that
+//       the arity supplied meets the function's arity requirement
 successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
         ast_type_t *arg_type_list, length_t type_list_length, trait_t conform_mode);
 

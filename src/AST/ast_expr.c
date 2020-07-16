@@ -64,15 +64,43 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         return representation;
     case EXPR_GENERIC_INT:
         representation = malloc(23);
-        sprintf(representation, "%ldgi", (long int) ((ast_expr_generic_int_t*) expr)->value);
+        sprintf(representation, "%ld", (long int) ((ast_expr_generic_int_t*) expr)->value);
         return representation;
     case EXPR_FLOAT:
         representation = malloc(23);
         sprintf(representation, "%06.6ff", ((ast_expr_float_t*) expr)->value);
+
+        // Trim extra zeros for good measure
+        // TODO: CLEANUP: Clean up this messy code
+        {
+            length_t representation_length = strlen(representation);
+            if(representation_length > 1) for(length_t j = representation_length - 2; j > 0; j--){
+                if(representation[j] == '0' && representation[j - 1] != '.'){
+                    representation[j] = 'f';
+                    representation[j + 1] = 0x00;
+                }
+                else break;
+            }
+        }
+
         return representation;
     case EXPR_DOUBLE:
         representation = malloc(23);
         sprintf(representation, "%06.6fd", ((ast_expr_float_t*) expr)->value);
+
+        // Trim extra zeros for good measure
+        // TODO: CLEANUP: Clean up this messy code
+        {
+            length_t representation_length = strlen(representation);
+            if(representation_length > 1) for(length_t j = representation_length - 2; j > 0; j--){
+                if(representation[j] == '0' && representation[j - 1] != '.'){
+                    representation[j] = 'd';
+                    representation[j + 1] = 0x00;
+                }
+                else break;
+            }
+        }
+
         return representation;
     case EXPR_BOOLEAN:
         representation = malloc(6);
@@ -80,7 +108,17 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         return representation;
     case EXPR_GENERIC_FLOAT:
         representation = malloc(23);
-        sprintf(representation, "%06.6fgf", ((ast_expr_generic_float_t*) expr)->value);
+        sprintf(representation, "%06.6f", ((ast_expr_generic_float_t*) expr)->value);
+
+        // Trim extra zeros for good measure
+        {
+            length_t representation_length = strlen(representation);
+            if(representation_length > 0) for(length_t j = representation_length - 1; j > 0; j--){
+                if(representation[j] == '0' && representation[j - 1] != '.') representation[j] = 0x00;
+                else break;
+            }
+        }
+        
         return representation;
     case EXPR_NULL:
         representation = malloc(5);

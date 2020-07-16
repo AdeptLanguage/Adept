@@ -288,7 +288,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
 
         parse_func_grow_arguments(func, backfill, &capacity);
 
-        if(parse_func_argument(ctx, func, &backfill, &is_solid)){
+        if(parse_func_argument(ctx, func, capacity, &backfill, &is_solid)){
             ctx->allow_polymorphic_prereqs = false;
             return FAILURE;
         }
@@ -326,7 +326,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     return SUCCESS;
 }
 
-errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *backfill, bool *out_is_solid){
+errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill, bool *out_is_solid){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
@@ -339,6 +339,9 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *ba
     }
 
     func->arg_sources[func->arity + *backfill] = sources[*i];
+
+    if(func->arg_defaults)
+        func->arg_defaults[func->arity + *backfill] = NULL;
 
     if(tokens[*i].id == TOKEN_ELLIPSIS){
         if(*backfill != 0){
@@ -395,6 +398,28 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t *ba
         return FAILURE;
     }
 
+    if(parse_ignore_newlines(ctx, "Expected ')'")) return FAILURE;
+
+    if(tokens[*i].id == TOKEN_ASSIGN){
+        // Create default argument array if it doesn't already exist
+        if(func->arg_defaults == NULL){
+            func->arg_defaults = malloc(sizeof(ast_expr_t*) * capacity);
+
+            // NOTE: Previous arguments must have their default argument set to nothing
+            for(length_t i = 0; i != func->arity + *backfill; i++){
+                func->arg_defaults[i] = NULL;
+            }
+        }
+
+        // Skip over '=' token
+        (*i)++;
+
+        if(parse_expr(ctx, &func->arg_defaults[func->arity + *backfill])){
+            parse_free_unbackfilled_arguments(func, *backfill);
+            return FAILURE;
+        }
+    }
+
     parse_func_backfill_arguments(func, backfill);
     func->arity++;
     *out_is_solid = true;
@@ -439,6 +464,9 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
     grow((void**) &func->arg_sources,     sizeof(source_t),   func->arity + backfill, *capacity);
     grow((void**) &func->arg_flows,       sizeof(char),       func->arity + backfill, *capacity);
     grow((void**) &func->arg_type_traits, sizeof(trait_t),    func->arity + backfill, *capacity);
+
+    if(func->arg_defaults)
+        grow((void**) &func->arg_defaults, sizeof(ast_expr_t*), func->arity + backfill, *capacity);
 }
 
 void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim){
@@ -468,5 +496,8 @@ void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_ve
 void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill){
     for(length_t i = 0; i != backfill; i++){
         free(func->arg_names[func->arity + backfill - i - 1]);
+        
+        if(func->arg_defaults)
+            ast_expr_free_fully(func->arg_defaults[func->arity + backfill - i - 1]);
     }
 }
