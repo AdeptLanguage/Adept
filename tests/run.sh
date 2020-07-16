@@ -35,6 +35,7 @@ compile conditionless_break_label || exit $?
 compile constants || exit $?
 compile continue || exit $?
 compile continue_to || exit $?
+compile default_args || exit $?
 compile defer || exit $?
 compile defer_global || exit $?
 compile deprecated || exit $?

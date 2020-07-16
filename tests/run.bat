@@ -53,6 +53,8 @@ call :compile continue
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile continue_to
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile default_args
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile defer
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile defer_global
