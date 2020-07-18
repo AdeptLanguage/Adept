@@ -1,0 +1,13 @@
+
+import '2.3/basics.adept'
+
+#default name "Isaac Shelton"
+#default welcome_format "Welcome %!"
+#default nine 1 * 2 + 3 + 6 / 2 + 1
+#default pi 3.1415926535
+
+func main {
+    print(#get welcome_format % #get name)
+    print("9 == %" % #get nine)
+    print("pi == %" % #get pi)
+}

@@ -142,6 +142,8 @@ call :compile mathassign
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile member
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile meta_get
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile methods
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile multiple_declaration

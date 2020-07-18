@@ -1368,6 +1368,20 @@ void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source){
     ((ast_expr_boolean_t*) *out_expr)->source = source;
 }
 
+void ast_expr_create_long(ast_expr_t **out_expr, long long value, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_long_t));
+    ((ast_expr_long_t*) *out_expr)->id = EXPR_LONG;
+    ((ast_expr_long_t*) *out_expr)->value = value;
+    ((ast_expr_long_t*) *out_expr)->source = source;
+}
+
+void ast_expr_create_double(ast_expr_t **out_expr, double value, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_double_t));
+    ((ast_expr_double_t*) *out_expr)->id = EXPR_DOUBLE;
+    ((ast_expr_double_t*) *out_expr)->value = value;
+    ((ast_expr_double_t*) *out_expr)->source = source;
+}
+
 void ast_expr_create_string(ast_expr_t **out_expr, char *array, length_t length, source_t source){
     *out_expr = malloc(sizeof(ast_expr_str_t));
     ((ast_expr_str_t*) *out_expr)->id = EXPR_STR;

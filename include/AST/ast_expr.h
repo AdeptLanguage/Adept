@@ -612,6 +612,14 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr);
 // Creates a boolean expression
 void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source);
 
+// ---------------- ast_expr_create_long ----------------
+// Creates a long expression
+void ast_expr_create_long(ast_expr_t **out_expr, long long value, source_t source);
+
+// ---------------- ast_expr_create_double ----------------
+// Creates a double expression
+void ast_expr_create_double(ast_expr_t **out_expr, double value, source_t source);
+
 // ---------------- ast_expr_create_string ----------------
 // Creates a string expression
 void ast_expr_create_string(ast_expr_t **out_expr, char *array, length_t length, source_t source);

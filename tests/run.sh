@@ -78,6 +78,7 @@ compile management_math || exit $?
 compile management_pass || exit $?
 compile mathassign || exit $?
 compile member || exit $?
+compile meta_get || exit $?
 compile methods || exit $?
 compile multiple_declaration || exit $?
 

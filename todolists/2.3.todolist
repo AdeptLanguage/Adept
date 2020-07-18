@@ -17,3 +17,4 @@ COMPLETED:
 + Bitwise assignment operators '&=', '|=', '^=', '<<=', '>>=', '<<<=', '>>>='
 + Fill in offsets for AnyStructType types
 + Runtime type information for indirectly used types
++ default arguments

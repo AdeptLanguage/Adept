@@ -146,6 +146,58 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_DECREMENT:
         if(parse_expr_predecrement(ctx, out_expr)) return FAILURE;
         break;
+    case TOKEN_META: {
+            weak_cstr_t directive = tokens[(*i)++].data;
+
+            if(strcmp(directive, "get") != 0){
+                compiler_panicf(ctx->compiler, sources[*i - 1], "Unexpected meta directive '%s' in expression", directive);
+                return FAILURE;
+            }
+
+            // Parse name of transcendant variable to get
+            weak_cstr_t transcendant_name = parse_take_word(ctx, "Expected transcendant variable name after '#get'");
+            if(transcendant_name == NULL) return FAILURE;
+
+            meta_definition_t *definition = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, transcendant_name);
+
+            if(definition == NULL){
+                compiler_panicf(ctx->compiler, sources[*i - 1], "Transcendant variable '%s' does not exist", transcendant_name);
+                return FAILURE;
+            }
+            
+            if(!IS_META_EXPR_ID_COLLAPSED(definition->value->id)){
+                compiler_panicf(ctx->compiler, sources[*i - 1], "INTERNAL ERROR: Meta expression expected to be collapsed");
+                return FAILURE;
+            }
+
+            switch(definition->value->id){
+            case META_EXPR_TRUE:
+                ast_expr_create_bool(out_expr, true, sources[*i - 1]);
+                break;
+            case META_EXPR_FALSE:
+                ast_expr_create_bool(out_expr, true, sources[*i - 1]);
+                break;
+            case META_EXPR_STR: {
+                    meta_expr_str_t *str = (meta_expr_str_t*) definition->value;
+                    ast_expr_create_string(out_expr, str->value, strlen(str->value), sources[*i - 1]);
+                }
+                break;
+            case META_EXPR_INT: {
+                    meta_expr_int_t *integer = (meta_expr_int_t*) definition->value;
+                    ast_expr_create_long(out_expr, integer->value, sources[*i - 1]);
+                }
+                break;
+            case META_EXPR_FLOAT: {
+                    meta_expr_float_t *floating_point = (meta_expr_float_t*) definition->value;
+                    ast_expr_create_double(out_expr, floating_point->value, sources[*i - 1]);
+                }
+                break;
+            default:
+                compiler_panicf(ctx->compiler, sources[*i - 1], "INTERNAL ERROR: '#get %s' failed to morph transcendant value into literal\n", transcendant_name);
+                return FAILURE;
+            }
+            break;
+        }
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
         return FAILURE;
