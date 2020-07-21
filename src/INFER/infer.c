@@ -517,6 +517,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_PREDECREMENT:
     case EXPR_POSTDECREMENT:
     case EXPR_POSTINCREMENT:
+    case EXPR_TOGGLE:
         if(infer_expr_inner(ctx, ast_func, &((ast_expr_unary_t*) *expr)->value, undetermined, scope)) return FAILURE;
         break;
     case EXPR_NEW:

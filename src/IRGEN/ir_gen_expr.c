@@ -1606,6 +1606,47 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
         }
         break;
+    case EXPR_TOGGLE: {
+            ast_expr_unary_t *toggle_expr = (ast_expr_unary_t*) expr;
+            ir_value_t *mutable_value;
+            ast_type_t ast_type;
+
+            if(ir_gen_expression(builder, toggle_expr->value, &mutable_value, true, &ast_type)) return FAILURE;
+
+            ir_type_t *dereferenced_ir_type = ir_type_dereference(mutable_value->type);
+
+            if(!ast_type_is_base_of(&ast_type, "bool") || dereferenced_ir_type == NULL || dereferenced_ir_type->kind != TYPE_KIND_BOOLEAN){
+                char *t = ast_type_str(&ast_type);
+                compiler_panicf(builder->compiler, toggle_expr->source, "Cannot toggle non-boolean type '%s'", t);
+                ast_type_free(&ast_type);
+                free(t);
+                return FAILURE;
+            }
+
+            // Load and not the boolean value
+            ir_value_t *loaded = build_load(builder, mutable_value, toggle_expr->source);
+            
+            ir_instr_t *built_instr = build_instruction(builder, sizeof(ir_instr_unary_t));
+            ((ir_instr_unary_t*) built_instr)->id = INSTRUCTION_ISZERO;
+            ((ir_instr_unary_t*) built_instr)->result_type = ir_builder_bool(builder);
+            ((ir_instr_unary_t*) built_instr)->value = loaded;
+            ir_value_t *notted = build_value_from_prev_instruction(builder);
+            
+            // Store it back into memory
+            build_store(builder, notted, mutable_value, toggle_expr->source);
+
+            if(out_expr_type){
+                *out_expr_type = ast_type;
+            } else {
+                ast_type_free(&ast_type);
+            }
+
+            // Don't even bother with expression result unless we care about the it
+            if(ir_value){
+                *ir_value = leave_mutable ? mutable_value : notted;
+            }
+        }
+        break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
 

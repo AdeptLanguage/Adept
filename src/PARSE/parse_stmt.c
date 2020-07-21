@@ -943,13 +943,14 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     ast_expr_t *mutable_expression;
     if(parse_expr(ctx, &mutable_expression)) return FAILURE;
-
-    // If it's a call method expression, bypass and treat as statement
+    
+    // For some expressions, bypass and treat as statement
     if(mutable_expression->id == EXPR_CALL_METHOD
             || mutable_expression->id == EXPR_POSTINCREMENT
             || mutable_expression->id == EXPR_POSTDECREMENT
             || mutable_expression->id == EXPR_PREINCREMENT
-            || mutable_expression->id == EXPR_PREDECREMENT){
+            || mutable_expression->id == EXPR_PREDECREMENT
+            || mutable_expression->id == EXPR_TOGGLE){
         stmt_list->statements[stmt_list->length++] = (ast_expr_t*) mutable_expression;
         return SUCCESS;
     }

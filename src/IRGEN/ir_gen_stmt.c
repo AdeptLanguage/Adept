@@ -349,6 +349,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_PREDECREMENT:
         case EXPR_POSTINCREMENT:
         case EXPR_POSTDECREMENT:
+        case EXPR_TOGGLE:
             // Expression-statements will be processed elsewhere
             if(ir_gen_expression(builder, stmt, NULL, true, NULL)) return FAILURE;
             break;

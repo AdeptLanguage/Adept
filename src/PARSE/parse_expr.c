@@ -364,6 +364,19 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 *inout_expr = (ast_expr_t*) increment;
             }
             break;
+        case TOKEN_TOGGLE: {
+                if(!expr_is_mutable(*inout_expr)){
+                    compiler_panic(ctx->compiler, sources[*i], "Cannot perform '!!' operator on immutable values");
+                    return FAILURE;
+                }
+
+                ast_expr_unary_t *toggle = (ast_expr_unary_t*) malloc(sizeof(ast_expr_unary_t));
+                toggle->id = EXPR_TOGGLE;
+                toggle->source = sources[(*i)++];
+                toggle->value = *inout_expr;
+                *inout_expr = (ast_expr_t*) toggle;
+            }
+            break;
         default:
             return SUCCESS;
         }
@@ -411,7 +424,7 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
                 TOKEN_BIT_LGC_RS_ASSIGN,  // 0x00000033
                 TOKEN_TERMINATE_JOIN,     // 0x00000037
                 TOKEN_COLON,              // 0x00000038
-                TOKEN_ELSE                // 0x0000005E
+                TOKEN_ELSE,               // 0x0000005E
             };
 
             // Terminate operator expression portion if termination operator encountered

@@ -130,6 +130,7 @@ compile tentative_method_calls || exit $?
 compile terminate_join || exit $?
 compile ternary || exit $?
 compile ternary_circuit || exit $?
+compile toggle || exit $?
 compile truefalse || exit $?
 compile undef || exit $?
 compile unless || exit $?

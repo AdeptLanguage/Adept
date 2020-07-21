@@ -121,8 +121,9 @@ extern "C" {
 #define EXPR_BREAK_TO        0x00000060
 #define EXPR_CONTINUE_TO     0x00000061
 #define EXPR_SWITCH          0x00000062
+#define EXPR_TOGGLE          0x00000063
 
-#define MAX_AST_EXPR EXPR_SWITCH
+#define MAX_AST_EXPR EXPR_TOGGLE
 
 // Static data that stores general expression syntax representations
 extern const char *global_expression_rep_table[];
@@ -288,7 +289,7 @@ typedef struct {
 
 // ---------------- ast_expr_unary_t ----------------
 // General purpose single-operand expression
-// Used for: address, dereference, bit complement, not, negate, delete
+// Used for: address, dereference, bit complement, not, negate, delete, toggle
 typedef struct {
     unsigned int id;
     source_t source;

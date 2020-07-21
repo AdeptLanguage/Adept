@@ -1,0 +1,9 @@
+
+import '2.3/basics.adept'
+
+func main {
+    value bool = false
+
+    repeat 3,
+        print("% => %" % value % value!!)
+}
