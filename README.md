@@ -270,7 +270,7 @@ func sum(a, b int) int = a + b
 
 func main {
     calculate func(int, int) int = func &sum
-    print("calculate(8, 13) = %" % caclulate(8, 13))
+    print("calculate(8, 13) = %" % calculate(8, 13))
 }
 ```
 
