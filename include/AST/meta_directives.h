@@ -97,6 +97,8 @@ void meta_definition_add_str(meta_definition_t **definitions, length_t *length, 
 
 meta_definition_t *meta_definition_find(meta_definition_t *definitions, length_t length, weak_cstr_t name);
 
+meta_expr_t *meta_get_special_variable(struct compiler *compiler, weak_cstr_t variable_name, source_t variable_source);
+
 #ifdef __cplusplus
 }
 #endif

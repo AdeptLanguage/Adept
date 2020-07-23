@@ -56,6 +56,7 @@ TODO:
 * reverse repeat
 * vararg bindings
 * make --no-typeinfo and no_type_info have the same spacing
+* conform default arguments to required argument type
 
 COMPLETED:
 + Finish ! operator for meta directives ()

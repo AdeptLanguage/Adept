@@ -1,0 +1,11 @@
+
+// Static meta variables
+#print "__compiler__ = " + __compiler__
+#print "__compiler_version__ = " + __compiler_version__
+
+// Dynamic meta variables
+#print "__no_typeinfo__ = " + __no_typeinfo__
+#print "__line__ = " + __line__
+#print "__column__ = " + __column__
+#print "__file__ = " + __file__
+#halt

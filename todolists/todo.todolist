@@ -33,6 +33,7 @@ COMPLETENESS:
 * Allow functionCall().methodCall().methodCall() like statements
 * Allow skipping __pass__ calls with functionCall(POD value1, POD value2)
 * Make --no-typeinfo and no_type_info have the same spacing
+* Conform default arguments to required argument type
 
 UNINTENDED:
 * Fix bug with #if as statement for single line if

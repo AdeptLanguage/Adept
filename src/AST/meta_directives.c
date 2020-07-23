@@ -1,5 +1,6 @@
 
 #include <math.h>
+#include "LEX/lex.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/search.h"
@@ -164,36 +165,26 @@ void meta_collapse(compiler_t *compiler, meta_definition_t *definitions, length_
             break;
         case META_EXPR_VAR: {
                 meta_expr_var_t *var = (meta_expr_var_t*) *expr;
+                meta_expr_t *special_result = meta_get_special_variable(compiler, var->name, var->source);
 
-                // Array of dynamic compiler meta variable names
-                // NOTE: This list must be sorted alphabetically
-                static const char* special_dynamic_meta_variables[] = {
-                    "__no_typeinfo__"
-                };
-                length_t special_dynamic_meta_variables_length = sizeof(special_dynamic_meta_variables) / sizeof(const char *);
-                maybe_index_t special_index = binary_string_search(special_dynamic_meta_variables, special_dynamic_meta_variables_length, var->name);
-
-                // Do special stuff instead if dynamic compiler meta variable
-                if(special_index >= 0){
-                    switch(special_index){
-                    case 0: // __no_typeinfo__
-                        (*expr)->id = compiler->traits & COMPILER_NO_TYPEINFO ? META_EXPR_TRUE : META_EXPR_FALSE;
-                        break;
-                    }
+                if(special_result){
+                    meta_expr_free_fully(*expr);
+                    *expr = special_result;
                     break;
                 }
                 
                 meta_definition_t *definition = meta_definition_find(definitions, definitions_length, var->name);
-                meta_expr_free(*expr);
 
                 if(definition){
-                    free(*expr);
+                    meta_expr_free_fully(*expr);
                     *expr = meta_expr_clone(definition->value);
                 } else {
                     if(!(compiler->traits & COMPILER_UNSAFE_META)){
                         compiler_warnf(compiler, var->source, "Warning: Usage of undefined transcendant variable '%s'", var->name);
                         printf("    (you can disable this warning with '--unsafe-meta' or 'pragma unsafe_meta')\n");
                     }
+
+                    meta_expr_free(*expr);
                     (*expr)->id = META_EXPR_UNDEF;
                 }
             }
@@ -559,4 +550,59 @@ meta_definition_t *meta_definition_find(meta_definition_t *definitions, length_t
         if(strcmp(definitions[i].name, name) == 0) return &definitions[i];
     }
     return NULL;
+}
+
+meta_expr_t *meta_get_special_variable(compiler_t *compiler, weak_cstr_t variable_name, source_t variable_source){
+    meta_expr_t *result;
+
+    // Array of dynamic compiler meta variable names
+    // NOTE: This list must be sorted alphabetically
+    static const char* special_dynamic_meta_variables[] = {
+        "__column__",
+        "__file__",
+        "__line__",
+        "__no_typeinfo__"
+    };
+
+    length_t special_dynamic_meta_variables_length = sizeof(special_dynamic_meta_variables) / sizeof(const char *);
+    maybe_index_t special_index = binary_string_search(special_dynamic_meta_variables, special_dynamic_meta_variables_length, variable_name);
+
+    // Do special stuff instead if dynamic compiler meta variable
+    if(special_index < 0) return NULL;
+
+    switch(special_index){
+    case 0: { // __column__
+            int line, column;
+            lex_get_location(compiler->objects[variable_source.object_index]->buffer, variable_source.index, &line, &column);
+            
+            result = malloc(sizeof(meta_expr_int_t));
+            ((meta_expr_int_t*) result)->id = META_EXPR_INT;
+            ((meta_expr_int_t*) result)->value = column;
+        }
+        break;
+    case 1: { // __file__
+            result = malloc(sizeof(meta_expr_str_t));
+            ((meta_expr_str_t*) result)->id = META_EXPR_STR;
+            ((meta_expr_str_t*) result)->value = strclone(compiler->objects[variable_source.object_index]->filename);
+        }
+        break;
+    case 2: { // __line__
+            int line, column;
+            lex_get_location(compiler->objects[variable_source.object_index]->buffer, variable_source.index, &line, &column);
+            
+            result = malloc(sizeof(meta_expr_int_t));
+            ((meta_expr_int_t*) result)->id = META_EXPR_INT;
+            ((meta_expr_int_t*) result)->value = line;
+        }
+        break;
+    case 3: // __no_typeinfo__
+        result = malloc(sizeof(meta_expr_t));
+        result->id = compiler->traits & COMPILER_NO_TYPEINFO ? META_EXPR_TRUE : META_EXPR_FALSE;
+        break;
+    default:
+        compiler_panic(compiler, variable_source, "INTERNAL ERROR: meta_get_special_variable() got unimplemented index");
+        return NULL;
+    }
+    
+    return result;
 }
