@@ -5,6 +5,13 @@ func main {
     printf('%f %f %f\n', sum(), sum(10.0), sum(10.0, 11.0))
     printf('%f %f %f\n', sumB(), sumB(10.0), sumB(10.0, 11.0))
     printf('%f %f %f\n', sumC(), sumC(10.0), sumC(10.0, 11.0))
+
+    my_struct MyStruct
+    printf('%f\n', my_struct.getValue())
+}
+
+struct MyStruct () {
+    func getValue(value double = 3.14159265) double = value
 }
 
 func sum(a double = 0.0, b double = 0.0, c double = 0.0) double {
