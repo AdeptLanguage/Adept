@@ -32,6 +32,7 @@ COMPLETENESS:
 * Support 64-bit numeric literals without suffixes
 * Allow functionCall().methodCall().methodCall() like statements
 * Allow skipping __pass__ calls with functionCall(POD value1, POD value2)
+* Make --no-typeinfo and no_type_info have the same spacing
 
 UNINTENDED:
 * Fix bug with #if as statement for single line if

@@ -339,7 +339,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         ir_type_t *any_type_type, *any_struct_type_type, *any_ptr_type_type,
             *any_type_ptr_type = NULL, *ubyte_ptr_type;
         
-        if(compiler->traits & COMPILER_NO_TYPE_INFO){
+        if(compiler->traits & COMPILER_NO_TYPEINFO){
             if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)){
                 redprintf("INTERNAL ERROR: Failed to get 'AnyType' which should've been injected\n");
                 redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)\n")
@@ -615,7 +615,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     }
 
     if(ast_global->traits & AST_GLOBAL___TYPES_LENGTH__){
-        if(compiler->traits & COMPILER_NO_TYPE_INFO){
+        if(compiler->traits & COMPILER_NO_TYPEINFO){
             ir_global->trusted_static_initializer = build_literal_usize(pool, 0);
             return SUCCESS;
         }
@@ -637,7 +637,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         ubyte_ptr_type = ir_type_pointer_to(pool, ubyte_ptr_type);
         ubyte_ptr_ptr_type = ir_type_pointer_to(pool, ubyte_ptr_type);
 
-        if(compiler->traits & COMPILER_NO_TYPE_INFO){
+        if(compiler->traits & COMPILER_NO_TYPEINFO){
             ir_global->trusted_static_initializer = build_null_pointer_of_type(pool, ubyte_ptr_ptr_type);
             return SUCCESS;
         }
@@ -663,7 +663,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     }
 
     if(ast_global->traits & AST_GLOBAL___TYPE_KINDS_LENGTH__){
-        if(compiler->traits & COMPILER_NO_TYPE_INFO){
+        if(compiler->traits & COMPILER_NO_TYPEINFO){
             ir_global->trusted_static_initializer = build_literal_usize(pool, 0);
             return SUCCESS;
         }

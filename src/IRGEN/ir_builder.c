@@ -317,7 +317,7 @@ ir_type_t* ir_builder_bool(ir_builder_t *builder){
 }
 
 maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_failure){
-    if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+    if(builder->compiler->traits & COMPILER_NO_TYPEINFO){
         compiler_panic(builder->compiler, source_on_failure, "Runtime type information cannot be disabled because of this");
         return -1;
     }
@@ -1792,7 +1792,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
     out_type->source = in_type->source;
 
     // Since we are past the parsing phase, we can check that RTTI isn't disabled
-    if(type_table && !(compiler->traits & COMPILER_NO_TYPE_INFO)){
+    if(type_table && !(compiler->traits & COMPILER_NO_TYPEINFO)){
         type_table_give(type_table, out_type, NULL);
     }
     return SUCCESS;

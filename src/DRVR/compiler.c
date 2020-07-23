@@ -256,7 +256,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(strcmp(argv[arg_index], "--no-undef") == 0){
                 compiler->traits |= COMPILER_NO_UNDEF;
             } else if(strcmp(argv[arg_index], "--no-type-info") == 0){
-                compiler->traits |= COMPILER_NO_TYPE_INFO;
+                compiler->traits |= COMPILER_NO_TYPEINFO;
             } else if(strcmp(argv[arg_index], "--unsafe-meta") == 0){
                 compiler->traits |= COMPILER_UNSAFE_META;
             } else if(strcmp(argv[arg_index], "--unsafe-new") == 0){

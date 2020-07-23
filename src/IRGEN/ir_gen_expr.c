@@ -1107,7 +1107,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         return FAILURE;
                     }
                 }
-                
+
                 // NOTE: We are discarding the memory held by 'arg_values'
                 //       Since it is a part of the pool, it'll just remain stagnant until
                 //       the pool is freed. As far as I can tell, the costs of trying to reuse
@@ -1455,7 +1455,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     case EXPR_TYPEINFO: {
             ast_expr_typeinfo_t *typeinfo = (ast_expr_typeinfo_t*) expr;
             
-            if(builder->compiler->traits & COMPILER_NO_TYPE_INFO){
+            if(builder->compiler->traits & COMPILER_NO_TYPEINFO){
                 compiler_panic(builder->compiler, typeinfo->source, "Unable to use runtime type info when runtime type information is disabled");
                 return FAILURE;
             }

@@ -1,7 +1,6 @@
 
 pragma no_type_info
 #set log_string_deletion true
-#set list_error_with_type false
 
 import '2.3/basics.adept'
 

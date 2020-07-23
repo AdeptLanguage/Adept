@@ -88,7 +88,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return SUCCESS;
         #endif
     case 7: // 'no_type_info' directive
-        ctx->compiler->traits |= COMPILER_NO_TYPE_INFO;
+        ctx->compiler->traits |= COMPILER_NO_TYPEINFO;
         return SUCCESS;
     case 8: // 'no_undef' directive
         ctx->compiler->traits |= COMPILER_NO_UNDEF;

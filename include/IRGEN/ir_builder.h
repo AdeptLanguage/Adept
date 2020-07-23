@@ -333,7 +333,7 @@ errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ast_type_t *arg_type
 // NOTE: Will show error messages on failure
 // NOTE: in_type == out_type is allowed
 // NOTE: out_type is same as in_type if out_type == null
-// NOTE: Will also give result to type_table if not NULL and !(compiler->traits & COMPILER_NO_TYPE_INFO)
+// NOTE: Will also give result to type_table if not NULL and !(compiler->traits & COMPILER_NO_TYPEINFO)
 errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
 
 // ---------------- resolve_expr_polymorphics ----------------

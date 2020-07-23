@@ -55,6 +55,7 @@ TODO:
 * scoped constants
 * reverse repeat
 * vararg bindings
+* make --no-typeinfo and no_type_info have the same spacing
 
 COMPLETED:
 + Finish ! operator for meta directives ()
@@ -147,3 +148,4 @@ COMPLETED:
 + 'each Type in cache [array, length]' [used 'each Type in static' syntax instead]
 + default arguments
 + fix bug with default arguments not being added in for method calls
++ add __no_typeinfo__ dynamic compiler meta variable

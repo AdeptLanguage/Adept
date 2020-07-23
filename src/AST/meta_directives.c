@@ -2,6 +2,7 @@
 #include <math.h>
 #include "UTIL/util.h"
 #include "UTIL/color.h"
+#include "UTIL/search.h"
 #include "DRVR/compiler.h"
 #include "AST/meta_directives.h"
 
@@ -163,6 +164,25 @@ void meta_collapse(compiler_t *compiler, meta_definition_t *definitions, length_
             break;
         case META_EXPR_VAR: {
                 meta_expr_var_t *var = (meta_expr_var_t*) *expr;
+
+                // Array of dynamic compiler meta variable names
+                // NOTE: This list must be sorted alphabetically
+                static const char* special_dynamic_meta_variables[] = {
+                    "__no_typeinfo__"
+                };
+                length_t special_dynamic_meta_variables_length = sizeof(special_dynamic_meta_variables) / sizeof(const char *);
+                maybe_index_t special_index = binary_string_search(special_dynamic_meta_variables, special_dynamic_meta_variables_length, var->name);
+
+                // Do special stuff instead if dynamic compiler meta variable
+                if(special_index >= 0){
+                    switch(special_index){
+                    case 0: // __no_typeinfo__
+                        (*expr)->id = compiler->traits & COMPILER_NO_TYPEINFO ? META_EXPR_TRUE : META_EXPR_FALSE;
+                        break;
+                    }
+                    break;
+                }
+                
                 meta_definition_t *definition = meta_definition_find(definitions, definitions_length, var->name);
                 meta_expr_free(*expr);
 

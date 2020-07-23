@@ -505,7 +505,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         if(to_traits & TYPE_TRAIT_BASE_ANY) return true;
     }
 
-    if(to_traits & TYPE_TRAIT_BASE_ANY && !(builder->compiler->traits & COMPILER_NO_TYPE_INFO)){
+    if(to_traits & TYPE_TRAIT_BASE_ANY && !(builder->compiler->traits & COMPILER_NO_TYPEINFO)){
         if(from_traits & TYPE_TRAIT_BASE_ANY) return true;
 
         ir_type_t *any_type;
