@@ -22,7 +22,7 @@ extern "C" {
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x00000013
+#define TOKEN_ITERATION_VERSION 0x00000014
 
 typedef unsigned short tokenid_t;
 

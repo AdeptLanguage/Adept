@@ -1,5 +1,5 @@
 
-pragma no_type_info
+pragma no_typeinfo
 #set log_string_deletion true
 
 import '2.3/basics.adept'

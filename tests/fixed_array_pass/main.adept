@@ -1,5 +1,5 @@
 
-pragma no_type_info
+pragma no_typeinfo
 
 #set autogen___pass__ false
 import 'sys/cstdio.adept'
