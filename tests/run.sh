@@ -119,7 +119,10 @@ compile small_functions || exit $?
 compile standard || exit $?
 compile static_arrays || exit $?
 compile static_structs || exit $?
-compile stdcall || exit $?
+
+#compile stdcall || exit $?
+printf "Skipping \033[0;31mstdcall\033[0m test program\n"
+
 compile string || exit $?
 compile structs || exit $?
 compile struct_association || exit $?
