@@ -155,6 +155,8 @@ void compiler_init(compiler_t *compiler){
     compiler->use_pic = TROOLEAN_FALSE;
     #endif
 
+    compiler->use_libm = TROOLEAN_FALSE;
+
     #ifdef ENABLE_DEBUG_FEATURES
     compiler->debug_traits = TRAIT_NONE;
     #endif // ENABLE_DEBUG_FEATURES
@@ -300,17 +302,23 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                         strcmp(argv[arg_index], "-fpic") == 0){
                 // Accessibility versions of --PIC
                 yellowprintf("WARNING: Flag '%s' is not valid, assuming you meant to use --PIC\n", argv[arg_index]);
-                compiler->use_pic = true;
+                compiler->use_pic = TROOLEAN_TRUE;
             } else if(strcmp(argv[arg_index], "--PIC") == 0){
-                compiler->use_pic = true;
+                compiler->use_pic = TROOLEAN_TRUE;
             } else if(strcmp(argv[arg_index], "--noPIC") == 0 || strcmp(argv[arg_index], "--no-pic") == 0 ||
                         strcmp(argv[arg_index], "--nopic") == 0 || strcmp(argv[arg_index], "-fno-pic") == 0 ||
                         strcmp(argv[arg_index], "-fno-PIC") == 0){
                 // Accessibility versions of --no-PIC
                 yellowprintf("WARNING: Flag '%s' is not valid, assuming you meant to use --no-PIC\n", argv[arg_index]);
-                compiler->use_pic = false;
+                compiler->use_pic = TROOLEAN_FALSE;
             } else if(strcmp(argv[arg_index], "--no-PIC") == 0){
-                compiler->use_pic = false;
+                compiler->use_pic = TROOLEAN_FALSE;
+            } else if(strcmp(argv[arg_index], "-lm") == 0){
+                // Accessibility versions of --libm
+                yellowprintf("WARNING: Flag '%s' is not valid, assuming you meant to use --libm\n", argv[arg_index]);
+                compiler->use_libm = true;
+            } else if(strcmp(argv[arg_index], "--libm") == 0){
+                compiler->use_libm = true;
             }
 
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////

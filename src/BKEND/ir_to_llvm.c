@@ -1268,7 +1268,8 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 	// UNIX Linking
 	
     const char *linker = "gcc"; // May need to change depending on system etc.
-    link_command = mallocandsprintf("%s \"%s\"%s -o \"%s\"", linker, object_filename, linker_additional, compiler->output_filename);
+    const char *linker_libm = compiler->use_libm ? " -lm" : "";
+    link_command = mallocandsprintf("%s \"%s\"%s%s -o \"%s\"", linker, object_filename, linker_additional, linker_libm, compiler->output_filename);
 	#endif
 
     if(linker_additional_length != 0) free(linker_additional);
