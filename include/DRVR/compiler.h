@@ -69,7 +69,8 @@ typedef struct compiler {
     unsigned int optimization; // 0 - 3 using OPTIMIZATION_* constants
     trait_t result_flags;      // Results flag (for internal use)
     trait_t checks;
-
+    troolean use_pic;          // Generate using PIC relocation model
+    
     #ifdef ENABLE_DEBUG_FEATURES
     trait_t debug_traits;      // COMPILER_DEBUG_* options
     #endif // ENABLE_DEBUG_FEATURES

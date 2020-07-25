@@ -7,7 +7,12 @@
 #include <stdlib.h>
 #endif
 
+#ifdef __linux__
+#include <linux/limits.h>
+#endif
+
 #include "UTIL/util.h"
+#include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
 
@@ -168,18 +173,22 @@ strong_cstr_t filename_absolute(const char *filename){
 
     #else
 
+    char *buffer = realpath(filename, NULL);
+
+    if(buffer == NULL){
+        // Failed to get path
+	redprintf("INTERNAL ERROR: filename_absolute() failed to get absolute path for '%s'\n", filename);
+	exit(1);
+    }
+
     #ifdef TRACK_MEMORY_USAGE
-    char *malloced = realpath(filename, NULL);
-    if(malloced)
-        memory_track_external_allocation(malloced, strlen(malloced) + 1, __FILE__, __LINE__ - 2);
-    return malloced;
-    #else
-	return realpath(filename, NULL);
+    if(buffer)
+        memory_track_external_allocation(buffer, strlen(buffer) + 1, __FILE__, __LINE__);
     #endif
-
+    
     #endif
-
-    return NULL;
+    
+    return buffer;
 }
 
 void filename_auto_ext(strong_cstr_t *out_filename, unsigned int mode){

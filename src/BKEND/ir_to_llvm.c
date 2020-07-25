@@ -1194,7 +1194,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     char *cpu = "generic";
     char *features = "";
     LLVMCodeGenOptLevel level = ir_to_llvm_config_optlvl(compiler);
-    LLVMRelocMode reloc = LLVMRelocDefault;
+    LLVMRelocMode reloc = compiler->use_pic ? LLVMRelocPIC : LLVMRelocDefault;
     LLVMCodeModel code_model = LLVMCodeModelDefault;
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(target, triple, cpu, features, level, reloc, code_model);
 

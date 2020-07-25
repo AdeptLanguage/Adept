@@ -17,7 +17,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     char *directive_name = tokenlist->tokens[*i].data;
 
     const char *standard_directives[] = {
-        "default", "elif", "else", "end", "halt", "if", "import", "input", "place", "place_error", "place_warning",
+        "default", "elif", "else", "end", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
         "print", "print_error", "print_warning", "set", "unless"
     };
 
@@ -25,18 +25,19 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     #define META_DIRECTIVE_ELIF 1
     #define META_DIRECTIVE_ELSE 2
     #define META_DIRECTIVE_END 3
-    #define META_DIRECTIVE_HALT 4
-    #define META_DIRECTIVE_IF 5
-    #define META_DIRECTIVE_IMPORT 6
-    #define META_DIRECTIVE_INPUT 7
-    #define META_DIRECTIVE_PLACE 8
-    #define META_DIRECTIVE_PLACE_ERROR 9
-    #define META_DIRECTIVE_PLACE_WARNING 10
-    #define META_DIRECTIVE_PRINT 11
-    #define META_DIRECTIVE_PRINT_ERROR 12
-    #define META_DIRECTIVE_PRINT_WARNING 13
-    #define META_DIRECTIVE_SET 14
-    #define META_DIRECTIVE_UNLESS 15
+    #define META_DIRECTIVE_GET 4
+    #define META_DIRECTIVE_HALT 5
+    #define META_DIRECTIVE_IF 6
+    #define META_DIRECTIVE_IMPORT 7
+    #define META_DIRECTIVE_INPUT 8
+    #define META_DIRECTIVE_PLACE 9
+    #define META_DIRECTIVE_PLACE_ERROR 10
+    #define META_DIRECTIVE_PLACE_WARNING 11
+    #define META_DIRECTIVE_PRINT 12
+    #define META_DIRECTIVE_PRINT_ERROR 13
+    #define META_DIRECTIVE_PRINT_WARNING 14
+    #define META_DIRECTIVE_SET 15
+    #define META_DIRECTIVE_UNLESS 16
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -381,6 +382,11 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             } else {
                 meta_definition_add(&ctx->ast->meta_definitions, &ctx->ast->meta_definitions_length, &ctx->ast->meta_definitions_capacity, definition_name, value);
             }
+        }
+        break;
+    case META_DIRECTIVE_GET: { // get
+            compiler_panicf(ctx->compiler, source, "Meta directive #%s must be used in an inline expression", directive_name);
+            return FAILURE;
         }
         break;
     default:

@@ -70,7 +70,7 @@ typedef long long maybe_index_t;
 
 // ---------------- troolean ----------------
 // 3-state value
-typedef char troolean;
+typedef signed char troolean;
 
 #define TROOLEAN_TRUE 1
 #define TROOLEAN_FALSE 0

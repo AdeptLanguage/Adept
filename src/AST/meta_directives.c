@@ -561,7 +561,8 @@ meta_expr_t *meta_get_special_variable(compiler_t *compiler, weak_cstr_t variabl
         "__column__",
         "__file__",
         "__line__",
-        "__no_typeinfo__"
+        "__no_typeinfo__",
+        "__randmax__"
     };
 
     length_t special_dynamic_meta_variables_length = sizeof(special_dynamic_meta_variables) / sizeof(const char *);
@@ -598,6 +599,12 @@ meta_expr_t *meta_get_special_variable(compiler_t *compiler, weak_cstr_t variabl
     case 3: // __no_typeinfo__
         result = malloc(sizeof(meta_expr_t));
         result->id = compiler->traits & COMPILER_NO_TYPEINFO ? META_EXPR_TRUE : META_EXPR_FALSE;
+        break;
+    case 4:{ // __randmax__
+            result = malloc(sizeof(meta_expr_int_t));
+            ((meta_expr_int_t*) result)->id = META_EXPR_INT;
+            ((meta_expr_int_t*) result)->value = RAND_MAX;
+        }
         break;
     default:
         compiler_panic(compiler, variable_source, "INTERNAL ERROR: meta_get_special_variable() got unimplemented index");

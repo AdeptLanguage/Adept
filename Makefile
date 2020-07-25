@@ -8,11 +8,16 @@ WINDOWS_WINRES=C:/Users/isaac/Projects/mingw64/bin/windres
 WINDOWS_LLVM_LIB=C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release/lib
 WINDOWS_LLVM_INCLUDE=C:/Users/isaac/Projects/llvm-7.0.0.src/include
 WINDOWS_LLVM_BUILD_INCLUDE=C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release/include
-UNIX_CC=clang
-UNIX_CXX=clang++
-UNIX_LLVM_LIB=/Users/isaac/Projects/llvm-7.0.0.src/build/lib
-UNIX_LLVM_INCLUDE=/Users/isaac/Projects/llvm-7.0.0.src/include
-UNIX_LLVM_BUILD_INCLUDE=/Users/isaac/Projects/llvm-7.0.0.src/build/include
+#UNIX_CC=clang
+#UNIX_CXX=clang++
+#UNIX_LLVM_LIB=/Users/isaac/Projects/llvm-7.0.0.src/build/lib
+#UNIX_LLVM_INCLUDE=/Users/isaac/Projects/llvm-7.0.0.src/include
+#UNIX_LLVM_BUILD_INCLUDE=/Users/isaac/Projects/llvm-7.0.0.src/build/include
+UNIX_CC=gcc
+UNIX_CXX=g++
+UNIX_LLVM_LIB=/usr/lib/llvm-7/lib
+UNIX_LLVM_INCLUDE=/usr/include/llvm-7 -I/usr/include/llvm-c-7
+UNIX_LLVM_BUILD_INCLUDE=/usr/lib/llvm-7/include
 
 INSIGHT_OUT_DIR=INSIGHT
 # ---------------------------------------------------------------------------
@@ -52,21 +57,7 @@ else
 		LLVM_INCLUDE_DIRS=-I$(UNIX_LLVM_INCLUDE) -I$(UNIX_LLVM_BUILD_INCLUDE)
 
 		# Libraries that will probably satisfy what the compiler needs
-		LLVM_LIBS=-lLLVMCoverage -lLLVMDlltoolDriver -lLLVMLibDriver -lLLVMOption -lLLVMOrcJIT -lLLVMTableGen -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen \
-			-lLLVMXCoreDesc -lLLVMXCoreInfo -lLLVMXCoreAsmPrinter -lLLVMSystemZDisassembler -lLLVMSystemZCodeGen -lLLVMSystemZAsmParser -lLLVMSystemZDesc -lLLVMSystemZInfo \
-			-lLLVMSystemZAsmPrinter -lLLVMSparcDisassembler -lLLVMSparcCodeGen -lLLVMSparcAsmParser -lLLVMSparcDesc -lLLVMSparcInfo -lLLVMSparcAsmPrinter -lLLVMPowerPCDisassembler \
-			-lLLVMPowerPCCodeGen -lLLVMPowerPCAsmParser -lLLVMPowerPCDesc -lLLVMPowerPCInfo -lLLVMPowerPCAsmPrinter -lLLVMNVPTXCodeGen -lLLVMNVPTXDesc -lLLVMNVPTXInfo \
-			-lLLVMNVPTXAsmPrinter -lLLVMMSP430CodeGen -lLLVMMSP430Desc -lLLVMMSP430Info -lLLVMMSP430AsmPrinter -lLLVMMipsDisassembler -lLLVMMipsCodeGen -lLLVMMipsAsmParser \
-			-lLLVMMipsDesc -lLLVMMipsInfo -lLLVMMipsAsmPrinter -lLLVMLanaiDisassembler -lLLVMLanaiCodeGen -lLLVMLanaiAsmParser -lLLVMLanaiDesc -lLLVMLanaiAsmPrinter -lLLVMLanaiInfo \
-			-lLLVMHexagonDisassembler -lLLVMHexagonCodeGen -lLLVMHexagonAsmParser -lLLVMHexagonDesc -lLLVMHexagonInfo -lLLVMBPFDisassembler -lLLVMBPFCodeGen -lLLVMBPFDesc -lLLVMBPFInfo \
-			-lLLVMBPFAsmPrinter -lLLVMARMDisassembler -lLLVMARMCodeGen -lLLVMARMAsmParser -lLLVMARMDesc -lLLVMARMInfo -lLLVMARMAsmPrinter -lLLVMAMDGPUDisassembler -lLLVMAMDGPUCodeGen \
-			-lLLVMAMDGPUAsmParser -lLLVMAMDGPUDesc -lLLVMAMDGPUInfo -lLLVMAMDGPUAsmPrinter -lLLVMAMDGPUUtils -lLLVMAArch64Disassembler -lLLVMAArch64CodeGen -lLLVMAArch64AsmParser \
-			-lLLVMAArch64Desc -lLLVMAArch64Info -lLLVMAArch64AsmPrinter -lLLVMAArch64Utils  -lLLVMInterpreter -lLLVMLineEditor -lLLVMLTO -lLLVMPasses -lLLVMObjCARCOpts \
-			-lLLVMCoroutines -lLLVMipo -lLLVMInstrumentation -lLLVMVectorize -lLLVMLinker -lLLVMIRReader -lLLVMObjectYAML -lLLVMSymbolize -lLLVMDebugInfoPDB -lLLVMDebugInfoDWARF \
-			-lLLVMMIRParser -lLLVMAsmParser -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMGlobalISel -lLLVMSelectionDAG -lLLVMAsmPrinter -lLLVMDebugInfoCodeView \
-			-lLLVMDebugInfoMSF -lLLVMCodeGen -lLLVMScalarOpts -lLLVMInstCombine -lLLVMTransformUtils -lLLVMBitWriter -lLLVMX86Desc -lLLVMMCDisassembler -lLLVMX86Info -lLLVMX86AsmPrinter \
-			-lLLVMX86Utils -lLLVMMCJIT -lLLVMExecutionEngine -lLLVMTarget -lLLVMAnalysis -lLLVMProfileData -lLLVMRuntimeDyld -lLLVMObject -lLLVMMCParser -lLLVMBitReader -lLLVMMC -lLLVMCore \
-			-lLLVMBinaryFormat -lLLVMSupport -lLLVMDemangle
+		LLVM_LIBS=-lLLVMSymbolize -lLLVMDebugInfoPDB -lLLVMCoverage -lLLVMDlltoolDriver -lLLVMOrcJIT -lLLVMWindowsManifest -lLLVMFuzzMutate -lLLVMMCJIT -lLLVMCoroutines -lLLVMLTO -lLLVMPasses -lLLVMObjCARCOpts -lLLVMMIRParser -lLLVMTableGen -lLLVMAVRDisassembler -lLLVMAVRCodeGen -lLLVMAVRAsmParser -lLLVMAVRDesc -lLLVMAVRInfo -lLLVMAVRAsmPrinter -lLLVMWebAssemblyDisassembler -lLLVMWebAssemblyCodeGen -lLLVMWebAssemblyDesc -lLLVMWebAssemblyAsmPrinter -lLLVMWebAssemblyAsmParser -lLLVMWebAssemblyInfo -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen -lLLVMXCoreDesc -lLLVMXCoreInfo -lLLVMXCoreAsmPrinter -lLLVMX86Disassembler -lLLVMX86CodeGen -lLLVMX86AsmParser -lLLVMX86Desc -lLLVMX86Info -lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMSystemZDisassembler -lLLVMSystemZCodeGen -lLLVMSystemZAsmParser -lLLVMSystemZDesc -lLLVMSystemZInfo -lLLVMSystemZAsmPrinter -lLLVMSparcDisassembler -lLLVMSparcCodeGen -lLLVMSparcAsmParser -lLLVMSparcDesc -lLLVMSparcInfo -lLLVMSparcAsmPrinter -lLLVMPowerPCDisassembler -lLLVMPowerPCCodeGen -lLLVMPowerPCAsmParser -lLLVMPowerPCDesc -lLLVMPowerPCInfo -lLLVMPowerPCAsmPrinter -lLLVMNVPTXCodeGen -lLLVMNVPTXDesc -lLLVMNVPTXInfo -lLLVMNVPTXAsmPrinter -lLLVMMSP430CodeGen -lLLVMMSP430Desc -lLLVMMSP430Info -lLLVMMSP430AsmPrinter -lLLVMMipsDisassembler -lLLVMMipsCodeGen -lLLVMMipsAsmParser -lLLVMMipsDesc -lLLVMMipsInfo -lLLVMMipsAsmPrinter -lLLVMLanaiDisassembler -lLLVMLanaiCodeGen -lLLVMLanaiAsmParser -lLLVMLanaiDesc -lLLVMLanaiAsmPrinter -lLLVMLanaiInfo -lLLVMHexagonDisassembler -lLLVMHexagonCodeGen -lLLVMHexagonAsmParser -lLLVMHexagonDesc -lLLVMHexagonInfo -lLLVMBPFDisassembler -lLLVMBPFCodeGen -lLLVMBPFAsmParser -lLLVMBPFDesc -lLLVMBPFInfo -lLLVMBPFAsmPrinter -lLLVMARMDisassembler -lLLVMARMCodeGen -lLLVMARMAsmParser -lLLVMARMDesc -lLLVMARMInfo -lLLVMARMAsmPrinter -lLLVMARMUtils -lLLVMAMDGPUDisassembler -lLLVMAMDGPUCodeGen -lLLVMipo -lLLVMInstrumentation -lLLVMVectorize -lLLVMLinker -lLLVMIRReader -lLLVMAsmParser -lLLVMAMDGPUAsmParser -lLLVMAMDGPUDesc -lLLVMAMDGPUInfo -lLLVMAMDGPUAsmPrinter -lLLVMAMDGPUUtils -lLLVMAArch64Disassembler -lLLVMMCDisassembler -lLLVMAArch64CodeGen -lLLVMGlobalISel -lLLVMSelectionDAG -lLLVMAsmPrinter -lLLVMAArch64AsmParser -lLLVMAArch64Desc -lLLVMAArch64Info -lLLVMAArch64AsmPrinter -lLLVMAArch64Utils -lLLVMObjectYAML -lLLVMPerfJITEvents -lLLVMDebugInfoDWARF -lLLVMLibDriver -lLLVMOption -lLLVMLineEditor -lLLVMInterpreter -lLLVMExecutionEngine -lLLVMRuntimeDyld -lLLVMCodeGen -lLLVMTarget -lLLVMScalarOpts -lLLVMInstCombine -lLLVMAggressiveInstCombine -lLLVMTransformUtils -lLLVMBitWriter -lLLVMAnalysis -lLLVMProfileData -lLLVMObject -lLLVMMCParser -lLLVMMC -lLLVMDebugInfoCodeView -lLLVMDebugInfoMSF -lLLVMBitReader -lLLVMCore -lLLVMBinaryFormat -lLLVMSupport -lLLVMDemangle
 	endif
 
 	LLVM_LIBS += -lpthread -lz -lcurses
@@ -77,7 +68,7 @@ LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__ST
 # -lgtest_main -lgtest -lLLVMTestingSupport
 
 # -static-libgcc -static-libstdc++ -static
-CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=c99 -O0 -DNDEBUG # -fmax-errors=5 -Werror
+CFLAGS=-c -Wall -I"include" $(LLVM_INCLUDE_FLAGS) -std=gnu99 -O0 -DNDEBUG # -fmax-errors=5 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 LDFLAGS=$(LLVM_LINKER_FLAGS)
 SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c src/BRIDGE/bridge.c src/BRIDGE/type_table.c \

@@ -501,7 +501,7 @@ typedef struct {
     const char *name;
     length_t ir_func_id;
     length_t ast_func_id;
-    char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
+    signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_func_mapping_t;
 
 // ---------------- ir_method_t ----------------
@@ -511,7 +511,7 @@ typedef struct {
     const char *name;
     length_t ir_func_id;
     length_t ast_func_id;
-    char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
+    signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_method_t;
 
 // ---------------- ir_generic_base_method_t ----------------
@@ -523,7 +523,7 @@ typedef struct {
     const char *name;
     length_t ir_func_id;
     length_t ast_func_id;
-    char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
+    signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_generic_base_method_t;
 
 // ---------------- ir_jobs_t ----------------
