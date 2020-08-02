@@ -210,6 +210,8 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
     length_t module_funcs_length = object->ir_module.funcs_length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
+    LLVMAttributeRef nounwind = LLVMCreateEnumAttribute(LLVMGetGlobalContext(), LLVMGetEnumAttributeKindForName("nounwind", 8), 0);
+
     for(length_t ir_func_id = 0; ir_func_id != module_funcs_length; ir_func_id++){
         ir_func_t *ir_func = &module_funcs[ir_func_id];
         LLVMTypeRef parameters[ir_func->arity];
@@ -222,20 +224,25 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
         LLVMTypeRef return_type = ir_to_llvm_type(ir_func->return_type);
         LLVMTypeRef llvm_func_type = LLVMFunctionType(return_type, parameters, ir_func->arity, ir_func->traits & IR_FUNC_VARARG);
 
-        const char *implementation_name;
-        char adept_implementation_name[256];
+        LLVMValueRef *skeleton = &func_skeletons[ir_func_id];
 
+        
         if(ir_func->traits & IR_FUNC_FOREIGN || ir_func->traits & AST_FUNC_MAIN){
-            implementation_name = ir_func->name;
+            *skeleton = LLVMAddFunction(llvm_module, ir_func->name, llvm_func_type);
         } else {
+            char adept_implementation_name[256];
             ir_implementation(ir_func_id, 'a', adept_implementation_name);
-            implementation_name = adept_implementation_name;
+
+            *skeleton = LLVMAddFunction(llvm_module, adept_implementation_name, llvm_func_type);
+            LLVMSetLinkage(*skeleton, LLVMPrivateLinkage);
         }
 
-        func_skeletons[ir_func_id] = LLVMAddFunction(llvm_module, implementation_name, llvm_func_type);
-
         LLVMCallConv call_conv = ir_func->traits & IR_FUNC_STDCALL ? LLVMX86StdcallCallConv : LLVMCCallConv;
-        LLVMSetFunctionCallConv(func_skeletons[ir_func_id], call_conv);
+        LLVMSetFunctionCallConv(*skeleton, call_conv);
+        
+        // Add nounwind to everything that isn't foreign
+        if(!(ir_func->traits & IR_FUNC_FOREIGN))
+            LLVMAddAttributeAtIndex(*skeleton, LLVMAttributeFunctionIndex, nounwind);
     }
 
     return SUCCESS;
@@ -1116,7 +1123,7 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
     for(length_t i = 0; i != anon_globals_length; i++){
         LLVMTypeRef anon_global_llvm_type = ir_to_llvm_type(anon_globals[i].type);
         llvm->anon_global_variables[i] = LLVMAddGlobal(module, anon_global_llvm_type, "");
-        LLVMSetLinkage(llvm->anon_global_variables[i], LLVMInternalLinkage);
+        LLVMSetLinkage(llvm->anon_global_variables[i], LLVMPrivateLinkage);
         LLVMSetGlobalConstant(llvm->anon_global_variables[i], anon_globals[i].traits & IR_ANON_GLOBAL_CONSTANT);
     }
 

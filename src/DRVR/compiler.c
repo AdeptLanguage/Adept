@@ -90,6 +90,18 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
 
     compiler->root = filename_path(compiler->location);
 
+    {
+        // Read persistent config file
+        strong_cstr_t config_filename = mallocandsprintf("%sadept.config", compiler->root);
+        weak_cstr_t config_warning = NULL;
+
+        if(!config_read(&compiler->config, config_filename, &config_warning) && config_warning){
+            yellowprintf("%s\n", config_warning);
+        }
+
+        free(config_filename);
+    }
+
     if(parse_arguments(compiler, object, argc, argv)) return;
 
     #ifndef ADEPT_INSIGHT_BUILD
@@ -144,6 +156,7 @@ void compiler_init(compiler_t *compiler){
     compiler->objects = malloc(sizeof(object_t*) * 4);
     compiler->objects_length = 0;
     compiler->objects_capacity = 4;
+    config_prepare(&compiler->config);
     compiler->traits = TRAIT_NONE;
     compiler->output_filename = NULL;
     compiler->optimization = OPTIMIZATION_NONE;
@@ -175,35 +188,24 @@ void compiler_free(compiler_t *compiler){
         object_t *object = compiler->objects[i];
 
         switch(object->compilation_stage){
-        case COMPILATION_STAGE_NONE:
-            break; // Nothing to free yet so yeah
-        case COMPILATION_STAGE_FILENAME:
-            free(object->filename);
-            free(object->full_filename);
-            break;
-        case COMPILATION_STAGE_TOKENLIST:
-            free(object->filename);
-            free(object->full_filename);
-            free(object->buffer);
-            tokenlist_free(&object->tokenlist);
-            break;
-        case COMPILATION_STAGE_AST:
-            free(object->filename);
-            free(object->full_filename);
-            free(object->buffer);
-            tokenlist_free(&object->tokenlist);
-            ast_free(&object->ast);
-            break;
         case COMPILATION_STAGE_IR_MODULE:
-            free(object->filename);
-            free(object->full_filename);
-            free(object->buffer);
-            tokenlist_free(&object->tokenlist);
-            ast_free(&object->ast);
-            
             #ifndef ADEPT_INSIGHT_BUILD
             ir_module_free(&object->ir_module);
             #endif
+            // [fallthrough]
+        case COMPILATION_STAGE_AST:    
+            ast_free(&object->ast);
+            // [fallthrough]
+        case COMPILATION_STAGE_TOKENLIST:
+            free(object->buffer);
+            tokenlist_free(&object->tokenlist);
+            // [fallthrough]
+        case COMPILATION_STAGE_FILENAME:
+            free(object->filename);
+            free(object->full_filename);
+            // [fallthrough]
+        case COMPILATION_STAGE_NONE:
+            // Nothing to free up
             break;
         default:
             printf("INTERNAL ERROR: Failed to delete object that has an invalid compilation stage\n");
@@ -213,6 +215,7 @@ void compiler_free(compiler_t *compiler){
     }
 
     free(compiler->objects);
+    config_free(&compiler->config);
 }
 
 object_t* compiler_new_object(compiler_t *compiler){

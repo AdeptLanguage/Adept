@@ -17,6 +17,7 @@ extern "C" {
 #define TERMINAL_COLOR_RED     0x01
 #define TERMINAL_COLOR_YELLOW  0x02
 #define TERMINAL_COLOR_WHITE   0x03
+#define TERMINAL_COLOR_BLUE    0x04
 
 // ---------------- terminal_set_color(color) ----------------
 // Sets the output color for the current terminal
@@ -32,6 +33,7 @@ void terminal_set_color_posix(char color);
 #define redprintf(...) ((void) 0)
 #define yellowprintf(...) ((void) 0)
 #define whiteprintf(...) ((void) 0)
+#define blueprintf(...) ((void) 0)
 #else
 // ---------------- redprintf(...) ----------------
 // Temporarily sets to red for a call to printf
@@ -53,6 +55,14 @@ void terminal_set_color_posix(char color);
 // Temporarily sets to white for a call to printf
 #define whiteprintf(...) { \
     terminal_set_color(TERMINAL_COLOR_WHITE); \
+    printf(__VA_ARGS__); \
+    terminal_set_color(TERMINAL_COLOR_DEFAULT); \
+}
+
+// ---------------- blueprintf(...) ----------------
+// Temporarily sets to blue for a call to printf
+#define blueprintf(...) { \
+    terminal_set_color(TERMINAL_COLOR_BLUE); \
     printf(__VA_ARGS__); \
     terminal_set_color(TERMINAL_COLOR_DEFAULT); \
 }

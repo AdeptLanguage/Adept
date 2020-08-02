@@ -14,6 +14,7 @@ extern "C" {
 
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
+#include "DRVR/config.h"
 #include "DRVR/object.h"
 
 // Possible compiler trait options
@@ -62,6 +63,9 @@ typedef struct compiler {
     object_t **objects;
     length_t objects_length;
     length_t objects_capacity;
+
+    // Compiler persistent configuration options
+    config_t config;
 
     // Compiler command-line configuration options
     trait_t traits;            // COMPILER_* options

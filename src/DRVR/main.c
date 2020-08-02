@@ -1,5 +1,6 @@
 
 #include "DRVR/compiler.h"
+#include "UTIL/download.h"
 
 int main(int argc, char **argv){
     #ifdef TRACK_MEMORY_USAGE
