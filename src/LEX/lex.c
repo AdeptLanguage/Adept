@@ -622,29 +622,26 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     break;
                 default:
                     (*sources)[tokenlist->length++].stride = lex_state.buildup_length;
-
-                    // Probably not ideal for checking but I can't think of a better way atm
-                    // TODO: Clean up this messy code, maybe make a contains() function in util.c?
-                    for(length_t d = 0; d != lex_state.buildup_length; d++){
-                        if(lex_state.buildup[d] == '.'){
-                            if(contains_dot){
-                                lex_get_location(buffer, i, &line, &column);
-                                redprintf("%s:%d:%d: Numbers cannot contain multiple dots\n", filename_name_const(object->filename), line, column);
-                                lex_state_free(&lex_state);
-                                return FAILURE;
-                            }
-                            contains_dot = true;
-                        }
-                    }
-
-                    if(contains_dot){
-                        t->id = TOKEN_GENERIC_FLOAT;
-                        t->data = malloc(sizeof(double));
-                        *((double*) t->data) = atof(lex_state.buildup);
-                    } else {
+                    
+                    switch(string_modern_count_character(lex_state.buildup, lex_state.buildup_length, '.')){
+                    case 0:
+                        // Number is generic integer
                         t->id = TOKEN_GENERIC_INT;
                         t->data = malloc(sizeof(long long));
                         *((long long*) t->data) = strtol(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
+                        break;
+                    case 1:
+                        // Number is generic floating point
+                        t->id = TOKEN_GENERIC_FLOAT;
+                        t->data = malloc(sizeof(double));
+                        *((double*) t->data) = atof(lex_state.buildup);
+                        break;
+                    default:
+                        // Error: dots_count > 1
+                        lex_get_location(buffer, i, &line, &column);
+                        redprintf("%s:%d:%d: Numbers cannot contain multiple dots\n", filename_name_const(object->filename), line, column);
+                        lex_state_free(&lex_state);
+                        return FAILURE;
                     }
                     break;
                 }

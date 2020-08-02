@@ -35,149 +35,37 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         sprintf(representation, "0x%02Xub", (unsigned int) ((ast_expr_ubyte_t*) expr)->value);
         return representation;
     case EXPR_SHORT:
-        representation = malloc(23);
-        sprintf(representation, "%ldss", (long int) ((ast_expr_short_t*) expr)->value);
-        return representation;
+        return long_to_string((long int) ((ast_expr_short_t*) expr)->value, "ss");
     case EXPR_USHORT:
-        representation = malloc(23);
-        sprintf(representation, "%ldus", (long int) ((ast_expr_ushort_t*) expr)->value);
-        return representation;
+        return long_to_string((long int) ((ast_expr_ushort_t*) expr)->value, "us");
     case EXPR_INT:
-        representation = malloc(23);
-        sprintf(representation, "%ldsi", (long int) ((ast_expr_int_t*) expr)->value);
-        return representation;
+        return long_to_string((long int) ((ast_expr_int_t*) expr)->value, "si");
     case EXPR_UINT:
-        representation = malloc(23);
-        sprintf(representation, "%ldui", (long int) ((ast_expr_uint_t*) expr)->value);
-        return representation;
+        return long_to_string((long int) ((ast_expr_uint_t*) expr)->value, "ui");
     case EXPR_LONG:
-        representation = malloc(23);
-        sprintf(representation, "%ldsl", (long int) ((ast_expr_long_t*) expr)->value);
-        return representation;
+        // NOTE: Possible loss of information
+        return long_to_string((long int) ((ast_expr_long_t*) expr)->value, "sl");
     case EXPR_ULONG:
-        representation = malloc(23);
-        sprintf(representation, "%ldul", (long int) ((ast_expr_ulong_t*) expr)->value);
-        return representation;
+        // NOTE: Possible loss of information
+        return long_to_string((long int) ((ast_expr_ulong_t*) expr)->value, "ul");
     case EXPR_USIZE:
-        representation = malloc(23);
-        sprintf(representation, "%lduz", (long int) ((ast_expr_usize_t*) expr)->value);
-        return representation;
+        // NOTE: Possible loss of information
+        return long_to_string((long int) ((ast_expr_ulong_t*) expr)->value, "uz");
     case EXPR_GENERIC_INT:
-        representation = malloc(23);
-        sprintf(representation, "%ld", (long int) ((ast_expr_generic_int_t*) expr)->value);
-        return representation;
+        // NOTE: Possible loss of information
+        return long_to_string((long int) ((ast_expr_ulong_t*) expr)->value, NULL);
     case EXPR_FLOAT:
-        representation = malloc(23);
-        sprintf(representation, "%06.6ff", ((ast_expr_float_t*) expr)->value);
-
-        // Trim extra zeros for good measure
-        // TODO: CLEANUP: Clean up this messy code
-        {
-            length_t representation_length = strlen(representation);
-            if(representation_length > 1) for(length_t j = representation_length - 2; j > 0; j--){
-                if(representation[j] == '0' && representation[j - 1] != '.'){
-                    representation[j] = 'f';
-                    representation[j + 1] = 0x00;
-                }
-                else break;
-            }
-        }
-
-        return representation;
+        return double_to_string(((ast_expr_float_t*) expr)->value, 'f');
     case EXPR_DOUBLE:
-        representation = malloc(23);
-        sprintf(representation, "%06.6fd", ((ast_expr_float_t*) expr)->value);
-
-        // Trim extra zeros for good measure
-        // TODO: CLEANUP: Clean up this messy code
-        {
-            length_t representation_length = strlen(representation);
-            if(representation_length > 1) for(length_t j = representation_length - 2; j > 0; j--){
-                if(representation[j] == '0' && representation[j - 1] != '.'){
-                    representation[j] = 'd';
-                    representation[j + 1] = 0x00;
-                }
-                else break;
-            }
-        }
-
-        return representation;
+        return double_to_string(((ast_expr_float_t*) expr)->value, 'd');
     case EXPR_BOOLEAN:
-        representation = malloc(6);
-        strcpy(representation, ((ast_expr_boolean_t*) expr)->value ? "true" : "false");
-        return representation;
+        return ((ast_expr_boolean_t*) expr)->value ? strclone("true") : strclone("false");
     case EXPR_GENERIC_FLOAT:
-        representation = malloc(23);
-        sprintf(representation, "%06.6f", ((ast_expr_generic_float_t*) expr)->value);
-
-        // Trim extra zeros for good measure
-        {
-            length_t representation_length = strlen(representation);
-            if(representation_length > 0) for(length_t j = representation_length - 1; j > 0; j--){
-                if(representation[j] == '0' && representation[j - 1] != '.') representation[j] = 0x00;
-                else break;
-            }
-        }
-        
-        return representation;
+        return double_to_string(((ast_expr_float_t*) expr)->value, '\0');
     case EXPR_NULL:
-        representation = malloc(5);
-        memcpy(representation, "null", 5);
-        return representation;
-    case EXPR_STR: {
-            length_t put_index = 1;
-            length_t special_characters = 0;
-
-            for(length_t s = 0; s != ((ast_expr_str_t*) expr)->length; s++){
-                if(((ast_expr_str_t*) expr)->array[s] <= 0x1F || ((ast_expr_str_t*) expr)->array[s] == '\\') special_characters++;
-            }
-
-            representation = malloc(((ast_expr_str_t*) expr)->length + special_characters + 3);
-            representation[0] = '\"';
-
-            for(length_t i = 0; i != ((ast_expr_str_t*) expr)->length; i++){
-                switch(((ast_expr_str_t*) expr)->array[i]){
-                case '\0':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = '0';
-                    break;
-                case '\t':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = 't';
-                    break;
-                case '\n':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = '0';
-                    break;
-                case '\r':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = 'r';
-                    break;
-                case '\b':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = 'b';
-                    break;
-                case '\e':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = 'e';
-                    break;
-                case '\\':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = '\\';
-                    break;
-                case '"':
-                    representation[put_index++] = '\\';
-                    representation[put_index++] = '"';
-                    break;
-                default:
-                    representation[put_index++] = ((ast_expr_str_t*) expr)->array[i];
-                }
-            }
-
-            representation[put_index++] = '"';
-            representation[put_index++] = '\0';
-            return representation;
-        }
+        return strclone("null");
+    case EXPR_STR:
+        return string_to_escaped_string(((ast_expr_str_t*) expr)->array, ((ast_expr_str_t*) expr)->length);
     case EXPR_CSTR: {
             char *string_data = ((ast_expr_cstr_t*) expr)->value;
             length_t string_data_length = strlen(string_data);

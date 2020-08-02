@@ -13,10 +13,10 @@ MAJOR:
 * ir_gen_find_method_conforming & ir_gen_find_generic_base_method_conforming & others
 * calling function elem
 * handle_children_deference/handle_children_pass and handle_single_deference/handle_single_pass
-* remove unused 'ir_type_var' code
 
 COMPLETED:
 + stmt & expr handling for EXPR_CALL
 + stmt & expr handling for EXPR_CALL_METHOD
 + stmt & expr handling for EXPR_P(RE/OST)(IN/DE)CREMENT
 + ast_type_dereference to replace occurrences of manual ast type dereference
++ remove unused 'ir_type_var' code

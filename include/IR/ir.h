@@ -14,7 +14,6 @@
 #include "BRIDGE/bridge.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
-#include "IR/ir_type_var.h"
 #include "IRGEN/ir_cache.h"
 
 // =============================================================
@@ -609,7 +608,6 @@ typedef struct {
     ir_anon_global_t *anon_globals;
     length_t anon_globals_length;
     length_t anon_globals_capacity;
-    ir_type_var_stack_t type_var_stack;
     ir_gen_sf_cache_t sf_cache;
     rtti_relocation_t *rtti_relocations;
     length_t rtti_relocations_length;

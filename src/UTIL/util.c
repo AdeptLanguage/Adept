@@ -110,3 +110,81 @@ char *mallocandsprintf(const char *format, ...){
     va_end(args);
     return destination;
 }
+
+strong_cstr_t long_to_string(long int value, weak_cstr_t suffix){
+    length_t suffix_length = suffix ? strlen(suffix) : 0;
+    strong_cstr_t string = malloc(23 + suffix_length);
+    sprintf(string, "%ld", value);
+
+    length_t numeric_length = strlen(string);
+
+    // Don't copy null-terminating byte directly from 'suffix' c-string, because it may be NULL
+    memcpy(&string[numeric_length], suffix, suffix_length);
+    string[numeric_length + suffix_length] = 0x00;
+    return string;
+}
+
+strong_cstr_t double_to_string(double value, char suffix){
+    strong_cstr_t string = malloc(23);
+    sprintf(string, "%06.6ff", value);
+    length_t length = strlen(string);
+    
+    // Trim extra zeros for good measure
+    if(length > 1) for(length_t i = length - 2; i > 0; i--){
+        if(string[i] != '0' || string[i - 1] == '.') break;
+        
+        string[i] = suffix;
+        string[i + 1] = 0x00;
+    }
+
+    return string;
+}
+
+strong_cstr_t string_to_escaped_string(char *array, length_t length){
+    length_t put_index = 1;
+    length_t special_characters = 0;
+
+    // Count number of special characters (\n, \t, \b, etc.)
+    for(length_t i = 0; i != length; i++){
+        if(array[i] <= 0x1F || array[i] == '\\') special_characters++;
+    }
+
+    strong_cstr_t string = malloc(length + special_characters + 3);
+    string[0] = '\"';
+    
+    for(length_t i = 0; i != length; i++){
+        if(array[i] <= 0x1F || array[i] == '\\'){
+            // Escape special character
+            string[put_index++] = '\\';
+        } else {
+            // Put regular character
+        }
+        switch(array[i]){
+        case '\0': string[put_index++] =  '0'; break;
+        case '\t': string[put_index++] =  't'; break;
+        case '\n': string[put_index++] =  'n'; break;
+        case '\r': string[put_index++] =  'r'; break;
+        case '\b': string[put_index++] =  'b'; break;
+        case '\e': string[put_index++] =  'e'; break;
+        case '\\': string[put_index++] = '\\'; break;
+        case '"':  string[put_index++] =  '"'; break;
+        default:
+            // Unrecognized special character, don't escape
+            string[put_index - 1] = array[i];
+        }
+    }
+
+    string[put_index++] = '"';
+    string[put_index++] = '\0';
+    return string;
+}
+
+length_t string_count_character(weak_cstr_t string, char character){
+    return string_modern_count_character(string, strlen(string), character);
+}
+
+length_t string_modern_count_character(weak_cstr_t string, length_t length, char character){
+    length_t count = 0;
+    for(length_t i = 0; i != length; i++) if(string[i] == character) count++;
+    return count;
+}

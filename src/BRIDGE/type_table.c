@@ -127,18 +127,16 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base){
 
     bool added = type_table_add(table, weak_ast_type_entry);
 
-    // HACK: Add extra entry for pointer to given type
-    // since we cannot know whether or not '&' is even used on that type
-    // (with the current system)
-    // Also, this may turn out to be benificial for formulating types that
-    // may not have been directly refered to at compile time
-    // TODO: Clean up this messy code
+    // Since we cannot know whether or not '&' is ever used on the type,
+    // force another type entry which is a pointer the the type
+    // (unless of course the type is void, cause *void is invalid)
     if(strcmp(weak_ast_type_entry.name, "void") != 0){
+        // Add *T type table entry
         weak_ast_type_entry.ast_type.elements = &static_elements[0];
         weak_ast_type_entry.ast_type.elements_length = 2;
         weak_ast_type_entry.ast_type.source = NULL_SOURCE;
         weak_ast_type_entry.name = ast_type_str(&weak_ast_type_entry.ast_type);
-
+        
         if(!type_table_add(table, weak_ast_type_entry)){
             free(weak_ast_type_entry.name);
         }
