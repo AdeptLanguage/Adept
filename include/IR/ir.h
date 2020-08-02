@@ -516,10 +516,10 @@ typedef struct {
 // ---------------- ir_generic_base_method_t ----------------
 // Mapping for a generic base method to an actual function
 typedef struct {
-    const char *generic_base;
+    weak_cstr_t generic_base;
     ast_type_t *generics;
     length_t generics_length;
-    const char *name;
+    weak_cstr_t name;
     length_t ir_func_id;
     length_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
@@ -536,7 +536,7 @@ typedef struct {
 // ---------------- ir_global_t ----------------
 // An intermediate representation global variable
 typedef struct {
-    const char *name;
+    weak_cstr_t name;
     ir_type_t *type;
     trait_t traits;
 
@@ -681,9 +681,34 @@ void ir_print_type(ir_type_t *type);
 // Inserts a method into a module's method list
 void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness);
 
+// ---------------- ir_module_insert_generic_method ----------------
+// Inserts a generic method into a module's method list
+// NOTE: Memory for 'weak_generics' should persist at least as long as
+//       the generic method exists
+void ir_module_insert_generic_method(ir_module_t *module, 
+    weak_cstr_t generic_base,
+    ast_type_t *weak_generics,
+    length_t generics_length,
+    weak_cstr_t name,
+    length_t ir_func_id,
+    length_t ast_func_id,
+bool preserve_sortedness);
+
+// ---------------- ir_module_insert_generic_method ----------------
+// Inserts a new function mapping into a module's function mappings list
+ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness, length_t initial_mappings_capacity);
+
 // ---------------- ir_module_find_insert_method_position ----------------
 // Finds the position to insert a method into a module's method list
 length_t ir_module_find_insert_method_position(ir_module_t *module, ir_method_t *weak_method_reference);
+
+// ---------------- ir_module_find_insert_generic_method_position ----------------
+// Finds the position to insert a method into a module's method list
+length_t ir_module_find_insert_generic_method_position(ir_module_t *module, ir_generic_base_method_t *weak_method_reference);
+
+// ---------------- ir_module_find_insert_mapping_position ----------------
+// Finds the position to insert a mapping into a module's mappings list
+length_t ir_module_find_insert_mapping_position(ir_module_t *module, ir_func_mapping_t *weak_mapping_reference);
 
 // ---------------- ir_func_mapping_cmp ----------------
 // Compares two 'ir_func_mapping_t' structures.

@@ -102,7 +102,7 @@ typedef struct {
 // ---------------- ast_global_t ----------------
 // A global variable within the root AST
 typedef struct {
-    const char *name;
+    weak_cstr_t name;
     ast_type_t type;
     ast_expr_t *initial;
     trait_t traits;

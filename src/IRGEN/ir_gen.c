@@ -96,6 +96,12 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
     #endif
 
+    module->funcs_length++;
+
+    ir_func_mapping_t *new_mapping = ir_module_insert_func_mapping(module, ast_func->name, ir_func_id, ast_func_id, preserve_sortedness, object->ast.funcs_length);
+    if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
+
+    /*
     expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, object->ast.funcs_length);
     ir_func_mapping_t *new_mapping = &module->func_mappings[module->func_mappings_length];
     new_mapping->name = ast_func->name;
@@ -103,7 +109,6 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     new_mapping->ast_func_id = ast_func_id;
     new_mapping->is_beginning_of_group = -1;
     module->func_mappings_length++;
-    module->funcs_length++;
 
     // Give data about the created function if asked for
     if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
@@ -116,6 +121,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         for(size_t i = 0; i != module->func_mappings_length; i++)
             module->func_mappings[i].is_beginning_of_group = -1;
     }
+    */
 
     if(!(ast_func->traits & AST_FUNC_FOREIGN)){
         if(ast_func->arity > 0 && strcmp(ast_func->arg_names[0], "this") == 0){
@@ -146,27 +152,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
                     const weak_cstr_t method_name = module_func->name;
                     weak_cstr_t struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
-                    ir_module_insert_method(module, struct_name, method_name, ir_func_id, ast_func_id, preserve_sortedness);    
-
-                    /*
-                    // Append the method to the struct's method list
-                    expand((void**) &module->methods, sizeof(ir_method_t), module->methods_length, &module->methods_capacity, 1, 4);
-                    ir_method_t *method = &module->methods[module->methods_length++];
-                    method->struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
-                    method->name = module_func->name;
-                    method->ir_func_id = ir_func_id;
-                    method->ast_func_id = ast_func_id;
-                    method->is_beginning_of_group = -1;
-
-                    if(preserve_sortedness){
-                        // SPEED: LAZY: TODO: Don't resort the entire array
-                        qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
-
-                        // SPEED: LAZY: TODO: Don't invalidate the entire array
-                        for(size_t i = 0; i != module->methods_length; i++)
-                            module->methods[i].is_beginning_of_group = -1;
-                    }
-                    */
+                    ir_module_insert_method(module, struct_name, method_name, ir_func_id, ast_func_id, preserve_sortedness);
                 }
                 break;
             case AST_ELEM_GENERIC_BASE: {
@@ -183,25 +169,14 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                         return FAILURE;
                     }
 
-                    // Append the method to the struct's method list
-                    expand((void**) &module->generic_base_methods, sizeof(ir_generic_base_method_t), module->generic_base_methods_length, &module->generic_base_methods_capacity, 1, 4);
-                    ir_generic_base_method_t *generic_base_method = &module->generic_base_methods[module->generic_base_methods_length++];
-                    generic_base_method->generic_base = generic_base->name;
-                    generic_base_method->generics = generic_base->generics; // NOTE: Memory for function argument types should persist, so this is ok
-                    generic_base_method->generics_length = generic_base->generics_length;
-                    generic_base_method->name = module_func->name;
-                    generic_base_method->ir_func_id = ir_func_id;
-                    generic_base_method->ast_func_id = ast_func_id;
-                    generic_base_method->is_beginning_of_group = -1;
-
-                    if(preserve_sortedness){
-                        // SPEED: LAZY: TODO: Don't resort the entire array
-                        qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
-
-                        // SPEED: LAZY: TODO: Don't invalidate the entire array
-                        for(size_t i = 0; i != module->generic_base_methods_length; i++)
-                            module->generic_base_methods[i].is_beginning_of_group = -1;
-                    }
+                    ir_module_insert_generic_method(module,
+                        generic_base->name,
+                        generic_base->generics, // NOTE: Memory for function argument types should persist, so this is ok
+                        generic_base->generics_length,
+                        module_func->name,
+                        ir_func_id,
+                        ast_func_id,
+                    preserve_sortedness);
                 }
                 break;
             default:

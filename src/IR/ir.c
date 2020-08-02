@@ -862,6 +862,86 @@ void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_
     }
 }
 
+void ir_module_insert_generic_method(ir_module_t *module, 
+    weak_cstr_t generic_base,
+    ast_type_t *weak_generics,
+    length_t generics_length,
+    weak_cstr_t name,
+    length_t ir_func_id,
+    length_t ast_func_id,
+bool preserve_sortedness){
+    
+    ir_generic_base_method_t method;
+    method.generic_base = generic_base;
+    method.generics = weak_generics;
+    method.generics_length = generics_length;
+    method.name = name;
+    method.ir_func_id = ir_func_id;
+    method.ast_func_id = ast_func_id;
+    method.is_beginning_of_group = -1;
+
+    // Make room for the additional method
+    expand((void**) &module->generic_base_methods, sizeof(ir_generic_base_method_t), module->generic_base_methods_length, &module->generic_base_methods_capacity, 1, 4);
+
+    if(preserve_sortedness){
+        // Find where to insert into the method list
+        length_t insert_position = ir_module_find_insert_generic_method_position(module, &method);
+        
+        // Move other methods over
+        memmove(
+            &module->generic_base_methods[insert_position + 1],
+            &module->generic_base_methods[insert_position],
+            sizeof(ir_generic_base_method_t) * (module->generic_base_methods_length - insert_position)    
+        );
+
+        // Invalidate whether method after is beginning of group
+        if(insert_position != module->generic_base_methods_length++)
+            module->generic_base_methods[insert_position + 1].is_beginning_of_group = -1;
+
+        // New method available
+        memcpy(&module->generic_base_methods[insert_position], &method, sizeof(ir_generic_base_method_t));
+    } else {
+        // New method available
+        memcpy(&module->generic_base_methods[module->generic_base_methods_length++], &method, sizeof(ir_generic_base_method_t));
+    }
+}
+
+ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness, length_t initial_mappings_capacity){
+    ir_func_mapping_t mapping, *result;
+    mapping.name = name;
+    mapping.ir_func_id = ir_func_id;
+    mapping.ast_func_id = ast_func_id;
+    mapping.is_beginning_of_group = -1;
+
+    // Make room for the additional function mapping
+    expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, initial_mappings_capacity);
+
+    if(preserve_sortedness){
+        // Find where to insert into the mappings list
+        length_t insert_position = ir_module_find_insert_mapping_position(module, &mapping);
+        
+        // Move other mappings over
+        memmove(
+            &module->func_mappings[insert_position + 1],
+            &module->func_mappings[insert_position],
+            sizeof(ir_func_mapping_t) * (module->func_mappings_length - insert_position)    
+        );
+        
+        // Invalidate whether mapping after is beginning of group
+        if(insert_position != module->func_mappings_length++)
+            module->func_mappings[insert_position + 1].is_beginning_of_group = -1;
+
+        // New mapping available
+        result = &module->func_mappings[insert_position];
+    } else {
+        // New mapping available
+        result = &module->func_mappings[module->func_mappings_length++];
+    }
+
+    memcpy(result, &mapping, sizeof(ir_func_mapping_t));
+    return result;
+}
+
 length_t ir_module_find_insert_method_position(ir_module_t *module, ir_method_t *weak_method_reference){
     ir_method_t *methods = module->methods;
     maybe_index_t first, middle, last, comparison;
@@ -870,6 +950,40 @@ length_t ir_module_find_insert_method_position(ir_module_t *module, ir_method_t 
     while(first <= last){
         middle = (first + last) / 2;
         comparison = ir_method_cmp(&methods[middle], weak_method_reference);
+        
+        if(comparison == 0) return middle;
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
+    }
+
+    return first;
+}
+
+length_t ir_module_find_insert_generic_method_position(ir_module_t *module, ir_generic_base_method_t *weak_method_reference){
+    ir_generic_base_method_t *methods = module->generic_base_methods;
+    maybe_index_t first, middle, last, comparison;
+    first = 0; last = module->generic_base_methods_length - 1;
+
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = ir_generic_base_method_cmp(&methods[middle], weak_method_reference);
+        
+        if(comparison == 0) return middle;
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
+    }
+
+    return first;
+}
+
+length_t ir_module_find_insert_mapping_position(ir_module_t *module, ir_func_mapping_t *weak_mapping_reference){
+    ir_func_mapping_t *mappings = module->func_mappings;
+    maybe_index_t first, middle, last, comparison;
+    first = 0; last = module->func_mappings_length - 1;
+
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = ir_func_mapping_cmp(&mappings[middle], weak_mapping_reference);
         
         if(comparison == 0) return middle;
         else if(comparison > 0) last = middle - 1;
