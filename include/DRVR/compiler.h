@@ -36,6 +36,14 @@ extern "C" {
 #define COMPILER_LEAK_CHECKS      TRAIT_2
 #define COMPILER_BOUNDS_CHECKS    TRAIT_3
 
+// Possible compiler errors/warning to ignore
+#define COMPILER_IGNORE_DEPRECATION             TRAIT_1
+#define COMPILER_IGNORE_PARTIAL_SUPPORT         TRAIT_2
+#define COMPILER_IGNORE_EARLY_RETURN            TRAIT_3
+#define COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES TRAIT_3
+#define COMPILER_IGNORE_OBSOLETE                TRAIT_4
+#define COMPILER_IGNORE_ALL                     TRAIT_ALL
+
 // Possible optimization levels
 #define OPTIMIZATION_NONE       0x00
 #define OPTIMIZATION_LESS       0x01
@@ -73,6 +81,7 @@ typedef struct compiler {
     unsigned int optimization; // 0 - 3 using OPTIMIZATION_* constants
     trait_t result_flags;      // Results flag (for internal use)
     trait_t checks;
+    trait_t ignore;
     troolean use_pic;          // Generate using PIC relocation model
     bool use_libm;             // Link to libm using '-lm'
     
@@ -114,7 +123,7 @@ void break_into_arguments(const char *s, int *out_argc, char ***out_argv);
 
 // ---------------- show_help ----------------
 // Displays program help information
-void show_help();
+void show_help(bool show_advanced_options);
 
 // ---------------- compiler_get_string ----------------
 // Gets the string identifier of the compiler

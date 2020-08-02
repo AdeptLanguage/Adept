@@ -299,10 +299,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 build_return(builder, expression_value);
                 
-                if(s + 1 != statements_length){
+                if(s + 1 != statements_length && builder->compiler->traits & COMPILER_FUSSY && !(builder->compiler->ignore & COMPILER_IGNORE_EARLY_RETURN)){
                     compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", builder->object->ast.funcs[builder->ast_func_id].name);
                 }
-
+                
                 if(out_is_terminated) *out_is_terminated = true;
             }
             return SUCCESS; // Return because no other statements can be after this one
