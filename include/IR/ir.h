@@ -470,9 +470,9 @@ typedef struct {
 // ---------------- ir_func_t ----------------
 // An intermediate representation function
 typedef struct {
-    const char *name;
-    const char *maybe_filename;
-    const char *maybe_definition_string;
+    weak_cstr_t name;
+    weak_cstr_t maybe_filename;
+    weak_cstr_t maybe_definition_string;
     length_t maybe_line_number;
     length_t maybe_column_number;
     trait_t traits;
@@ -676,5 +676,28 @@ void ir_print_value(ir_value_t *value);
 // ---------------- ir_print_type ----------------
 // Prints a type to stdout
 void ir_print_type(ir_type_t *type);
+
+// ---------------- ir_module_insert_method ----------------
+// Inserts a method into a module's method list
+void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness);
+
+// ---------------- ir_module_find_insert_method_position ----------------
+// Finds the position to insert a method into a module's method list
+length_t ir_module_find_insert_method_position(ir_module_t *module, ir_method_t *weak_method_reference);
+
+// ---------------- ir_func_mapping_cmp ----------------
+// Compares two 'ir_func_mapping_t' structures.
+// Used for qsort()
+int ir_func_mapping_cmp(const void *a, const void *b);
+
+// ---------------- ir_method_cmp ----------------
+// Compares two 'ir_method_t' structures.
+// Used for qsort()
+int ir_method_cmp(const void *a, const void *b);
+
+// ---------------- ir_generic_base_method_cmp ----------------
+// Compares two 'ir_generic_base_method_t' structures.
+// Used for qsort()
+int ir_generic_base_method_cmp(const void *a, const void *b);
 
 #endif // IR_H

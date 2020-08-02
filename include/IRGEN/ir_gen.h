@@ -51,21 +51,6 @@ errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_ast_definition_string ----------------
 // Makes a string containing the textual definition of an AST function using an IR memory pool
-const char *ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func);
-
-// ---------------- ir_func_mapping_cmp ----------------
-// Compares two 'ir_func_mapping_t' structures.
-// Used for qsort()
-int ir_func_mapping_cmp(const void *a, const void *b);
-
-// ---------------- ir_method_cmp ----------------
-// Compares two 'ir_method_t' structures.
-// Used for qsort()
-int ir_method_cmp(const void *a, const void *b);
-
-// ---------------- ir_generic_base_method_cmp ----------------
-// Compares two 'ir_generic_base_method_t' structures.
-// Used for qsort()
-int ir_generic_base_method_cmp(const void *a, const void *b);
+weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func);
 
 #endif // IR_GEN_H

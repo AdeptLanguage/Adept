@@ -144,6 +144,11 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                         return FAILURE;
                     }
 
+                    const weak_cstr_t method_name = module_func->name;
+                    weak_cstr_t struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
+                    ir_module_insert_method(module, struct_name, method_name, ir_func_id, ast_func_id, preserve_sortedness);    
+
+                    /*
                     // Append the method to the struct's method list
                     expand((void**) &module->methods, sizeof(ir_method_t), module->methods_length, &module->methods_capacity, 1, 4);
                     ir_method_t *method = &module->methods[module->methods_length++];
@@ -161,6 +166,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                         for(size_t i = 0; i != module->methods_length; i++)
                             module->methods[i].is_beginning_of_group = -1;
                     }
+                    */
                 }
                 break;
             case AST_ELEM_GENERIC_BASE: {
@@ -694,7 +700,7 @@ errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object){
     return SUCCESS;
 }
 
-const char *ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
+weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
     length_t length = 0;
     length_t capacity = 96;
     strong_cstr_t string = malloc(capacity);
@@ -754,26 +760,4 @@ const char *ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
     memcpy(destination, string, length);
     free(string);
     return destination;
-}
-
-int ir_func_mapping_cmp(const void *a, const void *b){
-    int diff = strcmp(((ir_func_mapping_t*) a)->name, ((ir_func_mapping_t*) b)->name);
-    if(diff != 0) return diff;
-    return (int) ((ir_func_mapping_t*) a)->ast_func_id - (int) ((ir_func_mapping_t*) b)->ast_func_id;
-}
-
-int ir_method_cmp(const void *a, const void *b){
-    int diff = strcmp(((ir_method_t*) a)->struct_name, ((ir_method_t*) b)->struct_name);
-    if(diff != 0) return diff;
-    diff = strcmp(((ir_method_t*) a)->name, ((ir_method_t*) b)->name);
-    if(diff != 0) return diff;
-    return (int) ((ir_method_t*) a)->ast_func_id - (int) ((ir_method_t*) b)->ast_func_id;
-}
-
-int ir_generic_base_method_cmp(const void *a, const void *b){
-    int diff = strcmp(((ir_generic_base_method_t*) a)->generic_base, ((ir_generic_base_method_t*) b)->generic_base);
-    if(diff != 0) return diff;
-    diff = strcmp(((ir_generic_base_method_t*) a)->name, ((ir_generic_base_method_t*) b)->name);
-    if(diff != 0) return diff;
-    return (int) ((ir_generic_base_method_t*) a)->ast_func_id - (int) ((ir_generic_base_method_t*) b)->ast_func_id;
 }

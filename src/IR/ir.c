@@ -831,3 +831,72 @@ void ir_print_type(ir_type_t *type){
     printf("%s\n", s);
     free(s);
 }
+
+void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness){
+    ir_method_t method;
+    method.struct_name = struct_name;
+    method.name = method_name;
+    method.ir_func_id = ir_func_id;
+    method.ast_func_id = ast_func_id;
+    method.is_beginning_of_group = -1;
+
+    // Make room for the additional method
+    expand((void**) &module->methods, sizeof(ir_method_t), module->methods_length, &module->methods_capacity, 1, 4);
+
+    if(preserve_sortedness){
+        // Find where to insert into the method list
+        length_t insert_position = ir_module_find_insert_method_position(module, &method);
+        
+        // Move other methods over
+        memmove(&module->methods[insert_position + 1], &module->methods[insert_position], sizeof(ir_method_t) * (module->methods_length - insert_position));
+
+        // Invalidate whether method after is beginning of group
+        if(insert_position != module->methods_length++)
+            module->methods[insert_position + 1].is_beginning_of_group = -1;
+
+        // New method available
+        memcpy(&module->methods[insert_position], &method, sizeof(ir_method_t));
+    } else {
+        // New method available
+        memcpy(&module->methods[module->methods_length++], &method, sizeof(ir_method_t));
+    }
+}
+
+length_t ir_module_find_insert_method_position(ir_module_t *module, ir_method_t *weak_method_reference){
+    ir_method_t *methods = module->methods;
+    maybe_index_t first, middle, last, comparison;
+    first = 0; last = module->methods_length - 1;
+
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = ir_method_cmp(&methods[middle], weak_method_reference);
+        
+        if(comparison == 0) return middle;
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
+    }
+
+    return first;
+}
+
+int ir_func_mapping_cmp(const void *a, const void *b){
+    int diff = strcmp(((ir_func_mapping_t*) a)->name, ((ir_func_mapping_t*) b)->name);
+    if(diff != 0) return diff;
+    return (int) ((ir_func_mapping_t*) a)->ast_func_id - (int) ((ir_func_mapping_t*) b)->ast_func_id;
+}
+
+int ir_method_cmp(const void *a, const void *b){
+    int diff = strcmp(((ir_method_t*) a)->struct_name, ((ir_method_t*) b)->struct_name);
+    if(diff != 0) return diff;
+    diff = strcmp(((ir_method_t*) a)->name, ((ir_method_t*) b)->name);
+    if(diff != 0) return diff;
+    return (int) ((ir_method_t*) a)->ast_func_id - (int) ((ir_method_t*) b)->ast_func_id;
+}
+
+int ir_generic_base_method_cmp(const void *a, const void *b){
+    int diff = strcmp(((ir_generic_base_method_t*) a)->generic_base, ((ir_generic_base_method_t*) b)->generic_base);
+    if(diff != 0) return diff;
+    diff = strcmp(((ir_generic_base_method_t*) a)->name, ((ir_generic_base_method_t*) b)->name);
+    if(diff != 0) return diff;
+    return (int) ((ir_generic_base_method_t*) a)->ast_func_id - (int) ((ir_generic_base_method_t*) b)->ast_func_id;
+}
