@@ -188,3 +188,19 @@ length_t string_modern_count_character(weak_cstr_t string, length_t length, char
     for(length_t i = 0; i != length; i++) if(string[i] == character) count++;
     return count;
 }
+
+length_t find_insert_any_object_position(void *array, length_t length, int(*compare)(const void*, const void*), void *object_reference, length_t object_size){
+    maybe_index_t first, middle, last, comparison;
+    first = 0; last = length - 1;
+
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = compare((char*) array + (middle * object_size), object_reference);
+        
+        if(comparison == 0) return middle;
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
+    }
+
+    return first;
+}

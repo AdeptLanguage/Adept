@@ -80,6 +80,10 @@ length_t string_count_character(weak_cstr_t string, char character);
 // string 'string' of 'length'
 length_t string_modern_count_character(weak_cstr_t string, length_t length, char character);
 
+// ---------------- find_insert_any_object_position ----------------
+// Finds the position to insert an object into an object list
+length_t find_insert_any_object_position(void *array, length_t length, int(*compare)(const void*, const void*), void *object_reference, length_t object_size);
+
 #ifdef __cplusplus
 }
 #endif

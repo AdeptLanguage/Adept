@@ -101,28 +101,6 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     ir_func_mapping_t *new_mapping = ir_module_insert_func_mapping(module, ast_func->name, ir_func_id, ast_func_id, preserve_sortedness, object->ast.funcs_length);
     if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
 
-    /*
-    expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, object->ast.funcs_length);
-    ir_func_mapping_t *new_mapping = &module->func_mappings[module->func_mappings_length];
-    new_mapping->name = ast_func->name;
-    new_mapping->ir_func_id = ir_func_id;
-    new_mapping->ast_func_id = ast_func_id;
-    new_mapping->is_beginning_of_group = -1;
-    module->func_mappings_length++;
-
-    // Give data about the created function if asked for
-    if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
-
-    if(preserve_sortedness){
-        // SPEED: LAZY: TODO: Don't resort the entire array
-        qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
-
-        // SPEED: LAZY: TODO: Don't invalidate the entire array
-        for(size_t i = 0; i != module->func_mappings_length; i++)
-            module->func_mappings[i].is_beginning_of_group = -1;
-    }
-    */
-
     if(!(ast_func->traits & AST_FUNC_FOREIGN)){
         if(ast_func->arity > 0 && strcmp(ast_func->arg_names[0], "this") == 0){
             // This is a struct method, attach a reference to the struct

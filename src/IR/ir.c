@@ -942,57 +942,6 @@ ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_
     return result;
 }
 
-length_t ir_module_find_insert_method_position(ir_module_t *module, ir_method_t *weak_method_reference){
-    ir_method_t *methods = module->methods;
-    maybe_index_t first, middle, last, comparison;
-    first = 0; last = module->methods_length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = ir_method_cmp(&methods[middle], weak_method_reference);
-        
-        if(comparison == 0) return middle;
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return first;
-}
-
-length_t ir_module_find_insert_generic_method_position(ir_module_t *module, ir_generic_base_method_t *weak_method_reference){
-    ir_generic_base_method_t *methods = module->generic_base_methods;
-    maybe_index_t first, middle, last, comparison;
-    first = 0; last = module->generic_base_methods_length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = ir_generic_base_method_cmp(&methods[middle], weak_method_reference);
-        
-        if(comparison == 0) return middle;
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return first;
-}
-
-length_t ir_module_find_insert_mapping_position(ir_module_t *module, ir_func_mapping_t *weak_mapping_reference){
-    ir_func_mapping_t *mappings = module->func_mappings;
-    maybe_index_t first, middle, last, comparison;
-    first = 0; last = module->func_mappings_length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = ir_func_mapping_cmp(&mappings[middle], weak_mapping_reference);
-        
-        if(comparison == 0) return middle;
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return first;
-}
-
 int ir_func_mapping_cmp(const void *a, const void *b){
     int diff = strcmp(((ir_func_mapping_t*) a)->name, ((ir_func_mapping_t*) b)->name);
     if(diff != 0) return diff;

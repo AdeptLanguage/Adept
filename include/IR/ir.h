@@ -700,15 +700,18 @@ ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_
 
 // ---------------- ir_module_find_insert_method_position ----------------
 // Finds the position to insert a method into a module's method list
-length_t ir_module_find_insert_method_position(ir_module_t *module, ir_method_t *weak_method_reference);
+#define ir_module_find_insert_method_position(module, weak_method_reference) \
+    find_insert_any_object_position(module->methods, module->methods_length, ir_method_cmp, weak_method_reference, sizeof(ir_method_t));
 
 // ---------------- ir_module_find_insert_generic_method_position ----------------
 // Finds the position to insert a method into a module's method list
-length_t ir_module_find_insert_generic_method_position(ir_module_t *module, ir_generic_base_method_t *weak_method_reference);
+#define ir_module_find_insert_generic_method_position(module, weak_method_reference) \
+    find_insert_any_object_position(module->generic_base_methods, module->generic_base_methods_length, ir_generic_base_method_cmp, weak_method_reference, sizeof(ir_generic_base_method_t));
 
 // ---------------- ir_module_find_insert_mapping_position ----------------
 // Finds the position to insert a mapping into a module's mappings list
-length_t ir_module_find_insert_mapping_position(ir_module_t *module, ir_func_mapping_t *weak_mapping_reference);
+#define ir_module_find_insert_mapping_position(module, weak_mapping_reference) \
+    find_insert_any_object_position(module->func_mappings, module->func_mappings_length, ir_func_mapping_cmp, weak_mapping_reference, sizeof(ir_func_mapping_t));
 
 // ---------------- ir_func_mapping_cmp ----------------
 // Compares two 'ir_func_mapping_t' structures.
