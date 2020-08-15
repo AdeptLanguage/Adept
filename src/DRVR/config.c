@@ -6,6 +6,7 @@
 #include "UTIL/filename.h"
 #include "DRVR/config.h"
 #include <time.h>
+#include <inttypes.h>
 
 #include "UTIL/download.h"
 
@@ -160,9 +161,9 @@ successful_t config_update_last_updated(config_t *config, weak_cstr_t filename, 
     // Since we are using binary file stream mode, don't rely on fprintf
     time_t timestamp = time(NULL);
     char timestamp_buffer[256];
-    sprintf(timestamp_buffer, "%lu", timestamp);
+    sprintf(timestamp_buffer, "%"PRIu64, (uint64_t) timestamp);
     fwrite(timestamp_buffer, 1, strlen(timestamp_buffer), f);
-
+    
     fwrite(buffer + last_update.end, 1, buffer_length - last_update.end, f);
     fclose(f);
 
