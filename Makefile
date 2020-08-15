@@ -166,6 +166,7 @@ insight: $(SOURCES)
 	@cp include/UTIL/builtin_type.h $(INSIGHT_OUT_DIR)/include/UTIL/builtin_type.h
 	@cp include/UTIL/color.h $(INSIGHT_OUT_DIR)/include/UTIL/color.h
 	@cp include/UTIL/datatypes.h $(INSIGHT_OUT_DIR)/include/UTIL/datatypes.h
+	@cp include/UTIL/download.h $(INSIGHT_OUT_DIR)/include/UTIL/download.h
 	@cp include/UTIL/filename.h $(INSIGHT_OUT_DIR)/include/UTIL/filename.h
 	@cp include/UTIL/hash.h $(INSIGHT_OUT_DIR)/include/UTIL/hash.h
 	@cp include/UTIL/jsmn.h $(INSIGHT_OUT_DIR)/include/UTIL/jsmn.h

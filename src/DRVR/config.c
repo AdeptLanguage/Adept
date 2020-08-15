@@ -102,6 +102,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
 
     config->has = true;
 
+    #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
     bool should_update = false;
     switch(config->update){
     case UPDATE_SCHEDULE_NEVER:
@@ -141,6 +142,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
             printf("(failed to download stash)\n");
         }
     }
+    #endif // ADEPT_ENABLE_PACKAGE_MANAGER
 
     free(tokens);
     free(buffer);
