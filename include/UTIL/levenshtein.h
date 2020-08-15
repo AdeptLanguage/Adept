@@ -1,6 +1,6 @@
 
-#ifndef LEVENSHTEIN_H
-#define LEVENSHTEIN_H
+#ifndef _ISAAC_LEVENSHTEIN_H
+#define _ISAAC_LEVENSHTEIN_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,4 +19,4 @@ int levenshtein_overlapping(const char *s1, const char *s2);
 }
 #endif
 
-#endif // LEVENSHTEIN_H
+#endif // _ISAAC_LEVENSHTEIN_H

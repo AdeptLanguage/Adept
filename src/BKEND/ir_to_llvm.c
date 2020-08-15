@@ -93,17 +93,17 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
     switch(value->value_type){
     case VALUE_TYPE_LITERAL: {
             switch(value->type->kind){
-            case TYPE_KIND_S8: return LLVMConstInt(LLVMInt8Type(), *((char*) value->extra), true);
-            case TYPE_KIND_U8: return LLVMConstInt(LLVMInt8Type(), *((unsigned char*) value->extra), false);
-            case TYPE_KIND_S16: return LLVMConstInt(LLVMInt16Type(), *((int*) value->extra), true);
-            case TYPE_KIND_U16: return LLVMConstInt(LLVMInt16Type(), *((unsigned int*) value->extra), false);
-            case TYPE_KIND_S32: return LLVMConstInt(LLVMInt32Type(), *((long long*) value->extra), true);
-            case TYPE_KIND_U32: return LLVMConstInt(LLVMInt32Type(), *((unsigned long long*) value->extra), false);
-            case TYPE_KIND_S64: return LLVMConstInt(LLVMInt64Type(), *((long long*) value->extra), true);
-            case TYPE_KIND_U64: return LLVMConstInt(LLVMInt64Type(), *((unsigned long long*) value->extra), false);
-            case TYPE_KIND_FLOAT: return LLVMConstReal(LLVMFloatType(), *((double*) value->extra));
-            case TYPE_KIND_DOUBLE: return LLVMConstReal(LLVMDoubleType(), *((double*) value->extra));
-            case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((bool*) value->extra), false);
+            case TYPE_KIND_S8: return LLVMConstInt(LLVMInt8Type(), *((adept_byte*) value->extra), true);
+            case TYPE_KIND_U8: return LLVMConstInt(LLVMInt8Type(), *((adept_ubyte*) value->extra), false);
+            case TYPE_KIND_S16: return LLVMConstInt(LLVMInt16Type(), *((adept_short*) value->extra), true);
+            case TYPE_KIND_U16: return LLVMConstInt(LLVMInt16Type(), *((adept_ushort*) value->extra), false);
+            case TYPE_KIND_S32: return LLVMConstInt(LLVMInt32Type(), *((adept_int*) value->extra), true);
+            case TYPE_KIND_U32: return LLVMConstInt(LLVMInt32Type(), *((adept_uint*) value->extra), false);
+            case TYPE_KIND_S64: return LLVMConstInt(LLVMInt64Type(), *((adept_long*) value->extra), true);
+            case TYPE_KIND_U64: return LLVMConstInt(LLVMInt64Type(), *((adept_ulong*) value->extra), false);
+            case TYPE_KIND_FLOAT: return LLVMConstReal(LLVMFloatType(), *((adept_float*) value->extra));
+            case TYPE_KIND_DOUBLE: return LLVMConstReal(LLVMDoubleType(), *((adept_double*) value->extra));
+            case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((adept_bool*) value->extra), false);
             default:
                 redprintf("INTERNAL ERROR: Unknown type kind literal in ir_to_llvm_value\n");
                 return NULL;
@@ -173,11 +173,30 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             LLVMValueRef literal = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
             return literal;
         }
-    case VALUE_TYPE_CONST_BITCAST: {
-            LLVMValueRef before = ir_to_llvm_value(llvm, value->extra);
-            LLVMTypeRef after = ir_to_llvm_type(value->type);
-            return LLVMConstBitCast(before, after);
-        }
+    case VALUE_TYPE_CONST_BITCAST:
+            return LLVMConstBitCast(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_ZEXT:
+            return LLVMConstZExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_FEXT:
+            return LLVMConstFPExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_TRUNC:
+            return LLVMConstTrunc(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_FTRUNC:
+            return LLVMConstFPTrunc(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_INTTOPTR:
+            return LLVMConstIntToPtr(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_PTRTOINT:
+            return LLVMConstPtrToInt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_FPTOUI:
+            return LLVMConstFPToUI(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_FPTOSI:
+            return LLVMConstFPToSI(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_UITOFP:
+            return LLVMConstUIToFP(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_SITOFP:
+            return LLVMConstSIToFP(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_REINTERPRET:
+            return ir_to_llvm_value(llvm, value->extra);
     case VALUE_TYPE_STRUCT_CONSTRUCTION: {
             ir_value_struct_construction_t *construction = (ir_value_struct_construction_t*) value->extra;
 

@@ -1,6 +1,6 @@
 
-#ifndef PARSE_GLOBAL_H
-#define PARSE_GLOBAL_H
+#ifndef _ISAAC_PARSE_GLOBAL_H
+#define _ISAAC_PARSE_GLOBAL_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,4 +20,4 @@ errorcode_t parse_constant_global(parse_ctx_t *ctx, char *name, source_t source)
 }
 #endif
 
-#endif // PARSE_GLOBAL_H
+#endif // _ISAAC_PARSE_GLOBAL_H

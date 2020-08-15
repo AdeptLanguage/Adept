@@ -1,6 +1,6 @@
 
-#ifndef SEARCH_H
-#define SEARCH_H
+#ifndef _ISAAC_SEARCH_H
+#define _ISAAC_SEARCH_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,4 +26,4 @@ maybe_index_t binary_int_search(const int ints[], length_t int_count, int target
 }
 #endif
 
-#endif // SEARCH_H
+#endif // _ISAAC_SEARCH_H

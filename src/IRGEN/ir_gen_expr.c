@@ -56,29 +56,29 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
     switch(expr->id){
     case EXPR_BYTE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_byte_t, "byte", char); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_byte_t, "byte", adept_byte); break;
     case EXPR_UBYTE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_ubyte_t, "ubyte", unsigned char); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_ubyte_t, "ubyte", adept_ubyte); break;
     case EXPR_SHORT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_short_t, "short", /*stored w/ extra precision*/ int); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_short_t, "short", adept_short); break;
     case EXPR_USHORT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_ushort_t, "ushort", /*stored w/ extra precision*/ unsigned int); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_ushort_t, "ushort", adept_ushort); break;
     case EXPR_INT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_int_t, "int", /*stored w/ extra precision*/ long long); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_int_t, "int", adept_int); break;
     case EXPR_UINT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_uint_t, "uint", /*stored w/ extra precision*/ unsigned long long); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_uint_t, "uint", adept_uint); break;
     case EXPR_LONG:
-        BUILD_LITERAL_IR_VALUE(ast_expr_long_t, "long", long long); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_long_t, "long", adept_long); break;
     case EXPR_ULONG:
-        BUILD_LITERAL_IR_VALUE(ast_expr_ulong_t, "ulong", unsigned long long); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_ulong_t, "ulong", adept_ulong); break;
     case EXPR_USIZE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_usize_t, "usize", unsigned long long); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_usize_t, "usize", adept_usize); break;
     case EXPR_FLOAT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_float_t, "float", /*stored w/ extra precision*/ double); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_float_t, "float", adept_float); break;
     case EXPR_DOUBLE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_double_t, "double", double); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_double_t, "double", adept_double); break;
     case EXPR_BOOLEAN:
-        BUILD_LITERAL_IR_VALUE(ast_expr_boolean_t, "bool", bool); break;
+        BUILD_LITERAL_IR_VALUE(ast_expr_boolean_t, "bool", adept_bool); break;
     case EXPR_NULL:
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
         *ir_value = build_null_pointer(builder->pool);
@@ -1282,8 +1282,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_value_t *bytes_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
             bytes_value->value_type = VALUE_TYPE_LITERAL;
             bytes_value->type = ir_builder_usize(builder);
-            bytes_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-            *((unsigned long long*) bytes_value->extra) = value_length + 1;
+            bytes_value->extra = ir_pool_alloc(builder->pool, sizeof(adept_usize));
+            *((adept_usize*) bytes_value->extra) = value_length + 1;
 
             ir_basicblock_new_instructions(builder->current_block, 1);
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_malloc_t));
@@ -1334,8 +1334,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
             (*ir_value)->value_type = VALUE_TYPE_LITERAL;
             ir_type_map_find(builder->type_map, enum_value_expr->enum_name, &((*ir_value)->type));
-            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-            *((unsigned long long*) (*ir_value)->extra) = enum_kind_id;
+            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(adept_usize));
+            *((adept_usize*) (*ir_value)->extra) = enum_kind_id;
 
             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(enum_value_expr->enum_name));
         }
@@ -1575,38 +1575,38 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             
             switch(one->type->kind){
             case TYPE_KIND_S8:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(char));
-                *((char*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_byte));
+                *((adept_byte*) one->extra) = 1;
                 break;
             case TYPE_KIND_U8:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned char));
-                *((unsigned char*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ubyte));
+                *((adept_ubyte*) one->extra) = 1;
                 break;
             case TYPE_KIND_S16:
                 // stored w/ extra precision
-                one->extra = ir_pool_alloc(builder->pool, sizeof(int));
-                *((int*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_short));
+                *((adept_short*) one->extra) = 1;
                 break;
             case TYPE_KIND_U16:
                 // stored w/ extra precision
-                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned int));
-                *((unsigned int*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ushort));
+                *((adept_ushort*) one->extra) = 1;
                 break;
             case TYPE_KIND_S32:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(long long));
-                *((long long*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_int));
+                *((adept_int*) one->extra) = 1;
                 break;
             case TYPE_KIND_U32:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-                *((unsigned long long*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_uint));
+                *((adept_uint*) one->extra) = 1;
                 break;
             case TYPE_KIND_S64:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(long long));
-                *((long long*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_long));
+                *((adept_long*) one->extra) = 1;
                 break;
             case TYPE_KIND_U64:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-                *((unsigned long long*) one->extra) = 1;
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ulong));
+                *((adept_ulong*) one->extra) = 1;
                 break;
             }
 

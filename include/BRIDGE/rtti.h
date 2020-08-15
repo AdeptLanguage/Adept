@@ -1,6 +1,6 @@
 
-#ifndef RTTI_H
-#define RTTI_H
+#ifndef _ISAAC_RTTI_H
+#define _ISAAC_RTTI_H
 
 #include "UTIL/ground.h"
 #include "AST/ast_type.h"
@@ -15,4 +15,4 @@ ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t sourc
 // NOTE: Used to fill in requested indices for the __types__ runtime array
 errorcode_t rtti_resolve(compiler_t *compiler, type_table_t *type_table, rtti_relocation_t *relocation);
 
-#endif // RTTI_H
+#endif // _ISAAC_RTTI_H

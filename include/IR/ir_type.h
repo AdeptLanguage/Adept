@@ -1,6 +1,6 @@
 
-#ifndef IR_TYPE_H
-#define IR_TYPE_H
+#ifndef _ISAAC_IR_TYPE_H
+#define _ISAAC_IR_TYPE_H
 
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
@@ -99,4 +99,4 @@ extern unsigned int global_type_kind_sizes_64[];
 // Contains whether each TYPE_KIND_* is generally signed
 extern bool global_type_kind_signs[];
 
-#endif // IR_TYPE_H
+#endif // _ISAAC_IR_TYPE_H

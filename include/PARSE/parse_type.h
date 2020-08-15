@@ -1,6 +1,6 @@
 
-#ifndef PARSE_TYPE_H
-#define PARSE_TYPE_H
+#ifndef _ISAAC_PARSE_TYPE_H
+#define _ISAAC_PARSE_TYPE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,4 +22,4 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem);
 }
 #endif
 
-#endif // PARSE_TYPE_H
+#endif // _ISAAC_PARSE_TYPE_H

@@ -1,6 +1,6 @@
 
-#ifndef BULITIN_TYPE_H
-#define BULITIN_TYPE_H
+#ifndef _ISAAC_BULITIN_TYPE_H
+#define _ISAAC_BULITIN_TYPE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,4 +35,4 @@ const char * const global_primitives_extended[15];
 }
 #endif
 
-#endif // BULITIN_TYPE_H
+#endif // _ISAAC_BULITIN_TYPE_H

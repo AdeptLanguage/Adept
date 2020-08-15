@@ -1,6 +1,6 @@
 
-#ifndef IR_BUILDER_H
-#define IR_BUILDER_H
+#ifndef _ISAAC_IR_BUILDER_H
+#define _ISAAC_IR_BUILDER_H
 
 /*
     =============================== ir_builder.h ===============================
@@ -159,11 +159,11 @@ maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_fai
 
 // ---------------- build_literal_int ----------------
 // Builds a literal int value
-ir_value_t *build_literal_int(ir_pool_t *pool, long long value);
+ir_value_t *build_literal_int(ir_pool_t *pool, adept_int value);
 
 // ---------------- build_literal_usize ----------------
 // Builds a literal usize value
-ir_value_t *build_literal_usize(ir_pool_t *pool, length_t value);
+ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize value);
 
 // ---------------- build_literal_str ----------------
 // Builds a literal string value
@@ -188,26 +188,50 @@ ir_value_t *build_null_pointer(ir_pool_t *pool);
 // Builds a literal null pointer value
 ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type);
 
-// ---------------- build_bitcast ----------------
-// Builds a bitcast instruction
-ir_value_t *build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+// ---------------- build_cast ----------------
+// Casts an IR value to an IR type
+// NOTE: const_cast_value_type is a valid VALUE_TYPE_* cast value
+// NOTE: nonconst_cast_instr_type is a valid INSTRUCTION_* cast value
+ir_value_t *build_cast(ir_builder_t *builder, unsigned int const_cast_value_type, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t *to);
 
-// ---------------- build_const_bitcast ----------------
-// Builds a const bitcast value
-ir_value_t *build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to);
+// ---------------- build_const_cast ----------------
+// Builds a constant cast value and returns it
+// NOTE: const_cast_value_type is a valid VALUE_TYPE_* cast value
+ir_value_t *build_const_cast(ir_pool_t *pool, unsigned int const_cast_value_type, ir_value_t *from, ir_type_t *to);
+
+// ---------------- build_nonconst_cast ----------------
+// Builds a non-constant cast instruction and returns
+// the casted result as an ir_value_t*
+// NOTE: nonconst_cast_instr_type is a valid INSTRUCTION_* cast value
+ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t* to);
 
 // ---------------- build_<cast> ----------------
 // Builds a specialized value cast
-ir_value_t *build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
-ir_value_t *build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to);
+#define build_bitcast(builder, from, to)     build_cast(builder, VALUE_TYPE_CONST_BITCAST, INSTRUCTION_BITCAST, from, to)
+#define build_zext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_ZEXT, INSTRUCTION_ZEXT, from, to)
+#define build_trunc(builder, from, to)       build_cast(builder, VALUE_TYPE_CONST_TRUNC, INSTRUCTION_TRUNC, from, to)
+#define build_fext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_FEXT, INSTRUCTION_FEXT, from, to)
+#define build_ftrunc(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_FTRUNC, INSTRUCTION_FTRUNC, from, to)
+#define build_inttoptr(builder, from, to)    build_cast(builder, VALUE_TYPE_CONST_INTTOPTR, INSTRUCTION_INTTOPTR, from, to)
+#define build_ptrtoint(builder, from, to)    build_cast(builder, VALUE_TYPE_CONST_PTRTOINT, INSTRUCTION_PTRTOINT, from, to)
+#define build_fptoui(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_FPTOUI, INSTRUCTION_FPTOUI, from, to)
+#define build_fptosi(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_FPTOSI, INSTRUCTION_FPTOSI, from, to)
+#define build_uitofp(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_UITOFP, INSTRUCTION_UITOFP, from, to)
+#define build_sitofp(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_SITOFP, INSTRUCTION_SITOFP, from, to)
+#define build_reinterpret(builder, from, to) build_cast(builder, VALUE_TYPE_CONST_REINTERPRET, INSTRUCTION_REINTERPRET, from, to)
+
+#define build_const_bitcast(pool, from, to)     build_const_cast(pool, VALUE_TYPE_CONST_BITCAST, from, to)
+#define build_const_zext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_ZEXT, from, to)
+#define build_const_trunc(pool, from, to)       build_const_cast(pool, VALUE_TYPE_CONST_TRUNC, from, to)
+#define build_const_fext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_FEXT, from, to)
+#define build_const_ftrunc(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_FTRUNC, from, to)
+#define build_const_inttoptr(pool, from, to)    build_const_cast(pool, VALUE_TYPE_CONST_INTTOPTR, from, to)
+#define build_const_ptrtoint(pool, from, to)    build_const_cast(pool, VALUE_TYPE_CONST_PTRTOINT, from, to)
+#define build_const_fptoui(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_FPTOUI, from, to)
+#define build_const_fptosi(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_FPTOSI, from, to)
+#define build_const_uitofp(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_UITOFP, from, to)
+#define build_const_sitofp(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_SITOFP, from, to)
+#define build_const_reinterpret(pool, from, to) build_const_cast(pool, VALUE_TYPE_CONST_REINTERPRET, from, to)
 
 // ---------------- build_alloc ----------------
 // Allocates space on the stack for a variable of a type
@@ -234,7 +258,7 @@ ir_value_t *build_bool(ir_pool_t *pool, bool value);
 // Adds an RTTI index that requires resolution to the rtti_relocations array
 // NOTE: Despite its name, this function does not add any instructions,
 //       it simply marks an RTTI index to be filled in later
-errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, unsigned long long *id_ref, source_t source_on_failure);
+errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure);
 
 // ---------------- prepare_for_new_label ----------------
 // Ensures there's enough room for another label
@@ -340,4 +364,4 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
 // Resovles any polymorphic type variables within an AST expression
 errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_expr_t *expr);
 
-#endif // IR_BUILDER_H
+#endif // _ISAAC_IR_BUILDER_H

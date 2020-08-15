@@ -1,6 +1,6 @@
 
-#ifndef TRAIT_H
-#define TRAIT_H
+#ifndef _ISAAC_TRAIT_H
+#define _ISAAC_TRAIT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,4 +39,4 @@ typedef unsigned short trait_t;
 }
 #endif
 
-#endif // TRAIT_H
+#endif // _ISAAC_TRAIT_H

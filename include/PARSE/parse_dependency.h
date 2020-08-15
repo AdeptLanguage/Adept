@@ -1,6 +1,6 @@
 
-#ifndef PARSE_DEPENDENCY_H
-#define PARSE_DEPENDENCY_H
+#ifndef _ISAAC_PARSE_DEPENDENCY_H
+#define _ISAAC_PARSE_DEPENDENCY_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,4 +39,4 @@ bool already_imported(parse_ctx_t *ctx, weak_cstr_t filename);
 }
 #endif
 
-#endif // PARSE_DEPENDENCY_H
+#endif // _ISAAC_PARSE_DEPENDENCY_H

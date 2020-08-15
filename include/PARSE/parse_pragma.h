@@ -1,12 +1,12 @@
 
-#ifndef PRAGMA_H
-#define PRAGMA_H
+#ifndef _ISAAC_PARSE_PRAGMA_H
+#define _ISAAC_PARSE_PRAGMA_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 /*
-    ================================= pragma.h =================================
+    ============================== parse_pragma.h ==============================
     Module for handling 'pragma' directives sent from code being compiled
     ----------------------------------------------------------------------------
 */
@@ -29,4 +29,4 @@ errorcode_t parse_pragma_cloptions(parse_ctx_t *ctx);
 }
 #endif
 
-#endif // PRAGMA_H
+#endif // _ISAAC_PARSE_PRAGMA_H

@@ -1,6 +1,6 @@
 
-#ifndef BRIDGE_H
-#define BRIDGE_H
+#ifndef _ISAAC_BRIDGE_H
+#define _ISAAC_BRIDGE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,4 +107,4 @@ void bridge_var_list_nearest(bridge_var_list_t *list, const char *name, char **o
 }
 #endif
 
-#endif // BRIDGE_H
+#endif // _ISAAC_BRIDGE_H

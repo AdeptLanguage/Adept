@@ -1,6 +1,6 @@
 
-#if !defined(DOWNLOAD_H) && defined(ADEPT_ENABLE_PACKAGE_MANAGER)
-#define DOWNLOAD_H
+#if !defined(_ISAAC_DOWNLOAD_H) && defined(ADEPT_ENABLE_PACKAGE_MANAGER)
+#define _ISAAC_DOWNLOAD_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,4 +36,4 @@ successful_t download_to_memory(weak_cstr_t url, download_buffer_t *out_memory);
 }
 #endif
 
-#endif // DOWNLOAD_H
+#endif // _ISAAC_DOWNLOAD_H

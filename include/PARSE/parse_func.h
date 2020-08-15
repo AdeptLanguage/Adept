@@ -1,6 +1,6 @@
 
-#ifndef PARSE_FUNC_H
-#define PARSE_FUNC_H
+#ifndef _ISAAC_PARSE_FUNC_H
+#define _ISAAC_PARSE_FUNC_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,4 +54,4 @@ void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill);
 }
 #endif
 
-#endif // PARSE_FUNC_H
+#endif // _ISAAC_PARSE_FUNC_H

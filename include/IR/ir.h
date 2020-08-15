@@ -1,6 +1,6 @@
 
-#ifndef IR_H
-#define IR_H
+#ifndef _ISAAC_IR_H
+#define _ISAAC_IR_H
 
 /*
     =================================== ir.h ===================================
@@ -11,6 +11,7 @@
 #include "AST/ast.h"
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
+#include "UTIL/datatypes.h"
 #include "BRIDGE/bridge.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
@@ -102,28 +103,40 @@
 // ------------------ Possible IR value types ------------------
 // =============================================================
 #define VALUE_TYPE_NONE                0x00000000
-#define VALUE_TYPE_LITERAL             0x00000001 // data = pointer to literal value
-#define VALUE_TYPE_RESULT              0x00000002 // data = pointer to an 'ir_value_result_t'
-#define VALUE_TYPE_NULLPTR             0x00000003
-#define VALUE_TYPE_NULLPTR_OF_TYPE     0x00000004
-#define VALUE_TYPE_ARRAY_LITERAL       0x00000005 // data = pointer to an 'ir_value_array_literal_t'
-#define VALUE_TYPE_STRUCT_LITERAL      0x00000006 // data = pointer to an 'ir_value_struct_literal_t'
-#define VALUE_TYPE_ANON_GLOBAL         0x00000007 // data = pointer to an 'ir_value_anon_global_t'
-#define VALUE_TYPE_CONST_ANON_GLOBAL   0x00000008 // data = pointer to an 'ir_value_anon_global_t'
-#define VALUE_TYPE_CSTR_OF_LEN         0x00000009 // data = pointer to an 'ir_value_cstr_of_len_t'
-#define VALUE_TYPE_CONST_BITCAST       0x0000000A // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_STRUCT_CONSTRUCTION 0x0000000B // data = pointer to an 'ir_value_struct_construction_t'
-#define VALUE_TYPE_OFFSETOF            0x0000000C // data = pointer to an 'ir_value_offsetof_t'
 
-#define VALUE_TYPE_IS_CONSTANT(a) ( \
-    a == VALUE_TYPE_LITERAL || \
-    a == VALUE_TYPE_NULLPTR || \
-    a == VALUE_TYPE_ARRAY_LITERAL || \
-    a == VALUE_TYPE_STRUCT_LITERAL || \
-    a == VALUE_TYPE_CONST_ANON_GLOBAL || \
-    a == VALUE_TYPE_CSTR_OF_LEN || \
-    a == VALUE_TYPE_CONST_BITCAST \
-)
+// Non-const values
+#define VALUE_TYPE_RESULT              0x00000001 // data = pointer to an 'ir_value_result_t'
+#define VALUE_TYPE_ANON_GLOBAL         0x00000002 // data = pointer to an 'ir_value_anon_global_t'
+#define VALUE_TYPE_STRUCT_CONSTRUCTION 0x00000003 // data = pointer to an 'ir_value_struct_construction_t'
+#define VALUE_TYPE_OFFSETOF            0x00000004 // data = pointer to an 'ir_value_offsetof_t'
+#define VALUE_TYPE_LAST_NON_CONST VALUE_TYPE_OFFSETOF
+
+// Const values
+#define VALUE_TYPE_LITERAL             0x00000005 // data = pointer to literal value
+#define VALUE_TYPE_NULLPTR             0x00000006
+#define VALUE_TYPE_NULLPTR_OF_TYPE     0x00000007
+#define VALUE_TYPE_ARRAY_LITERAL       0x00000008 // data = pointer to an 'ir_value_array_literal_t'
+#define VALUE_TYPE_STRUCT_LITERAL      0x00000009 // data = pointer to an 'ir_value_struct_literal_t'
+#define VALUE_TYPE_CONST_ANON_GLOBAL   0x0000000A // data = pointer to an 'ir_value_anon_global_t'
+#define VALUE_TYPE_CSTR_OF_LEN         0x0000000B // data = pointer to an 'ir_value_cstr_of_len_t'
+#define VALUE_TYPE_LAST_CONST_NON_CAST VALUE_TYPE_CSTR_OF_LEN
+
+// Const cast values
+#define VALUE_TYPE_CONST_BITCAST       0x0000000C // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_ZEXT          0x0000000D // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FEXT          0x0000000E // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_TRUNC         0x0000000F // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FTRUNC        0x00000010 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_INTTOPTR      0x00000011 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_PTRTOINT      0x00000012 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOUI        0x00000013 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOSI        0x00000014 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_UITOFP        0x00000015 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_SITOFP        0x00000016 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_REINTERPRET   0x00000017 // data = pointer to an 'ir_value_t'
+
+#define VALUE_TYPE_IS_CONSTANT(a)      (a > VALUE_TYPE_LAST_NON_CONST)
+#define VALUE_TYPE_IS_CONSTANT_CAST(a) (a > VALUE_TYPE_LAST_CONST_NON_CAST)
 
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type
@@ -562,7 +575,7 @@ typedef struct {
 // Represents an RTTI index that requires resolution
 typedef struct {
     strong_cstr_t human_notation;
-    unsigned long long *id_ref;
+    adept_usize *id_ref;
     source_t source_on_failure;
 } rtti_relocation_t;
 
@@ -701,17 +714,17 @@ ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_
 // ---------------- ir_module_find_insert_method_position ----------------
 // Finds the position to insert a method into a module's method list
 #define ir_module_find_insert_method_position(module, weak_method_reference) \
-    find_insert_any_object_position(module->methods, module->methods_length, ir_method_cmp, weak_method_reference, sizeof(ir_method_t));
+    find_insert_position(module->methods, module->methods_length, ir_method_cmp, weak_method_reference, sizeof(ir_method_t));
 
 // ---------------- ir_module_find_insert_generic_method_position ----------------
 // Finds the position to insert a method into a module's method list
 #define ir_module_find_insert_generic_method_position(module, weak_method_reference) \
-    find_insert_any_object_position(module->generic_base_methods, module->generic_base_methods_length, ir_generic_base_method_cmp, weak_method_reference, sizeof(ir_generic_base_method_t));
+    find_insert_position(module->generic_base_methods, module->generic_base_methods_length, ir_generic_base_method_cmp, weak_method_reference, sizeof(ir_generic_base_method_t));
 
 // ---------------- ir_module_find_insert_mapping_position ----------------
 // Finds the position to insert a mapping into a module's mappings list
 #define ir_module_find_insert_mapping_position(module, weak_mapping_reference) \
-    find_insert_any_object_position(module->func_mappings, module->func_mappings_length, ir_func_mapping_cmp, weak_mapping_reference, sizeof(ir_func_mapping_t));
+    find_insert_position(module->func_mappings, module->func_mappings_length, ir_func_mapping_cmp, weak_mapping_reference, sizeof(ir_func_mapping_t));
 
 // ---------------- ir_func_mapping_cmp ----------------
 // Compares two 'ir_func_mapping_t' structures.
@@ -728,4 +741,4 @@ int ir_method_cmp(const void *a, const void *b);
 // Used for qsort()
 int ir_generic_base_method_cmp(const void *a, const void *b);
 
-#endif // IR_H
+#endif // _ISAAC_IR_H

@@ -1,6 +1,6 @@
 
-#ifndef IR_GEN_STMT_H
-#define IR_GEN_STMT_H
+#ifndef _ISAAC_IR_GEN_STMT_H
+#define _ISAAC_IR_GEN_STMT_H
 
 /*
     ============================== ir_gen_stmt.h ==============================
@@ -27,4 +27,4 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 // statements given an existing 'ir_builder_t'
 errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated);
 
-#endif // IR_GEN_STMT_H
+#endif // _ISAAC_IR_GEN_STMT_H

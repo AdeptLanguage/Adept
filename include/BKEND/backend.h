@@ -1,6 +1,6 @@
 
-#ifndef BACKEND_H
-#define BACKEND_H
+#ifndef _ISAAC_BACKEND_H
+#define _ISAAC_BACKEND_H
 
 /*
     ================================= backend.h ================================
@@ -24,4 +24,4 @@
 // some backend.
 errorcode_t ir_export(compiler_t *compiler, object_t *object, unsigned int backend);
 
-#endif // BACKED_H
+#endif // _ISAAC_BACKED_H

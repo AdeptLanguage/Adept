@@ -1,6 +1,6 @@
 
-#ifndef PARSE_EXPR_H
-#define PARSE_EXPR_H
+#ifndef _ISAAC_PARSE_EXPR_H
+#define _ISAAC_PARSE_EXPR_H
 
 #include "UTIL/ground.h"
 #include "AST/ast_expr.h"
@@ -114,4 +114,4 @@ int parse_get_precedence(unsigned int id);
 }
 #endif
 
-#endif // PARSE_EXPR_H
+#endif // _ISAAC_PARSE_EXPR_H

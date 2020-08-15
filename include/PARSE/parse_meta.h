@@ -1,6 +1,6 @@
 
-#ifndef PARSE_META_H
-#define PARSE_META_H
+#ifndef _ISAAC_PARSE_META_H
+#define _ISAAC_PARSE_META_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,4 +20,4 @@ errorcode_t meta_parse_rhs_expr(parse_ctx_t *ctx, meta_expr_t **left, meta_expr_
 }
 #endif
 
-#endif
+#endif // _ISAAC_PARSE_META_H

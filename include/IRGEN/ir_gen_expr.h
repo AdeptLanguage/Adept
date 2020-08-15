@@ -1,6 +1,6 @@
 
-#ifndef IR_GEN_EXPR_H
-#define IR_GEN_EXPR_H
+#ifndef _ISAAC_IR_GEN_EXPR_H
+#define _ISAAC_IR_GEN_EXPR_H
 
 /*
     ============================== ir_gen_expr.h ==============================
@@ -79,4 +79,4 @@ errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned i
 // (either signed, unsigned, or float)
 char ir_type_get_catagory(ir_type_t *type);
 
-#endif // IR_GEN_EXPR_H
+#endif // _ISAAC_IR_GEN_EXPR_H

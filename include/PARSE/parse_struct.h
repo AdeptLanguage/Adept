@@ -1,6 +1,6 @@
 
-#ifndef PARSE_STRUCT_H
-#define PARSE_STRUCT_H
+#ifndef _ISAAC_PARSE_STRUCT_H
+#define _ISAAC_PARSE_STRUCT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,4 +34,4 @@ void parse_struct_free_fields(strong_cstr_t *names, ast_type_t *types, length_t 
 }
 #endif
 
-#endif // PARSE_STRUCT_H
+#endif // _ISAAC_PARSE_STRUCT_H

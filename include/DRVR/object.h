@@ -1,6 +1,6 @@
 
-#ifndef OBJECT_H
-#define OBJECT_H
+#ifndef _ISAAC_OBJECT_H
+#define _ISAAC_OBJECT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,4 +56,4 @@ void object_init_ast(object_t *object);
 }
 #endif
 
-#endif // OBJECT_H
+#endif // _ISAAC_OBJECT_H

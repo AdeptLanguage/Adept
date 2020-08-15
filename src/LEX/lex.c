@@ -458,19 +458,23 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
 
             bool exp_exception = false;
 
-            if(lex_state.can_exp && (tmp == 'e' || tmp == 'E') && lex_state.buildup_length != 0){
-                exp_exception = true;
-                lex_state.can_exp = false;
-            } else if(tmp == '-' && !lex_state.can_exp && lex_state.can_exp_neg){
-                exp_exception = true;
-                lex_state.can_exp_neg = false;
+            if(!lex_state.is_hexadecimal){
+                if(lex_state.can_exp && (tmp == 'e' || tmp == 'E') && lex_state.buildup_length != 0){
+                    exp_exception = true;
+                    lex_state.can_exp = false;
+                } else if(tmp == '-' && !lex_state.can_exp && lex_state.can_exp_neg){
+                    exp_exception = true;
+                    lex_state.can_exp_neg = false;
+                }
             }
-
+            
             if((tmp >= '0' && tmp <= '9') || tmp == '.' || exp_exception || (lex_state.is_hexadecimal
             &&((tmp >= 'A' && tmp <= 'F') || (tmp >= 'a' && tmp <= 'f'))) ){
+                // Valid numeric digit
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
             } else if(lex_state.buildup[0] == '0' && lex_state.buildup_length == 1 && (tmp == 'x' || tmp == 'X')){
-                lex_state.buildup[lex_state.buildup_length++] = 'x';
+                // Hexadecimal prefix
+                lex_state.buildup_length--; // Don't prefix hexadecimal buildup with '0x'
                 lex_state.is_hexadecimal = true;
             } else {
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
@@ -479,62 +483,56 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 t = &((*tokens)[tokenlist->length]);
                 lex_state.state = LEX_STATE_IDLE;
 
-                bool contains_dot = false;
+                length_t num_dots = string_count_character(lex_state.buildup, lex_state.buildup_length, '.');
                 int base = lex_state.is_hexadecimal ? 16 : 10;
 
-                if(contains_dot && lex_state.is_hexadecimal){
+                if(num_dots != 0 && lex_state.is_hexadecimal){
+                    // Don't allow dots in hexadecimal numbers
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Hexadecimal numbers cannot contain dots\n", filename_name_const(object->filename), line, column);
                     lex_state_free(&lex_state);
                     return FAILURE;
                 }
-
+                
                 switch(buffer[i]){
                 case 'u':
-                    if(i != buffer_size){
-                        switch(buffer[++i]){
-                        case 'b':
-                            t->id = TOKEN_UBYTE;
-                            t->data = malloc(sizeof(unsigned char));
-                            *((unsigned char*) t->data) = strtoul(lex_state.buildup, NULL, base);
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        case 's':
-                            t->id = TOKEN_USHORT;
-                            t->data = malloc(sizeof(unsigned short));
-                            *((unsigned short*) t->data) = strtoul(lex_state.buildup, NULL, base);
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        case 'i':
-                            t->id = TOKEN_UINT;
-                            t->data = malloc(sizeof(unsigned long long));
-                            *((unsigned long*) t->data) = strtoul(lex_state.buildup, NULL, base);
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        case 'l':
-                            t->id = TOKEN_ULONG;
-                            t->data = malloc(sizeof(unsigned long long));
-                            *((unsigned long long*) t->data) = strtoull(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        case 'z':
-                            t->id = TOKEN_USIZE;
-                            t->data = malloc(sizeof(unsigned long long));
-                            *((unsigned long long*) t->data) = strtoull(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        default:
-                            lex_get_location(buffer, i, &line, &column);
-                            redprintf("%s:%d:%d: Expected valid number suffix after 'u' base suffix\n", filename_name_const(object->filename), line, column);
-                            lex_state_free(&lex_state);
-                            return FAILURE;
-                        }
-                    } else {
+                    switch(i == buffer_size ? /*unused suffix*/ 'k' : buffer[++i]){
+                    case 'b':
+                        t->id = TOKEN_UBYTE;
+                        t->data = malloc(sizeof(adept_ubyte));
+                        *((adept_ubyte*) t->data) = string_to_uint8(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    case 's':
+                        t->id = TOKEN_USHORT;
+                        t->data = malloc(sizeof(adept_ushort));
+                        *((adept_ushort*) t->data) = string_to_uint16(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    case 'i':
+                        t->id = TOKEN_UINT;
+                        t->data = malloc(sizeof(adept_uint));
+                        *((adept_uint*) t->data) = string_to_uint32(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    case 'l':
+                        t->id = TOKEN_ULONG;
+                        t->data = malloc(sizeof(adept_ulong));
+                        *((adept_ulong*) t->data) = string_to_uint64(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    case 'z':
+                        t->id = TOKEN_USIZE;
+                        t->data = malloc(sizeof(adept_usize));
+                        *((adept_usize*) t->data) = string_to_uint64(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    default:
                         lex_get_location(buffer, i, &line, &column);
                         redprintf("%s:%d:%d: Expected valid number suffix after 'u' base suffix\n", filename_name_const(object->filename), line, column);
                         lex_state_free(&lex_state);
@@ -542,99 +540,98 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     }
                     break;
                 case 's':
-                    if(i != buffer_size){
-                        switch(buffer[++i]){
-                        case 'b':
-                            t->id = TOKEN_BYTE;
-                            t->data = malloc(sizeof(char));
-                            *((char*) t->data) = strtol(lex_state.buildup, NULL, base);
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        case 's':
-                            t->id = TOKEN_SHORT;
-                            t->data = malloc(sizeof(short));
-                            *((short*) t->data) = strtol(lex_state.buildup, NULL, base);
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        case 'i':
-                            t->id = TOKEN_INT;
-                            t->data = malloc(sizeof(long long));
-                            *((long long*) t->data) = strtol(lex_state.buildup, NULL, base);
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        case 'l':
-                            t->id = TOKEN_LONG;
-                            t->data = malloc(sizeof(long long));
-                            *((long long*) t->data) = strtol(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                            i++;
-                            break;
-                        default:
-                            t->id = TOKEN_SHORT;
-                            t->data = malloc(sizeof(short));
-                            *((short*) t->data) = strtoll(lex_state.buildup, NULL, base);
-                            (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
-                        }
-                    } else {
+                    switch(i == buffer_size ? /*unused suffix*/ 'k' : buffer[++i]){
+                    case 'b':
+                        t->id = TOKEN_BYTE;
+                        t->data = malloc(sizeof(adept_byte));
+                        *((adept_byte*) t->data) = string_to_int8(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    case 's':
                         t->id = TOKEN_SHORT;
-                        t->data = malloc(sizeof(short));
-                        *((short*) t->data) = strtol(lex_state.buildup, NULL, base);
-                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
+                        t->data = malloc(sizeof(adept_ushort));
+                        *((short*) t->data) = string_to_int16(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    case 'i':
+                        t->id = TOKEN_INT;
+                        t->data = malloc(sizeof(adept_int));
+                        *((adept_int*) t->data) = string_to_int32(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    case 'l':
+                        t->id = TOKEN_LONG;
+                        t->data = malloc(sizeof(adept_long));
+                        *((adept_long*) t->data) = string_to_int64(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
+                        i++;
+                        break;
+                    default:
+                        t->id = TOKEN_SHORT;
+                        t->data = malloc(sizeof(adept_short));
+                        *((adept_short*) t->data) = string_to_int16(lex_state.buildup, base);
+                        (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 2;
                     }
                     break;
                 case 'b':
                     t->id = TOKEN_BYTE;
-                    t->data = malloc(sizeof(char));
-                    *((char*) t->data) = strtol(lex_state.buildup, NULL, base);
+                    t->data = malloc(sizeof(adept_byte));
+                    *((adept_byte*) t->data) = string_to_int8(lex_state.buildup, base);
                     (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     i++;
                     break;
                 case 'i':
                     t->id = TOKEN_INT;
-                    t->data = malloc(sizeof(long));
-                    *((long*) t->data) = strtol(lex_state.buildup, NULL, base);
+                    t->data = malloc(sizeof(adept_int));
+                    *((adept_int*) t->data) = string_to_int32(lex_state.buildup, base);
                     (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     i++;
                     break;
                 case 'l':
                     t->id = TOKEN_LONG;
-                    t->data = malloc(sizeof(long long));
-                    *((long long*) t->data) = strtol(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
+                    t->data = malloc(sizeof(adept_long));
+                    *((adept_long*) t->data) = string_to_int64(lex_state.buildup, base);
                     (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     i++;
                     break;
                 case 'f':
                     t->id = TOKEN_FLOAT;
-                    t->data = malloc(sizeof(float));
-                    *((float*) t->data) = atof(lex_state.buildup);
+                    t->data = malloc(sizeof(adept_float));
+                    *((adept_float*) t->data) = string_to_float32(lex_state.buildup);
                     (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     i++;
                     break;
                 case 'd':
                     t->id = TOKEN_DOUBLE;
-                    t->data = malloc(sizeof(double));
-                    *((double*) t->data) = atof(lex_state.buildup);
+                    t->data = malloc(sizeof(adept_double));
+                    *((adept_double*) t->data) = string_to_float64(lex_state.buildup);
                     (*sources)[tokenlist->length++].stride = lex_state.buildup_length + 1;
                     i++;
                     break;
                 default:
                     (*sources)[tokenlist->length++].stride = lex_state.buildup_length;
                     
-                    switch(string_modern_count_character(lex_state.buildup, lex_state.buildup_length, '.')){
-                    case 0:
-                        // Number is generic integer
-                        t->id = TOKEN_GENERIC_INT;
-                        t->data = malloc(sizeof(long long));
-                        *((long long*) t->data) = strtol(lex_state.buildup, NULL, base); // NOTE: Potential loss of data
+                    switch(num_dots){
+                    case 0: // Number is generic integer
+                        if(string_to_int_must_be_uint64(lex_state.buildup, lex_state.buildup_length, base)){
+                            // Numbers that cannot be expressed using int64 will be promoted to uint64
+                            t->id = TOKEN_ULONG;
+                            t->data = malloc(sizeof(adept_ulong));
+                            *((adept_ulong*) t->data) = string_to_uint64(lex_state.buildup, base);
+                        } else {
+                            // Otherwise, default to normal generic integer
+                            t->id = TOKEN_GENERIC_INT;
+                            t->data = malloc(sizeof(adept_generic_int));
+                            *((adept_generic_int*) t->data) = string_to_int64(lex_state.buildup, base);
+                        }
                         break;
-                    case 1:
-                        // Number is generic floating point
+                    case 1: // Number is generic floating point
                         t->id = TOKEN_GENERIC_FLOAT;
-                        t->data = malloc(sizeof(double));
-                        *((double*) t->data) = atof(lex_state.buildup);
+                        t->data = malloc(sizeof(adept_generic_float));
+                        *((adept_generic_float*) t->data) = string_to_float64(lex_state.buildup);
                         break;
                     default:
                         // Error: dots_count > 1

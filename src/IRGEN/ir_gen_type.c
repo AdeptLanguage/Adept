@@ -364,9 +364,10 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         (mode & CONFORM_MODE_INT_TO_BOOL && from_traits & TYPE_TRAIT_INTEGER) ||
         (/*mode & CONFORM_MODE_PTR_TO_BOOL && */ from_traits & TYPE_TRAIT_POINTER || from_traits & TYPE_TRAIT_BASE_PTR || from_traits & TYPE_TRAIT_FUNC_PTR)
     )){
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+
         ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
         instr->id = INSTRUCTION_ISNTZERO;
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
         instr->result_type = ir_to_type;
         instr->value = *ir_value;
         *ir_value = build_value_from_prev_instruction(builder);
@@ -387,37 +388,22 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         // Casting pointers
         if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
-        unsigned int value_type = (*ir_value)->value_type;
-        
-        if(VALUE_TYPE_IS_CONSTANT(value_type)){
-            *ir_value = build_const_bitcast(builder->pool, *ir_value, ir_to_type);
-        } else {
-            *ir_value = build_bitcast(builder, *ir_value, ir_to_type);
-        }
-
+        *ir_value = build_bitcast(builder, *ir_value, ir_to_type);
         return true;
     }
 
     // Attempt to conform integers and pointers if allowed
     if(mode & CONFORM_MODE_INTPTR){
-        if(from_traits & TYPE_TRAIT_INTEGER && (to_traits & TYPE_TRAIT_POINTER
-        || to_traits & TYPE_TRAIT_BASE_PTR)){
-            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-            instr->id = INSTRUCTION_INTTOPTR;
+        if(from_traits & TYPE_TRAIT_INTEGER && (to_traits & TYPE_TRAIT_POINTER || to_traits & TYPE_TRAIT_BASE_PTR)){
             if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
-            instr->result_type = ir_to_type;
-            instr->value = *ir_value;
-            *ir_value = build_value_from_prev_instruction(builder);
+
+            *ir_value = build_inttoptr(builder, *ir_value, ir_to_type);
             return true;
         }
-        else if(to_traits & TYPE_TRAIT_INTEGER && (from_traits & TYPE_TRAIT_POINTER
-        || from_traits & TYPE_TRAIT_BASE_PTR)){
-            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-            instr->id = INSTRUCTION_PTRTOINT;
+        else if(to_traits & TYPE_TRAIT_INTEGER && (from_traits & TYPE_TRAIT_POINTER || from_traits & TYPE_TRAIT_BASE_PTR)){
             if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
-            instr->result_type = ir_to_type;
-            instr->value = *ir_value;
-            *ir_value = build_value_from_prev_instruction(builder);
+
+            *ir_value = build_ptrtoint(builder, *ir_value, ir_to_type);
             return true;
         }
     }
@@ -431,27 +417,20 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             // They are either both floats or both integers
             // They are of different primitive types
 
-            // Build instruction to cast
-            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
-            if(global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind]){
-                instr->id = INSTRUCTION_REINTERPRET; // They are the same size
-                if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
-                instr->result_type = ir_to_type;
-                instr->value = *ir_value;
-                *ir_value = build_value_from_prev_instruction(builder);
-                return true;
-            }
+            length_t from_size = global_type_kind_sizes_64[from_type_kind];
+            length_t to_size   = global_type_kind_sizes_64[to_type_kind];
 
             // Decide what type of cast it should be
-            instr->id = global_type_kind_sizes_64[from_type_kind] < global_type_kind_sizes_64[to_type_kind] ?
-                (from_is_float ? INSTRUCTION_FEXT   : INSTRUCTION_ZEXT) :
-                (from_is_float ? INSTRUCTION_FTRUNC : INSTRUCTION_TRUNC);
+            if(from_size == to_size){
+                *ir_value = build_reinterpret(builder, *ir_value, ir_to_type);
+            } else if(from_size < to_size){
+                *ir_value = from_is_float ? build_fext(builder, *ir_value, ir_to_type) : build_zext(builder, *ir_value, ir_to_type);
+            } else {
+                *ir_value = from_is_float ? build_ftrunc(builder, *ir_value, ir_to_type) : build_trunc(builder, *ir_value, ir_to_type);
+            }
 
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
-            instr->result_type = ir_to_type;
-            instr->value = *ir_value;
-            *ir_value = build_value_from_prev_instruction(builder);
             return true;
         }
 
@@ -460,17 +439,16 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             bool from_is_float = (from_type_kind == TYPE_KIND_FLOAT || from_type_kind == TYPE_KIND_DOUBLE);
             bool from_is_signed = global_type_kind_signs[from_type_kind];
             bool to_is_signed = global_type_kind_signs[to_type_kind];
-            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-
-            // Decide what type of cast it should be
-            instr->id = from_is_float ?
-                (to_is_signed   ? INSTRUCTION_FPTOSI : INSTRUCTION_FPTOUI):
-                (from_is_signed ? INSTRUCTION_SITOFP : INSTRUCTION_UITOFP);
 
             if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
-            instr->result_type = ir_to_type;
-            instr->value = *ir_value;
-            *ir_value = build_value_from_prev_instruction(builder);
+
+            // Decide what type of cast it should be
+            if(from_is_float){
+                *ir_value = to_is_signed ? build_fptosi(builder, *ir_value, ir_to_type) : build_fptoui(builder, *ir_value, ir_to_type);
+            } else {
+                *ir_value = from_is_signed ? build_sitofp(builder, *ir_value, ir_to_type) : build_uitofp(builder, *ir_value, ir_to_type);
+            }
+
             return true;
         }
     }
@@ -481,22 +459,10 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             // Don't bother casting the value when they are the same underlying type
             if(to_type_kind == TYPE_KIND_U64) return true;
 
-            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
-            // Set result type of instruction
-            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &instr->result_type)) return false;
-
-            // Set 'from' value for instruction
-            instr->value = *ir_value;
-
-            if(global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind]){
-                instr->id = INSTRUCTION_REINTERPRET; // They are the same size
-                *ir_value = build_value_from_prev_instruction(builder);
-                return true;
-            }
-
-            instr->id = INSTRUCTION_TRUNC;
-            *ir_value = build_value_from_prev_instruction(builder);
+            bool is_same_size = global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind];
+            *ir_value = is_same_size ? build_reinterpret(builder, *ir_value, ir_to_type) : build_trunc(builder, *ir_value, ir_to_type);
             return true;
         }
     }
@@ -648,29 +614,18 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     }
 
     if(mode & CONFORM_MODE_INTENUM && from_traits & TYPE_TRAIT_INTEGER){
-        ir_type_t *to_as_ir_type;
-        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &to_as_ir_type)) return false;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
         // If the type boils down to a u64 we'll consider it an enum
-        bool to_type_is_enum = to_as_ir_type->kind == TYPE_KIND_U64;
+        bool to_type_is_enum = ir_to_type->kind == TYPE_KIND_U64;
 
         // Convert integer to enum
         if(to_type_is_enum){
             // Don't bother casting the value when they are the same underlying type
             if(from_type_kind == TYPE_KIND_U64) return true;
 
-            ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-            instr->result_type = to_as_ir_type;
-            instr->value = *ir_value;
-
-            if(global_type_kind_sizes_64[to_type_kind] == global_type_kind_sizes_64[from_type_kind]){
-                instr->id = INSTRUCTION_REINTERPRET; // They are the same size
-                *ir_value = build_value_from_prev_instruction(builder);
-                return true;
-            }
-
-            instr->id = INSTRUCTION_ZEXT;
-            *ir_value = build_value_from_prev_instruction(builder);
+            bool is_same_size = global_type_kind_sizes_64[to_type_kind] == global_type_kind_sizes_64[from_type_kind];
+            *ir_value = is_same_size ? build_reinterpret(builder, *ir_value, ir_to_type) : build_zext(builder, *ir_value, ir_to_type);
             return true;
         }
     }

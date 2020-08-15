@@ -1,6 +1,6 @@
 
-#ifndef IR_GEN_TYPE_H
-#define IR_GEN_TYPE_H
+#ifndef _ISAAC_IR_GEN_TYPE_H
+#define _ISAAC_IR_GEN_TYPE_H
 
 /*
     ============================== ir_gen_type.h ==============================
@@ -65,4 +65,4 @@ int ir_type_mapping_cmp(const void *a, const void *b);
 // for the given AST type
 unsigned int ir_primitive_from_ast_type(const ast_type_t *type);
 
-#endif // IR_GEN_TYPE_H
+#endif // _ISAAC_IR_GEN_TYPE_H

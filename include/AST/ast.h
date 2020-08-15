@@ -1,6 +1,6 @@
 
-#ifndef AST_H
-#define AST_H
+#ifndef _ISAAC_AST_H
+#define _ISAAC_AST_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -324,4 +324,4 @@ int ast_polymorphic_funcs_cmp(const void *a, const void *b);
 }
 #endif
 
-#endif // AST_H
+#endif // _ISAAC_AST_H

@@ -1,6 +1,6 @@
 
-#ifndef IR_TO_LLVM_H
-#define IR_TO_LLVM_H
+#ifndef _ISAAC_IR_TO_LLVM_H
+#define _ISAAC_IR_TO_LLVM_H
 
 /*
     =============================== ir_to_llvm.h ==============================
@@ -86,4 +86,4 @@ void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, L
 // Converts optimization level to LLVM optimization constant
 LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler);
 
-#endif // IR_TO_LLVM_H
+#endif // _ISAAC_IR_TO_LLVM_H

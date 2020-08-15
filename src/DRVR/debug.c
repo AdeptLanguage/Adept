@@ -1,7 +1,7 @@
 
 #ifndef ENABLE_DEBUG_FEATURES
 #error This file should never be included in release builds
-#endif // ENABLE_DEBUG_FEATURES
+#else
 
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
@@ -10,6 +10,9 @@
 #include "UTIL/ground.h"
 #include "DRVR/debug.h"
 #include "DRVR/compiler.h"
+#include "IR/ir.h"
+#include "IR/ir_lowering.h"
+#include "IRGEN/ir_builder.h"
 
 void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data){
     #define OPTIONAL_NOTIF_MACRO(optional_trait, message) { \
@@ -44,10 +47,12 @@ void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data){
 
 void run_debug_tests(){
     bool ok = true;
-    ok = ok && rep_table_tests(); // Coverage test of representation tables
-    ok = ok && ast_expr_tests();  // Coverage test of ast_expr_* functions
+    ok = ok && rep_table_tests();   // Coverage test of representation tables
+    ok = ok && ast_expr_tests();    // Coverage test of ast_expr_* functions
+    ok = ok && ir_lowering_tests(); // Coverage test of IR lowering utilities
 
     if(!ok) whiteprintf("!!! DEBUG TESTS FAILED !!!\n");
+    whiteprintf("Completed All Tests\n");
 }
 
 bool ast_expr_tests(){
@@ -108,3 +113,41 @@ bool rep_table_tests(){
 
     return true;
 }
+
+bool ir_lowering_tests(){
+    whiteprintf("Running Test: ir_lowering_tests()\n");
+
+    ir_pool_t pool;
+    ir_pool_init(&pool);
+
+    #define build_literal(out_variable, pool, adept_storage_type, literal_value, ir_type_kind) { \
+        out_variable = ir_pool_alloc(pool, sizeof(ir_value_t)); \
+        out_variable->value_type = VALUE_TYPE_LITERAL; \
+        out_variable->type = ir_pool_alloc(pool, sizeof(ir_type_t)); \
+        out_variable->type->kind = ir_type_kind; \
+        out_variable->extra = ir_pool_alloc(pool, sizeof(adept_storage_type)); \
+        *((adept_storage_type*) out_variable->extra) = literal_value; \
+    }
+
+    ir_value_t *long_value;
+    build_literal(long_value, &pool, adept_long, -INT32_MAX, TYPE_KIND_S64);
+
+    ir_type_t *usize_type = ir_pool_alloc(&pool, sizeof(ir_type_t));
+    usize_type->kind = TYPE_KIND_U64;
+    ir_value_t *casted = build_const_bitcast(&pool, long_value, usize_type);
+
+    char *s = ir_value_str(casted);
+    printf("%s\n", s);
+    free(s);
+
+    ir_lower_const_bitcast(&pool, &casted);
+
+    s = ir_value_str(casted);
+    printf("%s\n", s);
+    free(s);
+
+    ir_pool_free(&pool);
+    return true;
+}
+
+#endif // ENABLE_DEBUG_FEATURES

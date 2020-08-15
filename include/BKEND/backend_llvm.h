@@ -1,6 +1,6 @@
 
-#ifndef BACKEND_LLVM_H
-#define BACKEND_LLVM_H
+#ifndef _ISAAC_BACKEND_LLVM_H
+#define _ISAAC_BACKEND_LLVM_H
 
 /*
     ============================== backend_llvm.h ==============================
@@ -17,4 +17,4 @@
 // Invokes the LLVM backend
 errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object);
 
-#endif // BACKEND_LLVM_H
+#endif // _ISAAC_BACKEND_LLVM_H

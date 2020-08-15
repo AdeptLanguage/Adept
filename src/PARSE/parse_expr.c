@@ -26,46 +26,46 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
         ((expr_type *)*out_expr)->value = *((storage_type *)tokens[*i].data); \
         ((expr_type *)*out_expr)->source = sources[(*i)++];                   \
     }
-
+    
     switch (tokens[*i].id){
     case TOKEN_BYTE:
-        LITERAL_TO_EXPR(ast_expr_byte_t, EXPR_BYTE, char);
+        LITERAL_TO_EXPR(ast_expr_byte_t, EXPR_BYTE, adept_byte);
         break;
     case TOKEN_UBYTE:
-        LITERAL_TO_EXPR(ast_expr_ubyte_t, EXPR_UBYTE, unsigned char);
+        LITERAL_TO_EXPR(ast_expr_ubyte_t, EXPR_UBYTE, adept_ubyte);
         break;
     case TOKEN_SHORT:
-        LITERAL_TO_EXPR(ast_expr_short_t, EXPR_SHORT, short);
+        LITERAL_TO_EXPR(ast_expr_short_t, EXPR_SHORT, adept_short);
         break;
     case TOKEN_USHORT:
-        LITERAL_TO_EXPR(ast_expr_ushort_t, EXPR_USHORT, unsigned short);
+        LITERAL_TO_EXPR(ast_expr_ushort_t, EXPR_USHORT, adept_ushort);
         break;
     case TOKEN_INT:
-        LITERAL_TO_EXPR(ast_expr_int_t, EXPR_INT, long long);
+        LITERAL_TO_EXPR(ast_expr_int_t, EXPR_INT, adept_int);
         break;
     case TOKEN_UINT:
-        LITERAL_TO_EXPR(ast_expr_uint_t, EXPR_UINT, unsigned long long);
+        LITERAL_TO_EXPR(ast_expr_uint_t, EXPR_UINT, adept_uint);
         break;
     case TOKEN_GENERIC_INT:
-        LITERAL_TO_EXPR(ast_expr_generic_int_t, EXPR_GENERIC_INT, long long);
+        LITERAL_TO_EXPR(ast_expr_generic_int_t, EXPR_GENERIC_INT, adept_generic_int);
         break;
     case TOKEN_LONG:
-        LITERAL_TO_EXPR(ast_expr_long_t, EXPR_LONG, long long);
+        LITERAL_TO_EXPR(ast_expr_long_t, EXPR_LONG, adept_long);
         break;
     case TOKEN_ULONG:
-        LITERAL_TO_EXPR(ast_expr_ulong_t, EXPR_ULONG, unsigned long long);
+        LITERAL_TO_EXPR(ast_expr_ulong_t, EXPR_ULONG, adept_ulong);
         break;
     case TOKEN_USIZE:
-        LITERAL_TO_EXPR(ast_expr_usize_t, EXPR_USIZE, unsigned long long);
+        LITERAL_TO_EXPR(ast_expr_usize_t, EXPR_USIZE, adept_usize);
         break;
     case TOKEN_FLOAT:
-        LITERAL_TO_EXPR(ast_expr_float_t, EXPR_FLOAT, float);
+        LITERAL_TO_EXPR(ast_expr_float_t, EXPR_FLOAT, adept_float);
         break;
     case TOKEN_DOUBLE:
-        LITERAL_TO_EXPR(ast_expr_double_t, EXPR_DOUBLE, double);
+        LITERAL_TO_EXPR(ast_expr_double_t, EXPR_DOUBLE, adept_double);
         break;
     case TOKEN_GENERIC_FLOAT:
-        LITERAL_TO_EXPR(ast_expr_generic_float_t, EXPR_GENERIC_FLOAT, double);
+        LITERAL_TO_EXPR(ast_expr_generic_float_t, EXPR_GENERIC_FLOAT, adept_generic_float);
         break;
     case TOKEN_TRUE:
         ast_expr_create_bool(out_expr, true, sources[(*i)++]);

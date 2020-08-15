@@ -347,7 +347,7 @@ maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_fai
     return -1;
 }
 
-ir_value_t *build_literal_int(ir_pool_t *pool, long long literal_value){
+ir_value_t *build_literal_int(ir_pool_t *pool, adept_int literal_value){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
 
     value->value_type = VALUE_TYPE_LITERAL;
@@ -355,12 +355,12 @@ ir_value_t *build_literal_int(ir_pool_t *pool, long long literal_value){
     value->type->kind = TYPE_KIND_S32;
     // neglect ir_value->type->extra
     
-    value->extra = ir_pool_alloc(pool, sizeof(long long));
-    *((long long*) value->extra) = literal_value;
+    value->extra = ir_pool_alloc(pool, sizeof(adept_int));
+    *((adept_int*) value->extra) = literal_value;
     return value;
 }
 
-ir_value_t *build_literal_usize(ir_pool_t *pool, length_t literal_value){
+ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize literal_value){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
 
     value->value_type = VALUE_TYPE_LITERAL;
@@ -368,8 +368,8 @@ ir_value_t *build_literal_usize(ir_pool_t *pool, length_t literal_value){
     value->type->kind = TYPE_KIND_U64;
     // neglect ir_value->type->extra
     
-    value->extra = ir_pool_alloc(pool, sizeof(unsigned long long));
-    *((unsigned long long*) value->extra) = literal_value;
+    value->extra = ir_pool_alloc(pool, sizeof(adept_usize));
+    *((adept_usize*) value->extra) = literal_value;
     return value;
 }
 
@@ -450,100 +450,28 @@ ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
     return value;
 }
 
-ir_value_t *build_bitcast(ir_builder_t *builder, ir_value_t *from, ir_type_t* to){
+ir_value_t *build_cast(ir_builder_t *builder, unsigned int const_cast_value_type, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t *to){
+    if(VALUE_TYPE_IS_CONSTANT(from->value_type)){
+        return build_const_cast(builder->pool, const_cast_value_type, from, to);
+    } else {
+        return build_nonconst_cast(builder, nonconst_cast_instr_type, from, to);
+    }
+}
+
+ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int cast_instr_id, ir_value_t *from, ir_type_t* to){
     ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_BITCAST;
+    instr->id = cast_instr_id;
     instr->result_type = to;
     instr->value = from;
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t *build_const_bitcast(ir_pool_t *pool, ir_value_t *from, ir_type_t *to){
+ir_value_t *build_const_cast(ir_pool_t *pool, unsigned int cast_value_type, ir_value_t *from, ir_type_t *to){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_CONST_BITCAST;
+    value->value_type = cast_value_type;
     value->type = to;
     value->extra = from;
     return value;
-}
-
-ir_value_t *build_zext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_ZEXT;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_trunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_TRUNC;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_fext(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_FEXT;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_ftrunc(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_FTRUNC;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_inttoptr(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_INTTOPTR;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_ptrtoint(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_PTRTOINT;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_fptoui(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_FPTOUI;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_fptosi(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_FPTOSI;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_uitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_UITOFP;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_sitofp(ir_builder_t *builder, ir_value_t *from, ir_type_t *to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = INSTRUCTION_SITOFP;
-    instr->result_type = to;
-    instr->value = from;
-    return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
@@ -598,7 +526,7 @@ ir_value_t *build_bool(ir_pool_t *pool, bool value){
     return ir_value;
 }
 
-errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, unsigned long long *id_ref, source_t source_on_failure){
+errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure){
     ir_module_t *ir_module = &builder->object->ir_module;
     expand((void**) &ir_module->rtti_relocations, sizeof(rtti_relocation_t), ir_module->rtti_relocations_length, &ir_module->rtti_relocations_capacity, 1, 4);
 

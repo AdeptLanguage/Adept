@@ -1,6 +1,6 @@
 
-#ifndef ANY_H
-#define ANY_H
+#ifndef _ISAAC_ANY_H
+#define _ISAAC_ANY_H
 
 /*
     ================================== any.h ==================================
@@ -100,4 +100,4 @@ void any_inject_ast___type_kinds_length__(ast_t *ast);
 }
 #endif
 
-#endif // ANY_H
+#endif // _ISAAC_ANY_H

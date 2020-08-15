@@ -1,6 +1,6 @@
 
-#ifndef INFER_H
-#define INFER_H
+#ifndef _ISAAC_INFER_H
+#define _ISAAC_INFER_H
 
 /*
     ================================== infer.h =================================
@@ -148,4 +148,4 @@ void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out
 // Mentions the type of a literal expression
 void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expression_literal_id);
 
-#endif // INFER_H
+#endif // _ISAAC_INFER_H

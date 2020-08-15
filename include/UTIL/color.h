@@ -1,6 +1,6 @@
 
-#ifndef COLOR_H
-#define COLOR_H
+#ifndef _ISAAC_COLOR_H
+#define _ISAAC_COLOR_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,4 +68,4 @@ void terminal_set_color_posix(char color);
 }
 #endif
 
-#endif // COLOR_H
+#endif // _ISAAC_COLOR_H

@@ -1,6 +1,6 @@
 
-#ifndef __INSIGHT_OVERLOADS_H
-#define __INSIGHT_OVERLOADS_H
+#ifndef _ISAAC___INSIGHT_OVERLOADS_H
+#define _ISAAC___INSIGHT_OVERLOADS_H
 
 #if !defined(ADEPT_INSIGHT_BUILD) && !defined(ADEPT_INSIGHT_BUILD_IGNORE_UNDEFINED)
 #error "This file can only be used in the Adept Insight API"
@@ -34,4 +34,4 @@ extern size_t insight_tmp_buffer_length;
 }
 #endif
 
-#endif // __INSIGHT_OVERLOADS_H
+#endif // _ISAAC___INSIGHT_OVERLOADS_H

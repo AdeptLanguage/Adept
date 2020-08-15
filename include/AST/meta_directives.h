@@ -1,6 +1,6 @@
 
-#ifndef META_DIRECTIVES_H
-#define META_DIRECTIVES_H
+#ifndef _ISAAC_META_DIRECTIVES_H
+#define _ISAAC_META_DIRECTIVES_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,4 +103,4 @@ meta_expr_t *meta_get_special_variable(struct compiler *compiler, weak_cstr_t va
 }
 #endif
 
-#endif // META_DIRECTIVES_H
+#endif // _ISAAC_META_DIRECTIVES_H

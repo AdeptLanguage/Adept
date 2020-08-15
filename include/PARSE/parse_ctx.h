@@ -1,6 +1,6 @@
 
-#ifndef PARSE_CTX_H
-#define PARSE_CTX_H
+#ifndef _ISAAC_PARSE_CTX_H
+#define _ISAAC_PARSE_CTX_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -124,4 +124,4 @@ maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error);
 }
 #endif
 
-#endif // PARSE_CTX_H
+#endif // _ISAAC_PARSE_CTX_H

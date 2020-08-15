@@ -1,6 +1,6 @@
 
-#ifndef AST_TYPE_H
-#define AST_TYPE_H
+#ifndef _ISAAC_AST_TYPE_H
+#define _ISAAC_AST_TYPE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -300,4 +300,4 @@ hash_t ast_elem_hash(ast_elem_t *element);
 }
 #endif
 
-#endif // AST_TYPE_H
+#endif // _ISAAC_AST_TYPE_H

@@ -1,6 +1,6 @@
 
-#ifndef PARSE_STMT_H
-#define PARSE_STMT_H
+#ifndef _ISAAC_PARSE_STMT_H
+#define _ISAAC_PARSE_STMT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,4 +78,4 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
 }
 #endif
 
-#endif // PARSE_STMT_H
+#endif // _ISAAC_PARSE_STMT_H

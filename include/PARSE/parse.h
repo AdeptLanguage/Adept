@@ -1,6 +1,6 @@
 
-#ifndef PARSE_H
-#define PARSE_H
+#ifndef _ISAAC_PARSE_H
+#define _ISAAC_PARSE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,9 +17,9 @@ extern "C" {
 
 // ------------------ parse ------------------
 // Entry point of the parser
-// Returns 0 on conventional success (parse completed)
-// Returns 1 on error
-// Returns 2 on unconventional success (parse incomplete)
+// Returns SUCCESS on conventional success (parse completed)
+// Returns FAILURE on error
+// Returns ALT_FAILURE on unconventional success (parse incomplete)
 errorcode_t parse(compiler_t *compiler, object_t *object);
 
 // ------------------ parse_tokens ------------------
@@ -31,4 +31,4 @@ errorcode_t parse_tokens(parse_ctx_t *ctx);
 }
 #endif
 
-#endif // PARSE_H
+#endif // _ISAAC_PARSE_H

@@ -1,6 +1,6 @@
 
-#ifndef MEMORY_H
-#define MEMORY_H
+#ifndef _ISAAC_MEMORY_H
+#define _ISAAC_MEMORY_H
 
 #ifndef ADEPT_INSIGHT_BUILD
 
@@ -18,7 +18,7 @@
 
 // Always enable memory tracking for debug builds
 #ifdef ENABLE_DEBUG_FEATURES
-//#define TRACK_MEMORY_USAGE
+#define TRACK_MEMORY_USAGE
 #endif // ENABLE_DEBUG_FEATURES
 
 // ================= OPTIONS =================
@@ -105,4 +105,4 @@ void memory_free_fast(void* data);
 
 #endif // ADEPT_INSIGHT_BUILD
 
-#endif // MEMORY_H
+#endif // _ISAAC_MEMORY_H

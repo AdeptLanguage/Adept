@@ -1,6 +1,6 @@
 
-#ifndef JSMN_HELPER_H
-#define JSMN_HELPER_H
+#ifndef _ISAAC_JSMN_HELPER_H
+#define _ISAAC_JSMN_HELPER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,4 +75,4 @@ weak_cstr_t jsmn_helper_parse_fail_reason(int code);
 }
 #endif
 
-#endif // JSMN_HELPER_H
+#endif // _ISAAC_JSMN_HELPER_H

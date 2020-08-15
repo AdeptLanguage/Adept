@@ -2,6 +2,7 @@
 #include "IR/ir.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
+#include "UTIL/datatypes.h"
 
 strong_cstr_t ir_value_str(ir_value_t *value){
     if(value == NULL){
@@ -24,58 +25,58 @@ strong_cstr_t ir_value_str(ir_value_t *value){
     case VALUE_TYPE_LITERAL:
         switch(value->type->kind){
         case TYPE_KIND_S8:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, (int) *((char*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRId8, typename, *((adept_byte*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_U8:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, (int) *((unsigned char*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRIu8, typename, *((adept_ubyte*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_S16:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, *((int*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRId16, typename, *((adept_short*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_U16:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, (int) *((unsigned int*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRIu16, typename, *((adept_ushort*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_S32:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, (int) *((long long*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRId32, typename, *((adept_int*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_U32:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, (int) *((unsigned long long*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRIu32, typename, *((adept_uint*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_S64:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, (int) *((long long*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRId64, typename, *((adept_long*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_U64:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %d", typename, (int) *((unsigned long long*) value->extra));
+            value_str = malloc(typename_length + 22);
+            sprintf(value_str, "%s %"PRIu64, typename, *((adept_ulong*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_FLOAT:
             value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %06.6f", typename, *((double*) value->extra));
+            sprintf(value_str, "%s %06.6f", typename, (double) *((adept_float*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_DOUBLE:
             value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %06.6f", typename, *((double*) value->extra));
+            sprintf(value_str, "%s %06.6f", typename, (double) *((adept_double*) value->extra));
             free(typename);
             return value_str;
         case TYPE_KIND_BOOLEAN:
             value_str = malloc(typename_length + 7);
-            sprintf(value_str, "%s %s", typename, *((bool*) value->extra) ? "true" : "false");
+            sprintf(value_str, "%s %s", typename, *((adept_bool*) value->extra) ? "true" : "false");
             free(typename);
             return value_str;
         case TYPE_KIND_POINTER:
@@ -176,11 +177,39 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             return value_str;
         }
         break;
-    case VALUE_TYPE_CONST_BITCAST: {
+    case VALUE_TYPE_CONST_BITCAST:
+    case VALUE_TYPE_CONST_ZEXT:
+    case VALUE_TYPE_CONST_FEXT:
+    case VALUE_TYPE_CONST_TRUNC:
+    case VALUE_TYPE_CONST_FTRUNC:
+    case VALUE_TYPE_CONST_INTTOPTR:
+    case VALUE_TYPE_CONST_PTRTOINT:
+    case VALUE_TYPE_CONST_FPTOUI:
+    case VALUE_TYPE_CONST_FPTOSI:
+    case VALUE_TYPE_CONST_UITOFP:
+    case VALUE_TYPE_CONST_SITOFP:
+    case VALUE_TYPE_CONST_REINTERPRET: {
+            weak_cstr_t const_cast_name = "<unknown const cast>";
+
+            switch(value->value_type){
+            case VALUE_TYPE_CONST_BITCAST:     const_cast_name = "cbc";     break;
+            case VALUE_TYPE_CONST_ZEXT:        const_cast_name = "czext";   break;
+            case VALUE_TYPE_CONST_FEXT:        const_cast_name = "cfext";   break;
+            case VALUE_TYPE_CONST_TRUNC:       const_cast_name = "ctrunc";  break;
+            case VALUE_TYPE_CONST_FTRUNC:      const_cast_name = "cftrunc"; break;
+            case VALUE_TYPE_CONST_INTTOPTR:    const_cast_name = "ci2p";    break;
+            case VALUE_TYPE_CONST_PTRTOINT:    const_cast_name = "cp2i";    break;
+            case VALUE_TYPE_CONST_FPTOUI:      const_cast_name = "cfp2ui";  break;
+            case VALUE_TYPE_CONST_FPTOSI:      const_cast_name = "cfp2si";  break;
+            case VALUE_TYPE_CONST_UITOFP:      const_cast_name = "cui2fp";  break;
+            case VALUE_TYPE_CONST_SITOFP:      const_cast_name = "csi2fp";  break;
+            case VALUE_TYPE_CONST_REINTERPRET: const_cast_name = "creinterp";  break;
+            }
+
             strong_cstr_t from = ir_value_str(value->extra);
             strong_cstr_t to = ir_type_str(value->type);
             value_str = malloc(32 + strlen(to) + strlen(from));
-            sprintf(value_str, "cbc %s to %s", from, to);
+            sprintf(value_str, "%s %s to %s", const_cast_name, from, to);
             free(to);
             free(from);
             free(typename);
@@ -803,17 +832,17 @@ unsigned long long ir_value_uniqueness_value(ir_value_t *value){
         printf("INTERNAL ERROR: ir_value_uniqueness_value received a value that isn't a constant literal\n");
         return 0xFFFFFFFF;
     }
-
+    
     switch(value->type->kind){
-    case TYPE_KIND_BOOLEAN: return *((bool*) value->extra);
-    case TYPE_KIND_S8:      return *((char*) value->extra);
-    case TYPE_KIND_U8:      return *((unsigned char*) value->extra);
-    case TYPE_KIND_S16:     return *((int*) value->extra);
-    case TYPE_KIND_U16:     return *((unsigned int*) value->extra);
-    case TYPE_KIND_S32:     return *((long*) value->extra);
-    case TYPE_KIND_U32:     return *((unsigned long*) value->extra);
-    case TYPE_KIND_S64:     return *((long*) value->extra);
-    case TYPE_KIND_U64:     return *((unsigned long*) value->extra);
+    case TYPE_KIND_BOOLEAN: return *((adept_bool*) value->extra);
+    case TYPE_KIND_S8:      return *((adept_byte*) value->extra);
+    case TYPE_KIND_U8:      return *((adept_ubyte*) value->extra);
+    case TYPE_KIND_S16:     return *((adept_short*) value->extra);
+    case TYPE_KIND_U16:     return *((adept_ushort*) value->extra);
+    case TYPE_KIND_S32:     return *((adept_int*) value->extra);
+    case TYPE_KIND_U32:     return *((adept_uint*) value->extra);
+    case TYPE_KIND_S64:     return *((adept_long*) value->extra);
+    case TYPE_KIND_U64:     return *((adept_ulong*) value->extra);
     default:
         printf("INTERNAL ERROR: ir_value_uniqueness_value received a value that isn't a constant literal\n");
         return 0xFFFFFFFF;

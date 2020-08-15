@@ -1,6 +1,6 @@
 
-#ifndef IR_GEN_CACHE_H
-#define IR_GEN_CACHE_H
+#ifndef _ISAAC_IR_GEN_CACHE_H
+#define _ISAAC_IR_GEN_CACHE_H
 
 /*
     ============================== ir_gen_find.h ==============================
@@ -52,4 +52,4 @@ void ir_gen_sf_cache_free(ir_gen_sf_cache_t *cache);
 // Locates cache entry for AST type in special functions cache
 ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_type_t type);
 
-#endif // IR_GEN_CACHE_H
+#endif // _ISAAC_IR_GEN_CACHE_H

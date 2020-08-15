@@ -1,6 +1,6 @@
 
-#ifndef AST_EXPR_H
-#define AST_EXPR_H
+#ifndef _ISAAC_AST_EXPR_H
+#define _ISAAC_AST_EXPR_H
 
 /*
     =============================== ast_expr.h ================================
@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #include "UTIL/ground.h"
+#include "UTIL/datatypes.h"
 #include "AST/ast_type.h"
 
 // =============================================================
@@ -148,7 +149,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    char value;
+    adept_byte value;
 } ast_expr_byte_t;
 
 // ---------------- ast_expr_ubyte_t ----------------
@@ -156,7 +157,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    unsigned char value;
+    adept_ubyte value;
 } ast_expr_ubyte_t;
 
 // ---------------- ast_expr_short_t ----------------
@@ -164,7 +165,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    int value;
+    adept_short value;
 } ast_expr_short_t;
 
 // ---------------- ast_expr_ushort_t ----------------
@@ -172,7 +173,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    unsigned int value;
+    adept_ushort value;
 } ast_expr_ushort_t;
 
 // ---------------- ast_expr_int_t ----------------
@@ -180,7 +181,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    long long value;
+    adept_int value;
 } ast_expr_int_t;
 
 // ---------------- ast_expr_uint_t ----------------
@@ -188,7 +189,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    unsigned long value;
+    adept_uint value;
 } ast_expr_uint_t;
 
 // ---------------- ast_expr_long_t ----------------
@@ -196,7 +197,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    long long value;
+    adept_long value;
 } ast_expr_long_t;
 
 // ---------------- ast_expr_ulong_t ----------------
@@ -204,7 +205,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    unsigned long long value;
+    adept_ulong value;
 } ast_expr_ulong_t;
 
 // ---------------- ast_expr_usize_t ----------------
@@ -212,7 +213,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    unsigned long long value;
+    adept_usize value;
 } ast_expr_usize_t;
 
 // ---------------- ast_expr_float_t ----------------
@@ -220,7 +221,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    double value; // Using double for minimal data lost
+    adept_float value;
 } ast_expr_float_t;
 
 // ---------------- ast_expr_double_t ----------------
@@ -228,7 +229,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    double value;
+    adept_double value;
 } ast_expr_double_t;
 
 // ---------------- ast_expr_boolean_t ----------------
@@ -236,7 +237,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    bool value;
+    adept_bool value;
 } ast_expr_boolean_t;
 
 // ---------------- ast_expr_str_t ----------------
@@ -265,7 +266,7 @@ typedef ast_expr_t ast_expr_null_t;
 typedef struct {
     unsigned int id;
     source_t source;
-    long long value;
+    adept_generic_int value;
 } ast_expr_generic_int_t;
 
 // ---------------- ast_expr_generic_float_t ----------------
@@ -273,7 +274,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    double value;
+    adept_generic_float value;
 } ast_expr_generic_float_t;
 
 // ---------------- ast_expr_math_t ----------------
@@ -611,15 +612,15 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr);
 
 // ---------------- ast_expr_create_bool ----------------
 // Creates a boolean expression
-void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source);
+void ast_expr_create_bool(ast_expr_t **out_expr, adept_bool value, source_t source);
 
 // ---------------- ast_expr_create_long ----------------
 // Creates a long expression
-void ast_expr_create_long(ast_expr_t **out_expr, long long value, source_t source);
+void ast_expr_create_long(ast_expr_t **out_expr, adept_long value, source_t source);
 
 // ---------------- ast_expr_create_double ----------------
 // Creates a double expression
-void ast_expr_create_double(ast_expr_t **out_expr, double value, source_t source);
+void ast_expr_create_double(ast_expr_t **out_expr, adept_double value, source_t source);
 
 // ---------------- ast_expr_create_string ----------------
 // Creates a string expression
@@ -661,4 +662,4 @@ void ast_expr_list_init(ast_expr_list_t *list, length_t capacity);
 }
 #endif
 
-#endif // AST_EXPR_H
+#endif // _ISAAC_AST_EXPR_H

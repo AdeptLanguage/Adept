@@ -1,6 +1,6 @@
 
-#ifndef IR_GEN_FIND_H
-#define IR_GEN_FIND_H
+#ifndef _ISAAC_IR_GEN_FIND_H
+#define _ISAAC_IR_GEN_FIND_H
 
 /*
     ============================== ir_gen_find.h ==============================
@@ -128,4 +128,4 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
 errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog);
 
-#endif // IR_GEN_FIND_H
+#endif // _ISAAC_IR_GEN_FIND_H

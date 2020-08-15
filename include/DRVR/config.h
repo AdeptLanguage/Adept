@@ -1,6 +1,6 @@
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef _ISAAC_CONFIG_H
+#define _ISAAC_CONFIG_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,4 +48,4 @@ successful_t process_adept_stash_value(config_t *config, stash_header_t *out_hea
 }
 #endif
 
-#endif // CONFIG_H
+#endif // _ISAAC_CONFIG_H

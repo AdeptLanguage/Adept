@@ -1,6 +1,7 @@
 
 #include "LEX/lex.h"
 #include "LEX/token.h"
+#include "UTIL/datatypes.h"
 
 void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
     // Prints detailed information contained in tokenlist
@@ -65,37 +66,37 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_END:           printf("End\n"); break;
         case TOKEN_NEWLINE:       printf("Newline\n"); break;
         case TOKEN_BYTE:
-            printf("Byte: %d\n", (int) *((unsigned char*) tokenlist->tokens[i].data));
+            printf("Byte: %"PRId8"\n", *((adept_byte*) tokenlist->tokens[i].data));
             break;
         case TOKEN_UBYTE:
-            printf("Unsigned Byte: %u\n", (unsigned int) *((unsigned char*) tokenlist->tokens[i].data));
+            printf("Unsigned Byte: %"PRIu8"\n", *((adept_ubyte*) tokenlist->tokens[i].data));
             break;
         case TOKEN_SHORT:
-            printf("Short: %d\n", (int) *((short*) tokenlist->tokens[i].data));
+            printf("Short: %"PRId16"\n", *((adept_short*) tokenlist->tokens[i].data));
             break;
         case TOKEN_USHORT:
-            printf("Unsigned Short: %u\n", (unsigned int) *((unsigned short*) tokenlist->tokens[i].data));
+            printf("Unsigned Short: %"PRIu16"\n", *((adept_ushort*) tokenlist->tokens[i].data));
             break;
         case TOKEN_INT:
-            printf("Integer: %ld\n", *((long*) tokenlist->tokens[i].data));
+            printf("Integer: %"PRId32"\n", *((adept_int*) tokenlist->tokens[i].data));
             break;
         case TOKEN_UINT:
-            printf("Unsigned Integer: %lu\n", *((unsigned long*) tokenlist->tokens[i].data));
+            printf("Unsigned Integer: %"PRIu32"\n", *((adept_uint*) tokenlist->tokens[i].data));
             break;
         case TOKEN_LONG:
-            printf("Long [Loss of Data]: %ld\n", (long) *((long long*) tokenlist->tokens[i].data)); // Loss of data when printed
+            printf("Long: %"PRId64"\n", *((adept_long*) tokenlist->tokens[i].data));
             break;
         case TOKEN_ULONG:
-            printf("Unsigned Long [Loss of Data]: %lu\n", (long) *((long long*) tokenlist->tokens[i].data)); // Loss of data when printed
+            printf("Unsigned Long: %"PRIu64"\n", *((adept_ulong*) tokenlist->tokens[i].data));
             break;
         case TOKEN_USIZE:
-            printf("Unsigned Long [Loss of Data]: %lu\n", (long) *((long long*) tokenlist->tokens[i].data)); // Loss of data when printed
+            printf("Unsigned Long: %"PRIu64"\n", *((adept_usize*) tokenlist->tokens[i].data));
             break;
         case TOKEN_FLOAT:
-            printf("Float: %f\n", (double) *((float*) tokenlist->tokens[i].data));
+            printf("Float: %f\n", (double) *((adept_float*) tokenlist->tokens[i].data));
             break;
         case TOKEN_DOUBLE:
-            printf("Double: %f\n", *((double*) tokenlist->tokens[i].data));
+            printf("Double: %f\n", *((adept_double*) tokenlist->tokens[i].data));
             break;
         case TOKEN_MEMBER:            printf("Member\n"); break;
         case TOKEN_ADDRESS:           printf("Address\n"); break;

@@ -673,27 +673,55 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
         switch(expr->id){
         case EXPR_GENERIC_INT:
             switch(target_primitive){
-            case EXPR_BOOLEAN: {
-                     // This is ok because the memory that was allocated is larger than needed
-                    ((ast_expr_boolean_t*) expr)->value = (((ast_expr_generic_int_t*) expr)->value != 0);
-                }
+            case EXPR_BOOLEAN:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_bool) == 1
+                ((ast_expr_boolean_t*) expr)->value = (((ast_expr_generic_int_t*) expr)->value != 0);
                 break;
-            case EXPR_BYTE: case EXPR_UBYTE: {
-                    char tmp = (char) ((ast_expr_generic_int_t*) expr)->value;
-                    ((ast_expr_byte_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
-                }
+            case EXPR_BYTE:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_byte) == 1
+                ((ast_expr_byte_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
                 break;
-            case EXPR_SHORT: case EXPR_USHORT: {
-                    short tmp = (short) ((ast_expr_generic_int_t*) expr)->value;
-                    ((ast_expr_short_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
-                }
+            case EXPR_UBYTE:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_ubyte) == 1
+                ((ast_expr_ubyte_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
                 break;
-            case EXPR_INT: case EXPR_UINT: case EXPR_LONG: case EXPR_ULONG: case EXPR_USIZE:
-                break; // No changes special changes necessary
-            case EXPR_FLOAT: case EXPR_DOUBLE: {
-                    double tmp = (double) ((ast_expr_generic_int_t*) expr)->value;
-                    ((ast_expr_double_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
-                }
+            case EXPR_SHORT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_short) == 2
+                ((ast_expr_short_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
+                break;
+            case EXPR_USHORT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_ushort) == 2
+                ((ast_expr_ushort_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
+                break;
+            case EXPR_INT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_int) == 4
+                ((ast_expr_int_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
+                break;
+            case EXPR_UINT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_uint) == 4
+                ((ast_expr_uint_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
+                break;
+            case EXPR_LONG: case EXPR_ULONG: case EXPR_USIZE:
+                // This is ok because the memory that was allocated is equal to that needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_long, adept_ulong, adept_usize) == 8
+                // No changes special changes necessary, because casting int64 to int64/uint64 is just a bitcast
+                break;
+            case EXPR_FLOAT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_float) == 4
+                ((ast_expr_float_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
+                break;
+            case EXPR_DOUBLE:
+                // This is ok because the memory that was allocated is equal to that needed
+                // sizeof(adept_generic_int) == 8  -->  sizeof(adept_double) == 8
+                ((ast_expr_double_t*) expr)->value = ((ast_expr_generic_int_t*) expr)->value;
                 break;
             default:
                 compiler_panic(ctx->compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
@@ -703,31 +731,75 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
             break;
         case EXPR_GENERIC_FLOAT:
             switch(target_primitive){
-            case EXPR_BOOLEAN: {
-                     // This is ok because the memory that was allocated is larger than needed
-                    ((ast_expr_boolean_t*) expr)->value = (((ast_expr_generic_float_t*) expr)->value != 0);
-                    compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a bool");
-                }
+            case EXPR_BOOLEAN:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_bool) == 1
+
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a bool");
+                ((ast_expr_boolean_t*) expr)->value = (((ast_expr_generic_float_t*) expr)->value != 0);
                 break;
-            case EXPR_BYTE: case EXPR_UBYTE: {
-                    char tmp = (char) ((ast_expr_generic_float_t*) expr)->value;
-                    ((ast_expr_byte_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
-                    compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a %s", target_primitive == EXPR_BYTE ? "byte" : "ubyte");
-                }
+            case EXPR_BYTE:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_byte) == 1
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a byte");
+                ((ast_expr_byte_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
-            case EXPR_SHORT: case EXPR_USHORT: {
-                    short tmp = (short) ((ast_expr_generic_float_t*) expr)->value;
-                    ((ast_expr_short_t*) expr)->value = tmp; // This is ok because the memory that was allocated is larger than needed
-                    compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a %s", target_primitive == EXPR_SHORT ? "short" : "ushort");
-                }
+            case EXPR_UBYTE:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_ubyte) == 1
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ubyte");
+                ((ast_expr_ubyte_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
-            case EXPR_INT: case EXPR_UINT: case EXPR_LONG: case EXPR_ULONG: case EXPR_USIZE: {
-                    long long tmp = (long long) ((ast_expr_generic_float_t*) expr)->value;
-                    ((ast_expr_int_t*) expr)->value = tmp; // // This is ok because the memory that was allocated is larger than needed
-                }
+            case EXPR_SHORT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_short) == 2
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a short");
+                ((ast_expr_short_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
-            case EXPR_FLOAT: case EXPR_DOUBLE:
-                break; // No changes special changes necessary
+            case EXPR_USHORT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_ushort) == 2
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ushort");
+                ((ast_expr_ushort_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
+                break;
+            case EXPR_INT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_int) == 4
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to an int");
+                ((ast_expr_int_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
+                break;
+            case EXPR_UINT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_uint) == 4
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a uint");
+                ((ast_expr_uint_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
+                break;
+            case EXPR_LONG:
+                // This is ok because the memory that was allocated is equal to that needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_long) == 8
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a long");
+                ((ast_expr_long_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
+                break;
+            case EXPR_ULONG:
+                // This is ok because the memory that was allocated is equal to that needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_ulong) == 8
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ulong");
+                ((ast_expr_ulong_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
+                break;
+            case EXPR_USIZE:
+                // This is ok because the memory that was allocated is equal to that needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_usize) == 8
+                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a usize");
+                ((ast_expr_usize_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
+                break;
+            case EXPR_FLOAT:
+                // This is ok because the memory that was allocated is larger than needed
+                // sizeof(adept_generic_float) == 8  -->  sizeof(adept_float) == 4
+                ((ast_expr_float_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
+                break;
+            case EXPR_DOUBLE:
+                // No changes special changes necessary, since (adept_double == adept_generic_float)
+                break;
             default:
                 compiler_panic(ctx->compiler, expr->source, "INTERNAL ERROR: Unrecognized target primitive in resolve_generics()");
                 return FAILURE; // Unknown assigned type

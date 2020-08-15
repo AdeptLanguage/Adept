@@ -102,10 +102,10 @@ endif
 
 LDFLAGS=$(LIBCURL_LINKER_FLAGS) $(LLVM_LINKER_FLAGS)
 SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c src/BRIDGE/bridge.c src/BRIDGE/type_table.c \
-	src/BRIDGE/rtti.c src/DRVR/compiler.c src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir.c src/IRGEN/ir_builder.c \
+	src/BRIDGE/rtti.c src/DRVR/compiler.c src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir.c src/IR/ir_lowering.c src/IRGEN/ir_builder.c \
 	src/IRGEN/ir_cache.c src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
 	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_alias.c src/PARSE/parse_ctx.c src/PARSE/parse_dependency.c src/PARSE/parse_enum.c src/PARSE/parse_expr.c src/PARSE/parse_func.c src/PARSE/parse_global.c src/PARSE/parse_meta.c src/PARSE/parse_pragma.c \
-	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c src/PARSE/parse.c src/UTIL/color.c src/UTIL/download.c src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
+	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c src/PARSE/parse.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj
@@ -165,6 +165,7 @@ insight: $(SOURCES)
 	@cp include/UTIL/__insight_undo_overloads.h $(INSIGHT_OUT_DIR)/include/UTIL/__insight_undo_overloads.h
 	@cp include/UTIL/builtin_type.h $(INSIGHT_OUT_DIR)/include/UTIL/builtin_type.h
 	@cp include/UTIL/color.h $(INSIGHT_OUT_DIR)/include/UTIL/color.h
+	@cp include/UTIL/datatypes.h $(INSIGHT_OUT_DIR)/include/UTIL/datatypes.h
 	@cp include/UTIL/filename.h $(INSIGHT_OUT_DIR)/include/UTIL/filename.h
 	@cp include/UTIL/hash.h $(INSIGHT_OUT_DIR)/include/UTIL/hash.h
 	@cp include/UTIL/jsmn.h $(INSIGHT_OUT_DIR)/include/UTIL/jsmn.h
@@ -207,6 +208,7 @@ insight: $(SOURCES)
 	@cp src/UTIL/__insight_overloads.c $(INSIGHT_OUT_DIR)/src/UTIL/__insight_overloads.c
 	@cp src/UTIL/builtin_type.c $(INSIGHT_OUT_DIR)/src/UTIL/builtin_type.c
 	@cp src/UTIL/color.c $(INSIGHT_OUT_DIR)/src/UTIL/color.c
+	@cp src/UTIL/datatypes.c $(INSIGHT_OUT_DIR)/src/UTIL/datatypes.c
 	@cp src/UTIL/filename.c $(INSIGHT_OUT_DIR)/src/UTIL/filename.c
 	@cp src/UTIL/hash.c $(INSIGHT_OUT_DIR)/src/UTIL/hash.c
 	@cp src/UTIL/jsmn_helper.c $(INSIGHT_OUT_DIR)/src/UTIL/jsmn_helper.c

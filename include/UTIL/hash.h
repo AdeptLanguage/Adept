@@ -1,6 +1,6 @@
 
-#ifndef HASH_H
-#define HASH_H
+#ifndef _ISAAC_HASH_H
+#define _ISAAC_HASH_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,4 +28,4 @@ hash_t hash_combine(hash_t h1, hash_t h2);
 }
 #endif
 
-#endif // HASH_H
+#endif // _ISAAC_HASH_H

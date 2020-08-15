@@ -1,6 +1,6 @@
 
-#ifndef IR_GEN_H
-#define IR_GEN_H
+#ifndef _ISAAC_IR_GEN_H
+#define _ISAAC_IR_GEN_H
 
 /*
     ================================ ir_gen.h =================================
@@ -53,4 +53,4 @@ errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object);
 // Makes a string containing the textual definition of an AST function using an IR memory pool
 weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func);
 
-#endif // IR_GEN_H
+#endif // _ISAAC_IR_GEN_H

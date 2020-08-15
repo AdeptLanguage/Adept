@@ -1,6 +1,6 @@
 
-#ifndef TOKEN_H
-#define TOKEN_H
+#ifndef _ISAAC_TOKEN_H
+#define _ISAAC_TOKEN_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -217,4 +217,4 @@ extern const char *global_token_name_table[];
 }
 #endif
 
-#endif // TOKEN_H
+#endif // _ISAAC_TOKEN_H

@@ -1,6 +1,6 @@
 
-#ifndef COMPILER_H
-#define COMPILER_H
+#ifndef _ISAAC_COMPILER_H
+#define _ISAAC_COMPILER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -184,4 +184,4 @@ void object_panicf_plain(object_t *object, const char *message, ...);
 }
 #endif
 
-#endif // COMPILER_H
+#endif // _ISAAC_COMPILER_H

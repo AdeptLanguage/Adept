@@ -1,6 +1,6 @@
 
-#ifndef PARSE_ENUM_H
-#define PARSE_ENUM_H
+#ifndef _ISAAC_PARSE_ENUM_H
+#define _ISAAC_PARSE_ENUM_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,4 +21,4 @@ errorcode_t parse_enum_body(parse_ctx_t *ctx, char ***kinds, length_t *length);
 }
 #endif
 
-#endif // PARSE_ENUM_H
+#endif // _ISAAC_PARSE_ENUM_H

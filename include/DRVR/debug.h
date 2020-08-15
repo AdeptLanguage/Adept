@@ -1,6 +1,6 @@
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#ifndef _ISAAC_DEBUG_H
+#define _ISAAC_DEBUG_H
 
 /*
     ================================== debug.h =================================
@@ -44,8 +44,12 @@ bool ast_expr_tests();
 // Tests the token and AST expression representation tables
 bool rep_table_tests();
 
+// ---------------- rep_table_tests ----------------
+// Tests the IR lowering utilities
+bool ir_lowering_tests();
+
 #else
 #define debug_signal(a, b, c) ((void) 0)
 #endif // ENABLE_DEBUG_FEATURES
 
-#endif // DEBUG_H
+#endif // _ISAAC_DEBUG_H

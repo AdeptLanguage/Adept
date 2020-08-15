@@ -3,6 +3,7 @@
 #include "AST/ast_expr.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
+#include "UTIL/datatypes.h"
 
 bool expr_is_mutable(ast_expr_t *expr){
     switch(expr->id){
@@ -27,41 +28,37 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
 
     switch(expr->id){
     case EXPR_BYTE:
-        representation = malloc(21);
-        sprintf(representation, "%dsb", (int) ((ast_expr_byte_t*) expr)->value);
-        return representation;
+        return int8_to_string(((ast_expr_byte_t*) expr)->value, "sb");
     case EXPR_UBYTE:
+        // Do special serialization for ubytes, since most of the time it
+        // makes more sense to print them as hexadecimal instead of base 10
         representation = malloc(7);
         sprintf(representation, "0x%02Xub", (unsigned int) ((ast_expr_ubyte_t*) expr)->value);
         return representation;
     case EXPR_SHORT:
-        return long_to_string((long int) ((ast_expr_short_t*) expr)->value, "ss");
+        return int16_to_string(((ast_expr_short_t*) expr)->value, "ss");
     case EXPR_USHORT:
-        return long_to_string((long int) ((ast_expr_ushort_t*) expr)->value, "us");
+        return uint16_to_string(((ast_expr_ushort_t*) expr)->value, "us");
     case EXPR_INT:
-        return long_to_string((long int) ((ast_expr_int_t*) expr)->value, "si");
+        return int32_to_string(((ast_expr_int_t*) expr)->value, "si");
     case EXPR_UINT:
-        return long_to_string((long int) ((ast_expr_uint_t*) expr)->value, "ui");
+        return uint32_to_string(((ast_expr_uint_t*) expr)->value, "ui");
     case EXPR_LONG:
-        // NOTE: Possible loss of information
-        return long_to_string((long int) ((ast_expr_long_t*) expr)->value, "sl");
+        return int64_to_string(((ast_expr_long_t*) expr)->value, "sl");
     case EXPR_ULONG:
-        // NOTE: Possible loss of information
-        return long_to_string((long int) ((ast_expr_ulong_t*) expr)->value, "ul");
+        return uint64_to_string(((ast_expr_ulong_t*) expr)->value, "ul");
     case EXPR_USIZE:
-        // NOTE: Possible loss of information
-        return long_to_string((long int) ((ast_expr_ulong_t*) expr)->value, "uz");
+        return uint64_to_string(((ast_expr_usize_t*) expr)->value, "uz");
     case EXPR_GENERIC_INT:
-        // NOTE: Possible loss of information
-        return long_to_string((long int) ((ast_expr_ulong_t*) expr)->value, NULL);
+        return int64_to_string(((ast_expr_generic_int_t*) expr)->value, "");
     case EXPR_FLOAT:
-        return double_to_string(((ast_expr_float_t*) expr)->value, 'f');
+        return float32_to_string(((ast_expr_float_t*) expr)->value, "f");
     case EXPR_DOUBLE:
-        return double_to_string(((ast_expr_float_t*) expr)->value, 'd');
-    case EXPR_BOOLEAN:
-        return ((ast_expr_boolean_t*) expr)->value ? strclone("true") : strclone("false");
+        return float64_to_string(((ast_expr_double_t*) expr)->value, "d");
     case EXPR_GENERIC_FLOAT:
-        return double_to_string(((ast_expr_float_t*) expr)->value, '\0');
+        return float64_to_string(((ast_expr_generic_float_t*) expr)->value, "");
+    case EXPR_BOOLEAN:
+        return strclone(((ast_expr_boolean_t*) expr)->value ? "true" : "false");
     case EXPR_NULL:
         return strclone("null");
     case EXPR_STR:
@@ -1249,21 +1246,21 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     return clone;
 }
 
-void ast_expr_create_bool(ast_expr_t **out_expr, bool value, source_t source){
+void ast_expr_create_bool(ast_expr_t **out_expr, adept_bool value, source_t source){
     *out_expr = malloc(sizeof(ast_expr_boolean_t));
     ((ast_expr_boolean_t*) *out_expr)->id = EXPR_BOOLEAN;
     ((ast_expr_boolean_t*) *out_expr)->value = value;
     ((ast_expr_boolean_t*) *out_expr)->source = source;
 }
 
-void ast_expr_create_long(ast_expr_t **out_expr, long long value, source_t source){
+void ast_expr_create_long(ast_expr_t **out_expr, adept_long value, source_t source){
     *out_expr = malloc(sizeof(ast_expr_long_t));
     ((ast_expr_long_t*) *out_expr)->id = EXPR_LONG;
     ((ast_expr_long_t*) *out_expr)->value = value;
     ((ast_expr_long_t*) *out_expr)->source = source;
 }
 
-void ast_expr_create_double(ast_expr_t **out_expr, double value, source_t source){
+void ast_expr_create_double(ast_expr_t **out_expr, adept_double value, source_t source){
     *out_expr = malloc(sizeof(ast_expr_double_t));
     ((ast_expr_double_t*) *out_expr)->id = EXPR_DOUBLE;
     ((ast_expr_double_t*) *out_expr)->value = value;
@@ -1443,4 +1440,5 @@ const char *global_expression_rep_table[] = {
     "<break to>",                 // 0x00000060
     "<continue to>",              // 0x00000061
     "<switch>",                   // 0x00000062
+    "<toggle>",                   // 0x00000063
 };

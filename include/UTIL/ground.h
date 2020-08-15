@@ -1,13 +1,13 @@
 
-#ifndef GROUND_H
-#define GROUND_H
+#ifndef _ISAAC_GROUND_H
+#define _ISAAC_GROUND_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*
-    ================================= ground.h ================================
+    ================================= ground.h =================================
     Module containing basic #includes and type definitions
     ----------------------------------------------------------------------------
 */
@@ -91,4 +91,4 @@ typedef signed char troolean;
 }
 #endif
 
-#endif // GROUND_H
+#endif // _ISAAC_GROUND_H

@@ -1,6 +1,6 @@
 
-#ifndef FUNCPAIR_H
-#define FUNCPAIR_H
+#ifndef _ISAAC_FUNCPAIR_H
+#define _ISAAC_FUNCPAIR_H
 
 #include "AST/ast.h"
 #include "IR/ir.h"
@@ -14,4 +14,4 @@ typedef struct {
     length_t ir_func_id;
 } funcpair_t;
 
-#endif // FUNCPAIR_H
+#endif // _ISAAC_FUNCPAIR_H

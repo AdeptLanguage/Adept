@@ -1,6 +1,6 @@
 
-#ifndef PARSE_ALIAS_H
-#define PARSE_ALIAS_H
+#ifndef _ISAAC_PARSE_ALIAS_H
+#define _ISAAC_PARSE_ALIAS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,4 +15,4 @@ errorcode_t parse_alias(parse_ctx_t *ctx);
 }
 #endif
 
-#endif // PARSE_ALIAS_H
+#endif // _ISAAC_PARSE_ALIAS_H

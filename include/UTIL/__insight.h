@@ -1,6 +1,6 @@
 
-#ifndef INSIGHT_H
-#define INSIGHT_H
+#ifndef _ISAAC___INSIGHT_H
+#define _ISAAC___INSIGHT_H
 
 // -------------------------------------------------------
 // Insight API for Adept Compiler Insights
@@ -23,4 +23,4 @@ extern "C" {
 }
 #endif
 
-#endif
+#endif // _ISAAC___INSIGHT_H

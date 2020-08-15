@@ -1,6 +1,6 @@
 
-#ifndef IR_POOL_H
-#define IR_POOL_H
+#ifndef _ISAAC_IR_POOL_H
+#define _ISAAC_IR_POOL_H
 
 #include "UTIL/ground.h"
 
@@ -52,4 +52,4 @@ void ir_pool_snapshot_capture(ir_pool_t *pool, ir_pool_snapshot_t *snapshot);
 // Restores an IR pool to a previous memory usage snapshot
 void ir_pool_snapshot_restore(ir_pool_t *pool, ir_pool_snapshot_t *snapshot);
 
-#endif // IR_POOL_H
+#endif // _ISAAC_IR_POOL_H

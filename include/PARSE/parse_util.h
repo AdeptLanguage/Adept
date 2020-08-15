@@ -1,6 +1,6 @@
 
-#ifndef PARSE_UTIL_H
-#define PARSE_UTIL_H
+#ifndef _ISAAC_PARSE_UTIL_H
+#define _ISAAC_PARSE_UTIL_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,4 +23,4 @@ void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id,
 }
 #endif
 
-#endif // PARSE_UTIL_H
+#endif // _ISAAC_PARSE_UTIL_H

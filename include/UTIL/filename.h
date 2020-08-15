@@ -1,6 +1,6 @@
 
-#ifndef FILENAME_H
-#define FILENAME_H
+#ifndef _ISAAC_FILENAME_H
+#define _ISAAC_FILENAME_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,4 +72,4 @@ void filename_prepend_dotslash_if_needed(strong_cstr_t *filename);
 }
 #endif
 
-#endif // FILENAME_H
+#endif // _ISAAC_FILENAME_H

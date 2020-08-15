@@ -1,6 +1,6 @@
 
-#ifndef PKG_H
-#define PKG_H
+#ifndef _ISAAC_PKG_H
+#define _ISAAC_PKG_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,4 +47,4 @@ errorcode_t pkg_compress_word(FILE *file, token_t *token);
 }
 #endif
 
-#endif // PKG_H
+#endif // _ISAAC_PKG_H

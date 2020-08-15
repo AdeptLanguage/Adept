@@ -1,6 +1,6 @@
 
-#ifndef LEX_H
-#define LEX_H
+#ifndef _ISAAC_LEX_H
+#define _ISAAC_LEX_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,6 +14,7 @@ extern "C" {
 
 #include "LEX/token.h"
 #include "UTIL/ground.h"
+#include "UTIL/datatypes.h"
 #include "DRVR/compiler.h"
 
 // ---------------- lex_state_t ----------------
@@ -81,4 +82,4 @@ void lex_get_location(const char *buffer, length_t i, int *line, int *column);
 }
 #endif
 
-#endif // LEX_H
+#endif // _ISAAC_LEX_H

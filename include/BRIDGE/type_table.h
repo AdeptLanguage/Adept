@@ -1,6 +1,6 @@
 
-#ifndef TYPE_TABLE_H
-#define TYPE_TABLE_H
+#ifndef _ISAAC_TYPE_TABLE_H
+#define _ISAAC_TYPE_TABLE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,4 +88,4 @@ bool type_table_add(type_table_t *table, type_table_entry_t entry);
 }
 #endif
 
-#endif // TYPE_TABLE_H
+#endif // _ISAAC_TYPE_TABLE_H

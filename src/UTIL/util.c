@@ -111,35 +111,6 @@ char *mallocandsprintf(const char *format, ...){
     return destination;
 }
 
-strong_cstr_t long_to_string(long int value, weak_cstr_t suffix){
-    length_t suffix_length = suffix ? strlen(suffix) : 0;
-    strong_cstr_t string = malloc(23 + suffix_length);
-    sprintf(string, "%ld", value);
-
-    length_t numeric_length = strlen(string);
-
-    // Don't copy null-terminating byte directly from 'suffix' c-string, because it may be NULL
-    memcpy(&string[numeric_length], suffix, suffix_length);
-    string[numeric_length + suffix_length] = 0x00;
-    return string;
-}
-
-strong_cstr_t double_to_string(double value, char suffix){
-    strong_cstr_t string = malloc(23);
-    sprintf(string, "%06.6ff", value);
-    length_t length = strlen(string);
-    
-    // Trim extra zeros for good measure
-    if(length > 1) for(length_t i = length - 2; i > 0; i--){
-        if(string[i] != '0' || string[i - 1] == '.') break;
-        
-        string[i] = suffix;
-        string[i + 1] = 0x00;
-    }
-
-    return string;
-}
-
 strong_cstr_t string_to_escaped_string(char *array, length_t length){
     length_t put_index = 1;
     length_t special_characters = 0;
@@ -179,17 +150,13 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length){
     return string;
 }
 
-length_t string_count_character(weak_cstr_t string, char character){
-    return string_modern_count_character(string, strlen(string), character);
-}
-
-length_t string_modern_count_character(weak_cstr_t string, length_t length, char character){
+length_t string_count_character(weak_cstr_t string, length_t length, char character){
     length_t count = 0;
     for(length_t i = 0; i != length; i++) if(string[i] == character) count++;
     return count;
 }
 
-length_t find_insert_any_object_position(void *array, length_t length, int(*compare)(const void*, const void*), void *object_reference, length_t object_size){
+length_t find_insert_position(void *array, length_t length, int(*compare)(const void*, const void*), void *object_reference, length_t object_size){
     maybe_index_t first, middle, last, comparison;
     first = 0; last = length - 1;
 
