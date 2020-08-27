@@ -934,27 +934,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) stmt;
 
                 length_t initial_basicblock_id = builder->current_block_id;
-                length_t prep_basicblock_id = build_basicblock(builder);
-                length_t new_basicblock_id  = build_basicblock(builder);
-                length_t inc_basicblock_id  = build_basicblock(builder);
-                length_t end_basicblock_id  = build_basicblock(builder);
-                
-                if(each_in->label != NULL){
-                    prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = each_in->label;
-                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
-                    builder->block_stack_continue_ids[builder->block_stack_length] = inc_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
-                    builder->block_stack_length++;
-                }
-
-                length_t prev_break_block_id = builder->break_block_id;
-                length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
-
-                builder->break_block_id = end_basicblock_id;
-                builder->continue_block_id = inc_basicblock_id;
-                builder->break_continue_scope = builder->scope;
+                length_t prep_basicblock_id = -1;
 
                 ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
 
@@ -978,6 +958,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 build_store(builder, initial_idx, idx_ptr, stmt->source);
 
                 if(!each_in->is_static){
+                    prep_basicblock_id = build_basicblock(builder);
                     build_using_basicblock(builder, prep_basicblock_id);
                 }
                 
@@ -1090,6 +1071,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 if(each_in->is_static){
                     // Finally move ahead to prep basicblock for static each-in
+                    prep_basicblock_id = build_basicblock(builder);
                     build_using_basicblock(builder, prep_basicblock_id);
                 }
 
@@ -1101,6 +1083,27 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ((ir_instr_math_t*) built_instr)->a = idx_value;
                 ((ir_instr_math_t*) built_instr)->b = array_length;
                 ir_value_t *whether_keep_going_value = build_value_from_prev_instruction(builder);
+
+                // Generate body blocks
+                length_t new_basicblock_id  = build_basicblock(builder);
+                length_t inc_basicblock_id  = build_basicblock(builder);
+                length_t end_basicblock_id  = build_basicblock(builder);
+
+                // Hook up labels
+                if(each_in->label != NULL){
+                    prepare_for_new_label(builder);
+                    
+                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
+                    builder->block_stack_length++;
+                }
+                
+                length_t prev_break_block_id = builder->break_block_id;
+                length_t prev_continue_block_id = builder->continue_block_id;
+                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+
+                builder->break_block_id = end_basicblock_id;
+                builder->continue_block_id = inc_basicblock_id;
+                builder->break_continue_scope = builder->scope;
 
                 // Generate conditional break
                 built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
@@ -1253,7 +1256,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_REPEAT: {
                 ast_expr_repeat_t *repeat = (ast_expr_repeat_t*) stmt;
 
-                length_t prep_basicblock_id = build_basicblock(builder);
+                length_t prep_basicblock_id = -1;
                 length_t new_basicblock_id  = build_basicblock(builder);
                 length_t inc_basicblock_id  = build_basicblock(builder);
                 length_t end_basicblock_id  = build_basicblock(builder);
@@ -1298,6 +1301,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 if(!repeat->is_static){
                     // Use prep block to calculate limit
+                    prep_basicblock_id = build_basicblock(builder);
                     build_break(builder, prep_basicblock_id);
                     build_using_basicblock(builder, prep_basicblock_id);
                 }
@@ -1323,6 +1327,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 if(repeat->is_static){
                     // Use prep block after calculating limit
+                    prep_basicblock_id = build_basicblock(builder);
                     build_break(builder, prep_basicblock_id);
                     build_using_basicblock(builder, prep_basicblock_id);
                 }

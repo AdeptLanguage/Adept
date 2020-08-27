@@ -551,6 +551,13 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(value_str);
             return representation;
         }
+    case EXPR_TOGGLE: {
+            char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
+            representation = malloc(strlen(value_str) + 5);
+            sprintf(representation, "(%s)!!", value_str);
+            free(value_str);
+            return representation;
+        }
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -650,6 +657,7 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_PREDECREMENT:
     case EXPR_POSTINCREMENT:
     case EXPR_POSTDECREMENT:
+    case EXPR_TOGGLE:
         ast_expr_free_fully( ((ast_expr_unary_t*) expr)->value );
         break;
     case EXPR_FUNC_ADDR:
@@ -880,6 +888,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_PREDECREMENT:
     case EXPR_POSTINCREMENT:
     case EXPR_POSTDECREMENT:
+    case EXPR_TOGGLE:
         #define expr_as_unary ((ast_expr_unary_t*) expr)
         #define clone_as_unary ((ast_expr_unary_t*) clone)
 
@@ -1405,40 +1414,55 @@ const char *global_expression_rep_table[] = {
     "<post-increment>",           // 0x0000003D
     "<post-decrement>",           // 0x0000003E
     "<phantom>",                  // 0x0000003F
-    "<declaration>",              // 0x00000040
-    "<undef declaration>",        // 0x00000041
-    "<inline declaration>",       // 0x00000042
-    "<inline undef declaration>", // 0x00000043
-    "=",                          // 0x00000044
-    "+=",                         // 0x00000045
-    "-=",                         // 0x00000046
-    "*=",                         // 0x00000047
-    "/=",                         // 0x00000048
-    "%=",                         // 0x00000049
-    "&=",                         // 0x0000004A
-    "|=",                         // 0x0000004B
-    "^=",                         // 0x0000004C
-    "<<=",                        // 0x0000004D
-    ">>=",                        // 0x0000004E
-    "<<<=",                       // 0x0000004F
-    ">>>=",                       // 0x00000050
-    "<return>",                   // 0x00000051
-    "<if>",                       // 0x00000052
-    "<unless>",                   // 0x00000053
-    "<if else>",                  // 0x00000054
-    "<unless else>",              // 0x00000055
-    "<while>",                    // 0x00000056
-    "<until>",                    // 0x00000057
-    "<while continue>",           // 0x00000058
-    "<until break>",              // 0x00000059
-    "<each in>",                  // 0x0000005A
-    "<repeat>",                   // 0x0000005B
-    "<delete>",                   // 0x0000005C
-    "<break>",                    // 0x0000005D
-    "<continue>",                 // 0x0000005E
-    "<fallthrough>",              // 0x0000005F
-    "<break to>",                 // 0x00000060
-    "<continue to>",              // 0x00000061
-    "<switch>",                   // 0x00000062
-    "<toggle>",                   // 0x00000063
+    "<toggle>",                   // 0x00000040
+    "<reserved>",                 // 0x00000041
+    "<reserved>",                 // 0x00000042
+    "<reserved>",                 // 0x00000043
+    "<reserved>",                 // 0x00000044
+    "<reserved>",                 // 0x00000045
+    "<reserved>",                 // 0x00000046
+    "<reserved>",                 // 0x00000047
+    "<reserved>",                 // 0x00000048
+    "<reserved>",                 // 0x00000049
+    "<reserved>",                 // 0x0000004A
+    "<reserved>",                 // 0x0000004B
+    "<reserved>",                 // 0x0000004C
+    "<reserved>",                 // 0x0000004D
+    "<reserved>",                 // 0x0000004E
+    "<reserved>",                 // 0x0000004F
+    "<declaration>",              // 0x00000050
+    "<undef declaration>",        // 0x00000051
+    "<inline declaration>",       // 0x00000052
+    "<inline undef declaration>", // 0x00000053
+    "=",                          // 0x00000054
+    "+=",                         // 0x00000055
+    "-=",                         // 0x00000056
+    "*=",                         // 0x00000057
+    "/=",                         // 0x00000058
+    "%=",                         // 0x00000059
+    "&=",                         // 0x0000005A
+    "|=",                         // 0x0000005B
+    "^=",                         // 0x0000005C
+    "<<=",                        // 0x0000005D
+    ">>=",                        // 0x0000005E
+    "<<<=",                       // 0x0000005F
+    ">>>=",                       // 0x00000060
+    "<return>",                   // 0x00000061
+    "<if>",                       // 0x00000062
+    "<unless>",                   // 0x00000063
+    "<if else>",                  // 0x00000064
+    "<unless else>",              // 0x00000065
+    "<while>",                    // 0x00000066
+    "<until>",                    // 0x00000067
+    "<while continue>",           // 0x00000068
+    "<until break>",              // 0x00000069
+    "<each in>",                  // 0x0000006A
+    "<repeat>",                   // 0x0000006B
+    "<delete>",                   // 0x0000006C
+    "<break>",                    // 0x0000006D
+    "<continue>",                 // 0x0000006E
+    "<fallthrough>",              // 0x0000006F
+    "<break to>",                 // 0x00000070
+    "<continue to>",              // 0x00000071
+    "<switch>",                   // 0x00000072
 };

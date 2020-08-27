@@ -656,7 +656,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     break;
                 case INSTRUCTION_ULESSER:
                     instr = basicblock->instructions[i];
-                    llvm_result = LLVMBuildICmp(builder, LLVMIntULT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
+                    {
+                        LLVMValueRef a2 = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
+                        LLVMValueRef b2 = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b);
+                        llvm_result = LLVMBuildICmp(builder, LLVMIntULT, a2, b2, "");
+                    }
                     catalog.blocks[b].value_references[i] = llvm_result;
                     break;
                 case INSTRUCTION_SLESSER:
@@ -1298,7 +1302,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     link_command = mallocandsprintf("%s \"%s\"%s%s -o \"%s\"", linker, object_filename, linker_additional, linker_libm, compiler->output_filename);
 	#endif
 
-    if(linker_additional_length != 0) free(linker_additional);
+    free(linker_additional);
 
     #ifdef ENABLE_DEBUG_FEATURES
     if(!(llvm.compiler->debug_traits & COMPILER_DEBUG_NO_VERIFICATION) && LLVMVerifyModule(llvm.module, LLVMPrintMessageAction, NULL) == 1){

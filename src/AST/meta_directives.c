@@ -73,7 +73,7 @@ void meta_expr_free(meta_expr_t *expr){
         }
         break;
     case META_EXPR_NOT:
-        free(((meta_expr_not_t*) expr)->value);
+        meta_expr_free_fully(((meta_expr_not_t*) expr)->value);
         break;
     default:
         redprintf("INTERNAL ERROR: meta_expr_free encountered unknown meta expression id %d!\n", (int) expr->id);
@@ -179,7 +179,7 @@ void meta_collapse(compiler_t *compiler, meta_definition_t *definitions, length_
                     meta_expr_free_fully(*expr);
                     *expr = meta_expr_clone(definition->value);
                 } else {
-                    if(!(compiler->traits & COMPILER_UNSAFE_META)){
+                    if(!(compiler->traits & COMPILER_UNSAFE_META) && !(compiler->traits & COMPILER_NO_WARN)){
                         compiler_warnf(compiler, var->source, "Warning: Usage of undefined transcendant variable '%s'", var->name);
                         printf("    (you can disable this warning with '--unsafe-meta' or 'pragma unsafe_meta')\n");
                     }

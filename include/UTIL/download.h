@@ -20,7 +20,7 @@ typedef struct {
 
     #ifdef TRACK_MEMORY_USAGE
     length_t capacity;
-    #endif
+    #endif // TRACK_MEMORY_USAGE
 } download_buffer_t;
 
 #ifdef ADEPT_ENABLE_PACKAGE_MANAGER

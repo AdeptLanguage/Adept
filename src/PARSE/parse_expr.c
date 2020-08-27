@@ -155,7 +155,7 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             }
 
             // Parse name of transcendant variable to get
-            weak_cstr_t transcendant_name = parse_take_word(ctx, "Expected transcendant variable name after '#get'");
+            weak_cstr_t transcendant_name = parse_eat_word(ctx, "Expected transcendant variable name after '#get'");
             if(transcendant_name == NULL) return FAILURE;
 
             meta_expr_t *value;
@@ -174,7 +174,6 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
                 value = definition->value;
             }
 
-            
             if(!IS_META_EXPR_ID_COLLAPSED(value->id)){
                 compiler_panicf(ctx->compiler, sources[*i - 1], "INTERNAL ERROR: Meta expression expected to be collapsed");
                 return FAILURE;
