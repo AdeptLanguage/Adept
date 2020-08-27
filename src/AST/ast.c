@@ -380,8 +380,8 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
             break;
         case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {
                 ast_expr_t *if_value = ((ast_expr_if_t*) statements[s])->value;
-                char *if_value_str = ast_expr_str(if_value);
-                char *keyword_name;
+                strong_cstr_t if_value_str = ast_expr_str(if_value);
+                weak_cstr_t keyword_name;
 
                 switch(statements[s]->id){
                 case EXPR_IF:     keyword_name = "if";     break;
@@ -400,7 +400,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
                 ast_expr_t *if_value = ((ast_expr_ifelse_t*) statements[s])->value;
-                char *if_value_str = ast_expr_str(if_value);
+                strong_cstr_t if_value_str = ast_expr_str(if_value);
                 fprintf(file, "%s %s {\n", (statements[s]->id == EXPR_IFELSE ? "if" : "unless"), if_value_str);
                 ast_dump_statements(file, ((ast_expr_ifelse_t*) statements[s])->statements, ((ast_expr_ifelse_t*) statements[s])->statements_length, indentation+1);
                 for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
@@ -409,6 +409,42 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
                 fprintf(file, "}\n");
                 free(if_value_str);
+            }
+            break;
+        case EXPR_REPEAT: {
+                ast_expr_repeat_t *repeat = (ast_expr_repeat_t*) statements[s];
+
+                ast_expr_t *value = repeat->limit;
+                strong_cstr_t value_str = ast_expr_str(value);
+                fprintf(file, "repeat %s%s {\n", repeat->is_static ? "static " : "", value_str);
+                ast_dump_statements(file, repeat->statements, repeat->statements_length, indentation + 1);
+                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                fprintf(file, "}\n");
+                free(value_str);
+            }
+            break;
+        case EXPR_EACH_IN: {
+                ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) statements[s];
+
+                strong_cstr_t it_type_name = ast_type_str(each_in->it_type);
+                fprintf(file, "each %s%s%s in %s", each_in->it_name ? each_in->it_name : "", each_in->it_name ? " " : "", it_type_name, each_in->is_static ? "static ": "");
+                free(it_type_name);
+                
+                if(each_in->list){
+                    strong_cstr_t value_str = ast_expr_str(each_in->list);
+                    fprintf(file, "%s {\n", value_str);
+                    free(value_str);
+                } else {
+                    strong_cstr_t array_str = ast_expr_str(each_in->low_array);
+                    strong_cstr_t length_str = ast_expr_str(each_in->length);
+                    fprintf(file, "[%s, %s] {\n", array_str, length_str);
+                    free(array_str);
+                    free(length_str);
+                }
+
+                ast_dump_statements(file, each_in->statements, each_in->statements_length, indentation + 1);
+                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                fprintf(file, "}\n");
             }
             break;
         case EXPR_CALL_METHOD: {
@@ -425,7 +461,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 fprintf(file, ")\n");
             }
             break;
-        case EXPR_DELETE:{
+        case EXPR_DELETE: {
                 ast_expr_t *delete_value = ((ast_expr_unary_t*) statements[s])->value;
                 char *delete_value_str = ast_expr_str(delete_value);
                 fprintf(file, "delete %s\n", delete_value_str);
@@ -455,6 +491,22 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
 
                 for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
                 fprintf(file, "}\n");
+            }
+            break;
+        case EXPR_BREAK:
+            fprintf(file, "break\n");
+            break;
+        case EXPR_CONTINUE:
+            fprintf(file, "continue\n");
+            break;
+        case EXPR_BREAK_TO: {
+                ast_expr_break_to_t *break_to_stmt = (ast_expr_break_to_t*) statements[s];
+                fprintf(file, "break %s\n", break_to_stmt->label);
+            }
+            break;
+        case EXPR_CONTINUE_TO: {
+                ast_expr_continue_to_t *continue_to_stmt = (ast_expr_continue_to_t*) statements[s];
+                fprintf(file, "continue %s\n", continue_to_stmt->label);
             }
             break;
         default:
