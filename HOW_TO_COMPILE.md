@@ -15,3 +15,13 @@
 
 ## msvc
 - Currently not supported
+
+
+# After compilation
+
+## Adding the Adept standard library
+In order to use the standard library, all you have to do is clone the AdeptImport GitHub repo into the bin folder and rename it
+- `cd bin`
+- `git clone https://github.com/IsaacShelton/AdeptImport`
+- `mv AdeptImport import` (For Unix)
+- `rename AdeptImport import` (For Windows)
