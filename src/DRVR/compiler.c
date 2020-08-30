@@ -591,9 +591,23 @@ void show_version(compiler_t *compiler){
     printf("Adept Build:\t%s\n", compiler_string);
     printf("Adept Version:\t%s\n", ADEPT_VERSION_STRING);
     printf("Pkg Manager:\t%s\n\n", package_manager_enabled ? "enabled" : "disabled");
+
+    // Make more human readable on Windows
+    #ifdef _WIN32
+    for(char *c = import_location; *c != '\0'; c++)
+        if(*c == '/') *c = '\\';
+    
+    for(char *c = stdlib_location; *c != '\0'; c++)
+        if(*c == '/') *c = '\\';
+    #endif
     
     printf("Import Folder:\t\"%s\"\n", import_location);
-    printf("Stblib Folder:\t\"%s\"\n\n", stdlib_location);
+    printf("Stblib Folder:\t\"%s\"\n", stdlib_location);
+
+    // Don't put an additional newline if on Windows
+    #ifndef _WIN32
+    putchar('\n');
+    #endif
 
     free(compiler_string);
     free(import_location);
