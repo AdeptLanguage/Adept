@@ -90,6 +90,7 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
 
     compiler->root = filename_path(compiler->location);
 
+    #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
     {
         // Read persistent config file
         strong_cstr_t config_filename = mallocandsprintf("%sadept.config", compiler->root);
@@ -101,6 +102,7 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
 
         free(config_filename);
     }
+    #endif
 
     if(parse_arguments(compiler, object, argc, argv)) return;
 

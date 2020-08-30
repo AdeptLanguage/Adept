@@ -3,7 +3,7 @@
 # Whether to include support for built-in adept package manager
 # NOTE: Requires libcurl fields to be filled out
 # NOTE: Default is 'true'
-ENABLE_ADEPT_PACKAGE_MANAGER=true
+ENABLE_ADEPT_PACKAGE_MANAGER=false
 
 # --------------------------- Change These Values ---------------------------
 # NOTE: For Windows, ensure mingw32-make.exe uses cmd.exe for shell
