@@ -105,6 +105,24 @@ maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error){
     return ownership;
 }
 
+maybe_null_strong_cstr_t parse_take_string(parse_ctx_t *ctx, const char *error){
+    // NOTE: We don't need to check whether *ctx->i == ctx->tokenlist->length because
+    // every token list is terminated with a newline and this should never
+    // be called from a newline token
+
+    length_t i = *ctx->i;
+    
+    if(ctx->tokenlist->tokens[i].id != TOKEN_STRING){
+        // ERROR: That token isn't a word
+        if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[i], error);
+        return NULL;
+    }
+
+    strong_cstr_t ownership = (char*) ctx->tokenlist->tokens[i].data;
+    ctx->tokenlist->tokens[(*ctx->i)++].data = NULL;
+    return ownership;
+}
+
 // =================================================
 //                   parse_grab_*
 // =================================================

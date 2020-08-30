@@ -23,7 +23,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     }
 
     const char * const directives[] = {
-        "compiler_supports", "compiler_version", "deprecated", "disable_warnings", "enable_warnings", "help",
+        "compiler_supports", "compiler_version", "default_stdlib", "deprecated", "disable_warnings", "enable_warnings", "help",
         "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete", "ignore_partial_support", "ignore_unrecognized_directives", "libm",
         "mac_only", "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name",
         "unsafe_meta", "unsafe_new", "unsupported", "windows_only"
@@ -53,13 +53,32 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             if(!(ctx->compiler->ignore & COMPILER_IGNORE_PARTIAL_SUPPORT)){
                 compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read);
             }
-        } else if(strcmp(read, "2.2") != 0 && strcmp(read, "2.3") != 0){
+        } else if(strcmp(read, "2.2") != 0 && strcmp(read, "2.3") != 0 && strcmp(read, "2.4") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
-            puts("\nSupported Versions: '2.3', '2.2', '2.1', '2.0'");
+            puts("\nSupported Versions: '2.4', '2.3', '2.2', '2.1', '2.0'");
             return FAILURE;
         }
+
+        // Guess default standard library version from 'pragma compiler_version' if none specified
+        if(!(ctx->compiler->traits & COMPILER_FORCE_STDLIB) && ctx->compiler->default_stblib == NULL && strcmp(directive_string, "compiler_version") == 0){
+            ctx->compiler->default_stblib = read;
+        }
+
         return SUCCESS;
-    case 2: // 'deprecated' directive
+    case 2: // 'default_stdlib' directive
+        read = parse_grab_string(ctx, NULL);
+        
+        if(!(ctx->compiler->traits & COMPILER_FORCE_STDLIB)){
+            // Store default_stdlib per compilation object
+            ctx->object->default_stblib = read;
+
+            // If the primary file, store default_stdlib as global default as well
+            if(ctx->object->index == 0){
+                ctx->compiler->default_stblib = read;
+            }
+        }
+        break;
+    case 3: // 'deprecated' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -77,57 +96,57 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             }
         }
         return SUCCESS;
-    case 3: // 'disable_warnings' directive
+    case 4: // 'disable_warnings' directive
         ctx->compiler->traits |= COMPILER_NO_WARN;
         return SUCCESS;
-    case 4: // 'enable_warnings' directive
+    case 5: // 'enable_warnings' directive
         ctx->compiler->traits &= ~COMPILER_NO_WARN;
         return SUCCESS;
-    case 5: // 'help' directive
+    case 6: // 'help' directive
         show_help(true);
         return FAILURE;
-    case 6: // 'ignore_ALL' directive
+    case 7: // 'ignore_ALL' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_ALL;
         return SUCCESS;
-    case 7: // 'ignore_deprecation' directive
+    case 8: // 'ignore_deprecation' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_DEPRECATION;
         return SUCCESS;
-    case 8: // 'ignore_early_return' directive
+    case 9: // 'ignore_early_return' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_EARLY_RETURN;
         return SUCCESS;
-    case 9: // 'ignore_obsolete' directive
+    case 10: // 'ignore_obsolete' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_OBSOLETE;
         return SUCCESS;
-    case 10: // 'ignore_partial_support' directive
+    case 11: // 'ignore_partial_support' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_PARTIAL_SUPPORT;
         return SUCCESS;
-    case 11: // 'ignore_unrecognized_directives' directive
+    case 12: // 'ignore_unrecognized_directives' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES;
         return SUCCESS;
-    case 12: // 'libm' directive
+    case 13: // 'libm' directive
         ctx->compiler->use_libm = true;
         return SUCCESS;
-    case 13: // 'mac_only' directive
+    case 14: // 'mac_only' directive
         #if !defined(__APPLE__) || !TARGET_OS_MAC
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
         return FAILURE;
         #else
         return SUCCESS;
         #endif
-    case 14: // 'no_type_info' directive
+    case 15: // 'no_type_info' directive
         if(!(ctx->compiler->ignore & COMPILER_IGNORE_OBSOLETE)){
             compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "WARNING: 'pragma no_type_info' is obsolete, use 'pragma no_typeinfo' instead");
         }
-    case 15: // 'no_typeinfo'  directive
+    case 16: // 'no_typeinfo'  directive
         ctx->compiler->traits |= COMPILER_NO_TYPEINFO;
         return SUCCESS;
-    case 16: // 'no_undef' directive
+    case 17: // 'no_undef' directive
         ctx->compiler->traits |= COMPILER_NO_UNDEF;
         return SUCCESS;
-    case 17: // 'null_checks' directive
+    case 18: // 'null_checks' directive
         ctx->compiler->checks |= COMPILER_NULL_CHECKS;
         return SUCCESS;
-    case 18: // 'optimization' directive
+    case 19: // 'optimization' directive
         read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
@@ -147,28 +166,28 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             return FAILURE;
         }
         return SUCCESS;
-    case 19: // 'options' directive
+    case 20: // 'options' directive
         return parse_pragma_cloptions(ctx);
-    case 20: // 'package' directive
+    case 21: // 'package' directive
         if(ctx->compiler->traits & COMPILER_INFLATE_PACKAGE) return SUCCESS;
         if(compiler_create_package(ctx->compiler, ctx->object) == 0){
             ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         }
         return FAILURE;
-    case 21: // 'project_name' directive
+    case 22: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
         if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 22: // 'unsafe_meta' directive
+    case 23: // 'unsafe_meta' directive
         ctx->compiler->traits |= COMPILER_UNSAFE_META;
         return SUCCESS;
-    case 23: // 'unsafe_new' directive
+    case 24: // 'unsafe_new' directive
         ctx->compiler->traits |= COMPILER_UNSAFE_NEW;
         return SUCCESS;
-    case 24: // 'unsupported' directive
+    case 25: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -185,7 +204,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 25: // 'windows_only' directive
+    case 26: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;

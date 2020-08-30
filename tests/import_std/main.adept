@@ -1,0 +1,9 @@
+
+pragma default_stdlib '2.3'
+
+import basics
+import "other.adept"
+
+func main {
+    print("Hello World")
+}

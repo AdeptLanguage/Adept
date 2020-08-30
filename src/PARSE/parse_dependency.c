@@ -2,21 +2,58 @@
 #include "PARSE/parse.h"
 #include "PARSE/parse_dependency.h"
 #include "UTIL/filename.h"
+#include "UTIL/util.h"
 
 errorcode_t parse_import(parse_ctx_t *ctx){
     // import 'somefile.adept'
     //   ^
 
+    // Don't allow importing while inside struct domains
     if(ctx->struct_association != NULL){
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot import dependencies within struct domain");
         return FAILURE;
     }
 
-    maybe_null_weak_cstr_t file = parse_grab_string(ctx, "Expected filename string after 'import' keyword");
+    // Figure out the filename
+    maybe_null_strong_cstr_t file = NULL;
+    maybe_null_weak_cstr_t standard_library_folder = NULL;
+    bool is_standard_library_component = ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_WORD;
+
+    if(is_standard_library_component){
+        // import standard_library_module
+        //   ^
+
+        // Read component name
+        maybe_null_weak_cstr_t component = parse_grab_word(ctx, "INTERNAL ERROR: Failed assumption of word after 'import' keyword");
+        if(component == NULL) return FAILURE;
+
+        // Find which standard library to use
+        standard_library_folder = ctx->object->default_stblib;
+
+        if(standard_library_folder == NULL) standard_library_folder = ctx->compiler->default_stblib;
+        if(standard_library_folder == NULL) standard_library_folder = ADEPT_VERSION_STRING;
+
+        // Combine standard library and component name to create the filename
+        file = mallocandsprintf("%s/%s.adept", standard_library_folder, component);
+    } else {
+        // Grab filename string of what file to import
+        file = parse_grab_string(ctx, "Expected filename string or standard library component after 'import' keyword");
+
+        // Make it a 'strong_cstr_t'
+        file = file ? strclone(file) : NULL;
+    }
+    
     if(file == NULL) return FAILURE;
 
-    maybe_null_strong_cstr_t target = parse_find_import(ctx, file);
-    if(target == NULL) return FAILURE;
+    maybe_null_strong_cstr_t target = parse_find_import(ctx, file, !is_standard_library_component);
+    free(file);
+
+    if(target == NULL){
+        if(is_standard_library_component && standard_library_folder != NULL){
+            printf("\nPerhaps you are using the wrong standard library version?\n\n");
+        }
+        return FAILURE;
+    }
 
     maybe_null_strong_cstr_t absolute = parse_resolve_import(ctx, target);
     if(absolute == NULL){
@@ -87,14 +124,18 @@ errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filenam
     return SUCCESS;
 }
 
-maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename){
-    strong_cstr_t test = filename_local(ctx->object->filename, filename);
-    if(access(test, F_OK) != -1) return test;
+maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename, bool allow_local_import){
+    strong_cstr_t test;
 
-    free(test);
+    if(allow_local_import){
+        test = filename_local(ctx->object->filename, filename);
+        if(access(test, F_OK) != -1) return test;
+        free(test);
+    }
+
     test = filename_adept_import(ctx->compiler->root, filename);
     if(access(test, F_OK) != -1) return test;
-
+    
     compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "The file '%s' doesn't exist", filename);
     free(test);
     return NULL;

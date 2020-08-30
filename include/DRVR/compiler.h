@@ -30,6 +30,7 @@ extern "C" {
 #define COMPILER_UNSAFE_META      TRAIT_B
 #define COMPILER_UNSAFE_NEW       TRAIT_C
 #define COMPILER_FUSSY            TRAIT_D
+#define COMPILER_FORCE_STDLIB     TRAIT_E
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
@@ -88,6 +89,10 @@ typedef struct compiler {
     #ifdef ENABLE_DEBUG_FEATURES
     trait_t debug_traits;      // COMPILER_DEBUG_* options
     #endif // ENABLE_DEBUG_FEATURES
+
+    // Default standard library to import from (global version)
+    // If NULL, then use ADEPT_VERSION_STRING
+    maybe_null_weak_cstr_t default_stblib;
 } compiler_t;
 
 // ---------------- compiler_run ----------------
@@ -124,6 +129,10 @@ void break_into_arguments(const char *s, int *out_argc, char ***out_argv);
 // ---------------- show_help ----------------
 // Displays program help information
 void show_help(bool show_advanced_options);
+
+// ---------------- show_version ----------------
+// Displays program version information
+void show_version(compiler_t *compiler);
 
 // ---------------- compiler_get_string ----------------
 // Gets the string identifier of the compiler

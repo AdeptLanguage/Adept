@@ -24,7 +24,7 @@ errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filenam
 // ------------------ parse_find_import ------------------
 // Finds the best file to use given a filename
 // NOTE: Returns NULL on error
-maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename);
+maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename, bool allow_local_import);
 
 // ------------------ parse_resolve_import ------------------
 // Attempts to create an absolute filename for a file

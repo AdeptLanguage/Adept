@@ -498,9 +498,11 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
         case TOKEN_MAYBE: {
                 (*i)++;
                 if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
-                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
+                
                 ast_expr_t *expr_a, *expr_b;
                 if(parse_expr(ctx, &expr_a)) return FAILURE;
+
+                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
 
                 if(tokens[(*i)++].id != TOKEN_COLON){
                     compiler_panic(ctx->compiler, sources[*i - 1], "Ternary operator expected ':' after expression");

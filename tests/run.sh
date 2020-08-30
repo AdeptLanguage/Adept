@@ -65,6 +65,7 @@ compile idx_manipulation || exit $?
 compile if || exit $?
 compile ifelse || exit $?
 compile import || exit $?
+compile import_std || exit $?
 compile increment || exit $?
 compile increment_stmt || exit $?
 compile inline_declaration || exit $?

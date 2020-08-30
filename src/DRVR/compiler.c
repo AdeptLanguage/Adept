@@ -176,6 +176,8 @@ void compiler_init(compiler_t *compiler){
     #ifdef ENABLE_DEBUG_FEATURES
     compiler->debug_traits = TRAIT_NONE;
     #endif // ENABLE_DEBUG_FEATURES
+    
+    compiler->default_stblib = NULL;
 }
 
 void compiler_free(compiler_t *compiler){
@@ -240,6 +242,7 @@ object_t* compiler_new_object(compiler_t *compiler){
     (*object_reference)->compilation_stage = COMPILATION_STAGE_NONE;
     (*object_reference)->index = compiler->objects_length++;
     (*object_reference)->traits = OBJECT_NONE;
+    (*object_reference)->default_stblib = NULL;
     return *object_reference;
 }
 
@@ -291,11 +294,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->optimization = OPTIMIZATION_AGGRESSIVE;
             } else if(strcmp(argv[arg_index], "--fussy") == 0){
                 compiler->traits |= COMPILER_FUSSY;
-            } else if(strcmp(argv[arg_index], "--version") == 0){
-                strong_cstr_t compiler_string = compiler_get_string();
-                printf("Adept Build:\t%s\n", compiler_string);
-                printf("Adept Version:\t%s\n", ADEPT_VERSION_STRING);
-                free(compiler_string);
+            } else if(strcmp(argv[arg_index], "-v") == 0 || strcmp(argv[arg_index], "--version") == 0){
+                show_version(compiler);
                 return FAILURE;
             } else if(strcmp(argv[arg_index], "--no-undef") == 0){
                 compiler->traits |= COMPILER_NO_UNDEF;
@@ -340,6 +340,12 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->use_libm = true;
             } else if(strcmp(argv[arg_index], "--libm") == 0){
                 compiler->use_libm = true;
+            } else if(strncmp(argv[arg_index], "-std=", 5) == 0){
+                compiler->default_stblib = &argv[arg_index][5];
+                compiler->traits |= COMPILER_FORCE_STDLIB;
+            }  else if(strncmp(argv[arg_index], "--std=", 6) == 0){
+                compiler->default_stblib = &argv[arg_index][6];
+                compiler->traits |= COMPILER_FORCE_STDLIB;
             }
 
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
@@ -517,7 +523,8 @@ void show_help(bool show_advanced_options){
         printf("    -j                Preserve generated object file\n");
     
     printf("    -O0,-O1,-O2,-O3   Set optimization level\n");
-
+    printf("    -std=2.x          Set standard library version\n");
+    
     if(show_advanced_options)
         printf("    --fussy           Show insignificant warnings\n");
     
@@ -557,6 +564,40 @@ void show_help(bool show_advanced_options){
     printf("    --llvmir          Show generated LLVM representation\n");
     printf("    --no-verification Don't verify backend output\n");
     #endif // ENABLE_DEBUG_FEATURES
+}
+
+void show_version(compiler_t *compiler){
+    strong_cstr_t compiler_string = compiler_get_string();
+    strong_cstr_t import_location = filename_adept_import(compiler->root, "");
+    strong_cstr_t stdlib_location = filename_adept_import(compiler->root, ADEPT_VERSION_STRING);
+
+    #ifdef _WIN32
+    weak_cstr_t platform = "Windows";
+    #elif defined(__APPLE__)
+    weak_cstr_t platform = "MacOS";
+    #elif defined(__linux__) || defined(__linux) || defined(linux)
+    weak_cstr_t platform = "Linux";
+    #else
+    weak_cstr_t platform = "Other Unix";
+    #endif
+
+    #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
+    bool package_manager_enabled = true;
+    #else
+    bool package_manager_enabled = false;
+    #endif
+
+    printf("Platform:     \t%s\n\n", platform);
+    printf("Adept Build:\t%s\n", compiler_string);
+    printf("Adept Version:\t%s\n", ADEPT_VERSION_STRING);
+    printf("Pkg Manager:\t%s\n\n", package_manager_enabled ? "enabled" : "disabled");
+    
+    printf("Import Folder:\t\"%s\"\n", import_location);
+    printf("Stblib Folder:\t\"%s\"\n\n", stdlib_location);
+
+    free(compiler_string);
+    free(import_location);
+    free(stdlib_location);
 }
 
 strong_cstr_t compiler_get_string(){

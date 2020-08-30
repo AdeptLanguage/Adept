@@ -44,6 +44,10 @@ typedef struct {
     int compilation_stage;       // Compilation stage
     length_t index;              // Index in object array (in compiler_t)
     trait_t traits;              // Object traits
+
+    // Default standard library to import from (per object version)
+    // If NULL, then use ADEPT_VERSION_STRING
+    maybe_null_weak_cstr_t default_stblib;
 } object_t;
 
 // Possible traits for object_t
