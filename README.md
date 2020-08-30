@@ -2,9 +2,9 @@
 
 A blazing fast language for general purpose programming.
 
-[Download Adept v2.2 for Windows](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.3 for Windows](https://github.com/IsaacShelton/Adept/releases)
 
-[Download Adept v2.2 for MacOS](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.3 for MacOS](https://github.com/IsaacShelton/Adept/releases)
 
 ## Command-Line Usage
 
@@ -13,14 +13,14 @@ A blazing fast language for general purpose programming.
 - filename - default is 'main.adept'
 - options - secondary compiler options
 
-You can optionally use `adept2` instead of `adept` if you have multiple versions installed.
+You can optionally use `adept2-3` instead of `adept` if you have multiple versions installed.
 
 ## Basic Functionality
 
 ### Hello World
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     print("Hello World!")
@@ -30,7 +30,7 @@ func main {
 ### Variables
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     name String = "Isaac"
@@ -41,7 +41,7 @@ func main {
 ### Functions
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     greet("Isaac")
@@ -55,7 +55,7 @@ func greet(name String) {
 ### Structures
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 struct Person (name String, age int)
 
@@ -79,7 +79,7 @@ func print(this *Person) {
 ### Pointers
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     width, height int
@@ -96,7 +96,7 @@ func getWidthAndHeight(out width, height *int) {
 ### Conditionals
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     name String = scan("What is your name? ")
@@ -131,8 +131,8 @@ func main {
 ### Lists
 
 ```
-import '2.2/basics.adept'
-import '2.2/List.adept'
+import '2.3/basics.adept'
+import '2.3/List.adept'
 
 func main {
     invites <Invitation> List
@@ -155,7 +155,7 @@ func invitation(to, from String, priority int) Invitation {
 ### Ownership
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 list_of_everyone <String> List
 
@@ -189,7 +189,7 @@ func getFullnameVersion2(firstname, lastname String) String {
 ### Loop Labels
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     countdown int = 0
@@ -220,7 +220,7 @@ func launch(inout countdown *int) {
 ### Constant Values
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 PI == 3.14159265
 TAU == PI * 2
@@ -264,7 +264,7 @@ func usingNewAndDelete(firstname, lastname *ubyte) void {
 ### Function Pointers
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func sum(a, b int) int = a + b
 
@@ -277,7 +277,7 @@ func main {
 ### Defer Statements
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     defer print("I will be printed last")
@@ -312,11 +312,11 @@ func main(in argc int, in argv **ubyte) int {
 ### Pragma Directives
 
 ```
-pragma compiler_version '2.2'
+pragma compiler_version '2.3'
 pragma project_name 'pragma_directives_example'
 pragma optimization aggressive
 
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     print("Hello World")
@@ -360,7 +360,7 @@ func main(in argc int, in argv **ubyte) int {
 ### Type Casting
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     value int = 1234
@@ -382,7 +382,7 @@ func main {
 ### Runtime Type Information
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     print("Every type used in this program: ")
@@ -416,7 +416,7 @@ func main {
     #set should_fake_macos   true
 #end
 
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func main {
     #if should_fake_windows && should_fake_macos
@@ -432,7 +432,7 @@ func main {
 ### Polymorphism
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 func sum(a, b $T) $T = a + b
 
@@ -448,7 +448,7 @@ func main {
 ### Polymorphic Structures
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 struct <$T> Couple (first, second $T)
 
@@ -462,7 +462,7 @@ func main {
 ### Delayed Method Declaration
 
 ```
-import '2.2/basics.adept'
+import '2.3/basics.adept'
 
 struct Unit (health int) {
     func damage(amount int) {
@@ -485,8 +485,8 @@ func main {
 ### Intrinsic Loop Variables
 
 ```
-import '2.2/basics.adept'
-import '2.2/List.adept'
+import '2.3/basics.adept'
+import '2.3/List.adept'
 
 func main {
     my_integers <int> List
@@ -507,9 +507,9 @@ func main {
 ### Spontaneous Variable Declarations
 
 ```
-import '2.2/basics.adept'
-import '2.2/List.adept'
-import '2.2/random.adept'
+import '2.3/basics.adept'
+import '2.3/List.adept'
+import '2.3/random.adept'
 
 func main {
     //   def variable_name Type   -  Zero-Initialized Spontaneous Variable
@@ -544,6 +544,7 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 - [(2.1) Minesweeper](https://github.com/IsaacShelton/AdeptMinesweeper)
 - [(2.2) Another 2D Platformer](https://github.com/IsaacShelton/Tangent)
 - [(2.2) A* Path Finding](https://github.com/IsaacShelton/AdeptPathFinding)
+- [(2.3) Card Game](https://github.com/IsaacShelton/GenericCardGame)
 
 # Syntax Examples
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
