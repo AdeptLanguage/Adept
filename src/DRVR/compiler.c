@@ -297,7 +297,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 return FAILURE;
             } else if(strcmp(argv[arg_index], "--no-undef") == 0){
                 compiler->traits |= COMPILER_NO_UNDEF;
-            } else if(strcmp(argv[arg_index], "--no-type-info") == 0){
+            } else if(strcmp(argv[arg_index], "--no-type-info") == 0 || strcmp(argv[arg_index], "--no-typeinfo") == 0){
                 compiler->traits |= COMPILER_NO_TYPEINFO;
             } else if(strcmp(argv[arg_index], "--unsafe-meta") == 0){
                 compiler->traits |= COMPILER_UNSAFE_META;
