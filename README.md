@@ -545,7 +545,7 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 - [(2.2) Another 2D Platformer](https://github.com/IsaacShelton/Tangent)
 - [(2.2) A* Path Finding](https://github.com/IsaacShelton/AdeptPathFinding)
 - [(2.3) Creature Gathering Game](https://github.com/IsaacShelton/Tadpole)
-- [(2.3 -> 2.4) Card Game](https://github.com/IsaacShelton/GenericCardGame)
+- [(2.4) Card Game](https://github.com/IsaacShelton/GenericCardGame)
 
 # Syntax Examples
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
