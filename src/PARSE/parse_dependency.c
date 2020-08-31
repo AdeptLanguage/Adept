@@ -15,6 +15,7 @@ errorcode_t parse_import(parse_ctx_t *ctx){
     }
 
     // Figure out the filename
+    source_t source = NULL_SOURCE;
     maybe_null_strong_cstr_t file = NULL;
     maybe_null_weak_cstr_t standard_library_folder = NULL;
     bool is_standard_library_component = ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_WORD;
@@ -30,6 +31,9 @@ errorcode_t parse_import(parse_ctx_t *ctx){
 
         maybe_null_weak_cstr_t first_part_of_component = parse_grab_word(ctx, "INTERNAL ERROR: Failed assumption of word after 'import' keyword");
         if(first_part_of_component == NULL) return FAILURE;
+
+        // Set base source
+        source = ctx->tokenlist->sources[*ctx->i];
 
         while(ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_DIVIDE){
             // Skip over previous component name
@@ -55,6 +59,10 @@ errorcode_t parse_import(parse_ctx_t *ctx){
 
             full_component_length += 1 + additional_part_length;
         }
+        
+        // Update source stride if using 'thing1/...'
+        // HACK: For 'import thing1/thing2/thing3', assume that there are no spaces in between the slashes
+        if(full_component) source.stride = full_component_length;
 
         // Find which standard library to use
         standard_library_folder = ctx->object->default_stblib;
@@ -71,11 +79,14 @@ errorcode_t parse_import(parse_ctx_t *ctx){
 
         // Make it a 'strong_cstr_t'
         file = file ? strclone(file) : NULL;
+
+        // Set code source
+        source = ctx->tokenlist->sources[*ctx->i];
     }
     
     if(file == NULL) return FAILURE;
 
-    maybe_null_strong_cstr_t target = parse_find_import(ctx, file, !is_standard_library_component);
+    maybe_null_strong_cstr_t target = parse_find_import(ctx, file, source, !is_standard_library_component);
     free(file);
 
     if(target == NULL){
@@ -154,7 +165,7 @@ errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filenam
     return SUCCESS;
 }
 
-maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename, bool allow_local_import){
+maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename, source_t source, bool allow_local_import){
     strong_cstr_t test;
 
     if(allow_local_import){
@@ -166,7 +177,7 @@ maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filenam
     test = filename_adept_import(ctx->compiler->root, filename);
     if(access(test, F_OK) != -1) return test;
     
-    compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "The file '%s' doesn't exist", filename);
+    compiler_panicf(ctx->compiler, source, "The file '%s' doesn't exist", filename);
     free(test);
     return NULL;
 }

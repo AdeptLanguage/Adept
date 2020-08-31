@@ -219,6 +219,7 @@ void compiler_free(compiler_t *compiler){
         free(object); // Free memory that the object is stored in
     }
 
+    if(compiler->error) adept_error_free_fully(compiler->error);
     free(compiler->objects);
     config_free(&compiler->config);
 }
@@ -712,16 +713,26 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
         redprintf("%s:%d:%d: %s!\n", filename_name_const(relevant_object->filename), line, column, message);
         compiler_print_source(compiler, line, column, source);
     }
-    #endif
+    #endif // !ADEPT_INSIGHT_BUILDER
+
+    if(compiler->error == NULL){
+        strong_cstr_t buffer = calloc(256, 1);
+        snprintf(buffer, 256, "%s", message);
+        compiler->error = adept_error_create(buffer, source);
+    }
 }
 
 void compiler_panicf(compiler_t *compiler, source_t source, const char *format, ...){
     #ifndef ADEPT_INSIGHT_BUILD
     object_t *relevant_object = compiler->objects[source.object_index];
     int line, column;
-    va_list args;
-
+    #endif // !ADEPT_INSIGHT_BUILD
+    
+    va_list args, error_format_args;
     va_start(args, format);
+    va_copy(error_format_args, args);
+
+    #ifndef ADEPT_INSIGHT_BUILD
     terminal_set_color(TERMINAL_COLOR_RED);
 
     if(format == NULL){
@@ -748,9 +759,17 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
     printf("!\n");
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
 
-    va_end(args);
     compiler_print_source(compiler, line, column, source);
-    #endif
+    #endif // !ADEPT_INSIGHT_BUILD
+
+    if(compiler->error == NULL){
+        strong_cstr_t buffer = calloc(256, 1);
+        vsnprintf(buffer, 256, format, error_format_args);
+        compiler->error = adept_error_create(buffer, source);
+    }
+
+    va_end(args);
+    va_end(error_format_args);
 }
 
 void compiler_warn(compiler_t *compiler, source_t source, const char *message){
@@ -1039,4 +1058,16 @@ void object_panicf_plain(object_t *object, const char *format, ...){
 
     va_end(args);
     #endif
+}
+
+adept_error_t *adept_error_create(strong_cstr_t message, source_t source){
+    adept_error_t *error = malloc(sizeof(adept_error_t));
+    error->message = message;
+    error->source = source;
+    return error;
+}
+
+void adept_error_free_fully(adept_error_t *error){
+    free(error->message);
+    free(error);
 }

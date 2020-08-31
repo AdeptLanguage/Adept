@@ -63,6 +63,13 @@ extern "C" {
 #define COMPILER_RESULT_NONE                    TRAIT_NONE
 #define COMPILER_RESULT_SUCCESS                 TRAIT_1 // Signifies success
 
+// ---------------- adept_error_t ----------------
+// Short result error message
+typedef struct {
+    strong_cstr_t message;
+    source_t source;
+} adept_error_t;
+
 // ---------------- compiler_t ----------------
 // Structure that encapsulates the compiler
 typedef struct compiler {
@@ -93,6 +100,8 @@ typedef struct compiler {
     // Default standard library to import from (global version)
     // If NULL, then use ADEPT_VERSION_STRING
     maybe_null_weak_cstr_t default_stblib;
+
+    adept_error_t *error;
 } compiler_t;
 
 // ---------------- compiler_run ----------------
@@ -188,6 +197,14 @@ void object_panic_plain(object_t *object, const char *message);
 // ---------------- object_panic_plain ----------------
 // Prints a plain compiler error given an object
 void object_panicf_plain(object_t *object, const char *message, ...);
+
+// ---------------- adept_error_create ----------------
+// Returns a newly allocated and initialized 'adept_error_t'
+adept_error_t *adept_error_create(strong_cstr_t message, source_t source);
+
+// ---------------- adept_error_free_fully ----------------
+// Frees the memory owned by an 'adept_error_t' and the memory occupied by it
+void adept_error_free_fully(adept_error_t *error);
 
 #ifdef __cplusplus
 }

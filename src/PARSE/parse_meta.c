@@ -244,8 +244,8 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             strong_cstr_t file = meta_expr_into_string(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             meta_expr_free_fully(value);
             *i = old_i;
-
-            maybe_null_strong_cstr_t target = parse_find_import(ctx, file, true);
+            
+            maybe_null_strong_cstr_t target = parse_find_import(ctx, file, source, true);
             free(file);
 
             if(target == NULL){
