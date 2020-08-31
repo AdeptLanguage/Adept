@@ -24,8 +24,37 @@ errorcode_t parse_import(parse_ctx_t *ctx){
         //   ^
 
         // Read component name
-        maybe_null_weak_cstr_t component = parse_grab_word(ctx, "INTERNAL ERROR: Failed assumption of word after 'import' keyword");
-        if(component == NULL) return FAILURE;
+        maybe_null_strong_cstr_t full_component = NULL;
+        length_t full_component_length = 0;
+        length_t full_component_capacity = 0;
+
+        maybe_null_weak_cstr_t first_part_of_component = parse_grab_word(ctx, "INTERNAL ERROR: Failed assumption of word after 'import' keyword");
+        if(first_part_of_component == NULL) return FAILURE;
+
+        while(ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_DIVIDE){
+            // Skip over previous component name
+            (*ctx->i)++;
+
+            maybe_null_weak_cstr_t additional_part = parse_grab_word(ctx, "Expected component name after '/' in 'import' statement");
+            if(additional_part == NULL) return FAILURE;
+
+            length_t additional_part_length = strlen(additional_part);
+
+            if(full_component == NULL){
+                length_t first_part_of_component_length = strlen(first_part_of_component);
+
+                expand((void**) &full_component, sizeof(char), full_component_length, &full_component_capacity, first_part_of_component_length, 256);
+                memcpy(full_component, first_part_of_component, first_part_of_component_length);
+                full_component_length = first_part_of_component_length;
+            }
+            
+            expand((void**) &full_component, sizeof(char), full_component_length, &full_component_capacity, additional_part_length + 2, 256);
+            full_component[full_component_length] = '/';
+            memcpy(&full_component[full_component_length + 1], additional_part, additional_part_length);
+            full_component[full_component_length + 1 + additional_part_length] = '\0';
+
+            full_component_length += 1 + additional_part_length;
+        }
 
         // Find which standard library to use
         standard_library_folder = ctx->object->default_stblib;
@@ -34,7 +63,8 @@ errorcode_t parse_import(parse_ctx_t *ctx){
         if(standard_library_folder == NULL) standard_library_folder = ADEPT_VERSION_STRING;
 
         // Combine standard library and component name to create the filename
-        file = mallocandsprintf("%s/%s.adept", standard_library_folder, component);
+        file = mallocandsprintf("%s/%s.adept", standard_library_folder, full_component ? full_component : first_part_of_component);
+        free(full_component);
     } else {
         // Grab filename string of what file to import
         file = parse_grab_string(ctx, "Expected filename string or standard library component after 'import' keyword");
