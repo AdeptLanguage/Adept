@@ -652,6 +652,21 @@ errorcode_t compiler_read_file(compiler_t *compiler, object_t *object){
     }
 }
 
+strong_cstr_t compiler_get_stdlib(compiler_t *compiler, object_t *optional_object){
+    // Find which standard library to use
+    maybe_null_weak_cstr_t standard_library_folder = optional_object ? optional_object->default_stblib : NULL;
+
+    if(standard_library_folder == NULL) standard_library_folder = compiler->default_stblib;
+    if(standard_library_folder == NULL) standard_library_folder = ADEPT_VERSION_STRING;
+    
+    length_t length = strlen(standard_library_folder);
+    char final_character = length == 0 ? 0x00 : standard_library_folder[length - 1];
+    if(final_character == '/' || final_character == '\\') return strclone(standard_library_folder);
+
+    // Otherwise, we need to append '/'
+    return mallocandsprintf("%s/", standard_library_folder);
+}
+
 void compiler_print_source(compiler_t *compiler, int line, int column, source_t source){
     object_t *relevant_object = compiler->objects[source.object_index];
     if(relevant_object->buffer == NULL || relevant_object->traits & OBJECT_PACKAGE) return;

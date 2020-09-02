@@ -155,6 +155,10 @@ errorcode_t compiler_create_package(compiler_t *compiler, object_t *object);
 // Reads either a package or adept code file into tokens for an object
 errorcode_t compiler_read_file(compiler_t *compiler, object_t *object);
 
+// ---------------- compiler_get_stdlib ----------------
+// Returns the current stdlib folder, including the preceeding slash
+strong_cstr_t compiler_get_stdlib(compiler_t *compiler, object_t *optional_object);
+
 // ---------------- compiler_print_source ----------------
 // Prints the source code at a given 'source_t'
 void compiler_print_source(compiler_t *compiler, int line, int column, source_t source);

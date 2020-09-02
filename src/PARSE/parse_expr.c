@@ -159,7 +159,7 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             if(transcendant_name == NULL) return FAILURE;
 
             meta_expr_t *value;
-            meta_expr_t *special_result = meta_get_special_variable(ctx->compiler, transcendant_name, sources[*i - 1]);
+            meta_expr_t *special_result = meta_get_special_variable(ctx->compiler, ctx->object, transcendant_name, sources[*i - 1]);
 
             if(special_result){
                 value = special_result;

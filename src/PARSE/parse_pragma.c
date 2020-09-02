@@ -67,6 +67,11 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return SUCCESS;
     case 2: // 'default_stdlib' directive
         read = parse_grab_string(ctx, NULL);
+
+        if(read == NULL){
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Expected version string after 'pragma default_stdlib', such as '%s'", ADEPT_VERSION_STRING);
+            return FAILURE;
+        }
         
         if(!(ctx->compiler->traits & COMPILER_FORCE_STDLIB)){
             // Store default_stdlib per compilation object

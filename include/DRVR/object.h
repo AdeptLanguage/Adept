@@ -30,7 +30,7 @@ extern "C" {
 // ------------------ object_t ------------------
 // Struct that contains data associated with a
 // a file that has been processed by the compiler
-typedef struct {
+typedef struct object {
     strong_cstr_t filename;      // Filename
     strong_cstr_t full_filename; // Absolute filename (used for testing duplicate imports)
     strong_cstr_t buffer;        // Text buffer

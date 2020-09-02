@@ -8,4 +8,5 @@
 #print "__line__ = " + __line__
 #print "__column__ = " + __column__
 #print "__file__ = " + __file__
+#print "__stdlib__ = " + __stdlib__
 #halt

@@ -17,7 +17,6 @@ errorcode_t parse_import(parse_ctx_t *ctx){
     // Figure out the filename
     source_t source = NULL_SOURCE;
     maybe_null_strong_cstr_t file = NULL;
-    maybe_null_weak_cstr_t standard_library_folder = NULL;
     bool is_standard_library_component = ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_WORD;
 
     if(is_standard_library_component){
@@ -64,15 +63,13 @@ errorcode_t parse_import(parse_ctx_t *ctx){
         // HACK: For 'import thing1/thing2/thing3', assume that there are no spaces in between the slashes
         if(full_component) source.stride = full_component_length;
 
-        // Find which standard library to use
-        standard_library_folder = ctx->object->default_stblib;
-
-        if(standard_library_folder == NULL) standard_library_folder = ctx->compiler->default_stblib;
-        if(standard_library_folder == NULL) standard_library_folder = ADEPT_VERSION_STRING;
+        // Get stdlib location
+        strong_cstr_t standard_library_folder = compiler_get_stdlib(ctx->compiler, ctx->object);
 
         // Combine standard library and component name to create the filename
-        file = mallocandsprintf("%s/%s.adept", standard_library_folder, full_component ? full_component : first_part_of_component);
+        file = mallocandsprintf("%s%s.adept", standard_library_folder, full_component ? full_component : first_part_of_component);
         free(full_component);
+        free(standard_library_folder);
     } else {
         // Grab filename string of what file to import
         file = parse_grab_string(ctx, "Expected filename string or standard library component after 'import' keyword");
@@ -90,9 +87,10 @@ errorcode_t parse_import(parse_ctx_t *ctx){
     free(file);
 
     if(target == NULL){
-        if(is_standard_library_component && standard_library_folder != NULL){
+        if(is_standard_library_component){
             printf("\nPerhaps you are using the wrong standard library version?\n\n");
         }
+
         return FAILURE;
     }
 

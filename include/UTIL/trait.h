@@ -14,7 +14,7 @@ extern "C" {
 
 // ---------------- trait_t ----------------
 // A type for storing traits as bitwise flags
-typedef unsigned short trait_t;
+typedef unsigned int trait_t;
 
 #define TRAIT_NONE 0x0000
 #define TRAIT_1    0x0001

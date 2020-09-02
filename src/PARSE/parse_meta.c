@@ -54,7 +54,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
 
             meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
 
@@ -168,7 +168,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
 
-            bool whether = meta_expr_into_bool(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value) ^ is_unless;
+            bool whether = meta_expr_into_bool(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value) ^ is_unless;
             meta_expr_free_fully(value);
 
             // If true, continue parsing as normal
@@ -201,7 +201,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                         meta_expr_t *value;
                         if(parse_meta_expr(ctx, &value)) return FAILURE;
 
-                        bool whether = meta_expr_into_bool(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+                        bool whether = meta_expr_into_bool(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
                         meta_expr_free_fully(value);
 
                         if(whether){   
@@ -241,7 +241,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             length_t new_i = *i;
 
-            strong_cstr_t file = meta_expr_into_string(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            strong_cstr_t file = meta_expr_into_string(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             meta_expr_free_fully(value);
             *i = old_i;
             
@@ -296,7 +296,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             char *print_value = meta_expr_str(value);
             printf("%s", print_value);
             free(print_value);
@@ -308,7 +308,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             char *print_value = meta_expr_str(value);
             redprintf("%s", print_value);
             free(print_value);
@@ -320,7 +320,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             char *print_value = meta_expr_str(value);
             yellowprintf("%s", print_value);
             free(print_value);
@@ -332,7 +332,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             char *print_value = meta_expr_str(value);
             printf("%s\n", print_value);
             free(print_value);
@@ -344,7 +344,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             char *print_value = meta_expr_str(value);
             redprintf("%s", print_value);
             putchar(0x0A);
@@ -357,7 +357,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
             char *print_value = meta_expr_str(value);
             yellowprintf("%s", print_value);
             putchar(0x0A);
@@ -372,7 +372,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
 
             meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
 
