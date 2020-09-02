@@ -843,6 +843,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
 
+            // Must be used on mutable value
             if(array_value->type->kind != TYPE_KIND_POINTER){
                 char *given_type = ast_type_str(&array_type);
 
@@ -864,21 +865,44 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
                 ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
                 array_value = build_bitcast(builder, array_value, casted_ir_type);
+            } else if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_STRUCTURE){
+                // Keep structure value mutable
             } else if(expr_is_mutable(array_access_expr->value)){
                 // Load value reference
-                // (*)  int -> int
+                // (*)  *int -> *int
                 array_value = build_load(builder, array_value, expr->source);
             }
 
-            if(index_value->type->kind < TYPE_KIND_S8 || index_value->type->kind > TYPE_KIND_U64){
-                compiler_panic(builder->compiler, array_access_expr->index->source, "Array index value must be an integer type");
-                ast_type_free(&array_type);
-                ast_type_free(&index_type);
-                return FAILURE;
+            bool access_allowed = false;
+
+            if(array_value->type->kind == TYPE_KIND_POINTER && array_type.elements_length >= 2 && array_type.elements[0]->id == AST_ELEM_POINTER){
+                // Standard [] access for pointers
+                access_allowed = true;
+
+                if(index_value->type->kind < TYPE_KIND_S8 || index_value->type->kind > TYPE_KIND_U64){
+                    compiler_panic(builder->compiler, array_access_expr->index->source, "Array index value must be an integer type");
+                    ast_type_free(&array_type);
+                    ast_type_free(&index_type);
+                    return FAILURE;
+                }
+
+                // Access array
+                *ir_value = build_array_access(builder, array_value, index_value, expr->source);
+            } else if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_STRUCTURE){
+                // Try to use __access__ management method on struct
+                
+                ast_type_t element_pointer_type;
+                *ir_value = handle_access_management(builder, array_value, index_value, expr->source, &array_type, &index_type, &element_pointer_type);
+                access_allowed = *ir_value != NULL;
+
+                // If successful in calling __access__ method, then swap the array type to the *Element type
+                if(access_allowed){
+                    ast_type_free(&array_type);
+                    array_type = element_pointer_type;
+                }
             }
-            
-            // Ensure array type is a pointer
-            if(array_value->type->kind != TYPE_KIND_POINTER || array_type.elements_length < 2 || array_type.elements[0]->id != AST_ELEM_POINTER){
+
+            if(!access_allowed){
                 char *given_type = ast_type_str(&array_type);
 
                 compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on non-array type '%s'",
@@ -889,9 +913,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ast_type_free(&index_type);
                 return FAILURE;
             }
-
-            // Access array
-            *ir_value = build_array_access(builder, array_value, index_value, expr->source);
 
             if(expr->id != EXPR_AT){
                 ast_type_dereference(&array_type);

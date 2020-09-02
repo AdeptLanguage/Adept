@@ -1369,40 +1369,85 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
 }
 
 ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name){
-    if(lhs->type->kind == TYPE_KIND_STRUCTURE){
-        if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
-            funcpair_t result;
+    if(lhs->type->kind != TYPE_KIND_STRUCTURE) return NULL;
 
-            ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
-            arguments[0] = lhs;
-            arguments[1] = rhs;
+    if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
+        funcpair_t result;
 
-            ast_type_t types[2] = {*lhs_type, *rhs_type};
+        ir_pool_snapshot_t snapshot;
+        ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-            if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, &result)){
-                // Failed to find a suitable function
-                return NULL;
-            }
+        ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
+        arguments[0] = lhs;
+        arguments[1] = rhs;
 
-            if(handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2)){
-                return NULL;
-            }
+        ast_type_t types[2] = {*lhs_type, *rhs_type};
 
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-            instruction->id = INSTRUCTION_CALL;
-            instruction->result_type = result.ir_func->return_type;
-            instruction->values = arguments;
-            instruction->values_length = 2;
-            instruction->ir_func_id = result.ir_func_id;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
-
-            if(out_type != NULL) *out_type = ast_type_clone(&result.ast_func->return_type);
-            return build_value_from_prev_instruction(builder);
+        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, &result)
+        || handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2)){
+            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            return NULL;
         }
+
+        ir_basicblock_new_instructions(builder->current_block, 1);
+        ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+        instruction->id = INSTRUCTION_CALL;
+        instruction->result_type = result.ir_func->return_type;
+        instruction->values = arguments;
+        instruction->values_length = 2;
+        instruction->ir_func_id = result.ir_func_id;
+        builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+
+        if(out_type != NULL) *out_type = ast_type_clone(&result.ast_func->return_type);
+        return build_value_from_prev_instruction(builder);
     }
 
     return NULL;
+}
+
+ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
+        source_t expr_source, ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type){
+    
+    // Ensure 'array_mutable_struct_value' is of type '*Structure'
+    if(array_mutable_struct_value->type->kind != TYPE_KIND_POINTER) return NULL;
+    if(((ir_type_t*) array_mutable_struct_value->type->extra)->kind != TYPE_KIND_STRUCTURE) return NULL;
+    if(array_type->elements_length != 1 || array_type->elements[0]->id != AST_ELEM_BASE) return NULL;
+
+    ir_pool_snapshot_t snapshot;
+    ir_pool_snapshot_capture(builder->pool, &snapshot);
+
+    funcpair_t result;
+    ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
+    arguments[0] = array_mutable_struct_value;
+    arguments[1] = index_value;
+
+    weak_cstr_t struct_name = ((ast_elem_base_t*) array_type->elements[0])->base;
+
+    ast_type_t argument_ast_types[2];
+    ast_type_make_base_ptr(&argument_ast_types[0], strclone(struct_name));
+    argument_ast_types[1] = *index_type;
+    
+    if(ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, &result)
+    || handle_pass_management(builder, arguments, argument_ast_types, result.ast_func->arg_type_traits, 2)
+    ){
+        ir_pool_snapshot_restore(builder->pool, &snapshot);
+        ast_type_free(&argument_ast_types[0]);
+        return NULL;
+    }
+
+    ast_type_free(&argument_ast_types[0]);
+
+    ir_basicblock_new_instructions(builder->current_block, 1);
+    ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
+    instruction->id = INSTRUCTION_CALL;
+    instruction->result_type = result.ir_func->return_type;
+    instruction->values = arguments;
+    instruction->values_length = 2;
+    instruction->ir_func_id = result.ir_func_id;
+    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+
+    if(out_ptr_to_element_type != NULL) *out_ptr_to_element_type = ast_type_clone(&result.ast_func->return_type);
+    return build_value_from_prev_instruction(builder);
 }
 
 errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,

@@ -7,8 +7,8 @@ extern "C" {
 #endif
 
 /*
-    ================================ filename.h ===============================
-    Module for manipulating filenames
+    ================================ download.h ===============================
+    Module for downloading files
     ---------------------------------------------------------------------------
 */
 
@@ -29,7 +29,7 @@ typedef struct {
 // Downloads a file, returns whether successful
 successful_t download(weak_cstr_t url, weak_cstr_t destination);
 
-// ---------------- filename_without_ext ----------------
+// ---------------- download_to_memory ----------------
 // Downloads a file into memory, returns whether successful
 // NOTE: If successful, out_memory->buffer must be freed by the caller
 successful_t download_to_memory(weak_cstr_t url, download_buffer_t *out_memory);

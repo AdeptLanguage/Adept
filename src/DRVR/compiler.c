@@ -178,6 +178,7 @@ void compiler_init(compiler_t *compiler){
     #endif // ENABLE_DEBUG_FEATURES
     
     compiler->default_stblib = NULL;
+    compiler->error = NULL;
 }
 
 void compiler_free(compiler_t *compiler){
@@ -616,11 +617,7 @@ void show_version(compiler_t *compiler){
 }
 
 strong_cstr_t compiler_get_string(){
-    weak_cstr_t build_date = __DATE__;
-    weak_cstr_t build_time = __TIME__;
-    strong_cstr_t compiler_string = malloc(21 + strlen(ADEPT_VERSION_STRING) + strlen(build_date) + strlen(build_time));
-    sprintf(compiler_string, "Adept %s - Build %s %s CDT", ADEPT_VERSION_STRING, build_date, build_time);
-    return compiler_string;
+    return mallocandsprintf("Adept %s - Build %s %s CDT", ADEPT_VERSION_STRING, __DATE__, __TIME__);
 }
 
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){
@@ -638,6 +635,7 @@ errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){
         if(compiler->output_filename == NULL) free(package_filename);
         return FAILURE;
     }
+
     if(compiler->output_filename == NULL) free(package_filename);
     return SUCCESS;
 }

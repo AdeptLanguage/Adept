@@ -88,6 +88,19 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         compiler_panic(ctx->compiler, source, "Management method __assign__ must be declared like 'func __assign__(this *T, other T) void'");
         return FAILURE;
     }
+
+    // TODO: Finis
+    if(strcmp(func->name, "__access__") == 0 && (
+        func->traits != TRAIT_NONE
+        || func->arity != 2
+        || !ast_type_is_pointer(&func->arg_types[0])
+        || !ast_type_is_pointer(&func->return_type)
+        || strcmp(func->arg_names[0], "this") != 0
+        || func->arg_type_traits[0] != TRAIT_NONE
+    )){
+        compiler_panic(ctx->compiler, source, "Management method __access__ must be declared like '__access__(this *T, index $Key) *$Value'");
+        return FAILURE;
+    }
     
     static const char *math_management_funcs[] = {
         "__add__", "__divide__", "__equals__", "__greater_than__",

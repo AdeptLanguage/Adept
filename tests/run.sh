@@ -73,6 +73,7 @@ compile inner_struct || exit $?
 compile int_ptr_cast || exit $?
 compile internal_deference || exit $?
 compile internal_deference_generic || exit $?
+compile management_access || exit $?
 compile management_assign || exit $?
 compile management_defer || exit $?
 compile management_math || exit $?

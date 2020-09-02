@@ -307,7 +307,7 @@ bool could_have_deference(ast_type_t *ast_type);
 // NOTE: Returns FAILURE if compile time error occured
 errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity);
 
-// ---------------- handle_single_deference ----------------
+// ---------------- handle_single_pass ----------------
 // Calls __pass__ function for a value and it's children if the function exists
 // NOTE: Assumes (ast_type->elements_length == 1)
 // NOTE: Returns SUCCESS if value was utilized in passing
@@ -332,6 +332,13 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
 // Handles basic math management function calls
 ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
     ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name);
+
+// ---------------- handle_access_management ----------------
+// Handles '__access__' management function calls for [] operator
+// NOTE: Returns SUCCESS if nothing went wrong
+// NOTE: Returns FAILURE if compile time error occured
+ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
+    source_t expr_source, ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type);
 
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function

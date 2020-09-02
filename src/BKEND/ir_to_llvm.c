@@ -245,8 +245,7 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
 
         LLVMValueRef *skeleton = &func_skeletons[ir_func_id];
 
-        
-        if(ir_func->traits & IR_FUNC_FOREIGN || ir_func->traits & AST_FUNC_MAIN){
+        if(ir_func->traits & IR_FUNC_FOREIGN || ir_func->traits & IR_FUNC_MAIN){
             *skeleton = LLVMAddFunction(llvm_module, ir_func->name, llvm_func_type);
         } else {
             char adept_implementation_name[256];
@@ -656,12 +655,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                     break;
                 case INSTRUCTION_ULESSER:
                     instr = basicblock->instructions[i];
-                    {
-                        LLVMValueRef a2 = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
-                        LLVMValueRef b2 = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b);
-                        llvm_result = LLVMBuildICmp(builder, LLVMIntULT, a2, b2, "");
-                    }
-                    catalog.blocks[b].value_references[i] = llvm_result;
+                    catalog.blocks[b].value_references[i] = LLVMBuildICmp(builder, LLVMIntULT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
                     break;
                 case INSTRUCTION_SLESSER:
                     instr = basicblock->instructions[i];

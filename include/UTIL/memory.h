@@ -101,6 +101,8 @@ void memory_free_fast(void* data);
 
 #endif // TRACK_MEMORY_FILE_AND_LINE
 
+#define calloc(amount, size) memset(malloc(amount * size), 0, amount * size)
+
 #endif // TRACK_MEMORY_USAGE
 
 #endif // ADEPT_INSIGHT_BUILD

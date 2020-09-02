@@ -7,14 +7,13 @@ FEATURE:
 * Finish 'Any'
     * Casting to Any from non-builtin types
 * __String__ function?
-* Override for [] += -= *= /= %= operators
+* Override for += -= *= /= %= operators
 * Make __defer__ for fixed arrays be a function/method
 * Local functions
 * Function aliases
 * Scoped constants
 * Reverse repeat
 * Vararg bindings
-* Import sources "#repo List '2.3/List.adept'   import List"
 
 VERIFICATION:
 * ir_to_llvm_type circular containment detection

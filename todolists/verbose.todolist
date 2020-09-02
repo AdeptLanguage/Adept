@@ -150,3 +150,5 @@ COMPLETED:
 + default arguments
 + fix bug with default arguments not being added in for method calls
 + add __no_typeinfo__ dynamic compiler meta variable
++ Standard library component imports and default_stdlib
++ [] operator overload

@@ -132,6 +132,8 @@ call :compile internal_deference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile internal_deference_generic
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile management_access
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_assign
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_defer
