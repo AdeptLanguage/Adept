@@ -1,0 +1,45 @@
+
+import basics
+
+struct MyFakeList (value int) {
+    func __access__(index usize) *int {
+        return &this.value
+    }
+}
+
+func myFakeList() MyFakeList {
+    list MyFakeList
+    list.value = 1234
+    return list
+}
+
+
+struct MyDictionary (value1, value2 String) {
+    func __access__(firstname String) *String {
+        if this.value1.empty(), this.value1 = "Shelton"
+        if this.value2.empty(), this.value2 = "Smith"
+
+        // Ignore case
+        firstname = firstname.lowercase()
+
+        // Returns lastname for given firstname
+        if firstname == "isaac", return &this.value1
+        return &this.value2
+    }
+}
+
+
+func main {
+    list MyFakeList = myFakeList()
+
+    // Since out __access__ operator ignores index, we can pass any index
+    list[524352345] = 10
+    printf('list[any value] = %d\n\n', list[45143523])
+
+    dictionary MyDictionary
+    print("Isaac's lastname is %" % dictionary["Isaac"])
+    print("John's lastname is %" % dictionary["John"])
+
+    dictionary["John"] = "Johnson"
+    print("John's new lastname is %" % dictionary["John"])
+}
