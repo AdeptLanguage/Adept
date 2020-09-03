@@ -740,6 +740,26 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         #undef LEX_OPTIONAL_2MODS_TOKEN_MAPPING
     }
 
+    if(lex_state.state != LEX_STATE_IDLE){
+        lex_get_location(buffer, (*sources)[tokenlist->length].index, &line, &column);
+        switch(lex_state.state){
+        case LEX_STATE_STRING:
+        case LEX_STATE_CSTRING:
+            redprintf("%s:%d:%d: Unterminated string literal\n", filename_name_const(object->filename), line, column);
+            (*sources)[tokenlist->length].stride = 1;
+            break;
+        case LEX_STATE_LONGCOMMENT:
+        case LEX_STATE_ENDCOMMENT:
+            (*sources)[tokenlist->length].stride = 2;
+            redprintf("%s:%d:%d: Unterminated multiline comment\n", filename_name_const(object->filename), line, column);
+            break;
+        }
+
+        compiler_print_source(compiler, line, column, (*sources)[tokenlist->length]);
+        lex_state_free(&lex_state);
+        return FAILURE;
+    }
+
     lex_state_free(&lex_state);
 
     if(compiler->traits & COMPILER_MAKE_PACKAGE){
