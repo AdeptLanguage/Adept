@@ -236,7 +236,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     "delete", "each", "else", "enum", "external", "fallthrough", "false", "for", "foreign", "func",
                     "funcptr", "global", "if", "import", "in", "inout", "new", "null", "or", "out", "packed",
                     "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch", 
-                    "true", "typeinfo", "undef", "unless", "until", "verbatim", "while"
+                    "true", "typeinfo", "undef", "unless", "until", "va_arg", "va_copy", "va_end", "va_start", "verbatim", "while"
                 };
 
                 const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);

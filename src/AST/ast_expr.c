@@ -148,134 +148,69 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         // No optimal for speed, but reduces code redundancy
         switch(expr->id){
         case EXPR_ADD:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " + ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s + %s)", a, b);
             break;
         case EXPR_SUBTRACT:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " - ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s - %s)", a, b);
             break;
         case EXPR_MULTIPLY:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " * ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s * %s)", a, b);
             break;
         case EXPR_DIVIDE:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " / ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s / %s)", a, b);
             break;
         case EXPR_MODULUS:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " % ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s %% %s)", a, b);
             break;
         case EXPR_EQUALS:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " == ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s == %s)", a, b);
             break;
         case EXPR_NOTEQUALS:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " != ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s != %s)", a, b);
             break;
         case EXPR_GREATER:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " > ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s > %s)", a, b);
             break;
         case EXPR_LESSER:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " < ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s < %s)", a, b);
             break;
         case EXPR_GREATEREQ:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " >= ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s >= %s)", a, b);
             break;
         case EXPR_LESSEREQ:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " <= ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s <= %s)", a, b);
             break;
         case EXPR_AND:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " && ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s && %s)", a, b);
             break;
         case EXPR_OR:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " || ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s || %s)", a, b);
             break;
         case EXPR_BIT_AND:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " & ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s & %s)", a, b);
             break;
         case EXPR_BIT_OR:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " | ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s | %s)", a, b);
             break;
         case EXPR_BIT_XOR:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " ^ ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s ^ %s)", a, b);
             break;
         case EXPR_BIT_LSHIFT:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " << ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s << %s)", a, b);
             break;
         case EXPR_BIT_RSHIFT:
-            representation = malloc(a_len + b_len + 7);
-            memcpy(&representation[a_len + 1], " >> ", 4);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 5], ")", 2);
+            representation = mallocandsprintf("(%s >> %s)", a, b);
             break;
         case EXPR_BIT_LGC_LSHIFT:
-            representation = malloc(a_len + b_len + 8);
-            memcpy(&representation[a_len + 1], " <<< ", 5);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 6], ")", 2);
+            representation = mallocandsprintf("(%s <<< %s)", a, b);
             break;
         case EXPR_BIT_LGC_RSHIFT:
-            representation = malloc(a_len + b_len + 8);
-            memcpy(&representation[a_len + 1], " >>> ", 5);
-            memcpy(&representation[a_len + 5], b, b_len);
-            memcpy(&representation[a_len + b_len + 6], ")", 2);
+            representation = mallocandsprintf("(%s >>> %s)", a, b);
             break;
         default:
-            representation = malloc(a_len + b_len + 6);
-            memcpy(&representation[a_len + 1], " ¿ ", 3);
-            memcpy(&representation[a_len + 4], b, b_len);
-            memcpy(&representation[a_len + b_len + 4], ")", 2);
+            representation = mallocandsprintf("(%s ¿ %s)", a, b);
         }
 
-        representation[0] = '(';
-        memcpy(&representation[1], a, a_len);
         free(a);
         free(b);
         return representation;
@@ -326,37 +261,32 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         return strclone(((ast_expr_variable_t*) expr)->name);
     case EXPR_MEMBER: {
             char *value_str = ast_expr_str(((ast_expr_member_t*) expr)->value);
-            representation = malloc(strlen(value_str) + strlen(((ast_expr_member_t*) expr)->member) + 2);
-            sprintf(representation, "%s.%s", value_str, ((ast_expr_member_t*) expr)->member);
+            representation = mallocandsprintf("%s.%s", value_str, ((ast_expr_member_t*) expr)->member);
             free(value_str);
             return representation;
         }
     case EXPR_ADDRESS: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 2);
-            sprintf(representation, "&%s", value_str);
+            representation = mallocandsprintf("&%s", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr_expr = (ast_expr_func_addr_t*) expr;
-            representation = malloc(strlen(func_addr_expr->name) + 12);
-            sprintf(representation, "func %s&%s", func_addr_expr->tentative ? "null " : "", func_addr_expr->name);
+            representation = mallocandsprintf("func %s&%s", func_addr_expr->tentative ? "null " : "", func_addr_expr->name);
             return representation;
         }
         break;
     case EXPR_DEREFERENCE: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 4);
-            sprintf(representation, "*(%s)", value_str);
+            representation = mallocandsprintf("*(%s)", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_ARRAY_ACCESS: {
             char *value_str1 = ast_expr_str(((ast_expr_array_access_t*) expr)->value);
             char *value_str2 = ast_expr_str(((ast_expr_array_access_t*) expr)->index);
-            representation = malloc(strlen(value_str1) + strlen(value_str2) + 3);
-            sprintf(representation, "%s[%s]", value_str1, value_str2);
+            representation = mallocandsprintf("%s[%s]", value_str1, value_str2);
             free(value_str1);
             free(value_str2);
             return representation;
@@ -364,8 +294,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_AT: {
             char *value_str1 = ast_expr_str(((ast_expr_array_access_t*) expr)->value);
             char *value_str2 = ast_expr_str(((ast_expr_array_access_t*) expr)->index);
-            representation = malloc(strlen(value_str1) + strlen(value_str2) + 7);
-            sprintf(representation, "%s at (%s)", value_str1, value_str2);
+            representation = mallocandsprintf("%s at (%s)", value_str1, value_str2);
             free(value_str1);
             free(value_str2);
             return representation;
@@ -373,23 +302,19 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_CAST: {
             char *type_str = ast_type_str(&((ast_expr_cast_t*) expr)->to);
             char *value_str = ast_expr_str(((ast_expr_cast_t*) expr)->from);
-            representation = malloc(strlen(type_str) + strlen(value_str) + 9);
-            sprintf(representation, "cast %s (%s)", type_str, value_str);
+            representation = mallocandsprintf("cast %s (%s)", type_str, value_str);
             free(type_str);
             free(value_str);
             return representation;
         }
     case EXPR_SIZEOF: {
             char *type_str = ast_type_str(&((ast_expr_sizeof_t*) expr)->type);
-            representation = malloc(strlen(type_str) + 8);
-            sprintf(representation, "sizeof %s", type_str);
+            representation = mallocandsprintf("sizeof %s", type_str);
             free(type_str);
             return representation;
         }
     case EXPR_PHANTOM: {
-            representation = malloc(10);
-            sprintf(representation, "~phantom~");
-            return representation;
+            return strclone("~phantom~");
         }
     case EXPR_CALL_METHOD: {
             // CLEANUP: This code is kinda scrappy, but hey it works
@@ -404,7 +329,6 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             }
 
             char *value_rep = ast_expr_str(call_expr->value);
-            length_t value_rep_length = strlen(value_rep);
 
             // (..., ..., ...)
             args_representation_length += (call_expr->arity == 0) ? 2 : 2 * call_expr->arity;
@@ -427,9 +351,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             args_representation_index += 1;
 
             // name   |   (arg1, arg2, arg3)   |   \0
-            length_t name_length = strlen(call_expr->name);
-            representation = malloc(value_rep_length + 1 + name_length + args_representation_length + 1);
-            sprintf(representation, "%s.%s%s", value_rep, call_expr->name, args_representation);
+            representation = mallocandsprintf("%s.%s%s", value_rep, call_expr->name, args_representation);
             for(length_t i = 0; i != call_expr->arity; i++) free(arg_strings[i]);
             free(value_rep);
             free(arg_strings);
@@ -438,8 +360,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         }
     case EXPR_NOT: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 4);
-            sprintf(representation, "!(%s)", value_str);
+            representation = mallocandsprintf("!(%s)", value_str);
             free(value_str);
             return representation;
         }
@@ -447,12 +368,10 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             char *type_str = ast_type_str(&((ast_expr_new_t*) expr)->type);
 
             if( ((ast_expr_new_t*) expr)->amount == NULL ){
-                representation = malloc(strlen(type_str) + 5);
-                sprintf(representation, "new %s", type_str);
+                representation = mallocandsprintf("new %s", type_str);
             } else {
                 char *a_str = ast_expr_str(((ast_expr_new_t*) expr)->amount);
-                representation = malloc(strlen(a_str) + strlen(type_str) + 10);
-                sprintf(representation, "new %s * (%s)", type_str, a_str);
+                representation = mallocandsprintf("new %s * (%s)", type_str, a_str);
                 free(a_str);
             }
 
@@ -461,8 +380,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         }
     case EXPR_NEW_CSTRING: {
             char *value = ((ast_expr_new_cstring_t*) expr)->value;
-            representation = malloc(strlen(value) + 7);
-            sprintf(representation, "new '%s'", value);
+            representation = mallocandsprintf("new '%s'", value);
             return representation;
         }
     case EXPR_ENUM_VALUE: {
@@ -470,42 +388,36 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             const char *kind_name = ((ast_expr_enum_value_t*) expr)->kind_name;
             if(enum_name == NULL) enum_name = "<contextual>";
 
-            representation = malloc(strlen(enum_name) + strlen(kind_name) + 3);
-            sprintf(representation, "%s::%s", enum_name, kind_name);
+            representation = mallocandsprintf("%s::%s", enum_name, kind_name);
             return representation;
         }
     case EXPR_BIT_COMPLEMENT: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 4);
-            sprintf(representation, "~(%s)", value_str);
+            representation = mallocandsprintf("~(%s)", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_NEGATE: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 4);
-            sprintf(representation, "-(%s)", value_str);
+            representation = mallocandsprintf("-(%s)", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_STATIC_ARRAY: {
             char *type_str = ast_type_str( &(((ast_expr_static_data_t*) expr)->type) );
-            representation = malloc(strlen(type_str) + 14);
-            sprintf(representation, "static %s {...}", type_str);
+            representation = mallocandsprintf("static %s {...}", type_str);
             free(type_str);
             return representation;
         }
     case EXPR_STATIC_STRUCT: {
             char *type_str = ast_type_str( &(((ast_expr_static_data_t*) expr)->type) );
-            representation = malloc(strlen(type_str) + 14);
-            sprintf(representation, "static %s (...)", type_str);
+            representation = mallocandsprintf("static %s (...)", type_str);
             free(type_str);
             return representation;
         }
     case EXPR_TYPEINFO: {
             char *type_str = ast_type_str( &(((ast_expr_static_data_t*) expr)->type) );
-            representation = malloc(strlen(type_str) + 10);
-            sprintf(representation, "typeinfo %s", type_str);
+            representation = mallocandsprintf("typeinfo %s", type_str);
             free(type_str);
             return representation;
         }
@@ -514,9 +426,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             char *true_str = ast_expr_str(((ast_expr_ternary_t*) expr)->if_true);
             char *false_str = ast_expr_str(((ast_expr_ternary_t*) expr)->if_false);
 
-            representation = malloc(strlen(condition_str) + strlen(true_str) + strlen(false_str) + 9);
-
-            sprintf(representation, "(%s ? %s : %s)", condition_str, true_str, false_str);
+            representation = mallocandsprintf("(%s ? %s : %s)", condition_str, true_str, false_str);
 
             free(condition_str);
             free(true_str);
@@ -525,37 +435,40 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         }
     case EXPR_PREINCREMENT: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 5);
-            sprintf(representation, "++(%s)", value_str);
+            representation = mallocandsprintf("++(%s)", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_PREDECREMENT: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 5);
-            sprintf(representation, "--(%s)", value_str);
+            representation = mallocandsprintf("--(%s)", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_POSTINCREMENT: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 5);
-            sprintf(representation, "(%s)++", value_str);
+            representation = mallocandsprintf("(%s)++", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_POSTDECREMENT: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 5);
-            sprintf(representation, "(%s)--", value_str);
+            representation = mallocandsprintf("(%s)--", value_str);
             free(value_str);
             return representation;
         }
     case EXPR_TOGGLE: {
             char *value_str = ast_expr_str(((ast_expr_unary_t*) expr)->value);
-            representation = malloc(strlen(value_str) + 5);
-            sprintf(representation, "(%s)!!", value_str);
+            representation = mallocandsprintf("(%s)!!", value_str);
             free(value_str);
+            return representation;
+        }
+    case EXPR_VA_ARG: {
+            char *value_str = ast_expr_str( ((ast_expr_va_arg_t*) expr)->va_list );
+            char *type_str = ast_type_str( &(((ast_expr_va_arg_t*) expr)->arg_type) );
+            representation = mallocandsprintf("va_arg(%s, %s)", value_str, type_str);
+            free(value_str);
+            free(type_str);
             return representation;
         }
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
@@ -569,13 +482,11 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
                 value = ast_expr_str(declaration->value);
             }
 
-            representation = malloc(strlen(declaration->name) + strlen(typename) + (value ? strlen(value) + 3: 0) + 8);
-
             if(declaration->value){
-                sprintf(representation, "%s %s %s = %s", is_undef ? "undef" : "def", declaration->name, typename, value);
+                representation = mallocandsprintf("%s %s %s = %s", is_undef ? "undef" : "def", declaration->name, typename, value);
                 free(value);
             } else {
-                sprintf(representation, "%s %s %s", is_undef ? "undef" : "def", declaration->name, typename);
+                representation = mallocandsprintf("%s %s %s", is_undef ? "undef" : "def", declaration->name, typename);
             }
             
             free(typename);
@@ -647,6 +558,10 @@ void ast_expr_free(ast_expr_t *expr){
         ast_expr_free_fully( ((ast_expr_call_method_t*) expr)->value );
         ast_exprs_free_fully(((ast_expr_call_method_t*) expr)->args, ((ast_expr_call_method_t*) expr)->arity);
         break;
+    case EXPR_VA_ARG:
+        ast_expr_free_fully( ((ast_expr_va_arg_t*) expr)->va_list );
+        ast_type_free( &(((ast_expr_va_arg_t*) expr)->arg_type) );
+        break;
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
     case EXPR_BIT_COMPLEMENT:
@@ -658,6 +573,8 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_POSTINCREMENT:
     case EXPR_POSTDECREMENT:
     case EXPR_TOGGLE:
+    case EXPR_VA_START:
+    case EXPR_VA_END:
         ast_expr_free_fully( ((ast_expr_unary_t*) expr)->value );
         break;
     case EXPR_FUNC_ADDR:
@@ -742,6 +659,10 @@ void ast_expr_free(ast_expr_t *expr){
         }
 
         free(((ast_expr_switch_t*) expr)->cases);
+        break;
+    case EXPR_VA_COPY:
+        ast_expr_free_fully(((ast_expr_va_copy_t*) expr)->dest_value);
+        ast_expr_free_fully(((ast_expr_va_copy_t*) expr)->src_value);
         break;
     }
 }
@@ -889,6 +810,8 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_POSTINCREMENT:
     case EXPR_POSTDECREMENT:
     case EXPR_TOGGLE:
+    case EXPR_VA_START:
+    case EXPR_VA_END:
         #define expr_as_unary ((ast_expr_unary_t*) expr)
         #define clone_as_unary ((ast_expr_unary_t*) clone)
 
@@ -1053,6 +976,17 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_ternary
         #undef clone_as_ternary
+    case EXPR_VA_ARG:
+        #define expr_as_va_arg ((ast_expr_va_arg_t*) expr)
+        #define clone_as_va_arg ((ast_expr_va_arg_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_va_arg_t));
+        clone_as_va_arg->va_list = ast_expr_clone(expr_as_va_arg->va_list);
+        clone_as_va_arg->arg_type = ast_type_clone(&expr_as_va_arg->arg_type);
+        break;
+
+        #undef expr_as_va_arg
+        #undef clone_as_va_arg
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         #define expr_as_declare ((ast_expr_declare_t*) expr)
@@ -1241,9 +1175,21 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         
         clone_as_switch->default_statements_length = expr_as_switch->default_statements_length;
         clone_as_switch->default_statements_capacity = expr_as_switch->default_statements_length; // (on purpose)
+        break;
 
         #undef expr_as_switch
         #undef clone_as_switch
+    case EXPR_VA_COPY:
+        #define expr_as_va_copy ((ast_expr_va_copy_t*) expr)
+        #define clone_as_va_copy ((ast_expr_va_copy_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_va_copy_t));
+        clone_as_va_copy->src_value = ast_expr_clone(expr_as_va_copy->src_value);
+        clone_as_va_copy->dest_value = ast_expr_clone(expr_as_va_copy->dest_value);
+        break;
+
+        #undef expr_as_va_copy
+        #undef clone_as_va_copy
     default:
         redprintf("INTERNAL ERROR: ast_expr_clone received unimplemented expression id 0x%08X\n", expr->id);
         redprintf("Returning NULL... a crash will probably follow\n");
@@ -1415,7 +1361,7 @@ const char *global_expression_rep_table[] = {
     "<post-decrement>",           // 0x0000003E
     "<phantom>",                  // 0x0000003F
     "<toggle>",                   // 0x00000040
-    "<reserved>",                 // 0x00000041
+    "<va_arg>",                   // 0x00000041
     "<reserved>",                 // 0x00000042
     "<reserved>",                 // 0x00000043
     "<reserved>",                 // 0x00000044
@@ -1465,4 +1411,7 @@ const char *global_expression_rep_table[] = {
     "<break to>",                 // 0x00000070
     "<continue to>",              // 0x00000071
     "<switch>",                   // 0x00000072
+    "<va_start>",                 // 0x00000073
+    "<va_end>",                   // 0x00000074
+    "<va_copy>",                  // 0x00000075
 };

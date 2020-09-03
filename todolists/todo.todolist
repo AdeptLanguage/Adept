@@ -13,7 +13,6 @@ FEATURE:
 * Function aliases
 * Scoped constants
 * Reverse repeat
-* Vararg bindings
 
 VERIFICATION:
 * ir_to_llvm_type circular containment detection

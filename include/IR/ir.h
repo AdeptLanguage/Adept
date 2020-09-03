@@ -98,6 +98,10 @@
 #define INSTRUCTION_SWITCH         0x00000051
 #define INSTRUCTION_STACK_SAVE     0x00000052
 #define INSTRUCTION_STACK_RESTORE  0x00000053 // ir_instr_stack_restore_t
+#define INSTRUCTION_VA_START       0x00000054 // ir_instr_unary_t
+#define INSTRUCTION_VA_END         0x00000055 // ir_instr_unary_t
+#define INSTRUCTION_VA_ARG         0x00000056 // ir_instr_va_arg_t
+#define INSTRUCTION_VA_COPY        0x00000057 // ir_instr_va_copy_t
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -411,7 +415,7 @@ typedef struct {
 } ir_instr_offsetof_t;
 
 // ---------------- ir_instr_varzeroinit_t ----------------
-// An IR for zero-initializing a stack allocated variable
+// An IR instruction for zero-initializing a stack allocated variable
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
@@ -419,7 +423,7 @@ typedef struct {
 } ir_instr_varzeroinit_t;
 
 // ---------------- ir_instr_memcpy_t ----------------
-// An IR for copying chunks of memory from one place to another
+// An IR instruction for copying chunks of memory from one place to another
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
@@ -430,14 +434,23 @@ typedef struct {
 } ir_instr_memcpy_t;
 
 // ---------------- ir_instr_stack_restore_t ----------------
-// An IR for restoring the stack pointer
+// An IR instruction for restoring the stack pointer
 typedef struct {
     unsigned int id;
+    ir_type_t *result_type;
     ir_value_t *stack_pointer;
 } ir_instr_stack_restore_t;
 
+// ---------------- ir_instr_stack_restore_t ----------------
+// An IR instruction for invoking 'va_arg'
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_value_t *va_list;
+} ir_instr_va_arg_t;
+
 // ---------------- ir_instr_select_t ----------------
-// An IR for conditionally selecting between two values
+// An IR instruction for conditionally selecting between two values
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
@@ -470,6 +483,15 @@ typedef struct {
     length_t default_block_id;
     length_t resume_block_id;
 } ir_instr_switch_t;
+
+// ---------------- ir_instr_va_copy_t ----------------
+// An IR instruction for invoking 'va_copy'
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    ir_value_t *dest_value;
+    ir_value_t *src_value;
+} ir_instr_va_copy_t;
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block

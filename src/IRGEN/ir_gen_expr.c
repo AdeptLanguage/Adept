@@ -707,6 +707,48 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             if(out_expr_type != NULL) ast_type_prepend_ptr(out_expr_type);
         }
         break;
+    case EXPR_VA_ARG: {
+            ast_expr_va_arg_t *va_arg_expr = (ast_expr_va_arg_t*) expr;
+            ir_value_t *va_list;
+            ir_type_t *arg_type;
+
+            ast_type_t temporary_type;
+            if(ir_gen_expression(builder, va_arg_expr->va_list, &va_list, true, &temporary_type)) return FAILURE;
+
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &va_arg_expr->arg_type, &arg_type)){
+                ast_type_free(&temporary_type);
+                return FAILURE;
+            }
+
+            if(!ast_type_is_base_of(&temporary_type, "va_list")){
+                char *t = ast_type_str(&temporary_type);
+                compiler_panicf(builder->compiler, va_arg_expr->source, "Can't pass non-'va_list' type '%s' to va_arg", t);
+                ast_type_free(&temporary_type);
+                free(t);
+                return FAILURE;
+            }
+
+            ast_type_free(&temporary_type);
+
+            if(!expr_is_mutable(va_arg_expr->va_list)){
+                compiler_panic(builder->compiler, va_arg_expr->source, "Value passed for va_list to va_arg must be mutable");
+                return FAILURE;
+            }
+
+            // Cast from *va_list to *s8
+            va_list = build_bitcast(builder, va_list, builder->ptr_type);
+            
+            ir_basicblock_new_instructions(builder->current_block, 1);
+            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_va_arg_t));
+            ((ir_instr_va_arg_t*) instruction)->id = INSTRUCTION_VA_ARG;
+            ((ir_instr_va_arg_t*) instruction)->result_type = arg_type;
+            ((ir_instr_va_arg_t*) instruction)->va_list = va_list;
+            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
+            *ir_value = build_value_from_prev_instruction(builder);
+
+            if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&va_arg_expr->arg_type);
+        }
+        break;
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr_expr = (ast_expr_func_addr_t*) expr;
 

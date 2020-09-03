@@ -501,6 +501,7 @@ ir_value_t *build_stack_save(ir_builder_t *builder){
 void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer){
     ir_instr_stack_restore_t *instr = (ir_instr_stack_restore_t*) build_instruction(builder, sizeof(ir_instr_stack_restore_t));
     instr->id = INSTRUCTION_STACK_RESTORE;
+    instr->result_type = NULL;
     instr->stack_pointer = stack_pointer;
 }
 

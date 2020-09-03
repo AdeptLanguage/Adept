@@ -40,6 +40,9 @@ typedef struct {
     LLVMValueRef memset_intrinsic;
     LLVMValueRef stacksave_intrinsic;
     LLVMValueRef stackrestore_intrinsic;
+    LLVMValueRef va_start_intrinsic;
+    LLVMValueRef va_end_intrinsic;
+    LLVMValueRef va_copy_intrinsic;
     compiler_t *compiler;
 
     // Variables only used for compilation with null checks

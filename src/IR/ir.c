@@ -632,6 +632,36 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                     fprintf(file, "    0x%08X srestore %s\n", (int) i, val_str);
                     free(val_str);
                     break;
+                case INSTRUCTION_VA_START:
+                    val_str = ir_value_str(((ir_instr_unary_t*) functions[f].basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X va_start %s\n", (int) i, val_str);
+                    free(val_str);
+                    break;
+                case INSTRUCTION_VA_END:
+                    val_str = ir_value_str(((ir_instr_unary_t*) functions[f].basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X va_end %s\n", (int) i, val_str);
+                    free(val_str);
+                    break;
+                case INSTRUCTION_VA_ARG: {
+                        val_str = ir_value_str(((ir_instr_va_arg_t*) functions[f].basicblocks[b].instructions[i])->va_list);
+                        strong_cstr_t type_str = ir_type_str(((ir_instr_va_arg_t*) functions[f].basicblocks[b].instructions[i])->result_type);
+
+                        fprintf(file, "    0x%08X va_arg %s, %s\n", (int) i, val_str, type_str);
+                        
+                        free(val_str);
+                        free(type_str);
+                    }
+                    break;
+                case INSTRUCTION_VA_COPY: {
+                        strong_cstr_t dest_str = ir_value_str(((ir_instr_va_copy_t*) functions[f].basicblocks[b].instructions[i])->dest_value);
+                        val_str = ir_value_str(((ir_instr_va_copy_t*) functions[f].basicblocks[b].instructions[i])->src_value);
+
+                        fprintf(file, "    0x%08X va_copy %s, %s\n", (int) i, dest_str, val_str);
+                        
+                        free(val_str);
+                        free(dest_str);
+                    }
+                    break;
                 default:
                     printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) functions[f].basicblocks[b].instructions[i]->id);
                     fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);

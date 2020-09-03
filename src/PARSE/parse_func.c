@@ -89,7 +89,6 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    // TODO: Finis
     if(strcmp(func->name, "__access__") == 0 && (
         func->traits != TRAIT_NONE
         || func->arity != 2

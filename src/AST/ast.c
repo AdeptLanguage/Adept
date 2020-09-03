@@ -334,6 +334,19 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
         switch(statements[s]->id){
         case EXPR_RETURN: {
                 ast_expr_t *return_value = ((ast_expr_return_t*) statements[s])->value;
+                ast_expr_list_t last_minute = ((ast_expr_return_t*) statements[s])->last_minute;
+
+                if(last_minute.length != 0){
+                    fprintf(file, "<deferred> {\n");
+                    ast_dump_statements(file, last_minute.statements, last_minute.length, indentation + 1);
+
+                    // Indent Remaining
+                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                    fprintf(file, "}\n");
+
+                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                }
+
                 char *return_value_str = return_value == NULL ? "" : ast_expr_str(return_value);
                 fprintf(file, "return %s\n", return_value_str);
                 if(return_value != NULL) free(return_value_str);
@@ -369,11 +382,59 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 }
             }
             break;
-        case EXPR_ASSIGN: {
+        case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN: case EXPR_MULTIPLY_ASSIGN:
+        case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN: case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN:
+        case EXPR_XOR_ASSIGN: case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN: case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN:
+            {
+                const char *operator = NULL;
+                switch(statements[s]->id){
+                case EXPR_ASSIGN:
+                    operator = "=";
+                    break;
+                case EXPR_ADD_ASSIGN:
+                    operator = "+=";
+                    break;
+                case EXPR_SUBTRACT_ASSIGN:
+                    operator = "-=";
+                    break;
+                case EXPR_MULTIPLY_ASSIGN:
+                    operator = "*=";
+                    break;
+                case EXPR_DIVIDE_ASSIGN:
+                    operator = "/=";
+                    break;
+                case EXPR_MODULUS_ASSIGN:
+                    operator = "%=";
+                    break;
+                case EXPR_AND_ASSIGN:
+                    operator = "&=";
+                    break;
+                case EXPR_OR_ASSIGN:
+                    operator = "|=";
+                    break;
+                case EXPR_XOR_ASSIGN:
+                    operator = "^=";
+                    break;
+                case EXPR_LS_ASSIGN:
+                    operator = "<<=";
+                    break;
+                case EXPR_RS_ASSIGN:
+                    operator = ">>=";
+                    break;
+                case EXPR_LGC_LS_ASSIGN:
+                    operator = "<<<=";
+                    break;
+                case EXPR_LGC_RS_ASSIGN:
+                    operator = ">>>=";
+                    break;
+                default:
+                    operator = "¿=";
+                }
+                
                 ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) statements[s];
                 char *destination_str = ast_expr_str(assign_stmt->destination);
                 char *value_str = ast_expr_str(assign_stmt->value);
-                fprintf(file, "%s = %s\n", destination_str, value_str);
+                fprintf(file, "%s %s %s\n", destination_str, operator, value_str);
                 free(destination_str);
                 free(value_str);
             }
@@ -507,6 +568,23 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
         case EXPR_CONTINUE_TO: {
                 ast_expr_continue_to_t *continue_to_stmt = (ast_expr_continue_to_t*) statements[s];
                 fprintf(file, "continue %s\n", continue_to_stmt->label);
+            }
+            break;
+        case EXPR_VA_START: case EXPR_VA_END: {
+                ast_expr_t *value = ((ast_expr_va_start_t*) statements[s])->value;
+                char *value_str = ast_expr_str(value);
+                fprintf(file, "%s %s\n", statements[s]->id == EXPR_VA_START ? "va_start" : "va_end", value_str);
+                free(value_str);
+            }
+            break;
+        case EXPR_VA_COPY: {
+                ast_expr_t *dest_value = ((ast_expr_va_copy_t*) statements[s])->dest_value;
+                ast_expr_t *src_value = ((ast_expr_va_copy_t*) statements[s])->src_value;
+                char *dest_str = ast_expr_str(dest_value);
+                char *src_str = ast_expr_str(src_value);
+                fprintf(file, "va_copy(%s, %s)\n", dest_str, src_str);
+                free(dest_str);
+                free(src_str);
             }
             break;
         default:
@@ -824,6 +902,39 @@ ast_type_t* ast_get_usize(ast_t *ast){
     }
 
     return usize_type;
+}
+
+void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
+    if(sizeof(va_list) <= 8){
+        // Small va_list
+        strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 1);
+        names[0] = strclone("_opaque");
+
+        ast_type_t *types = malloc(sizeof(ast_type_t) * 1);
+        ast_type_make_base(&types[0], strclone("ptr"));
+
+        ast_add_struct(ast, strclone("va_list"), names, types, 1, TRAIT_NONE, NULL_SOURCE);
+    } else {
+        // Larger Intel x86_64 va_list
+        
+        if(sizeof(va_list) != 24){
+            compiler_warnf(compiler, NULL_SOURCE, "WARNING: Assuming Intel x86_64 va_list\n");
+        }
+
+        strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 4);
+        names[0] = strclone("_opaque1");
+        names[1] = strclone("_opaque2");
+        names[2] = strclone("_opaque3");
+        names[3] = strclone("_opaque4");
+
+        ast_type_t *types = malloc(sizeof(ast_type_t) * 4);
+        ast_type_make_base(&types[0], strclone("int"));
+        ast_type_make_base(&types[1], strclone("int"));
+        ast_type_make_base(&types[2], strclone("ptr"));
+        ast_type_make_base(&types[3], strclone("ptr"));
+        
+        ast_add_struct(ast, strclone("va_list"), names, types, 4, TRAIT_NONE, NULL_SOURCE);
+    }
 }
 
 int ast_aliases_cmp(const void *a, const void *b){

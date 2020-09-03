@@ -300,6 +300,10 @@ void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, bool is_framewor
 // Gets constant AST type for type 'usize'
 ast_type_t* ast_get_usize(ast_t *ast);
 
+// ---------------- va_args_inject_ast ----------------
+// Injects va_* definitions into AST
+void va_args_inject_ast(struct compiler *compiler, ast_t *ast);
+
 // ---------------- ast_aliases_cmp ----------------
 // Compares two 'ast_alias_t' structures.
 // Used for qsort()

@@ -180,9 +180,9 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 }
             }
             break;
-        case EXPR_DELETE: {
-                ast_expr_unary_t *delete_stmt = (ast_expr_unary_t*) statements[s];
-                if(infer_expr(ctx, func, &delete_stmt->value, EXPR_NONE, scope)) return FAILURE;
+        case EXPR_DELETE: case EXPR_VA_START: case EXPR_VA_END: {
+                ast_expr_unary_t *unary_stmt = (ast_expr_unary_t*) statements[s];
+                if(infer_expr(ctx, func, &unary_stmt->value, EXPR_NONE, scope)) return FAILURE;
             }
             break;
         case EXPR_EACH_IN: {
@@ -241,6 +241,12 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                     return FAILURE;
                 }
                 infer_var_scope_pop(&scope);
+            }
+            break;
+        case EXPR_VA_COPY: {
+                ast_expr_va_copy_t *va_copy_stmt = (ast_expr_va_copy_t*) statements[s];
+                if(infer_expr(ctx, func, &va_copy_stmt->src_value, EXPR_NONE, scope)) return FAILURE;
+                if(infer_expr(ctx, func, &va_copy_stmt->dest_value, EXPR_NONE, scope)) return FAILURE;
             }
             break;
         default: break;
@@ -620,6 +626,13 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             }
 
             infer_var_scope_add_variable(scope, def->name, &def->type);
+        }
+        break;
+    case EXPR_VA_ARG: {
+            ast_expr_va_arg_t *va = (ast_expr_va_arg_t*) *expr;
+
+            if(infer_expr(ctx, ast_func, &va->va_list, EXPR_NONE, scope)) return FAILURE;
+            if(infer_type(ctx, &va->arg_type)) return FAILURE;
         }
         break;
     default:

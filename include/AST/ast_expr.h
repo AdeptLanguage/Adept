@@ -87,6 +87,7 @@ extern "C" {
 #define EXPR_POSTDECREMENT   0x0000003E
 #define EXPR_PHANTOM         0x0000003F
 #define EXPR_TOGGLE          0x00000040
+#define EXPR_VA_ARG          0x00000041
 // Exclusive statements ---------------
 #define EXPR_DECLARE         0x00000050
 #define EXPR_DECLAREUNDEF    0x00000051
@@ -123,8 +124,11 @@ extern "C" {
 #define EXPR_BREAK_TO        0x00000070
 #define EXPR_CONTINUE_TO     0x00000071
 #define EXPR_SWITCH          0x00000072
+#define EXPR_VA_START        0x00000073
+#define EXPR_VA_END          0x00000074
+#define EXPR_VA_COPY         0x00000075
 
-#define MAX_AST_EXPR EXPR_SWITCH
+#define MAX_AST_EXPR EXPR_VA_COPY
 
 // Static data that stores general expression syntax representations
 extern const char *global_expression_rep_table[];
@@ -295,7 +299,8 @@ typedef struct {
     unsigned int id;
     source_t source;
     ast_expr_t *value;
-} ast_expr_unary_t;
+} ast_expr_unary_t, ast_expr_address_t, ast_expr_dereference_t, ast_expr_bitwise_complement_t, ast_expr_not_t,
+    ast_expr_negate_t, ast_expr_delete_t, ast_expr_toggle_t, ast_expr_va_start_t, ast_expr_va_end_t;
 
 // ---------------- ast_expr_new_t ----------------
 // Expression for 'new' keyword, used to dynamically
@@ -444,6 +449,15 @@ typedef struct {
     bool is_tentative;
 } ast_expr_call_method_t;
 
+// ---------------- ast_expr_va_arg_t ----------------
+// Expression for using 'va_arg'
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_expr_t *va_list;
+    ast_type_t arg_type;
+} ast_expr_va_arg_t;
+
 // ---------------- ast_expr_declare_t ----------------
 // Expression for declaring a variable
 typedef struct {
@@ -581,6 +595,15 @@ typedef struct {
     length_t default_statements_length;
     length_t default_statements_capacity;
 } ast_expr_switch_t;
+
+// ---------------- ast_expr_va_copy_t ----------------
+// Expression for 'va_copy' instruction
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_expr_t *dest_value;
+    ast_expr_t *src_value;
+} ast_expr_va_copy_t;
 
 // ---------------- expr_is_mutable ----------------
 // Tests to see if the result of an expression will be mutable

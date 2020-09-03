@@ -22,7 +22,7 @@ extern "C" {
     or other cases where it is necessary to break off into a new interation version.
     (Used for compatibility checking with pre-lexed libraries)
 */
-#define TOKEN_ITERATION_VERSION 0x00000014
+#define TOKEN_ITERATION_VERSION 0x00000015
 
 typedef unsigned short tokenid_t;
 
@@ -191,8 +191,12 @@ extern const char *global_token_name_table[];
 #define TOKEN_UNDEF            0x0000007D
 #define TOKEN_UNLESS           0x0000007E
 #define TOKEN_UNTIL            0x0000007F
-#define TOKEN_VERBATIM         0x00000080
-#define TOKEN_WHILE            0x00000081
+#define TOKEN_VA_ARG           0x00000080
+#define TOKEN_VA_COPY          0x00000081
+#define TOKEN_VA_END           0x00000082
+#define TOKEN_VA_START         0x00000083
+#define TOKEN_VERBATIM         0x00000084
+#define TOKEN_WHILE            0x00000085
 // 81..9F
 #define MAX_LEX_TOKEN          TOKEN_WHILE
 

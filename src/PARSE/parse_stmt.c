@@ -606,6 +606,62 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_SWITCH:
             if(parse_switch(ctx, stmt_list, defer_scope)) return FAILURE;
             break;
+        case TOKEN_VA_START: case TOKEN_VA_END: {
+                tokenid_t tokenid = tokens[*i].id;
+                source = sources[(*i)++];
+
+                ast_expr_t *va_list_value;
+                if(parse_expr(ctx, &va_list_value)) return FAILURE;
+
+                ast_expr_unary_t *stmt = malloc(sizeof(ast_expr_unary_t));
+                stmt->id = tokenid == TOKEN_VA_START ? EXPR_VA_START : EXPR_VA_END;
+                stmt->source = source;
+                stmt->value = va_list_value;
+
+                stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+            }
+            break;
+        case TOKEN_VA_COPY: {
+                // va_copy(dest, src)
+                //    ^
+
+                source = sources[(*i)++];
+
+                // Eat '('
+                if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after va_copy keyword")) return FAILURE;
+
+                ast_expr_t *va_list_destination;
+                if(parse_expr(ctx, &va_list_destination)) return FAILURE;
+
+                // Eat ','
+                if(parse_eat(ctx, TOKEN_NEXT, "Expected ',' after first parameter to va_arg")){
+                    ast_expr_free_fully(va_list_destination);
+                    return FAILURE;
+                }
+                
+                ast_expr_t *va_list_source;
+                if(parse_expr(ctx, &va_list_source)){
+                    ast_expr_free_fully(va_list_destination);
+                    ast_expr_free_fully(va_list_source);
+                    return FAILURE;
+                }
+
+                // Eat ')'
+                if(parse_eat(ctx, TOKEN_CLOSE, "Expected ')' after va_arg parameters")){
+                    ast_expr_free_fully(va_list_destination);
+                    ast_expr_free_fully(va_list_source);
+                    return FAILURE;
+                }
+
+                ast_expr_va_copy_t *stmt = malloc(sizeof(ast_expr_va_copy_t));
+                stmt->id = EXPR_VA_COPY;
+                stmt->source = source;
+                stmt->dest_value = va_list_destination;
+                stmt->src_value = va_list_source;
+
+                stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+            }
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
             return FAILURE;

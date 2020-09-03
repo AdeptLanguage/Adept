@@ -79,7 +79,12 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     builder.static_bool.source = NULL_SOURCE;
     builder.static_bool.source.object_index = builder.object->index;
 
+    ir_type_t *i8_type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    i8_type->kind = TYPE_KIND_S8;
+    // neglect i8_type->extra
+
     builder.stack_pointer_type = NULL;
+    builder.ptr_type = ir_type_pointer_to(pool, i8_type);
     builder.type_table = object->ast.type_table;
 
     while(module_func->arity != ast_func->arity){
@@ -1557,6 +1562,84 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ((ir_instr_switch_t*) built_instr)->default_block_id = default_block_id;
                 ((ir_instr_switch_t*) built_instr)->resume_block_id = resume_block_id;
                 build_using_basicblock(builder, resume_block_id);
+            }
+            break;
+        case EXPR_VA_START: case EXPR_VA_END: {
+                ast_expr_unary_t *va_expr = (ast_expr_unary_t*) stmt;
+                if(ir_gen_expression(builder, va_expr->value, &expression_value, true, &temporary_type)) return FAILURE;
+                
+                if(!ast_type_is_base_of(&temporary_type, "va_list")){
+                    char *t = ast_type_str(&temporary_type);
+                    compiler_panicf(builder->compiler, va_expr->source, "Can't pass non-'va_list' type '%s' to va_%s", t, stmt->id == EXPR_VA_START ? "start" : "end");
+                    ast_type_free(&temporary_type);
+                    free(t);
+                    return FAILURE;
+                }
+
+                if(!expr_is_mutable(va_expr->value)){
+                    compiler_panicf(builder->compiler, va_expr->source, "Value passed to va_%s must be mutable", stmt->id == EXPR_VA_START ? "start" : "end");
+                    return FAILURE;
+                }
+
+                // Cast from *va_list to *s8
+                expression_value = build_bitcast(builder, expression_value, builder->ptr_type);
+
+                built_instr = build_instruction(builder, sizeof(ir_instr_unary_t));
+                ((ir_instr_unary_t*) built_instr)->id = stmt->id == EXPR_VA_START ? INSTRUCTION_VA_START : INSTRUCTION_VA_END;
+                ((ir_instr_unary_t*) built_instr)->result_type = NULL;
+                ((ir_instr_unary_t*) built_instr)->value = expression_value;
+
+                ast_type_free(&temporary_type);
+            }
+            break;
+        case EXPR_VA_COPY: {
+                ast_expr_va_copy_t *va_copy_expr = (ast_expr_va_copy_t*) stmt;
+
+                ir_value_t *dest_value;
+                if(ir_gen_expression(builder, va_copy_expr->dest_value, &dest_value, true, &temporary_type)) return FAILURE;
+                
+                if(!ast_type_is_base_of(&temporary_type, "va_list")){
+                    char *t = ast_type_str(&temporary_type);
+                    compiler_panicf(builder->compiler, va_copy_expr->dest_value->source, "Can't pass non-'va_list' type '%s' to va_copy", t);
+                    ast_type_free(&temporary_type);
+                    free(t);
+                    return FAILURE;
+                }
+
+                if(!expr_is_mutable(va_copy_expr->dest_value)){
+                    compiler_panicf(builder->compiler, va_copy_expr->dest_value->source, "Value passed to va_copy must be mutable");
+                    return FAILURE;
+                }
+
+                ast_type_free(&temporary_type);
+
+                ir_value_t *src_value;
+                if(ir_gen_expression(builder, va_copy_expr->src_value, &src_value, true, &temporary_type)) return FAILURE;
+                
+                if(!ast_type_is_base_of(&temporary_type, "va_list")){
+                    char *t = ast_type_str(&temporary_type);
+                    compiler_panicf(builder->compiler, va_copy_expr->src_value->source, "Can't pass non-'va_list' type '%s' to va_copy", t);
+                    ast_type_free(&temporary_type);
+                    free(t);
+                    return FAILURE;
+                }
+
+                if(!expr_is_mutable(va_copy_expr->dest_value)){
+                    compiler_panicf(builder->compiler, va_copy_expr->src_value->source, "Value passed to va_copy must be mutable");
+                    return FAILURE;
+                }
+
+                // Cast from *va_list to *s8
+                dest_value = build_bitcast(builder, dest_value, builder->ptr_type);
+                src_value   = build_bitcast(builder, src_value, builder->ptr_type);
+
+                built_instr = build_instruction(builder, sizeof(ir_instr_va_copy_t));
+                ((ir_instr_va_copy_t*) built_instr)->id = INSTRUCTION_VA_COPY;
+                ((ir_instr_va_copy_t*) built_instr)->result_type = NULL;
+                ((ir_instr_va_copy_t*) built_instr)->dest_value = dest_value;
+                ((ir_instr_va_copy_t*) built_instr)->src_value = src_value;
+
+                ast_type_free(&temporary_type);
             }
             break;
         default:

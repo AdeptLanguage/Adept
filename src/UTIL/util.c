@@ -81,7 +81,7 @@ void freestrs(strong_cstr_t *array, length_t length){
 }
 
 char *mallocandsprintf(const char *format, ...){
-    // TODO: Add support for things other than %s
+    // TODO: Add support for things other then '%s' and '%%'
     char *destination = NULL;
     va_list args;
     va_list transverse;

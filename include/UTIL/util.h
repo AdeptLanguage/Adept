@@ -50,10 +50,10 @@ strong_cstr_t strclone(const char *src);
 void freestrs(strong_cstr_t *array, length_t length);
 
 // ---------------- mallocandsprintf ----------------
+// NOTE: Only supports using '%s' and '%%'
 // Allocates an array capable of holding the result
 // of a sprintf() and then runs sprintf() and
 // returns the byte array
-// NOTE: Only supports using '%s' currently
 strong_cstr_t mallocandsprintf(const char *format, ...);
 
 // ---------------- string_to_escaped_string ----------------

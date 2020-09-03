@@ -54,8 +54,6 @@ TODO:
 * function aliases
 * scoped constants
 * reverse repeat
-* vararg bindings
-* make --no-typeinfo and no_type_info have the same spacing
 * conform default arguments to required argument type
 
 COMPLETED:
@@ -150,5 +148,7 @@ COMPLETED:
 + default arguments
 + fix bug with default arguments not being added in for method calls
 + add __no_typeinfo__ dynamic compiler meta variable
++ make --no-typeinfo and no_type_info have the same spacing
 + Standard library component imports and default_stdlib
 + [] operator overload
++ vararg bindings

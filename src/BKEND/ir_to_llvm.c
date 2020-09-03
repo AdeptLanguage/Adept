@@ -1082,6 +1082,54 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         catalog.blocks[b].value_references[i] = NULL;
                     }
                     break;
+                case INSTRUCTION_VA_START: case INSTRUCTION_VA_END: {
+                        instr = basicblock->instructions[i];
+
+                        bool is_start = instr->id == INSTRUCTION_VA_START;
+                        LLVMValueRef *va_intrinsic = is_start ? &llvm->va_start_intrinsic : &llvm->va_end_intrinsic;
+
+                        if(*va_intrinsic == NULL){
+                            LLVMTypeRef params[] = {LLVMPointerType(LLVMInt8Type(), 0)};
+                            LLVMTypeRef va_intrinsic_type = LLVMFunctionType(LLVMVoidType(), params, 1, 0);
+                            *va_intrinsic = LLVMAddFunction(llvm->module, is_start ? "llvm.va_start" : "llvm.va_end", va_intrinsic_type);
+                        }
+
+                        LLVMValueRef args[1];
+                        args[0] = ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value);
+                        
+                        LLVMBuildCall(builder, *va_intrinsic, args, 1, "");
+                        catalog.blocks[b].value_references[i] = NULL;
+                    }
+                    break;
+                case INSTRUCTION_VA_ARG: {
+                        instr = basicblock->instructions[i];
+
+                        LLVMValueRef list = ir_to_llvm_value(llvm, ((ir_instr_va_arg_t*) instr)->va_list);
+                        LLVMTypeRef arg_type = ir_to_llvm_type(((ir_instr_va_arg_t*) instr)->result_type);
+
+                        catalog.blocks[b].value_references[i] = LLVMBuildVAArg(builder, list, arg_type, "");
+                    }
+                    break;
+                case INSTRUCTION_VA_COPY: {
+                        instr = basicblock->instructions[i];
+
+                        LLVMValueRef *va_copy_intrinsic = &llvm->va_copy_intrinsic;
+
+                        if(*va_copy_intrinsic == NULL){
+                            LLVMTypeRef llvm_ptr_type = LLVMPointerType(LLVMInt8Type(), 0);
+                            LLVMTypeRef params[] = {llvm_ptr_type, llvm_ptr_type};
+                            LLVMTypeRef va_copy_intrinsic_type = LLVMFunctionType(LLVMVoidType(), params, 2, 0);
+                            *va_copy_intrinsic = LLVMAddFunction(llvm->module, "llvm.va_copy", va_copy_intrinsic_type);
+                        }
+
+                        LLVMValueRef args[2];
+                        args[0] = ir_to_llvm_value(llvm, ((ir_instr_va_copy_t*) instr)->dest_value);
+                        args[1] = ir_to_llvm_value(llvm, ((ir_instr_va_copy_t*) instr)->src_value);
+                        
+                        LLVMBuildCall(builder, *va_copy_intrinsic, args, 2, "");
+                        catalog.blocks[b].value_references[i] = NULL;
+                    }
+                    break;
                 default:
                     redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", basicblocks[b].instructions[i]->id);
                     for(length_t c = 0; c != catalog.blocks_length; c++) free(catalog.blocks[c].value_references);
@@ -1186,6 +1234,9 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.memset_intrinsic = NULL;
     llvm.stacksave_intrinsic = NULL;
     llvm.stackrestore_intrinsic = NULL;
+    llvm.va_start_intrinsic = NULL;
+    llvm.va_end_intrinsic = NULL;
+    llvm.va_copy_intrinsic = NULL;
     llvm.compiler = compiler;
 
     bool disposeTriple = false;

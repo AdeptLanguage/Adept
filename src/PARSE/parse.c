@@ -22,8 +22,12 @@ errorcode_t parse(compiler_t *compiler, object_t *object){
 
     object_init_ast(object);
     parse_ctx_init(&ctx, compiler, object);
-    if(!(compiler->traits & COMPILER_INFLATE_PACKAGE)) any_inject_ast(ctx.ast);
-
+    
+    if(!(compiler->traits & COMPILER_INFLATE_PACKAGE)){
+        any_inject_ast(ctx.ast);
+        va_args_inject_ast(compiler, ctx.ast);
+    }
+    
     if(parse_tokens(&ctx)) return FAILURE;
 
     qsort(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, sizeof(ast_polymorphic_func_t), &ast_polymorphic_funcs_cmp);
