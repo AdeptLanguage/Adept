@@ -1,0 +1,28 @@
+
+import VariadicArray
+import 'sys/cstdio.adept'
+
+func main {
+    printf('sum = %d\n', sumEmUp(1, 2, 3, 4, 5))
+}
+
+func sumEmUp(integers ...) int {
+    printf('%p\n', integers.items)
+    printf('%p\n', integers.next)
+    printf('%d\n', integers.length as int)
+    printf('%d\n', integers.index as int)
+    printf('%p\n', integers.types)
+    
+    sum int = 0
+    while integers.hasNext() {
+        if integers.types[integers.index] != typeinfo int {
+            printf('ERROR: sumEmUp() got non-int value!\n')
+            return 0
+        }
+
+        x int = integers.readInt()
+        printf('Got value: %d\n', x)
+        sum += x
+    }
+    return sum
+}
