@@ -123,21 +123,22 @@
 #define VALUE_TYPE_STRUCT_LITERAL      0x00000009 // data = pointer to an 'ir_value_struct_literal_t'
 #define VALUE_TYPE_CONST_ANON_GLOBAL   0x0000000A // data = pointer to an 'ir_value_anon_global_t'
 #define VALUE_TYPE_CSTR_OF_LEN         0x0000000B // data = pointer to an 'ir_value_cstr_of_len_t'
+#define VALUE_TYPE_CONST_SIZEOF        0x0000000C // data = pointer to an 'ir_value_const_sizeof_t'
 #define VALUE_TYPE_LAST_CONST_NON_CAST VALUE_TYPE_CSTR_OF_LEN
 
 // Const cast values
-#define VALUE_TYPE_CONST_BITCAST       0x0000000C // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_ZEXT          0x0000000D // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FEXT          0x0000000E // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_TRUNC         0x0000000F // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FTRUNC        0x00000010 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_INTTOPTR      0x00000011 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_PTRTOINT      0x00000012 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FPTOUI        0x00000013 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FPTOSI        0x00000014 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_UITOFP        0x00000015 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_SITOFP        0x00000016 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_REINTERPRET   0x00000017 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_BITCAST       0x0000000D // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_ZEXT          0x0000000E // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FEXT          0x0000000F // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_TRUNC         0x00000010 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FTRUNC        0x00000011 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_INTTOPTR      0x00000012 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_PTRTOINT      0x00000013 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOUI        0x00000014 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOSI        0x00000015 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_UITOFP        0x00000016 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_SITOFP        0x00000017 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_REINTERPRET   0x00000018 // data = pointer to an 'ir_value_t'
 
 #define VALUE_TYPE_IS_CONSTANT(a)      (a > VALUE_TYPE_LAST_NON_CONST)
 #define VALUE_TYPE_IS_CONSTANT_CAST(a) (a > VALUE_TYPE_LAST_CONST_NON_CAST)
@@ -215,11 +216,18 @@ typedef struct {
 
 // ---------------- ir_value_offsetof_t ----------------
 // Structure for 'extra' field of 'ir_value_t' if
-// the value is a construction of a structure
+// the value type is VALUE_TYPE_OFFSETOF
 typedef struct {
     ir_type_t *type;
     length_t index;
 } ir_value_offsetof_t;
+
+// ---------------- ir_value_const_sizeof_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if
+// the value type is VALUE_TYPE_CONST_SIZEOF
+typedef struct {
+    ir_type_t *type;
+} ir_value_const_sizeof_t;
 
 // ---------------- ir_instr_t ----------------
 // General structure for intermediate

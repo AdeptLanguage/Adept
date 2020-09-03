@@ -126,6 +126,10 @@ ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value
 ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index);
 ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type, length_t index);
 
+// ---------------- build_offsetof ----------------
+// Builds constant 'sizeof' value
+ir_value_t *build_const_sizeof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type);
+
 // ---------------- build_static_array ----------------
 // Builds a static array
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);

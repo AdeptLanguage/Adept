@@ -50,6 +50,7 @@ typedef struct {
 #define AST_FUNC_DEFER       TRAIT_7
 #define AST_FUNC_PASS        TRAIT_8
 #define AST_FUNC_AUTOGEN     TRAIT_9
+#define AST_FUNC_VARIADIC    TRAIT_A
 
 // ---------------- ast_struct_t ----------------
 // A structure within the root AST

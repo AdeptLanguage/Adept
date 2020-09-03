@@ -191,7 +191,7 @@ void print_candidate(ast_func_t *ast_func);
 
 // ---------------- make_args_string ----------------
 // Helper function for generating a string for function arguments
-strong_cstr_t make_args_string(ast_type_t *types, ast_expr_t **defaults, length_t arity);
+strong_cstr_t make_args_string(ast_type_t *types, ast_expr_t **defaults, length_t arity, trait_t traits);
 
 // ---------------- object_panic_plain ----------------
 // Prints a plain compiler error given an object

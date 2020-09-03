@@ -357,7 +357,12 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                     } else if(func_elem->traits & AST_FUNC_VARARG){
                         EXTEND_NAME_MACRO(5);
                         memcpy(&name[name_length], ", ...", 5);
+
                         name_length += 5;
+                    } else if(func_elem->traits & AST_FUNC_VARIADIC){
+                        EXTEND_NAME_MACRO(4);
+                        memcpy(&name[name_length], ", ..", 4);
+                        name_length += 4;
                     }
                 }
 

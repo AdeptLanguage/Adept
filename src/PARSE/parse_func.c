@@ -307,7 +307,9 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
         
         if(!is_solid) continue;
 
-        if(tokens[*i].id == TOKEN_NEXT){
+        bool takes_variable_arity = func->traits & AST_FUNC_VARARG || func->traits & AST_FUNC_VARIADIC;
+
+        if(tokens[*i].id == TOKEN_NEXT && !takes_variable_arity){
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
                 parse_free_unbackfilled_arguments(func, backfill);
@@ -315,7 +317,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
                 return FAILURE;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
-            const char *error_message = func->traits & AST_FUNC_VARARG
+            const char *error_message = takes_variable_arity
                     ? "Expected ')' after variadic argument"
                     : "Expected ',' after argument type";
             compiler_panic(ctx->compiler, sources[*i], error_message);
@@ -356,6 +358,8 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         func->arg_defaults[func->arity + *backfill] = NULL;
 
     if(tokens[*i].id == TOKEN_ELLIPSIS){
+        // Alone ellipsis, used for c-style varargs
+
         if(*backfill != 0){
             compiler_panic(ctx->compiler, sources[*i], "Expected type for previous arguments before ellipsis");
             parse_free_unbackfilled_arguments(func, *backfill);
@@ -377,6 +381,21 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         }
 
         func->arg_names[func->arity + *backfill] = name;
+    }
+
+    if(tokens[*i].id == TOKEN_ELLIPSIS){
+        // Ellipsis as type, used for modern variadic argument
+
+        if(*backfill != 0){
+            compiler_panic(ctx->compiler, sources[*i], "Expected type for previous arguments before ellipsis");
+            parse_free_unbackfilled_arguments(func, *backfill);
+            return FAILURE;
+        }
+
+        (*i)++;
+        func->traits |= AST_FUNC_VARIADIC;
+        *out_is_solid = false;
+        return SUCCESS;
     }
 
     if(

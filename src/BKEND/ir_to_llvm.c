@@ -213,6 +213,11 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(offsetof->type), offsetof->index);
             return LLVMConstInt(LLVMInt64Type(), offset, false);
         }
+    case VALUE_TYPE_CONST_SIZEOF: {
+            ir_value_const_sizeof_t *const_sizeof = (ir_value_const_sizeof_t*) value->extra;
+            length_t type_size = const_sizeof->type->kind == TYPE_KIND_VOID ? 0 : LLVMABISizeOfType(llvm->data_layout, ir_to_llvm_type(const_sizeof->type));
+            return LLVMConstInt(LLVMInt64Type(), type_size, false);
+        }
     default:
         redprintf("INTERNAL ERROR: Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
         return NULL;

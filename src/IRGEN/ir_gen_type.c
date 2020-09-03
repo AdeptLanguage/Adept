@@ -503,7 +503,8 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
                 switch(recognized){
                 case BUILTIN_TYPE_NONE:
                     // Try to store a pointer to whatever the data is
-                    redprintf("converting non-built-in types to Any has not been implemented yet!\n");
+                    // TODO: Implement converting between non-built-in types and Any
+                    // redprintf("converting non-built-in types to Any has not been implemented yet!\n");
                     return false;
                 case BUILTIN_TYPE_SHORT:
                 case BUILTIN_TYPE_USHORT:

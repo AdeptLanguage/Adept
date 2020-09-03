@@ -246,6 +246,17 @@ ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t 
     return value;
 }
 
+ir_value_t *build_const_sizeof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_CONST_SIZEOF;
+    value->type = usize_type;
+
+    ir_value_const_sizeof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_const_sizeof_t));
+    extra->type = type;
+    value->extra = extra;
+    return value;
+}
+
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_ARRAY_LITERAL;

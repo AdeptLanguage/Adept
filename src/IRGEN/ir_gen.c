@@ -361,10 +361,10 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
             switch(type_type_kind){
             case TYPE_KIND_POINTER: {
-                    /* struct AnyPtrType(kind AnyTypeKind, name *ubyte, is_alias bool, subtype *AnyType) */
+                    /* struct AnyPtrType(kind AnyTypeKind, name *ubyte, is_alias bool, size usize, subtype *AnyType) */
 
-                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 4);
-                    initializer_members_length = 4;
+                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 5);
+                    initializer_members_length = 5;
 
                     maybe_index_t subtype_index = -1;
 
@@ -382,20 +382,20 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                     if(subtype_index == -1){
                         ir_value_t *null_pointer = build_null_pointer_of_type(pool, any_type_ptr_type);
-                        initializer_members[3] = null_pointer; // subtype
+                        initializer_members[4] = null_pointer; // subtype
                     } else {
-                        initializer_members[3] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type); // subtype
+                        initializer_members[4] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type); // subtype
                     }
 
                     initializer_type = any_ptr_type_type;
                 }
                 break;
             case TYPE_KIND_STRUCTURE: {
-                    /* struct AnyStructType (kind AnyTypeKind, name *ubyte, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
+                    /* struct AnyStructType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
 
                     ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) type_table->entries[i].ir_type->extra;
-                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 8);
-                    initializer_members_length = 8;
+                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
+                    initializer_members_length = 9;
 
                     ir_value_t **composite_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length);
                     ir_value_t **composite_offsets = ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length);
@@ -519,17 +519,17 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                     ir_value_t *offsets_array = build_static_array(pool, usize_type, composite_offsets, composite->subtypes_length);
                     ir_value_t *member_names_array = build_static_array(pool, ubyte_ptr_type, composite_member_names, composite->subtypes_length);
 
-                    initializer_members[3] = members_array;
-                    initializer_members[4] = build_literal_usize(pool, composite->subtypes_length); // length
-                    initializer_members[5] = offsets_array;
-                    initializer_members[6] = member_names_array;
-                    initializer_members[7] = build_bool(pool, composite->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
+                    initializer_members[4] = members_array;
+                    initializer_members[5] = build_literal_usize(pool, composite->subtypes_length); // length
+                    initializer_members[6] = offsets_array;
+                    initializer_members[7] = member_names_array;
+                    initializer_members[8] = build_bool(pool, composite->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
                     initializer_type = any_struct_type_type;
                 }
                 break;
             default:
-                initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 3);
-                initializer_members_length = 3;
+                initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 4);
+                initializer_members_length = 4;
                 initializer_type = any_type_type;
             }
 
@@ -559,6 +559,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             initializer_members[0] = build_literal_usize(pool, any_type_kind_id); // kind
             initializer_members[1] = build_literal_cstr_ex(pool, &ir_module->type_map, type_table->entries[i].name); // name
             initializer_members[2] = build_bool(pool, type_table->entries[i].is_alias); // is_alias
+            initializer_members[3] = build_const_sizeof(pool, usize_type, type_table->entries[i].ir_type); // size
 
             ir_value_t *initializer = build_static_struct(ir_module, initializer_type, initializer_members, initializer_members_length, false);
             build_anon_global_initializer(ir_module, array_values[i], initializer);

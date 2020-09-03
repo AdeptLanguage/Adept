@@ -309,6 +309,17 @@ void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_le
             memcpy(&arguments_string[arguments_string_length], ", ...", 6);
         }
 
+        if(func->traits & AST_FUNC_VARIADIC){
+            if(arguments_string_length + 5 >= arguments_string_capacity){
+                arguments_string_capacity += 5;
+                char *new_arguments_string = malloc(arguments_string_capacity);
+                memcpy(new_arguments_string, arguments_string, arguments_string_length + 1);
+                free(arguments_string);
+                arguments_string = new_arguments_string;
+            }
+
+            memcpy(&arguments_string[arguments_string_length], ", ..", 5);
+        }
 
         char *return_type_string = ast_type_str(&func->return_type);
 
