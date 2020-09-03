@@ -19,6 +19,7 @@ compile any_type_inventory || exit $?
 compile any_type_kind || exit $?
 compile any_type_list || exit $?
 compile any_type_offsets || exit $?
+compile any_type_sizes || exit $?
 compile array_access || exit $?
 compile as || exit $?
 compile assign_func || exit $?

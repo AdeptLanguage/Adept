@@ -1,0 +1,9 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    // Print the size of each type used in the program
+    each *AnyType in [__types__, __types_length__] {
+        printf('\'%s\' is %d bytes\n', it.name, it.size as int);
+    }
+}
