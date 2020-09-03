@@ -218,6 +218,10 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             length_t type_size = const_sizeof->type->kind == TYPE_KIND_VOID ? 0 : LLVMABISizeOfType(llvm->data_layout, ir_to_llvm_type(const_sizeof->type));
             return LLVMConstInt(LLVMInt64Type(), type_size, false);
         }
+    case VALUE_TYPE_CONST_ADD: {
+            ir_value_const_math_t *const_add = (ir_value_const_math_t*) value->extra;
+            return LLVMConstAdd(ir_to_llvm_value(llvm, const_add->a), ir_to_llvm_value(llvm, const_add->b));
+        }
     default:
         redprintf("INTERNAL ERROR: Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
         return NULL;

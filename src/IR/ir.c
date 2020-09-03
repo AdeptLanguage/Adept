@@ -177,6 +177,26 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             return value_str;
         }
         break;
+    case VALUE_TYPE_CONST_SIZEOF: {
+            ir_value_const_sizeof_t *const_sizeof = value->extra;
+            char *type_str = ir_type_str(const_sizeof->type);
+            value_str = mallocandsprintf("csizeof %s", type_str);
+            free(type_str);
+            free(typename);
+            return value_str;
+        }
+        break;
+    case VALUE_TYPE_CONST_ADD: {
+            ir_value_const_math_t *const_add = value->extra;
+            char *a_str = ir_value_str(const_add->a);
+            char *b_str = ir_value_str(const_add->b);
+            value_str = mallocandsprintf("cadd %s, %s", a_str, b_str);
+            free(a_str);
+            free(b_str);
+            free(typename);
+            return value_str;
+        }
+        break;
     case VALUE_TYPE_CONST_BITCAST:
     case VALUE_TYPE_CONST_ZEXT:
     case VALUE_TYPE_CONST_FEXT:
@@ -679,7 +699,7 @@ void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, c
     free(val_str_2);
 }
 
-void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, const char *real_name){
+void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int instr_i, const char *real_name){
     char *call_args = malloc(256);
     length_t call_args_length = 0;
     length_t call_args_capacity = 256;
@@ -708,7 +728,7 @@ void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, c
 
     char implementation_buffer[32];
     ir_implementation((int) instruction->ir_func_id, 'a', implementation_buffer);
-    fprintf(file, "    0x%08X call %s \"%s\" (%s) %s\n", i, implementation_buffer, real_name, call_args, call_result_type);
+    fprintf(file, "    0x%08X call %s \"%s\" (%s) %s\n", instr_i, implementation_buffer, real_name, call_args, call_result_type);
     free(call_args);
     free(call_result_type);
 }

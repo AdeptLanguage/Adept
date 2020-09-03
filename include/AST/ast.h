@@ -32,6 +32,7 @@ typedef struct {
     length_t arity;
     ast_type_t return_type;
     trait_t traits;
+    strong_cstr_t variadic_arg_name;
     ast_expr_t **statements;
     length_t statements_length;
     length_t statements_capacity;
@@ -130,6 +131,7 @@ typedef struct {
 
 typedef struct {
     ast_type_t *ast_usize_type;
+    ast_type_t *ast_variadic_array;
 } ast_shared_common_t;
 
 typedef struct {

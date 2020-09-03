@@ -694,8 +694,8 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     ast_type_t *arg_types = func->arg_types;
     length_t required_arity = func->arity;
 
-    // In no world is more arguments than allowed for non-vararg functions valid Adept code
-    if(!(func->traits & AST_FUNC_VARARG) && required_arity < type_list_length) return false;
+    // In no world is more arguments than allowed for non-vararg/non-variadic functions valid Adept code
+    if(!(func->traits & AST_FUNC_VARARG || func->traits & AST_FUNC_VARIADIC) && required_arity < type_list_length) return false;
 
     // Determine whether we are missing arguments
     bool requires_use_of_defaults = required_arity > type_list_length;

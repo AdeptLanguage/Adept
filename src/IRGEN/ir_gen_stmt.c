@@ -105,6 +105,18 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         module_func->arity++;
     }
 
+    // Append variadic array argument for variadic functions
+    if(ast_func->traits & AST_FUNC_VARIADIC){
+        if(object->ast.common.ast_variadic_array == NULL){
+            compiler_panic(compiler, ast_func->source, "In order to use variadic functions, __variadic_array__ must be defined");
+            printf("\nTry importing '%s/VariadicArray.adept'\n", ADEPT_VERSION_STRING);
+            return FAILURE;
+        }
+
+        add_variable(&builder, ast_func->variadic_arg_name, object->ast.common.ast_variadic_array, ir_module->common.ir_variadic_array, TRAIT_NONE);
+        module_func->arity++;
+    }
+
     ast_expr_t **statements = ast_func->statements;
     length_t statements_length = ast_func->statements_length;
 

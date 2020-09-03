@@ -10,6 +10,7 @@
 #include "BRIDGE/rtti.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
+#include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
 
@@ -38,15 +39,39 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_func_t **ast_funcs = &ast->funcs;
 
+    // Setup IR variadic array type if it exists
+    if(ast->common.ast_variadic_array){
+        // Resolve ast_variadic_array type
+        if(ir_gen_resolve_type(compiler, object, ast->common.ast_variadic_array, &module->common.ir_variadic_array)) return FAILURE;
+    }
+
+    // Generate function skeletons
     for(length_t ast_func_id = 0; ast_func_id != ast->funcs_length; ast_func_id++){
         ast_func_t *ast_func = &(*ast_funcs)[ast_func_id];
         if(ast_func->traits & AST_FUNC_POLYMORPHIC) continue;
         if(ir_gen_func_head(compiler, object, ast_func, ast_func_id, false, NULL)) return FAILURE;
     }
 
+    // Sort various mappings
     qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
     qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
+
+    // Find __variadic_array__ (if it exists)
+    {
+        funcpair_t result;
+        bool is_unique;
+        if(ir_gen_find_func_named(compiler, object, "__variadic_array__", &is_unique, &result) == SUCCESS){
+            // FOUND '__variadic_array__' function
+            
+            if(!is_unique){
+                compiler_warn(compiler, result.ast_func->source, "Warning: Using this definition of __variadic_array__, but there are multiple possibilities");
+            }
+
+            module->common.variadic_ir_func_id = result.ir_func_id;
+        }
+    }
+
     return SUCCESS;
 }
 
@@ -65,12 +90,16 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     module_func->maybe_column_number = 0;
     module_func->traits = TRAIT_NONE;
     module_func->return_type = NULL;
-    module_func->argument_types = malloc(sizeof(ir_type_t*) * ast_func->arity);
+    module_func->argument_types = malloc(sizeof(ir_type_t*) * (ast_func->traits & AST_FUNC_VARIADIC ? ast_func->arity + 1 : ast_func->arity));
     module_func->arity = 0;
     module_func->basicblocks = NULL; // Will be set after 'basicblocks' contains all of the basicblocks
     module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
     module_func->scope = NULL;
     module_func->variable_count = 0;
+
+    if(ast_func->traits & AST_FUNC_VARIADIC){
+        module_func->argument_types[ast_func->arity] = module->common.ir_variadic_array;
+    }
 
     if(compiler->checks & COMPILER_NULL_CHECKS){
         module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);        
@@ -163,6 +192,8 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
             }
         }
     } else {
+        // If 'foreign' function, we don't ever process the statements, which is where we generate the IR argument types here instead
+
         while(module_func->arity != ast_func->arity){
             if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
             module_func->arity++;

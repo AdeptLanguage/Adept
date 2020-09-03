@@ -271,6 +271,8 @@ call :compile varargs
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile variables
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile variadic
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile version
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile while
