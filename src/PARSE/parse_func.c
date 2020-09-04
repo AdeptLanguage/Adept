@@ -279,6 +279,11 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     if(parse_ignore_newlines(ctx, "Expected '(' after function name")) return FAILURE;
 
     if(ctx->struct_association){
+        if(func->traits & AST_FUNC_FOREIGN){
+            compiler_panic(ctx->compiler, func->source, "Cannot declare foreign function inside of struct domain");
+            return FAILURE;
+        }
+
         parse_func_grow_arguments(func, backfill, &capacity);
 
         if(ctx->struct_association_is_polymorphic){
@@ -317,7 +322,8 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
         func->arg_type_traits[0] = TRAIT_NONE;
         func->arity++;
     }
-
+    
+    // Allow for no argument list
     if(tokens[*i].id != TOKEN_OPEN) return SUCCESS;
     (*i)++; // Eat '('
 
@@ -440,7 +446,7 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         (tokens[*i].id == TOKEN_ASSIGN && parse_func_default_arg_value(ctx, func, capacity, backfill)) ||
         parse_ignore_newlines(ctx, "Expected type")
     ){
-        free(func->arg_names[func->arity + *backfill]);
+        if(func->arg_names) free(func->arg_names[func->arity + *backfill]);
         parse_free_unbackfilled_arguments(func, *backfill);
         return FAILURE;
     }
@@ -448,7 +454,7 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
     if(!(func->traits & AST_FUNC_FOREIGN) && tokens[*i].id == TOKEN_NEXT){
         if(tokens[++(*i)].id == TOKEN_CLOSE){
             compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
-            free(func->arg_names[func->arity + *backfill]);
+            if(func->arg_names) free(func->arg_names[func->arity + *backfill]);
             parse_free_unbackfilled_arguments(func, *backfill);
             return FAILURE;
         }
@@ -471,7 +477,7 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         parse_ignore_newlines(ctx, "Expected type") ||
         (tokens[*i].id == TOKEN_ASSIGN && parse_func_default_arg_value(ctx, func, capacity, backfill))
     ){
-        free(func->arg_names[func->arity + *backfill]);
+        if(func->arg_names) free(func->arg_names[func->arity + *backfill]);
         parse_free_unbackfilled_arguments(func, *backfill);
         return FAILURE;
     }
