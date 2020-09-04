@@ -188,6 +188,8 @@ call :compile package_use
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile pass_func
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile poly_default_args
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile polymorphic_functions
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile polymorphic_inner
