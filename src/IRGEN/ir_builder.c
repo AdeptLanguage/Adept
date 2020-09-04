@@ -501,6 +501,15 @@ ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
     ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
     instr->id = INSTRUCTION_ALLOC;
     instr->result_type = ir_type_pointer_to(builder->pool, type);
+    instr->alignment = 0;
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment){
+    ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
+    instr->id = INSTRUCTION_ALLOC;
+    instr->result_type = ir_type_pointer_to(builder->pool, type);
+    instr->alignment = alignment;
     return build_value_from_prev_instruction(builder);
 }
 

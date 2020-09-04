@@ -1056,8 +1056,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                             catalog.blocks[b].value_references[i] = LLVMConstPointerNull(ir_to_llvm_type(target_result_type));
                             break;
                         }
-
+                        
                         catalog.blocks[b].value_references[i] = LLVMBuildAlloca(llvm->builder, ir_to_llvm_type(target_result_type->extra), "");
+
+                        if(((ir_instr_alloc_t*) instr)->alignment != 0)
+                            LLVMSetAlignment(catalog.blocks[b].value_references[i], ((ir_instr_alloc_t*) instr)->alignment);
                     }
                     break;
                 case INSTRUCTION_STACK_SAVE: {

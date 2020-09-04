@@ -634,12 +634,14 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                     }
                     break;
                 case INSTRUCTION_ALLOC: {
-                        ir_type_t *alloc_result_type = ((ir_instr_alloc_t*) functions[f].basicblocks[b].instructions[i])->result_type;
+                        ir_instr_alloc_t *alloc = (ir_instr_alloc_t*) functions[f].basicblocks[b].instructions[i];
+                        ir_type_t *alloc_result_type = alloc->result_type;
+                        
                         if(alloc_result_type->kind != TYPE_KIND_POINTER){
                             fprintf(file, "    0x%08X alloc (malformed)\n", (int) i);
                         } else {
                             char *typename = ir_type_str(alloc_result_type->extra);
-                            fprintf(file, "    0x%08X alloc %s\n", (int) i, typename);
+                            fprintf(file, "    0x%08X alloc %s, aligned %d\n", (int) i, typename, alloc->alignment);
                             free(typename);
                         }
                     }

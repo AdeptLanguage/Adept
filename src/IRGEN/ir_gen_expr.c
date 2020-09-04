@@ -500,13 +500,13 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     }
 
                     for(length_t i = variadic_count; i > 0; i--){
-                        ir_value_t *alloca = build_alloc(builder, arg_values[pair.ast_func->arity + (i - 1)]->type);
+                        ir_value_t *alloca = build_alloc_aligned(builder, arg_values[pair.ast_func->arity + (i - 1)]->type, 8);
                         build_store(builder, arg_values[pair.ast_func->arity + (i - 1)], alloca, call_expr->source);
                         last_alloca = alloca;
                     }
 
                     if(any_type_pointer_type) for(length_t i = variadic_count; i > 0; i--){
-                        ir_value_t *alloca = build_alloc(builder, any_type_pointer_type);
+                        ir_value_t *alloca = build_alloc_aligned(builder, any_type_pointer_type, 8);
                         build_store(builder, rtti_for(builder, &arg_types[pair.ast_func->arity + (i - 1)], call_expr->source), alloca, call_expr->source);
                         last_types_alloca = alloca;
                     }
