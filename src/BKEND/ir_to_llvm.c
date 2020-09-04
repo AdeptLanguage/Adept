@@ -1049,18 +1049,21 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 case INSTRUCTION_ALLOC: {
                         instr = basicblock->instructions[i];
 
-                        ir_type_t *target_result_type = ((ir_instr_alloc_t*) instr)->result_type;
+                        ir_instr_alloc_t *alloc = (ir_instr_alloc_t*) instr;
+                        ir_type_t *target_result_type = alloc->result_type;
 
                         if(target_result_type->kind != TYPE_KIND_POINTER){
                             redprintf("INTERNAL ERROR: INSTRUCTION_ALLOC got non-pointer result type when exporting ir to llvm\n");
                             catalog.blocks[b].value_references[i] = LLVMConstPointerNull(ir_to_llvm_type(target_result_type));
                             break;
                         }
-                        
-                        catalog.blocks[b].value_references[i] = LLVMBuildAlloca(llvm->builder, ir_to_llvm_type(target_result_type->extra), "");
 
-                        if(((ir_instr_alloc_t*) instr)->alignment != 0)
-                            LLVMSetAlignment(catalog.blocks[b].value_references[i], ((ir_instr_alloc_t*) instr)->alignment);
+                        catalog.blocks[b].value_references[i] = (alloc->count)
+                            ? LLVMBuildArrayAlloca(llvm->builder, ir_to_llvm_type(target_result_type->extra), ir_to_llvm_value(llvm, alloc->count), "")
+                            : LLVMBuildAlloca(llvm->builder, ir_to_llvm_type(target_result_type->extra), "");
+
+                        if(alloc->alignment != 0)
+                            LLVMSetAlignment(catalog.blocks[b].value_references[i], alloc->alignment);
                     }
                     break;
                 case INSTRUCTION_STACK_SAVE: {

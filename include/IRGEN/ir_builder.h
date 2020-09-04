@@ -247,6 +247,7 @@ ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int nonconst_cas
 // Allocates space on the stack for a variable of a type
 // NOTE: This is only used for dynamic allocations w/ STACK_SAVE and STACK_RESTORE
 ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type);
+ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t *count);
 ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment);
 
 // ---------------- build_stack_restore ----------------

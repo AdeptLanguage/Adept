@@ -301,6 +301,7 @@ typedef struct {
     unsigned int id;
     ir_type_t *result_type;
     unsigned int alignment;
+    ir_value_t *count;
 } ir_instr_alloc_t;
 
 // ---------------- ir_instr_malloc_t ----------------

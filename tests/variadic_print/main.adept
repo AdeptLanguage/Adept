@@ -1,14 +1,27 @@
 
 import basics
-import Array
-import VariadicArray
 
 func main {
+    // Hello there isaac, you are 1234 years old!
     printf("Hello there %s, you are %d years old!\n", 'isaac', 1234)
+    
+    // Welcome back, we are glad to see you!
     printf("Welcome back, we are %S to see you!\n", "glad")
     
+    // 1
+    // two
+    // 3
+    // four
+    // I declare
+    // A thumb war
     print(1, "two", 3, "four", 'I declare', "A thumb war")
     
+    // 1234, false, Test String, 44, Hello, 1, 2, 3, 4, 5
     place(1234ss, false, 'Test string', 44ub, "Hello", 1, 2, 3, 4, 5)
+    
+    // Values are: 1 2 3 4 5
     placePlain("Values are: ", 1, " ", 2, " ", 3, " ", 4, " ", 5, "\n")
+    
+    // 1 and 2 and 3 and 4
+    placeEx(" and ", false, "\n", 1, 2, 3, 4)
 }

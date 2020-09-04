@@ -88,6 +88,17 @@ ir_type_t* ir_type_pointer_to(ir_pool_t *pool, ir_type_t *base){
     return ptr_type;
 }
 
+ir_type_t* ir_type_fixed_array_of(ir_pool_t *pool, length_t length, ir_type_t *base){
+    ir_type_extra_fixed_array_t *extra = ir_pool_alloc(pool, sizeof(ir_type_extra_fixed_array_t));
+    extra->length = length;
+    extra->subtype = base;
+
+    ir_type_t *fixed_array_type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    fixed_array_type->kind = TYPE_KIND_FIXED_ARRAY;
+    fixed_array_type->extra = extra;
+    return fixed_array_type;
+}
+
 ir_type_t* ir_type_dereference(ir_type_t *type){
     if(type->kind != TYPE_KIND_POINTER) return NULL;
     return (ir_type_t*) type->extra;

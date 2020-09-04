@@ -499,29 +499,46 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         ast_type_free(&any_type);
                     }
 
-                    for(length_t i = variadic_count; i > 0; i--){
-                        ir_value_t *alloca = build_alloc_aligned(builder, arg_values[pair.ast_func->arity + (i - 1)]->type, 8);
-                        build_store(builder, arg_values[pair.ast_func->arity + (i - 1)], alloca, call_expr->source);
-                        last_alloca = alloca;
-                    }
-
-                    if(any_type_pointer_type) for(length_t i = variadic_count; i > 0; i--){
-                        ir_value_t *alloca = build_alloc_aligned(builder, any_type_pointer_type, 8);
-                        build_store(builder, rtti_for(builder, &arg_types[pair.ast_func->arity + (i - 1)], call_expr->source), alloca, call_expr->source);
-                        last_types_alloca = alloca;
-                    }
-
-                    if(last_alloca == NULL){
-                        redprintf("INTERNAL ERROR: ir_gen_expr() EXPR_CALL expected 'last_alloca' to not be NULL\n");
-                        return FAILURE;
-                    }
-
                     ir_type_t *usize_type = ir_builder_usize(builder);
                     ir_value_t *bytes = build_const_sizeof(builder->pool, usize_type, arg_values[pair.ast_func->arity]->type);
 
                     for(length_t i = 1; i < variadic_count; i++){
                         ir_value_t *more_bytes = build_const_sizeof(builder->pool, usize_type, arg_values[pair.ast_func->arity + i]->type);
                         bytes = build_const_add(builder->pool, bytes, more_bytes);
+                    }
+
+                    ir_type_t *ubyte_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+                    ubyte_type->kind = TYPE_KIND_S8;
+
+                    // neglect ubyte_type->extra
+                    last_alloca = build_alloc_array(builder, ubyte_type, bytes);
+                    last_alloca = build_bitcast(builder, last_alloca, ir_type_pointer_to(builder->pool, ubyte_type));
+                    ir_value_t *current_offset = build_literal_usize(builder->pool, 0);
+
+                    for(length_t i = 0; i < variadic_count; i++){
+                        ir_value_t *arg = build_array_access(builder, last_alloca, current_offset, call_expr->source);
+                        arg = build_bitcast(builder, arg, ir_type_pointer_to(builder->pool, arg_values[pair.ast_func->arity + i]->type));
+                        build_store(builder, arg_values[pair.ast_func->arity + i], arg, call_expr->source);
+
+                        if(i + 1 < variadic_count){
+                            // Move offset along
+                            current_offset = build_const_add(builder->pool, current_offset, build_const_sizeof(builder->pool, usize_type, arg_values[pair.ast_func->arity + i]->type));
+                        }
+                    }
+                    
+                    if(any_type_pointer_type){
+                        last_types_alloca = build_alloc_array(builder, any_type_pointer_type, build_literal_usize(builder->pool, variadic_count));
+                        last_types_alloca = build_bitcast(builder, last_types_alloca, ir_type_pointer_to(builder->pool, any_type_pointer_type));
+
+                        for(length_t i = 0; i < variadic_count; i++){
+                            ir_value_t *arg_type = build_array_access(builder, last_types_alloca, build_literal_usize(builder->pool, i), call_expr->source);
+                            build_store(builder, rtti_for(builder, &arg_types[pair.ast_func->arity + i], call_expr->source), arg_type, call_expr->source);
+                        }
+                    }
+
+                    if(last_alloca == NULL){
+                        redprintf("INTERNAL ERROR: ir_gen_expr() EXPR_CALL expected 'last_alloca' to not be NULL\n");
+                        return FAILURE;
                     }
                     
                     // Create temporary 'ptr' type to use

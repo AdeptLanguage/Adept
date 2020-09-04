@@ -86,6 +86,10 @@ bool ir_types_identical(ir_type_t *a, ir_type_t *b);
 // Gets the type of a pointer to a type
 ir_type_t* ir_type_pointer_to(ir_pool_t *pool, ir_type_t *base);
 
+// ---------------- ir_type_fixed_array_of ----------------
+// Gets the type of a fixed array of a type
+ir_type_t* ir_type_fixed_array_of(ir_pool_t *pool, length_t length, ir_type_t *base);
+
 // ---------------- ir_type_dereference ----------------
 // Gets the type pointed to by a pointer type
 ir_type_t* ir_type_dereference(ir_type_t *type);
