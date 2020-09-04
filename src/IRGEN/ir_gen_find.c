@@ -751,11 +751,37 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 }
 
 errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
-        length_t type_length, ast_type_var_catalog_t *out_catalog, trait_t conform_mode){
+        length_t type_list_length, ast_type_var_catalog_t *out_catalog, trait_t conform_mode){
+
+    length_t required_arity = poly_template->arity;
 
     // Ensure argument supplied meet length requirements
-    if(poly_template->traits & AST_FUNC_VARARG ? poly_template->arity > type_length : poly_template->arity != type_length){
-        return FAILURE;
+    if(
+        required_arity < type_list_length &&
+        !(poly_template->traits & AST_FUNC_VARARG) &&
+        (conform_mode & CONFORM_MODE_VARIADIC ? !(poly_template->traits & AST_FUNC_VARIADIC) : true)
+    ) return FAILURE;
+
+    // Determine whether we are missing arguments
+    bool requires_use_of_defaults = required_arity > type_list_length;
+
+    if(requires_use_of_defaults){
+        // Check to make sure that we have the necessary default values available to later
+        // fill in the missing arguments
+        
+        ast_expr_t **arg_defaults = poly_template->arg_defaults;
+
+        // No default arguments are available to use to attempt to meet the arity requirement
+        if(arg_defaults == NULL) return FAILURE;
+
+        for(length_t i = type_list_length; i != required_arity; i++){
+            // We are missing a necessary default argument value
+            if(arg_defaults[i] == NULL) return FAILURE;
+        }
+
+        // Otherwise, we met the arity requirement.
+        // We will then only process the argument values we already have
+        // and leave processing and conforming the default arguments to higher level functions
     }
     
     ast_type_var_catalog_t catalog;
@@ -765,11 +791,11 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
     // Store a copy of the unmodifed function argument values
-    ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_length);
-    memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_length);
+    ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
+    memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
 
-    for(length_t i = 0; i != poly_template->arity; i++){
-        errorcode_t res;
+    for(length_t i = 0; i != type_list_length; i++){
+        errorcode_t res = SUCCESS;
 
         if(ast_type_has_polymorph(&poly_template->arg_types[i]))
             res = arg_type_polymorphable(builder, &poly_template->arg_types[i], &arg_types[i], &catalog);

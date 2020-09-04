@@ -1495,10 +1495,42 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 }
 
 errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
-        length_t types_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping){
-    
-    if(types_length != poly_func->arity && !(poly_func->traits & AST_FUNC_VARARG)) return FAILURE;
+        length_t types_list_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping){
 
+        
+    length_t required_arity = poly_func->arity;
+
+    if(
+        required_arity < types_list_length &&
+        !(poly_func->traits & AST_FUNC_VARARG) &&
+        !(poly_func->traits & AST_FUNC_VARIADIC)
+    ){
+        return FAILURE;
+    }
+    
+    // Determine whether we are missing arguments
+    bool requires_use_of_defaults = required_arity > types_list_length;
+
+    if(requires_use_of_defaults){
+        // Check to make sure that we have the necessary default values available to later
+        // fill in the missing arguments
+        
+        ast_expr_t **arg_defaults = poly_func->arg_defaults;
+
+        // No default arguments are available to use to attempt to meet the arity requirement
+        if(arg_defaults == NULL) return FAILURE;
+
+        for(length_t i = types_list_length; i != required_arity; i++){
+            // We are missing a necessary default argument value
+            if(arg_defaults[i] == NULL) return FAILURE;
+        }
+
+        // Otherwise, we met the arity requirement.
+        // We will then only process the argument values we already have
+        // and leave processing and conforming the default arguments to higher level functions
+    }
+
+    
     ast_t *ast = &builder->object->ast;
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
@@ -1513,6 +1545,15 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     func->arg_sources = malloc(sizeof(source_t) * poly_func->arity);
     func->arg_flows = malloc(sizeof(char) * poly_func->arity);
     func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
+
+    if(poly_func->arg_defaults) {
+        func->arg_defaults = malloc(sizeof(ast_expr_t *) * poly_func->arity);
+        for(length_t i = 0; i != poly_func->arity; i++){
+            func->arg_defaults[i] = poly_func->arg_defaults[i] ? ast_expr_clone(poly_func->arg_defaults[i]) : NULL;
+        }
+    } else {
+        func->arg_defaults = NULL;
+    }
 
     for(length_t i = 0; i != poly_func->arity; i++){
         ast_type_t *template_ast_type = &poly_func->arg_types[i];
@@ -1538,7 +1579,9 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
 
     for(length_t s = 0; s != poly_func->statements_length; s++){
         func->statements[s] = ast_expr_clone(poly_func->statements[s]);
-        if(resolve_expr_polymorphics(builder->compiler, builder->type_table, catalog, func->statements[s])) return FAILURE;
+        if(resolve_expr_polymorphics(builder->compiler, builder->type_table, catalog, func->statements[s])){
+            return FAILURE;
+        }
     }
 
     ir_func_mapping_t newest_mapping;
