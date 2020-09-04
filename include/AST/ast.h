@@ -132,6 +132,7 @@ typedef struct {
 typedef struct {
     ast_type_t *ast_usize_type;
     ast_type_t *ast_variadic_array;
+    source_t ast_variadic_source; // Only exists if 'ast_variadic_array' isn't NULL
 } ast_shared_common_t;
 
 typedef struct {

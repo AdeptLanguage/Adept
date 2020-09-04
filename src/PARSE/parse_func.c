@@ -104,6 +104,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(strcmp(func->name, "__variadic_array__") == 0){
         if(ctx->ast->common.ast_variadic_array != NULL){
             compiler_panic(ctx->compiler, source, "The function __variadic_array__ can only be defined once");
+            compiler_panic(ctx->compiler, ctx->ast->common.ast_variadic_source, "Previous definition");
             return FAILURE;
         }
 
@@ -112,8 +113,24 @@ errorcode_t parse_func(parse_ctx_t *ctx){
             return FAILURE;
         }
 
+        if(func->traits != TRAIT_NONE
+        || func->arity != 4
+        || !ast_type_is_base_of(&func->arg_types[0], "ptr")
+        || !ast_type_is_base_of(&func->arg_types[1], "usize")
+        || !ast_type_is_base_of(&func->arg_types[2], "usize")
+        || !ast_type_is_base_of(&func->arg_types[3], "ptr")
+        || func->arg_type_traits[0] != TRAIT_NONE
+        || func->arg_type_traits[1] != TRAIT_NONE
+        || func->arg_type_traits[2] != TRAIT_NONE
+        || func->arg_type_traits[3] != TRAIT_NONE
+        ){
+            compiler_panic(ctx->compiler, source, "Special function __variadic_array__ must be declared like:\n'__variadic_array__(pointer ptr, bytes usize, length usize, maybe_types ptr) ReturnType'");
+            return FAILURE;
+        }
+
         ctx->ast->common.ast_variadic_array = malloc(sizeof(ast_type_t));
         *ctx->ast->common.ast_variadic_array = ast_type_clone(&func->return_type);
+        ctx->ast->common.ast_variadic_source = func->source;
     }
     
     static const char *math_management_funcs[] = {
