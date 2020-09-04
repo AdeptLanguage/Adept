@@ -1,0 +1,17 @@
+
+import basics
+
+func main {
+    strings <String> List
+    strings.add("1")
+    strings.add("3")
+    strings.add("5")
+    strings.add("7")
+    each String in strings, print("strings[%] = \"%\"" % idx % it)
+
+    integers <int> List = strings.map(func &toInt(String))
+    each int in integers, print("integers[%] = %" % idx % it)
+
+    print("integers.contains(2) == %" % integers.contains(2))
+    print("integers.contains(3) == %" % integers.contains(3))
+}
