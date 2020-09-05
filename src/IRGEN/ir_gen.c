@@ -809,19 +809,19 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
         switch(*p++){
         case 'S':
             if(!ast_type_is_base_of(given_type, "String")){
-                bad_printf_format(builder->compiler, source, given_type, "String", substitutions_gotten, *(p - 1), true);
+                bad_printf_format(builder->compiler, source, given_type, "String", substitutions_gotten, *(p - 1), false);
                 return FAILURE;
             }
             break;
         case 'B': case 'y': case 'Y':
             if(!ast_type_is_base_of(given_type, "bool")){
-                bad_printf_format(builder->compiler, source, given_type, "bool", substitutions_gotten, *(p - 1), true);
+                bad_printf_format(builder->compiler, source, given_type, "bool", substitutions_gotten, *(p - 1), false);
                 return FAILURE;
             }
             break;
         case 's':
             if(!ast_type_is_base_ptr_of(given_type, "ubyte")){
-                bad_printf_format(builder->compiler, source, given_type, "*ubyte", substitutions_gotten, *(p - 1), true);
+                bad_printf_format(builder->compiler, source, given_type, "*ubyte", substitutions_gotten, *(p - 1), false);
                 return FAILURE;
             }
             break;
@@ -840,11 +840,12 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
                 ast_type_is_base_of(given_type, "usize") || 
                 ast_type_is_base_of(given_type, "successful")
             ){
-                // Allowed, but discouraged
-                bad_printf_format(builder->compiler, source, given_type, "int", substitutions_gotten, *(p - 1), false);
+                // Allowed, but discouraged (Warning if RTTI is disabled)
+                if(builder->compiler->traits & COMPILER_NO_TYPEINFO)
+                    bad_printf_format(builder->compiler, source, given_type, "int", substitutions_gotten, *(p - 1), true);
             } else {
                 // Never allowed
-                bad_printf_format(builder->compiler, source, given_type, "int", substitutions_gotten, *(p - 1), true);
+                bad_printf_format(builder->compiler, source, given_type, "int", substitutions_gotten, *(p - 1), false);
                 return FAILURE;
             }
             break;
@@ -865,18 +866,19 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
                 ast_type_is_base_of(given_type, "usize") || 
                 ast_type_is_base_of(given_type, "successful")
             ){
-                // Allowed, but discouraged
-                bad_printf_format(builder->compiler, source, given_type, "double", substitutions_gotten, *(p - 1), false);
+                // Allowed, but discouraged (Warning if RTTI is disabled)
+                if(builder->compiler->traits & COMPILER_NO_TYPEINFO)
+                    bad_printf_format(builder->compiler, source, given_type, "double", substitutions_gotten, *(p - 1), true);
             } else {
                 // Never allowed
-                bad_printf_format(builder->compiler, source, given_type, "double", substitutions_gotten, *(p - 1), true);
+                bad_printf_format(builder->compiler, source, given_type, "double", substitutions_gotten, *(p - 1), false);
                 return FAILURE;
             }
             break;
         case 'p':
             if(!ast_type_is_pointer(given_type) && !ast_type_is_base_of(given_type, "ptr")){
                 // Never allowed
-                bad_printf_format(builder->compiler, source, given_type, "ptr' or '*T", substitutions_gotten, *(p - 1), true);
+                bad_printf_format(builder->compiler, source, given_type, "ptr' or '*T", substitutions_gotten, *(p - 1), false);
                 return FAILURE;
             }
             break;
@@ -895,20 +897,18 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
     return SUCCESS;
 }
 
-void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_type, weak_cstr_t expected, int variadic_argument_number, char specifier, bool is_error){
-    if(!is_error && compiler->traits & COMPILER_NO_WARN) return;
-
+void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_type, weak_cstr_t expected, int variadic_argument_number, char specifier, bool is_semimatch){
     strong_cstr_t incorrect_type = ast_type_str(given_type);
-
-    if(is_error){
-        compiler_panicf(compiler, source, "Got value of incorrect type for format specifier '%%%c'", specifier);
-        printf("\n");
-    } else {
-        compiler_warnf(compiler, source, "WARNING: Got value of non-exact type for format specifier '%%%c'", specifier);
-    }
-
+    compiler_panicf(compiler, source, "Got value of incorrect type for format specifier '%%%c'", specifier);
+    printf("\n");
+    
     printf("    Expected value of type '%s', got value of type '%s'\n", expected, incorrect_type);
     printf("    For %d%s variadic argument\n", variadic_argument_number, get_numeric_ending(variadic_argument_number));
+    
+    if(is_semimatch){
+        printf("    Support for this type mismatch requires runtime type information\n");
+    }
+
     free(incorrect_type);
 }
 

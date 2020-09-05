@@ -59,7 +59,7 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *compiler, fun
 
 // ---------------- ir_gen_do_builtin_warn_bad_printf_format ----------------
 // Prints error for incorrect arguments to printf format
-void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_type, weak_cstr_t expected, int variadic_argument_number, char specifier, bool is_error);
+void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_type, weak_cstr_t expected, int variadic_argument_number, char specifier, bool is_semimatch);
 
 // ---------------- get_numeric_ending ----------------
 // Gets suffix for an integer
