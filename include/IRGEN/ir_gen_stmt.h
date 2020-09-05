@@ -27,4 +27,8 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 // statements given an existing 'ir_builder_t'
 errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated);
 
+// ---------------- exhaustive_switch_check ----------------
+// Performs exhaustive switch checking for switch values
+errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length);
+
 #endif // _ISAAC_IR_GEN_STMT_H

@@ -66,7 +66,7 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
 
 // ------------------ parse_switch ------------------
 // Parses a switch statement
-errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *parent_defer_scope);
+errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *parent_defer_scope, bool is_exhaustive);
 
 // ------------------ parse_assign ------------------
 // Parses an assignment statement

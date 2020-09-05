@@ -133,6 +133,7 @@ compile structs || exit $?
 compile struct_association || exit $?
 compile successful || exit $?
 compile switch || exit $?
+compile switch_exhaustive || exit $?
 compile temporary_mutable || exit $?
 compile tentative_function_calls || exit $?
 compile tentative_method_calls || exit $?

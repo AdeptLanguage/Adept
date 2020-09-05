@@ -1175,6 +1175,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         
         clone_as_switch->default_statements_length = expr_as_switch->default_statements_length;
         clone_as_switch->default_statements_capacity = expr_as_switch->default_statements_length; // (on purpose)
+        clone_as_switch->is_exhaustive = expr_as_switch->is_exhaustive;
         break;
 
         #undef expr_as_switch

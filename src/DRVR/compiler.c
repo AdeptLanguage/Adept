@@ -250,12 +250,16 @@ object_t* compiler_new_object(compiler_t *compiler){
 }
 
 void compiler_final_words(compiler_t *compiler){
+    #ifndef ADEPT_INSIGHT_BUILD
+    
     if(compiler->show_unused_variables_how_to_disable){
         printf("\nTo disable warnings about unused variables, you can:\n");
         printf("    * Prefix them with '_'\n");
         printf("    * Add 'pragma ignore_unused' to your file\n");
         printf("    * Pass '--ignore-unused' to the compiler\n");
     }
+
+    #endif
 }
 
 errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){

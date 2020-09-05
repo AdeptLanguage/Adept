@@ -603,8 +603,16 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_META:
             if(parse_meta(ctx)) return FAILURE;
             break;
+        case TOKEN_EXHAUSTIVE:
+            if(ctx->tokenlist->tokens[++(*i)].id != TOKEN_SWITCH){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected 'switch' keyword after 'exhaustive' keyword");
+                return FAILURE;
+            }
+            
+            if(parse_switch(ctx, stmt_list, defer_scope, true)) return FAILURE;
+            break;
         case TOKEN_SWITCH:
-            if(parse_switch(ctx, stmt_list, defer_scope)) return FAILURE;
+            if(parse_switch(ctx, stmt_list, defer_scope, false)) return FAILURE;
             break;
         case TOKEN_VA_START: case TOKEN_VA_END: {
                 tokenid_t tokenid = tokens[*i].id;
@@ -864,11 +872,11 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     return SUCCESS;
 }
 
-errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *parent_defer_scope){
+errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *parent_defer_scope, bool is_exhaustive){
     // switch <condition> { ... }
     //    ^
 
-    source_t source = ctx->tokenlist->sources[*ctx->i];
+    source_t source = ctx->tokenlist->sources[is_exhaustive ? *ctx->i - 1 : *ctx->i];
 
     if(parse_eat(ctx, TOKEN_SWITCH, "Expected 'switch' keyword when parsing switch statement"))
         return FAILURE;
@@ -934,6 +942,9 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
 
             failed = failed || parse_eat(ctx, TOKEN_DEFAULT, "Expected 'default' keyword for switch default case")
                             || parse_ignore_newlines(ctx, "Expected '}' before end of file");
+            
+            // Disable exhaustive checking if default case is specified
+            is_exhaustive = false;
         } else {
             ast_expr_list_t stmts_pass_list;
             stmts_pass_list.statements = *list;
@@ -981,6 +992,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
     switch_expr->default_statements = default_statements;
     switch_expr->default_statements_length = default_statements_length;
     switch_expr->default_statements_capacity = default_statements_capacity;
+    switch_expr->is_exhaustive = is_exhaustive;
 
     // Append the created switch statement
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) switch_expr;

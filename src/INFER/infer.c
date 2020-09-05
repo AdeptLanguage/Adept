@@ -90,7 +90,7 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
         }
 
         if(function->traits & AST_FUNC_VARIADIC){
-            // Added variatic array variable
+            // Add variadic array variable
             infer_var_scope_add_variable(&func_scope, function->variadic_arg_name, ctx->ast->common.ast_variadic_array, function->variadic_source, false);
         }
         

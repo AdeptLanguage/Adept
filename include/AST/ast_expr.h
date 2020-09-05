@@ -594,6 +594,7 @@ typedef struct {
     ast_expr_t **default_statements;
     length_t default_statements_length;
     length_t default_statements_capacity;
+    bool is_exhaustive;
 } ast_expr_switch_t;
 
 // ---------------- ast_expr_va_copy_t ----------------

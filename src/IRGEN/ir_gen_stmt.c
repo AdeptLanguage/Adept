@@ -1539,6 +1539,17 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     builder->fallthrough_scope = prev_fallthrough_scope;
                 }
 
+                // If the switch is an exhaustive switch, check whether the supplied values are exhaustive
+                if(switch_expr->is_exhaustive && ast_type_is_base(&master_ast_type)){
+                    weak_cstr_t enum_name = ((ast_elem_base_t*) master_ast_type.elements[0])->base;
+                    
+                    if(exhaustive_switch_check(builder, enum_name, switch_expr->source, uniqueness, switch_expr->cases_length)){
+                        ast_type_free(&master_ast_type);
+                        free(uniqueness);
+                        return FAILURE;
+                    }
+                }
+
                 free(uniqueness);
 
                 // Fill in statements for default block
@@ -1661,4 +1672,55 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
     }
 
     return SUCCESS;
+}
+
+errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length){
+    ast_t *ast = &builder->object->ast;
+    maybe_index_t enum_index = find_enum(ast->enums, ast->enums_length, enum_name);
+    if(enum_index == -1) return SUCCESS;
+
+    // Assumes regular 0..n enum
+    ast_enum_t *enum_definition = &ast->enums[enum_index];
+    length_t n = enum_definition->length;
+
+    // Don't check enums that have more than 512 elements
+    if(n > 512){
+        if(uniqueness_values_length < n){
+            compiler_panic(builder->compiler, switch_source, "Exhaustive switch with more than 512 elements is missing cases");
+            return FAILURE;
+        } else if(uniqueness_values_length > n){
+            compiler_panic(builder->compiler, switch_source, "Exhaustive switch with more than 512 elements has extraneous cases");
+            return FAILURE;
+        }
+
+        return SUCCESS;
+    }
+    
+    bool covered[n];
+    memset(covered, 0, sizeof(covered));
+
+    for(length_t i = 0; i < uniqueness_values_length; i++){
+        if(uniqueness_values[i] >= n){
+            compiler_panic(builder->compiler, switch_source, "Exhaustive switch got out of bounds case value");
+            return FAILURE;
+        }
+
+        covered[uniqueness_values[i]] = true;
+    }
+
+    bool is_missing_case = false;
+    for(length_t i = 0; i < n; i++) if(!covered[i]){
+        // If missing case
+        
+        if(!is_missing_case){
+            is_missing_case = true;
+
+            compiler_panic(builder->compiler, switch_source, "Not all cases covered in exhaustive switch statement");
+            printf("\nMissing cases:\n");
+        }
+        
+        printf("    case %s::%s\n", enum_name, enum_definition->kinds[i]);
+    }
+
+    return is_missing_case ? FAILURE : SUCCESS;
 }
