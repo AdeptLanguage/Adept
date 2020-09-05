@@ -17,7 +17,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     char *directive_name = tokenlist->tokens[*i].data;
 
     const char *standard_directives[] = {
-        "default", "elif", "else", "end", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
+        "default", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
         "print", "print_error", "print_warning", "set", "unless"
     };
 
@@ -25,19 +25,20 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     #define META_DIRECTIVE_ELIF 1
     #define META_DIRECTIVE_ELSE 2
     #define META_DIRECTIVE_END 3
-    #define META_DIRECTIVE_GET 4
-    #define META_DIRECTIVE_HALT 5
-    #define META_DIRECTIVE_IF 6
-    #define META_DIRECTIVE_IMPORT 7
-    #define META_DIRECTIVE_INPUT 8
-    #define META_DIRECTIVE_PLACE 9
-    #define META_DIRECTIVE_PLACE_ERROR 10
-    #define META_DIRECTIVE_PLACE_WARNING 11
-    #define META_DIRECTIVE_PRINT 12
-    #define META_DIRECTIVE_PRINT_ERROR 13
-    #define META_DIRECTIVE_PRINT_WARNING 14
-    #define META_DIRECTIVE_SET 15
-    #define META_DIRECTIVE_UNLESS 16
+    #define META_DIRECTIVE_ERROR 4
+    #define META_DIRECTIVE_GET 5
+    #define META_DIRECTIVE_HALT 6
+    #define META_DIRECTIVE_IF 7
+    #define META_DIRECTIVE_IMPORT 8
+    #define META_DIRECTIVE_INPUT 9
+    #define META_DIRECTIVE_PLACE 10
+    #define META_DIRECTIVE_PLACE_ERROR 11
+    #define META_DIRECTIVE_PLACE_WARNING 12
+    #define META_DIRECTIVE_PRINT 13
+    #define META_DIRECTIVE_PRINT_ERROR 14
+    #define META_DIRECTIVE_PRINT_WARNING 15
+    #define META_DIRECTIVE_SET 16
+    #define META_DIRECTIVE_UNLESS 17
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -158,6 +159,20 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
         }
         (*i)++;
         break;
+    case META_DIRECTIVE_ERROR: // error
+        (*i)++;
+
+        meta_expr_t *value;
+        if(parse_meta_expr(ctx, &value)) return FAILURE;
+        meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
+        char *print_value = meta_expr_str(value);
+        compiler_panicf(ctx->compiler, source, "%s", print_value);
+        free(print_value);
+
+        meta_expr_free_fully(value);
+        ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+        return FAILURE;
     case META_DIRECTIVE_HALT: // halt
         ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         return FAILURE;
@@ -297,9 +312,11 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
             char *print_value = meta_expr_str(value);
             printf("%s", print_value);
             free(print_value);
+
             meta_expr_free_fully(value);
         }
         break;
@@ -309,9 +326,11 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
             char *print_value = meta_expr_str(value);
             redprintf("%s", print_value);
             free(print_value);
+
             meta_expr_free_fully(value);
         }
         break;
@@ -321,9 +340,11 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
             char *print_value = meta_expr_str(value);
             yellowprintf("%s", print_value);
             free(print_value);
+
             meta_expr_free_fully(value);
         }
         break;
@@ -333,9 +354,11 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
             char *print_value = meta_expr_str(value);
             printf("%s\n", print_value);
             free(print_value);
+
             meta_expr_free_fully(value);
         }
         break;
@@ -345,10 +368,11 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
             char *print_value = meta_expr_str(value);
-            redprintf("%s", print_value);
-            putchar(0x0A);
+            redprintf("%s\n", print_value);
             free(print_value);
+
             meta_expr_free_fully(value);
         }
         break;
@@ -358,10 +382,11 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+
             char *print_value = meta_expr_str(value);
-            yellowprintf("%s", print_value);
-            putchar(0x0A);
+            yellowprintf("%s\n", print_value);
             free(print_value);
+
             meta_expr_free_fully(value);
         }
         break;

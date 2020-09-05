@@ -901,7 +901,7 @@ void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_
     strong_cstr_t incorrect_type = ast_type_str(given_type);
     compiler_panicf(compiler, source, "Got value of incorrect type for format specifier '%%%c'", specifier);
     printf("\n");
-    
+
     printf("    Expected value of type '%s', got value of type '%s'\n", expected, incorrect_type);
     printf("    For %d%s variadic argument\n", variadic_argument_number, get_numeric_ending(variadic_argument_number));
     
