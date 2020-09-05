@@ -799,7 +799,7 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
 
         if(substitutions_gotten >= variadic_length){
             strong_cstr_t escaped = string_to_escaped_string(string->array, string->length);
-            compiler_panicf(builder->compiler, source, "Too many arguments specified for format %s", escaped);
+            compiler_panicf(builder->compiler, source, "Not enough arguments specified for format %s", escaped);
             free(escaped);
             return FAILURE;
         }
@@ -887,7 +887,7 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
 
     if(substitutions_gotten < variadic_length){
         strong_cstr_t escaped = string_to_escaped_string(string->array, string->length);
-        compiler_panicf(builder->compiler, source, "Not enough arguments specified for format %s", escaped);
+        compiler_panicf(builder->compiler, source, "Too many arguments specified for format %s", escaped);
         free(escaped);
         return FAILURE;
     }
