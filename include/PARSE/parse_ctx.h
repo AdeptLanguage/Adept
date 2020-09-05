@@ -39,6 +39,8 @@ typedef struct {
 
     // Used to allow parse_type to parse polymorphic types that have prerequisites
     bool allow_polymorphic_prereqs;
+
+    trait_t next_builtin_traits;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------

@@ -53,6 +53,9 @@ typedef struct {
 #define AST_FUNC_AUTOGEN     TRAIT_9
 #define AST_FUNC_VARIADIC    TRAIT_A
 
+// Addional AST function traits for builtin uses
+#define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
+
 // ---------------- ast_struct_t ----------------
 // A structure within the root AST
 typedef struct {

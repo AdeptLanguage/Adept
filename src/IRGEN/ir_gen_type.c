@@ -376,11 +376,13 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     // Do bitcast if appropriate
     if(
-        (/*mode & CONFORM_MODE_POINTERPTR &&*/ (
-            (from_traits & TYPE_TRAIT_BASE_PTR && to_traits & TYPE_TRAIT_POINTER)  || // 'ptr' and '*something'
+        ((
             (to_traits & TYPE_TRAIT_BASE_PTR && from_traits & TYPE_TRAIT_POINTER)  || // '*something' and 'ptr'
-            (from_traits & TYPE_TRAIT_FUNC_PTR && to_traits & TYPE_TRAIT_BASE_PTR) || // 'ptr' and function pointer
             (to_traits & TYPE_TRAIT_FUNC_PTR && from_traits & TYPE_TRAIT_BASE_PTR)    // function pointer and 'ptr'
+            || (mode & CONFORM_MODE_POINTERPTR && ( // Allow 'ptr' to '*Something'
+                (from_traits & TYPE_TRAIT_BASE_PTR && to_traits & TYPE_TRAIT_POINTER)  || // 'ptr' and '*something'
+                (from_traits & TYPE_TRAIT_FUNC_PTR && to_traits & TYPE_TRAIT_BASE_PTR)    // 'ptr' and function pointer
+            ))
         )) || (mode & CONFORM_MODE_POINTERS && to_traits & TYPE_TRAIT_POINTER && from_traits & TYPE_TRAIT_POINTER
             && !ast_types_identical(ast_from_type, ast_to_type) // '*something' && '*somethingelse'
         )

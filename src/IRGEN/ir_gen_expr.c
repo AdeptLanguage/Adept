@@ -478,12 +478,17 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ir_value_t *saved_stack = NULL;
 
                 if(pair.ast_func->traits & AST_FUNC_VARIADIC && pair.ast_func->arity < arity){
+                    length_t variadic_count = arity - pair.ast_func->arity;
+
+                    // Do __builtin_warn_bad_printf_format if applicable
+                    if(pair.ast_func->traits & AST_FUNC_WARN_BAD_PRINTF_FORMAT){
+                        if(ir_gen_do_builtin_warn_bad_printf_format(builder, pair, arg_types, arg_values, call_expr->source, variadic_count)) return FAILURE;
+                    }
+
                     saved_stack = build_stack_save(builder);
                     
                     ir_value_t *last_alloca = NULL;
                     ir_value_t *last_types_alloca = NULL;
-                    length_t variadic_count = arity - pair.ast_func->arity;
-
                     ir_type_t *any_type_pointer_type = NULL;
 
                     if(!(builder->compiler->traits & COMPILER_NO_TYPEINFO)){

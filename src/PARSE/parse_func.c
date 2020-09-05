@@ -28,6 +28,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, source);
 
+    if(ctx->next_builtin_traits != TRAIT_NONE){
+        func->traits |= ctx->next_builtin_traits;
+        ctx->next_builtin_traits = TRAIT_NONE;
+    }
+    
     if(parse_func_arguments(ctx, func)) return FAILURE;
     if(parse_ignore_newlines(ctx, "Expected '{' after function head")) return FAILURE;
 

@@ -33,7 +33,26 @@ typedef unsigned int trait_t;
 #define TRAIT_E    0x2000
 #define TRAIT_F    0x4000
 #define TRAIT_G    0x8000
-#define TRAIT_ALL  0xFFFF
+
+#define TRAIT_2_MASK 0xFFFF0000
+#define TRAIT_2_1    0x00010000
+#define TRAIT_2_2    0x00020000
+#define TRAIT_2_3    0x00040000
+#define TRAIT_2_4    0x00080000
+#define TRAIT_2_5    0x00100000
+#define TRAIT_2_6    0x00200000
+#define TRAIT_2_7    0x00400000
+#define TRAIT_2_8    0x00800000
+#define TRAIT_2_9    0x01000000
+#define TRAIT_2_A    0x02000000
+#define TRAIT_2_B    0x04000000
+#define TRAIT_2_C    0x08000000
+#define TRAIT_2_D    0x10000000
+#define TRAIT_2_E    0x20000000
+#define TRAIT_2_F    0x40000000
+#define TRAIT_2_G    0x80000000
+
+#define TRAIT_ALL  0xFFFFFFFF
 
 #ifdef __cplusplus
 }
