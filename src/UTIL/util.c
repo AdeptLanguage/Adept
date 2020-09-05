@@ -172,3 +172,12 @@ length_t find_insert_position(void *array, length_t length, int(*compare)(const 
 
     return first;
 }
+
+bool file_exists(weak_cstr_t filename){
+    FILE *f = fopen(filename, "r");
+    if(f != NULL){
+        fclose(f);
+        return true;
+    }
+    return false;
+}

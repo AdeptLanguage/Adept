@@ -23,6 +23,7 @@
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "IR/ir.h"
+#include "DRVR/repl.h"
 #include "DRVR/debug.h"
 #include "INFER/infer.h"
 #include "IRGEN/ir_gen.h"
@@ -111,6 +112,11 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     debug_signal(compiler, DEBUG_SIGNAL_AT_STAGE_ARGS_AND_LEX, NULL);
     #endif
 
+    if(compiler->traits & COMPILER_REPL){
+        if(compiler_repl(compiler)) compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+        return;
+    }
+
     // Compile / Package the code
     if(compiler_read_file(compiler, object)) return;
 
@@ -180,6 +186,7 @@ void compiler_init(compiler_t *compiler){
     
     compiler->default_stblib = NULL;
     compiler->error = NULL;
+    compiler->show_unused_variables_how_to_disable = false;
 }
 
 void compiler_free(compiler_t *compiler){
@@ -191,6 +198,12 @@ void compiler_free(compiler_t *compiler){
     free(compiler->root);
     free(compiler->output_filename);
 
+    compiler_free_objects(compiler);
+    compiler_free_error(compiler);
+    config_free(&compiler->config);
+}
+
+void compiler_free_objects(compiler_t *compiler){
     for(length_t i = 0; i != compiler->objects_length; i++){
         object_t *object = compiler->objects[i];
 
@@ -221,9 +234,18 @@ void compiler_free(compiler_t *compiler){
         free(object); // Free memory that the object is stored in
     }
 
-    if(compiler->error) adept_error_free_fully(compiler->error);
     free(compiler->objects);
-    config_free(&compiler->config);
+    
+    compiler->objects = NULL;
+    compiler->objects_length = 0;
+    compiler->objects_capacity = 0;
+}
+
+void compiler_free_error(compiler_t *compiler){
+    if(compiler->error){
+        adept_error_free_fully(compiler->error);
+        compiler->error = NULL;
+    }
 }
 
 object_t* compiler_new_object(compiler_t *compiler){
@@ -260,6 +282,38 @@ void compiler_final_words(compiler_t *compiler){
     }
 
     #endif
+}
+
+errorcode_t compiler_repl(compiler_t *compiler){
+    #ifndef ADEPT_INSIGHT_BUILD
+    repl_t repl;
+    repl_init(&repl, compiler);
+
+    printf("Adept %s REPL\n", ADEPT_VERSION_STRING);
+    printf("Type '#halt' to exit, '#reset' to reset, or '#clear' to clear\n");
+
+    length_t input_buffer_size = 2048;
+    strong_cstr_t input_buffer = malloc(input_buffer_size);
+
+    while(true){
+        printf("> ");
+        fflush(stdout);
+
+        // Read buffer
+        weak_cstr_t buffer = fgets(input_buffer, input_buffer_size - 1, stdin);
+        if(buffer == NULL) continue;
+
+        // Sanitize buffer
+        repl_helper_sanitize(buffer);
+
+        // Execute
+        if(repl_execute(&repl, buffer)) break;
+    }
+    
+    free(input_buffer);
+    repl_free(&repl);
+    #endif
+    return SUCCESS;
 }
 
 errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){
@@ -361,9 +415,11 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(strncmp(argv[arg_index], "-std=", 5) == 0){
                 compiler->default_stblib = &argv[arg_index][5];
                 compiler->traits |= COMPILER_FORCE_STDLIB;
-            }  else if(strncmp(argv[arg_index], "--std=", 6) == 0){
+            } else if(strncmp(argv[arg_index], "--std=", 6) == 0){
                 compiler->default_stblib = &argv[arg_index][6];
                 compiler->traits |= COMPILER_FORCE_STDLIB;
+            } else if(strcmp(argv[arg_index], "--repl") == 0){
+                compiler->traits |= COMPILER_REPL;
             }
 
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
@@ -423,7 +479,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
         arg_index++;
     }
 
-    if(object->filename == NULL){
+    if(object->filename == NULL && !(compiler->traits & COMPILER_REPL)){
         if(access("main.adept", F_OK) != -1) {
             // If no file was specified and the file 'main.adept' exists,
             // then assume we want to compile 'main.adept'

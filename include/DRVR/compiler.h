@@ -31,6 +31,7 @@ extern "C" {
 #define COMPILER_UNSAFE_NEW       TRAIT_C
 #define COMPILER_FUSSY            TRAIT_D
 #define COMPILER_FORCE_STDLIB     TRAIT_E
+#define COMPILER_REPL             TRAIT_F
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
@@ -123,6 +124,14 @@ void compiler_init(compiler_t *compiler);
 // Frees data within a compiler
 void compiler_free(compiler_t *compiler);
 
+// ---------------- compiler_free_objects ----------------
+// Frees objects of a compiler and resets 'objects_*' values
+void compiler_free_objects(compiler_t *compiler);
+
+// ---------------- compiler_free_error ----------------
+// Frees error from the compiler
+void compiler_free_error(compiler_t *compiler);
+
 // ---------------- compiler_new_object ----------------
 // Generates a new object within the compiler
 object_t* compiler_new_object(compiler_t *compiler);
@@ -130,6 +139,10 @@ object_t* compiler_new_object(compiler_t *compiler);
 // ---------------- compiler_final_words ----------------
 // Says any final notes the compiler has
 void compiler_final_words(compiler_t *compiler);
+
+// ---------------- compiler_repl ----------------
+// Launch REPL
+errorcode_t compiler_repl(compiler_t *compiler);
 
 // ---------------- parse_arguments ----------------
 // Configures a compiler based on program arguments.

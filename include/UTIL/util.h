@@ -71,6 +71,10 @@ length_t string_count_character(weak_cstr_t string, length_t length, char charac
 // Finds the position to insert an object into an object list
 length_t find_insert_position(void *array, length_t length, int(*compare)(const void*, const void*), void *object_reference, length_t object_size);
 
+// ---------------- file_exists ----------------
+// Returns whether a file exits
+bool file_exists(weak_cstr_t filename);
+
 #ifdef __cplusplus
 }
 #endif
