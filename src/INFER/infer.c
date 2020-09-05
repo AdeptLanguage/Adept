@@ -75,27 +75,31 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
             if(function->arg_defaults && function->arg_defaults[a]){
                 unsigned int default_primitive = ast_primitive_from_ast_type(&funcs[f].arg_types[a]);
                 if(infer_expr(ctx, function, &function->arg_defaults[a], default_primitive, &func_scope)){
-                    infer_var_scope_free(&func_scope);
+                    infer_var_scope_free(ctx->compiler, &func_scope);
                     return FAILURE;
                 }
             }
 
             if(!(function->traits & AST_FUNC_FOREIGN)){
-                infer_var_scope_add_variable(&func_scope, function->arg_names[a], &function->arg_types[a]);
+                const bool force_used = ctx->compiler->ignore & COMPILER_IGNORE_UNUSED
+                        ? true
+                        : function->traits & AST_FUNC_MAIN || (a == 0 && strcmp(function->arg_names[a], "this") == 0);
+                
+                infer_var_scope_add_variable(&func_scope, function->arg_names[a], &function->arg_types[a], function->arg_sources[a], force_used);
             }
         }
 
         if(function->traits & AST_FUNC_VARIADIC){
             // Added variatic array variable
-            infer_var_scope_add_variable(&func_scope, function->variadic_arg_name, ctx->ast->common.ast_variadic_array);
+            infer_var_scope_add_variable(&func_scope, function->variadic_arg_name, ctx->ast->common.ast_variadic_array, function->variadic_source, false);
         }
         
         // Infer expressions in statements
         if(infer_in_stmts(ctx, function, function->statements, function->statements_length, &func_scope)){
-            infer_var_scope_free(&func_scope);
+            infer_var_scope_free(ctx->compiler, &func_scope);
             return FAILURE;
         }
-        infer_var_scope_free(&func_scope);
+        infer_var_scope_free(ctx->compiler, &func_scope);
     }
     return SUCCESS;
 }
@@ -111,6 +115,15 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
             break;
         case EXPR_CALL: {
                 ast_expr_call_t *call_stmt = (ast_expr_call_t*) statements[s];
+
+                // HACK: Mark a variable as used if a call is made to a function with the same name
+                // SPEED: PERFORMANCE: This is probably really slow to do
+                // TODO: Clean up and/or speed up this code
+                if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && scope != NULL){
+                    infer_var_t *func_variable = infer_var_scope_find(scope, call_stmt->name);
+                    if(func_variable) func_variable->used = true;
+                }
+                
                 for(length_t a = 0; a != call_stmt->arity; a++){
                     if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return FAILURE;
                 }
@@ -123,7 +136,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                     if(infer_expr(ctx, func, &declare_stmt->value, ast_primitive_from_ast_type(&declare_stmt->type), scope)) return FAILURE;
                 }
 
-                infer_var_scope_add_variable(scope, declare_stmt->name, &declare_stmt->type);
+                infer_var_scope_add_variable(scope, declare_stmt->name, &declare_stmt->type, declare_stmt->source, false);
             }
             break;
         case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
@@ -142,10 +155,10 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
 
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length, scope)){
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                     return FAILURE;
                 }
-                infer_var_scope_pop(&scope);
+                infer_var_scope_pop(ctx->compiler, &scope);
             }
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
@@ -154,27 +167,27 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
 
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, complex_conditional->statements, complex_conditional->statements_length, scope)){
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                     return FAILURE;
                 }
                 
-                infer_var_scope_pop(&scope);
+                infer_var_scope_pop(ctx->compiler, &scope);
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, complex_conditional->else_statements, complex_conditional->else_statements_length, scope)){
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                     return FAILURE;
                 }
-                infer_var_scope_pop(&scope);
+                infer_var_scope_pop(ctx->compiler, &scope);
             }
             break;
         case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK: {
                 ast_expr_whilecontinue_t *conditional = (ast_expr_whilecontinue_t*) statements[s];
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length, scope)){
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                     return FAILURE;
                 }
-                infer_var_scope_pop(&scope);
+                infer_var_scope_pop(ctx->compiler, &scope);
             }
             break;
         case EXPR_CALL_METHOD: {
@@ -199,14 +212,14 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 if(loop->list      && infer_expr(ctx, func, &loop->list, EXPR_USIZE, scope))     return FAILURE;
  
                 infer_var_scope_push(&scope);
-                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
-                infer_var_scope_add_variable(scope, loop->it_name ? loop->it_name : "it", loop->it_type);
+                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast), loop->source, true);
+                infer_var_scope_add_variable(scope, loop->it_name ? loop->it_name : "it", loop->it_type, loop->source, true);
 
                 if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                     return FAILURE;
                 }
-                infer_var_scope_pop(&scope);
+                infer_var_scope_pop(ctx->compiler, &scope);
             }
             break;
         case EXPR_REPEAT: {
@@ -214,13 +227,13 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 if(infer_expr(ctx, func, &loop->limit, EXPR_USIZE, scope)) return FAILURE;
  
                 infer_var_scope_push(&scope);
-                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast));
+                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast), loop->source, true);
 
                 if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                     return FAILURE;
                 }
-                infer_var_scope_pop(&scope);
+                infer_var_scope_pop(ctx->compiler, &scope);
             }
             break;
         case EXPR_SWITCH: {
@@ -234,18 +247,18 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
 
                     infer_var_scope_push(&scope);
                     if(infer_in_stmts(ctx, func, expr_case->statements, expr_case->statements_length, scope)){
-                        infer_var_scope_pop(&scope);
+                        infer_var_scope_pop(ctx->compiler, &scope);
                         return FAILURE;
                     }
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                 }
 
                 infer_var_scope_push(&scope);
                 if(infer_in_stmts(ctx, func, expr_switch->default_statements, expr_switch->default_statements_length, scope)){
-                    infer_var_scope_pop(&scope);
+                    infer_var_scope_pop(ctx->compiler, &scope);
                     return FAILURE;
                 }
-                infer_var_scope_pop(&scope);
+                infer_var_scope_pop(ctx->compiler, &scope);
             }
             break;
         case EXPR_VA_COPY: {
@@ -371,6 +384,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
 
             if(infer_var != NULL){
                 variable_type = infer_var->type;
+                infer_var->used = true;
                 found_variable = true;
             }
 
@@ -479,6 +493,14 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         if(infer_expr(ctx, ast_func, b, EXPR_NONE, scope)) return FAILURE;
         break;
     case EXPR_CALL:
+        // HACK: Mark a variable as used if a call is made to a function with the same name
+        // SPEED: PERFORMANCE: This is probably really slow to do
+        // TODO: Clean up and/or speed up this code
+        if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && scope != NULL){
+            infer_var_t *func_variable = infer_var_scope_find(scope, ((ast_expr_call_t*) *expr)->name);
+            if(func_variable) func_variable->used = true;
+        }
+        
         for(length_t i = 0; i != ((ast_expr_call_t*) *expr)->arity; i++){
             if(infer_expr(ctx, ast_func, &((ast_expr_call_t*) *expr)->args[i], EXPR_NONE, scope)) return FAILURE;
         }
@@ -630,7 +652,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
                 return FAILURE;
             }
 
-            infer_var_scope_add_variable(scope, def->name, &def->type);
+            infer_var_scope_add_variable(scope, def->name, &def->type, def->source, true);
         }
         break;
     case EXPR_VA_ARG: {
@@ -959,7 +981,17 @@ void infer_var_scope_init(infer_var_scope_t *out_scope, infer_var_scope_t *paren
     out_scope->list.capacity = 0;
 }
 
-void infer_var_scope_free(infer_var_scope_t *scope){
+void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
+    infer_var_t *variables = scope->list.variables;
+    length_t length = scope->list.length;
+
+    if(!(compiler->ignore & COMPILER_IGNORE_UNUSED || compiler->traits & COMPILER_NO_WARN)) for(length_t i = 0; i < length; i++){
+        if(!variables[i].used){
+            compiler_warnf(compiler, variables[i].source, "Variable '%s' is never used", variables[i].name);
+            compiler->show_unused_variables_how_to_disable = true;
+        }
+    }
+
     free(scope->list.variables);
 }
 
@@ -969,14 +1001,14 @@ void infer_var_scope_push(infer_var_scope_t **scope){
     *scope = new_scope;
 } 
 
-void infer_var_scope_pop(infer_var_scope_t **scope){
+void infer_var_scope_pop(compiler_t *compiler, infer_var_scope_t **scope){
     if((*scope)->parent == NULL){
         redprintf("INTERNAL ERROR: TRIED TO POP INFER VARIABLE SCOPE WITH NO PARENT\n");
         return;
     }
 
     infer_var_scope_t *parent = (*scope)->parent;
-    infer_var_scope_free(*scope);
+    infer_var_scope_free(compiler, *scope);
     free(*scope);
 
     *scope = parent;
@@ -996,13 +1028,17 @@ infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name){
     }
 }
 
-void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type){
+void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used){
+    // NOTE: Assumes name is a valid C-String
+
     infer_var_list_t *list = &scope->list;
     expand((void**) &list->variables, sizeof(infer_var_t), list->length, &list->capacity, 1, 4);
 
     infer_var_t *var = &list->variables[list->length++];
     var->name = name;
     var->type = type;
+    var->source = source;
+    var->used = force_used || name[0] == '_';
 }
 
 const char* infer_var_scope_nearest(infer_var_scope_t *scope, const char *name){

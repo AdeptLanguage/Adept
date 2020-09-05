@@ -22,9 +22,10 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return FAILURE;
     }
 
+    // NOTE: Must be presorted alphabetically and match with indicies below
     const char * const directives[] = {
         "__builtin_warn_bad_printf_format", "compiler_supports", "compiler_version", "default_stdlib", "deprecated", "disable_warnings", "enable_warnings", "help",
-        "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete", "ignore_partial_support", "ignore_unrecognized_directives", "libm",
+        "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete", "ignore_partial_support", "ignore_unrecognized_directives", "ignore_unused", "libm",
         "mac_only", "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name",
         "unsafe_meta", "unsafe_new", "unsupported", "windows_only"
     };
@@ -34,14 +35,44 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     weak_cstr_t directive_string = parse_grab_word(ctx, "Expected pragma option after 'pragma' keyword");
     if(directive_string == NULL) return FAILURE;
 
+    #define PRAGMA___BULITIN_WARN_BAD_PRINTF_FORMAT 0x00000000
+    #define PRAGMA_COMPILER_SUPPORTS                0x00000001
+    #define PRAGMA_COMPILER_VERSION                 0x00000002
+    #define PRAGMA_DEFAULT_STDLIB                   0x00000003
+    #define PRAGMA_DEPRECATED                       0x00000004
+    #define PRAGMA_DISABLE_WARNINGS                 0x00000005
+    #define PRAGMA_ENABLE_WARNINGS                  0x00000006
+    #define PRAGMA_HELP                             0x00000007
+    #define PRAGMA_IGNORE_ALL                       0x00000008
+    #define PRAGMA_IGNORE_DEPRECATION               0x00000009
+    #define PRAGMA_IGNORE_EARLY_RETURN              0x0000000A
+    #define PRAGMA_IGNORE_OBSOLETE                  0x0000000B
+    #define PRAGMA_IGNORE_PARTIAL_SUPPORT           0x0000000C
+    #define PRAGMA_IGNORE_UNRECOGNIZED_DIRECTIVES   0x0000000D
+    #define PRAGMA_IGNORE_UNUSED                    0x0000000E
+    #define PRAGMA_LIBM                             0x0000000F
+    #define PRAGMA_MAC_ONLY                         0x00000010
+    #define PRAGMA_NO_TYPE_INFO                     0x00000011
+    #define PRAGMA_NO_TYPEINFO                      0x00000012
+    #define PRAGMA_NO_UNDEF                         0x00000013
+    #define PRAGMA_NULL_CHECKS                      0x00000014
+    #define PRAGMA_OPTIMIZATION                     0x00000015
+    #define PRAGMA_OPTIONS                          0x00000016
+    #define PRAGMA_PACKAGE                          0x00000017
+    #define PRAGMA_PROJECT_NAME                     0x00000018
+    #define PRAGMA_UNSAFE_META                      0x00000019
+    #define PRAGMA_UNSAFE_NEW                       0x0000001A
+    #define PRAGMA_UNSUPPORTED                      0x0000001B
+    #define PRAGMA_WINDOWS_ONLY                     0x0000001C
+
     maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
     switch(directive){
-    case 0: // '__builtin_warn_bad_printf_format' directive
+    case PRAGMA___BULITIN_WARN_BAD_PRINTF_FORMAT: // '__builtin_warn_bad_printf_format' directive
         ctx->next_builtin_traits |= AST_FUNC_WARN_BAD_PRINTF_FORMAT;
         return SUCCESS;
-    case 1: // 'compiler_supports' directive
-    case 2: // 'compiler_version' directive
+    case PRAGMA_COMPILER_SUPPORTS: // 'compiler_supports' directive
+    case PRAGMA_COMPILER_VERSION: // 'compiler_version' directive
         read = parse_grab_string(ctx, directive == 0
                 ? "Expected compiler version string after 'pragma compiler_supports'"
                 : "Expected compiler version string after 'pragma compiler_version'");
@@ -68,7 +99,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         }
 
         return SUCCESS;
-    case 3: // 'default_stdlib' directive
+    case PRAGMA_DEFAULT_STDLIB: // 'default_stdlib' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -86,7 +117,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             }
         }
         break;
-    case 4: // 'deprecated' directive
+    case PRAGMA_DEPRECATED: // 'deprecated' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -104,57 +135,60 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             }
         }
         return SUCCESS;
-    case 5: // 'disable_warnings' directive
+    case PRAGMA_DISABLE_WARNINGS: // 'disable_warnings' directive
         ctx->compiler->traits |= COMPILER_NO_WARN;
         return SUCCESS;
-    case 6: // 'enable_warnings' directive
+    case PRAGMA_ENABLE_WARNINGS: // 'enable_warnings' directive
         ctx->compiler->traits &= ~COMPILER_NO_WARN;
         return SUCCESS;
-    case 7: // 'help' directive
+    case PRAGMA_HELP: // 'help' directive
         show_help(true);
         return FAILURE;
-    case 8: // 'ignore_ALL' directive
+    case PRAGMA_IGNORE_ALL: // 'ignore_all' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_ALL;
         return SUCCESS;
-    case 9: // 'ignore_deprecation' directive
+    case PRAGMA_IGNORE_DEPRECATION: // 'ignore_deprecation' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_DEPRECATION;
         return SUCCESS;
-    case 10: // 'ignore_early_return' directive
+    case PRAGMA_IGNORE_EARLY_RETURN: // 'ignore_early_return' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_EARLY_RETURN;
         return SUCCESS;
-    case 11: // 'ignore_obsolete' directive
+    case PRAGMA_IGNORE_OBSOLETE: // 'ignore_obsolete' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_OBSOLETE;
         return SUCCESS;
-    case 12: // 'ignore_partial_support' directive
+    case PRAGMA_IGNORE_PARTIAL_SUPPORT: // 'ignore_partial_support' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_PARTIAL_SUPPORT;
         return SUCCESS;
-    case 13: // 'ignore_unrecognized_directives' directive
+    case PRAGMA_IGNORE_UNRECOGNIZED_DIRECTIVES: // 'ignore_unrecognized_directives' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES;
         return SUCCESS;
-    case 14: // 'libm' directive
+    case PRAGMA_IGNORE_UNUSED: // 'ignore_unrecognized_directives' directive
+        ctx->compiler->ignore |= COMPILER_IGNORE_UNUSED;
+        return SUCCESS;
+    case PRAGMA_LIBM: // 'libm' directive
         ctx->compiler->use_libm = true;
         return SUCCESS;
-    case 15: // 'mac_only' directive
+    case PRAGMA_MAC_ONLY: // 'mac_only' directive
         #if !defined(__APPLE__) || !TARGET_OS_MAC
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
         return FAILURE;
         #else
         return SUCCESS;
         #endif
-    case 16: // 'no_type_info' directive
+    case PRAGMA_NO_TYPE_INFO: // 'no_type_info' directive
         if(!(ctx->compiler->ignore & COMPILER_IGNORE_OBSOLETE)){
             compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "WARNING: 'pragma no_type_info' is obsolete, use 'pragma no_typeinfo' instead");
         }
-    case 17: // 'no_typeinfo'  directive
+    case PRAGMA_NO_TYPEINFO: // 'no_typeinfo'  directive
         ctx->compiler->traits |= COMPILER_NO_TYPEINFO;
         return SUCCESS;
-    case 18: // 'no_undef' directive
+    case PRAGMA_NO_UNDEF: // 'no_undef' directive
         ctx->compiler->traits |= COMPILER_NO_UNDEF;
         return SUCCESS;
-    case 19: // 'null_checks' directive
+    case PRAGMA_NULL_CHECKS: // 'null_checks' directive
         ctx->compiler->checks |= COMPILER_NULL_CHECKS;
         return SUCCESS;
-    case 20: // 'optimization' directive
+    case PRAGMA_OPTIMIZATION: // 'optimization' directive
         read = parse_grab_word(ctx, "Expected optimization level after 'pragma optimization'");
 
         if(read == NULL){
@@ -174,28 +208,28 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             return FAILURE;
         }
         return SUCCESS;
-    case 21: // 'options' directive
+    case PRAGMA_OPTIONS: // 'options' directive
         return parse_pragma_cloptions(ctx);
-    case 22: // 'package' directive
+    case PRAGMA_PACKAGE: // 'package' directive
         if(ctx->compiler->traits & COMPILER_INFLATE_PACKAGE) return SUCCESS;
         if(compiler_create_package(ctx->compiler, ctx->object) == 0){
             ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         }
         return FAILURE;
-    case 23: // 'project_name' directive
+    case PRAGMA_PROJECT_NAME: // 'project_name' directive
         read = parse_grab_string(ctx, "Expected string containing project name after 'pragma project_name'");
         if(read == NULL) return FAILURE;
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
         return SUCCESS;
-    case 24: // 'unsafe_meta' directive
+    case PRAGMA_UNSAFE_META: // 'unsafe_meta' directive
         ctx->compiler->traits |= COMPILER_UNSAFE_META;
         return SUCCESS;
-    case 25: // 'unsafe_new' directive
+    case PRAGMA_UNSAFE_NEW: // 'unsafe_new' directive
         ctx->compiler->traits |= COMPILER_UNSAFE_NEW;
         return SUCCESS;
-    case 26: // 'unsupported' directive
+    case PRAGMA_UNSUPPORTED: // 'unsupported' directive
         read = parse_grab_string(ctx, NULL);
 
         if(read == NULL){
@@ -212,7 +246,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "This file is no longer supported or never was unsupported");
         }
         return FAILURE;
-    case 27: // 'windows_only' directive
+    case PRAGMA_WINDOWS_ONLY: // 'windows_only' directive
         #ifndef _WIN32
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
         return FAILURE;

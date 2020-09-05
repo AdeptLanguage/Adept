@@ -15,6 +15,6 @@ func test(thing $T) {
     thing.?greet(1234)
 }
 
-func greet(this *StructB, dummy_parameter int) {
+func greet(this *StructB, _unused int) {
     printf('Hello World from StructB\n')
 }

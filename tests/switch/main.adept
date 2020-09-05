@@ -1,4 +1,6 @@
 
+pragma ignore_unused
+
 #default stage 4
 #default test_duplicate_cases false
 

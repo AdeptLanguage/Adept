@@ -1,4 +1,5 @@
 
+pragma ignore_unused
 import 'sys/cstdio.adept'
 
 struct Assigned (value int)

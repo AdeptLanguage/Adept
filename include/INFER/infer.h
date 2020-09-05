@@ -27,6 +27,8 @@ typedef struct {
 typedef struct {
     weak_cstr_t name;
     ast_type_t *type;
+    source_t source;
+    bool used;
 } infer_var_t;
 
 // ---------------- infer_var_list_t ----------------
@@ -114,11 +116,11 @@ void infer_var_scope_push(infer_var_scope_t **scope);
 
 // ---------------- infer_var_scope_pop ----------------
 // Pops an inference variable scope
-void infer_var_scope_pop(infer_var_scope_t **scope);
+void infer_var_scope_pop(compiler_t *compiler, infer_var_scope_t **scope);
 
 // ---------------- infer_var_scope_free ----------------
 // Frees an inference variable scope
-void infer_var_scope_free(infer_var_scope_t *scope);
+void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope);
 
 // ---------------- infer_var_scope_find ----------------
 // Finds a variable mapping within an inference variable scope
@@ -126,7 +128,7 @@ infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name);
 
 // ---------------- infer_var_scope_add_variable ----------------
 // Adds a variables to an inference variable scope
-void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type);
+void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used);
 
 // ---------------- infer_var_scope_nearest ----------------
 // Finds the nearest variable name to the given variable name

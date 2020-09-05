@@ -1,4 +1,6 @@
 
+pragma ignore_unused
+
 foreign puts(*ubyte) int
 
 func main(in argc int, in argv **ubyte) int {

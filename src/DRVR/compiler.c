@@ -33,6 +33,7 @@
 errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv){
     // A wrapper function around 'compiler_invoke'
     compiler_invoke(compiler, argc, argv);
+    compiler_final_words(compiler);
     return compiler->result_flags & COMPILER_RESULT_SUCCESS ? SUCCESS : FAILURE;
 }
 
@@ -248,6 +249,15 @@ object_t* compiler_new_object(compiler_t *compiler){
     return *object_reference;
 }
 
+void compiler_final_words(compiler_t *compiler){
+    if(compiler->show_unused_variables_how_to_disable){
+        printf("\nTo disable warnings about unused variables, you can:\n");
+        printf("    * Prefix them with '_'\n");
+        printf("    * Add 'pragma ignore_unused' to your file\n");
+        printf("    * Pass '--ignore-unused' to the compiler\n");
+    }
+}
+
 errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){
     int arg_index = 1;
 
@@ -321,6 +331,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->ignore |= COMPILER_IGNORE_PARTIAL_SUPPORT;
             } else if(strcmp(argv[arg_index], "--ignore-unrecognized-directives") == 0){
                 compiler->ignore |= COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES;
+            } else if(strcmp(argv[arg_index], "--ignore-unused") == 0){
+                compiler->ignore |= COMPILER_IGNORE_UNUSED;
             } else if(strcmp(argv[arg_index], "--pic") == 0 || strcmp(argv[arg_index], "-fPIC") == 0 ||
                         strcmp(argv[arg_index], "-fpic") == 0){
                 // Accessibility versions of --PIC

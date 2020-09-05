@@ -1,4 +1,6 @@
 
+pragma ignore_unused
+
 func main(in argc int, in argv **ubyte) int {
     is_blue bool = true
     is_grey bool = false

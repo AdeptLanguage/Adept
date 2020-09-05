@@ -1,4 +1,5 @@
 
+pragma ignore_unused
 pragma compiler_version '2.1'
 
 import '2.1/String.adept'

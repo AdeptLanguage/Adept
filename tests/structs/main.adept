@@ -1,4 +1,6 @@
 
+pragma ignore_unused
+
 struct Person (name *ubyte, age int, parent Parent)
 struct Parent (gender bool)
 

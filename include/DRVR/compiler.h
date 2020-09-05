@@ -43,6 +43,7 @@ extern "C" {
 #define COMPILER_IGNORE_EARLY_RETURN            TRAIT_3
 #define COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES TRAIT_3
 #define COMPILER_IGNORE_OBSOLETE                TRAIT_4
+#define COMPILER_IGNORE_UNUSED                  TRAIT_5
 #define COMPILER_IGNORE_ALL                     TRAIT_ALL
 
 // Possible optimization levels
@@ -102,6 +103,7 @@ typedef struct compiler {
     maybe_null_weak_cstr_t default_stblib;
 
     adept_error_t *error;
+    bool show_unused_variables_how_to_disable;
 } compiler_t;
 
 // ---------------- compiler_run ----------------
@@ -124,6 +126,10 @@ void compiler_free(compiler_t *compiler);
 // ---------------- compiler_new_object ----------------
 // Generates a new object within the compiler
 object_t* compiler_new_object(compiler_t *compiler);
+
+// ---------------- compiler_final_words ----------------
+// Says any final notes the compiler has
+void compiler_final_words(compiler_t *compiler);
 
 // ---------------- parse_arguments ----------------
 // Configures a compiler based on program arguments.

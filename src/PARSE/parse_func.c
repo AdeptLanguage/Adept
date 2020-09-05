@@ -443,6 +443,9 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         // Take variadic name from last unused argument name
         func->variadic_arg_name = func->arg_names[func->arity + *backfill];
         func->arg_names[func->arity + *backfill] = NULL;
+
+        // Assign variadic source
+        func->variadic_source = sources[*i - 2];
         return SUCCESS;
     }
 

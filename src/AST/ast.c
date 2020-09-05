@@ -717,6 +717,7 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     func->return_type.source.object_index = source.object_index;
     func->traits = TRAIT_NONE;
     func->variadic_arg_name = NULL;
+    func->variadic_source = NULL_SOURCE;
     func->statements = NULL;
     func->statements_length = 0;
     func->statements_capacity = 0;

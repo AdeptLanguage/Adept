@@ -32,7 +32,7 @@ func freeNames(in names **ubyte, in length usize) void {
 }
 
 func jamesify(out names **ubyte, in length usize) void {
-    each *ubyte in [names, 4], it = 'James'
+    each *ubyte in [names, length], it = 'James'
 }
 
 func printNames(in names **ubyte, in length usize) void {

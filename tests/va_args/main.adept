@@ -11,14 +11,13 @@
 import basics
 
 func main {
-    list va_list
     print(sizeof va_list)
     print(addEmUp(4, 10, 11, 12, 13))
 }
 
 func addEmUp(count usize, ...) int {
     ap, ap2 va_list
-    i, sum int
+    sum int
 
     va_start ap
     defer va_end ap

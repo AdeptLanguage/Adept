@@ -33,6 +33,7 @@ typedef struct {
     ast_type_t return_type;
     trait_t traits;
     strong_cstr_t variadic_arg_name;
+    source_t variadic_source;
     ast_expr_t **statements;
     length_t statements_length;
     length_t statements_capacity;

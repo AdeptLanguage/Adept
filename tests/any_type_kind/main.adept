@@ -3,7 +3,7 @@ import 'sys/cstdio.adept'
 import 'sys/cstring.adept'
 
 func main {
-    force_int_runtime_info int = undef
+    _force_int_runtime_info int = undef
     some_type *AnyType = null
 
     each *AnyType in [__types__, __types_length__],

@@ -1,4 +1,6 @@
 
+pragma ignore_unused
+
 struct Bomb ()
 struct Gift (bomb1, bomb2, bomb3 Bomb)
 struct Present (gift Gift)
