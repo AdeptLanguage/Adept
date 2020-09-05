@@ -571,7 +571,7 @@ void show_help(bool show_advanced_options){
         printf("    --ignore-obsolete                 Ignore obsolete feature warnings\n");
         printf("    --ignore-partial-support          Ignore partial compiler support warnings\n");
         printf("    --ignore-unrecognized-directives  Ignore unrecognized pragma directives\n");
-	printf("    --ignore-unused                   Ignore unused.\n");
+	  printf("    --ignore-unused                   Ignore unused.\n");
     }
 
     #ifdef ENABLE_DEBUG_FEATURES
