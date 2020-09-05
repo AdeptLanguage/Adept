@@ -1,0 +1,43 @@
+
+#default test_with_missing_cases false
+#default test_with_default_case  false
+import 'sys/cstdio.adept'
+
+enum MyEnum (VALUE1, VALUE2, VALUE3, VALUE4, VALUE5)
+
+func main {
+    value MyEnum = MyEnum::VALUE1
+
+    #if test_with_missing_cases
+
+        exhaustive switch value {
+        case MyEnum::VALUE3
+            // Do nothing
+        case MyEnum::VALUE5
+            // Do nothing
+        }
+
+    #elif test_with_default_case
+    
+        exhaustive switch value {
+        case MyEnum::VALUE3
+            // Do nothing
+        case MyEnum::VALUE5
+            // Do nothing
+        default
+            // Since we have default case, no error is thrown
+        }
+
+    #else
+
+        exhaustive switch value {
+        case MyEnum::VALUE1, fallthrough
+        case MyEnum::VALUE2, fallthrough
+        case MyEnum::VALUE3, fallthrough
+        case MyEnum::VALUE4, fallthrough
+        case MyEnum::VALUE5
+            printf('Hello World!\n')
+        }
+
+    #end
+}
