@@ -171,8 +171,12 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
         free(print_value);
 
         meta_expr_free_fully(value);
-        ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+        
+        #ifndef ADEPT_INSIGHT_BUILD
         return FAILURE;
+        #else
+        break;
+        #endif
     case META_DIRECTIVE_HALT: // halt
         ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
         return FAILURE;

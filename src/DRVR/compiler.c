@@ -33,7 +33,7 @@
 errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv){
     // A wrapper function around 'compiler_invoke'
     compiler_invoke(compiler, argc, argv);
-    return !(compiler->result_flags & COMPILER_RESULT_SUCCESS);
+    return compiler->result_flags & COMPILER_RESULT_SUCCESS ? SUCCESS : FAILURE;
 }
 
 void compiler_invoke(compiler_t *compiler, int argc, char **argv){
@@ -726,7 +726,7 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
         redprintf("%s:%d:%d: %s!\n", filename_name_const(relevant_object->filename), line, column, message);
         compiler_print_source(compiler, line, column, source);
     }
-    #endif // !ADEPT_INSIGHT_BUILDER
+    #endif // !ADEPT_INSIGHT_BUILD
 
     if(compiler->error == NULL){
         strong_cstr_t buffer = calloc(256, 1);
