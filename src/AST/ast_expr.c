@@ -24,7 +24,6 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     // NOTE: Returns an allocated string representation of the expression
 
     char *representation, *a, *b;
-    length_t a_len, b_len;
 
     switch(expr->id){
     case EXPR_BYTE:
@@ -142,8 +141,6 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_BIT_LGC_RSHIFT:
         a = ast_expr_str(((ast_expr_math_t*) expr)->a);
         b = ast_expr_str(((ast_expr_math_t*) expr)->b);
-        a_len = strlen(a);
-        b_len = strlen(b);
 
         // No optimal for speed, but reduces code redundancy
         switch(expr->id){
