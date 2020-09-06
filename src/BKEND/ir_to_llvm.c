@@ -1387,8 +1387,6 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         return FAILURE;
     }
 
-    puts(triple);
-
     LLVMDisposeTargetData(data_layout);
     LLVMRunPassManager(pass_manager, llvm.module);
     LLVMDisposeTargetMachine(target_machine);
