@@ -198,7 +198,7 @@ typedef struct {
 
 // ---------------- ast_init ----------------
 // Initializes an AST
-void ast_init(ast_t *ast);
+void ast_init(ast_t *ast, unsigned int cross_compile_for);
 
 // ---------------- ast_free ----------------
 // Frees data within an AST

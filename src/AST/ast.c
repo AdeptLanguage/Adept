@@ -3,7 +3,7 @@
 #include "UTIL/util.h"
 #include "DRVR/compiler.h"
 
-void ast_init(ast_t *ast){
+void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->funcs = malloc(sizeof(ast_func_t) * 8);
     ast->funcs_length = 0;
     ast->funcs_capacity = 8;
@@ -58,14 +58,14 @@ void ast_init(ast_t *ast){
     #ifdef _WIN32
         true
     #else
-        false
+        cross_compile_for == CROSS_COMPILE_WINDOWS
     #endif
     );
 
     // __macos__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__macos__",
     #if defined(__APPLE__) || defined(__MACH__)
-        true
+        cross_compile_for == CROSS_COMPILE_NONE
     #else
         false
     #endif
@@ -74,7 +74,7 @@ void ast_init(ast_t *ast){
     // __unix__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__unix__",
     #if defined(__unix__) || defined(__unix) || defined(unix)
-        true
+        cross_compile_for == CROSS_COMPILE_NONE
     #else
         false
     #endif
@@ -83,14 +83,14 @@ void ast_init(ast_t *ast){
     // __linux__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__linux__",
     #if defined(__linux__) || defined(__linux) || defined(linux)
-        true
+        cross_compile_for == CROSS_COMPILE_NONE
     #else
         false
     #endif
     );
 
     unsigned short x = 0xEEFF;
-    if (*((unsigned char*) &x) == 0xFF){
+    if (*((unsigned char*) &x) == 0xFF || cross_compile_for == CROSS_COMPILE_WINDOWS){
         // Little Endian
         meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__little_endian__", true);
         meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__endianness__", strclone("little"));

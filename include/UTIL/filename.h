@@ -49,7 +49,7 @@ strong_cstr_t filename_absolute(const char *filename);
 // ---------------- filename_auto_ext ----------------
 // Append the correct file extension for the given
 // mode if '*out_filename' doesn't already have it
-void filename_auto_ext(strong_cstr_t *out_filename, unsigned int mode);
+void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_for, unsigned int mode);
 
 // Possible file auto-extension modes
 #define FILENAME_AUTO_NONE       0x00

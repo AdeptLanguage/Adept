@@ -105,7 +105,11 @@ typedef struct compiler {
 
     adept_error_t *error;
     bool show_unused_variables_how_to_disable;
+    unsigned int cross_compile_for;
 } compiler_t;
+
+#define CROSS_COMPILE_NONE    0x00
+#define CROSS_COMPILE_WINDOWS 0x01
 
 // ---------------- compiler_run ----------------
 // Runs a compiler with the given arguments.

@@ -169,11 +169,15 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         ctx->compiler->use_libm = true;
         return SUCCESS;
     case PRAGMA_MAC_ONLY: // 'mac_only' directive
-        #if !defined(__APPLE__) || !TARGET_OS_MAC
+        #if defined(__APPLE__) && TARGET_OS_MAC
+        if(ctx->compiler->cross_compile_for != CROSS_COMPILE_NONE){
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
+            return FAILURE;
+        }
+        return SUCCESS;
+        #else
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
         return FAILURE;
-        #else
-        return SUCCESS;
         #endif
     case PRAGMA_NO_TYPE_INFO: // 'no_type_info' directive
         if(!(ctx->compiler->ignore & COMPILER_IGNORE_OBSOLETE)){
@@ -247,12 +251,18 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         }
         return FAILURE;
     case PRAGMA_WINDOWS_ONLY: // 'windows_only' directive
-        #ifndef _WIN32
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
-        return FAILURE;
+        #ifdef _WIN32
+        if(ctx->compiler->cross_compile_for != CROSS_COMPILE_NONE){
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
+            return FAILURE;
+        }
         #else
-        return SUCCESS;
+        if(ctx->compiler->cross_compile_for != CROSS_COMPILE_WINDOWS){
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Windows");
+            return FAILURE;
+        }
         #endif
+        return SUCCESS;
     default:
         if(ctx->compiler->ignore & COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES){
             // Skip over the rest of the line

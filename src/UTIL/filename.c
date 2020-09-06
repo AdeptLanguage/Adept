@@ -15,6 +15,7 @@
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/filename.h"
+#include "DRVR/compiler.h"
 
 strong_cstr_t filename_name(const char *filename){
     length_t i;
@@ -191,7 +192,7 @@ strong_cstr_t filename_absolute(const char *filename){
     return buffer;
 }
 
-void filename_auto_ext(strong_cstr_t *out_filename, unsigned int mode){
+void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_for, unsigned int mode){
     if(mode == FILENAME_AUTO_PACKAGE){
         filename_append_if_missing(out_filename, ".dep");
         return;
@@ -202,11 +203,11 @@ void filename_auto_ext(strong_cstr_t *out_filename, unsigned int mode){
             // Windows file extensions
             filename_append_if_missing(out_filename, ".exe");
             return;
-        #elif defined(__APPLE__)
-            // Macintosh file extensions
-            return;
         #else
-            // Linux / General Unix file extensions
+            // MacOS / Linux / General Unix file extensions
+
+            if(cross_compile_for == CROSS_COMPILE_WINDOWS)
+                filename_append_if_missing(out_filename, ".exe");
             return;
         #endif
     }

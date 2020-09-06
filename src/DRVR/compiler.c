@@ -187,6 +187,7 @@ void compiler_init(compiler_t *compiler){
     compiler->default_stblib = NULL;
     compiler->error = NULL;
     compiler->show_unused_variables_how_to_disable = false;
+    compiler->cross_compile_for = CROSS_COMPILE_NONE;
 }
 
 void compiler_free(compiler_t *compiler){
@@ -420,6 +421,11 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_FORCE_STDLIB;
             } else if(strcmp(argv[arg_index], "--repl") == 0){
                 compiler->traits |= COMPILER_REPL;
+            } else if(strcmp(argv[arg_index], "--windows") == 0){
+                #ifndef _WIN32
+                printf("[-] Cross compiling for Windows x86_64\n");
+                compiler->cross_compile_for = CROSS_COMPILE_WINDOWS;
+                #endif
             }
 
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
@@ -697,7 +703,7 @@ errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){
     char *package_filename;
 
     if(compiler->output_filename != NULL){
-        filename_auto_ext(&compiler->output_filename, FILENAME_AUTO_PACKAGE);
+        filename_auto_ext(&compiler->output_filename, compiler->cross_compile_for, FILENAME_AUTO_PACKAGE);
         package_filename = compiler->output_filename;
     } else {
         package_filename = filename_ext(object->filename, "dep");

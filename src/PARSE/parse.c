@@ -20,7 +20,7 @@
 errorcode_t parse(compiler_t *compiler, object_t *object){
     parse_ctx_t ctx;
 
-    object_init_ast(object);
+    object_init_ast(object, compiler->cross_compile_for);
     parse_ctx_init(&ctx, compiler, object);
     
     if(!(compiler->traits & COMPILER_INFLATE_PACKAGE)){

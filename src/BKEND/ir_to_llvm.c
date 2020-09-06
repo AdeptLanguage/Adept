@@ -1259,9 +1259,15 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 	#ifdef _WIN32
     char *triple = "x86_64-pc-windows-gnu";
 	#else
-	char *triple = LLVMGetDefaultTargetTriple();
-    disposeTriple = true;
+    char *triple;
+    if(compiler->cross_compile_for == CROSS_COMPILE_WINDOWS){
+        triple = "x86_64-pc-windows-gnu";
+    } else {
+        triple = LLVMGetDefaultTargetTriple();
+        disposeTriple = true;
+    }
 	#endif
+
     LLVMSetTarget(llvm.module, triple);
 
     char *error_message; LLVMTargetRef target;
@@ -1277,7 +1283,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 	
 	// Automatically add proper extension if missing
-    filename_auto_ext(&compiler->output_filename, FILENAME_AUTO_EXECUTABLE);
+    filename_auto_ext(&compiler->output_filename, compiler->cross_compile_for, FILENAME_AUTO_EXECUTABLE);
 
     char* object_filename = filename_ext(compiler->output_filename, "o");
 
@@ -1357,9 +1363,29 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 	#else
 	// UNIX Linking
 	
-    const char *linker = "gcc"; // May need to change depending on system etc.
-    const char *linker_libm = compiler->use_libm ? " -lm" : "";
-    link_command = mallocandsprintf("%s \"%s\"%s%s -o \"%s\"", linker, object_filename, linker_additional, linker_libm, compiler->output_filename);
+    if(compiler->cross_compile_for == CROSS_COMPILE_WINDOWS){
+        const char *linker = "cross-compile-windows/x86_64-w64-mingw32-ld";
+        const char *linker_options = "";
+        const char *root = compiler->root;
+
+        strong_cstr_t cross_linker = mallocandsprintf("%s%s", compiler->root, linker);
+        if(!file_exists(cross_linker)){
+            printf("\n");
+            redprintf("Cross compiling for Windows requires the 'cross-compile-windows' extension!\n");
+            redprintf("You need to first download and install it from here:\n");
+            printf("    https://github.com/IsaacShelton/AdeptCrossCompilation/releases\n");
+            free(cross_linker);
+            free(linker_additional);
+            return FAILURE;
+        }
+
+        free(cross_linker);
+        link_command = mallocandsprintf("\"%s%s\" --start-group -static \"%scross-compile-windows/crt2.o\" \"%scross-compile-windows/crtbegin.o\" %s%s \"%s\" \"%scross-compile-windows/libdep.a\" --end-group %scross-compile-windows/libmsvcrt.a -o \"%s\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, root, compiler->output_filename);
+    } else {
+        const char *linker = "gcc"; // May need to change depending on system etc.
+        const char *linker_libm = compiler->use_libm ? " -lm" : "";
+        link_command = mallocandsprintf("%s \"%s\"%s%s -o \"%s\"", linker, object_filename, linker_additional, linker_libm, compiler->output_filename);
+    }
 	#endif
 
     free(linker_additional);
@@ -1394,6 +1420,8 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     if(disposeTriple) LLVMDisposeMessage(triple);
 
     debug_signal(compiler, DEBUG_SIGNAL_AT_LINKING, NULL);
+
+    //if(compiler->cross_compile_for == CROSS_COMPILE_WINDOWS) return SUCCESS;
 
     if(system(link_command) != 0){
         redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);
