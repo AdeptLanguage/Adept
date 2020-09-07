@@ -1261,7 +1261,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 	#else
     char *triple;
 
-    switch(CROSS_COMPILE_MACOS /*compiler->cross_compile_for*/){
+    switch(compiler->cross_compile_for){
     case CROSS_COMPILE_WINDOWS:
         triple = "x86_64-pc-windows-gnu";
         break;
