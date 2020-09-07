@@ -140,6 +140,7 @@ void repl_undo(repl_t *repl){
 void repl_reset_compiler(repl_t *repl){
     compiler_free_objects(repl->compiler);
     compiler_free_error(repl->compiler);
+    compiler_free_warnings(repl->compiler);
 
     // Reset result flags
     repl->compiler->result_flags = TRAIT_NONE;

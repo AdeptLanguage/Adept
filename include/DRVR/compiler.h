@@ -68,12 +68,12 @@ extern "C" {
 #define COMPILER_RESULT_NONE                    TRAIT_NONE
 #define COMPILER_RESULT_SUCCESS                 TRAIT_1 // Signifies success
 
-// ---------------- adept_error_t ----------------
-// Short result error message
+// ---------------- adept_error_t, adept_warning_t ----------------
+// Short result warning/error message
 typedef struct {
     strong_cstr_t message;
     source_t source;
-} adept_error_t;
+} adept_error_t, adept_warning_t;
 
 // ---------------- compiler_t ----------------
 // Structure that encapsulates the compiler
@@ -107,6 +107,10 @@ typedef struct compiler {
     maybe_null_weak_cstr_t default_stblib;
 
     adept_error_t *error;
+    adept_warning_t *warnings;
+    length_t warnings_length;
+    length_t warnings_capacity;
+
     bool show_unused_variables_how_to_disable;
     unsigned int cross_compile_for;
 } compiler_t;
@@ -139,6 +143,10 @@ void compiler_free_objects(compiler_t *compiler);
 // ---------------- compiler_free_error ----------------
 // Frees error from the compiler
 void compiler_free_error(compiler_t *compiler);
+
+// ---------------- compiler_free_warnings ----------------
+// Frees warnings from the compiler
+void compiler_free_warnings(compiler_t *compiler);
 
 // ---------------- compiler_new_object ----------------
 // Generates a new object within the compiler
@@ -239,6 +247,10 @@ adept_error_t *adept_error_create(strong_cstr_t message, source_t source);
 // ---------------- adept_error_free_fully ----------------
 // Frees the memory owned by an 'adept_error_t' and the memory occupied by it
 void adept_error_free_fully(adept_error_t *error);
+
+// ---------------- compiler_create_warning ----------------
+// Adds a warning to the list of warnings for a compiler
+void compiler_create_warning(compiler_t *compiler, strong_cstr_t message, source_t source);
 
 #ifdef __cplusplus
 }
