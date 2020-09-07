@@ -951,7 +951,12 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
     #ifndef ADEPT_INSIGHT_BUILD
     object_t *relevant_object = compiler->objects[source.object_index];
     int line, column;
+    #endif
 
+    va_list warning_format_args;
+    va_copy(warning_format_args, args);
+    
+    #ifndef ADEPT_INSIGHT_BUILD
     terminal_set_color(TERMINAL_COLOR_YELLOW);
 
     if(relevant_object->traits & OBJECT_PACKAGE){
@@ -976,8 +981,9 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
     #endif
 
     strong_cstr_t buffer = calloc(512, 1);
-    vsnprintf(buffer, 512, format, args);
+    vsnprintf(buffer, 512, format, warning_format_args);
     compiler_create_warning(compiler, buffer, source);
+    va_end(warning_format_args);
 }
 
 #ifndef ADEPT_INSIGHT_BUILD
