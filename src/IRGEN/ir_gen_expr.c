@@ -875,7 +875,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 }
                 
                 if(!(failed_tentatively || is_unique)){
-                    compiler_warnf(builder->compiler, func_addr_expr->source, "Multiple functions named '%s', using the first of them", func_addr_expr->name);
+                    if(compiler_warnf(builder->compiler, func_addr_expr->source, "Multiple functions named '%s', using the first of them", func_addr_expr->name))
+                        return FAILURE;
                 }
             } else if(ir_gen_find_func(builder, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length, &pair)){
                 if(func_addr_expr->tentative){

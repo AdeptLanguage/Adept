@@ -65,7 +65,8 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
             // FOUND '__variadic_array__' function
             
             if(!is_unique){
-                compiler_warn(compiler, result.ast_func->source, "Warning: Using this definition of __variadic_array__, but there are multiple possibilities");
+                if(compiler_warn(compiler, result.ast_func->source, "Warning: Using this definition of __variadic_array__, but there are multiple possibilities"))
+                    return FAILURE;
             }
 
             module->common.variadic_ir_func_id = result.ir_func_id;
@@ -883,7 +884,8 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
             }
             break;
         default:
-            compiler_warnf(builder->compiler, source, "WARNING: Unrecognized format specifier '%%%c'", *(p - 1));
+            if(compiler_warnf(builder->compiler, source, "WARNING: Unrecognized format specifier '%%%c'", *(p - 1)))
+                return FAILURE;
         }
     }
 

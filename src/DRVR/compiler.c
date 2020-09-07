@@ -886,13 +886,15 @@ void compiler_vpanicf(compiler_t *compiler, source_t source, const char *format,
     va_end(error_format_args);
 }
 
-void compiler_warn(compiler_t *compiler, source_t source, const char *message){
-    if(compiler->traits & COMPILER_NO_WARN) return;
+bool compiler_warn(compiler_t *compiler, source_t source, const char *message){
+    // Returns whether program should exit
+
+    if(compiler->traits & COMPILER_NO_WARN) return false;
 
     #ifndef ADEPT_INSIGHT_BUILD
     if(compiler->traits & COMPILER_WARN_AS_ERROR){
         compiler_panic(compiler, source, message);
-        return;
+        return true;
     }
     
     object_t *relevant_object = compiler->objects[source.object_index];
@@ -900,10 +902,12 @@ void compiler_warn(compiler_t *compiler, source_t source, const char *message){
     lex_get_location(relevant_object->buffer, source.index, &line, &column);
     yellowprintf("%s:%d:%d: %s\n", filename_name_const(relevant_object->filename), line, column, message);
     #endif
+
+    return false;
 }
 
-void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){
-    if(compiler->traits & COMPILER_NO_WARN) return;
+bool compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){
+    if(compiler->traits & COMPILER_NO_WARN) return false;
 
     #ifndef ADEPT_INSIGHT_BUILD
     va_list args;
@@ -911,12 +915,15 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 
     if(compiler->traits & COMPILER_WARN_AS_ERROR){
         compiler_vpanicf(compiler, source, format, args);
+        return true;
     } else {
         compiler_vwarnf(compiler, source, format, args);
     }
 
     va_end(args);
     #endif
+
+    return false;
 }
 
 void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, va_list args){

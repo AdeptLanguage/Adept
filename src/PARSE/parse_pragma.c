@@ -86,7 +86,8 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         // Check to make sure we support the target version
         if(strcmp(read, "2.0") == 0 || strcmp(read, "2.1") == 0){
             if(!(ctx->compiler->ignore & COMPILER_IGNORE_PARTIAL_SUPPORT)){
-                compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read);
+                if(compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read))
+                    return FAILURE;
             }
         } else if(strcmp(read, "2.2") != 0 && strcmp(read, "2.3") != 0 && strcmp(read, "2.4") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
@@ -129,11 +130,15 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         }
 
         if(!(ctx->compiler->ignore & COMPILER_IGNORE_DEPRECATION)){
+            bool should_exit = false;
+
             if(read != NULL){
-                compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "This file is deprecated and may be removed in the future\n %s %s", BOX_DRAWING_UP_RIGHT, read);
+                should_exit = compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i - 1], "This file is deprecated and may be removed in the future\n %s %s", BOX_DRAWING_UP_RIGHT, read);
             } else {
-                compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "This file is deprecated and may be removed in the future");
+                should_exit = compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "This file is deprecated and may be removed in the future");
             }
+
+            if(should_exit) return FAILURE;
         }
         return SUCCESS;
     case PRAGMA_DISABLE_WARNINGS: // 'disable_warnings' directive
@@ -184,7 +189,8 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return SUCCESS;
     case PRAGMA_NO_TYPE_INFO: // 'no_type_info' directive
         if(!(ctx->compiler->ignore & COMPILER_IGNORE_OBSOLETE)){
-            compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "WARNING: 'pragma no_type_info' is obsolete, use 'pragma no_typeinfo' instead");
+            if(compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "WARNING: 'pragma no_type_info' is obsolete, use 'pragma no_typeinfo' instead"))
+                return FAILURE;
         }
     case PRAGMA_NO_TYPEINFO: // 'no_typeinfo'  directive
         ctx->compiler->traits |= COMPILER_NO_TYPEINFO;

@@ -197,8 +197,9 @@ void compiler_vpanicf(compiler_t *compiler, source_t source, const char *format,
 
 // ---------------- compiler_warn (and friends) ----------------
 // Prints a compiler warning at a given 'source_t'
-void compiler_warn(compiler_t *compiler, source_t source, const char *message);
-void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...);
+// Returns whether the compiler should exit, if return value of the function isn't void
+bool compiler_warn(compiler_t *compiler, source_t source, const char *message);
+bool compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...);
 void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, va_list args);
 
 #ifndef ADEPT_INSIGHT_BUILD

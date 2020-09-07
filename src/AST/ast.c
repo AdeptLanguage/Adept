@@ -937,6 +937,7 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
         // Larger Intel x86_64 va_list
         
         if(sizeof(va_list) != 24){
+            // Neglect whether to terminate, since this is not a fixable warning
             compiler_warnf(compiler, NULL_SOURCE, "WARNING: Assuming Intel x86_64 va_list\n");
         }
 

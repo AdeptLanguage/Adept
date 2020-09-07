@@ -120,7 +120,7 @@ meta_expr_t *meta_expr_clone(meta_expr_t *expr){
     }
 }
 
-void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr){
+errorcode_t meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr){
     #define META_EXPR_MATH_MODE_INT   0x00
     #define META_EXPR_MATH_MODE_FLOAT 0x01
     #define META_EXPR_MATH_MODE_STR   0x02
@@ -131,8 +131,9 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
         switch((*expr)->id){
         case META_EXPR_AND: {
                 meta_expr_and_t *and_expr = (meta_expr_and_t*) *expr;
-                bool a = meta_expr_into_bool(compiler, object, definitions, definitions_length, &and_expr->a);
-                bool b = meta_expr_into_bool(compiler, object, definitions, definitions_length, &and_expr->b);
+                bool a, b;
+                if(meta_expr_into_bool(compiler, object, definitions, definitions_length, &and_expr->a, &a)) return FAILURE;
+                if(meta_expr_into_bool(compiler, object, definitions, definitions_length, &and_expr->b, &b)) return FAILURE;
                 meta_expr_free_fully(and_expr->a);
                 meta_expr_free_fully(and_expr->b);
                 (*expr)->id = (a && b) ? META_EXPR_TRUE : META_EXPR_FALSE;
@@ -140,8 +141,9 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
             break;
         case META_EXPR_OR: {
                 meta_expr_or_t *or_expr = (meta_expr_or_t*) *expr;
-                bool a = meta_expr_into_bool(compiler, object, definitions, definitions_length, &or_expr->a);
-                bool b = meta_expr_into_bool(compiler, object, definitions, definitions_length, &or_expr->b);
+                bool a, b;
+                if(meta_expr_into_bool(compiler, object, definitions, definitions_length, &or_expr->a, &a)) return FAILURE;
+                if(meta_expr_into_bool(compiler, object, definitions, definitions_length, &or_expr->b, &b)) return FAILURE;
                 meta_expr_free_fully(or_expr->a);
                 meta_expr_free_fully(or_expr->b);
                 (*expr)->id = (a || b) ? META_EXPR_TRUE : META_EXPR_FALSE;
@@ -149,8 +151,9 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
             break;
         case META_EXPR_XOR: {
                 meta_expr_xor_t *xor_expr = (meta_expr_xor_t*) *expr;
-                bool a = meta_expr_into_bool(compiler, object, definitions, definitions_length, &xor_expr->a);
-                bool b = meta_expr_into_bool(compiler, object, definitions, definitions_length, &xor_expr->b);
+                bool a, b;
+                if(meta_expr_into_bool(compiler, object, definitions, definitions_length, &xor_expr->a, &a)) return FAILURE;
+                if(meta_expr_into_bool(compiler, object, definitions, definitions_length, &xor_expr->b, &b)) return FAILURE;
                 meta_expr_free_fully(xor_expr->a);
                 meta_expr_free_fully(xor_expr->b);
                 (*expr)->id = (a ^ b) ? META_EXPR_TRUE : META_EXPR_FALSE;
@@ -173,8 +176,13 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                     *expr = meta_expr_clone(definition->value);
                 } else {
                     if(!(compiler->traits & COMPILER_UNSAFE_META) && !(compiler->traits & COMPILER_NO_WARN)){
-                        compiler_warnf(compiler, var->source, "Warning: Usage of undefined transcendant variable '%s'", var->name);
+                        bool should_exit = compiler_warnf(compiler, var->source, "Warning: Usage of undefined transcendant variable '%s'", var->name);
                         printf("    (you can disable this warning with '--unsafe-meta' or 'pragma unsafe_meta')\n");
+
+                        if(should_exit){
+                            meta_expr_free_fully(*expr);
+                            return FAILURE;
+                        }
                     }
 
                     meta_expr_free(*expr);
@@ -187,8 +195,8 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                 unsigned int math_expr_id = (*expr)->id;
 
                 meta_expr_math_t *math_expr = (meta_expr_math_t*) *expr;
-                meta_collapse(compiler, object, definitions, definitions_length, &math_expr->a);
-                meta_collapse(compiler, object, definitions, definitions_length, &math_expr->b);
+                if(meta_collapse(compiler, object, definitions, definitions_length, &math_expr->a)) return FAILURE;
+                if(meta_collapse(compiler, object, definitions, definitions_length, &math_expr->b)) return FAILURE;
 
                 //                    B
                 //           i        d         s
@@ -250,8 +258,9 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                 
                 switch(mode){
                 case META_EXPR_MATH_MODE_INT: {
-                        long long a_int = meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->a);
-                        long long b_int = meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->b);
+                        long long a_int, b_int;
+                        if(meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->a, &a_int)) return FAILURE;
+                        if(meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->b, &b_int)) return FAILURE;
 
                         meta_expr_int_t *result = malloc(sizeof(meta_expr_int_t));
                         result->id = META_EXPR_INT;
@@ -271,8 +280,9 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                     }
                     break;
                 case META_EXPR_MATH_MODE_FLOAT: {
-                        double a_float = meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->a);
-                        double b_float = meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->b);
+                        double a_float, b_float;
+                        if(meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->a, &a_float)) return FAILURE;
+                        if(meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->b, &b_float)) return FAILURE;
 
                         meta_expr_float_t *result = malloc(sizeof(meta_expr_float_t));
                         result->id = META_EXPR_FLOAT;
@@ -293,8 +303,14 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                     }
                     break;
                 case META_EXPR_MATH_MODE_STR: {
-                        strong_cstr_t a_str = meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->a);
-                        strong_cstr_t b_str = meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->b);
+                        strong_cstr_t a_str, b_str;
+                        if(meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->a, &a_str)) return FAILURE;
+
+                        if(meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->b, &b_str)){
+                            free(a_str);
+                            return FAILURE;
+                        }
+
                         length_t a_len = strlen(a_str);
                         length_t b_len = strlen(b_str);
 
@@ -321,8 +337,8 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                 unsigned int math_expr_id = (*expr)->id;
 
                 meta_expr_math_t *math_expr = (meta_expr_math_t*) *expr;
-                meta_collapse(compiler, object, definitions, definitions_length, &math_expr->a);
-                meta_collapse(compiler, object, definitions, definitions_length, &math_expr->b);
+                if(meta_collapse(compiler, object, definitions, definitions_length, &math_expr->a)) return FAILURE;
+                if(meta_collapse(compiler, object, definitions, definitions_length, &math_expr->b)) return FAILURE;
 
                 static meta_math_modes_t comparison_modes = {
                                                             /* b */
@@ -352,8 +368,9 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
 
                 switch(mode){
                 case META_EXPR_MATH_MODE_INT: {
-                        long long a_int = meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->a);
-                        long long b_int = meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->b);
+                        long long a_int, b_int;
+                        if(meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->a, &a_int)) return FAILURE;
+                        if(meta_expr_into_int(compiler, object, definitions, definitions_length, &math_expr->b, &b_int)) return FAILURE;
 
                         switch(math_expr_id){
                         case META_EXPR_EQ:  result->id = (a_int == b_int) ? META_EXPR_TRUE : META_EXPR_FALSE; break;
@@ -371,8 +388,9 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                     }
                     break;
                 case META_EXPR_MATH_MODE_FLOAT: {
-                        double a_float = meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->a);
-                        double b_float = meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->b);
+                        double a_float, b_float;
+                        if(meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->a, &a_float)) return FAILURE;
+                        if(meta_expr_into_float(compiler, object, definitions, definitions_length, &math_expr->b, &b_float)) return FAILURE;
 
                         switch(math_expr_id){
                         case META_EXPR_EQ:  result->id = (a_float == b_float) ? META_EXPR_TRUE : META_EXPR_FALSE; break;
@@ -390,8 +408,13 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
                     }
                     break;
                 case META_EXPR_MATH_MODE_STR: {
-                        strong_cstr_t a_str = meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->a);
-                        strong_cstr_t b_str = meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->b);
+                        strong_cstr_t a_str, b_str;
+                        if(meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->a, &a_str)) return FAILURE;
+
+                        if(meta_expr_into_string(compiler, object, definitions, definitions_length, &math_expr->b, &b_str)){
+                            free(a_str);
+                            return FAILURE;
+                        }
 
                         switch(math_expr_id){
                         case META_EXPR_EQ:  result->id = strcmp(a_str, b_str) == 0 ? META_EXPR_TRUE : META_EXPR_FALSE; break;
@@ -419,112 +442,153 @@ void meta_collapse(compiler_t *compiler, object_t *object, meta_definition_t *de
             break;
         case META_EXPR_NOT: {
                 meta_expr_not_t *not_expr = (meta_expr_not_t*) *expr;
-                bool whether = meta_expr_into_bool(compiler, object, definitions, definitions_length, &not_expr->value);
+                bool is_true;
+
+                if(meta_expr_into_bool(compiler, object, definitions, definitions_length, &not_expr->value, &is_true))
+                    return FAILURE;
+                
                 meta_expr_free_fully(not_expr->value);
-                (*expr)->id = whether ? META_EXPR_FALSE : META_EXPR_TRUE;
+                (*expr)->id = is_true ? META_EXPR_FALSE : META_EXPR_TRUE;
             }
             break;
         default:
             redprintf("INTERNAL ERROR: Unrecognized meta expression in meta_collapse!\n");
-            redprintf("A crash will probably follow...\n");
+            return FAILURE;
         }
     }
+
+    return SUCCESS;
 }
 
-bool meta_expr_into_bool(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr){
-    meta_collapse(compiler, object, definitions, definitions_length, expr);
+errorcode_t meta_expr_into_bool(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, bool *out){
+    if(meta_collapse(compiler, object, definitions, definitions_length, expr)) return FAILURE;
 
     switch((*expr)->id){
     case META_EXPR_UNDEF:
-        return false;
+        *out = false;
+        break;
     case META_EXPR_NULL:
-        return false;
+        *out = false;
+        break;
     case META_EXPR_TRUE:
-        return true;
+        *out = true;
+        break;
     case META_EXPR_FALSE:
-        return false;
+        *out = false;
+        break;
     case META_EXPR_INT:
-        return ((meta_expr_int_t*) *expr)->value != 0;
+        *out = ((meta_expr_int_t*) *expr)->value != 0;
+        break;
     case META_EXPR_FLOAT:
-        return ((meta_expr_float_t*) *expr)->value != 0;
+        *out = ((meta_expr_float_t*) *expr)->value != 0;
+        break;
     default:
-        return true;
+        *out = true;
     }
+
+    return SUCCESS;
 }
 
-long long meta_expr_into_int(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr){
-    meta_collapse(compiler, object, definitions, definitions_length, expr);
+errorcode_t meta_expr_into_int(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, long long *out){
+    if(meta_collapse(compiler, object, definitions, definitions_length, expr)) return FAILURE;
 
     switch((*expr)->id){
     case META_EXPR_UNDEF:
-        return 0;
+        *out = 0;
+        break;
     case META_EXPR_NULL:
-        return 0;
+        *out = 0;
+        break;
     case META_EXPR_TRUE:
-        return 1;
+        *out = 1;
+        break;
     case META_EXPR_FALSE:
-        return 0;
+        *out = 0;
+        break;
     case META_EXPR_INT:
-        return ((meta_expr_int_t*) *expr)->value;
+        *out = ((meta_expr_int_t*) *expr)->value;
+        break;
     case META_EXPR_FLOAT:
-        return (long long) ((meta_expr_float_t*) *expr)->value;
+        *out = (long long) ((meta_expr_float_t*) *expr)->value;
+        break;
     case META_EXPR_STR:
-        return atoll(((meta_expr_str_t*) *expr)->value);
+        *out = atoll(((meta_expr_str_t*) *expr)->value);
+        break;
     default:
-        return 0;
+        *out = 0;
     }
+
+    return SUCCESS;
 }
 
-double meta_expr_into_float(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr){
-    meta_collapse(compiler, object, definitions, definitions_length, expr);
+errorcode_t meta_expr_into_float(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, double *out){
+    if(meta_collapse(compiler, object, definitions, definitions_length, expr)) return FAILURE;
 
     switch((*expr)->id){
     case META_EXPR_UNDEF:
-        return 0.0;
+        *out = 0.0;
+        break;
     case META_EXPR_NULL:
-        return 0.0;
+        *out = 0.0;
+        break;
     case META_EXPR_TRUE:
-        return 1.0;
+        *out = 1.0;
+        break;
     case META_EXPR_FALSE:
-        return 0.0;
+        *out = 0.0;
+        break;
     case META_EXPR_INT:
-        return (double) ((meta_expr_int_t*) *expr)->value;
+        *out = (double) ((meta_expr_int_t*) *expr)->value;
+        break;
     case META_EXPR_FLOAT:
-        return ((meta_expr_float_t*) *expr)->value;
+        *out = ((meta_expr_float_t*) *expr)->value;
+        break;
     case META_EXPR_STR:
-        return atof(((meta_expr_str_t*) *expr)->value);
+        *out = atof(((meta_expr_str_t*) *expr)->value);
+        break;
     default:
-        return 0.0;
+        *out = 0.0;
     }
+
+    return SUCCESS;
 }
 
-strong_cstr_t meta_expr_into_string(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr){
-    meta_collapse(compiler, object, definitions, definitions_length, expr);
+errorcode_t meta_expr_into_string(compiler_t *compiler, object_t *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, strong_cstr_t *out){
+    if(meta_collapse(compiler, object, definitions, definitions_length, expr)) return FAILURE;
 
     switch((*expr)->id){
     case META_EXPR_UNDEF:
-        return strclone("undef");
+        *out = strclone("undef");
+        break;
     case META_EXPR_NULL:
-        return strclone("null");
+        *out = strclone("null");
+        break;
     case META_EXPR_TRUE:
-        return strclone("true");
+        *out = strclone("true");
+        break;
     case META_EXPR_FALSE:
-        return strclone("false");
+        *out = strclone("false");
+        break;
     case META_EXPR_INT: {
-        strong_cstr_t representation = malloc(21);
-        sprintf(representation, "%ld", (long) ((meta_expr_int_t*) *expr)->value);
-        return representation;
-    }
+            strong_cstr_t representation = malloc(21);
+            sprintf(representation, "%ld", (long) ((meta_expr_int_t*) *expr)->value);
+            *out = representation;
+        }
+        break;
     case META_EXPR_FLOAT: {
             strong_cstr_t representation = malloc(21);
             sprintf(representation, "%06.6f", ((meta_expr_float_t*) *expr)->value);
-            return representation;
+            *out = representation;
         }
+        break;
     case META_EXPR_STR:
-        return strclone(((meta_expr_str_t*) *expr)->value);
+        *out = strclone(((meta_expr_str_t*) *expr)->value);
+        break;
     default:
-        return strclone("");
+        *out = strclone("");
     }
+
+    return SUCCESS;
 }
 
 void meta_definition_add(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, meta_expr_t *value){

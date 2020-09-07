@@ -87,11 +87,11 @@ void meta_expr_free_fully(meta_expr_t *expr);
 
 meta_expr_t *meta_expr_clone(meta_expr_t *expr);
 
-void meta_collapse(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-bool meta_expr_into_bool(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-long long meta_expr_into_int(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-double meta_expr_into_float(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
-strong_cstr_t meta_expr_into_string(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
+errorcode_t meta_collapse(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr);
+errorcode_t meta_expr_into_bool(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, bool *out);
+errorcode_t meta_expr_into_int(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, long long *out);
+errorcode_t meta_expr_into_float(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, double *out);
+errorcode_t meta_expr_into_string(struct compiler *compiler, struct object *object, meta_definition_t *definitions, length_t definitions_length, meta_expr_t **expr, strong_cstr_t *out);
 
 void meta_definition_add(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, meta_expr_t *value);
 void meta_definition_add_bool(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, bool boolean);

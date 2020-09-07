@@ -22,7 +22,8 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
 
     if(ast_func->statements_length == 0 && !(ast_func->traits & AST_FUNC_GENERATED) && compiler->traits & COMPILER_FUSSY){
-        compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name);
+        if(compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name))
+            return FAILURE;
     }
 
     // Used for constructing array of basicblocks
@@ -317,7 +318,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 build_return(builder, expression_value);
                 
                 if(s + 1 != statements_length && builder->compiler->traits & COMPILER_FUSSY && !(builder->compiler->ignore & COMPILER_IGNORE_EARLY_RETURN)){
-                    compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", builder->object->ast.funcs[builder->ast_func_id].name);
+                    if(compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", builder->object->ast.funcs[builder->ast_func_id].name))
+                        return FAILURE;
                 }
                 
                 if(out_is_terminated) *out_is_terminated = true;

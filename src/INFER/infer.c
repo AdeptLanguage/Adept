@@ -53,6 +53,12 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     if(infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)) return FAILURE;
 
     ast->type_table = ctx.type_table;
+
+    // We had unused variables and have been told to treat them as errors, so exit
+    if(compiler->traits & COMPILER_WARN_AS_ERROR && compiler->show_unused_variables_how_to_disable){
+        return FAILURE;
+    }
+
     return SUCCESS;
 }
 
@@ -775,61 +781,71 @@ int resolve_generics(infer_ctx_t *ctx, ast_expr_t **expressions, length_t expres
                 // This is ok because the memory that was allocated is larger than needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_bool) == 1
 
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a bool");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a bool"))
+                    return FAILURE;
                 ((ast_expr_boolean_t*) expr)->value = (((ast_expr_generic_float_t*) expr)->value != 0);
                 break;
             case EXPR_BYTE:
                 // This is ok because the memory that was allocated is larger than needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_byte) == 1
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a byte");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a byte"))
+                    return FAILURE;
                 ((ast_expr_byte_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_UBYTE:
                 // This is ok because the memory that was allocated is larger than needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_ubyte) == 1
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ubyte");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ubyte"))
+                    return FAILURE;
                 ((ast_expr_ubyte_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_SHORT:
                 // This is ok because the memory that was allocated is larger than needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_short) == 2
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a short");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a short"))
+                    return FAILURE;
                 ((ast_expr_short_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_USHORT:
                 // This is ok because the memory that was allocated is larger than needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_ushort) == 2
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ushort");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ushort"))
+                    return FAILURE;
                 ((ast_expr_ushort_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_INT:
                 // This is ok because the memory that was allocated is larger than needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_int) == 4
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to an int");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to an int"))
+                    return FAILURE;
                 ((ast_expr_int_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_UINT:
                 // This is ok because the memory that was allocated is larger than needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_uint) == 4
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a uint");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a uint"))
+                    return FAILURE;
                 ((ast_expr_uint_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_LONG:
                 // This is ok because the memory that was allocated is equal to that needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_long) == 8
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a long");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a long"))
+                    return FAILURE;
                 ((ast_expr_long_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_ULONG:
                 // This is ok because the memory that was allocated is equal to that needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_ulong) == 8
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ulong");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a ulong"))
+                    return FAILURE;
                 ((ast_expr_ulong_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_USIZE:
                 // This is ok because the memory that was allocated is equal to that needed
                 // sizeof(adept_generic_float) == 8  -->  sizeof(adept_usize) == 8
-                compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a usize");
+                if(compiler_warnf(ctx->compiler, expr->source, "Implicitly converting generic float value to a usize"))
+                    return FAILURE;
                 ((ast_expr_usize_t*) expr)->value = ((ast_expr_generic_float_t*) expr)->value;
                 break;
             case EXPR_FLOAT:
@@ -987,6 +1003,8 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
 
     if(!(compiler->ignore & COMPILER_IGNORE_UNUSED || compiler->traits & COMPILER_NO_WARN)) for(length_t i = 0; i < length; i++){
         if(!variables[i].used){
+            // Ignore whether to terminate, since we cannot terminate right now because we are freeing 'infer_var_scope_t's
+            // Optional termination for this warning is handled when inference is finished.
             compiler_warnf(compiler, variables[i].source, "Variable '%s' is never used", variables[i].name);
             compiler->show_unused_variables_how_to_disable = true;
         }
