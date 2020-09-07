@@ -17,28 +17,29 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     char *directive_name = tokenlist->tokens[*i].data;
 
     const char *standard_directives[] = {
-        "default", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
+        "default", "define", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
         "print", "print_error", "print_warning", "set", "unless"
     };
 
     #define META_DIRECTIVE_DEFAULT 0
-    #define META_DIRECTIVE_ELIF 1
-    #define META_DIRECTIVE_ELSE 2
-    #define META_DIRECTIVE_END 3
-    #define META_DIRECTIVE_ERROR 4
-    #define META_DIRECTIVE_GET 5
-    #define META_DIRECTIVE_HALT 6
-    #define META_DIRECTIVE_IF 7
-    #define META_DIRECTIVE_IMPORT 8
-    #define META_DIRECTIVE_INPUT 9
-    #define META_DIRECTIVE_PLACE 10
-    #define META_DIRECTIVE_PLACE_ERROR 11
-    #define META_DIRECTIVE_PLACE_WARNING 12
-    #define META_DIRECTIVE_PRINT 13
-    #define META_DIRECTIVE_PRINT_ERROR 14
-    #define META_DIRECTIVE_PRINT_WARNING 15
-    #define META_DIRECTIVE_SET 16
-    #define META_DIRECTIVE_UNLESS 17
+    #define META_DIRECTIVE_DEFINE 1
+    #define META_DIRECTIVE_ELIF 2
+    #define META_DIRECTIVE_ELSE 3
+    #define META_DIRECTIVE_END 4
+    #define META_DIRECTIVE_ERROR 5
+    #define META_DIRECTIVE_GET 6
+    #define META_DIRECTIVE_HALT 7
+    #define META_DIRECTIVE_IF 8
+    #define META_DIRECTIVE_IMPORT 9
+    #define META_DIRECTIVE_INPUT 10
+    #define META_DIRECTIVE_PLACE 11
+    #define META_DIRECTIVE_PLACE_ERROR 12
+    #define META_DIRECTIVE_PLACE_WARNING 13
+    #define META_DIRECTIVE_PRINT 14
+    #define META_DIRECTIVE_PRINT_ERROR 15
+    #define META_DIRECTIVE_PRINT_WARNING 16
+    #define META_DIRECTIVE_SET 17
+    #define META_DIRECTIVE_UNLESS 18
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -394,7 +395,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_free_fully(value);
         }
         break;
-    case META_DIRECTIVE_SET: { // set
+    case META_DIRECTIVE_SET: case META_DIRECTIVE_DEFINE: { // set, define
             char *definition_name = parse_grab_word(ctx, "Expected transcendent variable name after #set");
             if(!definition_name) return FAILURE;
             (*i)++;

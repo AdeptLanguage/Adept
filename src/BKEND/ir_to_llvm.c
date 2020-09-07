@@ -1420,9 +1420,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     if(disposeTriple) LLVMDisposeMessage(triple);
 
     debug_signal(compiler, DEBUG_SIGNAL_AT_LINKING, NULL);
-
-    //if(compiler->cross_compile_for == CROSS_COMPILE_WINDOWS) return SUCCESS;
-
+    
     if(system(link_command) != 0){
         redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);
         free(object_filename);
