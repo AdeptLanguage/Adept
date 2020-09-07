@@ -844,12 +844,10 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
 }
 
 void compiler_panicf(compiler_t *compiler, source_t source, const char *format, ...){
-    #ifndef ADEPT_INSIGHT_BUILD
     va_list args;
     va_start(args, format);
     compiler_vpanicf(compiler, source, format, args);
     va_end(args);
-    #endif
 }
 
 void compiler_vpanicf(compiler_t *compiler, source_t source, const char *format, va_list args){
@@ -927,21 +925,19 @@ bool compiler_warn(compiler_t *compiler, source_t source, const char *message){
 
 bool compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){
     if(compiler->traits & COMPILER_NO_WARN) return false;
-
-    #ifndef ADEPT_INSIGHT_BUILD
+    
     va_list args;
     va_start(args, format);
 
     if(compiler->traits & COMPILER_WARN_AS_ERROR){
         compiler_vpanicf(compiler, source, format, args);
+        va_end(args);
         return true;
     } else {
         compiler_vwarnf(compiler, source, format, args);
     }
 
     va_end(args);
-    #endif
-
     return false;
 }
 
@@ -1269,6 +1265,7 @@ void adept_error_free_fully(adept_error_t *error){
 }
 
 void compiler_create_warning(compiler_t *compiler, strong_cstr_t message, source_t source){
+    printf("here!\n");
     expand((void**) &compiler->warnings, sizeof(adept_warning_t), compiler->warnings_length, &compiler->warnings_capacity, 1, 4);
     
     adept_warning_t *warning = &compiler->warnings[compiler->warnings_length++];
