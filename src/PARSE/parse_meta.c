@@ -416,22 +416,23 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_t *value = NULL;
 
-            if(tokenlist->tokens[++(*i)].id != TOKEN_NEWLINE || standard != META_DIRECTIVE_DEFINE){
-                if(parse_meta_expr(ctx, &value)) return FAILURE;
-                if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
-            }
-            
-            if(value == NULL){
-                value = malloc(sizeof(meta_expr_t));
-                value->id = META_EXPR_NULL;
-
-                if(!(ctx->compiler->traits & COMPILER_UNSAFE_META)){
-                    if(compiler_warnf(ctx->compiler, source, "WARNING: No value given for definition of '%s'", definition_name)){
-                        meta_expr_free_fully(value);
-                        return FAILURE;
-                    }
+            if(tokenlist->tokens[++(*i)].id == TOKEN_NEWLINE){
+                if(standard == META_DIRECTIVE_DEFINE){
+                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Expected initial value for meta variable definition");
+                } else {
+                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Expected new value for meta variable");
                 }
+
+                printf("Did you mean to use:\n    #%s %s true\n", directive_name, definition_name);
+
+                #ifndef _WIN32
+                printf("\n"); // Extra newline for non-windows systems to make more readable
+                #endif
+                return FAILURE;
             }
+
+            if(parse_meta_expr(ctx, &value)) return FAILURE;
+            if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
             
             meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
 
