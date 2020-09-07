@@ -186,6 +186,9 @@ void compiler_init(compiler_t *compiler){
     
     compiler->default_stblib = NULL;
     compiler->error = NULL;
+    compiler->warnings = NULL;
+    compiler->warnings_length = 0;
+    compiler->warnings_capacity = 0;
     compiler->show_unused_variables_how_to_disable = false;
     compiler->cross_compile_for = CROSS_COMPILE_NONE;
 }
