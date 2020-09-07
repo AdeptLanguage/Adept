@@ -252,6 +252,10 @@ void adept_error_free_fully(adept_error_t *error);
 // Adds a warning to the list of warnings for a compiler
 void compiler_create_warning(compiler_t *compiler, strong_cstr_t message, source_t source);
 
+// ---------------- adept_warnings_free_fully ----------------
+// Frees an array of warnings and the memory it occupies
+void adept_warnings_free_fully(adept_warning_t *warnings, length_t length);
+
 #ifdef __cplusplus
 }
 #endif

@@ -251,10 +251,11 @@ void compiler_free_error(compiler_t *compiler){
 }
 
 void compiler_free_warnings(compiler_t *compiler){
-    for(length_t i = 0; i != compiler->warnings_length; i++){
-        free(compiler->warnings[i].message);
-    }
+    adept_warnings_free_fully(compiler->warnings, compiler->warnings_length);
+
+    compiler->warnings = NULL;
     compiler->warnings_length = 0;
+    compiler->warnings_capacity = 0;
 }
 
 object_t* compiler_new_object(compiler_t *compiler){
@@ -1264,4 +1265,9 @@ void compiler_create_warning(compiler_t *compiler, strong_cstr_t message, source
     adept_warning_t *warning = &compiler->warnings[compiler->warnings_length++];
     warning->message = message;
     warning->source = source;
+}
+
+void adept_warnings_free_fully(adept_warning_t *warnings, length_t length){
+    for(length_t i = 0; i != length; i++) free(warnings[i].message);
+    free(warnings);
 }
