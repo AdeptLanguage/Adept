@@ -867,15 +867,18 @@ void compiler_panicf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_warn(compiler_t *compiler, source_t source, const char *message){
     if(compiler->traits & COMPILER_NO_WARN) return;
 
+    #ifndef ADEPT_INSIGHT_BUILD
     object_t *relevant_object = compiler->objects[source.object_index];
     int line, column;
     lex_get_location(relevant_object->buffer, source.index, &line, &column);
     yellowprintf("%s:%d:%d: %s\n", filename_name_const(relevant_object->filename), line, column, message);
+    #endif
 }
 
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...){
     if(compiler->traits & COMPILER_NO_WARN) return;
 
+    #ifndef ADEPT_INSIGHT_BUILD
     object_t *relevant_object = compiler->objects[source.object_index];
     va_list args;
     int line, column;
@@ -890,6 +893,7 @@ void compiler_warnf(compiler_t *compiler, source_t source, const char *format, .
 
     va_end(args);
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
+    #endif
 }
 
 #ifndef ADEPT_INSIGHT_BUILD
