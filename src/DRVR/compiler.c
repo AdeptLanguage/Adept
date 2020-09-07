@@ -901,6 +901,14 @@ bool compiler_warn(compiler_t *compiler, source_t source, const char *message){
     int line, column;
     lex_get_location(relevant_object->buffer, source.index, &line, &column);
     yellowprintf("%s:%d:%d: %s\n", filename_name_const(relevant_object->filename), line, column, message);
+
+    if(relevant_object->traits & OBJECT_PACKAGE){
+        redprintf("%s:?:?: %s!\n", filename_name_const(relevant_object->filename), message);
+    } else {
+        lex_get_location(relevant_object->buffer, source.index, &line, &column);
+        redprintf("%s:%d:%d: %s!\n", filename_name_const(relevant_object->filename), line, column, message);
+        compiler_print_source(compiler, line, column, source);
+    }
     #endif
 
     return false;
@@ -935,12 +943,22 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 
     terminal_set_color(TERMINAL_COLOR_YELLOW);
 
+    if(relevant_object->traits & OBJECT_PACKAGE){
+        line = 1;
+        column = 1;
+        printf("%s:?:?: ", filename_name_const(relevant_object->filename));
+    } else {
+        lex_get_location(relevant_object->buffer, source.index, &line, &column);
+        printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
+    }
+    
     lex_get_location(relevant_object->buffer, source.index, &line, &column);
     printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
     vprintf(format, args);
     printf("\n");
 
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
+    compiler_print_source(compiler, line, column, source);
     #endif
 }
 

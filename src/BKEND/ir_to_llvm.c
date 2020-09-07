@@ -1358,14 +1358,19 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         linker_additional = malloc(1);
         *linker_additional = '\0';
     }
-
+    
 	#ifdef _WIN32
-	// Windows Linking
-    // TODO: SECURITY: Stop using system(3) call to invoke linker
-    const char *linker = "ld.exe"; // May need to change depending on system etc.
-    const char *linker_options = "--start-group";
-    const char *root = compiler->root;
-    link_command = mallocandsprintf("\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
+    if(compiler->cross_compile_for == CROSS_COMPILE_MACOS){
+        const char *linker = "gcc"; // May need to change depending on system etc.
+        const char *linker_libm = compiler->use_libm ? " -lm" : "";
+        link_command = mallocandsprintf("%s \"%s\"%s%s -o \"%s\"", linker, object_filename, linker_additional, linker_libm, compiler->output_filename);
+    } else {
+        // Windows Linking
+        const char *linker = "ld.exe"; // May need to change depending on system etc.
+        const char *linker_options = "--start-group";
+        const char *root = compiler->root;
+        link_command = mallocandsprintf("\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll -o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, compiler->output_filename);
+    }
 	#else
 	// UNIX Linking
 	
@@ -1428,13 +1433,15 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     if(compiler->cross_compile_for == CROSS_COMPILE_MACOS){
         // Don't support linking output Mach-O object files
         printf("Mach-O Object File Generated (Requires Manual Linking)\n");
+        printf("\nLink Command: '%s'\n", link_command);
         free(object_filename);
         free(link_command);
         return SUCCESS;
     }
-
+    
     debug_signal(compiler, DEBUG_SIGNAL_AT_LINKING, NULL);
     
+    // TODO: SECURITY: Stop using system(3) call to invoke linker
     if(system(link_command) != 0){
         redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);
         free(object_filename);
