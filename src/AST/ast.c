@@ -56,7 +56,7 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     // __windows__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__windows__",
     #ifdef _WIN32
-        true
+        cross_compile_for == CROSS_COMPILE_NONE
     #else
         cross_compile_for == CROSS_COMPILE_WINDOWS
     #endif
@@ -67,7 +67,7 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     #if defined(__APPLE__) || defined(__MACH__)
         cross_compile_for == CROSS_COMPILE_NONE
     #else
-        false
+        cross_compile_for == CROSS_COMPILE_MACOS
     #endif
     );
 

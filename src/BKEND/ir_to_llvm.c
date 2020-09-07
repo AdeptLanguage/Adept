@@ -1260,9 +1260,15 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     char *triple = "x86_64-pc-windows-gnu";
 	#else
     char *triple;
-    if(compiler->cross_compile_for == CROSS_COMPILE_WINDOWS){
+
+    switch(CROSS_COMPILE_MACOS /*compiler->cross_compile_for*/){
+    case CROSS_COMPILE_WINDOWS:
         triple = "x86_64-pc-windows-gnu";
-    } else {
+        break;
+    case CROSS_COMPILE_MACOS:
+        triple = "x86_64-apple-darwin19.6.0";
+        break;
+    default:
         triple = LLVMGetDefaultTargetTriple();
         disposeTriple = true;
     }
@@ -1418,6 +1424,14 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMDisposeTargetMachine(target_machine);
     LLVMDisposePassManager(pass_manager);
     if(disposeTriple) LLVMDisposeMessage(triple);
+
+    if(compiler->cross_compile_for == CROSS_COMPILE_MACOS){
+        // Don't support linking output Mach-O object files
+        printf("Mach-O Object File Generated (Requires Manual Linking)\n");
+        free(object_filename);
+        free(link_command);
+        return SUCCESS;
+    }
 
     debug_signal(compiler, DEBUG_SIGNAL_AT_LINKING, NULL);
     

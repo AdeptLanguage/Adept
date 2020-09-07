@@ -426,8 +426,13 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 printf("[-] Cross compiling for Windows x86_64\n");
                 compiler->cross_compile_for = CROSS_COMPILE_WINDOWS;
                 #endif
+            } else if(strcmp(argv[arg_index], "--macos") == 0){
+                #ifndef __APPLE__
+                printf("[-] Cross compiling for MacOS x86_64\n");
+                compiler->cross_compile_for = CROSS_COMPILE_MACOS;
+                #endif
             }
-
+            
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
             else if(strcmp(argv[arg_index], "--run-tests") == 0){
                 run_debug_tests();
@@ -626,6 +631,10 @@ void show_help(bool show_advanced_options){
         printf("\nLinker Options:\n");
         printf("    --libm            Forces linking against libc math library\n");
 
+        printf("\nCross Compilation:\n");
+        printf("    --windows         Output Windows Executable (Requires Extension)\n");
+        printf("    --macos           Output MacOS Mach-O Object File\n");
+        
         printf("\nIgnore Options:\n");
         printf("    --ignore-all                      Enables all ignore options\n");
         printf("    --ignore-deprecation              Ignore deprecation warnings\n");

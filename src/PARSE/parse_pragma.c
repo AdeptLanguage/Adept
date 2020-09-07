@@ -174,11 +174,13 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
             return FAILURE;
         }
-        return SUCCESS;
         #else
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
-        return FAILURE;
+        if(ctx->compiler->cross_compile_for != CROSS_COMPILE_MACOS){
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This file only works on Mac");
+            return FAILURE;
+        }
         #endif
+        return SUCCESS;
     case PRAGMA_NO_TYPE_INFO: // 'no_type_info' directive
         if(!(ctx->compiler->ignore & COMPILER_IGNORE_OBSOLETE)){
             compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "WARNING: 'pragma no_type_info' is obsolete, use 'pragma no_typeinfo' instead");
