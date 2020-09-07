@@ -12,6 +12,7 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
+#include <stdarg.h>
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
 #include "DRVR/config.h"
@@ -32,6 +33,7 @@ extern "C" {
 #define COMPILER_FUSSY            TRAIT_D
 #define COMPILER_FORCE_STDLIB     TRAIT_E
 #define COMPILER_REPL             TRAIT_F
+#define COMPILER_WARN_AS_ERROR    TRAIT_G
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
@@ -191,11 +193,13 @@ void compiler_print_source(compiler_t *compiler, int line, int column, source_t 
 // Prints a compiler error message at a given 'source_t'
 void compiler_panic(compiler_t *compiler, source_t source, const char *message);
 void compiler_panicf(compiler_t *compiler, source_t source, const char *format, ...);
+void compiler_vpanicf(compiler_t *compiler, source_t source, const char *format, va_list args);
 
 // ---------------- compiler_warn (and friends) ----------------
 // Prints a compiler warning at a given 'source_t'
 void compiler_warn(compiler_t *compiler, source_t source, const char *message);
 void compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...);
+void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, va_list args);
 
 #ifndef ADEPT_INSIGHT_BUILD
 // ---------------- compiler_undeclared_function ----------------
