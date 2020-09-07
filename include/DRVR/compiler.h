@@ -34,6 +34,7 @@ extern "C" {
 #define COMPILER_FORCE_STDLIB     TRAIT_E
 #define COMPILER_REPL             TRAIT_F
 #define COMPILER_WARN_AS_ERROR    TRAIT_G
+#define COMPILER_SHORT_WARNINGS   TRAIT_2_1
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1

@@ -355,6 +355,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_NO_WARN;
             } else if(strcmp(argv[arg_index], "-Werror") == 0){
                 compiler->traits |= COMPILER_WARN_AS_ERROR;
+            } else if(strcmp(argv[arg_index], "-Wshort") == 0 || strcmp(argv[arg_index], "--short-warnings") == 0){
+                compiler->traits |= COMPILER_SHORT_WARNINGS;
             } else if(strcmp(argv[arg_index], "-j") == 0){
                 compiler->traits |= COMPILER_NO_REMOVE_OBJECT;
             } else if(strcmp(argv[arg_index], "-O0") == 0){
@@ -598,9 +600,11 @@ void show_help(bool show_advanced_options){
     printf("    -e                Execute resulting executable\n");
     printf("    -w                Disable compiler warnings\n");
 
-    if(show_advanced_options)
+    if(show_advanced_options){
         printf("    -Werror           Turn warnings into errors\n");
-
+        printf("    --short-warnings  Don't show code fragments for warnings\n");
+    }
+    
     printf("    -o FILENAME       Output to FILENAME (relative to working directory)\n");
     printf("    -n FILENAME       Output to FILENAME (relative to file)\n");
 
@@ -902,11 +906,7 @@ bool compiler_warn(compiler_t *compiler, source_t source, const char *message){
     lex_get_location(relevant_object->buffer, source.index, &line, &column);
     yellowprintf("%s:%d:%d: %s\n", filename_name_const(relevant_object->filename), line, column, message);
 
-    if(relevant_object->traits & OBJECT_PACKAGE){
-        redprintf("%s:?:?: %s!\n", filename_name_const(relevant_object->filename), message);
-    } else {
-        lex_get_location(relevant_object->buffer, source.index, &line, &column);
-        redprintf("%s:%d:%d: %s!\n", filename_name_const(relevant_object->filename), line, column, message);
+    if(!(compiler->traits & COMPILER_SHORT_WARNINGS)){
         compiler_print_source(compiler, line, column, source);
     }
     #endif
@@ -951,14 +951,17 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
         lex_get_location(relevant_object->buffer, source.index, &line, &column);
         printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
     }
-    
+
     lex_get_location(relevant_object->buffer, source.index, &line, &column);
     printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
     vprintf(format, args);
     printf("\n");
 
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
-    compiler_print_source(compiler, line, column, source);
+
+    if(!(compiler->traits & COMPILER_SHORT_WARNINGS)){
+        compiler_print_source(compiler, line, column, source);
+    }
     #endif
 }
 

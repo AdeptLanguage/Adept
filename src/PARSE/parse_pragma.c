@@ -27,7 +27,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         "__builtin_warn_bad_printf_format", "compiler_supports", "compiler_version", "default_stdlib", "deprecated", "disable_warnings", "enable_warnings", "help",
         "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete", "ignore_partial_support", "ignore_unrecognized_directives", "ignore_unused", "libm",
         "mac_only", "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name",
-        "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "windows_only"
+        "short_warnings", "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "warn_short", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -60,11 +60,13 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     #define PRAGMA_OPTIONS                          0x00000016
     #define PRAGMA_PACKAGE                          0x00000017
     #define PRAGMA_PROJECT_NAME                     0x00000018
-    #define PRAGMA_UNSAFE_META                      0x00000019
-    #define PRAGMA_UNSAFE_NEW                       0x0000001A
-    #define PRAGMA_UNSUPPORTED                      0x0000001B
-    #define PRAGMA_WARN_AS_ERROR                    0x0000001C
-    #define PRAGMA_WINDOWS_ONLY                     0x0000001D
+    #define PRAGMA_SHORT_WARNINGS                   0x00000019
+    #define PRAGMA_UNSAFE_META                      0x0000001A
+    #define PRAGMA_UNSAFE_NEW                       0x0000001B
+    #define PRAGMA_UNSUPPORTED                      0x0000001C
+    #define PRAGMA_WARN_AS_ERROR                    0x0000001D
+    #define PRAGMA_WARN_SHORT                       0x0000001E
+    #define PRAGMA_WINDOWS_ONLY                     0x0000001F
 
     maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
@@ -261,6 +263,11 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return FAILURE;
     case PRAGMA_WARN_AS_ERROR: // 'warn_as_error' directive
         ctx->compiler->traits |= COMPILER_WARN_AS_ERROR;
+        return SUCCESS;
+    case PRAGMA_WARN_SHORT: // 'warn_short' directive
+        // fallthrough
+    case PRAGMA_SHORT_WARNINGS: // 'short_warnings' directive
+        ctx->compiler->traits |= COMPILER_SHORT_WARNINGS;
         return SUCCESS;
     case PRAGMA_WINDOWS_ONLY: // 'windows_only' directive
         #ifdef _WIN32
