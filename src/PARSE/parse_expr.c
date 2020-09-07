@@ -180,6 +180,9 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             }
 
             switch(value->id){
+             case META_EXPR_UNDEF: case META_EXPR_NULL:
+                ast_expr_create_null(out_expr, sources[*i - 1]);
+                break;
             case META_EXPR_TRUE:
                 ast_expr_create_bool(out_expr, true, sources[*i - 1]);
                 break;

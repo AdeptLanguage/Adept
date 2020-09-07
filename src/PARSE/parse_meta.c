@@ -398,11 +398,20 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     case META_DIRECTIVE_SET: case META_DIRECTIVE_DEFINE: { // set, define
             char *definition_name = parse_grab_word(ctx, "Expected transcendent variable name after #set");
             if(!definition_name) return FAILURE;
-            (*i)++;
 
-            meta_expr_t *value;
-            if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            meta_expr_t *value = NULL;
+
+            if(tokenlist->tokens[++(*i)].id != TOKEN_NEWLINE || standard != META_DIRECTIVE_DEFINE){
+                if(parse_meta_expr(ctx, &value)) return FAILURE;
+                meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value);
+            }
+            
+            if(value == NULL){
+                value = malloc(sizeof(meta_expr_t));
+                value->id = META_EXPR_NULL;
+
+                compiler_warnf(ctx->compiler, source, "WARNING: No value given for definition of '%s'", definition_name);
+            }
 
             meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
 
@@ -447,6 +456,11 @@ errorcode_t parse_meta_primary_expr(parse_ctx_t *ctx, meta_expr_t **out_expr){
     case TOKEN_FALSE:
         *out_expr = malloc(sizeof(meta_expr_t));
         (*out_expr)->id = META_EXPR_FALSE;
+        (*i)++;
+        break;
+    case TOKEN_NULL:
+        *out_expr = malloc(sizeof(meta_expr_t));
+        (*out_expr)->id = META_EXPR_NULL;
         (*i)++;
         break;
     case TOKEN_CSTRING:

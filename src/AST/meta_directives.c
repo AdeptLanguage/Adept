@@ -11,6 +11,8 @@ strong_cstr_t meta_expr_str(meta_expr_t *meta){
     switch(meta->id){
     case META_EXPR_UNDEF:
         return strclone("undef");
+    case META_EXPR_NULL:
+        return strclone("null");
     case META_EXPR_TRUE:
         return strclone("true");
     case META_EXPR_FALSE:
@@ -37,6 +39,7 @@ strong_cstr_t meta_expr_str(meta_expr_t *meta){
 void meta_expr_free(meta_expr_t *expr){
     switch(expr->id){
     case META_EXPR_UNDEF:
+    case META_EXPR_NULL:
     case META_EXPR_TRUE:
     case META_EXPR_FALSE:
     case META_EXPR_INT:
@@ -87,19 +90,9 @@ void meta_expr_free_fully(meta_expr_t *expr){
 
 meta_expr_t *meta_expr_clone(meta_expr_t *expr){
     switch(expr->id){
-    case META_EXPR_UNDEF: {
+    case META_EXPR_UNDEF: case META_EXPR_NULL: case META_EXPR_TRUE: case META_EXPR_FALSE: {
             meta_expr_t *result = malloc(sizeof(meta_expr_t));
-            result->id = META_EXPR_UNDEF;
-            return result;
-        }
-    case META_EXPR_TRUE: {
-            meta_expr_t *result = malloc(sizeof(meta_expr_t));
-            result->id = META_EXPR_TRUE;
-            return result;
-        }
-    case META_EXPR_FALSE: {
-            meta_expr_t *result = malloc(sizeof(meta_expr_t));
-            result->id = META_EXPR_FALSE;
+            result->id = expr->id;
             return result;
         }
     case META_EXPR_STR: {
@@ -444,6 +437,8 @@ bool meta_expr_into_bool(compiler_t *compiler, object_t *object, meta_definition
     switch((*expr)->id){
     case META_EXPR_UNDEF:
         return false;
+    case META_EXPR_NULL:
+        return false;
     case META_EXPR_TRUE:
         return true;
     case META_EXPR_FALSE:
@@ -462,6 +457,8 @@ long long meta_expr_into_int(compiler_t *compiler, object_t *object, meta_defini
 
     switch((*expr)->id){
     case META_EXPR_UNDEF:
+        return 0;
+    case META_EXPR_NULL:
         return 0;
     case META_EXPR_TRUE:
         return 1;
@@ -484,6 +481,8 @@ double meta_expr_into_float(compiler_t *compiler, object_t *object, meta_definit
     switch((*expr)->id){
     case META_EXPR_UNDEF:
         return 0.0;
+    case META_EXPR_NULL:
+        return 0.0;
     case META_EXPR_TRUE:
         return 1.0;
     case META_EXPR_FALSE:
@@ -505,6 +504,8 @@ strong_cstr_t meta_expr_into_string(compiler_t *compiler, object_t *object, meta
     switch((*expr)->id){
     case META_EXPR_UNDEF:
         return strclone("undef");
+    case META_EXPR_NULL:
+        return strclone("null");
     case META_EXPR_TRUE:
         return strclone("true");
     case META_EXPR_FALSE:
