@@ -410,9 +410,10 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 value = malloc(sizeof(meta_expr_t));
                 value->id = META_EXPR_NULL;
 
-                compiler_warnf(ctx->compiler, source, "WARNING: No value given for definition of '%s'", definition_name);
+                if(!(ctx->compiler->traits & COMPILER_UNSAFE_META))
+                    compiler_warnf(ctx->compiler, source, "WARNING: No value given for definition of '%s'", definition_name);
             }
-
+            
             meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
 
             if(existing){
