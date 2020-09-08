@@ -127,6 +127,7 @@ extern "C" {
 #define EXPR_VA_START        0x00000073
 #define EXPR_VA_END          0x00000074
 #define EXPR_VA_COPY         0x00000075
+#define EXPR_FOR             0x00000076
 
 #define MAX_AST_EXPR EXPR_VA_COPY
 
@@ -605,6 +606,17 @@ typedef struct {
     ast_expr_t *dest_value;
     ast_expr_t *src_value;
 } ast_expr_va_copy_t;
+
+// ---------------- ast_expr_for_t ----------------
+// Expression for 'for' loop
+typedef struct {
+    unsigned int id;
+    source_t source;
+    weak_cstr_t label;
+    ast_expr_list_t before;
+    ast_expr_t *condition;
+    ast_expr_list_t statements;
+} ast_expr_for_t;
 
 // ---------------- expr_is_mutable ----------------
 // Tests to see if the result of an expression will be mutable

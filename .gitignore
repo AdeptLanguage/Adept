@@ -6,4 +6,11 @@ obj/*
 bin/*
 MyMakefile
 OriginalMakefile
-tests/*
+main
+pragma
+*.dep
+tests/native_linking/*.a
+bugs/*
+counter.py
+*.DS_Store
+.vscode/*

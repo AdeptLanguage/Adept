@@ -661,6 +661,13 @@ void ast_expr_free(ast_expr_t *expr){
         ast_expr_free_fully(((ast_expr_va_copy_t*) expr)->dest_value);
         ast_expr_free_fully(((ast_expr_va_copy_t*) expr)->src_value);
         break;
+    case EXPR_FOR: {
+            ast_expr_for_t *for_loop = (ast_expr_for_t*) expr;
+            ast_free_statements_fully(for_loop->before.statements, for_loop->before.length);
+            if(for_loop->condition) ast_expr_free_fully(for_loop->condition);
+            ast_free_statements_fully(for_loop->statements.statements, for_loop->statements.length);
+        }
+        break;
     }
 }
 
@@ -1188,6 +1195,33 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_va_copy
         #undef clone_as_va_copy
+    case EXPR_FOR:
+        #define expr_as_for ((ast_expr_for_t*) expr)
+        #define clone_as_for ((ast_expr_for_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_for_t));
+        clone_as_for->label = expr_as_for->label;
+        clone_as_for->condition = expr_as_for->condition ? ast_expr_clone(expr_as_for->condition) : NULL;
+        
+        clone_as_for->before.statements = malloc(sizeof(ast_expr_t*) * expr_as_for->before.length);
+        clone_as_for->before.length = expr_as_for->before.length;
+        clone_as_for->before.capacity = expr_as_for->before.length; // (on purpose)
+
+        for(length_t i = 0; i != expr_as_for->before.length; i++){
+            clone_as_for->before.statements[i] = ast_expr_clone(expr_as_for->before.statements[i]);
+        }
+        
+        clone_as_for->statements.statements = malloc(sizeof(ast_expr_t*) * expr_as_for->statements.length);
+        clone_as_for->statements.length = expr_as_for->statements.length;
+        clone_as_for->statements.capacity = expr_as_for->statements.length; // (on purpose)
+
+        for(length_t i = 0; i != expr_as_for->statements.length; i++){
+            clone_as_for->statements.statements[i] = ast_expr_clone(expr_as_for->statements.statements[i]);
+        }
+        break;
+
+        #undef expr_as_for
+        #undef clone_as_for
     default:
         redprintf("INTERNAL ERROR: ast_expr_clone received unimplemented expression id 0x%08X\n", expr->id);
         redprintf("Returning NULL... a crash will probably follow\n");
@@ -1412,4 +1446,5 @@ const char *global_expression_rep_table[] = {
     "<va_start>",                 // 0x00000073
     "<va_end>",                   // 0x00000074
     "<va_copy>",                  // 0x00000075
+    "<for>",                      // 0x00000076
 };

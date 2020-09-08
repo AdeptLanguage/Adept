@@ -1,0 +1,16 @@
+
+import basics
+
+func main {
+    // More traditional version
+    for(i int = 0; i < 10; i++){
+        printf("%d ", i)
+    }
+    newline()
+
+    // Without parentheses
+    for i int = 0; i < 10; i++ {
+        printf("%d ", i)
+    }
+    newline()
+}
