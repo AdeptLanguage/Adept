@@ -1,0 +1,8 @@
+adept
+adept_debug
+adept.exe
+adept_debug.exe
+obj/*
+bin/*
+MyMakefile
+OriginalMakefile
