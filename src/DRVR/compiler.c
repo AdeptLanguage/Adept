@@ -964,8 +964,6 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
         printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
     }
 
-    lex_get_location(relevant_object->buffer, source.index, &line, &column);
-    printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
     vprintf(format, args);
     printf("\n");
 
@@ -1265,7 +1263,6 @@ void adept_error_free_fully(adept_error_t *error){
 }
 
 void compiler_create_warning(compiler_t *compiler, strong_cstr_t message, source_t source){
-    printf("here!\n");
     expand((void**) &compiler->warnings, sizeof(adept_warning_t), compiler->warnings_length, &compiler->warnings_capacity, 1, 4);
     
     adept_warning_t *warning = &compiler->warnings[compiler->warnings_length++];
