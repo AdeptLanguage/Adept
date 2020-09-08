@@ -784,7 +784,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         // TODO: INVESTIGATE: Investigate whether TOKEN_META #else/#elif should be having (*i)++ here
         if(tokens[*i].id == TOKEN_NEWLINE || (tokens[*i].id == TOKEN_META && (strcmp(tokens[*i].data, "else") == 0 || strcmp(tokens[*i].data, "elif") == 0))){
             (*i)++;
-        } else if(tokens[*i].id != TOKEN_ELSE && tokens[*i].id != TOKEN_TERMINATE_JOIN && tokens[*i].id != TOKEN_CLOSE && tokens[*i].id != TOKEN_BEGIN){
+        } else if(tokens[*i].id != TOKEN_ELSE && tokens[*i].id != TOKEN_TERMINATE_JOIN && tokens[*i].id != TOKEN_CLOSE && tokens[*i].id != TOKEN_BEGIN && tokens[*i].id != TOKEN_NEXT){
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at end of statement");
             return FAILURE;
         }    

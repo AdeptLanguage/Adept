@@ -8,9 +8,16 @@ func main {
     }
     newline()
 
+    // More traditional version, Single Line
+    for(i int = 0; i < 10; i++), printf("%d ", i)
+    newline()
+
     // Without parentheses
     for i int = 0; i < 10; i++ {
         printf("%d ", i)
     }
+
+    // Without parentheses, Single Line
+    for i int = 0; i < 10; i++, printf("%d ", i)
     newline()
 }
