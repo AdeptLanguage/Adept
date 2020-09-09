@@ -199,6 +199,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         break;
     case VALUE_TYPE_CONST_BITCAST:
     case VALUE_TYPE_CONST_ZEXT:
+    case VALUE_TYPE_CONST_SEXT:
     case VALUE_TYPE_CONST_FEXT:
     case VALUE_TYPE_CONST_TRUNC:
     case VALUE_TYPE_CONST_FTRUNC:
@@ -214,6 +215,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             switch(value->value_type){
             case VALUE_TYPE_CONST_BITCAST:     const_cast_name = "cbc";     break;
             case VALUE_TYPE_CONST_ZEXT:        const_cast_name = "czext";   break;
+            case VALUE_TYPE_CONST_SEXT:        const_cast_name = "csext";   break;
             case VALUE_TYPE_CONST_FEXT:        const_cast_name = "cfext";   break;
             case VALUE_TYPE_CONST_TRUNC:       const_cast_name = "ctrunc";  break;
             case VALUE_TYPE_CONST_FTRUNC:      const_cast_name = "cftrunc"; break;
@@ -505,17 +507,17 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
                     } else
                         fprintf(file, "    0x%08X funcaddr %s\n", (unsigned int) i, ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name);
                     break;
-                case INSTRUCTION_BITCAST: case INSTRUCTION_ZEXT:
-                case INSTRUCTION_FEXT: case INSTRUCTION_TRUNC:
-                case INSTRUCTION_FTRUNC: case INSTRUCTION_INTTOPTR:
-                case INSTRUCTION_PTRTOINT: case INSTRUCTION_FPTOUI:
-                case INSTRUCTION_FPTOSI: case INSTRUCTION_UITOFP:
-                case INSTRUCTION_SITOFP: case INSTRUCTION_REINTERPRET: {
+                case INSTRUCTION_BITCAST: case INSTRUCTION_ZEXT: case INSTRUCTION_SEXT:
+                case INSTRUCTION_FEXT: case INSTRUCTION_TRUNC: case INSTRUCTION_FTRUNC:
+                case INSTRUCTION_INTTOPTR: case INSTRUCTION_PTRTOINT: case INSTRUCTION_FPTOUI:
+                case INSTRUCTION_FPTOSI: case INSTRUCTION_UITOFP: case INSTRUCTION_SITOFP:
+                case INSTRUCTION_REINTERPRET: {
                         char *instr_name = "";
 
                         switch(functions[f].basicblocks[b].instructions[i]->id){
                         case INSTRUCTION_BITCAST:     instr_name = "bc";     break;
                         case INSTRUCTION_ZEXT:        instr_name = "zext";   break;
+                        case INSTRUCTION_SEXT:        instr_name = "sext";   break;
                         case INSTRUCTION_FEXT:        instr_name = "fext";   break;
                         case INSTRUCTION_TRUNC:       instr_name = "trunc";  break;
                         case INSTRUCTION_FTRUNC:      instr_name = "ftrunc"; break;

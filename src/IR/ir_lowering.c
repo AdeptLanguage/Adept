@@ -17,6 +17,8 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         break;
     case VALUE_TYPE_CONST_ZEXT:
         break;
+    case VALUE_TYPE_CONST_SEXT:
+        break;
     case VALUE_TYPE_CONST_FEXT:
         break;
     case VALUE_TYPE_CONST_TRUNC:

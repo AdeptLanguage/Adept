@@ -219,6 +219,7 @@ ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int nonconst_cas
 // Builds a specialized value cast
 #define build_bitcast(builder, from, to)     build_cast(builder, VALUE_TYPE_CONST_BITCAST, INSTRUCTION_BITCAST, from, to)
 #define build_zext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_ZEXT, INSTRUCTION_ZEXT, from, to)
+#define build_sext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_SEXT, INSTRUCTION_SEXT, from, to)
 #define build_trunc(builder, from, to)       build_cast(builder, VALUE_TYPE_CONST_TRUNC, INSTRUCTION_TRUNC, from, to)
 #define build_fext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_FEXT, INSTRUCTION_FEXT, from, to)
 #define build_ftrunc(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_FTRUNC, INSTRUCTION_FTRUNC, from, to)
@@ -232,6 +233,7 @@ ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int nonconst_cas
 
 #define build_const_bitcast(pool, from, to)     build_const_cast(pool, VALUE_TYPE_CONST_BITCAST, from, to)
 #define build_const_zext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_ZEXT, from, to)
+#define build_const_sext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_SEXT, from, to)
 #define build_const_trunc(pool, from, to)       build_const_cast(pool, VALUE_TYPE_CONST_TRUNC, from, to)
 #define build_const_fext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_FEXT, from, to)
 #define build_const_ftrunc(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_FTRUNC, from, to)

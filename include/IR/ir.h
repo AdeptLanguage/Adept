@@ -66,42 +66,43 @@
 #define INSTRUCTION_FUNC_ADDRESS   0x0000002B // ir_instr_cast_t
 #define INSTRUCTION_BITCAST        0x0000002C // ir_instr_cast_t
 #define INSTRUCTION_ZEXT           0x0000002D // ir_instr_cast_t
-#define INSTRUCTION_TRUNC          0x0000002E // ir_instr_cast_t
-#define INSTRUCTION_FEXT           0x0000002F // ir_instr_cast_t
-#define INSTRUCTION_FTRUNC         0x00000030 // ir_instr_cast_t
-#define INSTRUCTION_INTTOPTR       0x00000031 // ir_instr_cast_t
-#define INSTRUCTION_PTRTOINT       0x00000032 // ir_instr_cast_t
-#define INSTRUCTION_FPTOUI         0x00000033 // ir_instr_cast_t
-#define INSTRUCTION_FPTOSI         0x00000034 // ir_instr_cast_t
-#define INSTRUCTION_UITOFP         0x00000035 // ir_instr_cast_t
-#define INSTRUCTION_SITOFP         0x00000036 // ir_instr_cast_t
-#define INSTRUCTION_ISZERO         0x00000037 // ir_unary_t
-#define INSTRUCTION_ISNTZERO       0x00000038 // ir_unary_t
-#define INSTRUCTION_REINTERPRET    0x00000039 // ir_instr_cast_t
-#define INSTRUCTION_AND            0x00000040 // ir_instr_math_t
-#define INSTRUCTION_OR             0x00000041 // ir_instr_math_t
-#define INSTRUCTION_SIZEOF         0x00000042
-#define INSTRUCTION_OFFSETOF       0x00000043
-#define INSTRUCTION_VARZEROINIT    0x00000044
-#define INSTRUCTION_MEMCPY         0x00000045
-#define INSTRUCTION_BIT_AND        0x00000046 // ir_instr_math_t
-#define INSTRUCTION_BIT_OR         0x00000047 // ir_instr_math_t
-#define INSTRUCTION_BIT_XOR        0x00000048 // ir_instr_math_t
-#define INSTRUCTION_BIT_COMPLEMENT 0x00000049 // ir_instr_unary_t
-#define INSTRUCTION_BIT_LSHIFT     0x0000004A // ir_instr_math_t
-#define INSTRUCTION_BIT_RSHIFT     0x0000004B // ir_instr_math_t
-#define INSTRUCTION_BIT_LGC_RSHIFT 0x0000004C // ir_instr_math_t
-#define INSTRUCTION_NEGATE         0x0000004D // ir_instr_unary_t
-#define INSTRUCTION_FNEGATE        0x0000004E // ir_instr_unary_t
-#define INSTRUCTION_SELECT         0x0000004F
-#define INSTRUCTION_PHI2           0x00000050
-#define INSTRUCTION_SWITCH         0x00000051
-#define INSTRUCTION_STACK_SAVE     0x00000052
-#define INSTRUCTION_STACK_RESTORE  0x00000053 // ir_instr_stack_restore_t
-#define INSTRUCTION_VA_START       0x00000054 // ir_instr_unary_t
-#define INSTRUCTION_VA_END         0x00000055 // ir_instr_unary_t
-#define INSTRUCTION_VA_ARG         0x00000056 // ir_instr_va_arg_t
-#define INSTRUCTION_VA_COPY        0x00000057 // ir_instr_va_copy_t
+#define INSTRUCTION_SEXT           0x0000002E // ir_instr_cast_t
+#define INSTRUCTION_TRUNC          0x0000002F // ir_instr_cast_t
+#define INSTRUCTION_FEXT           0x00000030 // ir_instr_cast_t
+#define INSTRUCTION_FTRUNC         0x00000031 // ir_instr_cast_t
+#define INSTRUCTION_INTTOPTR       0x00000032 // ir_instr_cast_t
+#define INSTRUCTION_PTRTOINT       0x00000033 // ir_instr_cast_t
+#define INSTRUCTION_FPTOUI         0x00000034 // ir_instr_cast_t
+#define INSTRUCTION_FPTOSI         0x00000035 // ir_instr_cast_t
+#define INSTRUCTION_UITOFP         0x00000036 // ir_instr_cast_t
+#define INSTRUCTION_SITOFP         0x00000037 // ir_instr_cast_t
+#define INSTRUCTION_ISZERO         0x00000038 // ir_unary_t
+#define INSTRUCTION_ISNTZERO       0x00000039 // ir_unary_t
+#define INSTRUCTION_REINTERPRET    0x00000040 // ir_instr_cast_t
+#define INSTRUCTION_AND            0x00000041 // ir_instr_math_t
+#define INSTRUCTION_OR             0x00000042 // ir_instr_math_t
+#define INSTRUCTION_SIZEOF         0x00000043
+#define INSTRUCTION_OFFSETOF       0x00000044
+#define INSTRUCTION_VARZEROINIT    0x00000045
+#define INSTRUCTION_MEMCPY         0x00000046
+#define INSTRUCTION_BIT_AND        0x00000047 // ir_instr_math_t
+#define INSTRUCTION_BIT_OR         0x00000048 // ir_instr_math_t
+#define INSTRUCTION_BIT_XOR        0x00000049 // ir_instr_math_t
+#define INSTRUCTION_BIT_COMPLEMENT 0x0000004A // ir_instr_unary_t
+#define INSTRUCTION_BIT_LSHIFT     0x0000004B // ir_instr_math_t
+#define INSTRUCTION_BIT_RSHIFT     0x0000004C // ir_instr_math_t
+#define INSTRUCTION_BIT_LGC_RSHIFT 0x0000004D // ir_instr_math_t
+#define INSTRUCTION_NEGATE         0x0000004E // ir_instr_unary_t
+#define INSTRUCTION_FNEGATE        0x0000004F // ir_instr_unary_t
+#define INSTRUCTION_SELECT         0x00000050
+#define INSTRUCTION_PHI2           0x00000051
+#define INSTRUCTION_SWITCH         0x00000052
+#define INSTRUCTION_STACK_SAVE     0x00000053
+#define INSTRUCTION_STACK_RESTORE  0x00000054 // ir_instr_stack_restore_t
+#define INSTRUCTION_VA_START       0x00000055 // ir_instr_unary_t
+#define INSTRUCTION_VA_END         0x00000056 // ir_instr_unary_t
+#define INSTRUCTION_VA_ARG         0x00000057 // ir_instr_va_arg_t
+#define INSTRUCTION_VA_COPY        0x00000058 // ir_instr_va_copy_t
 
 // =============================================================
 // ------------------ Possible IR value types ------------------
@@ -130,16 +131,17 @@
 // Const cast values
 #define VALUE_TYPE_CONST_BITCAST       0x0000000E // data = pointer to an 'ir_value_t'
 #define VALUE_TYPE_CONST_ZEXT          0x0000000F // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FEXT          0x00000010 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_TRUNC         0x00000011 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FTRUNC        0x00000012 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_INTTOPTR      0x00000013 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_PTRTOINT      0x00000014 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FPTOUI        0x00000015 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FPTOSI        0x00000016 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_UITOFP        0x00000017 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_SITOFP        0x00000018 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_REINTERPRET   0x00000019 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_SEXT          0x00000010 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FEXT          0x00000011 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_TRUNC         0x00000012 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FTRUNC        0x00000013 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_INTTOPTR      0x00000014 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_PTRTOINT      0x00000015 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOUI        0x00000016 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOSI        0x00000017 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_UITOFP        0x00000018 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_SITOFP        0x00000019 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_REINTERPRET   0x0000001A // data = pointer to an 'ir_value_t'
 
 #define VALUE_TYPE_IS_CONSTANT(a)      (a > VALUE_TYPE_LAST_NON_CONST)
 #define VALUE_TYPE_IS_CONSTANT_CAST(a) (a > VALUE_TYPE_LAST_CONST_NON_CAST)

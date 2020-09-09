@@ -178,6 +178,8 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             return LLVMConstBitCast(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
     case VALUE_TYPE_CONST_ZEXT:
             return LLVMConstZExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
+    case VALUE_TYPE_CONST_SEXT:
+            return LLVMConstSExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
     case VALUE_TYPE_CONST_FEXT:
             return LLVMConstFPExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(value->type));
     case VALUE_TYPE_CONST_TRUNC:
@@ -757,6 +759,11 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                 case INSTRUCTION_ZEXT:
                     instr = basicblock->instructions[i];
                     llvm_result = LLVMBuildZExt(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(((ir_instr_cast_t*) instr)->result_type), "");
+                    catalog.blocks[b].value_references[i] = llvm_result;
+                    break;
+                case INSTRUCTION_SEXT:
+                    instr = basicblock->instructions[i];
+                    llvm_result = LLVMBuildSExt(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(((ir_instr_cast_t*) instr)->result_type), "");
                     catalog.blocks[b].value_references[i] = llvm_result;
                     break;
                 case INSTRUCTION_FEXT:
