@@ -162,6 +162,11 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 if(parse_expr(ctx, &conditional)) return FAILURE;
 
+                if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
+                    ast_expr_free_fully(conditional);
+                    return FAILURE;
+                }
+
                 switch(tokens[(*i)++].id){
                 case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
                 case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
@@ -284,6 +289,10 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     if(parse_expr(ctx, &conditional)) return FAILURE;
                 }
 
+                if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
+                    ast_expr_free_fully(conditional);
+                    return FAILURE;
+                }
 
                 switch(tokens[(*i)++].id){
                 case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
@@ -416,6 +425,15 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     return FAILURE;
                 }
 
+                if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
+                    ast_type_free_fully(it_type);
+                    ast_expr_free_fully(low_array);
+                    ast_expr_free_fully(length_limit);
+                    ast_expr_free_fully(list_expr);
+                    free(it_name);
+                    return FAILURE;
+                }
+
                 switch(tokens[(*i)++].id){
                 case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
                 case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
@@ -483,6 +501,11 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 if(is_static) *i += 1;
                 
                 if(parse_expr(ctx, &limit)) return FAILURE;
+
+                if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
+                    ast_expr_free_fully(limit);
+                    return FAILURE;
+                }
 
                 switch(tokens[(*i)++].id){
                 case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
@@ -734,6 +757,13 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 // Eat ')' if it exists
                 if(tokens[*i].id == TOKEN_CLOSE) (*i)++;
+
+                if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
+                    if(condition) ast_expr_free(condition);
+                    ast_exprs_free_fully(before.statements, before.length);
+                    defer_scope_free(&for_defer_scope);
+                    return FAILURE;
+                }
 
                 // Eat '{' or ','
                 unsigned int stmts_mode;
@@ -988,6 +1018,10 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
     ast_case_t *cases = NULL;
     length_t cases_length = 0, cases_capacity = 0;
 
+    if(parse_ignore_newlines(ctx, "Expected '{' after value given to 'switch' statement")){
+        ast_expr_free_fully(value);
+    }
+    
     if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after value given to 'switch' statement")){
         ast_expr_free_fully(value);
         return FAILURE;

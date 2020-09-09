@@ -1720,6 +1720,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(for_loop->condition){
                     if(ir_gen_expression(builder, for_loop->condition, &condition_value, false, &temporary_type)) return FAILURE;
                 } else {
+                    ast_type_make_base(&temporary_type, "bool");
                     condition_value = build_bool(builder->pool, true);
                 }
 
