@@ -1020,6 +1020,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
 
     if(parse_ignore_newlines(ctx, "Expected '{' after value given to 'switch' statement")){
         ast_expr_free_fully(value);
+        return FAILURE;
     }
     
     if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after value given to 'switch' statement")){
@@ -1035,7 +1036,11 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
     length_t *list_length = &default_statements_length;
     length_t *list_capacity = &default_statements_capacity;
 
-    parse_ignore_newlines(ctx, "Expected '}' before end of file");
+    if(parse_ignore_newlines(ctx, "Expected '}' before end of file")){
+        ast_expr_free_fully(value);
+        return FAILURE;
+    }
+
     unsigned int token_id = ctx->tokenlist->tokens[*ctx->i].id;
     bool failed = false;
 
