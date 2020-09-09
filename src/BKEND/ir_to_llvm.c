@@ -1221,8 +1221,11 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
             ir_implementation(i, 'g', global_implementation_name);
 
         llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, is_external ? globals[i].name : global_implementation_name);
-        LLVMSetLinkage(llvm->global_variables[i], LLVMExternalLinkage);
+        LLVMSetLinkage(llvm->global_variables[i], is_external ? LLVMExternalLinkage : LLVMPrivateLinkage);
 
+        if(globals[i].traits & IR_GLOBAL_THREAD_LOCAL)
+            LLVMSetThreadLocal(llvm->global_variables[i], true);
+        
         if(globals[i].trusted_static_initializer){
             // Non-user static value initializer
             // (Used for __types__ and __types_length__)
@@ -1361,7 +1364,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
                 // Sanitize
                 for(length_t s = 0; object->ast.libraries[i][s] != 0x00; s++){
                     if(!isalnum(object->ast.libraries[i][s])){
-                        memmove(&object->ast.libraries[i][s], &object->ast.libraries[i][s + 1], strlen(&object->ast.libraries[i][s + 1]));
+                        memmove(&object->ast.libraries[i][s], &object->ast.libraries[i][s + 1], strlen(&object->ast.libraries[i][s + 1]) + 1);
                         s--;
                     }
                 }

@@ -166,6 +166,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_STDCALL:           printf("Keyword: stdcall\n"); break;
         case TOKEN_STRUCT:            printf("Keyword: struct\n"); break;
         case TOKEN_SWITCH:            printf("Keyword: switch\n"); break;
+        case TOKEN_THREAD_LOCAL:      printf("Keyword: thread_local\n"); break;
         case TOKEN_TRUE:              printf("Keyword: true\n"); break;
         case TOKEN_TYPEINFO:          printf("Keyword: typeinfo\n"); break;
         case TOKEN_UNDEF:             printf("Keyword: undef\n"); break;
@@ -329,18 +330,18 @@ const char *global_token_name_table[] = {
     "stdcall keyword",                    // 0x00000079
     "struct keyword",                     // 0x0000007A
     "switch keyword",                     // 0x0000007B
-    "true keyword",                       // 0x0000007C
-    "typeinfo keyword",                   // 0x0000007D
-    "undef keyword",                      // 0x0000007E
-    "unless keyword",                     // 0x0000007F
-    "until keyword",                      // 0x00000080
-    "va_arg keyword",                     // 0x00000081
-    "va_copy keyword",                    // 0x00000082
-    "va_end keyword",                     // 0x00000083
-    "va_start keyword",                   // 0x00000084
-    "verbatim keyword",                   // 0x00000085
-    "while keyword",                      // 0x00000086
-    "reserved",                           // 0x00000087
+    "thread_local keyword",               // 0x0000007C
+    "true keyword",                       // 0x0000007D
+    "typeinfo keyword",                   // 0x0000007E
+    "undef keyword",                      // 0x0000007F
+    "unless keyword",                     // 0x00000080
+    "until keyword",                      // 0x00000081
+    "va_arg keyword",                     // 0x00000082
+    "va_copy keyword",                    // 0x00000083
+    "va_end keyword",                     // 0x00000084
+    "va_start keyword",                   // 0x00000085
+    "verbatim keyword",                   // 0x00000086
+    "while keyword",                      // 0x00000087
     "reserved",                           // 0x00000088
     "reserved",                           // 0x00000089
     "reserved",                           // 0x0000008A

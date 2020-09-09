@@ -17,11 +17,22 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    if(tokens[*i].id == TOKEN_EXTERNAL){
-        traits |= AST_GLOBAL_EXTERNAL;
-        (*i)++;
-    }
+    while(true){
+        if(tokens[*i].id == TOKEN_EXTERNAL){
+            traits |= AST_GLOBAL_EXTERNAL;
+            (*i)++;
+            continue;
+        }
 
+        if(tokens[*i].id == TOKEN_THREAD_LOCAL){
+            traits |= AST_GLOBAL_THREAD_LOCAL;
+            (*i)++;
+            continue;
+        }    
+
+        break;
+    }
+    
     weak_cstr_t name = parse_eat_word(ctx, "INTERNAL ERROR: Expected word");
     if(name == NULL) return FAILURE;
 

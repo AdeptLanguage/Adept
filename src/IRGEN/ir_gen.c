@@ -248,7 +248,11 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
         ir_global_t *global = &module->globals[g];
 
         global->name = ast->globals[g].name;
-        global->traits = ast->globals[g].traits & AST_GLOBAL_EXTERNAL ? IR_GLOBAL_EXTERNAL : TRAIT_NONE;
+        global->traits = TRAIT_NONE;
+
+        if(ast->globals[g].traits & AST_GLOBAL_EXTERNAL) global->traits |= IR_GLOBAL_EXTERNAL;
+        if(ast->globals[g].traits & AST_GLOBAL_THREAD_LOCAL) global->traits |= IR_GLOBAL_THREAD_LOCAL;
+        
         global->trusted_static_initializer = NULL;
 
         if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &global->type)){

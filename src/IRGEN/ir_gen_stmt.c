@@ -153,11 +153,14 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     if(!terminated){
         handle_deference_for_variables(&builder, &builder.scope->list);
 
+        // Make sure to update references that may have been invalidated
+        ast_func = &object->ast.funcs[ast_func_id];
+
         if(ast_func->traits & AST_FUNC_MAIN){
             handle_deference_for_globals(&builder);
         }
 
-        // Make sure to update references that may have been invalidated
+        // Make sure to again update references that may have been invalidated
         ast_func = &object->ast.funcs[ast_func_id];
 
         if(ast_func->traits & AST_FUNC_AUTOGEN){

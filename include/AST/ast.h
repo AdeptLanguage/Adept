@@ -118,11 +118,12 @@ typedef struct {
 // Possible ast_global_t traits
 #define AST_GLOBAL_POD                   TRAIT_1
 #define AST_GLOBAL_EXTERNAL              TRAIT_2
-#define AST_GLOBAL_SPECIAL               TRAIT_3
-#define AST_GLOBAL___TYPES__             TRAIT_4 // Sub-trait of AST_GLOBAL_SPECIAL
-#define AST_GLOBAL___TYPES_LENGTH__      TRAIT_5 // Sub-trait of AST_GLOBAL_SPECIAL
-#define AST_GLOBAL___TYPE_KINDS__        TRAIT_6 // Sub-trait of AST_GLOBAL_SPECIAL
-#define AST_GLOBAL___TYPE_KINDS_LENGTH__ TRAIT_7 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL_THREAD_LOCAL          TRAIT_3
+#define AST_GLOBAL_SPECIAL               TRAIT_4
+#define AST_GLOBAL___TYPES__             TRAIT_5 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL___TYPES_LENGTH__      TRAIT_6 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL___TYPE_KINDS__        TRAIT_7 // Sub-trait of AST_GLOBAL_SPECIAL
+#define AST_GLOBAL___TYPE_KINDS_LENGTH__ TRAIT_8 // Sub-trait of AST_GLOBAL_SPECIAL
 
 // ---------------- ast_enum_t ----------------
 // An enum AST node

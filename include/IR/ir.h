@@ -599,7 +599,8 @@ typedef struct {
     ir_value_t *trusted_static_initializer;
 } ir_global_t;
 
-#define IR_GLOBAL_EXTERNAL TRAIT_1
+#define IR_GLOBAL_EXTERNAL     TRAIT_1
+#define IR_GLOBAL_THREAD_LOCAL TRAIT_2
 
 // ---------------- ir_anon_global_t ----------------
 // An intermediate representation anonymous global variable
