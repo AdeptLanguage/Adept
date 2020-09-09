@@ -4,6 +4,7 @@
 #include <llvm-c/Target.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/BitWriter.h>
+#include <ctype.h>
 
 #include "IR/ir.h"
 #include "UTIL/util.h"
@@ -1335,15 +1336,45 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     length_t linker_additional_length = 0;
     length_t linker_additional_index = 0;
 
-    for(length_t i = 0; i != object->ast.libraries_length; i++)
-        linker_additional_length += strlen(object->ast.libraries[i]) + 3 + (object->ast.libraries_are_framework[i] ? 11 : 0);
+    // TODO: Clean up this messy code
+    // We need like a string builder or something
+    for(length_t i = 0; i != object->ast.libraries_length; i++){
+        linker_additional_length += strlen(object->ast.libraries[i]) + 3;
 
+        switch(object->ast.library_kinds[i]){
+        case LIBRARY_KIND_LIBRARY:
+             // Already have enough space for "- l"
+            break;
+        case LIBRARY_KIND_FRAMEWORK: // " -framework"
+            linker_additional_length += 11;
+            break;
+        }
+    }
+
+    // TODO: Clean up this messy code
+    // We need like a string builder or something
     if(linker_additional_length != 0){
         linker_additional = malloc(linker_additional_length + 1);
         for(length_t i = 0; i != object->ast.libraries_length; i++){
-            if(object->ast.libraries_are_framework[i]){
+            switch(object->ast.library_kinds[i]){
+            case LIBRARY_KIND_LIBRARY:
+                // Sanitize
+                for(length_t s = 0; object->ast.libraries[i][s] != 0x00; s++){
+                    if(!isalnum(object->ast.libraries[i][s])){
+                        memmove(&object->ast.libraries[i][s], &object->ast.libraries[i][s + 1], strlen(&object->ast.libraries[i][s + 1]));
+                        s--;
+                    }
+                }
+                memcpy(&linker_additional[linker_additional_index], " -l", 3);
+                linker_additional_index += 3;
+                length_t lib_length = strlen(object->ast.libraries[i]);
+                memcpy(&linker_additional[linker_additional_index], object->ast.libraries[i], lib_length);
+                linker_additional_index += lib_length;
+                continue;
+            case LIBRARY_KIND_FRAMEWORK:
                 memcpy(&linker_additional[linker_additional_index], " -framework", 11);
                 linker_additional_index += 11;
+                // fallthrough
             }
 
             linker_additional[linker_additional_index++] = ' ';

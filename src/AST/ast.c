@@ -23,7 +23,7 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->enums_length = 0;
     ast->enums_capacity = 0;
     ast->libraries = NULL;
-    ast->libraries_are_framework = NULL;
+    ast->library_kinds = NULL;
     ast->libraries_length = 0;
     ast->libraries_capacity = 0;
     ast->common.ast_usize_type = NULL;
@@ -126,7 +126,7 @@ void ast_free(ast_t *ast){
     free(ast->globals);
     free(ast->aliases);
     free(ast->libraries);
-    free(ast->libraries_are_framework);
+    free(ast->library_kinds);
 
     if(ast->common.ast_usize_type != NULL){
         ast_type_free_fully(ast->common.ast_usize_type);
@@ -899,10 +899,10 @@ void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *i
     global->source = source;
 }
 
-void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, bool is_framework){
-    coexpand((void**) &ast->libraries, sizeof(char*), (void**) &ast->libraries_are_framework, sizeof(bool), ast->libraries_length, &ast->libraries_capacity, 1, 4);
+void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, char kind){
+    coexpand((void**) &ast->libraries, sizeof(char*), (void**) &ast->library_kinds, sizeof(char), ast->libraries_length, &ast->libraries_capacity, 1, 4);
     ast->libraries[ast->libraries_length] = library;
-    ast->libraries_are_framework[ast->libraries_length++] = is_framework;
+    ast->library_kinds[ast->libraries_length++] = kind;
 }
 
 ast_type_t* ast_get_usize(ast_t *ast){

@@ -123,7 +123,7 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
 
     // Assume the token we're currently on is 'foreign' keyword
     maybe_null_weak_cstr_t library = parse_grab_string(ctx, "INTERNAL ERROR: Assumption failed that 'foreign' keyword would be proceeded by a string, will probably crash...");
-    bool is_framework = false;
+    char kind = LIBRARY_KIND_NONE;
 
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
@@ -132,7 +132,12 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
         const char *data = tokens[*i + 1].data;
 
         if(strcmp(data, "framework") == 0){
-            is_framework = true;
+            kind = LIBRARY_KIND_FRAMEWORK;
+
+            // Take ownership of library string
+            tokens[*i].data = NULL;
+        } else if(strcmp(data, "library") == 0){
+            kind = LIBRARY_KIND_LIBRARY;
 
             // Take ownership of library string
             tokens[*i].data = NULL;
@@ -143,8 +148,9 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
         (*ctx->i)++;
     }
 
-    if(!is_framework) library = filename_local(ctx->object->filename, library);
-    ast_add_foreign_library(ctx->ast, library, is_framework);
+    // NOTE: 'library' become as strong_cstr_t
+    if(kind == LIBRARY_KIND_NONE) library = filename_local(ctx->object->filename, library);
+    ast_add_foreign_library(ctx->ast, library, kind);
     return SUCCESS;
 }
 
