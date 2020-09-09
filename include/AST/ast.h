@@ -53,7 +53,6 @@ typedef struct {
 #define AST_FUNC_PASS        TRAIT_8
 #define AST_FUNC_AUTOGEN     TRAIT_9
 #define AST_FUNC_VARIADIC    TRAIT_A
-#define AST_FUNC_STRICT      TRAIT_B
 
 // Addional AST function traits for builtin uses
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1

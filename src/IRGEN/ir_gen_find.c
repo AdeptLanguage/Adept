@@ -734,10 +734,6 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     // only conform the non-varargs arguments.
     length_t min_arity = func->arity < type_list_length ? func->arity : type_list_length;
 
-    if(func->traits & AST_FUNC_STRICT){
-        conform_mode = CONFORM_MODE_STANDARD;
-    }
-    
     for(length_t a = 0; a != min_arity; a++){
         if(!ast_types_conform(builder, &arg_value_list[a], &arg_type_list[a], &arg_types[a], conform_mode)){
             // Restore pool snapshot
