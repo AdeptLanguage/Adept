@@ -273,6 +273,25 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 if(infer_expr(ctx, func, &va_copy_stmt->dest_value, EXPR_NONE, scope)) return FAILURE;
             }
             break;
+        case EXPR_FOR: {
+                ast_expr_for_t *loop = (ast_expr_for_t*) statements[s];
+                infer_var_scope_push(&scope);
+
+                if(infer_in_stmts(ctx, func, loop->before.statements, loop->before.length, scope)){
+                    infer_var_scope_pop(ctx->compiler, &scope);
+                    return FAILURE;
+                }
+
+                if(loop->condition && infer_expr(ctx, func, &loop->condition, EXPR_NONE, scope)) return FAILURE;
+
+                if(infer_in_stmts(ctx, func, loop->statements.statements, loop->statements.length, scope)){
+                    infer_var_scope_pop(ctx->compiler, &scope);
+                    return FAILURE;
+                }
+
+                infer_var_scope_pop(ctx->compiler, &scope);
+            }
+            break;
         default: break;
             // Ignore this statement, it doesn't contain any expressions that we need to worry about
         }

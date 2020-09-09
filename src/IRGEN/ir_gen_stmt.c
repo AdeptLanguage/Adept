@@ -1667,6 +1667,113 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_type_free(&temporary_type);
             }
             break;
+        case EXPR_FOR: {
+                ast_expr_for_t *for_loop = (ast_expr_for_t*) stmt;
+                length_t prep_basicblock_id = -1;
+                length_t new_basicblock_id  = build_basicblock(builder);
+                length_t end_basicblock_id  = build_basicblock(builder);
+
+                if(for_loop->label != NULL){
+                    prepare_for_new_label(builder);
+                    builder->block_stack_labels[builder->block_stack_length] = for_loop->label;
+                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
+                    builder->block_stack_continue_ids[builder->block_stack_length] = prep_basicblock_id;
+                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
+                    builder->block_stack_length++;
+                }
+
+                length_t prev_break_block_id = builder->break_block_id;
+                length_t prev_continue_block_id = builder->continue_block_id;
+                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+
+                builder->break_block_id = end_basicblock_id;
+                builder->continue_block_id = prep_basicblock_id;
+                builder->break_continue_scope = builder->scope;
+
+                open_scope(builder);
+
+                // Do 'before' statements
+                bool terminated;
+                if(ir_gen_statements(builder, for_loop->before.statements, for_loop->before.length, &terminated)){
+                    close_scope(builder);
+                    return FAILURE;
+                }
+
+                // Don't allow 'return'/'continue'/'break' in 'before' statements
+                if(terminated){
+                    compiler_panic(builder->compiler, for_loop->before.statements[0]->source, "The 'before' statements of a 'for' loop cannot contain a terminator");
+                    close_scope(builder);
+                    return FAILURE;
+                }
+
+                // Use prep block to calculate condition
+                prep_basicblock_id = build_basicblock(builder);
+                build_break(builder, prep_basicblock_id);
+                build_using_basicblock(builder, prep_basicblock_id);
+
+                // Generate condition
+                ir_value_t *condition_value;
+
+                if(for_loop->condition){
+                    if(ir_gen_expression(builder, for_loop->condition, &condition_value, false, &temporary_type)) return FAILURE;
+                } else {
+                    condition_value = build_bool(builder->pool, true);
+                }
+
+                // Create static bool type for comparison with
+                ast_elem_base_t bool_base;
+                bool_base.id = AST_ELEM_BASE;
+                bool_base.source = NULL_SOURCE;
+                bool_base.source.object_index = builder->object->index;
+                bool_base.base = "bool";
+                ast_elem_t *bool_type_elem = (ast_elem_t*) &bool_base;
+                ast_type_t bool_type;
+                bool_type.elements = &bool_type_elem;
+                bool_type.elements_length = 1;
+                bool_type.source = NULL_SOURCE;
+                bool_type.source.object_index = builder->object->index;
+
+                if(!ast_types_conform(builder, &condition_value, &temporary_type, &bool_type, CONFORM_MODE_CALCULATION)){
+                    char *a_type_str = ast_type_str(&temporary_type);
+                    char *b_type_str = ast_type_str(&bool_type);
+                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
+                    free(a_type_str);
+                    free(b_type_str);
+                    ast_type_free(&temporary_type);
+                    return FAILURE;
+                }
+
+                // Generate conditional break
+                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
+                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
+                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
+                ((ir_instr_cond_break_t*) built_instr)->value = condition_value;
+                ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
+                ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
+
+                build_using_basicblock(builder, new_basicblock_id);
+
+                // Generate new_block user-defined statements
+                if(ir_gen_statements(builder, for_loop->statements.statements, for_loop->statements.length, &terminated)){
+                    close_scope(builder);
+                    return FAILURE;
+                }
+
+                if(!terminated){
+                    handle_deference_for_variables(builder, &builder->scope->list);
+                    build_break(builder, prep_basicblock_id);
+                }
+
+                close_scope(builder);
+                build_using_basicblock(builder, end_basicblock_id);
+
+                if(for_loop->label != NULL) builder->block_stack_length--;
+
+                builder->break_block_id = prev_break_block_id;
+                builder->continue_block_id = prev_continue_block_id;
+                builder->break_continue_scope = prev_break_continue_scope;
+            }
+            break;
         default:
             compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_statements()");
             return FAILURE;

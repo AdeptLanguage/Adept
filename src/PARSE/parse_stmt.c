@@ -670,20 +670,121 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;
+        case TOKEN_FOR: {
+                // for(stmt; condition; stmt) {...}    for stmt; condition; stmt {...}
+                //  ^                                   ^
+
+                ast_expr_t *condition = NULL;
+                ast_expr_list_t before, statements;
+                weak_cstr_t label = NULL;
+                source = sources[*i];
+                
+                memset(&before, 0, sizeof(ast_expr_list_t));
+                memset(&statements, 0, sizeof(ast_expr_list_t));
+
+                if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
+                    label = tokens[*i].data; *i += 2;
+                }
+
+                defer_scope_t for_defer_scope;
+                defer_scope_init(&for_defer_scope, defer_scope, label, BREAKABLE | CONTINUABLE);
+
+                // Skip over 'for' keyword
+                (*i)++;
+
+                // Eat '(' if it exists
+                if(tokens[*i].id == TOKEN_OPEN) (*i)++;
+
+                if(tokens[*i].id != TOKEN_TERMINATE_JOIN && parse_stmts(ctx, &before, &for_defer_scope, PARSE_STMTS_SINGLE | PARSE_STMTS_NO_JOINING | PARSE_STMTS_PARENT_DEFER_SCOPE)){
+                    defer_scope_free(&for_defer_scope);
+                    return FAILURE;
+                }
+
+                if(parse_eat(ctx, TOKEN_TERMINATE_JOIN, "Expected ';' after first part of 'for' statement")){
+                    ast_exprs_free_fully(before.statements, before.length);
+                    defer_scope_free(&for_defer_scope);
+                    return FAILURE;
+                }
+
+                if(tokens[*i].id != TOKEN_TERMINATE_JOIN && parse_expr(ctx, &condition)){
+                    ast_exprs_free_fully(before.statements, before.length);
+                    defer_scope_free(&for_defer_scope);
+                    return FAILURE;
+                }
+
+                if(parse_eat(ctx, TOKEN_TERMINATE_JOIN, "Expected ';' after second part of 'for' statement")){
+                    if(condition) ast_expr_free(condition);
+                    ast_exprs_free_fully(before.statements, before.length);
+                    defer_scope_free(&for_defer_scope);
+                    return FAILURE;
+                }
+
+                if(tokens[*i].id != TOKEN_NEXT && tokens[*i].id != TOKEN_BEGIN && tokens[*i].id != TOKEN_NEWLINE && tokens[*i].id != TOKEN_CLOSE){
+                    // Put the 'after' statement directly in the defer statements of the 'for' loop
+                    if(parse_stmts(ctx, &for_defer_scope.list, &for_defer_scope, PARSE_STMTS_SINGLE | PARSE_STMTS_NO_JOINING | PARSE_STMTS_PARENT_DEFER_SCOPE)){
+                        if(condition) ast_expr_free(condition);
+                        ast_exprs_free_fully(before.statements, before.length);
+                        defer_scope_free(&for_defer_scope);
+                        return FAILURE;
+                    }
+
+                    // TODO: Reverse statements given in 'after' statements for 'defer'
+                    // NOTE: This isn't a problem right now, since there can only be one statements anyway
+                }
+
+                // Eat ')' if it exists
+                if(tokens[*i].id == TOKEN_CLOSE) (*i)++;
+
+                // Eat '{' or ','
+                unsigned int stmts_mode;
+                switch(tokens[(*i)++].id){
+                case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
+                case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
+                default:
+                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after beginning parts of 'for' loop");
+                    if(condition) ast_expr_free(condition);
+                    ast_exprs_free_fully(before.statements, before.length);
+                    defer_scope_free(&for_defer_scope);
+                    return FAILURE;
+                }
+                
+                // Parse statements
+                if(parse_stmts(ctx, &statements, &for_defer_scope, stmts_mode)){
+                    if(condition) ast_expr_free(condition);
+                    ast_exprs_free_fully(before.statements, before.length);
+                    defer_scope_free(&for_defer_scope);
+                    return FAILURE;
+                }
+
+                defer_scope_free(&for_defer_scope);
+
+                if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
+
+                ast_expr_for_t *stmt = malloc(sizeof(ast_expr_for_t));
+                stmt->id = EXPR_FOR;
+                stmt->source = source;
+                stmt->label = label;
+                stmt->before = before;
+                stmt->condition = condition;
+                stmt->statements = statements;
+                stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+            }
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
             return FAILURE;
         }
 
-        if(tokens[*i].id == TOKEN_TERMINATE_JOIN){
+        if(tokens[*i].id == TOKEN_TERMINATE_JOIN && !(mode & PARSE_STMTS_NO_JOINING)){
             // Bypass single statement flag by "joining" 2+ statements
             (*i)++; continue;
         }
 
         // Continue over newline token
+        // TODO: INVESTIGATE: Investigate whether TOKEN_META #else/#elif should be having (*i)++ here
         if(tokens[*i].id == TOKEN_NEWLINE || (tokens[*i].id == TOKEN_META && (strcmp(tokens[*i].data, "else") == 0 || strcmp(tokens[*i].data, "elif") == 0))){
             (*i)++;
-        } else if(tokens[*i].id != TOKEN_ELSE){
+        } else if(tokens[*i].id != TOKEN_ELSE && tokens[*i].id != TOKEN_TERMINATE_JOIN && tokens[*i].id != TOKEN_CLOSE && tokens[*i].id != TOKEN_BEGIN && tokens[*i].id != TOKEN_NEXT){
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at end of statement");
             return FAILURE;
         }    

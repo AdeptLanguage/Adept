@@ -54,6 +54,7 @@ void defer_scope_rewind(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list, 
 #define PARSE_STMTS_STANDARD           TRAIT_NONE // Standard mode (will parse multiple statements)
 #define PARSE_STMTS_SINGLE             TRAIT_1    // Single statement mode (will parse a single statement)
 #define PARSE_STMTS_PARENT_DEFER_SCOPE TRAIT_2    // Parent defer scope mode (won't create a seperate defer scope for the statements)
+#define PARSE_STMTS_NO_JOINING         TRAIT_3    // Disable statement join operator ';'
 errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope, trait_t mode);
 
 // ------------------ parse_stmt_call ------------------
