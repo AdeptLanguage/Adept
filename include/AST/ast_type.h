@@ -103,6 +103,7 @@ typedef struct {
     unsigned int id;
     source_t source;
     strong_cstr_t name;
+    bool allow_auto_conversion;
 } ast_elem_polymorph_t;
 
 // ---------------- ast_elem_polymorph_prereq_t ----------------
@@ -113,6 +114,7 @@ typedef struct {
     unsigned int id;
     source_t source;
     strong_cstr_t name;
+    bool allow_auto_conversion;
     // ----------------------------
     strong_cstr_t similarity_prerequisite;
 } ast_elem_polymorph_prereq_t;
@@ -195,7 +197,7 @@ void ast_type_prepend_ptr(ast_type_t *type);
 
 // ---------------- ast_type_make_base_ptr_ptr ----------------
 // Takes ownership of 'name' and creates a polymorphic type variable
-void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name);
+void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name, bool allow_auto_conversion);
 
 // ---------------- ast_type_make_generic_int ----------------
 // Creates a generic integer type

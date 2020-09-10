@@ -42,7 +42,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_resolve_type ----------------
 // Resolves an AST type to an IR type
-errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type);
+errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const ast_type_t *unresolved_type, ir_type_t **resolved_type);
 
 // ---------------- ast_types_conform ----------------
 // Attempts to conform an IR value from an AST type to

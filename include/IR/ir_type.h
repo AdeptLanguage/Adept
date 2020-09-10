@@ -105,4 +105,13 @@ extern unsigned int global_type_kind_sizes_64[];
 // Contains whether each TYPE_KIND_* is generally signed
 extern bool global_type_kind_signs[];
 
+// ---------------- global_type_kind_is_integer ----------------
+// Contains whether each TYPE_KIND_* is an integer value
+// Does not include booleans
+extern bool global_type_kind_is_integer[];
+
+// ---------------- global_type_kind_is_float ----------------
+// Contains whether each TYPE_KIND_* is a floating point value
+extern bool global_type_kind_is_float[];
+
 #endif // _ISAAC_IR_TYPE_H

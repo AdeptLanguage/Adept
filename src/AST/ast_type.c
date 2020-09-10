@@ -62,6 +62,7 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
             ((ast_elem_polymorph_t*) new_element)->id = AST_ELEM_POLYMORPH;
             ((ast_elem_polymorph_t*) new_element)->source = element->source;
             ((ast_elem_polymorph_t*) new_element)->name = strclone(((ast_elem_polymorph_t*) element)->name);
+            ((ast_elem_polymorph_t*) new_element)->allow_auto_conversion = ((ast_elem_polymorph_t*) element)->allow_auto_conversion;
             break;
         }
     case AST_ELEM_POLYMORPH_PREREQ: {
@@ -70,6 +71,7 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
             ((ast_elem_polymorph_prereq_t*) new_element)->source = element->source;
             ((ast_elem_polymorph_prereq_t*) new_element)->name = strclone(((ast_elem_polymorph_prereq_t*) element)->name);
             ((ast_elem_polymorph_prereq_t*) new_element)->similarity_prerequisite = strclone(((ast_elem_polymorph_prereq_t*) element)->similarity_prerequisite);
+            ((ast_elem_polymorph_prereq_t*) new_element)->allow_auto_conversion = ((ast_elem_polymorph_prereq_t*) element)->allow_auto_conversion;
             break;
         }
     case AST_ELEM_GENERIC_BASE: {
@@ -235,11 +237,12 @@ void ast_type_prepend_ptr(ast_type_t *type){
     type->elements_length++;
 }
 
-void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name){
+void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name, bool allow_auto_conversion){
     ast_elem_polymorph_t *elem = malloc(sizeof(ast_elem_polymorph_t));
     elem->id = AST_ELEM_POLYMORPH;
     elem->name = name;
     elem->source = NULL_SOURCE;
+    elem->allow_auto_conversion = allow_auto_conversion;
 
     type->elements = malloc(sizeof(ast_elem_t*));
     type->elements[0] = (ast_elem_t*) elem;
@@ -383,9 +386,14 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 const char *polyname = ((ast_elem_polymorph_t*) type->elements[i])->name;
                 length_t polyname_length = strlen(polyname);
                 EXTEND_NAME_MACRO(polyname_length + 1);
-                name[name_length] = '$';
-                memcpy(&name[name_length + 1], polyname, polyname_length + 1);
-                name_length += polyname_length + 1;
+                name[name_length++] = '$';
+
+                if(((ast_elem_polymorph_t*) type->elements[i])->allow_auto_conversion){
+                    name[name_length++] = '~';
+                }
+
+                memcpy(&name[name_length], polyname, polyname_length + 1);
+                name_length += polyname_length;
             }
             break;
         case AST_ELEM_POLYMORPH_PREREQ: {
@@ -522,13 +530,15 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 ast_elem_polymorph_t *polymorph_a = (ast_elem_polymorph_t*) a->elements[i];
                 ast_elem_polymorph_t *polymorph_b = (ast_elem_polymorph_t*) b->elements[i];
                 if(strcmp(polymorph_a->name, polymorph_b->name) != 0) return false;
+                if(polymorph_a->allow_auto_conversion != polymorph_b->allow_auto_conversion) return false;
             }
             break;
         case AST_ELEM_POLYMORPH_PREREQ: {
                 ast_elem_polymorph_prereq_t *polymorph_a = (ast_elem_polymorph_prereq_t*) a->elements[i];
                 ast_elem_polymorph_prereq_t *polymorph_b = (ast_elem_polymorph_prereq_t*) b->elements[i];
-                if(strcmp(polymorph_a->name, polymorph_b->name) != 0 ||
-                    strcmp(polymorph_a->similarity_prerequisite, polymorph_b->similarity_prerequisite) != 0) return false;
+                if(strcmp(polymorph_a->name, polymorph_b->name) != 0) return false;
+                if(strcmp(polymorph_a->similarity_prerequisite, polymorph_b->similarity_prerequisite) != 0) return false;
+                if(polymorph_a->allow_auto_conversion != polymorph_b->allow_auto_conversion) return false;
             }
             break;
         default:

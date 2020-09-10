@@ -78,8 +78,15 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
     case TOKEN_POLYMORPH: {
             strong_cstr_t name = tokens[*i].data;
             source_t source = sources[*i];
+            bool allow_auto_conversion = false;
             tokens[(*i)++].data = NULL; // Take ownership
 
+            // If polymorph tokens starts with tilda, then we allow auto conversion
+            if(name[0] == '~'){
+                allow_auto_conversion = true;
+                memmove(name, &name[1], strlen(name) /* - 1 + 1*/);
+            }
+            
             if(tokens[*i].id == TOKEN_BIT_COMPLEMENT){
                 if(!ctx->allow_polymorphic_prereqs){
                     free(name);
@@ -102,6 +109,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 polymorph_elem->id = AST_ELEM_POLYMORPH_PREREQ;
                 polymorph_elem->name = name;
                 polymorph_elem->source = source;
+                polymorph_elem->allow_auto_conversion = allow_auto_conversion;
                 polymorph_elem->similarity_prerequisite = similar;
                 out_type->elements[out_type->elements_length] = (ast_elem_t*) polymorph_elem;
             } else {
@@ -109,6 +117,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 polymorph_elem->id = AST_ELEM_POLYMORPH;
                 polymorph_elem->name = name;
                 polymorph_elem->source = source;
+                polymorph_elem->allow_auto_conversion = allow_auto_conversion;
                 out_type->elements[out_type->elements_length] = (ast_elem_t*) polymorph_elem;
             }
         }

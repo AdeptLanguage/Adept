@@ -1085,43 +1085,46 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
     maybe_index_t index = original_index;
 
     // Print potential candidates for basic struct
-    if(kind == AST_ELEM_BASE) do {
-        ir_method_t *method = &ir_module->methods[index];
+    // TODO: Clean up this messy code
+    if(index != -1){
+        if(kind == AST_ELEM_BASE) do {
+            ir_method_t *method = &ir_module->methods[index];
 
-        if(method->is_beginning_of_group == -1){
-            method->is_beginning_of_group = index == 0 ? 1 : (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
-        }
-        if(method->is_beginning_of_group == 1 && index != original_index) break;
-
-        // Print method candidate for basic struct type
-        print_candidate(&object->ast.funcs[method->ast_func_id]);
-    } while(++index != ir_module->methods_length);
-
-    // Print potential candidates for generic struct
-    else if(kind == AST_ELEM_GENERIC_BASE) do {
-        ir_generic_base_method_t *generic_base_method = &ir_module->generic_base_methods[index];
-        
-        if(generic_base_method->is_beginning_of_group == -1){
-            generic_base_method->is_beginning_of_group = index == 0 ? 1 : (strcmp(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
-        }
-        if(generic_base_method->is_beginning_of_group == 1 && index != original_index) break;
-
-        // Ensure the generics of the generic base match up
-        bool generics_match_up = maybe_generic_base->generics_length == generic_base_method->generics_length;
-        if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
-            if(!ast_types_identical(&maybe_generic_base->generics[i], &generic_base_method->generics[i])){
-                // && !ast_type_has_polymorph(&generic_base_method->generics[i])
-                // is unnessary because generic_base_methods my themselves will never contain polymorphic type variables
-                generics_match_up = false;
-                break;
+            if(method->is_beginning_of_group == -1){
+                method->is_beginning_of_group = index == 0 ? 1 : (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
             }
-        }
+            if(method->is_beginning_of_group == 1 && index != original_index) break;
 
-        // Print method candidate for generic struct type (if the generics match up)
-        if(generics_match_up){
-            print_candidate(&object->ast.funcs[generic_base_method->ast_func_id]);
-        }
-    } while(++index != ir_module->generic_base_methods_length);
+            // Print method candidate for basic struct type
+            print_candidate(&object->ast.funcs[method->ast_func_id]);
+        } while(++index != ir_module->methods_length);
+
+        // Print potential candidates for generic struct
+        else if(kind == AST_ELEM_GENERIC_BASE) do {
+            ir_generic_base_method_t *generic_base_method = &ir_module->generic_base_methods[index];
+            
+            if(generic_base_method->is_beginning_of_group == -1){
+                generic_base_method->is_beginning_of_group = index == 0 ? 1 : (strcmp(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
+            }
+            if(generic_base_method->is_beginning_of_group == 1 && index != original_index) break;
+
+            // Ensure the generics of the generic base match up
+            bool generics_match_up = maybe_generic_base->generics_length == generic_base_method->generics_length;
+            if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
+                if(!ast_types_identical(&maybe_generic_base->generics[i], &generic_base_method->generics[i])){
+                    // && !ast_type_has_polymorph(&generic_base_method->generics[i])
+                    // is unnessary because generic_base_methods my themselves will never contain polymorphic type variables
+                    generics_match_up = false;
+                    break;
+                }
+            }
+
+            // Print method candidate for generic struct type (if the generics match up)
+            if(generics_match_up){
+                print_candidate(&object->ast.funcs[generic_base_method->ast_func_id]);
+            }
+        } while(++index != ir_module->generic_base_methods_length);
+    }
 
     index = poly_index;
 

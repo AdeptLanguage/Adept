@@ -1676,6 +1676,22 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 return FAILURE;
             }
             length_t when_false_landing = builder->current_block_id;
+            
+            if(!ast_types_identical(&if_true_type, &if_false_type)){
+                // Try to autocast to larger type of the two if there is one
+                bool conflict_resolved = ir_gen_resolve_ternay_conflict(builder, if_true, if_false, &if_true_type, &if_false_type, &when_true_landing, &when_false_landing);
+                
+                if(!conflict_resolved){
+                    char *if_true_typename = ast_type_str(&if_true_type);
+                    char *if_false_typename = ast_type_str(&if_false_type);
+                    compiler_panicf(builder->compiler, ternary->source, "Ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
+                    ast_type_free(&if_true_type);
+                    ast_type_free(&if_false_type);
+                    free(if_true_typename);
+                    free(if_false_typename);
+                    return FAILURE;
+                }
+            }
 
             // Break from both landing blocks to the merge block
             length_t merge_block_id = build_basicblock(builder);
@@ -1685,17 +1701,6 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // Merge to grab the result
             build_using_basicblock(builder, merge_block_id);
-            
-            if(!ast_types_identical(&if_true_type, &if_false_type)){
-                char *if_true_typename = ast_type_str(&if_true_type);
-                char *if_false_typename = ast_type_str(&if_false_type);
-                compiler_panicf(builder->compiler, ternary->source, "Ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
-                ast_type_free(&if_true_type);
-                ast_type_free(&if_false_type);
-                free(if_true_typename);
-                free(if_false_typename);
-                return FAILURE;
-            }
 
             ir_type_t *result_ir_type;
             if(ir_gen_resolve_type(builder->compiler, builder->object, &if_true_type, &result_ir_type)){
@@ -2215,6 +2220,36 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 
     if(out_expr_type != NULL) *out_expr_type = ast_type_clone(function_elem->return_type);
     return SUCCESS;
+}
+
+successful_t ir_gen_resolve_ternay_conflict(ir_builder_t *builder, ir_value_t *a, ir_value_t *b, ast_type_t *a_type, ast_type_t *b_type,
+        length_t *inout_a_basicblock, length_t *inout_b_basicblock){
+    
+    if(!ast_type_is_base(a_type) || !ast_type_is_base(b_type)) return UNSUCCESSFUL;
+    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return UNSUCCESSFUL;
+    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return UNSUCCESSFUL;
+    if(global_type_kind_signs[a->type->kind] != global_type_kind_sizes_64[b->type->kind]) return UNSUCCESSFUL;
+    if(global_type_kind_is_float[a->type->kind] != global_type_kind_is_float[b->type->kind]) return UNSUCCESSFUL;
+    if(global_type_kind_is_integer[a->type->kind] != global_type_kind_is_integer[b->type->kind]) return UNSUCCESSFUL;
+    
+    size_t a_size = global_type_kind_sizes_64[a->type->kind];
+    size_t b_size = global_type_kind_sizes_64[b->type->kind];
+
+    ir_value_t *smaller_value;
+    ast_type_t *smaller_type;
+    ast_type_t *bigger_type;
+
+    if(a_size < b_size){
+        smaller_value = a;
+        smaller_type = a_type;
+        bigger_type = b_type;
+    } else {
+        smaller_value = b;
+        smaller_type = b_type;
+        bigger_type = a_type;
+    }
+
+    return ast_types_conform(builder, &smaller_value, smaller_type, bigger_type, CONFORM_MODE_PRIMITIVES);
 }
 
 errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsigned int f_instr){

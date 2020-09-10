@@ -54,6 +54,12 @@ errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t 
         unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean);
 
 // ---------------- i_vs_f_instruction ----------------
+// Attempts to resolve conflict between two possible result types
+// of a ternary expression
+successful_t ir_gen_resolve_ternay_conflict(ir_builder_t *builder, ir_value_t *a, ir_value_t *b, ast_type_t *a_type, ast_type_t *b_type,
+        length_t *inout_a_basicblock, length_t *inout_b_basicblock);
+
+// ---------------- i_vs_f_instruction ----------------
 // If the math instruction given will have it's
 // instruction id changed based on what it operates on.
 // 'int_instr' if it operates on integers.

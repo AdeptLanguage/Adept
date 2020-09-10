@@ -305,7 +305,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
             generic_base->generics = malloc(sizeof(ast_type_t) * ctx->struct_association->generics_length);
 
             for(length_t i = 0; i != ctx->struct_association->generics_length; i++){
-                ast_type_make_polymorph(&generic_base->generics[i], strclone(ctx->struct_association->generics[i]));
+                ast_type_make_polymorph(&generic_base->generics[i], strclone(ctx->struct_association->generics[i]), false);
             }
 
             generic_base->generics_length = ctx->struct_association->generics_length;

@@ -16,7 +16,7 @@ struct Greeter () {
 }
 
 struct <$T> Welcomer () {
-    func welcome(value $T) {
+    func welcome(value $~T) {
         printf('Welcome! [x%d]\n', value as int)
     }
 }

@@ -145,7 +145,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     return SUCCESS;
 }
 
-errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, ast_type_t *unresolved_type, ir_type_t **resolved_type){
+errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const ast_type_t *unresolved_type, ir_type_t **resolved_type){
     // NOTE: Stores resolved type into 'resolved_type'
     // NOTE: If this function fails, 'resolved_type' is not guaranteed to be the same.
     //       However, no memory will have to be manually freed after this call since
@@ -412,8 +412,8 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     // Attempt to conform primitives if allowed
     if(mode & CONFORM_MODE_PRIMITIVES && from_type_kind != TYPE_KIND_NONE && to_type_kind != TYPE_KIND_NONE){
-        bool from_is_float = (from_type_kind == TYPE_KIND_FLOAT || from_type_kind == TYPE_KIND_DOUBLE);
-        bool to_is_float   = (to_type_kind   == TYPE_KIND_FLOAT || to_type_kind   == TYPE_KIND_DOUBLE);
+        bool from_is_float = global_type_kind_is_float[from_type_kind];
+        bool to_is_float   = global_type_kind_is_float[to_type_kind];
 
         if(from_is_float == to_is_float){
             // They are either both floats or both integers

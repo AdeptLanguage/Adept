@@ -148,3 +148,47 @@ bool global_type_kind_signs[] = { // (0 == unsigned, 1 == signed)
     0, // TYPE_KIND_FUNCPTR
     0, // TYPE_KIND_FIXED_ARRAY
 };
+
+bool global_type_kind_is_integer[] = { // (0 == non-integer, 1 == integer)
+    0, // TYPE_KIND_NONE
+    0, // TYPE_KIND_POINTER
+    1, // TYPE_KIND_S8
+    1, // TYPE_KIND_S16
+    1, // TYPE_KIND_S32
+    1, // TYPE_KIND_S64
+    1, // TYPE_KIND_U8
+    1, // TYPE_KIND_U16
+    1, // TYPE_KIND_U32
+    1, // TYPE_KIND_U64
+    0, // TYPE_KIND_HALF
+    0, // TYPE_KIND_FLOAT
+    0, // TYPE_KIND_DOUBLE
+    0, // TYPE_KIND_BOOLEAN
+    0, // TYPE_KIND_UNION
+    0, // TYPE_KIND_STRUCTURE
+    0, // TYPE_KIND_VOID
+    0, // TYPE_KIND_FUNCPTR
+    0, // TYPE_KIND_FIXED_ARRAY
+};
+
+bool global_type_kind_is_float[] = { // (0 == non-float, 1 == float)
+    0, // TYPE_KIND_NONE
+    0, // TYPE_KIND_POINTER
+    0, // TYPE_KIND_S8
+    0, // TYPE_KIND_S16
+    0, // TYPE_KIND_S32
+    0, // TYPE_KIND_S64
+    0, // TYPE_KIND_U8
+    0, // TYPE_KIND_U16
+    0, // TYPE_KIND_U32
+    0, // TYPE_KIND_U64
+    1, // TYPE_KIND_HALF
+    1, // TYPE_KIND_FLOAT
+    1, // TYPE_KIND_DOUBLE
+    0, // TYPE_KIND_BOOLEAN
+    0, // TYPE_KIND_UNION
+    0, // TYPE_KIND_STRUCTURE
+    0, // TYPE_KIND_VOID
+    0, // TYPE_KIND_FUNCPTR
+    0, // TYPE_KIND_FIXED_ARRAY
+};

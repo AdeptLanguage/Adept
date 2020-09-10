@@ -385,4 +385,9 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
 // Resovles any polymorphic type variables within an AST expression
 errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_expr_t *expr);
 
+// ---------------- is_allowed_auto_conversion ----------------
+// Returns whether a builtin auto conversion is allowed
+// (For integers / floats)
+bool is_allowed_auto_conversion(ir_builder_t *builder, const ast_type_t *a_type, const ast_type_t *b_type);
+
 #endif // _ISAAC_IR_BUILDER_H

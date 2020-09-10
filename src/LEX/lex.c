@@ -717,6 +717,10 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9')){
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
+            } else if(lex_state.buildup_length == 0 && lex_state.state == LEX_STATE_POLYMORPH && tmp == '~'){
+                // Allow tilda for first character of polymorph
+                expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
+                lex_state.buildup[lex_state.buildup_length++] = '~';
             } else {
                 // Terminate string buildup buffer
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);

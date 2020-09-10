@@ -4,6 +4,7 @@
 #include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
+#include "IRGEN/ir_builder.h"
 
 errorcode_t ir_gen_find_func(ir_builder_t *builder, const char *name,
         ast_type_t *arg_types, length_t arg_types_length, funcpair_t *result){
@@ -836,7 +837,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
 
             // NOTE: Must be presorted
             const char *reserved_prereqs[] = {
-                "__number__", "__primitive__", "__struct__"
+                "__number__", "__primitive__", "__signed__", "__struct__", "__unsigned__"
             };
             const length_t reserved_prereqs_length = sizeof(reserved_prereqs) / sizeof(weak_cstr_t*);
             maybe_index_t special_prereq = binary_string_search(reserved_prereqs, reserved_prereqs_length, prereq->similarity_prerequisite);
@@ -849,9 +850,36 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
             case 1: // __primitive__
                 meets_special_prereq = concrete_type->elements[i]->id == AST_ELEM_BASE && typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
                 break;
-            case 2: // __struct__
+            case 2: { // __signed__
+                    if(concrete_type->elements[i]->id != AST_ELEM_BASE) break;
+                    weak_cstr_t base = ((ast_elem_base_t*) concrete_type->elements[i])->base;
+
+                    if(strcmp(base, "byte") == 0 || strcmp(base, "short") == 0 || strcmp(base, "int") == 0 || strcmp(base, "long") == 0){
+                        meets_special_prereq = true;
+                        break;
+                    }
+                }
+                break;
+            case 3: // __struct__
                 meets_special_prereq = concrete_type->elements[i]->id != AST_ELEM_BASE || !typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
                 break;
+            case 4: { // __unsigned__
+                    if(concrete_type->elements[i]->id != AST_ELEM_BASE) break;
+                    weak_cstr_t base = ((ast_elem_base_t*) concrete_type->elements[i])->base;
+
+                    if(strcmp(base, "ubyte") == 0 || strcmp(base, "ushort") == 0 || strcmp(base, "uint") == 0 || strcmp(base, "ulong") == 0 || strcmp(base, "usize") == 0){
+                        meets_special_prereq = true;
+                        break;
+                    }
+                }
+                break;
+            }
+
+            if(!meets_special_prereq && prereq->allow_auto_conversion){
+                ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, prereq->name);
+
+                // Determine special allowed auto conversions
+                meets_special_prereq = type_var ? is_allowed_auto_conversion(builder, &type_var->binding, concrete_type) : false;
             }
 
             if(!meets_special_prereq){
@@ -925,8 +953,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
             replacement.source = replacement.elements[0]->source;
 
             // Ensure consistency with catalog
-            ast_elem_polymorph_t *polymorphic_elem = (ast_elem_polymorph_t*) polymorphic_type->elements[i];
-            ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, polymorphic_elem->name);
+            ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, prereq->name);
 
             if(type_var){
                 if(!ast_types_identical(&replacement, &type_var->binding)){
@@ -936,7 +963,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                 }
             } else {
                 // Add to catalog since it's not already present
-                ast_type_var_catalog_add(catalog, polymorphic_elem->name, &replacement);
+                ast_type_var_catalog_add(catalog, prereq->name, &replacement);
             }
 
             i = concrete_type->elements_length - 1;
@@ -966,9 +993,11 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
 
             if(type_var){
                 if(!ast_types_identical(&replacement, &type_var->binding)){
-                    // Given arguments don't meet consistency requirements of type variables
-                    free(replacement.elements);
-                    return FAILURE;
+                    if(!polymorphic_elem->allow_auto_conversion || !is_allowed_auto_conversion(builder, &replacement, &type_var->binding)){
+                        // Given arguments don't meet consistency requirements of type variables
+                        free(replacement.elements);
+                        return FAILURE;
+                    }
                 }
             } else {
                 // Add to catalog since it's not already present

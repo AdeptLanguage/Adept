@@ -5,6 +5,7 @@
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
+#include "UTIL/builtin_type.h"
 
 length_t build_basicblock(ir_builder_t *builder){
     // NOTE: Returns new id
@@ -2078,4 +2079,31 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
     }
     
     return SUCCESS;
+}
+
+// ---------------- is_allowed_auto_conversion ----------------
+// Returns whether a builtin auto conversion is allowed
+// (For integers / floats)
+bool is_allowed_auto_conversion(ir_builder_t *builder, const ast_type_t *a_type, const ast_type_t *b_type){
+    if(!ast_type_is_base(a_type) || !ast_type_is_base(b_type)) return false;
+    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return false;
+    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return false;
+
+    ir_pool_snapshot_t snapshot;
+    ir_pool_snapshot_capture(builder->pool, &snapshot);
+
+    ir_type_t *a, *b;
+    if(ir_gen_resolve_type(builder->compiler, builder->object, a_type, &a)) return false;
+
+    if(ir_gen_resolve_type(builder->compiler, builder->object, b_type, &b)){
+        ir_pool_snapshot_restore(builder->pool, &snapshot);
+        return false;
+    }
+
+    unsigned int a_kind = a->kind;
+    unsigned int b_kind = b->kind;
+
+    bool allowed = (global_type_kind_is_integer[a_kind] == global_type_kind_is_integer[b_kind] && global_type_kind_is_float[a_kind] == global_type_kind_is_float[b_kind]);
+    ir_pool_snapshot_restore(builder->pool, &snapshot);
+    return allowed;
 }
