@@ -430,10 +430,10 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             } else if(from_size < to_size){
                 if(from_is_float){
                     *ir_value = build_fext(builder, *ir_value, ir_to_type);
-                } else if(to_type_kind == TYPE_KIND_U8 || to_type_kind == TYPE_KIND_U16 || to_type_kind == TYPE_KIND_U32 || to_type_kind == TYPE_KIND_U64){
-                    *ir_value = build_zext(builder, *ir_value, ir_to_type);
-                } else {
+                } else if(global_type_kind_signs[to_type_kind] && global_type_kind_signs[from_type_kind]){
                     *ir_value = build_sext(builder, *ir_value, ir_to_type);
+                } else {
+                    *ir_value = build_zext(builder, *ir_value, ir_to_type);
                 }
             } else {
                 *ir_value = from_is_float ? build_ftrunc(builder, *ir_value, ir_to_type) : build_trunc(builder, *ir_value, ir_to_type);

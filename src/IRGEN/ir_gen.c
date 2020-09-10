@@ -854,6 +854,54 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
                 return FAILURE;
             }
             break;
+        case 'u':
+            if(ast_type_is_base_of(given_type, "uint")){
+                // Always allowed
+            } else if(
+                ast_type_is_base_of(given_type, "bool") ||
+                ast_type_is_base_of(given_type, "byte") || 
+                ast_type_is_base_of(given_type, "ubyte") || 
+                ast_type_is_base_of(given_type, "short") || 
+                ast_type_is_base_of(given_type, "ushort") || 
+                ast_type_is_base_of(given_type, "int") || 
+                ast_type_is_base_of(given_type, "long") || 
+                ast_type_is_base_of(given_type, "ulong") || 
+                ast_type_is_base_of(given_type, "usize") || 
+                ast_type_is_base_of(given_type, "successful")
+            ){
+                // Allowed, but discouraged (Warning if RTTI is disabled)
+                if(builder->compiler->traits & COMPILER_NO_TYPEINFO)
+                    bad_printf_format(builder->compiler, source, given_type, "uint", substitutions_gotten, *(p - 1), true);
+            } else {
+                // Never allowed
+                bad_printf_format(builder->compiler, source, given_type, "uint", substitutions_gotten, *(p - 1), false);
+                return FAILURE;
+            }
+            break;
+        case 'l':
+            if(ast_type_is_base_of(given_type, "long")){
+                // Always allowed
+            } else if(
+                ast_type_is_base_of(given_type, "bool") ||
+                ast_type_is_base_of(given_type, "byte") || 
+                ast_type_is_base_of(given_type, "ubyte") || 
+                ast_type_is_base_of(given_type, "short") || 
+                ast_type_is_base_of(given_type, "ushort") || 
+                ast_type_is_base_of(given_type, "uint") || 
+                ast_type_is_base_of(given_type, "int") || 
+                ast_type_is_base_of(given_type, "ulong") || 
+                ast_type_is_base_of(given_type, "usize") || 
+                ast_type_is_base_of(given_type, "successful")
+            ){
+                // Allowed, but discouraged (Warning if RTTI is disabled)
+                if(builder->compiler->traits & COMPILER_NO_TYPEINFO)
+                    bad_printf_format(builder->compiler, source, given_type, "long", substitutions_gotten, *(p - 1), true);
+            } else {
+                // Never allowed
+                bad_printf_format(builder->compiler, source, given_type, "long", substitutions_gotten, *(p - 1), false);
+                return FAILURE;
+            }
+            break;
         case 'f':
             if(ast_type_is_base_of(given_type, "double")){
                 // Always allowed

@@ -29,6 +29,8 @@
 #define TYPE_KIND_FUNCPTR     0x00000011 // extra = *ir_type_extra_function_t
 #define TYPE_KIND_FIXED_ARRAY 0x00000012 // extra = *ir_type_extra_fixed_array_t;
 
+#define IS_TYPE_KIND_SIGNED(a) global_type_kind_signs[a]
+
 // ---------------- ir_type_t ----------------
 // An intermediate representation type
 // 'extra' can optionally contain one of the following:
