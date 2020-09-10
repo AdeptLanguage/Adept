@@ -1503,7 +1503,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         return FAILURE;
                     }
 
-                    unsigned long long uniqueness_value = ir_value_uniqueness_value(case_values[c]);
+                    unsigned long long uniqueness_value = ir_value_uniqueness_value(builder->pool, &case_values[c]);
                     uniqueness[c] = uniqueness_value;
 
                     for(length_t u = 0; u != c; u++){

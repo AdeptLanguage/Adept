@@ -1695,6 +1695,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // Break from both landing blocks to the merge block
             length_t merge_block_id = build_basicblock(builder);
+            build_using_basicblock(builder, when_false_landing);
             build_break(builder, merge_block_id);
             build_using_basicblock(builder, when_true_landing);
             build_break(builder, merge_block_id);

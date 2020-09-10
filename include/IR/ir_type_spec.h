@@ -19,7 +19,7 @@
 typedef trait_t ir_type_traits_t;
 
 typedef struct {
-    length_t bits;
+    length_t bytes;
     ir_type_traits_t traits;
 } ir_type_spec_t;
 

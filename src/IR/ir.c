@@ -1,5 +1,6 @@
 
 #include "IR/ir.h"
+#include "IR/ir_lowering.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
@@ -883,22 +884,22 @@ void ir_implementation(length_t id, char prefix, char *output_buffer){
     output_buffer[length] = 0x00;
 }
 
-unsigned long long ir_value_uniqueness_value(ir_value_t *value){
-    if(value->value_type != VALUE_TYPE_LITERAL){
+unsigned long long ir_value_uniqueness_value(ir_pool_t *pool, ir_value_t **value){
+    if(ir_lower_const_cast(pool, value) || (*value)->value_type != VALUE_TYPE_LITERAL){
         printf("INTERNAL ERROR: ir_value_uniqueness_value received a value that isn't a constant literal\n");
         return 0xFFFFFFFF;
-    }
+    };
     
-    switch(value->type->kind){
-    case TYPE_KIND_BOOLEAN: return *((adept_bool*) value->extra);
-    case TYPE_KIND_S8:      return *((adept_byte*) value->extra);
-    case TYPE_KIND_U8:      return *((adept_ubyte*) value->extra);
-    case TYPE_KIND_S16:     return *((adept_short*) value->extra);
-    case TYPE_KIND_U16:     return *((adept_ushort*) value->extra);
-    case TYPE_KIND_S32:     return *((adept_int*) value->extra);
-    case TYPE_KIND_U32:     return *((adept_uint*) value->extra);
-    case TYPE_KIND_S64:     return *((adept_long*) value->extra);
-    case TYPE_KIND_U64:     return *((adept_ulong*) value->extra);
+    switch((*value)->type->kind){
+    case TYPE_KIND_BOOLEAN: return *((adept_bool*) (*value)->extra);
+    case TYPE_KIND_S8:      return *((adept_byte*) (*value)->extra);
+    case TYPE_KIND_U8:      return *((adept_ubyte*) (*value)->extra);
+    case TYPE_KIND_S16:     return *((adept_short*) (*value)->extra);
+    case TYPE_KIND_U16:     return *((adept_ushort*) (*value)->extra);
+    case TYPE_KIND_S32:     return *((adept_int*) (*value)->extra);
+    case TYPE_KIND_U32:     return *((adept_uint*) (*value)->extra);
+    case TYPE_KIND_S64:     return *((adept_long*) (*value)->extra);
+    case TYPE_KIND_U64:     return *((adept_ulong*) (*value)->extra);
     default:
         printf("INTERNAL ERROR: ir_value_uniqueness_value received a value that isn't a constant literal\n");
         return 0xFFFFFFFF;

@@ -90,6 +90,9 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
                 const bool force_used = ctx->compiler->ignore & COMPILER_IGNORE_UNUSED
                         ? true
                         : function->traits & AST_FUNC_MAIN || (a == 0 && strcmp(function->arg_names[a], "this") == 0);
+                    
+                if(strcmp(function->arg_names[a], "this") == 0 && a != 0)
+                    printf("%zu\n", a);
                 
                 infer_var_scope_add_variable(&func_scope, function->arg_names[a], &function->arg_types[a], function->arg_sources[a], force_used);
             }

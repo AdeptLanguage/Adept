@@ -726,7 +726,7 @@ void ir_implementation(length_t id, char prefix, char *output_buffer);
 // they also have the same literal value.
 // If two IR values of the same IR type have different uniqueness values, then
 // they do not share the same literal value.
-unsigned long long ir_value_uniqueness_value(ir_value_t *value);
+unsigned long long ir_value_uniqueness_value(ir_pool_t *pool, ir_value_t **value);
 
 // ---------------- ir_print_value ----------------
 // Prints a value to stdout
