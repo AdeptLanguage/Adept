@@ -186,8 +186,8 @@ errorcode_t pkg_read(compiler_t *compiler, object_t *object){
                 fread(&read, sizeof(char), 1, file);
             }
             buildup[buildup_length] = '\0';
-            tokenlist->tokens[t].data = malloc(sizeof(long long));
-            *((long long*) tokenlist->tokens[t].data) = atoi(buildup);
+            tokenlist->tokens[t].data = malloc(sizeof(adept_generic_int));
+            *((adept_generic_int*) tokenlist->tokens[t].data) = string_to_int64(buildup, 10);
         }
         else if(id == TOKEN_GENERIC_FLOAT){
             char read;

@@ -38,7 +38,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             ast_elem_fixed_array_t *fixed_array = malloc(sizeof(ast_elem_fixed_array_t));
             source_t fixed_array_source = sources[*i];
 
-            fixed_array->length = *((long long*) tokens[*i].data);
+            fixed_array->length = *((adept_generic_int*) tokens[*i].data);
 
             out_type->elements[out_type->elements_length] = (ast_elem_t*) fixed_array;
             out_type->elements[out_type->elements_length]->id = AST_ELEM_FIXED_ARRAY;

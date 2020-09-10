@@ -525,7 +525,7 @@ errorcode_t parse_meta_primary_expr(parse_ctx_t *ctx, meta_expr_t **out_expr){
     case TOKEN_GENERIC_INT:
         *out_expr = malloc(sizeof(meta_expr_int_t));
         (*out_expr)->id = META_EXPR_INT;
-        ((meta_expr_int_t*) *out_expr)->value = *((long long*) tokens[*i].data);
+        ((meta_expr_int_t*) *out_expr)->value = *((adept_generic_int*) tokens[*i].data);
         (*i)++;
         break;
     case TOKEN_GENERIC_FLOAT:

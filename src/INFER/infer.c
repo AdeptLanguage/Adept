@@ -909,7 +909,7 @@ unsigned int generics_primitive_type(ast_expr_t **expressions, length_t expressi
     unsigned int assigned_type = EXPR_NONE;
 
     if((generics & FLAG_GENERIC_INT) && (generics & FLAG_GENERIC_FLOAT)) assigned_type = EXPR_DOUBLE;
-    else if(generics & FLAG_GENERIC_INT)   assigned_type = EXPR_INT;
+    else if(generics & FLAG_GENERIC_INT)   assigned_type = EXPR_LONG;
     else if(generics & FLAG_GENERIC_FLOAT) assigned_type = EXPR_DOUBLE;
 
     #undef FLAG_GENERIC_INT
