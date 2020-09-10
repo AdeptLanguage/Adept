@@ -1780,6 +1780,14 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ulong));
                 *((adept_ulong*) one->extra) = 1;
                 break;
+            case TYPE_KIND_FLOAT:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_float));
+                *((adept_float*) one->extra) = 1.0f;
+                break;
+            case TYPE_KIND_DOUBLE:
+                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_double));
+                *((adept_double*) one->extra) = 1.0f;
+                break;
             }
 
             if(one->extra == NULL){
