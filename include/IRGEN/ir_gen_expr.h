@@ -56,7 +56,7 @@ errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t 
 // ---------------- i_vs_f_instruction ----------------
 // Attempts to resolve conflict between two possible result types
 // of a ternary expression
-successful_t ir_gen_resolve_ternay_conflict(ir_builder_t *builder, ir_value_t *a, ir_value_t *b, ast_type_t *a_type, ast_type_t *b_type,
+successful_t ir_gen_resolve_ternay_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
         length_t *inout_a_basicblock, length_t *inout_b_basicblock);
 
 // ---------------- i_vs_f_instruction ----------------
