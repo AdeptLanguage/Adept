@@ -31,12 +31,12 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_ftrunc(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_INTTOPTR:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_INTTOPTR is unimplemented!\n");
-        return FAILURE;
+        // Operate using 'zext' operation
+        if(ir_lower_const_zext(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_PTRTOINT:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_PTRTOINT is unimplemented!\n");
-        return FAILURE;
+        // Operate using 'trunc' operation
+        if(ir_lower_const_trunc(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_FPTOUI:
         redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_FPTOUI is unimplemented!\n");
