@@ -42,8 +42,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_fptoui(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_FPTOSI:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_FPTOSI is unimplemented!\n");
-        return FAILURE;
+        if(ir_lower_const_fptosi(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_UITOFP:
         redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_UITOFP is unimplemented!\n");
@@ -303,7 +302,7 @@ errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value){
     memset(new_pointer, 0, to_spec.bytes);
 
     uint64_t as_unsigned;
-    char *pointer = &as_unsigned;
+    char *pointer = (char*) &as_unsigned;
 
     switch(from_spec.bytes){
     case 4:
@@ -319,6 +318,76 @@ errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value){
     
     // Copy bytes of value to proper place in new value
     memcpy(new_pointer, is_little_endian ? pointer : &pointer[sizeof(uint64_t) - to_spec.bytes], to_spec.bytes);
+    
+    // Promote the altered child literal value
+    (*child)->extra = new_pointer;
+    *inout_value = *child;
+
+    // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
+}
+
+errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
+    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
+    //       In other words, that the value inside the given value is not another constant cast
+
+    ir_type_t *type = (*inout_value)->type;
+    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
+
+    ir_type_spec_t to_spec, from_spec;
+    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
+
+    if(to_spec.bytes < from_spec.bytes){
+        redprintf("INTERNAL ERROR: ir_lower_const_fptosi() called when target type is smaller!\n");
+        return FAILURE;
+    }
+
+    unsigned short x = 0xEEFF;
+    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
+    
+    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
+    memset(new_pointer, 0, to_spec.bytes);
+
+    int64_t as_signed;
+    char *pointer = (char*) &as_signed;
+
+    switch(from_spec.bytes){
+    case 4:
+        as_signed = *((adept_float*) ((*child)->extra));
+        break;
+    case 8:
+        as_signed = *((adept_double*) ((*child)->extra));
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_lower_const_fptosi() failed!\n");
+        return FAILURE;
+    }
+
+    bool is_signed = as_signed < 0;
+    if(is_signed) as_signed *= -1;
+    
+    // Copy bytes of value to proper place in new value
+    memcpy(new_pointer, is_little_endian ? pointer : &pointer[sizeof(uint64_t) - to_spec.bytes], to_spec.bytes);
+
+    // Treat as signed integer of same size for platform independent sign swap and representation formatting
+    if(is_signed) switch(to_spec.bytes){
+    case 1:
+        *((int8_t*) new_pointer) *= -1;
+        break;
+    case 2:
+        *((int16_t*) new_pointer) *= -1;
+        break;
+    case 4:
+        *((int32_t*) new_pointer) *= -1;
+        break;
+    case 8:
+        *((int64_t*) new_pointer) *= -1;
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_lower_const_fptosi() failed to swap sign bit!\n");
+        return FAILURE;
+    }
     
     // Promote the altered child literal value
     (*child)->extra = new_pointer;
