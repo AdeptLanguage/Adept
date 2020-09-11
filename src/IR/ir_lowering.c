@@ -22,8 +22,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_sext(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_FEXT:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_FEXT is unimplemented!\n");
-        return FAILURE;
+        if(ir_lower_const_fext(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_TRUNC:
         if(ir_lower_const_trunc(pool, inout_value)) return FAILURE;
@@ -233,30 +232,29 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
+errorcode_t ir_lower_const_fext(ir_pool_t *pool, ir_value_t **inout_value){
+    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
+    //       In other words, that the value inside the given value is not another constant cast
 
+    ir_type_t *type = (*inout_value)->type;
+    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
 
+    ir_type_spec_t to_spec, from_spec;
+    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void printBits(size_t const size, void const * const ptr); /////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// assumes little endian
-void printBits(size_t const size, void const * const ptr)
-{
-    unsigned char *b = (unsigned char*) ptr;
-    unsigned char byte;
-    int i, j;
-
-    for (i=size-1;i>=0;i--)
-    {
-        for (j=7;j>=0;j--)
-        {
-            byte = (b[i] >> j) & 1;
-            printf("%u", byte);
-        }
+    if(to_spec.bytes < from_spec.bytes){
+        redprintf("INTERNAL ERROR: ir_lower_const_sext() called when target type is smaller!\n");
+        return FAILURE;
     }
-    puts("");
+
+    adept_double *new_pointer = ir_pool_alloc(pool, sizeof(adept_double));
+    *new_pointer = *((adept_float*) ((*child)->extra));
+    
+    // Promote the altered child literal value
+    (*child)->extra = (void*) new_pointer;
+    *inout_value = *child;
+
+    // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
 }
