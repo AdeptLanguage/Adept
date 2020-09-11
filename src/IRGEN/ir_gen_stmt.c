@@ -242,7 +242,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
         switch(stmt->id){
         case EXPR_RETURN: {        
-                // DANGEROUS: Could be invalidated by 'ir_gen_expression' call, in which case it should no longer be used
+                // DANGEROUS: Could be invalidated by 'ir_gen_expr' call, in which case it should no longer be used
                 ast_func_t *ast_func = &builder->object->ast.funcs[builder->ast_func_id];
                 ast_type_t *return_type = &ast_func->return_type;
                 ast_expr_return_t *return_stmt = (ast_expr_return_t*) stmt;
@@ -254,7 +254,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
 
                     // Return non-void value
-                    if(ir_gen_expression(builder, return_stmt->value, &expression_value, false, &temporary_type)) return FAILURE;
+                    if(ir_gen_expr(builder, return_stmt->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                     if(!ast_types_conform(builder, &expression_value, &temporary_type, return_type, CONFORM_MODE_CALCULATION)){
                         char *a_type_str = ast_type_str(&temporary_type);
@@ -334,7 +334,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_type_t dropped_type;
                 ir_value_t *dropped_value;
 
-                if(ir_gen_expression(builder, stmt, &dropped_value, true, &dropped_type)) return FAILURE;
+                if(ir_gen_expr(builder, stmt, &dropped_value, true, &dropped_type)) return FAILURE;
 
                 if(dropped_type.elements_length == 0){
                     compiler_panicf(builder->compiler, stmt->source, "INTERNAL ERROR: Dropped value has type with zero elements");
@@ -373,7 +373,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_POSTDECREMENT:
         case EXPR_TOGGLE:
             // Expression-statements will be processed elsewhere
-            if(ir_gen_expression(builder, stmt, NULL, true, NULL)) return FAILURE;
+            if(ir_gen_expr(builder, stmt, NULL, true, NULL)) return FAILURE;
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
                 ast_expr_declare_t *declare_stmt = ((ast_expr_declare_t*) stmt);
@@ -392,7 +392,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ir_value_t *initial;
                     ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
 
-                    if(ir_gen_expression(builder, declare_stmt->value, &initial, false, &temporary_type)) return FAILURE;
+                    if(ir_gen_expr(builder, declare_stmt->value, &initial, false, &temporary_type)) return FAILURE;
 
                     if(!ast_types_conform(builder, &initial, &temporary_type, &declare_stmt->type, CONFORM_MODE_ASSIGNING)){
                         char *a_type_str = ast_type_str(&temporary_type);
@@ -438,8 +438,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_expr_assign_t *assign_stmt = ((ast_expr_assign_t*) stmt);
                 ir_value_t *destination;
                 ast_type_t destination_type, expression_value_type;
-                if(ir_gen_expression(builder, assign_stmt->value, &expression_value, false, &expression_value_type)) return FAILURE;
-                if(ir_gen_expression(builder, assign_stmt->destination, &destination, true, &destination_type)){
+                if(ir_gen_expr(builder, assign_stmt->value, &expression_value, false, &expression_value_type)) return FAILURE;
+                if(ir_gen_expr(builder, assign_stmt->destination, &destination, true, &destination_type)){
                     ast_type_free(&expression_value_type);
                     return FAILURE;
                 }
@@ -564,7 +564,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             break;
         case EXPR_IF: case EXPR_UNLESS: {
                 unsigned int conditional_type = stmt->id;
-                if(ir_gen_expression(builder, ((ast_expr_if_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, ((ast_expr_if_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
@@ -616,7 +616,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             break;
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
                 unsigned int conditional_type = stmt->id;
-                if(ir_gen_expression(builder, ((ast_expr_ifelse_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, ((ast_expr_ifelse_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
                     char *a_type_str = ast_type_str(&temporary_type);
@@ -711,7 +711,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 build_using_basicblock(builder, test_basicblock_id);
 
                 unsigned int conditional_type = stmt->id;
-                if(ir_gen_expression(builder, ((ast_expr_while_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, ((ast_expr_while_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 // Create static bool type for comparison with
                 ast_elem_base_t bool_base;
@@ -834,7 +834,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             break;
         case EXPR_DELETE: {
                 ast_expr_unary_t *delete_expr = (ast_expr_unary_t*) stmt;
-                if(ir_gen_expression(builder, delete_expr->value, &expression_value, false, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, delete_expr->value, &expression_value, false, &temporary_type)) return FAILURE;
 
                 if(temporary_type.elements_length == 0 || ( temporary_type.elements[0]->id != AST_ELEM_POINTER &&
                     !(temporary_type.elements[0]->id == AST_ELEM_BASE && strcmp(((ast_elem_base_t*) temporary_type.elements[0])->base, "ptr") == 0)
@@ -992,7 +992,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_expr_phantom_t phantom_list_value;
 
                 if(each_in->list){
-                    if(ir_gen_expression(builder, each_in->list, &list_precomputed, true, &phantom_list_value.type)){
+                    if(ir_gen_expr(builder, each_in->list, &list_precomputed, true, &phantom_list_value.type)){
                         return FAILURE;
                     }
                     phantom_list_value.id = EXPR_PHANTOM;
@@ -1067,12 +1067,12 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         length_call.arity = 0;
                         length_call.is_tentative = false;
 
-                        if(ir_gen_expression(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
+                        if(ir_gen_expr(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
                             ast_type_free(&phantom_list_value.type);
                             return FAILURE;
                         }
                     }
-                } else if(ir_gen_expression(builder, each_in->length, &array_length, false, &temporary_type)){
+                } else if(ir_gen_expr(builder, each_in->length, &array_length, false, &temporary_type)){
                     return FAILURE;
                 }
 
@@ -1164,7 +1164,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     array_call.arity = 0;
                     array_call.is_tentative = false;
 
-                    if(ir_gen_expression(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
+                    if(ir_gen_expr(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
                         ast_type_free(&phantom_list_value.type);
                         close_scope(builder);
                         return FAILURE;
@@ -1172,7 +1172,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                     // We don't need 'phantom_list_value' anymore, so free its type
                     ast_type_free(&phantom_list_value.type);
-                } else if(ir_gen_expression(builder, each_in->low_array, &array, false, &temporary_type)){
+                } else if(ir_gen_expr(builder, each_in->low_array, &array, false, &temporary_type)){
                     close_scope(builder);
                     return FAILURE;
                 }
@@ -1331,7 +1331,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Generate length
                 ir_value_t *limit;
 
-                if(ir_gen_expression(builder, repeat->limit, &limit, false, &temporary_type)){
+                if(ir_gen_expr(builder, repeat->limit, &limit, false, &temporary_type)){
                     close_scope(builder);
                     return FAILURE;
                 }
@@ -1428,7 +1428,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 ir_value_t *condition;
                 ast_type_t master_ast_type;
-                if(ir_gen_expression(builder, switch_expr->value, &condition, false, &master_ast_type)){
+                if(ir_gen_expr(builder, switch_expr->value, &condition, false, &master_ast_type)){
                     return FAILURE;
                 }
 
@@ -1475,7 +1475,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     ast_case_t *switch_case = &switch_expr->cases[c];
 
                     ast_type_t slave_ast_type;
-                    if(ir_gen_expression(builder, switch_case->condition, &case_values[c], false, &slave_ast_type)){
+                    if(ir_gen_expr(builder, switch_case->condition, &case_values[c], false, &slave_ast_type)){
                         ast_type_free(&master_ast_type);
                         free(uniqueness);
                         return FAILURE;
@@ -1594,7 +1594,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             break;
         case EXPR_VA_START: case EXPR_VA_END: {
                 ast_expr_unary_t *va_expr = (ast_expr_unary_t*) stmt;
-                if(ir_gen_expression(builder, va_expr->value, &expression_value, true, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, va_expr->value, &expression_value, true, &temporary_type)) return FAILURE;
                 
                 if(!ast_type_is_base_of(&temporary_type, "va_list")){
                     char *t = ast_type_str(&temporary_type);
@@ -1624,7 +1624,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_expr_va_copy_t *va_copy_expr = (ast_expr_va_copy_t*) stmt;
 
                 ir_value_t *dest_value;
-                if(ir_gen_expression(builder, va_copy_expr->dest_value, &dest_value, true, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, va_copy_expr->dest_value, &dest_value, true, &temporary_type)) return FAILURE;
                 
                 if(!ast_type_is_base_of(&temporary_type, "va_list")){
                     char *t = ast_type_str(&temporary_type);
@@ -1642,7 +1642,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_type_free(&temporary_type);
 
                 ir_value_t *src_value;
-                if(ir_gen_expression(builder, va_copy_expr->src_value, &src_value, true, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, va_copy_expr->src_value, &src_value, true, &temporary_type)) return FAILURE;
                 
                 if(!ast_type_is_base_of(&temporary_type, "va_list")){
                     char *t = ast_type_str(&temporary_type);
@@ -1718,7 +1718,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_value_t *condition_value;
 
                 if(for_loop->condition){
-                    if(ir_gen_expression(builder, for_loop->condition, &condition_value, false, &temporary_type)) return FAILURE;
+                    if(ir_gen_expr(builder, for_loop->condition, &condition_value, false, &temporary_type)) return FAILURE;
                 } else {
                     ast_type_make_base(&temporary_type, "bool");
                     condition_value = build_bool(builder->pool, true);

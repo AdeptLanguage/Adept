@@ -277,7 +277,7 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
         ir_value_t *value;
         ast_type_t value_ast_type;
 
-        if(ir_gen_expression(builder, ast_global->initial, &value, false, &value_ast_type)) return FAILURE;
+        if(ir_gen_expr(builder, ast_global->initial, &value, false, &value_ast_type)) return FAILURE;
 
         if(!ast_types_conform(builder, &value, &value_ast_type, &ast_global->type, CONFORM_MODE_ASSIGNING)){
             char *a_type_str = ast_type_str(&value_ast_type);

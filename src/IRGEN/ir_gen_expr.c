@@ -11,7 +11,7 @@
 #include "BRIDGE/rtti.h"
 #include "BRIDGE/bridge.h"
 
-errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
     // NOTE: Generates an ir_value_t from an ast_expr_t
     // NOTE: Will write determined ast_type_t to 'out_expr_type' (Can use NULL to ignore)
 
@@ -127,152 +127,11 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         if(differentiate_math_operation(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ, "compare", "__less_than_or_equal__", true))
             return FAILURE;
         break;
-    case EXPR_AND: {
-            ir_value_t *a, *b;
-            ast_type_t ast_type_a, ast_type_b;
-
-            // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
-            // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
-            ast_type_make_base(out_expr_type, strclone("bool"));
-
-            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->a, &a, false, &ast_type_a)) return FAILURE;
-
-            if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, &a, &ast_type_a, out_expr_type, CONFORM_MODE_CALCULATION)){
-                char *a_type_str = ast_type_str(&ast_type_a);
-                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", a_type_str);
-                free(a_type_str);
-                ast_type_free(&ast_type_a);
-                ast_type_free(out_expr_type);
-                return FAILURE;
-            }
-
-            length_t landing_a_block_id = builder->current_block_id;
-
-            length_t more_block_id = build_basicblock(builder);
-            build_using_basicblock(builder, more_block_id);
-
-            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->b, &b, false, &ast_type_b)){
-                ast_type_free(&ast_type_a);
-                return FAILURE;
-            }
-
-            if(!ast_types_identical(&ast_type_b, out_expr_type) && !ast_types_conform(builder, &b, &ast_type_b, out_expr_type, CONFORM_MODE_CALCULATION)){
-                char *b_type_str = ast_type_str(&ast_type_b);
-                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", b_type_str);
-                free(b_type_str);
-                ast_type_free(&ast_type_a);
-                ast_type_free(&ast_type_b);
-                ast_type_free(out_expr_type);
-                return FAILURE;
-            }
-
-            ast_type_free(&ast_type_a);
-            ast_type_free(&ast_type_b);
-            ast_type_a = *out_expr_type;
-            ast_type_b = *out_expr_type;
-
-            if(!ast_types_conform(builder, &b, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
-                char *a_type_str = ast_type_str(&ast_type_a);
-                char *b_type_str = ast_type_str(&ast_type_b);
-                compiler_panicf(builder->compiler, expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-                free(a_type_str);
-                free(b_type_str);
-                ast_type_free(out_expr_type);
-                return FAILURE;
-            }
-
-            length_t landing_b_block_id = builder->current_block_id;
-
-            // Merge evaluation
-            length_t merge_block_id = build_basicblock(builder);
-            build_break(builder, merge_block_id);
-            build_using_basicblock(builder, landing_a_block_id);
-            build_cond_break(builder, a, more_block_id, merge_block_id);
-            build_using_basicblock(builder, merge_block_id);
-
-            instruction = build_instruction(builder, sizeof(ir_instr_phi2_t));
-            ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
-            ((ir_instr_phi2_t*) instruction)->result_type = ir_builder_bool(builder);
-            ((ir_instr_phi2_t*) instruction)->a = build_bool(builder->pool, false);
-            ((ir_instr_phi2_t*) instruction)->b = b;
-            ((ir_instr_phi2_t*) instruction)->block_id_a = landing_a_block_id;
-            ((ir_instr_phi2_t*) instruction)->block_id_b = landing_b_block_id;
-            *ir_value = build_value_from_prev_instruction(builder);
-        }
+    case EXPR_AND:
+        if(ir_gen_expr_and(builder, (ast_expr_and_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_OR: {
-            ir_value_t *a, *b;
-            ast_type_t ast_type_a, ast_type_b;
-
-            // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
-            // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
-            ast_type_make_base(out_expr_type, strclone("bool"));
-
-            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->a, &a, false, &ast_type_a)) return FAILURE;
-
-            if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, &a, &ast_type_a, out_expr_type, CONFORM_MODE_CALCULATION)){
-                char *a_type_str = ast_type_str(&ast_type_a);
-                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", a_type_str);
-                free(a_type_str);
-                ast_type_free(&ast_type_a);
-                ast_type_free(out_expr_type);
-                return FAILURE;
-            }
-
-            length_t landing_a_block_id = builder->current_block_id;
-
-            length_t more_block_id = build_basicblock(builder);
-            build_using_basicblock(builder, more_block_id);
-
-            if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->b, &b, false, &ast_type_b)){
-                ast_type_free(&ast_type_a);
-                return FAILURE;
-            }
-
-            if(!ast_types_identical(&ast_type_b, out_expr_type) && !ast_types_conform(builder, &b, &ast_type_b, out_expr_type, CONFORM_MODE_CALCULATION)){
-                char *b_type_str = ast_type_str(&ast_type_b);
-                compiler_panicf(builder->compiler, expr->source, "Failed to convert value of type '%s' to type 'bool'", b_type_str);
-                free(b_type_str);
-                ast_type_free(&ast_type_a);
-                ast_type_free(&ast_type_b);
-                ast_type_free(out_expr_type);
-                return FAILURE;
-            }
-
-            ast_type_free(&ast_type_a);
-            ast_type_free(&ast_type_b);
-            ast_type_a = *out_expr_type;
-            ast_type_b = *out_expr_type;
-
-            if(!ast_types_conform(builder, &b, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
-                char *a_type_str = ast_type_str(&ast_type_a);
-                char *b_type_str = ast_type_str(&ast_type_b);
-                compiler_panicf(builder->compiler, expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-                free(a_type_str);
-                free(b_type_str);
-                ast_type_free(out_expr_type);
-                return FAILURE;
-            }
-
-            length_t landing_b_block_id = builder->current_block_id;
-
-            // Merge evaluation
-            length_t merge_block_id = build_basicblock(builder);
-            build_break(builder, merge_block_id);
-            build_using_basicblock(builder, landing_a_block_id);
-            build_cond_break(builder, a, merge_block_id, more_block_id);
-            build_using_basicblock(builder, merge_block_id);
-
-            instruction = build_instruction(builder, sizeof(ir_instr_phi2_t));
-            ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
-            ((ir_instr_phi2_t*) instruction)->result_type = (ir_type_t*) ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ((ir_instr_phi2_t*) instruction)->result_type->kind = TYPE_KIND_BOOLEAN;
-            ((ir_instr_phi2_t*) instruction)->a = build_bool(builder->pool, true);
-            ((ir_instr_phi2_t*) instruction)->b = b;
-            ((ir_instr_phi2_t*) instruction)->block_id_a = landing_a_block_id;
-            ((ir_instr_phi2_t*) instruction)->block_id_b = landing_b_block_id;
-            *ir_value = build_value_from_prev_instruction(builder);
-        }
+    case EXPR_OR:
+        if(ir_gen_expr_or(builder, (ast_expr_or_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_STR:
         if(builder->object->ir_module.common.ir_string_struct == NULL){
@@ -360,7 +219,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // Resolve & ir_gen function arguments
             for(length_t a = 0; a != arity; a++){
-                if(ir_gen_expression(builder, call_expr->args[a], &arg_values[a], false, &arg_types[a])){
+                if(ir_gen_expr(builder, call_expr->args[a], &arg_values[a], false, &arg_types[a])){
                     ast_types_free_fully(arg_types, a);
                     return FAILURE;
                 }
@@ -440,7 +299,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                             return FAILURE;
                         }
 
-                        if(ir_gen_expression(builder, arg_defaults[i], &new_args[i], false, &new_arg_types[i])){
+                        if(ir_gen_expr(builder, arg_defaults[i], &new_args[i], false, &new_arg_types[i])){
                             ast_types_free(&new_arg_types[arity], i - arity);
                             ast_types_free_fully(arg_types, call_expr->arity);
                             return FAILURE;
@@ -677,7 +536,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_type_t struct_value_ast_type;
 
             // This expression should be able to be mutable (Checked during parsing)
-            if(ir_gen_expression(builder, member_expr->value, &struct_value, true, &struct_value_ast_type)) return FAILURE;
+            if(ir_gen_expr(builder, member_expr->value, &struct_value, true, &struct_value_ast_type)) return FAILURE;
 
             if(struct_value->type->kind != TYPE_KIND_POINTER){
                 char *given_type = ast_type_str(&struct_value_ast_type);
@@ -699,7 +558,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             }
 
             if(struct_value_ast_type.elements_length == 0){
-                compiler_panicf(builder->compiler, expr->source, "INTERNAL ERROR: Member expression in ir_gen_expression received bad AST type");
+                compiler_panicf(builder->compiler, expr->source, "INTERNAL ERROR: Member expression in ir_gen_expr received bad AST type");
                 ast_type_free(&struct_value_ast_type);
                 return FAILURE;
 
@@ -815,7 +674,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
         break;
     case EXPR_ADDRESS: {
             // This expression should be able to be mutable (Checked during parsing)
-            if(ir_gen_expression(builder, ((ast_expr_unary_t*) expr)->value, ir_value, true, out_expr_type)) return FAILURE;
+            if(ir_gen_expr(builder, ((ast_expr_unary_t*) expr)->value, ir_value, true, out_expr_type)) return FAILURE;
             if(out_expr_type != NULL) ast_type_prepend_ptr(out_expr_type);
         }
         break;
@@ -825,7 +684,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_type_t *arg_type;
 
             ast_type_t temporary_type;
-            if(ir_gen_expression(builder, va_arg_expr->va_list, &va_list, true, &temporary_type)) return FAILURE;
+            if(ir_gen_expr(builder, va_arg_expr->va_list, &va_list, true, &temporary_type)) return FAILURE;
 
             if(ir_gen_resolve_type(builder->compiler, builder->object, &va_arg_expr->arg_type, &arg_type)){
                 ast_type_free(&temporary_type);
@@ -948,7 +807,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_type_t expr_type;
             ir_value_t *expr_value;
 
-            if(ir_gen_expression(builder, dereference_expr->value, &expr_value, false, &expr_type)) return FAILURE;
+            if(ir_gen_expr(builder, dereference_expr->value, &expr_value, false, &expr_type)) return FAILURE;
 
             // Ensure that the result ast_type_t is a pointer type
             if(expr_type.elements_length < 2 || expr_type.elements[0]->id != AST_ELEM_POINTER){
@@ -965,7 +824,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             if(!leave_mutable){
                 // ir_type_t is expected to be of kind pointer
                 if(expr_value->type->kind != TYPE_KIND_POINTER){
-                    compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expression()");
+                    compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expr()");
                     ast_type_free(&expr_type);
                     return FAILURE;
                 }
@@ -975,7 +834,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
                 // ir_type_t is expected to be of kind pointer
                 if(expr_value->type->kind != TYPE_KIND_POINTER){
-                    compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expression()");
+                    compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expr()");
                     ast_type_free(&expr_type);
                     return FAILURE;
                 }
@@ -992,8 +851,8 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_type_t index_type, array_type;
             ir_value_t *index_value, *array_value;
 
-            if(ir_gen_expression(builder, array_access_expr->value, &array_value, true, &array_type)) return FAILURE;
-            if(ir_gen_expression(builder, array_access_expr->index, &index_value, false, &index_type)){
+            if(ir_gen_expr(builder, array_access_expr->value, &array_value, true, &array_type)) return FAILURE;
+            if(ir_gen_expr(builder, array_access_expr->index, &index_value, false, &index_type)){
                 ast_type_free(&array_type);
                 return FAILURE;
             }
@@ -1088,7 +947,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_cast_t *cast_expr = (ast_expr_cast_t*) expr;
             ast_type_t from_type;
 
-            if(ir_gen_expression(builder, cast_expr->from, ir_value, false, &from_type)) return FAILURE;
+            if(ir_gen_expr(builder, cast_expr->from, ir_value, false, &from_type)) return FAILURE;
 
             if(!ast_types_conform(builder, ir_value, &from_type, &cast_expr->to, CONFORM_MODE_ALL)){
                 char *a_type_str = ast_type_str(&from_type);
@@ -1133,7 +992,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_value_t *stack_pointer = NULL;
 
             // Generate primary argument
-            if(ir_gen_expression(builder, call_expr->value, &arg_values[0], true, &arg_types[0])){
+            if(ir_gen_expr(builder, call_expr->value, &arg_values[0], true, &arg_types[0])){
                 free(arg_types);
                 return FAILURE;
             }
@@ -1179,7 +1038,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // Generate secondary argument values
             for(length_t a = 0; a != call_expr->arity; a++){
-                if(ir_gen_expression(builder, call_expr->args[a], &arg_values[a + 1], false, &arg_types[a + 1])){
+                if(ir_gen_expr(builder, call_expr->args[a], &arg_values[a + 1], false, &arg_types[a + 1])){
                     ast_types_free_fully(arg_types, a + 1);
                     return FAILURE;
                 }
@@ -1277,7 +1136,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                         return FAILURE;
                     }
 
-                    if(ir_gen_expression(builder, arg_defaults[i], &new_args[i], false, &new_arg_types[i])){
+                    if(ir_gen_expr(builder, arg_defaults[i], &new_args[i], false, &new_arg_types[i])){
                         ast_types_free(&new_arg_types[arity], i - arity);
                         ast_types_free_fully(arg_types, arity);
                         return FAILURE;
@@ -1355,7 +1214,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             #define MACRO_UNARY_OPERATOR_CHARCTER (expr->id == EXPR_NOT ? '!' : (expr->id == EXPR_NEGATE ? '-' : '~'))
 
-            if(ir_gen_expression(builder, unary_expr->value, &expr_value, false, &expr_type)) return FAILURE;
+            if(ir_gen_expr(builder, unary_expr->value, &expr_value, false, &expr_type)) return FAILURE;
 
             if(ir_type_get_catagory(expr_value->type) == PRIMITIVE_NA){
                 char *s = ast_type_str(&expr_type);
@@ -1417,7 +1276,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_new_t*) expr)->type, &ir_type)) return FAILURE;
 
             if( ((ast_expr_new_t*) expr)->amount != NULL ){
-                if(ir_gen_expression(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return FAILURE;
+                if(ir_gen_expr(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return FAILURE;
                 unsigned int multiplier_typekind = amount->type->kind;
 
                 if(multiplier_typekind < TYPE_KIND_S8 || multiplier_typekind > TYPE_KIND_U64){
@@ -1549,7 +1408,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             for(length_t i = 0; i != static_array_expr->length; i++){
                 ast_type_t member_type;
 
-                if(ir_gen_expression(builder, static_array_expr->values[i], &values[i], false, &member_type)){
+                if(ir_gen_expr(builder, static_array_expr->values[i], &values[i], false, &member_type)){
                     return FAILURE;
                 }
 
@@ -1601,7 +1460,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             for(length_t i = 0; i != static_struct_expr->length; i++){
                 ast_type_t member_type;
 
-                if(ir_gen_expression(builder, static_struct_expr->values[i], &values[i], false, &member_type)){
+                if(ir_gen_expr(builder, static_struct_expr->values[i], &values[i], false, &member_type)){
                     return FAILURE;
                 }
 
@@ -1653,7 +1512,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_value_t *condition, *if_true, *if_false;
             ast_type_t condition_type, if_true_type, if_false_type;
 
-            if(ir_gen_expression(builder, ternary->condition, &condition, false, &condition_type))
+            if(ir_gen_expr(builder, ternary->condition, &condition, false, &condition_type))
                 return FAILURE;
 
             if(!ast_types_conform(builder, &condition, &condition_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
@@ -1673,13 +1532,13 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
 
             // Generate instructions for when condition is true
             build_using_basicblock(builder, when_true_block_id);
-            if(ir_gen_expression(builder, ternary->if_true, &if_true, false, &if_true_type))
+            if(ir_gen_expr(builder, ternary->if_true, &if_true, false, &if_true_type))
                 return FAILURE;
             length_t when_true_landing = builder->current_block_id;
 
             // Generate instructions for when condition is false
             build_using_basicblock(builder, when_false_block_id);
-            if(ir_gen_expression(builder, ternary->if_false, &if_false, false, &if_false_type)){
+            if(ir_gen_expr(builder, ternary->if_false, &if_false, false, &if_false_type)){
                 ast_type_free(&if_true_type);
                 return FAILURE;
             }
@@ -1745,7 +1604,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ast_expr_unary_t *unary = (ast_expr_unary_t*) expr;
 
             // NOTE: unary->value is guaranteed to be a mutable expression
-            if(ir_gen_expression(builder, unary->value, &before_value, true, &before_ast_type))
+            if(ir_gen_expr(builder, unary->value, &before_value, true, &before_ast_type))
                 return FAILURE;
             
             if(before_value->type->kind != TYPE_KIND_POINTER){
@@ -1864,7 +1723,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
             ir_value_t *mutable_value;
             ast_type_t ast_type;
 
-            if(ir_gen_expression(builder, toggle_expr->value, &mutable_value, true, &ast_type)) return FAILURE;
+            if(ir_gen_expr(builder, toggle_expr->value, &mutable_value, true, &ast_type)) return FAILURE;
 
             ir_type_t *dereferenced_ir_type = ir_type_dereference(mutable_value->type);
 
@@ -1918,7 +1777,7 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 // Regular inline declare statement initial assign value
                 ir_value_t *initial;
                 ast_type_t temporary_type;
-                if(ir_gen_expression(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
+                if(ir_gen_expr(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
 
                 if(!ast_types_conform(builder, &initial, &temporary_type, &def->type, CONFORM_MODE_ASSIGNING)){
                     char *a_type_str = ast_type_str(&temporary_type);
@@ -1977,6 +1836,95 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
     return SUCCESS;
 }
 
+errorcode_t ir_gen_expr_and(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_value_t *a, *b;
+    length_t landing_a_block_id, landing_b_block_id, landing_more_block_id;
+
+    if(ir_gen_expr_pre_andor(builder, expr, &a, &b, &landing_a_block_id, &landing_b_block_id, &landing_more_block_id, out_expr_type)) return FAILURE;
+
+    // Merge evaluation with short circuit
+    length_t merge_block_id = build_basicblock(builder);
+    build_break(builder, merge_block_id);
+    build_using_basicblock(builder, landing_a_block_id);
+    build_cond_break(builder, a, landing_more_block_id, merge_block_id);
+
+    build_using_basicblock(builder, merge_block_id);
+    *ir_value = build_phi2(builder, ir_builder_bool(builder), build_bool(builder->pool, false), b, landing_a_block_id, landing_b_block_id);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_or(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_value_t *a, *b;
+    length_t landing_a_block_id, landing_b_block_id, landing_more_block_id;
+
+    if(ir_gen_expr_pre_andor(builder, expr, &a, &b, &landing_a_block_id, &landing_b_block_id, &landing_more_block_id, out_expr_type)) return FAILURE;
+
+    // Merge evaluation
+    length_t merge_block_id = build_basicblock(builder);
+    build_break(builder, merge_block_id);
+    build_using_basicblock(builder, landing_a_block_id);
+    build_cond_break(builder, a, merge_block_id, landing_more_block_id);
+    build_using_basicblock(builder, merge_block_id);
+
+    *ir_value = build_phi2(builder, ir_builder_bool(builder), build_bool(builder->pool, true), b, landing_a_block_id, landing_b_block_id);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_expr, ir_value_t **a, ir_value_t **b,
+        length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type){
+    
+    ast_type_t ast_type_a, ast_type_b;
+
+    // Conform expression 'a' to type 'bool' to ensure 'b' will also have to conform
+    // Use 'out_expr_type' to store bool type (will stay there anyways cause resulting type is a bool)
+    ast_type_make_base(out_expr_type, strclone("bool"));
+
+    // Generate value for 'a' expression
+    if(ir_gen_expr(builder, andor_expr->a, a, false, &ast_type_a)){
+        ast_type_free(out_expr_type);
+        return FAILURE;
+    }
+
+    // Force 'a' value to be a boolean
+    if(!ast_types_identical(&ast_type_a, out_expr_type) && !ast_types_conform(builder, a, &ast_type_a, out_expr_type, CONFORM_MODE_CALCULATION)){
+        char *a_type_str = ast_type_str(&ast_type_a);
+        compiler_panicf(builder->compiler, andor_expr->source, "Failed to convert value of type '%s' to type 'bool'", a_type_str);
+        free(a_type_str);
+        ast_type_free(&ast_type_a);
+        ast_type_free(out_expr_type);
+        return FAILURE;
+    }
+
+    *landing_a_block_id = builder->current_block_id;
+    *landing_more_block_id = build_basicblock(builder);
+    build_using_basicblock(builder, *landing_more_block_id);
+
+    // Generate value for 'b' expression
+    if(ir_gen_expr(builder, ((ast_expr_math_t*) andor_expr)->b, b, false, &ast_type_b)){
+        ast_type_free(&ast_type_a);
+        ast_type_free(out_expr_type);
+        return FAILURE;
+    }
+
+    // Force 'b' value to be a boolean
+    if(!ast_types_identical(&ast_type_b, out_expr_type) && !ast_types_conform(builder, b, &ast_type_b, out_expr_type, CONFORM_MODE_CALCULATION)){
+        char *b_type_str = ast_type_str(&ast_type_b);
+        compiler_panicf(builder->compiler, andor_expr->source, "Failed to convert value of type '%s' to type 'bool'", b_type_str);
+        free(b_type_str);
+        ast_type_free(&ast_type_a);
+        ast_type_free(&ast_type_b);
+        ast_type_free(out_expr_type);
+        return FAILURE;
+    }
+
+    // Each parameter will be a boolean
+    ast_type_free(&ast_type_a);
+    ast_type_free(&ast_type_b);
+
+    *landing_b_block_id = builder->current_block_id;
+    return SUCCESS;
+}
+
 errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
         unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean){
 
@@ -1987,8 +1935,8 @@ errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t 
     ast_type_t ast_type_a, ast_type_b;
     ir_value_t *lhs, *rhs;
 
-    if(ir_gen_expression(builder, math_expr->a, &lhs, false, &ast_type_a)) return FAILURE;
-    if(ir_gen_expression(builder, math_expr->b, &rhs, false, &ast_type_b)){
+    if(ir_gen_expr(builder, math_expr->a, &lhs, false, &ast_type_a)) return FAILURE;
+    if(ir_gen_expr(builder, math_expr->b, &rhs, false, &ast_type_b)){
         ast_type_free(&ast_type_a);
         return FAILURE;
     }
@@ -2067,8 +2015,8 @@ ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_val
     *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
     (*ir_value)->value_type = VALUE_TYPE_RESULT;
 
-    if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->a, &a, false, &ast_type_a)) return NULL;
-    if(ir_gen_expression(builder, ((ast_expr_math_t*) expr)->b, &b, false, &ast_type_b)){
+    if(ir_gen_expr(builder, ((ast_expr_math_t*) expr)->a, &a, false, &ast_type_a)) return NULL;
+    if(ir_gen_expr(builder, ((ast_expr_math_t*) expr)->b, &b, false, &ast_type_b)){
         ast_type_free(&ast_type_a);
         return NULL;
     }

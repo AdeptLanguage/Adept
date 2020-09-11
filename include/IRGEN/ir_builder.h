@@ -264,6 +264,10 @@ void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer);
 // Builds a basic math instruction
 ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result);
 
+// ---------------- build_phi2 ----------------
+// Builds a PHI2 instruction
+ir_value_t *build_phi2(ir_builder_t *builder, ir_type_t *result_type, ir_value_t *a, ir_value_t *b, length_t landing_a_block_id, length_t landing_b_block_id);
+
 // ---------------- build_bool ----------------
 // Builds a literal boolean value
 ir_value_t *build_bool(ir_pool_t *pool, bool value);

@@ -16,13 +16,21 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_builder.h"
 
-// ---------------- ir_gen_expression ----------------
+// ---------------- ir_gen_expr ----------------
 // ir_gens an AST expression into an IR value and
 // stores the resulting AST type in 'out_expr_type'
 // if 'out_expr_type' isn't NULL.
 // If 'leave_mutable' is true and the resulting expression
 // is mutable, the result won't automatically be dereferenced.
-errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
+
+// ---------------- ir_gen_expr_* ----------------
+// Genarates an IR value for a specific kind of AST expression
+errorcode_t ir_gen_expr_and(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_or(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+
+errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_expr, ir_value_t **a, ir_value_t **b,
+        length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
 
 // ---------------- ir_gen_math_operands ----------------
 // ir_gens both expression operands of a math expression

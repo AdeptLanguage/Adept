@@ -558,6 +558,17 @@ ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t 
     return build_value_from_prev_instruction(builder);
 }
 
+ir_value_t *build_phi2(ir_builder_t *builder, ir_type_t *result_type, ir_value_t *a, ir_value_t *b, length_t landing_a_block_id, length_t landing_b_block_id){
+    ir_instr_phi2_t *instruction = (ir_instr_phi2_t*) build_instruction(builder, sizeof(ir_instr_phi2_t));
+    instruction->id = INSTRUCTION_PHI2;
+    instruction->result_type = result_type;
+    instruction->a = a;
+    instruction->b = b;
+    instruction->block_id_a = landing_a_block_id;
+    instruction->block_id_b = landing_b_block_id;
+    return build_value_from_prev_instruction(builder);
+}
+
 ir_value_t *build_bool(ir_pool_t *pool, bool value){
     ir_value_t *ir_value = ir_pool_alloc(pool, sizeof(ir_value_t));
     ir_value->value_type = VALUE_TYPE_LITERAL;

@@ -291,7 +291,7 @@ typedef struct {
     source_t source;
     ast_expr_t *a;
     ast_expr_t *b;
-} ast_expr_math_t;
+} ast_expr_math_t, ast_expr_and_t, ast_expr_or_t;
 
 // ---------------- ast_expr_unary_t ----------------
 // General purpose single-operand expression
