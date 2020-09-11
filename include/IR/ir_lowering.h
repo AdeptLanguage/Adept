@@ -21,6 +21,7 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value);
 errorcode_t ir_lower_const_fext(ir_pool_t *pool, ir_value_t **inout_value);
 errorcode_t ir_lower_const_trunc(ir_pool_t *pool, ir_value_t **inout_value);
 errorcode_t ir_lower_const_ftrunc(ir_pool_t *pool, ir_value_t **inout_value);
+errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value);
 
 #ifdef __cplusplus
 }

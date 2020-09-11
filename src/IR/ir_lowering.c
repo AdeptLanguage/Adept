@@ -39,8 +39,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_trunc(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_FPTOUI:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_FPTOUI is unimplemented!\n");
-        return FAILURE;
+        if(ir_lower_const_fptoui(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_FPTOSI:
         redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_FPTOSI is unimplemented!\n");
@@ -134,7 +133,7 @@ errorcode_t ir_lower_const_zext(ir_pool_t *pool, ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_sext() called when target type is smaller!\n");
+        redprintf("INTERNAL ERROR: ir_lower_const_zext() called when target type is smaller!\n");
         return FAILURE;
     }
 
@@ -242,7 +241,7 @@ errorcode_t ir_lower_const_fext(ir_pool_t *pool, ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_sext() called when target type is smaller!\n");
+        redprintf("INTERNAL ERROR: ir_lower_const_fext() called when target type is smaller!\n");
         return FAILURE;
     }
 
@@ -269,7 +268,7 @@ errorcode_t ir_lower_const_ftrunc(ir_pool_t *pool, ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes > from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_sext() called when target type is smaller!\n");
+        redprintf("INTERNAL ERROR: ir_lower_const_ftrunc() called when target type is smaller!\n");
         return FAILURE;
     }
 
@@ -282,3 +281,50 @@ errorcode_t ir_lower_const_ftrunc(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
+errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value){
+    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
+    //       In other words, that the value inside the given value is not another constant cast
+
+    ir_type_t *type = (*inout_value)->type;
+    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
+
+    ir_type_spec_t to_spec, from_spec;
+    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
+
+    if(to_spec.bytes < from_spec.bytes){
+        redprintf("INTERNAL ERROR: ir_lower_const_fptoui() called when target type is smaller!\n");
+        return FAILURE;
+    }
+
+    unsigned short x = 0xEEFF;
+    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
+    
+    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
+    memset(new_pointer, 0, to_spec.bytes);
+
+    uint64_t as_unsigned;
+    char *pointer = &as_unsigned;
+
+    switch(from_spec.bytes){
+    case 4:
+        as_unsigned = *((adept_float*) ((*child)->extra));
+        break;
+    case 8:
+        as_unsigned = *((adept_double*) ((*child)->extra));
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_lower_const_fptoui() failed!\n");
+        return FAILURE;
+    }
+    
+    // Copy bytes of value to proper place in new value
+    memcpy(new_pointer, is_little_endian ? pointer : &pointer[sizeof(uint64_t) - to_spec.bytes], to_spec.bytes);
+    
+    // Promote the altered child literal value
+    (*child)->extra = new_pointer;
+    *inout_value = *child;
+
+    // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
+}
