@@ -117,7 +117,7 @@ errorcode_t ir_lower_const_trunc(ir_pool_t *pool, ir_value_t **inout_value){
         // Only have to move bytes if big endian
         memmove(pointer, &pointer[from_spec.bytes - to_spec.bytes], to_spec.bytes);
     }
-
+    
     // Promote the altered child literal value
     *inout_value = *child;
 
@@ -142,6 +142,59 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
         return FAILURE;
     }
 
-    redprintf("INTERNAL ERROR: ir_lower_const_sext() is unimplemented!\n");
-    return FAILURE;
+    unsigned short x = 0xEEFF;
+    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
+    char *pointer = (*child)->extra;
+    char *sign_byte = is_little_endian ? &pointer[from_spec.bytes - 1] : pointer;
+    bool sign_bit = *sign_byte & 0x80;
+    
+    // Turn off sign bit and format to magnitude based unsigned integer
+    if(sign_bit) switch(from_spec.bytes){
+    case 1:
+        *((int8_t*) pointer) *= -1;
+        break;
+    case 2:
+        *((int16_t*) pointer) *= -1;
+        break;
+    case 4:
+        *((int32_t*) pointer) *= -1;
+        break;
+    case 8:
+        *((int64_t*) pointer) *= -1;
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_lower_const_sext() failed to swap sign bit!\n");
+        return FAILURE;
+    }
+
+    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
+    memset(new_pointer, 0, to_spec.bytes);
+    memcpy(new_pointer, pointer, from_spec.bytes);
+
+    // Treat as signed integer of same size for platform independent sign swap and representation formatting
+    if(sign_bit) switch(to_spec.bytes){
+    case 1:
+        *((int8_t*) new_pointer) *= -1;
+        break;
+    case 2:
+        *((int16_t*) new_pointer) *= -1;
+        break;
+    case 4:
+        *((int32_t*) new_pointer) *= -1;
+        break;
+    case 8:
+        *((int64_t*) new_pointer) *= -1;
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_lower_const_sext() failed to swap sign bit!\n");
+        return FAILURE;
+    }
+
+    // Promote the altered child literal value
+    (*child)->extra = new_pointer;
+    *inout_value = *child;
+
+    // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
 }
