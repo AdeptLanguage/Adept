@@ -151,129 +151,11 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_ADDRESS:
         if(ir_gen_expr_address(builder, (ast_expr_address_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
-    case EXPR_VA_ARG: {
-            ast_expr_va_arg_t *va_arg_expr = (ast_expr_va_arg_t*) expr;
-            ir_value_t *va_list;
-            ir_type_t *arg_type;
-
-            ast_type_t temporary_type;
-            if(ir_gen_expr(builder, va_arg_expr->va_list, &va_list, true, &temporary_type)) return FAILURE;
-
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &va_arg_expr->arg_type, &arg_type)){
-                ast_type_free(&temporary_type);
-                return FAILURE;
-            }
-
-            if(!ast_type_is_base_of(&temporary_type, "va_list")){
-                char *t = ast_type_str(&temporary_type);
-                compiler_panicf(builder->compiler, va_arg_expr->source, "Can't pass non-'va_list' type '%s' to va_arg", t);
-                ast_type_free(&temporary_type);
-                free(t);
-                return FAILURE;
-            }
-
-            ast_type_free(&temporary_type);
-
-            if(!expr_is_mutable(va_arg_expr->va_list)){
-                compiler_panic(builder->compiler, va_arg_expr->source, "Value passed for va_list to va_arg must be mutable");
-                return FAILURE;
-            }
-
-            // Cast from *va_list to *s8
-            va_list = build_bitcast(builder, va_list, builder->ptr_type);
-            
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_va_arg_t));
-            ((ir_instr_va_arg_t*) instruction)->id = INSTRUCTION_VA_ARG;
-            ((ir_instr_va_arg_t*) instruction)->result_type = arg_type;
-            ((ir_instr_va_arg_t*) instruction)->va_list = va_list;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
-
-            if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&va_arg_expr->arg_type);
-        }
+    case EXPR_VA_ARG:
+        if(ir_gen_expr_va_arg(builder, (ast_expr_va_arg_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_FUNC_ADDR: {
-            ast_expr_func_addr_t *func_addr_expr = (ast_expr_func_addr_t*) expr;
-
-            funcpair_t pair;
-            bool failed_tentatively = false;        
-
-            if(func_addr_expr->has_match_args == false){
-                bool is_unique;
-                if(ir_gen_find_func_named(builder->compiler, builder->object, func_addr_expr->name, &is_unique, &pair)){
-                    if(func_addr_expr->tentative){
-                        failed_tentatively = true;
-                    } else {
-                        compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", func_addr_expr->name);
-                        return FAILURE;
-                    }    
-                }
-                
-                if(!(failed_tentatively || is_unique)){
-                    if(compiler_warnf(builder->compiler, func_addr_expr->source, "Multiple functions named '%s', using the first of them", func_addr_expr->name))
-                        return FAILURE;
-                }
-            } else if(ir_gen_find_func(builder, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length, &pair)){
-                if(func_addr_expr->tentative){
-                    failed_tentatively = true;
-                } else {
-                    compiler_undeclared_function(builder->compiler, builder->object, func_addr_expr->source, func_addr_expr->name, func_addr_expr->match_args, func_addr_expr->match_args_length);
-                    return FAILURE;
-                }
-            }
-
-            if(failed_tentatively){
-                // Since we cannot know the exact type of the function returned (because none exist)
-                // we must return a generic null pointer of type 'ptr'
-                // I'm not sure whether this is the best choice, but it feels right
-                // - Isaac (Mar 21 2020)
-                *ir_value = build_null_pointer(builder->pool);
-            } else {
-                ir_type_extra_function_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
-                extra->arg_types = pair.ir_func->argument_types;
-                extra->arity = pair.ast_func->arity;
-                extra->return_type = pair.ir_func->return_type;
-                extra->traits = func_addr_expr->traits;
-
-                ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
-                ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
-                ir_funcptr_type->extra = extra;
-
-                const char *maybe_name = pair.ast_func->traits & AST_FUNC_FOREIGN ||
-                    pair.ast_func->traits & AST_FUNC_MAIN ? func_addr_expr->name : NULL;
-
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
-                ((ir_instr_func_address_t*) instruction)->id = INSTRUCTION_FUNC_ADDRESS;
-                ((ir_instr_func_address_t*) instruction)->result_type = ir_funcptr_type;
-                ((ir_instr_func_address_t*) instruction)->name = maybe_name;
-                ((ir_instr_func_address_t*) instruction)->ir_func_id = pair.ir_func_id;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-                *ir_value = build_value_from_prev_instruction(builder);
-            }
-
-            if(out_expr_type != NULL){
-                if(failed_tentatively){
-                    ast_type_make_base(out_expr_type, strclone("ptr"));
-                } else {
-                    out_expr_type->elements = malloc(sizeof(ast_elem_t*));
-                    out_expr_type->elements_length = 1;
-                    out_expr_type->source = func_addr_expr->source;
-
-                    ast_elem_func_t *function_elem = malloc(sizeof(ast_elem_func_t));
-                    function_elem->id = AST_ELEM_FUNC;
-                    function_elem->source = func_addr_expr->source;
-                    function_elem->arg_types = pair.ast_func->arg_types;
-                    function_elem->arity = pair.ast_func->arity;
-                    function_elem->return_type = &pair.ast_func->return_type;
-                    function_elem->traits = pair.ast_func->traits;
-                    function_elem->ownership = false;
-
-                    out_expr_type->elements[0] = (ast_elem_t*) function_elem;
-                }
-            }
-        }
+    case EXPR_FUNC_ADDR:
+        if(ir_gen_expr_func_addr(builder, (ast_expr_func_addr_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_DEREFERENCE: {
             ast_expr_unary_t *dereference_expr = (ast_expr_unary_t*) expr;
@@ -1058,16 +940,7 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
 
             ast_type_free(&if_false_type);
 
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_phi2_t));
-            ((ir_instr_phi2_t*) instruction)->id = INSTRUCTION_PHI2;
-            ((ir_instr_phi2_t*) instruction)->result_type = result_ir_type;
-            ((ir_instr_phi2_t*) instruction)->a = if_true;
-            ((ir_instr_phi2_t*) instruction)->b = if_false;
-            ((ir_instr_phi2_t*) instruction)->block_id_a = when_true_landing;
-            ((ir_instr_phi2_t*) instruction)->block_id_b = when_false_landing;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
+            *ir_value = build_phi2(builder, result_ir_type, if_true, if_false, when_true_landing, when_false_landing);
         }
         break;
     case EXPR_PREINCREMENT: case EXPR_PREDECREMENT:
@@ -1964,6 +1837,121 @@ errorcode_t ir_gen_expr_address(ir_builder_t *builder, ast_expr_address_t *expr,
     return SUCCESS;
 }
 
+errorcode_t ir_gen_expr_va_arg(ir_builder_t *builder, ast_expr_va_arg_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_value_t *va_list_value;
+    ir_type_t *arg_type;
+    ast_type_t temporary_type;
+
+    // Generate IR value from expression given for list variable
+    if(ir_gen_expr(builder, expr->va_list, &va_list_value, true, &temporary_type)) return FAILURE;
+
+    // Ensure the type of the expression 
+    if(!ast_type_is_base_of(&temporary_type, "va_list")){
+        char *t = ast_type_str(&temporary_type);
+        compiler_panicf(builder->compiler, expr->source, "Can't pass non-'va_list' type '%s' to va_arg", t);
+        ast_type_free(&temporary_type);
+        free(t);
+        return FAILURE;
+    }
+
+    // Dispose of the temporary list expression AST type
+    ast_type_free(&temporary_type);
+
+    // Ensure the given list value is mutable
+    if(!expr_is_mutable(expr->va_list)){
+        compiler_panic(builder->compiler, expr->source, "Value passed for va_list to va_arg must be mutable");
+        return FAILURE;
+    }
+
+    // Resolve the target AST type to and IR type
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->arg_type, &arg_type)) return FAILURE;
+
+    // Cast the list value from *va_list to *s8
+    va_list_value = build_bitcast(builder, va_list_value, builder->ptr_type);
+    
+    ir_instr_va_arg_t *instruction = (ir_instr_va_arg_t*) build_instruction(builder, sizeof(ir_instr_va_arg_t));
+    instruction->id = INSTRUCTION_VA_ARG;
+    instruction->result_type = arg_type;
+    instruction->va_list = va_list_value;
+    *ir_value = build_value_from_prev_instruction(builder);
+
+    // Result type is the AST type given to va_arg expression
+    if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&expr->arg_type);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    bool is_unique;
+    funcpair_t pair;
+
+    // No arguments given to match against
+    if(expr->has_match_args == false){
+        if(ir_gen_find_func_named(builder->compiler, builder->object, expr->name, &is_unique, &pair)){
+            // If nothing exists and the lookup is tentative, fail tentatively
+            if(expr->tentative) goto fail_tentatively;
+
+            // Otherwise, we failed to find a function we were expecting to find
+            compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", expr->name);
+            return FAILURE;
+        }
+        
+        // Warn of multiple possibilities if the resulting function isn't unique in its name
+        if(!is_unique && compiler_warnf(builder->compiler, expr->source, "Multiple functions named '%s', using the first of them", expr->name)){
+            return FAILURE;
+        }
+    }
+    
+    // Otherwise we have arguments we can try to match against
+    else if(ir_gen_find_func(builder, expr->name, expr->match_args, expr->match_args_length, &pair)){
+        // If nothing exists and the lookup is tentative, fail tentatively
+        if(expr->tentative) goto fail_tentatively;
+
+        // Otherwise, we failed to find a function we were expecting to find
+        compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length);
+        return FAILURE;
+    }
+
+    // Create the IR function pointer type
+    ir_type_extra_function_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
+    extra->arg_types = pair.ir_func->argument_types;
+    extra->arity = pair.ast_func->arity;
+    extra->return_type = pair.ir_func->return_type;
+    extra->traits = expr->traits;
+
+    ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_instr_func_address_t));
+    ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
+    ir_funcptr_type->extra = extra;
+
+    // If the function is only referenced by C-mangled name, remember its name
+    const char *maybe_name = (pair.ast_func->traits & AST_FUNC_FOREIGN || pair.ast_func->traits & AST_FUNC_MAIN) ? expr->name : NULL;
+
+    // Build 'get function address' instruction
+    ir_instr_func_address_t *instruction = (ir_instr_func_address_t*) build_instruction(builder, sizeof(ir_instr_func_address_t));
+    instruction->id = INSTRUCTION_FUNC_ADDRESS;
+    instruction->result_type = ir_funcptr_type;
+    instruction->name = maybe_name;
+    instruction->ir_func_id = pair.ir_func_id;
+    *ir_value = build_value_from_prev_instruction(builder);
+
+    // Write resulting type if requested
+    if(out_expr_type != NULL){
+        ast_func_t *ast_func = pair.ast_func;
+        ast_type_make_func_ptr(out_expr_type, expr->source, ast_func->arg_types, ast_func->arity, &ast_func->return_type, ast_func->traits, false);
+    }
+    
+    // We successfully got the function address of the function
+    return SUCCESS;
+
+fail_tentatively:
+    // Since we cannot know the exact type of the function returned (because none exist)
+    // we must return a generic null pointer of type 'ptr'
+    // I'm not sure whether this is the best choice, but it feels right
+    // - Isaac (Mar 21 2020)
+    *ir_value = build_null_pointer(builder->pool);
+    if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
+    return SUCCESS;
+}
+
 errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
         unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean){
 
@@ -2018,7 +2006,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
 
     // Determine which instruction to use
     errorcode_t error = instr3 ? u_vs_s_vs_float_instruction(instruction, instr1, instr2, instr3) : i_vs_f_instruction(instruction, instr1, instr2);
-    
+
     // We couldn't use the built-in instructions to operate on these types
     if(error){
         // Undo last instruction we attempted to build

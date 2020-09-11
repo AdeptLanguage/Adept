@@ -250,6 +250,23 @@ void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name, bool allow_au
     type->source = NULL_SOURCE;
 }
 
+void ast_type_make_func_ptr(ast_type_t *type, source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership){
+    type->elements = malloc(sizeof(ast_elem_t*));
+    type->elements_length = 1;
+    type->source = source;
+
+    ast_elem_func_t *elem = malloc(sizeof(ast_elem_func_t));
+    elem->id = AST_ELEM_FUNC;
+    elem->source = source;
+    elem->arg_types = arg_types;
+    elem->arity = arity;
+    elem->return_type = return_type;
+    elem->traits = traits;
+    elem->ownership = have_ownership;
+
+    type->elements[0] = (ast_elem_t*) elem;
+}
+
 void ast_type_make_generic_int(ast_type_t *type){
     ast_elem_base_t *elem = malloc(sizeof(ast_elem_t));
     elem->id = AST_ELEM_GENERIC_INT;
