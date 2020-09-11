@@ -145,153 +145,11 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_CALL:
         if(ir_gen_expr_call(builder, (ast_expr_call_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_MEMBER: {
-            ast_expr_member_t *member_expr = (ast_expr_member_t*) expr;
-            ir_value_t *struct_value;
-            ast_type_t struct_value_ast_type;
-
-            // This expression should be able to be mutable (Checked during parsing)
-            if(ir_gen_expr(builder, member_expr->value, &struct_value, true, &struct_value_ast_type)) return FAILURE;
-
-            if(struct_value->type->kind != TYPE_KIND_POINTER){
-                char *given_type = ast_type_str(&struct_value_ast_type);
-                compiler_panicf(builder->compiler, member_expr->source, "Can't use member operator '.' on temporary value of type '%s'", given_type);
-                free(given_type);
-                ast_type_free(&struct_value_ast_type);
-                return FAILURE;
-            }
-
-            // Auto-derefernce '*something' types
-            if(struct_value_ast_type.elements_length > 1 && struct_value_ast_type.elements[0]->id == AST_ELEM_POINTER
-                    && struct_value_ast_type.elements[1]->id != AST_ELEM_POINTER){
-
-                ast_type_dereference(&struct_value_ast_type);
-                
-                if(expr_is_mutable(member_expr->value)){
-                    struct_value = build_load(builder, struct_value, expr->source);
-                }
-            }
-
-            if(struct_value_ast_type.elements_length == 0){
-                compiler_panicf(builder->compiler, expr->source, "INTERNAL ERROR: Member expression in ir_gen_expr received bad AST type");
-                ast_type_free(&struct_value_ast_type);
-                return FAILURE;
-
-            }
-
-            length_t field_index;
-            ir_type_t *field_type;
-            ast_elem_t *elem = struct_value_ast_type.elements[0];
-
-            switch(elem->id){
-            case AST_ELEM_BASE: {
-                    char *struct_name = ((ast_elem_base_t*) elem)->base;
-                    ast_struct_t *target = ast_struct_find(&builder->object->ast, struct_name);
-
-                    if(target == NULL){
-                        if(typename_is_entended_builtin_type(struct_name)){
-                            compiler_panicf(builder->compiler, expr->source, "Can't use member operator on built-in type '%s'", struct_name);
-                        } else {
-                            compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", struct_name);
-                        }
-                        ast_type_free(&struct_value_ast_type);
-                        return FAILURE;
-                    }
-
-                    if(!ast_struct_find_field(target, member_expr->member, &field_index)){
-                        char *struct_typename = ast_type_str(&struct_value_ast_type);
-                        compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "Field '%s' doesn't exist in struct '%s'", member_expr->member, struct_typename);
-                        ast_type_free(&struct_value_ast_type);
-                        free(struct_typename);
-                        return FAILURE;
-                    }
-
-                    if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[field_index], &field_type)){
-                        ast_type_free(&struct_value_ast_type);
-                        return FAILURE;
-                    }
-
-                    if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&target->field_types[field_index]);
-                }
-                break;
-            case AST_ELEM_GENERIC_BASE: {
-                    ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
-
-                    char *poly_struct_name = generic_base->name;
-                    ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&builder->object->ast, poly_struct_name);
-
-                    if(template == NULL){
-                        compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find polymorphic struct '%s' that should exist", poly_struct_name);
-                        ast_type_free(&struct_value_ast_type);
-                        return FAILURE;
-                    }
-
-                    if(!ast_struct_find_field((ast_struct_t*) template, member_expr->member, &field_index)){
-                        char *struct_typename = ast_type_str(&struct_value_ast_type);
-                        compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "Field '%s' doesn't exist in struct '%s'", member_expr->member, struct_typename);
-                        ast_type_free(&struct_value_ast_type);
-                        free(struct_typename);
-                        return FAILURE;
-                    }
-
-                    // Substitute generic type parameters
-                    ast_type_var_catalog_t catalog;
-                    ast_type_var_catalog_init(&catalog);
-
-                    if(template->generics_length != generic_base->generics_length){
-                        redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
-                        ast_type_free(&struct_value_ast_type);
-                        ast_type_var_catalog_free(&catalog);
-                        return FAILURE;
-                    }
-
-                    for(length_t i = 0; i != template->generics_length; i++){
-                        ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
-                    }
-
-                    ast_type_t ast_field_type;
-                    if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &template->field_types[field_index], &ast_field_type)){
-                        ast_type_free(&struct_value_ast_type);
-                        ast_type_var_catalog_free(&catalog);
-                        return FAILURE;
-                    }
-
-                    if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &field_type)){
-                        ast_type_free(&struct_value_ast_type);
-                        ast_type_var_catalog_free(&catalog);
-                        return FAILURE;
-                    }
-
-                    if(out_expr_type != NULL) *out_expr_type = ast_field_type;
-                    else                      ast_type_free(&ast_field_type);
-
-                    ast_type_var_catalog_free(&catalog);
-                }
-                break;
-            default: {
-                    char *nonstruct_typename = ast_type_str(&struct_value_ast_type);
-                    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-struct type '%s'", nonstruct_typename);
-                    ast_type_free(&struct_value_ast_type);
-                    free(nonstruct_typename);
-                    return FAILURE;
-                }
-            }
-
-            *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
-
-            // If not requested to leave the expression mutable, dereference it
-            if(!leave_mutable){
-                *ir_value = build_load(builder, *ir_value, expr->source);
-            }
-
-            ast_type_free(&struct_value_ast_type);
-        }
+    case EXPR_MEMBER:
+        if(ir_gen_expr_member(builder, (ast_expr_member_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
-    case EXPR_ADDRESS: {
-            // This expression should be able to be mutable (Checked during parsing)
-            if(ir_gen_expr(builder, ((ast_expr_unary_t*) expr)->value, ir_value, true, out_expr_type)) return FAILURE;
-            if(out_expr_type != NULL) ast_type_prepend_ptr(out_expr_type);
-        }
+    case EXPR_ADDRESS:
+        if(ir_gen_expr_address(builder, (ast_expr_address_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
     case EXPR_VA_ARG: {
             ast_expr_va_arg_t *va_arg_expr = (ast_expr_va_arg_t*) expr;
@@ -1581,29 +1439,15 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
     ir_module_t *ir_module = &builder->object->ir_module;
 
     // Attempt to find global variable
-    bool found_global = false;
-    length_t ir_global_var_index = 0;
-
-    while(ir_global_var_index != ir_module->globals_length){
-        if(strcmp(variable_name, ir_module->globals[ir_global_var_index].name) == 0){
-            found_global = true;
-            break;
-        }
-        ir_global_var_index++;
-    }
+    maybe_index_t global_variable_index = ast_find_global(ast->globals, ast->globals_length, variable_name);
 
     // Found variable as global variable
-    if(found_global){
-        // Find corresponding AST global
-        if(out_expr_type != NULL) for(length_t g = 0; g != ast->globals_length; g++){
-            if(strcmp(variable_name, ast->globals[g].name) == 0){
-                *out_expr_type = ast_type_clone(&ast->globals[g].type);
-                break;
-            }
-        }
+    if(global_variable_index != -1){
+        if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&ast->globals[global_variable_index].type);
 
-        ir_global_t *ir_global = &ir_module->globals[ir_global_var_index];
-        *ir_value = build_gvarptr(builder, ir_type_pointer_to(builder->pool, ir_global->type), ir_global_var_index);
+        // DANGEROUS: Using AST global variable index as IR global variable index
+        ir_global_t *ir_global = &ir_module->globals[global_variable_index];
+        *ir_value = build_gvarptr(builder, ir_type_pointer_to(builder->pool, ir_global->type), global_variable_index);
         
         // If not requested to leave the expression mutable, dereference it
         if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
@@ -1953,6 +1797,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     }
     
     // Otherwise no function or variable with a matching name was found
+    // ...
 
     // If the call expression was tentative, then ignore the failure
     if(expr->is_tentative){
@@ -1961,12 +1806,163 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         return SUCCESS;
     }
 
-    // Print error messsage
+    // Otherwise, print an error messsage
     compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity);
     ast_types_free_fully(arg_types, expr->arity);
     return FAILURE;
 }
 
+errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+    ir_value_t *struct_value;
+    ast_type_t struct_value_ast_type;
+
+    // This expression should be able to be mutable (Checked during parsing)
+    if(ir_gen_expr(builder, expr->value, &struct_value, true, &struct_value_ast_type)) return FAILURE;
+
+    // Ensure that IR value we get back is a pointer, cause if it isn't, then it isn't mutable
+    if(struct_value->type->kind != TYPE_KIND_POINTER){
+        char *given_type = ast_type_str(&struct_value_ast_type);
+        compiler_panicf(builder->compiler, expr->source, "Can't use member operator '.' on temporary value of type '%s'", given_type);
+        free(given_type);
+        ast_type_free(&struct_value_ast_type);
+        return FAILURE;
+    }
+
+    // Auto-derefernce non-ptr pointer types that don't point to other pointers
+    if(ast_type_is_pointer(&struct_value_ast_type) && struct_value_ast_type.elements[1]->id != AST_ELEM_POINTER){
+        ast_type_dereference(&struct_value_ast_type);
+        
+        // Defererence one layer if struct value is **StructType
+        if(expr_is_mutable(expr->value)) struct_value = build_load(builder, struct_value, expr->source);
+    }
+
+    // Get member field information
+    length_t field_index;
+    ir_type_t *field_type;
+    ast_elem_t *elem = struct_value_ast_type.elements[0];
+
+    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &struct_value_ast_type, &field_index, &field_type, out_expr_type)){
+        ast_type_free(&struct_value_ast_type);
+        return FAILURE;
+    }
+
+    // Build the member access
+    *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
+
+    // If not requested to leave the expression mutable, dereference it
+    if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
+
+    ast_type_free(&struct_value_ast_type);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *struct_value_ast_type,
+        length_t *field_index, ir_type_t **field_type, ast_type_t *out_expr_type){
+    
+    if(elem->id == AST_ELEM_BASE){
+        // Basic 'Struct' structure type
+        weak_cstr_t struct_name = ((ast_elem_base_t*) elem)->base;
+        ast_struct_t *target = ast_struct_find(&builder->object->ast, struct_name);
+
+        // If we didn't find the structure, show an error message and return failure
+        if(target == NULL){
+            weak_cstr_t message_format = typename_is_entended_builtin_type(struct_name) ? "Can't use member operator on built-in type '%s'" : "INTERNAL ERROR: Failed to find struct '%s' that should exist";
+            compiler_panicf(builder->compiler, expr->source, message_format, struct_name);
+            return FAILURE;
+        }
+
+        // Find the field of the structure by name
+        if(!ast_struct_find_field(target, expr->member, field_index)){
+            char *struct_typename = ast_type_str(struct_value_ast_type);
+            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in struct '%s'", expr->member, struct_typename);
+            free(struct_typename);
+            return FAILURE;
+        }
+
+        // Resolve AST field type to IR field type
+        if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[*field_index], field_type)) return FAILURE;
+
+        // Result type is the type of that member
+        if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&target->field_types[*field_index]);
+        return SUCCESS;
+    }
+
+    if(elem->id == AST_ELEM_GENERIC_BASE){
+        // Complex '<$T> Struct' structure type
+        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
+
+        weak_cstr_t struct_name = generic_base->name;
+        ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&builder->object->ast, struct_name);
+
+        // Find the polymorphic structure
+        if(template == NULL){
+            compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find polymorphic struct '%s' that should exist", struct_name);
+            return FAILURE;
+        }
+
+        // Find the field of the polymorphic structure by name
+        if(!ast_struct_find_field((ast_struct_t*) template, expr->member, field_index)){
+            char *struct_typename = ast_type_str(struct_value_ast_type);
+            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in struct '%s'", expr->member, struct_typename);
+            free(struct_typename);
+            return FAILURE;
+        }
+
+        // Create a catalog of all the known polymorphic type substitutions
+        ast_type_var_catalog_t catalog;
+        ast_type_var_catalog_init(&catalog);
+
+        // Ensure that the number of parameters given for the generic base is the same as expected for the polymorphic structure
+        if(template->generics_length != generic_base->generics_length){
+            compiler_panicf(builder->compiler, expr->source, "Polymorphic struct '%s' type parameter length mismatch!", generic_base->name);
+            ast_type_var_catalog_free(&catalog);
+            return FAILURE;
+        }
+
+        // Add each entry given for the generic base structure type to the list of known polymorphic type substitutions
+        for(length_t i = 0; i != template->generics_length; i++){
+            ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+        }
+
+        // Get the AST field type of the target field by index and resolve any polymorphs
+        ast_type_t ast_field_type;
+        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &template->field_types[*field_index], &ast_field_type)){
+            ast_type_var_catalog_free(&catalog);
+            return FAILURE;
+        }
+
+        // Get the IR type of the target field
+        if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, field_type)){
+            ast_type_var_catalog_free(&catalog);
+            return FAILURE;
+        }
+
+        // Result type is the AST type of that member
+        if(out_expr_type != NULL) *out_expr_type = ast_field_type;
+        else                      ast_type_free(&ast_field_type);
+
+        // Dispose of the polymorphic substituions catalog
+        ast_type_var_catalog_free(&catalog);
+        return SUCCESS;
+    }
+
+    // Otherwise, we got a value that isn't a structure type
+    char *typename = ast_type_str(struct_value_ast_type);
+    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-struct type '%s'", typename);
+    free(typename);
+    return FAILURE;
+}
+
+errorcode_t ir_gen_expr_address(ir_builder_t *builder, ast_expr_address_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+    // NOTE: The child expression should be able to be mutable (Checked during parsing)
+
+    // Generate the child expression, and leave it as mutable
+    if(ir_gen_expr(builder, expr->value, ir_value, true, out_expr_type)) return FAILURE;
+
+    // Result type is just a pointer to the expression type
+    if(out_expr_type != NULL) ast_type_prepend_ptr(out_expr_type);
+    return SUCCESS;
+}
 
 errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
         unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean){
@@ -1974,20 +1970,26 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
     // NOTE: If instr3 is INSTRUCTION_NONE then the operation will be differentiated for Integer vs. Float (using instr1 and instr2)
     //       Otherwise, the operation will be differentiated for Unsigned Integer vs. Signed Integer vs. Float (using instr1, instr2 & instr3)
 
-    ir_pool_snapshot_t tmp_pool_snapshot;
+    ir_pool_snapshot_t snapshot;
     ast_type_t ast_type_a, ast_type_b;
     ir_value_t *lhs, *rhs;
 
+    // Generate IR values for left and right sides of the math operator
     if(ir_gen_expr(builder, math_expr->a, &lhs, false, &ast_type_a)) return FAILURE;
     if(ir_gen_expr(builder, math_expr->b, &rhs, false, &ast_type_b)){
         ast_type_free(&ast_type_a);
         return FAILURE;
     }
 
+    // Conform the type of the second value to the first
     if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
+
+        // Failed to conform the values, if we have an overload function, we can use the argument
+        // types for that and continue on our way
         if(overload){
             *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload);
 
+            // We successfully used the overload function
             if(*ir_value != NULL){
                 ast_type_free(&ast_type_a);
                 ast_type_free(&ast_type_b);
@@ -1995,6 +1997,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
             }
         }
 
+        // Otherwise, we couldn't do anything the the types given to us
         char *a_type_str = ast_type_str(&ast_type_a);
         char *b_type_str = ast_type_str(&ast_type_b);
         compiler_panicf(builder->compiler, math_expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
@@ -2006,37 +2009,45 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
     }
 
     // Add math instruction template
-    ir_pool_snapshot_capture(builder->pool, &tmp_pool_snapshot);
+    ir_pool_snapshot_capture(builder->pool, &snapshot);
     ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
     instruction->a = lhs;
     instruction->b = rhs;
     instruction->id = INSTRUCTION_NONE; // For safety
     instruction->result_type = result_is_boolean ? ir_builder_bool(builder) : lhs->type;
 
-    if(instr3 == INSTRUCTION_NONE
-            ? i_vs_f_instruction((ir_instr_math_t*) instruction, instr1, instr2) == FAILURE
-            : u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, instr1, instr2, instr3) == FAILURE
-    ){
-        // Remove math instruction template
-        ir_pool_snapshot_restore(builder->pool, &tmp_pool_snapshot);
+    // Determine which instruction to use
+    errorcode_t error = instr3 ? u_vs_s_vs_float_instruction(instruction, instr1, instr2, instr3) : i_vs_f_instruction(instruction, instr1, instr2);
+    
+    // We couldn't use the built-in instructions to operate on these types
+    if(error){
+        // Undo last instruction we attempted to build
+        ir_pool_snapshot_restore(builder->pool, &snapshot);
         builder->current_block->instructions_length--;
 
-        *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload);
+        // Try to use the overload function if it exists
+        *ir_value = overload ? handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload) : NULL;
         ast_type_free(&ast_type_a);
         ast_type_free(&ast_type_b);
 
-        if(*ir_value == NULL){
-            compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", op_verb);
-            return FAILURE;
-        }
+        // If we got a value back, then we successfully used the overload function instead
+        if(*ir_value != NULL) return SUCCESS;
 
-        return SUCCESS;
+        // Otherwise, we don't have a way to operate on these types
+        compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", op_verb);
+        return FAILURE;
     }
 
+    // We successfully used the built-in instructions to perform the operation
     *ir_value = build_value_from_prev_instruction(builder);
+
+    // Write the result type, will either be a boolean or the same type as the given arguments
     if(out_expr_type != NULL){
-        if(result_is_boolean) ast_type_make_base(out_expr_type, strclone("bool"));
-        else                  *out_expr_type = ast_type_clone(&ast_type_a);
+        if(result_is_boolean){
+            ast_type_make_base(out_expr_type, strclone("bool"));
+        } else {
+            *out_expr_type = ast_type_clone(&ast_type_a);
+        }
     }
 
     ast_type_free(&ast_type_a);
@@ -2309,11 +2320,11 @@ char ir_type_get_catagory(ir_type_t *type){
     switch(type->kind){
     case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
     case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
-        return PRIMITIVE_UI;
+        return PRIMITIVE_UI; // Unsigned integer like values
     case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-        return PRIMITIVE_SI;
+        return PRIMITIVE_SI; // Signed integer like values
     case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
-        return PRIMITIVE_FP;
+        return PRIMITIVE_FP; // Floating point values
     }
     return PRIMITIVE_NA; // No catagory
 }

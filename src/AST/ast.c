@@ -868,8 +868,9 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
 }
 
 maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, const char *name){
-    // TODO: SPEED: PERFORMANCE: Make this not be a linear search
+    // If not found returns -1 else returns index inside array
 
+    // TODO: SPEED: PERFORMANCE: Make this not be a linear search
     for(length_t i = 0; i != globals_length; i++){
         if(strcmp(globals[i].name, name) == 0) return i;
     }
