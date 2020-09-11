@@ -813,7 +813,7 @@ successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t
     return false;
 }
 
-maybe_index_t find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias){
+maybe_index_t ast_find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias){
     // If not found returns -1 else returns index inside array
 
     maybe_index_t first, middle, last, comparison;
@@ -831,7 +831,7 @@ maybe_index_t find_alias(ast_alias_t *aliases, length_t aliases_length, const ch
     return -1;
 }
 
-maybe_index_t find_constant(ast_constant_t *constants, length_t constants_length, const char *constant){
+maybe_index_t ast_find_constant(ast_constant_t *constants, length_t constants_length, const char *constant){
     // If not found returns -1 else returns index inside array
 
     maybe_index_t first, middle, last, comparison;
@@ -849,7 +849,7 @@ maybe_index_t find_constant(ast_constant_t *constants, length_t constants_length
     return -1;
 }
 
-maybe_index_t find_enum(ast_enum_t *enums, length_t enums_length, const char *inum){
+maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char *inum){
     // If not found returns -1 else returns index inside array
 
     maybe_index_t first, middle, last, comparison;
@@ -862,6 +862,16 @@ maybe_index_t find_enum(ast_enum_t *enums, length_t enums_length, const char *in
         if(comparison == 0) return middle;
         else if(comparison > 0) last = middle - 1;
         else first = middle + 1;
+    }
+
+    return -1;
+}
+
+maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, const char *name){
+    // TODO: SPEED: PERFORMANCE: Make this not be a linear search
+
+    for(length_t i = 0; i != globals_length; i++){
+        if(strcmp(globals[i].name, name) == 0) return i;
     }
 
     return -1;

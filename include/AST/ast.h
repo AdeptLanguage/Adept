@@ -274,17 +274,21 @@ successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, l
 // Finds a kind by name within an enum
 successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t *out_index);
 
-// ---------------- find_alias ----------------
+// ---------------- ast_find_alias ----------------
 // Finds an alias by name
-maybe_index_t find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias);
+maybe_index_t ast_find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias);
 
-// ---------------- find_constant ----------------
+// ---------------- ast_find_constant ----------------
 // Finds a global constant expression by name
-maybe_index_t find_constant(ast_constant_t *constants, length_t constants_length, const char *constant);
+maybe_index_t ast_find_constant(ast_constant_t *constants, length_t constants_length, const char *constant);
 
-// ---------------- find_enum ----------------
+// ---------------- ast_find_enum ----------------
 // Finds a enum expression by name
-maybe_index_t find_enum(ast_enum_t *enums, length_t enums_length, const char *inum);
+maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char *inum);
+
+// ---------------- ast_find_global ----------------
+// Finds a global variable by name
+maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, const char *name);
 
 // ---------------- ast_add_enum ----------------
 // Adds an enum to the global scope of an AST

@@ -1789,7 +1789,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
 errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length){
     ast_t *ast = &builder->object->ast;
-    maybe_index_t enum_index = find_enum(ast->enums, ast->enums_length, enum_name);
+    maybe_index_t enum_index = ast_find_enum(ast->enums, ast->enums_length, enum_name);
     if(enum_index == -1) return SUCCESS;
 
     // Assumes regular 0..n enum

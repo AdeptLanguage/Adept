@@ -27,7 +27,11 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
 // ---------------- ir_gen_expr_* ----------------
 // Genarates an IR value for a specific kind of AST expression
 errorcode_t ir_gen_expr_and(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
-errorcode_t ir_gen_expr_or(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_or(ir_builder_t *builder, ast_expr_or_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_str(ir_builder_t *builder, ast_expr_str_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_cstr(ir_builder_t *builder, ast_expr_cstr_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 
 errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_expr, ir_value_t **a, ir_value_t **b,
         length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
@@ -49,7 +53,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 #define MATH_OP_RESULT_BOOL  0x02
 #define MATH_OP_ALL_BOOL     0x03
 
-// ---------------- differentiate_math_operation ----------------
+// ---------------- ir_gen_expr_math ----------------
 // Differentiates an operation for different data types
 // When given 2 instruction ids: (instr3 == INSTRUCTION_NONE)
 //     - instr1 is chosen for integers
@@ -58,7 +62,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 //     - instr1 is chosen for unsigned integers
 //     - instr2 is chosen for signed integers
 //     - instr3 is chosen for floats
-errorcode_t differentiate_math_operation(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
+errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
         unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean);
 
 // ---------------- i_vs_f_instruction ----------------

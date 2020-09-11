@@ -431,7 +431,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
 
             // See if this is a constant
             if(!found_variable){
-                length_t constant_index = find_constant(ast->constants, ast->constants_length, variable_name);
+                length_t constant_index = ast_find_constant(ast->constants, ast->constants_length, variable_name);
 
                 if(constant_index != -1){
                     // Constant does exist, substitute it's value
@@ -965,7 +965,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
 
         switch(elem->id){
         case AST_ELEM_BASE: {
-                int alias_index = find_alias(aliases, aliases_length, ((ast_elem_base_t*) elem)->base);
+                int alias_index = ast_find_alias(aliases, aliases_length, ((ast_elem_base_t*) elem)->base);
                 if(alias_index != -1){
                     // NOTE: The alias target type was already resolved of any aliases,
                     //       so we don't have to scan the new elements
