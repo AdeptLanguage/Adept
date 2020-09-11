@@ -4,7 +4,7 @@
 
 const char *any_type_kind_names[] = {
     "void", "bool", "byte", "ubyte", "short", "ushort", "int", "uint",
-    "long", "ulong", "float", "double", "pointer", "struct", "function-pointer", "fixed-array"
+    "long", "ulong", "float", "double", "pointer", "struct", "union", "function-pointer", "fixed-array"
 };
 
 void any_inject_ast(ast_t *ast){

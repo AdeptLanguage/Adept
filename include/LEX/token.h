@@ -191,15 +191,16 @@ extern const char *global_token_name_table[];
 #define TOKEN_TRUE             0x0000007D
 #define TOKEN_TYPEINFO         0x0000007E
 #define TOKEN_UNDEF            0x0000007F
-#define TOKEN_UNLESS           0x00000080
-#define TOKEN_UNTIL            0x00000081
-#define TOKEN_VA_ARG           0x00000082
-#define TOKEN_VA_COPY          0x00000083
-#define TOKEN_VA_END           0x00000084
-#define TOKEN_VA_START         0x00000085
-#define TOKEN_VERBATIM         0x00000086
-#define TOKEN_WHILE            0x00000087
-// 88..9F
+#define TOKEN_UNION            0x00000080
+#define TOKEN_UNLESS           0x00000081
+#define TOKEN_UNTIL            0x00000082
+#define TOKEN_VA_ARG           0x00000083
+#define TOKEN_VA_COPY          0x00000084
+#define TOKEN_VA_END           0x00000085
+#define TOKEN_VA_START         0x00000086
+#define TOKEN_VERBATIM         0x00000087
+#define TOKEN_WHILE            0x00000088
+// 89..9F
 #define MAX_LEX_TOKEN          TOKEN_WHILE
 
 // Shorthand tokens for common sequences in packages; Not recognized by parser

@@ -170,6 +170,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_TRUE:              printf("Keyword: true\n"); break;
         case TOKEN_TYPEINFO:          printf("Keyword: typeinfo\n"); break;
         case TOKEN_UNDEF:             printf("Keyword: undef\n"); break;
+        case TOKEN_UNION:             printf("Keyword: union\n"); break;
         case TOKEN_UNLESS:            printf("Keyword: unless\n"); break;
         case TOKEN_UNTIL:             printf("Keyword: until\n"); break;
         case TOKEN_VA_ARG:            printf("Keyword: va_arg\n"); break;
@@ -334,15 +335,15 @@ const char *global_token_name_table[] = {
     "true keyword",                       // 0x0000007D
     "typeinfo keyword",                   // 0x0000007E
     "undef keyword",                      // 0x0000007F
-    "unless keyword",                     // 0x00000080
-    "until keyword",                      // 0x00000081
-    "va_arg keyword",                     // 0x00000082
-    "va_copy keyword",                    // 0x00000083
-    "va_end keyword",                     // 0x00000084
-    "va_start keyword",                   // 0x00000085
-    "verbatim keyword",                   // 0x00000086
-    "while keyword",                      // 0x00000087
-    "reserved",                           // 0x00000088
+    "union keyword",                      // 0x00000080
+    "unless keyword",                     // 0x00000081
+    "until keyword",                      // 0x00000082
+    "va_arg keyword",                     // 0x00000083
+    "va_copy keyword",                    // 0x00000084
+    "va_end keyword",                     // 0x00000085
+    "va_start keyword",                   // 0x00000086
+    "verbatim keyword",                   // 0x00000087
+    "while keyword",                      // 0x00000088
     "reserved",                           // 0x00000089
     "reserved",                           // 0x0000008A
     "reserved",                           // 0x0000008B
