@@ -105,7 +105,7 @@ ir_type_t* ir_type_dereference(ir_type_t *type){
 }
 
 // (For 64 bit systems)
-unsigned int global_type_kind_sizes_64[] = {
+unsigned int global_type_kind_sizes_in_bits_64[] = {
      0, // TYPE_KIND_NONE
     64, // TYPE_KIND_POINTER
      8, // TYPE_KIND_S8

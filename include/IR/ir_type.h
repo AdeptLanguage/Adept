@@ -96,10 +96,10 @@ ir_type_t* ir_type_fixed_array_of(ir_pool_t *pool, length_t length, ir_type_t *b
 // Gets the type pointed to by a pointer type
 ir_type_t* ir_type_dereference(ir_type_t *type);
 
-// ---------------- global_type_kind_sizes_64 ----------------
+// ---------------- global_type_kind_sizes_in_bits_64 ----------------
 // Contains the general sizes of each TYPE_KIND_*
 // (For 64 bit systems only)
-extern unsigned int global_type_kind_sizes_64[];
+extern unsigned int global_type_kind_sizes_in_bits_64[];
 
 // ---------------- global_type_kind_signs ----------------
 // Contains whether each TYPE_KIND_* is generally signed

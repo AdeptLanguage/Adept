@@ -421,8 +421,8 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
             if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
-            length_t from_size = global_type_kind_sizes_64[from_type_kind];
-            length_t to_size   = global_type_kind_sizes_64[to_type_kind];
+            length_t from_size = global_type_kind_sizes_in_bits_64[from_type_kind];
+            length_t to_size   = global_type_kind_sizes_in_bits_64[to_type_kind];
 
             // Decide what type of cast it should be
             if(from_size == to_size){
@@ -469,7 +469,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
             if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
-            bool is_same_size = global_type_kind_sizes_64[from_type_kind] == global_type_kind_sizes_64[to_type_kind];
+            bool is_same_size = global_type_kind_sizes_in_bits_64[from_type_kind] == global_type_kind_sizes_in_bits_64[to_type_kind];
             *ir_value = is_same_size ? build_reinterpret(builder, *ir_value, ir_to_type) : build_trunc(builder, *ir_value, ir_to_type);
             return true;
         }
@@ -633,7 +633,8 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             // Don't bother casting the value when they are the same underlying type
             if(from_type_kind == TYPE_KIND_U64) return true;
 
-            bool is_same_size = global_type_kind_sizes_64[to_type_kind] == global_type_kind_sizes_64[from_type_kind];
+            // Since enums aren't standard type kinds, we have to use '64' instead of global_type_kind_sizes_in_bits_64
+            bool is_same_size = 64 == global_type_kind_sizes_in_bits_64[from_type_kind];
             *ir_value = is_same_size ? build_reinterpret(builder, *ir_value, ir_to_type) : build_zext(builder, *ir_value, ir_to_type);
             return true;
         }

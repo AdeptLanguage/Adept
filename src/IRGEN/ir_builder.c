@@ -986,7 +986,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                 ir_basicblock_new_instructions(builder->current_block, 1);
                 ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
                 instruction->id = INSTRUCTION_CALL;
-                instruction->result_type = result.ir_func->return_type;
+                instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
                 instruction->values = arguments;
                 instruction->values_length = 1;
                 instruction->ir_func_id = result.ir_func_id;
@@ -1437,7 +1437,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
         ir_basicblock_new_instructions(builder->current_block, 1);
         ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
         instruction->id = INSTRUCTION_CALL;
-        instruction->result_type = result.ir_func->return_type;
+        instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
         instruction->values = arguments;
         instruction->values_length = 2;
         instruction->ir_func_id = result.ir_func_id;
@@ -1485,7 +1485,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     ir_basicblock_new_instructions(builder->current_block, 1);
     ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
     instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = result.ir_func->return_type;
+    instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
     instruction->values = arguments;
     instruction->values_length = 2;
     instruction->ir_func_id = result.ir_func_id;

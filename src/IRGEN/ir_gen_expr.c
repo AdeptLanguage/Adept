@@ -475,6 +475,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                     return FAILURE;
                 }
 
+                // Revalidate 'ast_func' and 'ir_func'
+                pair.ast_func = &builder->object->ast.funcs[pair.ast_func_id];
+                pair.ir_func = &builder->object->ir_module.funcs[pair.ir_func_id];
+
                 ir_value_t *saved_stack = NULL;
 
                 if(pair.ast_func->traits & AST_FUNC_VARIADIC && pair.ast_func->arity < arity){
@@ -1307,6 +1311,10 @@ errorcode_t ir_gen_expression(ir_builder_t *builder, ast_expr_t *expr, ir_value_
                 ast_types_free_fully(arg_types, arity);
                 return FAILURE;
             }
+
+            // Revalidate 'ast_func' and 'ir_func'
+            pair.ast_func = &builder->object->ast.funcs[pair.ast_func_id];
+            pair.ir_func = &builder->object->ir_module.funcs[pair.ir_func_id];
             
             ir_basicblock_new_instructions(builder->current_block, 1);
             instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
@@ -2233,8 +2241,8 @@ successful_t ir_gen_resolve_ternay_conflict(ir_builder_t *builder, ir_value_t **
     if(global_type_kind_is_float[(*a)->type->kind] != global_type_kind_is_float[(*b)->type->kind]) return UNSUCCESSFUL;
     if(global_type_kind_is_integer[(*a)->type->kind] != global_type_kind_is_integer[(*b)->type->kind]) return UNSUCCESSFUL;
     
-    size_t a_size = global_type_kind_sizes_64[(*a)->type->kind];
-    size_t b_size = global_type_kind_sizes_64[(*b)->type->kind];
+    size_t a_size = global_type_kind_sizes_in_bits_64[(*a)->type->kind];
+    size_t b_size = global_type_kind_sizes_in_bits_64[(*b)->type->kind];
 
     ir_value_t **smaller_value;
     ast_type_t *smaller_type;
