@@ -16,8 +16,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_bitcast(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_ZEXT:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_ZEXT is unimplemented!\n");
-        return FAILURE;
+        if(ir_lower_const_zext(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_SEXT:
         if(ir_lower_const_sext(pool, inout_value)) return FAILURE;
@@ -126,10 +125,43 @@ errorcode_t ir_lower_const_trunc(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
-errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
+errorcode_t ir_lower_const_zext(ir_pool_t *pool, ir_value_t **inout_value){
     // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
     //       In other words, that the value inside the given value is not another constant cast
 
+    ir_type_t *type = (*inout_value)->type;
+    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
+
+    ir_type_spec_t to_spec, from_spec;
+    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
+
+    if(to_spec.bytes < from_spec.bytes){
+        redprintf("INTERNAL ERROR: ir_lower_const_sext() called when target type is smaller!\n");
+        return FAILURE;
+    }
+
+    unsigned short x = 0xEEFF;
+    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
+    char *pointer = (*child)->extra;
+    
+    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
+    memset(new_pointer, 0, to_spec.bytes);
+    
+    // Copy bytes of value to proper place in new value
+    memcpy(is_little_endian ? new_pointer : &new_pointer[to_spec.bytes - from_spec.bytes], pointer, from_spec.bytes);
+    
+    // Promote the altered child literal value
+    (*child)->extra = new_pointer;
+    *inout_value = *child;
+
+    // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
+}
+
+errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
+    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
+    //       In other words, that the value inside the given value is not another constant cast
 
     ir_type_t *type = (*inout_value)->type;
     ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
@@ -169,8 +201,10 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
 
     char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
     memset(new_pointer, 0, to_spec.bytes);
-    memcpy(new_pointer, pointer, from_spec.bytes);
-
+    
+    // Copy bytes of value to proper place in new value
+    memcpy(is_little_endian ? new_pointer : &new_pointer[to_spec.bytes - from_spec.bytes], pointer, from_spec.bytes);
+    
     // Treat as signed integer of same size for platform independent sign swap and representation formatting
     if(sign_bit) switch(to_spec.bytes){
     case 1:
@@ -197,4 +231,32 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
     // Change the type of the literal value
     (*inout_value)->type = type;
     return SUCCESS;
+}
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void printBits(size_t const size, void const * const ptr); /////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// assumes little endian
+void printBits(size_t const size, void const * const ptr)
+{
+    unsigned char *b = (unsigned char*) ptr;
+    unsigned char byte;
+    int i, j;
+
+    for (i=size-1;i>=0;i--)
+    {
+        for (j=7;j>=0;j--)
+        {
+            byte = (b[i] >> j) & 1;
+            printf("%u", byte);
+        }
+    }
+    puts("");
 }
