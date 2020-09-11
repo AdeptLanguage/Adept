@@ -51,8 +51,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_sitofp(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_REINTERPRET:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_REINTERPRET is unimplemented!\n");
-        return FAILURE;
+        if(ir_lower_const_reinterpret(pool, inout_value)) return FAILURE;
         break;
     }
 
@@ -459,7 +458,7 @@ errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() called when target type is smaller!\n");
+        redprintf("INTERNAL ERROR: ir_lower_const_sitofp() called when target type is smaller!\n");
         return FAILURE;
     }
     
@@ -480,7 +479,7 @@ errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
         as_float = *((int64_t*) ((*child)->extra));
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() failed!\n");
+        redprintf("INTERNAL ERROR: ir_lower_const_sitofp() failed!\n");
         return FAILURE;
     }
     
@@ -496,6 +495,26 @@ errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
     *inout_value = *child;
 
     // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
+}
+
+errorcode_t ir_lower_const_reinterpret(ir_pool_t *pool, ir_value_t **inout_value){
+    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
+    //       In other words, that the value inside the given value is not another constant cast
+
+    ir_type_t *type = (*inout_value)->type;
+    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
+
+    ir_type_spec_t to_spec, from_spec;
+    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
+
+    if(to_spec.bytes != from_spec.bytes){
+        redprintf("INTERNAL ERROR: ir_lower_const_reinterpret() called for types of different sizes!\n");
+        return FAILURE;
+    }
+
+    *inout_value = *child;
     (*inout_value)->type = type;
     return SUCCESS;
 }
