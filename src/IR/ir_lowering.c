@@ -45,12 +45,10 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_fptosi(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_UITOFP:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_UITOFP is unimplemented!\n");
-        return FAILURE;
+        if(ir_lower_const_uitofp(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_SITOFP:
-        redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_SITOFP is unimplemented!\n");
-        return FAILURE;
+        if(ir_lower_const_sitofp(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_REINTERPRET:
         redprintf("ir_lower_const_cast/VALUE_TYPE_CONST_REINTERPRET is unimplemented!\n");
@@ -76,11 +74,11 @@ errorcode_t ir_lower_const_bitcast(ir_pool_t *pool, ir_value_t **inout_value){
         return FAILURE;
     }
 
-    if(to_spec.traits & IR_TYPE_TRAIT_POINTER || from_spec.traits & IR_TYPE_TRAIT_POINTER){
-        redprintf("INTERNAL ERROR: ir_lower_const_bitcast() called for pointer type!\n");
+    if((to_spec.traits & IR_TYPE_TRAIT_POINTER) ^ (from_spec.traits & IR_TYPE_TRAIT_POINTER)){
+        redprintf("INTERNAL ERROR: ir_lower_const_bitcast() called for a single pointer type!\n");
         return FAILURE;
     }
-
+    
     // Since size is that same, we'll just treat the bits differently by changing the literal type
     // We'll just replace the cast with the value being casted and change the literal's type to match the cast type
     // NOTE: This is ok since 'ir_value_t->type' lives in an 'ir_pool_t'
@@ -389,6 +387,110 @@ errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
         return FAILURE;
     }
     
+    // Promote the altered child literal value
+    (*child)->extra = new_pointer;
+    *inout_value = *child;
+
+    // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
+}
+
+errorcode_t ir_lower_const_uitofp(ir_pool_t *pool, ir_value_t **inout_value){
+    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
+    //       In other words, that the value inside the given value is not another constant cast
+
+    ir_type_t *type = (*inout_value)->type;
+    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
+
+    ir_type_spec_t to_spec, from_spec;
+    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
+
+    if(to_spec.bytes < from_spec.bytes){
+        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() called when target type is smaller!\n");
+        return FAILURE;
+    }
+
+    double as_float;
+    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
+
+    switch(from_spec.bytes){
+    case 1:
+        as_float = *((uint8_t*) ((*child)->extra));
+        break;
+    case 2:
+        as_float = *((uint16_t*) ((*child)->extra));
+        break;
+    case 4:
+        as_float = *((uint32_t*) ((*child)->extra));
+        break;
+    case 8:
+        as_float = *((uint64_t*) ((*child)->extra));
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() failed!\n");
+        return FAILURE;
+    }
+    
+    // Convert floating point number to requested size
+    if(to_spec.bytes == 4){
+        *((adept_float*) new_pointer) = as_float;
+    } else {
+        *((adept_double*) new_pointer) = as_float;
+    }
+
+    // Promote the altered child literal value
+    (*child)->extra = new_pointer;
+    *inout_value = *child;
+
+    // Change the type of the literal value
+    (*inout_value)->type = type;
+    return SUCCESS;
+}
+
+errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
+    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
+    //       In other words, that the value inside the given value is not another constant cast
+
+    ir_type_t *type = (*inout_value)->type;
+    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
+
+    ir_type_spec_t to_spec, from_spec;
+    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
+
+    if(to_spec.bytes < from_spec.bytes){
+        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() called when target type is smaller!\n");
+        return FAILURE;
+    }
+    
+    double as_float;
+    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
+
+    switch(from_spec.bytes){
+    case 1:
+        as_float = *((int8_t*) ((*child)->extra));
+        break;
+    case 2:
+        as_float = *((int16_t*) ((*child)->extra));
+        break;
+    case 4:
+        as_float = *((int32_t*) ((*child)->extra));
+        break;
+    case 8:
+        as_float = *((int64_t*) ((*child)->extra));
+        break;
+    default:
+        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() failed!\n");
+        return FAILURE;
+    }
+    
+    // Convert floating point number to requested size
+    if(to_spec.bytes == 4){
+        *((adept_float*) new_pointer) = as_float;
+    } else {
+        *((adept_double*) new_pointer) = as_float;
+    }
+
     // Promote the altered child literal value
     (*child)->extra = new_pointer;
     *inout_value = *child;
