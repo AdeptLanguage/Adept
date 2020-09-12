@@ -227,6 +227,7 @@ void ast_free_globals(ast_global_t *globals, length_t globals_length){
 void ast_free_enums(ast_enum_t *enums, length_t enums_length){
     for(length_t i = 0; i != enums_length; i++){
         ast_enum_t *inum = &enums[i];
+        free(inum->name);
         free(inum->kinds);
     }
 }
@@ -878,7 +879,7 @@ maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, co
     return -1;
 }
 
-void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
+void ast_add_enum(ast_t *ast, strong_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
     expand((void**) &ast->enums, sizeof(ast_enum_t), ast->enums_length, &ast->enums_capacity, 1, 4);
     ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
 }

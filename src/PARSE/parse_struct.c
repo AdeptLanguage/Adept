@@ -83,7 +83,6 @@ errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *ou
     } else {
         if(parse_eat(ctx, TOKEN_UNION, "Expected 'union' keyword for union definition")) return FAILURE;
     }
-    
 
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
@@ -130,10 +129,16 @@ errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *ou
         (*i)++;
     }
 
-    *out_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
-    if(*out_name == NULL){
-        freestrs(generics, generics_length);
-        return FAILURE;
+    if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+        *out_name = ctx->prename;
+        ctx->prename = NULL;
+    } else {
+        *out_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
+
+        if(*out_name == NULL){
+            freestrs(generics, generics_length);
+            return FAILURE;
+        }
     }
 
     *out_generics = generics;

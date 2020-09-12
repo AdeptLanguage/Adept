@@ -77,7 +77,7 @@ void any_inject_ast_AnyTypeKind(ast_t *ast){
     kinds[12] = "PTR";      kinds[13] = "STRUCT";
     kinds[14] = "FUNC_PTR"; kinds[15] = "FIXED_ARRAY";
 
-    ast_add_enum(ast, "AnyTypeKind", kinds, 16, NULL_SOURCE);
+    ast_add_enum(ast, strclone("AnyTypeKind"), kinds, 16, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyPtrType(ast_t *ast){

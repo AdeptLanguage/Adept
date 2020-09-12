@@ -41,6 +41,9 @@ typedef struct {
     bool allow_polymorphic_prereqs;
 
     trait_t next_builtin_traits;
+
+    // Experimental pre-naming syntax
+    maybe_null_strong_cstr_t prename;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------

@@ -8,7 +8,7 @@
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
 
-errorcode_t parse_func(parse_ctx_t *ctx, maybe_null_weak_cstr_t optional_prename){
+errorcode_t parse_func(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
     source_t source = ctx->tokenlist->sources[*ctx->i];
 
@@ -197,7 +197,10 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out
     *out_is_foreign = (id == TOKEN_FOREIGN);
 
     if(*out_is_foreign || id == TOKEN_FUNC){
-        if(*out_is_foreign){
+        if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+            *out_name = ctx->prename;
+            ctx->prename = NULL;
+        } else if(*out_is_foreign){
             *out_name = parse_take_word(ctx, "Expected function name after 'foreign' keyword");
         } else {
             *out_name = parse_take_word(ctx, "Expected function name after 'func' keyword");

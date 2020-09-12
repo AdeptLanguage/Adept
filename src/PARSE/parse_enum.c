@@ -15,7 +15,15 @@ errorcode_t parse_enum(parse_ctx_t *ctx){
 
     if(parse_eat(ctx, TOKEN_ENUM, "Expected 'enum' keyword")) return FAILURE;
 
-    maybe_null_weak_cstr_t name = parse_eat_word(ctx, "Expected name of enum after 'enum' keyword");
+    maybe_null_strong_cstr_t name;
+    
+    if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+        name = ctx->prename;
+        ctx->prename = NULL;
+    } else {
+        name = parse_take_word(ctx, "Expected name of enum after 'enum' keyword");
+    }
+
     if(name == NULL) return FAILURE;
 
     if(parse_enum_body(ctx, &kinds, &length)) return FAILURE;

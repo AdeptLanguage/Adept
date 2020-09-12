@@ -22,6 +22,12 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
     length_t elements_capacity = 0;
     tokenid_t id = tokens[*i].id;
 
+    if(ctx->compiler->traits & COMPILER_TYPE_COLON && id == TOKEN_COLON){
+        // Skip over colon for experimental ": int" syntax
+        start = ++(*i);
+        id = tokens[start].id;
+    }
+
     while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT){
         expand((void**) &out_type->elements, sizeof(ast_elem_t*), out_type->elements_length, &elements_capacity, 1, 2);
 
