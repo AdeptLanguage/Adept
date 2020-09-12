@@ -17,8 +17,8 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     ir_pool_t *pool = &module->pool;
 
     // Base types:
-    // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize, successful
-    #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 15
+    // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize, successful, void
+    #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 16
 
     ir_type_t *tmp_type;
     ir_type_map_t *type_map = &module->type_map;
@@ -59,6 +59,8 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     mappings[13].type.kind = TYPE_KIND_U64;
     mappings[14].name = "successful";
     mappings[14].type.kind = TYPE_KIND_BOOLEAN;
+    mappings[15].name = "void";
+    mappings[15].type.kind = TYPE_KIND_VOID;
 
     length_t beginning_of_structs = IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
     length_t beginning_of_enums = type_map->mappings_length - ast->enums_length;
@@ -129,6 +131,9 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
             module->common.ir_string_struct = &mappings[i].type;
         }
 
+        // Transform union structures into actual union types
+        if(structure->traits & AST_STRUCT_IS_UNION) mappings[i].type.kind = TYPE_KIND_UNION;
+
         // NOTE: This composite information will replace mappings[i].type.extra
         ir_type_extra_composite_t *composite = ir_pool_alloc(pool, sizeof(ir_type_extra_composite_t));
         composite->subtypes_length = structure->field_count;
@@ -157,14 +162,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
     ir_module_t *ir_module = &object->ir_module;
     length_t non_concrete_layers;
     ir_type_map_t *type_map = &ir_module->type_map;
-
-    if(unresolved_type->elements_length == 1 && unresolved_type->elements[0]->id == AST_ELEM_BASE && strcmp(((ast_elem_base_t*) unresolved_type->elements[0])->base, "void") == 0){
-        // Special void type
-        *resolved_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-        (*resolved_type)->kind = TYPE_KIND_VOID;
-        return SUCCESS;
-    }
-
+    
     // Peel back pointer layers
     for(non_concrete_layers = 0; non_concrete_layers != unresolved_type->elements_length; non_concrete_layers++){
         unsigned int element_id = unresolved_type->elements[non_concrete_layers]->id;
@@ -209,11 +207,11 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
             ir_type_t *created_type = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t));
             ir_type_extra_composite_t *extra = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_extra_composite_t));
-            created_type->kind = TYPE_KIND_STRUCTURE;
             created_type->extra = extra;
 
             // Find polymorphic structure
             ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
+            created_type->kind = template->traits & AST_STRUCT_IS_UNION ? TYPE_KIND_UNION : TYPE_KIND_STRUCTURE;
 
             if(template == NULL){
                 compiler_panicf(compiler, generic_base->source, "Undeclared type '%s'", generic_base->name);
@@ -222,9 +220,10 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             
             if(generic_base->generics_length != template->generics_length){
                 const char *message = generic_base->generics_length < template->generics_length ?
-                                    "Not enough type parameters specified for struct '%s' (expected %d, got %d)"
-                                    : "Too many type parameters specified for struct '%s' (expected %d, got %d)";
-                compiler_panicf(compiler, generic_base->source, message, generic_base->name, template->generics_length, generic_base->generics_length);
+                                    "Not enough type parameters specified for %s '%s' (expected %d, got %d)"
+                                    : "Too many type parameters specified for %s '%s' (expected %d, got %d)";
+                compiler_panicf(compiler, generic_base->source, message, template->traits & AST_STRUCT_IS_UNION ? "union" : "struct",
+                        generic_base->name, template->generics_length, generic_base->generics_length);
                 return FAILURE;
             }
 

@@ -621,6 +621,11 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
                 return FAILURE;
             }
 
+            if(structure->traits & AST_STRUCT_IS_UNION){
+                compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for union type '%s'", base);
+                return FAILURE;
+            }
+
             if(static_data->length != structure->field_count){
                 if(static_data->length > structure->field_count){
                     compiler_panicf(ctx->compiler, static_data->type.source, "Too many fields specified for struct '%s' (expected %d, got %d)", base, structure->field_count, static_data->length);

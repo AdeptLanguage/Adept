@@ -331,7 +331,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     ir_global_t *ir_global = &ir_module->globals[global_variable_id];
 
     if(ast_global->traits & AST_GLOBAL___TYPES__){
-        ir_type_t *any_type_type, *any_struct_type_type, *any_ptr_type_type,
+        ir_type_t *any_type_type, *any_struct_type_type, *any_union_type_type, *any_ptr_type_type,
             *any_type_ptr_type = NULL, *ubyte_ptr_type;
         
         if(compiler->traits & COMPILER_NO_TYPEINFO){
@@ -348,6 +348,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
         if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)
         || !ir_type_map_find(&ir_module->type_map, "AnyStructType", &any_struct_type_type)
+        || !ir_type_map_find(&ir_module->type_map, "AnyUnionType", &any_union_type_type)
         || !ir_type_map_find(&ir_module->type_map, "AnyPtrType", &any_ptr_type_type)
         || !ir_type_map_find(&ir_module->type_map, "ubyte", &ubyte_ptr_type)){
             redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
@@ -382,6 +383,9 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                 break;
             case TYPE_KIND_STRUCTURE:
                 array_values[i] = build_anon_global(ir_module, any_struct_type_type, true);
+                break;
+            case TYPE_KIND_UNION:
+                array_values[i] = build_anon_global(ir_module, any_union_type_type, true);
                 break;
             default:
                 array_values[i] = build_anon_global(ir_module, any_type_type, true);
@@ -426,15 +430,16 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                     initializer_type = any_ptr_type_type;
                 }
                 break;
-            case TYPE_KIND_STRUCTURE: {
+            case TYPE_KIND_STRUCTURE: case TYPE_KIND_UNION: {
                     /* struct AnyStructType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
+                    /* struct AnyUnionType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, member_names **ubyte) */
 
                     ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) type_table->entries[i].ir_type->extra;
-                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
-                    initializer_members_length = 9;
+                    initializer_members_length = type_type_kind == TYPE_KIND_STRUCTURE ? 9 : 7;
+                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * initializer_members_length);
 
                     ir_value_t **composite_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length);
-                    ir_value_t **composite_offsets = ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length);
+                    ir_value_t **composite_offsets = type_type_kind == TYPE_KIND_STRUCTURE ? ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length) : NULL;
                     ir_value_t **composite_member_names = ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length);
 
                     ast_elem_t *elem = type_table->entries[i].ast_type.elements[0];
@@ -498,7 +503,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                                 return FAILURE;
                             }
 
-                            composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);;
+                            if(composite_offsets) composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
                             composite_member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, template->field_names[s]);
                             ast_type_free(&member_ast_type);
                         }
@@ -543,7 +548,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                             ast_type_free(&struct_ast_type);
 
-                            composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
+                            if(composite_offsets) composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
                             composite_member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, structure->field_names[s]);
                         }
                     } else {
@@ -552,15 +557,23 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                     }
 
                     ir_value_t *members_array = build_static_array(pool, any_type_ptr_type, composite_members, composite->subtypes_length);
-                    ir_value_t *offsets_array = build_static_array(pool, usize_type, composite_offsets, composite->subtypes_length);
                     ir_value_t *member_names_array = build_static_array(pool, ubyte_ptr_type, composite_member_names, composite->subtypes_length);
+                    
+                    if(type_type_kind == TYPE_KIND_STRUCTURE){
+                        ir_value_t *offsets_array = build_static_array(pool, usize_type, composite_offsets, composite->subtypes_length);
 
-                    initializer_members[4] = members_array;
-                    initializer_members[5] = build_literal_usize(pool, composite->subtypes_length); // length
-                    initializer_members[6] = offsets_array;
-                    initializer_members[7] = member_names_array;
-                    initializer_members[8] = build_bool(pool, composite->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
-                    initializer_type = any_struct_type_type;
+                        initializer_members[4] = members_array;
+                        initializer_members[5] = build_literal_usize(pool, composite->subtypes_length); // length
+                        initializer_members[6] = offsets_array;
+                        initializer_members[7] = member_names_array;
+                        initializer_members[8] = build_bool(pool, composite->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
+                        initializer_type = any_struct_type_type;
+                    } else {
+                        initializer_members[4] = members_array;
+                        initializer_members[5] = build_literal_usize(pool, composite->subtypes_length); // length
+                        initializer_members[6] = member_names_array;
+                        initializer_type = any_union_type_type;
+                    }
                 }
                 break;
             default:
@@ -584,6 +597,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             case TYPE_KIND_DOUBLE:      any_type_kind_id = ANY_TYPE_KIND_DOUBLE; break;
             case TYPE_KIND_BOOLEAN:     any_type_kind_id = ANY_TYPE_KIND_BOOL; break;
             case TYPE_KIND_STRUCTURE:   any_type_kind_id = ANY_TYPE_KIND_STRUCT; break;
+            case TYPE_KIND_UNION:       any_type_kind_id = ANY_TYPE_KIND_UNION; break;
             case TYPE_KIND_FUNCPTR:     any_type_kind_id = ANY_TYPE_KIND_FUNC_PTR; break;
             case TYPE_KIND_FIXED_ARRAY: any_type_kind_id = ANY_TYPE_KIND_FIXED_ARRAY; break;
 

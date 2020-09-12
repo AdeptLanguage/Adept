@@ -63,7 +63,7 @@ typedef struct {
 
 // ---------------- ir_to_llvm_type ----------------
 // Converts an IR type to an LLVM type
-LLVMTypeRef ir_to_llvm_type(ir_type_t *ir_type);
+LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type);
 
 // ---------------- ir_to_llvm_value ----------------
 // Converts an IR value to an LLVM value

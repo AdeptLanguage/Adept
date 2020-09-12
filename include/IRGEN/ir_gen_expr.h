@@ -43,7 +43,7 @@ errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_
         length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
 
 errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *struct_value_ast_type,
-        length_t *field_index, ir_type_t **field_type, ast_type_t *out_expr_type);
+        length_t *field_index, ir_type_t **field_type, bool *is_via_union, ast_type_t *out_expr_type);
 // ----------------------------------------------------------------
 
 // ---------------- ir_gen_math_operands ----------------

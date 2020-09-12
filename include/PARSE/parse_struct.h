@@ -11,12 +11,12 @@ extern "C" {
 
 // ------------------ parse_struct ------------------
 // Parses a struct
-errorcode_t parse_struct(parse_ctx_t *ctx);
+errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union);
 
 // ------------------ parse_struct_head ------------------
 // Parses the head of a struct
 // NOTE: All arguments must be valid pointers
-errorcode_t parse_struct_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length);
+errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length);
 
 // ------------------ parse_struct_body ------------------
 // Parses the body of a struct

@@ -64,13 +64,7 @@ bool ir_types_identical(ir_type_t *a, ir_type_t *b){
     switch(a->kind){
     case TYPE_KIND_POINTER:
         return ir_types_identical((ir_type_t*) a->extra, (ir_type_t*) b->extra);
-    case TYPE_KIND_UNION:
-        if(((ir_type_extra_composite_t*) a->extra)->subtypes_length != ((ir_type_extra_composite_t*) b->extra)->subtypes_length) return false;
-        for(length_t i = 0; i != ((ir_type_extra_composite_t*) a->extra)->subtypes_length; i++){
-            if(!ir_types_identical(((ir_type_extra_composite_t*) a->extra)->subtypes[i], ((ir_type_extra_composite_t*) b->extra)->subtypes[i])) return false;
-        }
-        return true;
-    case TYPE_KIND_STRUCTURE:
+    case TYPE_KIND_STRUCTURE: case TYPE_KIND_UNION:
         if(((ir_type_extra_composite_t*) a->extra)->subtypes_length != ((ir_type_extra_composite_t*) b->extra)->subtypes_length) return false;
         for(length_t i = 0; i != ((ir_type_extra_composite_t*) a->extra)->subtypes_length; i++){
             if(!ir_types_identical(((ir_type_extra_composite_t*) a->extra)->subtypes[i], ((ir_type_extra_composite_t*) b->extra)->subtypes[i])) return false;

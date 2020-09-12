@@ -1713,15 +1713,20 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
     length_t field_index;
     ir_type_t *field_type;
     ast_elem_t *elem = struct_value_ast_type.elements[0];
+    bool is_via_union;
 
-    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &struct_value_ast_type, &field_index, &field_type, out_expr_type)){
+    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &struct_value_ast_type, &field_index, &field_type, &is_via_union, out_expr_type)){
         ast_type_free(&struct_value_ast_type);
         return FAILURE;
     }
 
     // Build the member access
-    *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
-
+    if(is_via_union){
+        *ir_value = build_bitcast(builder, struct_value, ir_type_pointer_to(builder->pool, field_type));
+    } else {
+        *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
+    }
+    
     // If not requested to leave the expression mutable, dereference it
     if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
 
@@ -1730,7 +1735,7 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
 }
 
 errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *struct_value_ast_type,
-        length_t *field_index, ir_type_t **field_type, ast_type_t *out_expr_type){
+        length_t *field_index, ir_type_t **field_type, bool *is_via_union, ast_type_t *out_expr_type){
     
     if(elem->id == AST_ELEM_BASE){
         // Basic 'Struct' structure type
@@ -1757,6 +1762,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
 
         // Result type is the type of that member
         if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&target->field_types[*field_index]);
+        *is_via_union = target->traits & AST_STRUCT_IS_UNION;
         return SUCCESS;
     }
 
@@ -1813,6 +1819,9 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         // Result type is the AST type of that member
         if(out_expr_type != NULL) *out_expr_type = ast_field_type;
         else                      ast_type_free(&ast_field_type);
+
+        // Write whether member access should take place via union access
+        *is_via_union = template->traits & AST_STRUCT_IS_UNION;
 
         // Dispose of the polymorphic substituions catalog
         ast_type_var_catalog_free(&catalog);

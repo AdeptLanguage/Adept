@@ -23,8 +23,8 @@
 #define TYPE_KIND_FLOAT       0x0000000B // extra = NULL
 #define TYPE_KIND_DOUBLE      0x0000000C // extra = NULL
 #define TYPE_KIND_BOOLEAN     0x0000000D // extra = NULL
-#define TYPE_KIND_UNION       0x0000000E // extra = *ir_type_extra_composite_t
-#define TYPE_KIND_STRUCTURE   0x0000000F // extra = *ir_type_extra_composite_t
+#define TYPE_KIND_STRUCTURE   0x0000000E // extra = *ir_type_extra_composite_t
+#define TYPE_KIND_UNION       0x0000000F // extra = *ir_type_extra_composite_t
 #define TYPE_KIND_VOID        0x00000010 // extra = NULL
 #define TYPE_KIND_FUNCPTR     0x00000011 // extra = *ir_type_extra_function_t
 #define TYPE_KIND_FIXED_ARRAY 0x00000012 // extra = *ir_type_extra_fixed_array_t;

@@ -262,6 +262,8 @@ call :compile truefalse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile undef
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile union
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile unless
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile unlesselse

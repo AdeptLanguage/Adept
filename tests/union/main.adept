@@ -1,0 +1,21 @@
+
+import basics
+
+union Data (x int, y double, z long)
+union <$T> PolymorphicData (x int, y double, z long, w $T)
+
+func main {
+    x Data
+    x.y = 12345.0
+    print("sizeof Data   = %" % sizeof Data)
+    print("data.x int    = %" % x.x)
+    print("data.y double = %" % x.y)
+    print("data.z long   = %" % x.z)
+    newline()
+
+    type *AnyUnionType = typeinfo <int> PolymorphicData as *AnyUnionType
+    printf('%s %s (size = %d)\n', __type_kinds__[type.kind], type.name, type.size as int)
+    repeat static type.length {
+        printf('-> %s %s\n', type.member_names[idx], type.members[idx].name)
+    }
+}

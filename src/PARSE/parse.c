@@ -57,7 +57,10 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_func(ctx)) return FAILURE;
             break;
         case TOKEN_STRUCT: case TOKEN_PACKED:
-            if(parse_struct(ctx)) return FAILURE;
+            if(parse_struct(ctx, false)) return FAILURE;
+            break;
+        case TOKEN_UNION:
+            if(parse_struct(ctx, true)) return FAILURE;
             break;
         case TOKEN_WORD:
         case TOKEN_EXTERNAL:

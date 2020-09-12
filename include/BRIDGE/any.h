@@ -73,6 +73,10 @@ void any_inject_ast_AnyPtrType(ast_t *ast);
 // Injects AST struct 'AnyStructType'
 void any_inject_ast_AnyStructType(ast_t *ast);
 
+// ---------------- any_inject_ast_AnyUnionType ----------------
+// Injects AST struct 'AnyUnionType'
+void any_inject_ast_AnyUnionType(ast_t *ast);
+
 // ---------------- any_inject_ast_AnyFuncPtrType ----------------
 // Injects AST struct 'AnyFuncPtrType'
 void any_inject_ast_AnyFuncPtrType(ast_t *ast);

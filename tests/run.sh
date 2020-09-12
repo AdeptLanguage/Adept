@@ -144,6 +144,7 @@ compile ternary_circuit || exit $?
 compile toggle || exit $?
 compile truefalse || exit $?
 compile undef || exit $?
+compile union || exit $?
 compile unless || exit $?
 compile unlesselse || exit $?
 # This file should always fail

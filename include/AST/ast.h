@@ -57,7 +57,7 @@ typedef struct {
 // Addional AST function traits for builtin uses
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
 
-// ---------------- ast_struct_t ----------------
+// ---------------- ast_struct_t, ast_union_t ----------------
 // A structure within the root AST
 typedef struct {
     strong_cstr_t name;
@@ -66,11 +66,14 @@ typedef struct {
     length_t field_count;
     trait_t traits;
     source_t source;
-} ast_struct_t;
+} ast_struct_t, ast_union_t;
 
 // Possible AST structure traits
 #define AST_STRUCT_PACKED      TRAIT_1
 #define AST_STRUCT_POLYMORPHIC TRAIT_2
+#define AST_STRUCT_IS_UNION    TRAIT_3
+
+#define AST_UNION_POLYMORPHIC  AST_STRUCT_POLYMORPHIC 
 
 // ---------------- ast_polymorphic_struct_t ----------------
 // A polymorphic structure

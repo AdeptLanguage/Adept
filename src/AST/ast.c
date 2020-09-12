@@ -649,7 +649,7 @@ void ast_dump_structs(FILE *file, ast_struct_t *structs, length_t structs_length
             free(typename);
         }
 
-        fprintf(file, "struct %s (%s)\n", structure->name, fields_string);
+        fprintf(file, "%s %s (%s)\n", structure->traits & AST_STRUCT_IS_UNION ? "union" : "struct", structure->name, fields_string);
     }
 
     free(fields_string);

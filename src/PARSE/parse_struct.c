@@ -6,12 +6,12 @@
 #include "PARSE/parse_util.h"
 #include "PARSE/parse_struct.h"
 
-errorcode_t parse_struct(parse_ctx_t *ctx){
+errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union){
     ast_t *ast = ctx->ast;
     source_t source = ctx->tokenlist->sources[*ctx->i];
 
     if(ctx->struct_association != NULL){
-        compiler_panicf(ctx->compiler, source, "Cannot declare struct within another struct's domain");
+        compiler_panicf(ctx->compiler, source, "Cannot declare %s within another struct's domain", is_union ? "union" : "struct");
         return FAILURE;
     }
 
@@ -19,7 +19,7 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
     bool is_packed;
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    if(parse_struct_head(ctx, &name, &is_packed, &generics, &generics_length)) return FAILURE;
+    if(parse_struct_head(ctx, is_union, &name, &is_packed, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -31,7 +31,7 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
     length_t invalid_names_length = sizeof(invalid_names) / sizeof(const char*);
 
     if(binary_string_search(invalid_names, invalid_names_length, name) != -1){
-        compiler_panicf(ctx->compiler, source, "Reserved type name '%s' can't be used to create a struct", name);
+        compiler_panicf(ctx->compiler, source, "Reserved type name '%s' can't be used to create a %s", name, is_union ? "union" : "struct");
         free(name);
         return FAILURE;
     }
@@ -46,37 +46,44 @@ errorcode_t parse_struct(parse_ctx_t *ctx){
     }
 
     ast_struct_t *domain = NULL;
-    trait_t traits = is_packed ? AST_STRUCT_PACKED : TRAIT_NONE;
-
+    trait_t traits = is_packed ? AST_STRUCT_PACKED : (is_union ? AST_STRUCT_IS_UNION : TRAIT_NONE);
+    
     if(generics){
         domain = (ast_struct_t*) ast_add_polymorphic_struct(ast, name, field_names, field_types, field_count, traits, source, generics, generics_length);
     } else {
         domain = ast_add_struct(ast, name, field_names, field_types, field_count, traits, source);
     }
 
-    length_t scan_i = *ctx->i + 1;
-    while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
-        scan_i++;
-    
-    if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
-        ctx->struct_association = (ast_polymorphic_struct_t*) domain;
-        ctx->struct_association_is_polymorphic = generics != NULL;
-        *ctx->i = scan_i;
+    // Only allow struct domains for structs, not unions
+    if(!is_union){
+        // Look for start of struct domain and set it up if it exists
+
+        length_t scan_i = *ctx->i + 1;
+        while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
+            scan_i++;
+        
+        if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
+            ctx->struct_association = (ast_polymorphic_struct_t*) domain;
+            ctx->struct_association_is_polymorphic = generics != NULL;
+            *ctx->i = scan_i;
+        }
     }
 
     return SUCCESS;
 }
 
-errorcode_t parse_struct_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length){
+errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
-    *out_is_packed = (tokens[*i].id == TOKEN_PACKED);
-    if(*out_is_packed) *i += 1;
-
-    if(parse_eat(ctx, TOKEN_STRUCT, "Expected 'struct' keyword after 'packed' keyword")){
-        return FAILURE;
+    if(!is_union){
+        *out_is_packed = (tokens[*i].id == TOKEN_PACKED);
+        if(*out_is_packed) *i += 1;
+        if(parse_eat(ctx, TOKEN_STRUCT, "Expected 'struct' keyword after 'packed' keyword")) return FAILURE;
+    } else {
+        if(parse_eat(ctx, TOKEN_UNION, "Expected 'union' keyword for union definition")) return FAILURE;
     }
+    
 
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
