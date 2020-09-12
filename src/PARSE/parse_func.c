@@ -8,7 +8,7 @@
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
 
-errorcode_t parse_func(parse_ctx_t *ctx){
+errorcode_t parse_func(parse_ctx_t *ctx, maybe_null_weak_cstr_t optional_prename){
     ast_t *ast = ctx->ast;
     source_t source = ctx->tokenlist->sources[*ctx->i];
 

@@ -256,6 +256,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     // Return non-void value
                     if(ir_gen_expr(builder, return_stmt->value, &expression_value, false, &temporary_type)) return FAILURE;
 
+                    // Revalidate AST func and return type
+                    ast_func_t *ast_func = &builder->object->ast.funcs[builder->ast_func_id];
+                    ast_type_t *return_type = &ast_func->return_type;
+
                     if(!ast_types_conform(builder, &expression_value, &temporary_type, return_type, CONFORM_MODE_CALCULATION)){
                         char *a_type_str = ast_type_str(&temporary_type);
                         char *b_type_str = ast_type_str(return_type);
@@ -292,7 +296,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 if(ir_gen_statements(builder, return_stmt->last_minute.statements, return_stmt->last_minute.length, &illegal_termination)){
                     return FAILURE;
                 }
-
+                
                 if(illegal_termination){
                     compiler_panicf(builder->compiler, return_stmt->source, "Cannot expand a previously deferred terminating statement");
                     return FAILURE;
@@ -304,11 +308,17 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     handle_deference_for_variables(builder, &visit_scope->list);
                 }
 
+                // Update ast_func in case 'ast.funcs' moved
+                ast_func = &builder->object->ast.funcs[builder->ast_func_id];
+
                 handle_deference_for_variables(builder, &visit_scope->list);
 
                 if(ast_func->traits & AST_FUNC_MAIN){
                     handle_deference_for_globals(builder);
                 }
+
+                // Update ast_func in case 'ast.funcs' moved
+                ast_func = &builder->object->ast.funcs[builder->ast_func_id];
 
                 if(ast_func->traits & AST_FUNC_AUTOGEN) if(
                     (ast_func->traits & AST_FUNC_PASS  && handle_children_pass_root(builder, true)) ||

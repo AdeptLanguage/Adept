@@ -169,7 +169,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
         if(found_compatible){
             ir_func_mapping_t instance;
             
-            if(instantiate_polymorphic_func(builder, poly_template, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
+            if(instantiate_polymorphic_func(builder, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
             ast_type_var_catalog_free(&using_catalog);
 
             result->ast_func = &builder->object->ast.funcs[instance.ast_func_id];
@@ -389,7 +389,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
         if(found_compatible){
             ir_func_mapping_t instance;
 
-            if(instantiate_polymorphic_func(builder, poly_template, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
+            if(instantiate_polymorphic_func(builder, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
             ast_type_var_catalog_free(&using_catalog);
 
             result->ast_func = &builder->object->ast.funcs[instance.ast_func_id];
@@ -498,7 +498,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
         if(found_compatible){
             ir_func_mapping_t instance;
 
-            if(instantiate_polymorphic_func(builder, poly_template, arg_types, type_list_length, &using_catalog, &instance)){
+            if(instantiate_polymorphic_func(builder, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
                 ast_type_var_catalog_free(&using_catalog);
                 return ALT_FAILURE;
             }

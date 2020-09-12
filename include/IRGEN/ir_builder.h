@@ -360,7 +360,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function
-errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
+errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_poly_func_id, ast_type_t *types,
     length_t types_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping);
 
 // ---------------- attempt_autogen___defer__ ----------------

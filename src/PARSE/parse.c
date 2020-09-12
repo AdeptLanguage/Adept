@@ -47,14 +47,14 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
         case TOKEN_NEWLINE:
             break;
         case TOKEN_FUNC: case TOKEN_STDCALL: case TOKEN_VERBATIM:
-            if(parse_func(ctx)) return FAILURE;
+            if(parse_func(ctx, NULL)) return FAILURE;
             break;
         case TOKEN_FOREIGN:
             if(tokens[i + 1].id == TOKEN_STRING || tokens[i + 1].id == TOKEN_CSTRING){
                 if(parse_foreign_library(ctx)) return FAILURE;
                 break;
             }
-            if(parse_func(ctx)) return FAILURE;
+            if(parse_func(ctx, NULL)) return FAILURE;
             break;
         case TOKEN_STRUCT: case TOKEN_PACKED:
             if(parse_struct(ctx, false)) return FAILURE;

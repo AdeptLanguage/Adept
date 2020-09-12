@@ -11,7 +11,7 @@ extern "C" {
 
 // ------------------ parse_func ------------------
 // Parses a function
-errorcode_t parse_func(parse_ctx_t *ctx);
+errorcode_t parse_func(parse_ctx_t *ctx, maybe_null_weak_cstr_t optional_prename);
 
 // ------------------ parse_func_head ------------------
 // Parses the head of a function definition

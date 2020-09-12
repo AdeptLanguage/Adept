@@ -129,7 +129,8 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length){
             string[put_index++] = '\\';
         } else {
             // Put regular character
-            put_index++;
+            string[put_index++] = array[i];
+            continue;
         }
         switch(array[i]){
         case '\0': string[put_index++] =  '0'; break;

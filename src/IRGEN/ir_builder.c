@@ -436,6 +436,7 @@ ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, char *array, len
 
 ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t length){
     // NOTE: Builds a null-terminated string literal value
+
     ir_value_t *ir_value = ir_pool_alloc(pool, sizeof(ir_value_t));
     ir_value->value_type = VALUE_TYPE_CSTR_OF_LEN;
     ir_type_t *ubyte_type;
@@ -1506,10 +1507,10 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     return build_value_from_prev_instruction(builder);
 }
 
-errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly_func, ast_type_t *types,
+errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping){
 
-        
+    ast_func_t *poly_func = &builder->object->ast.funcs[ast_poly_func_id];
     length_t required_arity = poly_func->arity;
 
     if(
@@ -1545,6 +1546,9 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, ast_func_t *poly
     
     ast_t *ast = &builder->object->ast;
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+
+    // Revalidate poly_func
+    poly_func = &builder->object->ast.funcs[ast_poly_func_id];
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
