@@ -1028,12 +1028,14 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
     infer_var_t *variables = scope->list.variables;
     length_t length = scope->list.length;
 
-    if(!(compiler->ignore & COMPILER_IGNORE_UNUSED || compiler->traits & COMPILER_NO_WARN)) for(length_t i = 0; i < length; i++){
-        if(!variables[i].used){
-            // Ignore whether to terminate, since we cannot terminate right now because we are freeing 'infer_var_scope_t's
-            // Optional termination for this warning is handled when inference is finished.
-            compiler_warnf(compiler, variables[i].source, "Variable '%s' is never used", variables[i].name);
-            compiler->show_unused_variables_how_to_disable = true;
+    if(compiler->result_flags & COMPILER_RESULT_SUCCESS && !(compiler->ignore & COMPILER_IGNORE_UNUSED || compiler->traits & COMPILER_NO_WARN)){
+        for(length_t i = 0; i < length; i++){
+            if(!variables[i].used){
+                // Ignore whether to terminate, since we cannot terminate right now because we are freeing 'infer_var_scope_t's
+                // Optional termination for this warning is handled when inference is finished.
+                compiler_warnf(compiler, variables[i].source, "Variable '%s' is never used", variables[i].name);
+                compiler->show_unused_variables_how_to_disable = true;
+            }
         }
     }
 
