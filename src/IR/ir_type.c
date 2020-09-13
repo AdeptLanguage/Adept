@@ -98,6 +98,12 @@ ir_type_t* ir_type_dereference(ir_type_t *type){
     return (ir_type_t*) type->extra;
 }
 
+bool ir_type_is_pointer_to(ir_type_t *type, unsigned int child_type_kind){
+    if(type->kind != TYPE_KIND_POINTER) return false;
+    if(((ir_type_t*) type->extra)->kind != child_type_kind) return false;
+    return true;
+}
+
 // (For 64 bit systems)
 unsigned int global_type_kind_sizes_in_bits_64[] = {
      0, // TYPE_KIND_NONE

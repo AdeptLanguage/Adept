@@ -241,6 +241,7 @@ bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base);
 
 // ---------------- ast_type_is_pointer ----------------
 // Returns whether an AST type is a pointer
+// NOTE: Does NOT include 'ptr'
 bool ast_type_is_pointer(const ast_type_t *type);
 
 // ---------------- ast_type_is_pointer_to ----------------

@@ -149,7 +149,7 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         if(ir_gen_expr_member(builder, (ast_expr_member_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
     case EXPR_ADDRESS:
-        if(ir_gen_expr_address(builder, (ast_expr_address_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
+        if(ir_gen_expr_address(builder, (ast_expr_address_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_VA_ARG:
         if(ir_gen_expr_va_arg(builder, (ast_expr_va_arg_t*) expr, ir_value, out_expr_type)) return FAILURE;
@@ -157,166 +157,14 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_FUNC_ADDR:
         if(ir_gen_expr_func_addr(builder, (ast_expr_func_addr_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_DEREFERENCE: {
-            ast_expr_unary_t *dereference_expr = (ast_expr_unary_t*) expr;
-            ast_type_t expr_type;
-            ir_value_t *expr_value;
-
-            if(ir_gen_expr(builder, dereference_expr->value, &expr_value, false, &expr_type)) return FAILURE;
-
-            // Ensure that the result ast_type_t is a pointer type
-            if(expr_type.elements_length < 2 || expr_type.elements[0]->id != AST_ELEM_POINTER){
-                char *expr_type_str = ast_type_str(&expr_type);
-                compiler_panicf(builder->compiler, dereference_expr->source, "Can't dereference non-pointer type '%s'", expr_type_str);
-                ast_type_free(&expr_type);
-                free(expr_type_str);
-                return FAILURE;
-            }
-
-            ast_type_dereference(&expr_type);
-
-            // If not requested to leave the expression mutable, dereference it
-            if(!leave_mutable){
-                // ir_type_t is expected to be of kind pointer
-                if(expr_value->type->kind != TYPE_KIND_POINTER){
-                    compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expr()");
-                    ast_type_free(&expr_type);
-                    return FAILURE;
-                }
-
-                // Build and append a load instruction
-                *ir_value = build_load(builder, expr_value, expr->source);
-
-                // ir_type_t is expected to be of kind pointer
-                if(expr_value->type->kind != TYPE_KIND_POINTER){
-                    compiler_panic(builder->compiler, dereference_expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside EXPR_DEREFERENCE of ir_gen_expr()");
-                    ast_type_free(&expr_type);
-                    return FAILURE;
-                }
-            } else {
-                *ir_value = expr_value;
-            }
-
-            if(out_expr_type != NULL) *out_expr_type = expr_type;
-            else ast_type_free(&expr_type);
-        }
+    case EXPR_DEREFERENCE:
+        if(ir_gen_expr_dereference(builder, (ast_expr_address_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
-    case EXPR_ARRAY_ACCESS: case EXPR_AT: {
-            ast_expr_array_access_t *array_access_expr = (ast_expr_array_access_t*) expr;
-            ast_type_t index_type, array_type;
-            ir_value_t *index_value, *array_value;
-
-            if(ir_gen_expr(builder, array_access_expr->value, &array_value, true, &array_type)) return FAILURE;
-            if(ir_gen_expr(builder, array_access_expr->index, &index_value, false, &index_type)){
-                ast_type_free(&array_type);
-                return FAILURE;
-            }
-
-            // Must be used on mutable value
-            if(array_value->type->kind != TYPE_KIND_POINTER){
-                char *given_type = ast_type_str(&array_type);
-
-                compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on temporary value of type '%s'",
-                    expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", given_type);
-
-                free(given_type);
-                ast_type_free(&array_type);
-                ast_type_free(&index_type);
-                return FAILURE;
-            }
-
-            if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY){
-                // Bitcast reference (that's to a fixed array of element) to pointer of element
-                // (*)  [10] int -> *int
-
-                assert(array_type.elements_length != 0);
-                array_type.elements[0]->id = AST_ELEM_POINTER;
-
-                ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
-                array_value = build_bitcast(builder, array_value, casted_ir_type);
-            } else if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_STRUCTURE){
-                // Keep structure value mutable
-            } else if(expr_is_mutable(array_access_expr->value)){
-                // Load value reference
-                // (*)  *int -> *int
-                array_value = build_load(builder, array_value, expr->source);
-            }
-
-            bool access_allowed = false;
-
-            if(array_value->type->kind == TYPE_KIND_POINTER && array_type.elements_length >= 2 && array_type.elements[0]->id == AST_ELEM_POINTER){
-                // Standard [] access for pointers
-                access_allowed = true;
-
-                if(index_value->type->kind < TYPE_KIND_S8 || index_value->type->kind > TYPE_KIND_U64){
-                    compiler_panic(builder->compiler, array_access_expr->index->source, "Array index value must be an integer type");
-                    ast_type_free(&array_type);
-                    ast_type_free(&index_type);
-                    return FAILURE;
-                }
-
-                // Access array
-                *ir_value = build_array_access(builder, array_value, index_value, expr->source);
-            } else if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_STRUCTURE){
-                // Try to use __access__ management method on struct
-                
-                ast_type_t element_pointer_type;
-                *ir_value = handle_access_management(builder, array_value, index_value, expr->source, &array_type, &index_type, &element_pointer_type);
-                access_allowed = *ir_value != NULL;
-
-                // If successful in calling __access__ method, then swap the array type to the *Element type
-                if(access_allowed){
-                    ast_type_free(&array_type);
-                    array_type = element_pointer_type;
-                }
-            }
-
-            if(!access_allowed){
-                char *given_type = ast_type_str(&array_type);
-
-                compiler_panicf(builder->compiler, array_access_expr->source, "Can't use operator %s on non-array type '%s'",
-                    expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", given_type);
-
-                free(given_type);
-                ast_type_free(&array_type);
-                ast_type_free(&index_type);
-                return FAILURE;
-            }
-
-            if(expr->id != EXPR_AT){
-                ast_type_dereference(&array_type);
-                
-                // If not requested to leave the expression mutable, dereference it
-                if(!leave_mutable){
-                    *ir_value = build_load(builder, *ir_value, expr->source);
-                }
-            }
-
-            ast_type_free(&index_type);
-
-            if(out_expr_type != NULL) *out_expr_type = array_type; // array_type was modified to be the element type (bad ik but whatever)
-            else ast_type_free(&array_type);
-        }
+    case EXPR_ARRAY_ACCESS: case EXPR_AT:
+        if(ir_gen_expr_array_access(builder, (ast_expr_array_access_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
-    case EXPR_CAST: {
-            ast_expr_cast_t *cast_expr = (ast_expr_cast_t*) expr;
-            ast_type_t from_type;
-
-            if(ir_gen_expr(builder, cast_expr->from, ir_value, false, &from_type)) return FAILURE;
-
-            if(!ast_types_conform(builder, ir_value, &from_type, &cast_expr->to, CONFORM_MODE_ALL)){
-                char *a_type_str = ast_type_str(&from_type);
-                char *b_type_str = ast_type_str(&cast_expr->to);
-                compiler_panicf(builder->compiler, expr->source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
-                free(a_type_str);
-                free(b_type_str);
-                ast_type_free(&from_type);
-                return FAILURE;
-            }
-
-            ast_type_free(&from_type);
-            if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&cast_expr->to);
-        }
+    case EXPR_CAST:
+        if(ir_gen_expr_cast(builder, (ast_expr_cast_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_SIZEOF: {
             ir_basicblock_new_instructions(builder->current_block, 1);
@@ -1865,7 +1713,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
     return FAILURE;
 }
 
-errorcode_t ir_gen_expr_address(ir_builder_t *builder, ast_expr_address_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+errorcode_t ir_gen_expr_address(ir_builder_t *builder, ast_expr_address_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
     // NOTE: The child expression should be able to be mutable (Checked during parsing)
 
     // Generate the child expression, and leave it as mutable
@@ -1988,6 +1836,170 @@ fail_tentatively:
     // - Isaac (Mar 21 2020)
     *ir_value = build_null_pointer(builder->pool);
     if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_dereference(ir_builder_t *builder, ast_expr_dereference_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+    ir_value_t *expr_value;
+    ast_type_t expr_type;
+
+    if(ir_gen_expr(builder, expr->value, &expr_value, false, &expr_type)) return FAILURE;
+
+    // Ensure that the result ast_type_t is a pointer type
+    if(!ast_type_is_pointer(&expr_type)){
+        char *expr_type_str = ast_type_str(&expr_type);
+        compiler_panicf(builder->compiler, expr->source, "Can't dereference non-pointer type '%s'", expr_type_str);
+        ast_type_free(&expr_type);
+        free(expr_type_str);
+        return FAILURE;
+    }
+
+    // Dereference the pointer type
+    ast_type_dereference(&expr_type);
+
+    // If not requested to leave the expression mutable, dereference it
+    if(!leave_mutable){
+        // ir_type_t is expected to be of kind pointer and it's child to also be of kind pointer
+        if(expr_value->type->kind != TYPE_KIND_POINTER){
+            compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Expected ir_type_t to be a pointer inside ir_gen_expr_dereference()");
+            ast_type_free(&expr_type);
+            return FAILURE;
+        }
+
+        // Build and append a load instruction
+        *ir_value = build_load(builder, expr_value, expr->source);
+    } else {
+        *ir_value = expr_value;
+    }
+
+    // Result type is the deferenced type, if not requested, we'll dispose of it
+    if(out_expr_type != NULL) *out_expr_type = expr_type;
+    else ast_type_free(&expr_type);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_access_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+    ast_type_t index_type, array_type;
+    ir_value_t *index_value, *array_value;
+    weak_cstr_t error_with_type;
+    
+    // Generate IR values for array value and index value
+    if(ir_gen_expr(builder, expr->value, &array_value, true, &array_type)) return FAILURE;
+    if(ir_gen_expr(builder, expr->index, &index_value, false, &index_type)){
+        ast_type_free(&array_type);
+        return FAILURE;
+    }
+
+    // Ensure array value is mutable
+    if(array_value->type->kind != TYPE_KIND_POINTER){
+        error_with_type = ast_type_str(&array_type);
+
+        compiler_panicf(builder->compiler, expr->source, "Can't use operator %s on temporary value of type '%s'",
+            expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", error_with_type);
+        
+        free(error_with_type);
+        ast_type_free(&array_type);
+        ast_type_free(&index_type);
+        return FAILURE;
+    }
+
+    // Prepare different types of array values
+    if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY){
+        // Bitcast reference (that's to a fixed array of element) to pointer of element
+        // (*)  [10] int -> *int
+
+        assert(array_type.elements_length != 0);
+        array_type.elements[0]->id = AST_ELEM_POINTER;
+
+        ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
+        array_value = build_bitcast(builder, array_value, casted_ir_type);
+    } else if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_STRUCTURE){
+        // Keep structure value mutable
+    } else if(expr_is_mutable(expr->value)){
+        // Load value reference
+        // (*)  *int -> *int
+        array_value = build_load(builder, array_value, expr->source);
+    }
+
+    // Standard [] access for pointers
+    if(ast_type_is_pointer(&array_type)){
+        // Ensure the given value for the index is an integer
+        if(!global_type_kind_is_integer[index_value->type->kind]){
+            compiler_panic(builder->compiler, expr->index->source, "Array index value must be an integer type");
+            ast_type_free(&array_type);
+            ast_type_free(&index_type);
+            return FAILURE;
+        }
+
+        // Access array via index
+        *ir_value = build_array_access(builder, array_value, index_value, expr->source);
+    } else if(ir_type_is_pointer_to(array_value->type, TYPE_KIND_STRUCTURE)){
+        // If standard [] access isn't allowed on this type, then try
+        // to use the __access__ management method (if the array value is a structure)
+        
+        ast_type_t element_pointer_type;
+        *ir_value = handle_access_management(builder, array_value, index_value, expr->source, &array_type, &index_type, &element_pointer_type);
+        if(*ir_value == NULL) goto array_access_not_allowed;
+
+        // If successful in calling __access__ method, then swap the array type to the *Element type
+        ast_type_free(&array_type);
+        array_type = element_pointer_type;
+    } else {
+        // We couldn't find a way to use the [] operator on this type
+        goto array_access_not_allowed;
+    }
+    
+    if(expr->id == EXPR_ARRAY_ACCESS){
+        // For [] expressions, and not 'at' expressions, we need to dereference the array type
+        // before giving it back as the result type
+        ast_type_dereference(&array_type);
+        
+        // If not requested to leave the expression mutable, dereference it
+        if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
+    }
+
+    // Dispose of the AST type of the index value
+    ast_type_free(&index_type);
+
+    // Result type is the AST type of the array value (cause we modified it to be)
+    if(out_expr_type != NULL) *out_expr_type = array_type;
+    else ast_type_free(&array_type);
+    return SUCCESS;
+
+array_access_not_allowed:
+    error_with_type = ast_type_str(&array_type);
+
+    compiler_panicf(builder->compiler, expr->source, "Can't use operator %s on non-array type '%s'",
+        expr->id == EXPR_ARRAY_ACCESS ? "[]" : "'at'", error_with_type);
+
+    free(error_with_type);
+    ast_type_free(&array_type);
+    ast_type_free(&index_type);
+    return FAILURE;
+}
+
+errorcode_t ir_gen_expr_cast(ir_builder_t *builder, ast_expr_cast_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ast_type_t from_type;
+
+    // Generate the IR value for the un-casted expression
+    if(ir_gen_expr(builder, expr->from, ir_value, false, &from_type)) return FAILURE;
+
+    // Attempt to cast the value to the given type, by any means necessary
+    if(!ast_types_conform(builder, ir_value, &from_type, &expr->to, CONFORM_MODE_ALL)){
+        char *a_type_str = ast_type_str(&from_type);
+        char *b_type_str = ast_type_str(&expr->to);
+        compiler_panicf(builder->compiler, expr->source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
+        free(a_type_str);
+        free(b_type_str);
+        ast_type_free(&from_type);
+        return FAILURE;
+    }
+
+    // Dispose of the temporary AST type of the un-casted value
+    ast_type_free(&from_type);
+
+    // Result type is the type we casted to
+    if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&expr->to);
     return SUCCESS;
 }
 
