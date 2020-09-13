@@ -25,60 +25,114 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         leave_mutable = true;
     }
 
-    #define BUILD_MATH_OP_IvF_MACRO(i, f, o, E) { \
-        instruction = ir_gen_math_operands(builder, expr, ir_value, o, out_expr_type); \
-        if(instruction == NULL) return FAILURE; \
-        if(i_vs_f_instruction((ir_instr_math_t*) instruction, i, f)){ \
-            compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, E); \
-            ast_type_free(out_expr_type); \
-            return FAILURE; \
-        } \
-    }
-
-    #define BUILD_MATH_OP_UvSvF_MACRO(u, s, f, o, E) { \
-        instruction = ir_gen_math_operands(builder, expr, ir_value, o, out_expr_type); \
-        if(instruction == NULL) return FAILURE; \
-        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, u, s, f)){ \
-            compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, E); \
-            ast_type_free(out_expr_type); \
-            return FAILURE; \
-        } \
-    }
-
-    #define BUILD_LITERAL_IR_VALUE(ast_expr_type, typename, storage_type) { \
-        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(typename)); \
-        *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t)); \
-        (*ir_value)->value_type = VALUE_TYPE_LITERAL; \
-        ir_type_map_find(builder->type_map, typename, &((*ir_value)->type)); \
-        (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(storage_type)); \
-        *((storage_type*) (*ir_value)->extra) = ((ast_expr_type*) expr)->value; \
-    }
-
     switch(expr->id){
+
+    #define build_literal_ir_value(ast_expr_type, typename, storage_type) {              \
+        /* Allocate memory for literal value */                                          \
+        *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));                    \
+        (*ir_value)->value_type = VALUE_TYPE_LITERAL;                                    \
+                                                                                         \
+        /* Store the literal value and resolve the IR type */                            \
+        ir_type_map_find(builder->type_map, typename, &((*ir_value)->type));             \
+        (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(storage_type));         \
+        *((storage_type*) (*ir_value)->extra) = ((ast_expr_type*) expr)->value;          \
+                                                                                         \
+        /* Result type is an AST type with that typename */                              \
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(typename)); \
+    }
+
     case EXPR_BYTE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_byte_t, "byte", adept_byte); break;
+        build_literal_ir_value(ast_expr_byte_t, "byte", adept_byte);
+        break;
     case EXPR_UBYTE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_ubyte_t, "ubyte", adept_ubyte); break;
+        build_literal_ir_value(ast_expr_ubyte_t, "ubyte", adept_ubyte);
+        break;
     case EXPR_SHORT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_short_t, "short", adept_short); break;
+        build_literal_ir_value(ast_expr_short_t, "short", adept_short);
+        break;
     case EXPR_USHORT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_ushort_t, "ushort", adept_ushort); break;
+        build_literal_ir_value(ast_expr_ushort_t, "ushort", adept_ushort);
+        break;
     case EXPR_INT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_int_t, "int", adept_int); break;
+        build_literal_ir_value(ast_expr_int_t, "int", adept_int);
+        break;
     case EXPR_UINT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_uint_t, "uint", adept_uint); break;
+        build_literal_ir_value(ast_expr_uint_t, "uint", adept_uint);
+        break;
     case EXPR_LONG:
-        BUILD_LITERAL_IR_VALUE(ast_expr_long_t, "long", adept_long); break;
+        build_literal_ir_value(ast_expr_long_t, "long", adept_long);
+        break;
     case EXPR_ULONG:
-        BUILD_LITERAL_IR_VALUE(ast_expr_ulong_t, "ulong", adept_ulong); break;
+        build_literal_ir_value(ast_expr_ulong_t, "ulong", adept_ulong);
+        break;
     case EXPR_USIZE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_usize_t, "usize", adept_usize); break;
+        build_literal_ir_value(ast_expr_usize_t, "usize", adept_usize);
+        break;
     case EXPR_FLOAT:
-        BUILD_LITERAL_IR_VALUE(ast_expr_float_t, "float", adept_float); break;
+        build_literal_ir_value(ast_expr_float_t, "float", adept_float);
+        break;
     case EXPR_DOUBLE:
-        BUILD_LITERAL_IR_VALUE(ast_expr_double_t, "double", adept_double); break;
+        build_literal_ir_value(ast_expr_double_t, "double", adept_double);
+        break;
     case EXPR_BOOLEAN:
-        BUILD_LITERAL_IR_VALUE(ast_expr_boolean_t, "bool", adept_bool); break;
+        build_literal_ir_value(ast_expr_boolean_t, "bool", adept_bool);
+        break;
+
+    #undef build_literal_ir_value
+
+    #define build_math_ivf_operation(ints_instr, floats_instr, op_result_kind, error_message) {     \
+        /* Create undesignated math operation */                                                    \
+        instruction = ir_gen_math_operands(builder, expr, ir_value, op_result_kind, out_expr_type); \
+        if(instruction == NULL) return FAILURE;                                                     \
+                                                                                                    \
+        /* Designated math operation based on operand types */                                      \
+        if(i_vs_f_instruction((ir_instr_math_t*) instruction, ints_instr, floats_instr)){           \
+            compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, error_message);    \
+            ast_type_free(out_expr_type);                                                           \
+            return FAILURE;                                                                         \
+        }                                                                                           \
+    }
+    
+    case EXPR_BIT_AND:
+        build_math_ivf_operation(INSTRUCTION_BIT_AND, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'and' on those types");
+        break;
+    case EXPR_BIT_OR:
+        build_math_ivf_operation(INSTRUCTION_BIT_OR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types");
+        break;
+    case EXPR_BIT_XOR:
+        build_math_ivf_operation(INSTRUCTION_BIT_XOR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'xor' on those types");
+        break;
+    case EXPR_BIT_LSHIFT:
+        build_math_ivf_operation(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types");
+        break;
+    case EXPR_BIT_LGC_LSHIFT:
+        build_math_ivf_operation(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types");
+        break;
+    case EXPR_BIT_LGC_RSHIFT:
+        build_math_ivf_operation(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types");
+        break;
+
+    #undef build_math_ivf_operation
+    
+    #define build_math_uvsvf_operation(uints_instr, sints_instr, floats_instr, op_result_kind, error_message) {  \
+        /* Create undesignated math operation */                                                                 \
+        instruction = ir_gen_math_operands(builder, expr, ir_value, op_result_kind, out_expr_type);              \
+        if(instruction == NULL) return FAILURE;                                                                  \
+                                                                                                                 \
+        /* Designated math operation based on operand types */                                                   \
+        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) instruction, uints_instr, sints_instr, floats_instr)){ \
+            compiler_panic(builder->compiler, ((ast_expr_math_t*) expr)->source, error_message);                 \
+            ast_type_free(out_expr_type);                                                                        \
+            return FAILURE;                                                                                      \
+        }                                                                                                        \
+    }
+
+    case EXPR_BIT_RSHIFT:
+        build_math_uvsvf_operation(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types");
+        break;
+
+    #undef build_math_uvsvf_operation
+    
     case EXPR_NULL:
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
         *ir_value = build_null_pointer(builder->pool);
@@ -582,20 +636,6 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(enum_value_expr->enum_name));
         }
         break;
-    case EXPR_BIT_AND:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_AND, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'and' on those types"); break;
-    case EXPR_BIT_OR:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_OR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'or' on those types"); break;
-    case EXPR_BIT_XOR:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_XOR, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'xor' on those types"); break;
-    case EXPR_BIT_LSHIFT:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
-    case EXPR_BIT_RSHIFT:
-        BUILD_MATH_OP_UvSvF_MACRO(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
-    case EXPR_BIT_LGC_LSHIFT:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'left shift' on those types"); break;
-    case EXPR_BIT_LGC_RSHIFT:
-        BUILD_MATH_OP_IvF_MACRO(INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE, MATH_OP_RESULT_MATCH, "Can't perform bitwise 'right shift' on those types"); break;
     case EXPR_STATIC_ARRAY: {
             ast_expr_static_data_t *static_array_expr = (ast_expr_static_data_t*) expr;
 
@@ -1022,10 +1062,6 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
         return FAILURE;
     }
-
-    #undef BUILD_LITERAL_IR_VALUE
-    #undef BUILD_MATH_OP_IvF_MACRO
-    #undef BUILD_MATH_OP_UvSvF_MACRO
 
     return SUCCESS;
 }
