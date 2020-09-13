@@ -1433,14 +1433,14 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_SWITCH: {
                 ast_expr_switch_t *switch_expr = (ast_expr_switch_t*) stmt;
 
-                length_t default_block_id, resume_block_id;
-                length_t starting_block_id = builder->current_block_id;
-
                 ir_value_t *condition;
                 ast_type_t master_ast_type;
                 if(ir_gen_expr(builder, switch_expr->value, &condition, false, &master_ast_type)){
                     return FAILURE;
                 }
+
+                length_t default_block_id, resume_block_id;
+                length_t starting_block_id = builder->current_block_id;
 
                 // STATIC ASSERT: Ensure that all IR integer type kinds are in the expected range
                 #define tmp_range(v) (v >= 0x00000002 && v <= 0x00000009)
