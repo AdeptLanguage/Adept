@@ -39,32 +39,58 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
 errorcode_t ir_gen_expr_dereference(ir_builder_t *builder, ast_expr_dereference_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_access_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_cast(ir_builder_t *builder, ast_expr_cast_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_sizeof(ir_builder_t *builder, ast_expr_sizeof_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_phantom(ir_builder_t *builder, ast_expr_phantom_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 
 // ---------------- ir_gen_expr_* helper functions ----------------
 // Functions that assist the ir_gen_expr_* functions
+
+// Generates math for operations that either work on integers or floats
+// If the instruction ID of the chosen instruction is INSTRUCTION_NONE,
+// then FAILURE will be returned
+// NOTE: Returns FAILURE on failure
+errorcode_t ir_gen_expr_math_ivf(ir_builder_t *builder, ast_expr_math_t *expr, unsigned int ints_instr, unsigned int floats_instr,
+        ir_value_t **ir_value, ast_type_t *out_expr_type);
+
+// Generates math for operations that either work on unsigned integers, signed integers, or floats
+// If the instruction ID of the chosen instruction is INSTRUCTION_NONE,
+// then FAILURE will be returned
+// NOTE: Returns FAILURE on failure
+errorcode_t ir_gen_expr_math_uvsvf(ir_builder_t *builder, ast_expr_math_t *expr, unsigned int uints_instr, unsigned int sints_instr,
+        unsigned int floats_instr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+
+// Generates the setup for either an 'AND' or an 'OR' expression
 errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_expr, ir_value_t **a, ir_value_t **b,
         length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
 
+// Gets info about a field in order to help complete a 'MEMBER' expression
 errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *struct_value_ast_type,
         length_t *field_index, ir_type_t **field_type, bool *is_via_union, ast_type_t *out_expr_type);
+
+// Finds the appropriate method for a 'CALL METHOD' expression to call
+errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values, ast_type_t *arg_types, funcpair_t *result);
+
+// Fills in any missing arguments for a 'CALL'/'CALL METHOD' expression
+errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types,
+        length_t provided_arity, ast_expr_t **target_defaults, length_t target_arity, source_t source_on_failure);
+
+// Calls the pass management function on arguments for 'CALL'/'CALL METHOD' expression
+errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *arg_types,
+        trait_t target_traits, trait_t *target_arg_type_traits, length_t arity_without_variadic_arguments);
 // ----------------------------------------------------------------
 
 // ---------------- ir_gen_math_operands ----------------
 // ir_gens both expression operands of a math expression
 // and returns a new IR math instruction with an undetermined
 // instruction id (for caller to determine afterwards).
-ir_instr_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, unsigned int op_res, ast_type_t *out_expr_type);
+ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 
 // ---------------- ir_gen_call_function_value ----------------
 // Generates instructions for calling a value that's a function pointer
 errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_var_type,
         ir_type_t *ir_var_type, ast_expr_call_t *call, ir_value_t **arg_values, ast_type_t *arg_types,
         ir_value_t **inout_ir_value, ast_type_t *out_expr_type);
-
-// Operation result auto-type-casting modes for 'ir_gen_math_operands'
-#define MATH_OP_RESULT_MATCH 0x01
-#define MATH_OP_RESULT_BOOL  0x02
-#define MATH_OP_ALL_BOOL     0x03
 
 // ---------------- ir_gen_expr_math ----------------
 // Differentiates an operation for different data types

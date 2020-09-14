@@ -599,6 +599,16 @@ bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base){
     return true;
 }
 
+bool ast_type_is_base_like(const ast_type_t *type){
+    if(type->elements_length != 1) return false;
+
+    unsigned int elem_id = type->elements[0]->id;
+
+    if(elem_id == AST_ELEM_BASE) return true;
+    if(elem_id == AST_ELEM_GENERIC_BASE) return true;
+    return false;
+}
+
 bool ast_type_is_pointer(const ast_type_t *type){
     return type->elements_length > 1 && type->elements[0]->id == AST_ELEM_POINTER;
 }
@@ -614,6 +624,31 @@ bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to){
     stripped.elements_length--;
     
     return ast_types_identical(&stripped, to);
+}
+
+bool ast_type_is_pointer_to_base(const ast_type_t *type){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER) return false;
+    
+    return type->elements[1]->id == AST_ELEM_BASE;
+}
+
+bool ast_type_is_pointer_to_generic_base(const ast_type_t *type){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER) return false;
+
+    return type->elements[1]->id == AST_ELEM_GENERIC_BASE;
+}
+
+bool ast_type_is_pointer_to_base_like(const ast_type_t *type){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER) return false;
+
+    unsigned int second_elem_id = type->elements[1]->id;
+    if(second_elem_id == AST_ELEM_BASE) return true;
+    if(second_elem_id == AST_ELEM_GENERIC_BASE) return true;
+
+    return false;
 }
 
 bool ast_type_is_polymorph(const ast_type_t *type){

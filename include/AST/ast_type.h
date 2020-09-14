@@ -239,6 +239,11 @@ bool ast_type_is_base_of(const ast_type_t *type, const char *base);
 // Returns whether an AST type is a pointer to a particular base
 bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base);
 
+// ---------------- ast_type_is_base_like ----------------
+// Returns whether an AST type is a base-like AST type.
+// This includes either regular base types and generic base types
+bool ast_type_is_base_like(const ast_type_t *type);
+
 // ---------------- ast_type_is_pointer ----------------
 // Returns whether an AST type is a pointer
 // NOTE: Does NOT include 'ptr'
@@ -247,6 +252,19 @@ bool ast_type_is_pointer(const ast_type_t *type);
 // ---------------- ast_type_is_pointer_to ----------------
 // Returns whether an AST type is a pointer to another AST type
 bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to);
+
+// ---------------- ast_type_is_pointer_to_base ----------------
+// Returns whether an AST type is a pointer to a base
+bool ast_type_is_pointer_to_base(const ast_type_t *type);
+
+// ---------------- ast_type_is_pointer_to_generic_base ----------------
+// Returns whether an AST type is a pointer to a generic base
+bool ast_type_is_pointer_to_generic_base(const ast_type_t *type);
+
+// ---------------- ast_type_is_pointer_to_base_like ----------------
+// Returns whether an AST type is a pointer to a base-like AST type.
+// This includes either regular base types and generic base types
+bool ast_type_is_pointer_to_base_like(const ast_type_t *type);
 
 // ---------------- ast_type_is_polymorph ----------------
 // Returns whether an AST type is a plain polymorphic type
