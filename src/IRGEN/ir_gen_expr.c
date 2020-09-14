@@ -15,7 +15,6 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     // NOTE: Generates an ir_value_t from an ast_expr_t
     // NOTE: Will write determined ast_type_t to 'out_expr_type' (Can use NULL to ignore)
 
-    ir_instr_t *instruction;
     ir_value_t *dummy_temporary_ir_value;
 
     if(ir_value == NULL){
@@ -218,599 +217,38 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_CALL_METHOD:
         if(ir_gen_expr_call_method(builder, (ast_expr_call_method_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_NOT: case EXPR_NEGATE: case EXPR_BIT_COMPLEMENT: {
-            ast_expr_unary_t *unary_expr = (ast_expr_unary_t*) expr;
-            ast_type_t expr_type;
-            ir_value_t *expr_value;
-
-            #define MACRO_UNARY_OPERATOR_CHARCTER (expr->id == EXPR_NOT ? '!' : (expr->id == EXPR_NEGATE ? '-' : '~'))
-
-            if(ir_gen_expr(builder, unary_expr->value, &expr_value, false, &expr_type)) return FAILURE;
-
-            if(ir_type_get_catagory(expr_value->type) == PRIMITIVE_NA){
-                char *s = ast_type_str(&expr_type);
-                compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
-                ast_type_free(&expr_type);
-                free(s);
-                return FAILURE;
-            }
-
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_unary_t));
-            ((ir_instr_unary_t*) instruction)->value = expr_value;
-
-            if(expr->id == EXPR_NOT){
-                // Build and append an 'iszero' instruction
-                ((ir_instr_unary_t*) instruction)->id = INSTRUCTION_ISZERO;
-                ((ir_instr_unary_t*) instruction)->result_type = ir_builder_bool(builder);
-                if(out_expr_type) ast_type_make_base(out_expr_type, strclone("bool"));
-            } else {
-                // Build and append an 'negate' instruction
-                ((ir_instr_unary_t*) instruction)->result_type = expr_value->type;
-
-                switch(((ir_instr_unary_t*) instruction)->value->type->kind){
-                case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN:
-                case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
-                case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-                    instruction->id = (expr->id == EXPR_NEGATE ? INSTRUCTION_NEGATE : INSTRUCTION_BIT_COMPLEMENT);
-                    break;
-                case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
-                    if(expr->id == EXPR_BIT_COMPLEMENT){
-                        char *s = ast_type_str(&expr_type);
-                        compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
-                        ast_type_free(&expr_type);
-                        free(s);
-                        return FAILURE;
-                    }
-                    instruction->id = INSTRUCTION_FNEGATE; break;
-                default: {
-                        char *s = ast_type_str(&expr_type);
-                        compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'", MACRO_UNARY_OPERATOR_CHARCTER, s);
-                        ast_type_free(&expr_type);
-                        free(s);
-                        return FAILURE;
-                    }
-                }
-
-                if(out_expr_type) *out_expr_type = ast_type_clone(&expr_type);
-            }
-
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
-            ast_type_free(&expr_type);
-        }
+    case EXPR_NOT: case EXPR_NEGATE: case EXPR_BIT_COMPLEMENT:
+        if(ir_gen_expr_unary(builder, (ast_expr_unary_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_NEW: {
-            ir_type_t *ir_type;
-            ast_type_t multiplier_type;
-            ir_value_t *amount = NULL;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &((ast_expr_new_t*) expr)->type, &ir_type)) return FAILURE;
-
-            if( ((ast_expr_new_t*) expr)->amount != NULL ){
-                if(ir_gen_expr(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return FAILURE;
-                unsigned int multiplier_typekind = amount->type->kind;
-
-                if(multiplier_typekind < TYPE_KIND_S8 || multiplier_typekind > TYPE_KIND_U64){
-                    char *typename = ast_type_str(&multiplier_type);
-                    compiler_panicf(builder->compiler, expr->source, "Can't specify length using non-integer type '%s'", typename);
-                    ast_type_free(&multiplier_type);
-                    free(typename);
-                    return FAILURE;
-                }
-
-                ast_type_free(&multiplier_type);
-            }
-
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_malloc_t));
-            ((ir_instr_malloc_t*) instruction)->id = INSTRUCTION_MALLOC;
-            ((ir_instr_malloc_t*) instruction)->result_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ((ir_instr_malloc_t*) instruction)->result_type->kind = TYPE_KIND_POINTER;
-            ((ir_instr_malloc_t*) instruction)->result_type->extra = ir_type;
-            ((ir_instr_malloc_t*) instruction)->type = ir_type;
-            ((ir_instr_malloc_t*) instruction)->amount = amount;
-            ((ir_instr_malloc_t*) instruction)->is_undef = ((ast_expr_new_t*) expr)->is_undef;
-
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            *ir_value = build_value_from_prev_instruction(builder);
-
-            if(out_expr_type != NULL){
-                *out_expr_type = ast_type_clone(&((ast_expr_new_t*) expr)->type);
-                ast_type_prepend_ptr(out_expr_type);
-            }
-        }
+    case EXPR_NEW:
+        if(ir_gen_expr_new(builder, (ast_expr_new_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_NEW_CSTRING: {
-            ast_expr_new_cstring_t *new_cstring_expr = (ast_expr_new_cstring_t*) expr;
-            
-            ir_type_t *ubyte = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ubyte->kind = TYPE_KIND_U8;
-
-            ir_type_t *ubyte_ptr = ir_type_pointer_to(builder->pool, ubyte);
-            length_t value_length = strlen(new_cstring_expr->value);
-
-            ir_value_t *bytes_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-            bytes_value->value_type = VALUE_TYPE_LITERAL;
-            bytes_value->type = ir_builder_usize(builder);
-            bytes_value->extra = ir_pool_alloc(builder->pool, sizeof(adept_usize));
-            *((adept_usize*) bytes_value->extra) = value_length + 1;
-
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_malloc_t));
-            ((ir_instr_malloc_t*) instruction)->id = INSTRUCTION_MALLOC;
-            ((ir_instr_malloc_t*) instruction)->result_type = ubyte_ptr;
-            ((ir_instr_malloc_t*) instruction)->type = ubyte;
-            ((ir_instr_malloc_t*) instruction)->amount = bytes_value;
-
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            ir_value_t *heap_memory = build_value_from_prev_instruction(builder);
-
-            ir_value_t *cstring_value = build_literal_cstr(builder, new_cstring_expr->value);
-
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_memcpy_t));
-            ((ir_instr_memcpy_t*) instruction)->id = INSTRUCTION_MEMCPY;
-            ((ir_instr_memcpy_t*) instruction)->result_type = NULL;
-            ((ir_instr_memcpy_t*) instruction)->destination = heap_memory;
-            ((ir_instr_memcpy_t*) instruction)->value = cstring_value;
-            ((ir_instr_memcpy_t*) instruction)->bytes = bytes_value;
-            ((ir_instr_memcpy_t*) instruction)->is_volatile = false;
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-
-            *ir_value = heap_memory;
-            if(out_expr_type != NULL){
-                ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
-            }
-        }
+    case EXPR_NEW_CSTRING:
+        if(ir_gen_expr_new_cstring(builder, (ast_expr_new_cstring_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_ENUM_VALUE: {
-            ast_expr_enum_value_t *enum_value_expr = (ast_expr_enum_value_t*) expr;
-            length_t enum_kind_id;
-
-            maybe_index_t enum_index = ast_find_enum(builder->object->ast.enums, builder->object->ast.enums_length, enum_value_expr->enum_name);
-
-            if(enum_index == -1){
-                compiler_panicf(builder->compiler, enum_value_expr->source, "Failed to enum '%s'", enum_value_expr->enum_name);
-                return FAILURE;
-            }
-
-            ast_enum_t *inum = &builder->object->ast.enums[enum_index];
-
-            if(!ast_enum_find_kind(inum, enum_value_expr->kind_name, &enum_kind_id)){
-                compiler_panicf(builder->compiler, enum_value_expr->source, "Failed to find member '%s' of enum '%s'", enum_value_expr->kind_name, enum_value_expr->enum_name);
-                return FAILURE;
-            }
-
-            *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-            (*ir_value)->value_type = VALUE_TYPE_LITERAL;
-            ir_type_map_find(builder->type_map, enum_value_expr->enum_name, &((*ir_value)->type));
-            (*ir_value)->extra = ir_pool_alloc(builder->pool, sizeof(adept_usize));
-            *((adept_usize*) (*ir_value)->extra) = enum_kind_id;
-
-            if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(enum_value_expr->enum_name));
-        }
+    case EXPR_ENUM_VALUE:
+        if(ir_gen_expr_enum_value(builder, (ast_expr_enum_value_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_STATIC_ARRAY: {
-            ast_expr_static_data_t *static_array_expr = (ast_expr_static_data_t*) expr;
-
-            ir_type_t *array_ir_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_array_expr->type, &array_ir_type)){
-                return FAILURE;
-            }
-
-            ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * static_array_expr->length);
-            length_t length = static_array_expr->length;
-            ir_type_t *type = array_ir_type;
-
-            for(length_t i = 0; i != static_array_expr->length; i++){
-                ast_type_t member_type;
-
-                if(ir_gen_expr(builder, static_array_expr->values[i], &values[i], false, &member_type)){
-                    return FAILURE;
-                }
-
-                if(!ast_types_conform(builder, &values[i], &member_type, &static_array_expr->type, CONFORM_MODE_STANDARD)){
-                    char *a_type_str = ast_type_str(&member_type);
-                    char *b_type_str = ast_type_str(&static_array_expr->type);
-                    compiler_panicf(builder->compiler, static_array_expr->type.source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
-                    ast_type_free(&member_type);
-                    return FAILURE;
-                }
-
-                if(!VALUE_TYPE_IS_CONSTANT(values[i]->value_type)){
-                    compiler_panicf(builder->compiler, static_array_expr->values[i]->source, "Can't put non-constant value into constant array");
-                    ast_type_free(&member_type);
-                    return FAILURE;
-                }
-
-                ast_type_free(&member_type);
-            }
-
-            *ir_value = build_static_array(builder->pool, type, values, length);
-
-            if(out_expr_type != NULL){
-                *out_expr_type = ast_type_clone(&static_array_expr->type);
-                ast_type_prepend_ptr(out_expr_type);
-            }
-        }
+    case EXPR_STATIC_ARRAY:
+        if(ir_gen_expr_static_array(builder, (ast_expr_static_data_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_STATIC_STRUCT: {
-            // NOTE: Assumes a structure names that exists, cause we already checked in 'infer'
-            // NOTE: Also assumes that lengths of the struct literal and the struct match up (because we already checked)
-
-            ast_expr_static_data_t *static_struct_expr = (ast_expr_static_data_t*) expr;
-
-            ir_type_t *struct_ir_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &static_struct_expr->type, &struct_ir_type)){
-                return FAILURE;
-            }
-
-            const char *base = ((ast_elem_base_t*) static_struct_expr->type.elements[0])->base;
-            ast_struct_t *structure = ast_struct_find(&builder->object->ast, base);
-
-            ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * static_struct_expr->length);
-            length_t length = static_struct_expr->length;
-            ir_type_t *type = struct_ir_type;
-
-            for(length_t i = 0; i != static_struct_expr->length; i++){
-                ast_type_t member_type;
-
-                if(ir_gen_expr(builder, static_struct_expr->values[i], &values[i], false, &member_type)){
-                    return FAILURE;
-                }
-
-                if(!ast_types_conform(builder, &values[i], &member_type, &structure->field_types[i], CONFORM_MODE_STANDARD)){
-                    char *a_type_str = ast_type_str(&member_type);
-                    char *b_type_str = ast_type_str(&static_struct_expr->type);
-                    compiler_panicf(builder->compiler, static_struct_expr->values[i]->source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
-                    ast_type_free(&member_type);
-                    return FAILURE;
-                }
-
-                if(!VALUE_TYPE_IS_CONSTANT(values[i]->value_type)){
-                    compiler_panicf(builder->compiler, static_struct_expr->values[i]->source, "Can't put non-constant value into constant array");
-                    ast_type_free(&member_type);
-                    return FAILURE;
-                }
-
-                ast_type_free(&member_type);
-            }
-
-            *ir_value = build_static_struct(&builder->object->ir_module, type, values, length, true);
-
-            if(out_expr_type != NULL){
-                *out_expr_type = ast_type_clone(&static_struct_expr->type);
-                ast_type_prepend_ptr(out_expr_type);
-            }
-        }
+    case EXPR_STATIC_STRUCT:
+        if(ir_gen_expr_static_struct(builder, (ast_expr_static_data_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_TYPEINFO: {
-            ast_expr_typeinfo_t *typeinfo = (ast_expr_typeinfo_t*) expr;
-            
-            if(builder->compiler->traits & COMPILER_NO_TYPEINFO){
-                compiler_panic(builder->compiler, typeinfo->source, "Unable to use runtime type info when runtime type information is disabled");
-                return FAILURE;
-            }
-
-            *ir_value = rtti_for(builder, &typeinfo->target, typeinfo->source);
-            if(*ir_value == NULL) return FAILURE;
-
-            if(out_expr_type)
-                ast_type_make_base_ptr(out_expr_type, strclone("AnyType"));
-        }
+    case EXPR_TYPEINFO:
+        if(ir_gen_expr_typeinfo(builder, (ast_expr_typeinfo_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_TERNARY: {
-            ast_expr_ternary_t *ternary = (ast_expr_ternary_t*) expr;
-
-            ir_value_t *condition, *if_true, *if_false;
-            ast_type_t condition_type, if_true_type, if_false_type;
-
-            if(ir_gen_expr(builder, ternary->condition, &condition, false, &condition_type))
-                return FAILURE;
-
-            if(!ast_types_conform(builder, &condition, &condition_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
-                char *condition_type_str = ast_type_str(&condition_type);
-                compiler_panicf(builder->compiler, ternary->condition->source, "Received type '%s' when conditional expects type 'bool'", condition_type_str);
-                free(condition_type_str);
-                ast_type_free(&condition_type);
-                return FAILURE;
-            }
-
-            ast_type_free(&condition_type);
-
-            length_t when_true_block_id = build_basicblock(builder);
-            length_t when_false_block_id = build_basicblock(builder);
-
-            build_cond_break(builder, condition, when_true_block_id, when_false_block_id);
-
-            // Generate instructions for when condition is true
-            build_using_basicblock(builder, when_true_block_id);
-            if(ir_gen_expr(builder, ternary->if_true, &if_true, false, &if_true_type))
-                return FAILURE;
-            length_t when_true_landing = builder->current_block_id;
-
-            // Generate instructions for when condition is false
-            build_using_basicblock(builder, when_false_block_id);
-            if(ir_gen_expr(builder, ternary->if_false, &if_false, false, &if_false_type)){
-                ast_type_free(&if_true_type);
-                return FAILURE;
-            }
-            length_t when_false_landing = builder->current_block_id;
-            
-            if(!ast_types_identical(&if_true_type, &if_false_type)){
-                // Try to autocast to larger type of the two if there is one
-                bool conflict_resolved = ir_gen_resolve_ternay_conflict(builder, &if_true, &if_false, &if_true_type, &if_false_type, &when_true_landing, &when_false_landing);
-                
-                if(!conflict_resolved){
-                    char *if_true_typename = ast_type_str(&if_true_type);
-                    char *if_false_typename = ast_type_str(&if_false_type);
-                    compiler_panicf(builder->compiler, ternary->source, "Ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
-                    ast_type_free(&if_true_type);
-                    ast_type_free(&if_false_type);
-                    free(if_true_typename);
-                    free(if_false_typename);
-                    return FAILURE;
-                }
-            }
-
-            // Break from both landing blocks to the merge block
-            length_t merge_block_id = build_basicblock(builder);
-            build_using_basicblock(builder, when_false_landing);
-            build_break(builder, merge_block_id);
-            build_using_basicblock(builder, when_true_landing);
-            build_break(builder, merge_block_id);
-
-            // Merge to grab the result
-            build_using_basicblock(builder, merge_block_id);
-
-            ir_type_t *result_ir_type;
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &if_true_type, &result_ir_type)){
-                ast_type_free(&if_true_type);
-                ast_type_free(&if_false_type);
-                return FAILURE;
-            }
-
-            if(out_expr_type){
-                *out_expr_type = if_true_type;
-            } else {
-                ast_type_free(&if_true_type);
-            }
-
-            ast_type_free(&if_false_type);
-
-            *ir_value = build_phi2(builder, result_ir_type, if_true, if_false, when_true_landing, when_false_landing);
-        }
+    case EXPR_TERNARY:
+        if(ir_gen_expr_ternary(builder, (ast_expr_ternary_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
-    case EXPR_PREINCREMENT: case EXPR_PREDECREMENT:
-    case EXPR_POSTINCREMENT: case EXPR_POSTDECREMENT: {
-            ir_value_t *before_value;
-            ast_type_t before_ast_type;
-            ast_expr_unary_t *unary = (ast_expr_unary_t*) expr;
-
-            // NOTE: unary->value is guaranteed to be a mutable expression
-            if(ir_gen_expr(builder, unary->value, &before_value, true, &before_ast_type))
-                return FAILURE;
-            
-            if(before_value->type->kind != TYPE_KIND_POINTER){
-                compiler_panic(builder->compiler, unary->value->source, "INTERNAL ERROR: ir_gen_expr() EXPR_xCREMENT expected mutable value");
-                ast_type_free(&before_ast_type);
-                return FAILURE;
-            }
-
-            ir_value_t *one = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-            one->value_type = VALUE_TYPE_LITERAL;
-            one->type = (ir_type_t*) before_value->type->extra;
-            one->extra = NULL;
-            
-            switch(one->type->kind){
-            case TYPE_KIND_S8:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_byte));
-                *((adept_byte*) one->extra) = 1;
-                break;
-            case TYPE_KIND_U8:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ubyte));
-                *((adept_ubyte*) one->extra) = 1;
-                break;
-            case TYPE_KIND_S16:
-                // stored w/ extra precision
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_short));
-                *((adept_short*) one->extra) = 1;
-                break;
-            case TYPE_KIND_U16:
-                // stored w/ extra precision
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ushort));
-                *((adept_ushort*) one->extra) = 1;
-                break;
-            case TYPE_KIND_S32:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_int));
-                *((adept_int*) one->extra) = 1;
-                break;
-            case TYPE_KIND_U32:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_uint));
-                *((adept_uint*) one->extra) = 1;
-                break;
-            case TYPE_KIND_S64:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_long));
-                *((adept_long*) one->extra) = 1;
-                break;
-            case TYPE_KIND_U64:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ulong));
-                *((adept_ulong*) one->extra) = 1;
-                break;
-            case TYPE_KIND_FLOAT:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_float));
-                *((adept_float*) one->extra) = 1.0f;
-                break;
-            case TYPE_KIND_DOUBLE:
-                one->extra = ir_pool_alloc(builder->pool, sizeof(adept_double));
-                *((adept_double*) one->extra) = 1.0f;
-                break;
-            }
-
-            if(one->extra == NULL){
-                char *typename = ast_type_str(&before_ast_type);
-                compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'",
-                    expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT ? "increment" : "decrement", typename);
-                ast_type_free(&before_ast_type);
-                free(typename);
-                return FAILURE;
-            }
-
-            ir_basicblock_new_instructions(builder->current_block, 1);
-            instruction = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_math_t));
-
-            ((ir_instr_math_t*) instruction)->id = INSTRUCTION_NONE; // Will be determined
-            ((ir_instr_math_t*) instruction)->a = build_load(builder, before_value, expr->source);
-            ((ir_instr_math_t*) instruction)->b = one;
-            ((ir_instr_math_t*) instruction)->result_type = before_value->type; 
-
-            if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT){
-                if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_ADD, INSTRUCTION_FADD)){
-                    char *typename = ast_type_str(&before_ast_type);
-                    compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "increment", typename);
-                    ast_type_free(&before_ast_type);
-                    free(typename);
-                    return FAILURE;
-                }
-            } else {
-                if(i_vs_f_instruction((ir_instr_math_t*) instruction, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
-                    char *typename = ast_type_str(&before_ast_type);
-                    compiler_panicf(builder->compiler, unary->source, "Can't %s type '%s'", "decrement", typename);
-                    ast_type_free(&before_ast_type);
-                    free(typename);
-                    return FAILURE;
-                }
-            }
-
-            builder->current_block->instructions[builder->current_block->instructions_length++] = instruction;
-            ir_value_t *modified = build_value_from_prev_instruction(builder);
-            build_store(builder, modified, before_value, expr->source);
-
-            if(out_expr_type){
-                *out_expr_type = before_ast_type;
-            } else {
-                ast_type_free(&before_ast_type);
-            }
-
-            // Don't even bother with result unless we care about the it
-            if(ir_value){
-                if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_PREDECREMENT){
-                    *ir_value = leave_mutable ? before_value : build_load(builder, before_value, expr->source);
-                } else {
-                    *ir_value = leave_mutable ? before_value : ((ir_instr_math_t*) instruction)->a;
-                }
-            }
-        }
+    case EXPR_PREINCREMENT: case EXPR_PREDECREMENT: case EXPR_POSTINCREMENT: case EXPR_POSTDECREMENT:
+        if(ir_gen_expr_crement(builder, (ast_expr_unary_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
-    case EXPR_TOGGLE: {
-            ast_expr_unary_t *toggle_expr = (ast_expr_unary_t*) expr;
-            ir_value_t *mutable_value;
-            ast_type_t ast_type;
-
-            if(ir_gen_expr(builder, toggle_expr->value, &mutable_value, true, &ast_type)) return FAILURE;
-
-            ir_type_t *dereferenced_ir_type = ir_type_dereference(mutable_value->type);
-
-            if(!ast_type_is_base_of(&ast_type, "bool") || dereferenced_ir_type == NULL || dereferenced_ir_type->kind != TYPE_KIND_BOOLEAN){
-                char *t = ast_type_str(&ast_type);
-                compiler_panicf(builder->compiler, toggle_expr->source, "Cannot toggle non-boolean type '%s'", t);
-                ast_type_free(&ast_type);
-                free(t);
-                return FAILURE;
-            }
-
-            // Load and not the boolean value
-            ir_value_t *loaded = build_load(builder, mutable_value, toggle_expr->source);
-            
-            ir_instr_t *built_instr = build_instruction(builder, sizeof(ir_instr_unary_t));
-            ((ir_instr_unary_t*) built_instr)->id = INSTRUCTION_ISZERO;
-            ((ir_instr_unary_t*) built_instr)->result_type = ir_builder_bool(builder);
-            ((ir_instr_unary_t*) built_instr)->value = loaded;
-            ir_value_t *notted = build_value_from_prev_instruction(builder);
-            
-            // Store it back into memory
-            build_store(builder, notted, mutable_value, toggle_expr->source);
-
-            if(out_expr_type){
-                *out_expr_type = ast_type;
-            } else {
-                ast_type_free(&ast_type);
-            }
-
-            // Don't even bother with expression result unless we care about the it
-            if(ir_value){
-                *ir_value = leave_mutable ? mutable_value : notted;
-            }
-        }
+    case EXPR_TOGGLE:
+        if(ir_gen_expr_toggle(builder, (ast_expr_unary_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
-    case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
-            ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
-
-            // Search for existing variable named that
-            if(bridge_scope_var_already_in_list(builder->scope, def->name)){
-                compiler_panicf(builder->compiler, def->source, "Variable '%s' already declared", def->name);
-                return FAILURE;
-            }
-
-            ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            if(ir_gen_resolve_type(builder->compiler, builder->object, &def->type, &ir_decl_type)) return FAILURE;
-
-            ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
-
-            if(def->value != NULL){
-                // Regular inline declare statement initial assign value
-                ir_value_t *initial;
-                ast_type_t temporary_type;
-                if(ir_gen_expr(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
-
-                if(!ast_types_conform(builder, &initial, &temporary_type, &def->type, CONFORM_MODE_ASSIGNING)){
-                    char *a_type_str = ast_type_str(&temporary_type);
-                    char *b_type_str = ast_type_str(&def->type);
-                    compiler_panicf(builder->compiler, def->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
-                    ast_type_free(&temporary_type);
-                    return FAILURE;
-                }
-
-
-                ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
-                add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
-
-                if(def->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
-                    build_store(builder, initial, destination, expr->source);
-                }
-
-                ast_type_free(&temporary_type);
-                *ir_value = destination;
-            } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
-                // Mark the variable as undefined memory so it isn't auto-initialized later on
-                add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
-
-                *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
-            } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
-                // Variable declaration without default value
-                add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
-                
-                // Zero initialize the variable
-                instruction = build_instruction(builder, sizeof(ir_instr_varzeroinit_t));
-                ((ir_instr_varzeroinit_t*) instruction)->id = INSTRUCTION_VARZEROINIT;
-                ((ir_instr_varzeroinit_t*) instruction)->result_type = NULL;
-                ((ir_instr_varzeroinit_t*) instruction)->index = builder->next_var_id - 1;
-                
-                *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
-            }
-
-            if(out_expr_type){
-                ast_type_t ast_pointer = ast_type_clone(&def->type);
-                ast_type_prepend_ptr(&ast_pointer);
-                *out_expr_type = ast_pointer;
-            }
-        }
+    case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
+        if(ir_gen_expr_inline_declare(builder, (ast_expr_inline_declare_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     default:
         compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
@@ -1618,11 +1056,12 @@ errorcode_t ir_gen_expr_va_arg(ir_builder_t *builder, ast_expr_va_arg_t *expr, i
 }
 
 errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    bool is_unique;
     funcpair_t pair;
 
     // No arguments given to match against
     if(expr->has_match_args == false){
+        bool is_unique;
+
         if(ir_gen_find_func_named(builder->compiler, builder->object, expr->name, &is_unique, &pair)){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;
@@ -1988,13 +1427,6 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     if(ir_value) *ir_value = build_value_from_prev_instruction(builder);
 
     if(stack_pointer){
-        // Dereference arg_types[0] and call __defer__ on arg_values[0]
-        if(arg_types[0].elements_length == 0 || arg_types[0].elements[0]->id != AST_ELEM_POINTER){
-            compiler_panicf(builder->compiler, expr->source, "INTERNAL ERROR: Temporary mutable value location has non-pointer type");
-            ast_types_free_fully(arg_types, arity);
-            return FAILURE;
-        }
-
         // Dereference pointer to subject AST type to get just the subject AST type
         ast_type_dereference(&arg_types[0]);
         
@@ -2042,6 +1474,671 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
         return FAILURE;
     }
     
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_unary(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ast_type_t expr_type;
+    ir_value_t *expr_value;
+    strong_cstr_t error_typename;
+
+    if(ir_gen_expr(builder, expr->value, &expr_value, false, &expr_type)) return FAILURE;
+
+    unsigned int catagory = ir_type_get_catagory(expr_value->type);
+    
+    ir_instr_unary_t *instruction = (ir_instr_unary_t*) build_instruction(builder, sizeof(ir_instr_unary_t));
+    instruction->value = expr_value;
+
+    if(expr->id == EXPR_NOT){
+        // Build '!'
+
+        // Must be either integer or float like
+        if(catagory == PRIMITIVE_NA) goto cant_use_operator_on_that_type;
+
+        instruction->id = INSTRUCTION_ISZERO;
+        instruction->result_type = ir_builder_bool(builder);
+
+        // Result type is bool
+        if(out_expr_type) ast_type_make_base(out_expr_type, strclone("bool"));
+    } else {
+        // Build '-' or '~'
+        instruction->result_type = expr_value->type;
+
+        // Determine instruction
+        switch(catagory){
+        case PRIMITIVE_UI:
+        case PRIMITIVE_SI:
+            instruction->id = expr->id == EXPR_NEGATE ? INSTRUCTION_NEGATE : INSTRUCTION_BIT_COMPLEMENT;
+            break;
+        case PRIMITIVE_FP:
+            if(expr->id == EXPR_BIT_COMPLEMENT) goto cant_use_operator_on_that_type;        
+            instruction->id = INSTRUCTION_FNEGATE;
+            break;
+        default:
+            goto cant_use_operator_on_that_type;
+        }
+
+        // Result type is the same as the value type
+        if(out_expr_type) *out_expr_type = ast_type_clone(&expr_type);
+    }
+
+    // We successfully generated the value for the unary expression
+    *ir_value = build_value_from_prev_instruction(builder);
+    ast_type_free(&expr_type);
+    return SUCCESS;
+
+cant_use_operator_on_that_type:
+    error_typename = ast_type_str(&expr_type);
+
+    compiler_panicf(builder->compiler, expr->source, "Can't use '%c' operator on type '%s'",
+        expr->id == EXPR_NOT ? '!' : (expr->id == EXPR_NEGATE ? '-' : '~'), error_typename);
+    
+    free(error_typename);
+    ast_type_free(&expr_type);
+    return FAILURE;
+}
+
+errorcode_t ir_gen_expr_new(ir_builder_t *builder, ast_expr_new_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_type_t *ir_type;
+    ast_type_t multiplier_type;
+    ir_value_t *amount = NULL;
+
+    // If a count is given, validate it and generate an IR value
+    if(expr->amount != NULL){
+        // Generate IR value for multiplier
+        if(ir_gen_expr(builder, ((ast_expr_new_t*) expr)->amount, &amount, false, &multiplier_type)) return FAILURE;
+
+        // Ensure the type of the count is an integer
+        unsigned int multiplier_typekind = amount->type->kind;
+
+        if(multiplier_typekind < TYPE_KIND_S8 || multiplier_typekind > TYPE_KIND_U64){
+            char *typename = ast_type_str(&multiplier_type);
+            compiler_panicf(builder->compiler, expr->source, "Can't specify length using non-integer type '%s'", typename);
+            ast_type_free(&multiplier_type);
+            free(typename);
+            return FAILURE;
+        }
+
+        // Dispose of multiplier type
+        ast_type_free(&multiplier_type);
+    }
+
+    // Resolve the target AST type to an IR type
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &ir_type)) return FAILURE;
+
+    // Build heap allocation instruction
+    ir_instr_malloc_t *instruction = (ir_instr_malloc_t*) build_instruction(builder, sizeof(ir_instr_malloc_t));
+    instruction->id = INSTRUCTION_MALLOC;
+    instruction->result_type = ir_type_pointer_to(builder->pool, ir_type);
+    instruction->type = ir_type;
+    instruction->amount = amount;
+    instruction->is_undef = expr->is_undef;
+    *ir_value = build_value_from_prev_instruction(builder);
+
+    // Result type is pointer to requested type
+    if(out_expr_type != NULL){
+        *out_expr_type = ast_type_clone(&expr->type);
+        ast_type_prepend_ptr(out_expr_type);
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    // Create IR u8 and *u8 types
+    ir_type_t *ubyte = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    ubyte->kind = TYPE_KIND_U8;
+    ir_type_t *ubyte_ptr = ir_type_pointer_to(builder->pool, ubyte);
+
+    // Get length of C-string
+    length_t value_length = strlen(expr->value);
+
+    // Get IR value for bytes necesssary
+    ir_value_t *bytes_value = build_literal_usize(builder->pool, value_length + 1);
+
+    // Build heap allocation instruction
+    ir_instr_malloc_t *malloc_instruction = (ir_instr_malloc_t*) build_instruction(builder, sizeof(ir_instr_malloc_t));
+    malloc_instruction->id = INSTRUCTION_MALLOC;
+    malloc_instruction->result_type = ubyte_ptr;
+    malloc_instruction->type = ubyte;
+    malloc_instruction->amount = bytes_value;
+
+    // Remember IR value for pointer to allocated heap memory
+    *ir_value = build_value_from_prev_instruction(builder);
+
+    // Generate a C-string constant
+    ir_value_t *cstring_value = build_literal_cstr(builder, expr->value);
+
+    // Generate instruction to copy string constant to allocated heap memory
+    ir_instr_memcpy_t *mempcy_instruction = (ir_instr_memcpy_t*) build_instruction(builder, sizeof(ir_instr_memcpy_t));
+    mempcy_instruction->id = INSTRUCTION_MEMCPY;
+    mempcy_instruction->result_type = NULL;
+    mempcy_instruction->destination = *ir_value;
+    mempcy_instruction->value = cstring_value;
+    mempcy_instruction->bytes = bytes_value;
+    mempcy_instruction->is_volatile = false;
+
+    // Result type is *ubyte
+    if(out_expr_type != NULL) ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_enum_value(ir_builder_t *builder, ast_expr_enum_value_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    length_t enum_kind_id;
+
+    // Find referenced enum
+    maybe_index_t enum_index = ast_find_enum(builder->object->ast.enums, builder->object->ast.enums_length, expr->enum_name);
+
+    // Fail if we couldn't find the enum
+    if(enum_index == -1){
+        compiler_panicf(builder->compiler, expr->source, "Failed to enum '%s'", expr->enum_name);
+        return FAILURE;
+    }
+
+    // Get enum informatino
+    ast_enum_t *inum = &builder->object->ast.enums[enum_index];
+
+    // Find the ID of the field of the enum
+    if(!ast_enum_find_kind(inum, expr->kind_name, &enum_kind_id)){
+        compiler_panicf(builder->compiler, expr->source, "Failed to find member '%s' of enum '%s'", expr->kind_name, expr->enum_name);
+        return FAILURE;
+    }
+
+    // The IR value for the enum value is just its ID as an u64
+    *ir_value = build_literal_usize(builder->pool, enum_kind_id);
+
+    // Result type is the enum
+    if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone(expr->enum_name));
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_static_array(ir_builder_t *builder, ast_expr_static_data_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * expr->length);
+    length_t length = expr->length;
+
+    // Resolve IR value for target element type
+    ir_type_t *type;
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &type)){
+        return FAILURE;
+    }
+
+    // Generate IR value for each element
+    for(length_t i = 0; i != expr->length; i++){
+        ast_type_t member_type;
+
+        // Generate IR value for element
+        if(ir_gen_expr(builder, expr->values[i], &values[i], false, &member_type)) return FAILURE;
+
+        // Conform element to array element type
+        if(!ast_types_conform(builder, &values[i], &member_type, &expr->type, CONFORM_MODE_STANDARD)){
+            char *a_type_str = ast_type_str(&member_type);
+            char *b_type_str = ast_type_str(&expr->type);
+            compiler_panicf(builder->compiler, expr->type.source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
+            free(a_type_str);
+            free(b_type_str);
+            ast_type_free(&member_type);
+            return FAILURE;
+        }
+
+        // Ensure the value given is constant
+        if(!VALUE_TYPE_IS_CONSTANT(values[i]->value_type)){
+            compiler_panicf(builder->compiler, expr->values[i]->source, "Can't put non-constant value into constant array");
+            ast_type_free(&member_type);
+            return FAILURE;
+        }
+
+        // Dipose of temporary AST member type
+        ast_type_free(&member_type);
+    }
+
+    // Build static array value
+    *ir_value = build_static_array(builder->pool, type, values, length);
+
+    // Result type is pointer to element type
+    if(out_expr_type != NULL){
+        *out_expr_type = ast_type_clone(&expr->type);
+        ast_type_prepend_ptr(out_expr_type);
+    }
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_static_struct(ir_builder_t *builder, ast_expr_static_data_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    // Generate IR type for struct type
+    ir_type_t *type;
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &type)){
+        return FAILURE;
+    }
+
+    // Find the AST structure
+    const char *base = ((ast_elem_base_t*) expr->type.elements[0])->base;
+    ast_struct_t *structure = ast_struct_find(&builder->object->ast, base);
+    if(structure == NULL) return FAILURE;
+
+    // Ensure the number of fields given is correct
+    if(structure->field_count != expr->length){
+        compiler_panicf(builder->compiler, expr->source, "Incorrect number of fields given in struct literal for struct '%s'", base);
+        return FAILURE;
+    }
+
+    // Generate space for field IR values
+    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * expr->length);
+    length_t length = expr->length;
+
+    // Generate IR values for struct fields
+    for(length_t i = 0; i != expr->length; i++){
+        ast_type_t member_type;
+
+        // Generate IR value for field
+        if(ir_gen_expr(builder, expr->values[i], &values[i], false, &member_type)){
+            return FAILURE;
+        }
+
+        // Conform the field IR value to the expected AST type
+        if(!ast_types_conform(builder, &values[i], &member_type, &structure->field_types[i], CONFORM_MODE_STANDARD)){
+            char *a_type_str = ast_type_str(&member_type);
+            char *b_type_str = ast_type_str(&expr->type);
+            compiler_panicf(builder->compiler, expr->values[i]->source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
+            free(a_type_str);
+            free(b_type_str);
+            ast_type_free(&member_type);
+            return FAILURE;
+        }
+
+        // Ensure the value given in constant
+        if(!VALUE_TYPE_IS_CONSTANT(values[i]->value_type)){
+            compiler_panicf(builder->compiler, expr->values[i]->source, "Can't put non-constant value into constant array");
+            ast_type_free(&member_type);
+            return FAILURE;
+        }
+
+        // Dipose of temporary member AST type
+        ast_type_free(&member_type);
+    }
+
+    // Build struct literal IR value
+    *ir_value = build_static_struct(&builder->object->ir_module, type, values, length, true);
+
+    // Result type is pointer to struct
+    if(out_expr_type != NULL){
+        *out_expr_type = ast_type_clone(&expr->type);
+        ast_type_prepend_ptr(out_expr_type);
+    }
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_typeinfo(ir_builder_t *builder, ast_expr_typeinfo_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    // Ensure runtime type information is enabled
+    if(builder->compiler->traits & COMPILER_NO_TYPEINFO){
+        compiler_panic(builder->compiler, expr->source, "Unable to use runtime type info when runtime type information is disabled");
+        return FAILURE;
+    }
+
+    // Get IR value for pointer to AnyType struct
+    *ir_value = rtti_for(builder, &expr->target, expr->source);
+    if(*ir_value == NULL) return FAILURE;
+
+    // Result type is *AnyType
+    if(out_expr_type) ast_type_make_base_ptr(out_expr_type, strclone("AnyType"));
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_ternary(ir_builder_t *builder, ast_expr_ternary_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_value_t *condition, *if_true, *if_false;
+    ast_type_t condition_type, if_true_type, if_false_type;
+
+    // Generate IR value for condition
+    if(ir_gen_expr(builder, expr->condition, &condition, false, &condition_type)) return FAILURE;
+
+    // Conform IR value to be a boolean
+    if(!ast_types_conform(builder, &condition, &condition_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
+        char *condition_type_str = ast_type_str(&condition_type);
+        compiler_panicf(builder->compiler, expr->condition->source, "Received type '%s' when conditional expects type 'bool'", condition_type_str);
+        free(condition_type_str);
+        ast_type_free(&condition_type);
+        return FAILURE;
+    }
+
+    // Dispose of temporary condition AST type
+    ast_type_free(&condition_type);
+
+    // Build blocks to jump to depending on condition
+    length_t when_true_block_id = build_basicblock(builder);
+    length_t when_false_block_id = build_basicblock(builder);
+
+    // Jump to appropriate block based on condition
+    build_cond_break(builder, condition, when_true_block_id, when_false_block_id);
+
+    // Generate instructions for when condition is true
+    build_using_basicblock(builder, when_true_block_id);
+    if(ir_gen_expr(builder, expr->if_true, &if_true, false, &if_true_type)) return FAILURE;
+
+    // Remember where true branch landed
+    length_t when_true_landing = builder->current_block_id;
+
+    // Generate instructions for when condition is false
+    build_using_basicblock(builder, when_false_block_id);
+    if(ir_gen_expr(builder, expr->if_false, &if_false, false, &if_false_type)){
+        ast_type_free(&if_true_type);
+        return FAILURE;
+    }
+
+    // Rembmer where false branch landed
+    length_t when_false_landing = builder->current_block_id;
+    
+    // Ensure the resulting types of the two branches is the same
+    if(!ast_types_identical(&if_true_type, &if_false_type)){
+        // Try to autocast to larger type of the two if there is one
+        bool conflict_resolved = ir_gen_resolve_ternay_conflict(builder, &if_true, &if_false, &if_true_type, &if_false_type, &when_true_landing, &when_false_landing);
+        
+        if(!conflict_resolved){
+            char *if_true_typename = ast_type_str(&if_true_type);
+            char *if_false_typename = ast_type_str(&if_false_type);
+            compiler_panicf(builder->compiler, expr->source, "Ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
+            ast_type_free(&if_true_type);
+            ast_type_free(&if_false_type);
+            free(if_true_typename);
+            free(if_false_typename);
+            return FAILURE;
+        }
+    }
+
+    // Break from both landing blocks to the merge block
+    length_t merge_block_id = build_basicblock(builder);
+    build_using_basicblock(builder, when_false_landing);
+    build_break(builder, merge_block_id);
+    build_using_basicblock(builder, when_true_landing);
+    build_break(builder, merge_block_id);
+
+    // Merge to grab the result
+    build_using_basicblock(builder, merge_block_id);
+
+    // Resolve IR type for finalized AST type
+    ir_type_t *result_ir_type;
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &if_true_type, &result_ir_type)){
+        ast_type_free(&if_true_type);
+        ast_type_free(&if_false_type);
+        return FAILURE;
+    }
+
+    // Result type is the AST type if the 'true' branch
+    if(out_expr_type){
+        *out_expr_type = if_true_type;
+    } else {
+        // If we don't use the result type, we can dispose if it
+        ast_type_free(&if_true_type);
+    }
+
+    // Dispose of temporary AST type of the 'false' branch
+    ast_type_free(&if_false_type);
+
+    // Merge the two branch values into a single value
+    *ir_value = build_phi2(builder, result_ir_type, if_true, if_false, when_true_landing, when_false_landing);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_crement(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+    ir_value_t *before_value;
+    ast_type_t before_ast_type;
+
+    // Ensure mutable value given
+    if(!expr_is_mutable(expr->value)){
+        compiler_panic(builder->compiler, expr->value->source, "INTERNAL ERROR: xCREMENT expression expected mutable value");
+        ast_type_free(&before_ast_type);
+        return FAILURE;
+    }
+
+    // Generate IR value for initial value
+    if(ir_gen_expr(builder, expr->value, &before_value, true, &before_ast_type)) return FAILURE;
+    
+    // Ensure IR type of IR value of initial value is a pointer
+    if(before_value->type->kind != TYPE_KIND_POINTER){
+        compiler_panic(builder->compiler, expr->value->source, "INTERNAL ERROR: ir_gen_expr() EXPR_xCREMENT expected mutable value");
+        ast_type_free(&before_ast_type);
+        return FAILURE;
+    }
+
+    // Generate an IR value of '1' for the type we're working with
+    ir_value_t *one = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
+    one->value_type = VALUE_TYPE_LITERAL;
+    one->type = (ir_type_t*) before_value->type->extra;
+    one->extra = NULL;
+    
+    switch(one->type->kind){
+    case TYPE_KIND_S8:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_byte));
+        *((adept_byte*) one->extra) = 1;
+        break;
+    case TYPE_KIND_U8:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ubyte));
+        *((adept_ubyte*) one->extra) = 1;
+        break;
+    case TYPE_KIND_S16:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_short));
+        *((adept_short*) one->extra) = 1;
+        break;
+    case TYPE_KIND_U16:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ushort));
+        *((adept_ushort*) one->extra) = 1;
+        break;
+    case TYPE_KIND_S32:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_int));
+        *((adept_int*) one->extra) = 1;
+        break;
+    case TYPE_KIND_U32:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_uint));
+        *((adept_uint*) one->extra) = 1;
+        break;
+    case TYPE_KIND_S64:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_long));
+        *((adept_long*) one->extra) = 1;
+        break;
+    case TYPE_KIND_U64:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ulong));
+        *((adept_ulong*) one->extra) = 1;
+        break;
+    case TYPE_KIND_FLOAT:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_float));
+        *((adept_float*) one->extra) = 1.0f;
+        break;
+    case TYPE_KIND_DOUBLE:
+        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_double));
+        *((adept_double*) one->extra) = 1.0;
+        break;
+    }
+
+    // If we couldn't create a value for 'one' of that type, so
+    // we can't perform the -crement instruction on this value
+    if(one->extra == NULL){
+        char *typename = ast_type_str(&before_ast_type);
+        compiler_panicf(builder->compiler, expr->source, "Can't %s type '%s'",
+            expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT ? "increment" : "decrement", typename);
+        ast_type_free(&before_ast_type);
+        free(typename);
+        return FAILURE;
+    }
+
+    ir_value_t *before_value_immutable = build_load(builder, before_value, expr->source);
+
+    // Build template for math instruction
+    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
+    instruction->id = INSTRUCTION_NONE; // Will be determined
+    instruction->a = before_value_immutable;
+    instruction->b = one;
+    instruction->result_type = before_value->type; 
+
+    // Generate respective instruction
+    if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT){
+        // For '++', do add instruction
+        if(i_vs_f_instruction(instruction, INSTRUCTION_ADD, INSTRUCTION_FADD)){
+            char *typename = ast_type_str(&before_ast_type);
+            compiler_panicf(builder->compiler, expr->source, "Can't increment type '%s'", typename);
+            ast_type_free(&before_ast_type);
+            free(typename);
+            return FAILURE;
+        }
+    } else {
+        // For '--', do subtract instruction
+        if(i_vs_f_instruction(instruction, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
+            char *typename = ast_type_str(&before_ast_type);
+            compiler_panicf(builder->compiler, expr->source, "Can't decrement type '%s'", typename);
+            ast_type_free(&before_ast_type);
+            free(typename);
+            return FAILURE;
+        }
+    }
+
+    // Store modified value
+    ir_value_t *modified = build_value_from_prev_instruction(builder);
+    build_store(builder, modified, before_value, expr->source);
+
+    // Result type is the type of the initial expression
+    if(out_expr_type){
+        *out_expr_type = before_ast_type;
+    } else {
+        // Dispose of the temporary type of the initial expression
+        // if we're not going to use it as the result type
+        ast_type_free(&before_ast_type);
+    }
+
+    // Don't even bother with result unless we care about the it
+    if(ir_value){
+        if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_PREDECREMENT){
+            // For pre-crement instructions, work with the post value
+            *ir_value = leave_mutable ? before_value : build_load(builder, before_value, expr->source);
+        } else {
+            // For post-crement instructions, work with the pre value
+            *ir_value = leave_mutable ? before_value : before_value_immutable;
+        }
+    }
+
+    // We successfully generate instructions for the xCREMENT instruction
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_toggle(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
+    ast_type_t ast_type;
+    ir_value_t *mutable_value;
+
+    // Generate mutable IR value from AST expression
+    if(ir_gen_expr(builder, expr->value, &mutable_value, true, &ast_type)) return FAILURE;
+
+    // Get IR type of dereferenced mutable IR value
+    ir_type_t *dereferenced_ir_type = ir_type_dereference(mutable_value->type);
+
+    // Ensure the value given is a boolean value
+    if(!ast_type_is_base_of(&ast_type, "bool") || dereferenced_ir_type == NULL || dereferenced_ir_type->kind != TYPE_KIND_BOOLEAN){
+        char *t = ast_type_str(&ast_type);
+        compiler_panicf(builder->compiler, expr->source, "Cannot toggle non-boolean type '%s'", t);
+        ast_type_free(&ast_type);
+        free(t);
+        return FAILURE;
+    }
+
+    // Load and not the boolean value
+    ir_value_t *loaded = build_load(builder, mutable_value, expr->source);
+    
+    // Perform 'not' operation
+    ir_instr_unary_t *isz_instr = (ir_instr_unary_t*) build_instruction(builder, sizeof(ir_instr_unary_t));
+    isz_instr->id = INSTRUCTION_ISZERO;
+    isz_instr->result_type = ir_builder_bool(builder);
+    isz_instr->value = loaded;
+    ir_value_t *notted = build_value_from_prev_instruction(builder);
+    
+    // Store it back into memory
+    build_store(builder, notted, mutable_value, expr->source);
+
+    // Result type is the AST type of the initial value
+    if(out_expr_type){
+        *out_expr_type = ast_type;
+    } else {
+        // Dispose of AST type of initial value if we're not
+        // going to use it as the result type
+        ast_type_free(&ast_type);
+    }
+
+    // Don't even bother with expression result unless we care about the it
+    if(ir_value) *ir_value = leave_mutable ? mutable_value : notted;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_declare_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
+
+    // Ensure no variable with the same name already exists in this scope
+    if(bridge_scope_var_already_in_list(builder->scope, def->name)){
+        compiler_panicf(builder->compiler, def->source, "Variable '%s' already declared", def->name);
+        return FAILURE;
+    }
+
+    // Allocate space in pool to hold IR type of declaration
+    ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+
+    // Resolve AST declaration type to IR declaration type
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &def->type, &ir_decl_type)) return FAILURE;
+
+    // Get IR type of mutable declaration value
+    ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
+
+    // Determine how to create inline variable, and do so
+    if(def->value != NULL){
+        // Inline declaration statement with initial value
+
+        // Generate IR value for initial value
+        ir_value_t *initial;
+        ast_type_t temporary_type;
+        if(ir_gen_expr(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
+
+        // Conform initial IR value to expected AST type
+        if(!ast_types_conform(builder, &initial, &temporary_type, &def->type, CONFORM_MODE_ASSIGNING)){
+            char *a_type_str = ast_type_str(&temporary_type);
+            char *b_type_str = ast_type_str(&def->type);
+            compiler_panicf(builder->compiler, def->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+            free(a_type_str);
+            free(b_type_str);
+            ast_type_free(&temporary_type);
+            return FAILURE;
+        }
+
+        // Add the variable
+        ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+
+        // Assign the initial value to the newly created variable
+        if(def->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
+            build_store(builder, initial, destination, expr->source);
+        }
+
+        // Dispose of temporary initial value AST type
+        ast_type_free(&temporary_type);
+
+        // Result is pointer to variable on stack
+        *ir_value = destination;
+    } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
+        // Mark the variable as undefined memory so it isn't auto-initialized later on
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
+
+        // Result is pointer to variable on stack
+        *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
+    } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
+        // Variable declaration without initial value
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+        
+        // Zero initialize the variable
+        ir_instr_varzeroinit_t *instruction = (ir_instr_varzeroinit_t*) build_instruction(builder, sizeof(ir_instr_varzeroinit_t));
+        instruction->id = INSTRUCTION_VARZEROINIT;
+        instruction->result_type = NULL;
+        instruction->index = builder->next_var_id - 1;
+        
+        // Result is pointer to variable on stack
+        *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
+    }
+
+    // Result type is pointer to AST declaration type
+    if(out_expr_type){
+        ast_type_t ast_pointer = ast_type_clone(&def->type);
+        ast_type_prepend_ptr(&ast_pointer);
+        *out_expr_type = ast_pointer;
+    }
     return SUCCESS;
 }
 
@@ -2285,18 +2382,19 @@ errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_inst
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
     // NOTE: Returns 1 if unsupported type
 
-    switch(instruction->a->type->kind){
-    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
-    case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
-    case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-        if(i_instr == INSTRUCTION_NONE) return FAILURE;
-        instruction->id = i_instr; break;
-    case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
-        if(f_instr == INSTRUCTION_NONE) return FAILURE;
-        instruction->id = f_instr; break;
-    default: return FAILURE;
+    switch(ir_type_get_catagory(instruction->a->type)){
+    case PRIMITIVE_UI:
+    case PRIMITIVE_SI:
+        instruction->id = i_instr;
+        break;
+    case PRIMITIVE_FP:
+        instruction->id = f_instr;
+        break;
+    default:
+        return FAILURE;
     }
-    return SUCCESS;
+
+    return instruction->id != INSTRUCTION_NONE ? SUCCESS : FAILURE;
 }
 
 errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
@@ -2306,31 +2404,47 @@ errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned i
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
     // NOTE: Returns 1 if unsupported type
 
-    switch(instruction->a->type->kind){
-    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
-    case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
-        if(u_instr == INSTRUCTION_NONE) return FAILURE;
-        instruction->id = u_instr; break;
-    case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-        if(s_instr == INSTRUCTION_NONE) return FAILURE;
-        instruction->id = s_instr; break;
-    case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
-        if(f_instr == INSTRUCTION_NONE) return FAILURE;
-        instruction->id = f_instr; break;
-    default: return FAILURE;
+    switch(ir_type_get_catagory(instruction->a->type)){
+    case PRIMITIVE_UI:
+        instruction->id = u_instr;
+        break;
+    case PRIMITIVE_SI:
+        instruction->id = s_instr;
+        break;
+    case PRIMITIVE_FP:
+        instruction->id = f_instr;
+        break;
+    default:
+        return FAILURE;
     }
-    return SUCCESS;
+
+    return instruction->id != INSTRUCTION_NONE ? SUCCESS : FAILURE;
 }
 
 char ir_type_get_catagory(ir_type_t *type){
     switch(type->kind){
-    case TYPE_KIND_POINTER: case TYPE_KIND_BOOLEAN: case TYPE_KIND_FUNCPTR:
-    case TYPE_KIND_U8: case TYPE_KIND_U16: case TYPE_KIND_U32: case TYPE_KIND_U64:
-        return PRIMITIVE_UI; // Unsigned integer like values
-    case TYPE_KIND_S8: case TYPE_KIND_S16: case TYPE_KIND_S32: case TYPE_KIND_S64:
-        return PRIMITIVE_SI; // Signed integer like values
-    case TYPE_KIND_HALF: case TYPE_KIND_FLOAT: case TYPE_KIND_DOUBLE:
-        return PRIMITIVE_FP; // Floating point values
+    case TYPE_KIND_POINTER:
+    case TYPE_KIND_BOOLEAN:
+    case TYPE_KIND_FUNCPTR:
+    case TYPE_KIND_U8:
+    case TYPE_KIND_U16:
+    case TYPE_KIND_U32:
+    case TYPE_KIND_U64:
+        // Unsigned integer like values
+        return PRIMITIVE_UI;
+    case TYPE_KIND_S8:
+    case TYPE_KIND_S16:
+    case TYPE_KIND_S32:
+    case TYPE_KIND_S64:
+        // Signed integer like values
+        return PRIMITIVE_SI; 
+    case TYPE_KIND_HALF:
+    case TYPE_KIND_FLOAT:
+    case TYPE_KIND_DOUBLE:
+        // Floating point like values
+        return PRIMITIVE_FP;
     }
-    return PRIMITIVE_NA; // No catagory
+
+    // Otherwise, no catagory
+    return PRIMITIVE_NA;
 }
