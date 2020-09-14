@@ -1028,11 +1028,8 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
     infer_var_t *variables = scope->list.variables;
     length_t length = scope->list.length;
 
-    if(
-        #ifndef ADEPT_INSIGHT_BUILD
-        compiler->result_flags & COMPILER_RESULT_SUCCESS &&
-        #endif
-            !(compiler->ignore & COMPILER_IGNORE_UNUSED || compiler->traits & COMPILER_NO_WARN)){
+    // TODO: Don't print unused variable warnings if error occurred
+    if(!(compiler->ignore & COMPILER_IGNORE_UNUSED || compiler->traits & COMPILER_NO_WARN)){
         
         for(length_t i = 0; i < length; i++){
             if(!variables[i].used){
