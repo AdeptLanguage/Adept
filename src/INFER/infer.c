@@ -63,12 +63,21 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
 }
 
 errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length){
+    bool variadic_functions_are_allowed = ctx->object->ast.common.ast_variadic_array != NULL;
+
     for(length_t f = 0; f != funcs_length; f++){
         infer_var_scope_t func_scope;
         infer_var_scope_init(&func_scope, NULL);
 
         ast_func_t *function = &funcs[f];
 
+        // If the function is variadic, ensure that variadic functions are allowed
+        if(function->traits & AST_FUNC_VARIADIC && !variadic_functions_are_allowed){
+            compiler_panic(ctx->compiler, function->source, "In order to use variadic functions, __variadic_array__ must be defined");
+            printf("\nTry importing '%s/VariadicArray.adept'\n", ADEPT_VERSION_STRING);
+            return FAILURE;
+        }
+        
         // Resolve aliases in function return type
         if(infer_type(ctx, &function->return_type)) return FAILURE;
 
