@@ -242,6 +242,8 @@ call :compile successful
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile switch
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile switch_more
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile switch_exhaustive
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile temporary_mutable

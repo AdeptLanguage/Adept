@@ -1,0 +1,23 @@
+
+import 'sys/cstdio.adept'
+
+THREE == 3 as int
+FRUIT_PEAR == Fruit::PEAR
+
+enum Fruit (APPLE, BANANA, ORANGE, PEAR)
+
+func main {
+    switch 3 {
+    case 0, printf('zero!\n')
+    case 1, printf('one!\n')
+    case 2, printf('two!\n')
+    case THREE, printf('three!\n')
+    }
+
+    switch Fruit::PEAR {
+    case Fruit::APPLE, printf('apple!\n')
+    case Fruit::BANANA, printf('banana!\n')
+    case Fruit::ORANGE, printf('orange!\n')
+    case FRUIT_PEAR, printf('pear!\n')
+    }
+}
