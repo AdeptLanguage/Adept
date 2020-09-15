@@ -1,7 +1,7 @@
 
 import 'sys/cstdio.adept'
 
-THREE == 3 as int
+THREE == 3.0f as ubyte
 FRUIT_PEAR == Fruit::PEAR
 
 enum Fruit (APPLE, BANANA, ORANGE, PEAR)

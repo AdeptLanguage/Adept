@@ -287,11 +287,6 @@ errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value){
     ir_type_spec_t to_spec, from_spec;
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
-    if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_fptoui() called when target type is smaller!\n");
-        return FAILURE;
-    }
-
     unsigned short x = 0xEEFF;
     bool is_little_endian = *((unsigned char*) &x) == 0xFF;
     
@@ -334,11 +329,6 @@ errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
 
     ir_type_spec_t to_spec, from_spec;
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
-
-    if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_fptosi() called when target type is smaller!\n");
-        return FAILURE;
-    }
 
     unsigned short x = 0xEEFF;
     bool is_little_endian = *((unsigned char*) &x) == 0xFF;
@@ -405,11 +395,6 @@ errorcode_t ir_lower_const_uitofp(ir_pool_t *pool, ir_value_t **inout_value){
     ir_type_spec_t to_spec, from_spec;
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
-    if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() called when target type is smaller!\n");
-        return FAILURE;
-    }
-
     double as_float;
     char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
 
@@ -456,11 +441,6 @@ errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
 
     ir_type_spec_t to_spec, from_spec;
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
-
-    if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_sitofp() called when target type is smaller!\n");
-        return FAILURE;
-    }
     
     double as_float;
     char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
