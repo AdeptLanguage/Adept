@@ -89,6 +89,10 @@ errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *b
 // Calls the pass management function on arguments for 'CALL'/'CALL METHOD' expression
 errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *arg_types,
         trait_t target_traits, trait_t *target_arg_type_traits, length_t arity_without_variadic_arguments);
+
+// Packs variadic arguments into single variadic array argument for 'CALL'/'CALL METHOD' expression if required
+errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t *arg_types,
+        length_t *arity, funcpair_t *pair, ir_value_t **stack_pointer, source_t source_on_failure);
 // ----------------------------------------------------------------
 
 // ---------------- ir_gen_math_operands ----------------

@@ -155,6 +155,7 @@ compile va_args || exit $?
 compile varargs || exit $?
 compile variables || exit $?
 compile variadic || exit $?
+compile variadic_method || exit $?
 compile variadic_print || exit $?
 compile version || exit $?
 compile while || exit $?

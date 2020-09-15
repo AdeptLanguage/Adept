@@ -1030,7 +1030,6 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
 
     // TODO: Don't print unused variable warnings if error occurred
     if(!(compiler->ignore & COMPILER_IGNORE_UNUSED || compiler->traits & COMPILER_NO_WARN)){
-        
         for(length_t i = 0; i < length; i++){
             if(!variables[i].used){
                 // Ignore whether to terminate, since we cannot terminate right now because we are freeing 'infer_var_scope_t's

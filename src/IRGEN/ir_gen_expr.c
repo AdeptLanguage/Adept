@@ -540,149 +540,19 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         pair.ir_func = &builder->object->ir_module.funcs[pair.ir_func_id];
 
         // Prepare for potential stack allocation
-        ir_value_t *saved_stack = NULL;
+        ir_value_t *stack_pointer = NULL;
 
-        // Pack variadic arguments into variadic array if applicable
-        if(pair.ast_func->traits & AST_FUNC_VARIADIC){
-            // Calculate number of variadic arguments
-            length_t variadic_count = arity - pair.ast_func->arity;
+        // Remember arity before variadic argument packing
+        length_t unpacked_arity = arity;
 
-            // Do __builtin_warn_bad_printf_format if applicable
-            if(pair.ast_func->traits & AST_FUNC_WARN_BAD_PRINTF_FORMAT){
-                if(ir_gen_do_builtin_warn_bad_printf_format(builder, pair, arg_types, arg_values, expr->source, variadic_count)){
-                    // Free AST types of the expressions given for the arguments
-                    ast_types_free(arg_types, arity);
-                    return FAILURE;
-                }
-            }
-
-            // Save stack pointer
-            saved_stack = build_stack_save(builder);
-            
-            ir_value_t *raw_types_array = NULL;
-            ir_type_t *pAnyType_ir_type = NULL;
-
-            // Obtain IR type of '*AnyType' type if typeinfo is enabled
-            if(!(builder->compiler->traits & COMPILER_NO_TYPEINFO)){
-                ast_type_t any_type;
-                ast_type_make_base_ptr(&any_type, strclone("AnyType"));
-
-                if(ir_gen_resolve_type(builder->compiler, builder->object, &any_type, &pAnyType_ir_type)){
-                    ast_type_free(&any_type);
-                    ast_types_free(arg_types, arity);
-                    return FAILURE;
-                }
-                ast_type_free(&any_type);
-            }
-
-            // Calculate total size of raw data array in bytes
-            ir_type_t *usize_type = ir_builder_usize(builder);
-            ir_value_t *bytes = NULL;
-            
-            if(variadic_count != 0){
-                bytes = build_const_sizeof(builder->pool, usize_type, arg_values[pair.ast_func->arity]->type);
-            } else {
-                bytes = build_literal_usize(builder->pool, 0);
-            }
-
-            for(length_t i = 1; i < variadic_count; i++){
-                ir_value_t *more_bytes = build_const_sizeof(builder->pool, usize_type, arg_values[pair.ast_func->arity + i]->type);
-                bytes = build_const_add(builder->pool, bytes, more_bytes);
-            }
-
-            // Obtain IR type for 'ubyte' type
-            ir_type_t *ubyte_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ubyte_type->kind = TYPE_KIND_S8;
-            /* neglect ubyte_type->extra */
-
-            // Allocate memory on the stack to hold raw data array
-            ir_value_t *raw_data_array = NULL;
-            
-            if(variadic_count != 0){
-                raw_data_array = build_alloc_array(builder, ubyte_type, bytes);
-
-                // Bitcast the value fromm '[n] ubyte' type to '*ubyte' type
-                raw_data_array = build_bitcast(builder, raw_data_array, ir_type_pointer_to(builder->pool, ubyte_type));
-            } else {
-                raw_data_array = build_null_pointer(builder->pool);
-            }
-
-            // Use iterative value 'current_offset' to store variadic arguments values into the raw data array
-            ir_value_t *current_offset = build_literal_usize(builder->pool, 0);
-
-            for(length_t i = 0; i < variadic_count; i++){
-                ir_value_t *arg = build_array_access(builder, raw_data_array, current_offset, expr->source);
-                arg = build_bitcast(builder, arg, ir_type_pointer_to(builder->pool, arg_values[pair.ast_func->arity + i]->type));
-                build_store(builder, arg_values[pair.ast_func->arity + i], arg, expr->source);
-
-                // Move iterative offset 'current_offset' along by the size of the type we just wrote
-                if(i + 1 < variadic_count){
-                    current_offset = build_const_add(builder->pool, current_offset, build_const_sizeof(builder->pool, usize_type, arg_values[pair.ast_func->arity + i]->type));
-                }
-            }
-            
-            // Create raw types array of '*AnyType' values if runtime type info is enabled
-            if(pAnyType_ir_type && variadic_count != 0){
-                raw_types_array = build_alloc_array(builder, pAnyType_ir_type, build_literal_usize(builder->pool, variadic_count));
-                raw_types_array = build_bitcast(builder, raw_types_array, ir_type_pointer_to(builder->pool, pAnyType_ir_type));
-
-                for(length_t i = 0; i < variadic_count; i++){
-                    ir_value_t *arg_type = build_array_access(builder, raw_types_array, build_literal_usize(builder->pool, i), expr->source);
-                    build_store(builder, rtti_for(builder, &arg_types[pair.ast_func->arity + i], expr->source), arg_type, expr->source);
-                }
-            }
-
-            // Create temporary IR '*s8' type to use
-            ir_type_t *ptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-            ptr_type->kind = TYPE_KIND_S8;
-            /* neglect ptr_type->extra */
-            ptr_type = ir_type_pointer_to(builder->pool, ptr_type);
-
-            // If runtime type info is disabled, then just set 'raw_types_array' to a null pointer
-            if(raw_types_array == NULL) raw_types_array = build_null_pointer_of_type(builder->pool, ptr_type);
-
-            // '__variadic_array__' arguments:
-            // pointer = raw_data_array
-            // bytes = bytes
-            // length = variadic_count
-            // maybe_types = raw_types_array
-
-            ir_value_t **variadic_array_function_arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 4);
-            variadic_array_function_arguments[0] = build_bitcast(builder, raw_data_array, ptr_type);
-            variadic_array_function_arguments[1] = bytes;
-            variadic_array_function_arguments[2] = build_literal_usize(builder->pool, variadic_count);
-            variadic_array_function_arguments[3] = build_bitcast(builder, raw_types_array, ptr_type);
-            
-            // Create variadic array value using the special function '__variadic_array__'
-            ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
-            instruction->id = INSTRUCTION_CALL;
-            instruction->result_type = builder->object->ir_module.common.ir_variadic_array;
-            instruction->values = variadic_array_function_arguments;
-            instruction->values_length = 4;
-            instruction->ir_func_id = builder->object->ir_module.common.variadic_ir_func_id;
-
-            // Free AST types of the expressions given for the arguments
-            ast_types_free(arg_types, arity);
-
-            // Make space for variadic array argument
-            if(variadic_count == 0){
-                ir_value_t **new_args = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * (pair.ast_func->arity + 1));
-
-                // Copy given argument values into new array
-                // NOTE: We are abandoning the old arg_values array
-                memcpy(new_args, arg_values, sizeof(ir_value_t*) * (pair.ast_func->arity + 1));
-                arg_values = new_args;
-            }
-
-            // Replace argument values after regular arguments with single variadic array argument value
-            arg_values[pair.ast_func->arity] = build_value_from_prev_instruction(builder);
-            arity = pair.ast_func->arity + 1;
-
-            // Now that the argument values are correct, we can continue calling the function as normal
-        } else {
-            // Free AST types of the expressions given for the arguments
-            ast_types_free(arg_types, arity);
+        // Handle variadic argument packing if applicable
+        if(ir_gen_expr_call_procedure_handle_variadic_packing(builder, &arg_values, arg_types, &arity, &pair, &stack_pointer, expr->source)){
+            ast_types_free(arg_types, unpacked_arity);
+            return FAILURE;
         }
+        
+        // Free AST types of the expressions given for the arguments
+        ast_types_free(arg_types, unpacked_arity);
         
         // Call the actual function
         ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
@@ -696,7 +566,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         if(ir_value) *ir_value = build_value_from_prev_instruction(builder);
 
         // Restore the stack if we allocated memory on it
-        if(saved_stack) build_stack_restore(builder, saved_stack);
+        if(stack_pointer) build_stack_restore(builder, stack_pointer);
 
         // Give back return type of the called function
         if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&pair.ast_func->return_type);
@@ -848,6 +718,138 @@ errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *buil
     }
 
     // Successfully called __pass__ for the arguments that needed it
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t *arg_types,
+        length_t *arity, funcpair_t *pair, ir_value_t **stack_pointer, source_t source_on_failure){
+    
+    // Don't pack arguments unless function is variadic
+    if(!(pair->ast_func->traits & AST_FUNC_VARIADIC)) return SUCCESS;
+
+    // Pack variadic arguments into variadic array if applicable
+
+    // Calculate number of variadic arguments
+    length_t variadic_count = *arity - pair->ast_func->arity;
+
+    // Do __builtin_warn_bad_printf_format if applicable
+    if(pair->ast_func->traits & AST_FUNC_WARN_BAD_PRINTF_FORMAT
+    && ir_gen_do_builtin_warn_bad_printf_format(builder, *pair, arg_types, *arg_values, source_on_failure, variadic_count)){
+        return FAILURE;
+    }
+
+    // Save stack pointer, unless its already saved
+    if(*stack_pointer == NULL) *stack_pointer = build_stack_save(builder);
+    
+    ir_value_t *raw_types_array = NULL;
+    ir_type_t *pAnyType_ir_type = NULL;
+
+    // Obtain IR type of '*AnyType' type if typeinfo is enabled
+    if(!(builder->compiler->traits & COMPILER_NO_TYPEINFO)){
+        ast_type_t any_type;
+        ast_type_make_base_ptr(&any_type, strclone("AnyType"));
+
+        if(ir_gen_resolve_type(builder->compiler, builder->object, &any_type, &pAnyType_ir_type)){
+            ast_type_free(&any_type);
+            return FAILURE;
+        }
+
+        ast_type_free(&any_type);
+    }
+
+    // Calculate total size of raw data array in bytes
+    ir_type_t *usize_type = ir_builder_usize(builder);
+    ir_value_t *bytes = NULL;
+    
+    if(variadic_count != 0){
+        bytes = build_const_sizeof(builder->pool, usize_type, (*arg_values)[pair->ast_func->arity]->type);
+    } else {
+        bytes = build_literal_usize(builder->pool, 0);
+    }
+
+    for(length_t i = 1; i < variadic_count; i++){
+        ir_value_t *more_bytes = build_const_sizeof(builder->pool, usize_type, (*arg_values)[pair->ast_func->arity + i]->type);
+        bytes = build_const_add(builder->pool, bytes, more_bytes);
+    }
+
+    // Obtain IR type for 'ubyte' type
+    ir_type_t *ubyte_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    ubyte_type->kind = TYPE_KIND_S8;
+    /* neglect ubyte_type->extra */
+
+    // Allocate memory on the stack to hold raw data array
+    ir_value_t *raw_data_array = NULL;
+    
+    if(variadic_count != 0){
+        raw_data_array = build_alloc_array(builder, ubyte_type, bytes);
+
+        // Bitcast the value fromm '[n] ubyte' type to '*ubyte' type
+        raw_data_array = build_bitcast(builder, raw_data_array, ir_type_pointer_to(builder->pool, ubyte_type));
+    } else {
+        raw_data_array = build_null_pointer(builder->pool);
+    }
+
+    // Use iterative value 'current_offset' to store variadic arguments values into the raw data array
+    ir_value_t *current_offset = build_literal_usize(builder->pool, 0);
+
+    for(length_t i = 0; i < variadic_count; i++){
+        ir_value_t *arg = build_array_access(builder, raw_data_array, current_offset, source_on_failure);
+        arg = build_bitcast(builder, arg, ir_type_pointer_to(builder->pool, (*arg_values)[pair->ast_func->arity + i]->type));
+        build_store(builder, (*arg_values)[pair->ast_func->arity + i], arg, source_on_failure);
+
+        // Move iterative offset 'current_offset' along by the size of the type we just wrote
+        if(i + 1 < variadic_count){
+            current_offset = build_const_add(builder->pool, current_offset, build_const_sizeof(builder->pool, usize_type, (*arg_values)[pair->ast_func->arity + i]->type));
+        }
+    }
+    
+    // Create raw types array of '*AnyType' values if runtime type info is enabled
+    if(pAnyType_ir_type && variadic_count != 0){
+        raw_types_array = build_alloc_array(builder, pAnyType_ir_type, build_literal_usize(builder->pool, variadic_count));
+        raw_types_array = build_bitcast(builder, raw_types_array, ir_type_pointer_to(builder->pool, pAnyType_ir_type));
+
+        for(length_t i = 0; i < variadic_count; i++){
+            ir_value_t *arg_type = build_array_access(builder, raw_types_array, build_literal_usize(builder->pool, i), source_on_failure);
+            build_store(builder, rtti_for(builder, &arg_types[pair->ast_func->arity + i], source_on_failure), arg_type, source_on_failure);
+        }
+    }
+    
+    // If runtime type info is disabled, then just set 'raw_types_array' to a null pointer
+    if(raw_types_array == NULL) raw_types_array = build_null_pointer_of_type(builder->pool, builder->ptr_type);
+
+    // '__variadic_array__' arguments:
+    // pointer = raw_data_array
+    // bytes = bytes
+    // length = variadic_count
+    // maybe_types = raw_types_array
+
+    ir_value_t **variadic_array_function_arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 4);
+    variadic_array_function_arguments[0] = build_bitcast(builder, raw_data_array, builder->ptr_type);
+    variadic_array_function_arguments[1] = bytes;
+    variadic_array_function_arguments[2] = build_literal_usize(builder->pool, variadic_count);
+    variadic_array_function_arguments[3] = build_bitcast(builder, raw_types_array, builder->ptr_type);
+    
+    // Create variadic array value using the special function '__variadic_array__'
+    ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
+    instruction->id = INSTRUCTION_CALL;
+    instruction->result_type = builder->object->ir_module.common.ir_variadic_array;
+    instruction->values = variadic_array_function_arguments;
+    instruction->values_length = 4;
+    instruction->ir_func_id = builder->object->ir_module.common.variadic_ir_func_id;
+
+    // Make space for variadic array argument
+    if(variadic_count == 0){
+        ir_value_t **new_args = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * (pair->ast_func->arity + 1));
+
+        // Copy given argument values into new array
+        // NOTE: We are abandoning the old arg_values array
+        memcpy(new_args, *arg_values, sizeof(ir_value_t*) * (pair->ast_func->arity + 1));
+        (*arg_values) = new_args;
+    }
+
+    // Replace argument values after regular arguments with single variadic array argument value
+    (*arg_values)[pair->ast_func->arity] = build_value_from_prev_instruction(builder);
+    *arity = pair->ast_func->arity + 1;
     return SUCCESS;
 }
 
@@ -1322,6 +1324,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
     ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
     ir_value_t *stack_pointer = NULL;
+    bool used_temporary_subject = false;
 
     // Generate IR value for subject
     if(ir_gen_expr(builder, expr->value, &arg_values[0], true, &arg_types[0])){
@@ -1344,6 +1347,9 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
             // Replace the immutable argument value with the mutable reference
             arg_values[0] = temporary_mutable;
+
+            // Remember that we used a temporary variable for the subject value
+            used_temporary_subject = true;
         }
 
         // Force AST type into a '*SubjectType'
@@ -1380,7 +1386,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     // Find the appropriate method to call
     funcpair_t pair;
     errorcode_t error = ir_gen_expr_call_method_find_appropriate_method(builder, expr, arg_values, arg_types, &pair);
-
+    
     // If we couldn't find a suitable method, handle the failure
     if(error != SUCCESS){
         ast_types_free_fully(arg_types, arity);
@@ -1413,6 +1419,15 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     pair.ast_func = &builder->object->ast.funcs[pair.ast_func_id];
     pair.ir_func = &builder->object->ir_module.funcs[pair.ir_func_id];
 
+    // Remember arity before variadic argument packing
+    length_t unpacked_arity = arity;
+
+    // Handle variadic argument packing if applicable
+    if(ir_gen_expr_call_procedure_handle_variadic_packing(builder, &arg_values, arg_types, &arity, &pair, &stack_pointer, expr->source)){
+        ast_types_free(arg_types, arity);
+        return FAILURE;
+    }
+
     // Remember the AST return type of the function
     ast_type_t *return_type = &pair.ast_func->return_type;
     
@@ -1426,22 +1441,22 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     // Don't even bother with result unless we care about the it
     if(ir_value) *ir_value = build_value_from_prev_instruction(builder);
 
-    if(stack_pointer){
+    if(used_temporary_subject){
         // Dereference pointer to subject AST type to get just the subject AST type
         ast_type_dereference(&arg_types[0]);
         
         // Call __defer__ on temporary mutable value
         if(handle_single_deference(builder, &arg_types[0], arg_values[0]) == ALT_FAILURE){
-            ast_types_free_fully(arg_types, arity);
+            ast_types_free_fully(arg_types, unpacked_arity);
             return FAILURE;
         }
-
-        // Restore stack pointer
-        build_stack_restore(builder, stack_pointer);
     }
 
+    // Restore stack pointer if we allocated memory on the stack
+    if(stack_pointer) build_stack_restore(builder, stack_pointer);
+
     // Dispose of AST argument types
-    ast_types_free_fully(arg_types, arity);
+    ast_types_free_fully(arg_types, unpacked_arity);
 
     // Result type is the return type of the method
     if(out_expr_type != NULL) *out_expr_type = ast_type_clone(return_type);

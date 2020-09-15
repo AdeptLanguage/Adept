@@ -2,11 +2,20 @@
 import VariadicArray
 import 'sys/cstdio.adept'
 
+struct Dummy (name *ubyte)
+
 func main {
-    printf('sum = %d\n', sumEmUp(1, 2, 3, 4, 5))
+    printf('sum = %d\n', getDummy().sumEmUp('Thing', 1, 2, 3, 4, 5))
 }
 
-func sumEmUp(integers ...) int {
+func getDummy Dummy {
+    dummy POD Dummy
+    dummy.name = 'Test'
+    return dummy
+}
+
+func sumEmUp(this *Dummy, thing *ubyte, integers ...) int {
+    printf('%s %s\n', this.name, thing)
     printf('%p\n', integers.items)
     printf('%p\n', integers.next)
     printf('%d\n', integers.length as int)

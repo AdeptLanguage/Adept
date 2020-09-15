@@ -80,12 +80,12 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     builder.static_bool.source = NULL_SOURCE;
     builder.static_bool.source.object_index = builder.object->index;
 
-    ir_type_t *i8_type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    i8_type->kind = TYPE_KIND_S8;
-    // neglect i8_type->extra
+    builder.s8_type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    builder.s8_type->kind = TYPE_KIND_S8;
+    // neglect builder.s8_type->extra
 
     builder.stack_pointer_type = NULL;
-    builder.ptr_type = ir_type_pointer_to(pool, i8_type);
+    builder.ptr_type = ir_type_pointer_to(pool, builder.s8_type);
     builder.type_table = object->ast.type_table;
 
     while(module_func->arity != ast_func->arity){

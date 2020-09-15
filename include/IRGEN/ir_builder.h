@@ -50,6 +50,7 @@ typedef struct {
     ast_elem_base_t static_bool_base;
     ast_elem_t *static_bool_elems;
     ir_type_t *stack_pointer_type;
+    ir_type_t *s8_type;
     ir_type_t *ptr_type;
     type_table_t *type_table;
 } ir_builder_t;
