@@ -1,0 +1,7 @@
+
+import basics
+
+func main {
+    value 10 int
+    print(sizeof(value))
+}

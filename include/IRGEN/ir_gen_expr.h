@@ -40,6 +40,7 @@ errorcode_t ir_gen_expr_dereference(ir_builder_t *builder, ast_expr_dereference_
 errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_access_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_cast(ir_builder_t *builder, ast_expr_cast_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_sizeof(ir_builder_t *builder, ast_expr_sizeof_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_value_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_phantom(ir_builder_t *builder, ast_expr_phantom_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_unary(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);

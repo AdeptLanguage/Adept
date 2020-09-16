@@ -73,21 +73,22 @@ extern "C" {
 #define EXPR_ARRAY_ACCESS    0x00000030
 #define EXPR_CAST            0x00000031
 #define EXPR_SIZEOF          0x00000032
-#define EXPR_CALL_METHOD     0x00000033
-#define EXPR_NEW             0x00000034
-#define EXPR_NEW_CSTRING     0x00000035
-#define EXPR_ENUM_VALUE      0x00000036
-#define EXPR_STATIC_ARRAY    0x00000037
-#define EXPR_STATIC_STRUCT   0x00000038
-#define EXPR_TYPEINFO        0x00000039
-#define EXPR_TERNARY         0x0000003A
-#define EXPR_PREINCREMENT    0x0000003B
-#define EXPR_PREDECREMENT    0x0000003C
-#define EXPR_POSTINCREMENT   0x0000003D
-#define EXPR_POSTDECREMENT   0x0000003E
-#define EXPR_PHANTOM         0x0000003F
-#define EXPR_TOGGLE          0x00000040
-#define EXPR_VA_ARG          0x00000041
+#define EXPR_SIZEOF_VALUE    0x00000033
+#define EXPR_CALL_METHOD     0x00000034
+#define EXPR_NEW             0x00000035
+#define EXPR_NEW_CSTRING     0x00000036
+#define EXPR_ENUM_VALUE      0x00000037
+#define EXPR_STATIC_ARRAY    0x00000038
+#define EXPR_STATIC_STRUCT   0x00000039
+#define EXPR_TYPEINFO        0x0000003A
+#define EXPR_TERNARY         0x0000003B
+#define EXPR_PREINCREMENT    0x0000003C
+#define EXPR_PREDECREMENT    0x0000003D
+#define EXPR_POSTINCREMENT   0x0000003E
+#define EXPR_POSTDECREMENT   0x0000003F
+#define EXPR_PHANTOM         0x00000040
+#define EXPR_TOGGLE          0x00000041
+#define EXPR_VA_ARG          0x00000042
 // Exclusive statements ---------------
 #define EXPR_DECLARE         0x00000050
 #define EXPR_DECLAREUNDEF    0x00000051
@@ -427,6 +428,14 @@ typedef struct {
     source_t source;
     ast_type_t type;
 } ast_expr_sizeof_t;
+
+// ---------------- ast_expr_sizeof_value_t ----------------
+// Expression for getting the size of a type
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_expr_t *value;
+} ast_expr_sizeof_value_t;
 
 // ---------------- ast_expr_phantom_t ----------------
 // Expression for passing precomputed ir_value_t values into AST expressions

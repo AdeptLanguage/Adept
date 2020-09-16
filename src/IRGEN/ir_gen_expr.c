@@ -211,6 +211,9 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_SIZEOF:
         if(ir_gen_expr_sizeof(builder, (ast_expr_sizeof_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
+    case EXPR_SIZEOF_VALUE:
+        if(ir_gen_expr_sizeof_value(builder, (ast_expr_sizeof_value_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        break;
     case EXPR_PHANTOM:
         if(ir_gen_expr_phantom(builder, (ast_expr_phantom_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
@@ -1299,6 +1302,47 @@ errorcode_t ir_gen_expr_sizeof(ir_builder_t *builder, ast_expr_sizeof_t *expr, i
 
     // Resolve AST type to IR type
     if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &of_type)) return FAILURE;
+
+    // Get size of IR type
+    *ir_value = build_const_sizeof(builder->pool, ir_builder_usize(builder), of_type);
+
+    // Return type is always usize
+    if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("usize"));
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_value_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_type_t *of_type;
+    ast_type_t ast_type;
+
+    // Take snapshot of IR pool in order to restore it later
+    ir_pool_snapshot_t snapshot;
+    ir_pool_snapshot_capture(builder->pool, &snapshot);
+
+    // DANGEROUS: Manully storing state of builder
+    length_t basicblocks_length = builder->basicblocks_length;
+    length_t current_block_id = builder->current_block_id;
+    length_t insturctions_length = builder->basicblocks[current_block_id].instructions_length;
+
+    // Generate the expression to get back it's result type
+    if(ir_gen_expr(builder, expr->value, NULL, true, &ast_type)) return FAILURE;
+
+    // DANGEROUS: Manully restoring state of builder
+    builder->basicblocks_length = basicblocks_length;
+    build_using_basicblock(builder, builder->current_block_id);
+    builder->basicblocks[current_block_id].instructions_length = insturctions_length;
+    
+    // Restore IR pool from previous snapshot
+    ir_pool_snapshot_restore(builder->pool, &snapshot);
+
+    // Resolve AST type to IR type
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_type, &of_type)){
+        ast_type_free(&ast_type);
+        return FAILURE;
+    }
+
+    // Dispose of temporary AST type
+    ast_type_free(&ast_type);
 
     // Get size of IR type
     *ir_value = build_const_sizeof(builder->pool, ir_builder_usize(builder), of_type);

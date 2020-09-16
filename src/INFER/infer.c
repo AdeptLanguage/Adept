@@ -574,6 +574,9 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_SIZEOF:
         if(infer_type(ctx, &((ast_expr_sizeof_t*) *expr)->type)) return FAILURE;
         break;
+    case EXPR_SIZEOF_VALUE:
+        if(infer_expr(ctx, ast_func, &((ast_expr_sizeof_value_t*) *expr)->value, EXPR_NONE, scope)) return FAILURE;
+        break;
     case EXPR_CALL_METHOD:
         if(infer_expr_inner(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->value, undetermined, scope)) return FAILURE;
         for(length_t i = 0; i != ((ast_expr_call_method_t*) *expr)->arity; i++){

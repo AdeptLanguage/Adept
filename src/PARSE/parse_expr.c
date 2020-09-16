@@ -897,16 +897,36 @@ errorcode_t parse_expr_at(parse_ctx_t *ctx, ast_expr_t **inout_expr){
 }
 
 errorcode_t parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr){
-    ast_expr_sizeof_t *sizeof_expr = malloc(sizeof(ast_expr_sizeof_t));
-    sizeof_expr->id = EXPR_SIZEOF;
-    sizeof_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
+    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
 
-    if(parse_type(ctx, &sizeof_expr->type)){
-        free(sizeof_expr);
-        return FAILURE;
+    if(ctx->tokenlist->tokens[(*ctx->i)].id == TOKEN_OPEN){
+        // sizeof (value)
+
+        ast_expr_sizeof_value_t *sizeof_value_expr = malloc(sizeof(ast_expr_sizeof_value_t));
+        sizeof_value_expr->id = EXPR_SIZEOF_VALUE;
+        sizeof_value_expr->source = source;
+
+        if(parse_expr(ctx, &sizeof_value_expr->value)){
+            free(sizeof_value_expr);
+            return FAILURE;
+        }
+
+        *out_expr = (ast_expr_t*) sizeof_value_expr;
+    } else {
+        // sizeof Type
+
+        ast_expr_sizeof_t *sizeof_expr = malloc(sizeof(ast_expr_sizeof_t));
+        sizeof_expr->id = EXPR_SIZEOF;
+        sizeof_expr->source = source;
+
+        if(parse_type(ctx, &sizeof_expr->type)){
+            free(sizeof_expr);
+            return FAILURE;
+        }
+
+        *out_expr = (ast_expr_t*) sizeof_expr;
     }
 
-    *out_expr = (ast_expr_t*) sizeof_expr;
     return SUCCESS;
 }
 

@@ -121,6 +121,7 @@ compile scientific || exit $?
 compile scoped_variables || exit $?
 compile similar || exit $?
 compile sizeof || exit $?
+compile sizeof_value || exit $?
 compile small_functions || exit $?
 compile standard || exit $?
 compile static_arrays || exit $?

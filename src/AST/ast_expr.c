@@ -310,6 +310,12 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(type_str);
             return representation;
         }
+    case EXPR_SIZEOF_VALUE: {
+            char *value_str = ast_expr_str(((ast_expr_sizeof_value_t*) expr)->value);
+            representation = mallocandsprintf("sizeof(%s)", value_str);
+            free(value_str);
+            return representation;
+        }
     case EXPR_PHANTOM: {
             return strclone("~phantom~");
         }
@@ -547,6 +553,9 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_SIZEOF:
         ast_type_free( &((ast_expr_sizeof_t*) expr)->type );
+        break;
+    case EXPR_SIZEOF_VALUE:
+        ast_expr_free_fully( ((ast_expr_sizeof_value_t*) expr)->value );
         break;
     case EXPR_PHANTOM:
         ast_type_free( &((ast_expr_phantom_t*) expr)->type );
@@ -882,6 +891,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_sizeof
         #undef clone_as_sizeof
+    case EXPR_SIZEOF_VALUE:
+        #define expr_as_sizeof_value ((ast_expr_sizeof_value_t*) expr)
+        #define clone_as_sizeof_value ((ast_expr_sizeof_value_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_sizeof_value_t));
+        clone_as_sizeof_value->value = ast_expr_clone(expr_as_sizeof_value->value);
+        break;
+
+        #undef expr_as_sizeof_value
+        #undef clone_as_sizeof_value
     case EXPR_PHANTOM:
         #define expr_as_phantom ((ast_expr_phantom_t*) expr)
         #define clone_as_phantom ((ast_expr_phantom_t*) clone)
