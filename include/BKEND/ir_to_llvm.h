@@ -25,6 +25,16 @@ typedef struct { value_catalog_block_t *blocks; length_t blocks_length; } value_
 // A list of stack variables for a function
 typedef struct { LLVMValueRef *values; LLVMTypeRef *types; length_t length; } varstack_t;
 
+// ---------------- llvm_string_table_entry_t ----------------
+// An entry in the string table
+typedef struct { weak_cstr_t data; length_t length; LLVMValueRef global_data; } llvm_string_table_entry_t;
+
+typedef struct {
+    llvm_string_table_entry_t *entries;
+    length_t length;
+    length_t capacity;
+} llvm_string_table_t;
+
 // ---------------- llvm_context_t ----------------
 // A general container for the LLVM exporting context
 typedef struct {
@@ -51,6 +61,8 @@ typedef struct {
     LLVMValueRef column_phi;
     LLVMValueRef null_check_failure_message_bytes;
     bool has_null_check_failure_message_bytes;
+
+    llvm_string_table_t string_table;
 } llvm_context_t;
 
 typedef struct {
@@ -88,5 +100,18 @@ void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, L
 // ---------------- ir_to_llvm_config_optlvl ----------------
 // Converts optimization level to LLVM optimization constant
 LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler);
+
+// ---------------- llvm_string_table_find ----------------
+// Finds the global variable data for an entry in the string table,
+// returns NULL if not found
+LLVMValueRef llvm_string_table_find(llvm_string_table_t *table, weak_cstr_t array, length_t length);
+
+// ---------------- llvm_string_table_add ----------------
+// Adds an entry into the string table
+void llvm_string_table_add(llvm_string_table_t *table, weak_cstr_t name, length_t length, LLVMValueRef global_data);
+
+// ---------------- llvm_string_table_entry_cmp ----------------
+// Compares two entries in the string table
+int llvm_string_table_entry_cmp(const void *va, const void *vb);
 
 #endif // _ISAAC_IR_TO_LLVM_H

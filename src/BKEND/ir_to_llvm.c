@@ -181,10 +181,23 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
         }
     case VALUE_TYPE_CSTR_OF_LEN: {
             ir_value_cstr_of_len_t *cstr_of_len = value->extra;
-            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), ".str");
-            LLVMSetLinkage(global_data, LLVMInternalLinkage);
-            LLVMSetGlobalConstant(global_data, true);
-            LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));
+            LLVMValueRef global_data = NULL;
+            
+            if(llvm->compiler->traits & COMPILER_MERGE_DUPES){
+                global_data = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->length);
+            }
+
+            if(global_data == NULL){
+                global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), "");
+                LLVMSetLinkage(global_data, LLVMInternalLinkage);
+                LLVMSetGlobalConstant(global_data, true);
+                LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));
+
+                if(llvm->compiler->traits & COMPILER_MERGE_DUPES){
+                    llvm_string_table_add(&llvm->string_table, cstr_of_len->array, cstr_of_len->length, global_data);
+                }
+            }
+            
             LLVMValueRef indices[2];
             indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
@@ -1336,6 +1349,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.global_variables = malloc(sizeof(LLVMValueRef) * module->globals_length);
     llvm.anon_global_variables = malloc(sizeof(LLVMValueRef) * module->anon_globals_length);
     llvm.has_null_check_failure_message_bytes = false;
+    memset(&llvm.string_table, 0, sizeof(llvm_string_table_t));
 
     if(ir_to_llvm_globals(&llvm, object) || ir_to_llvm_functions(&llvm, object)
     || ir_to_llvm_function_bodies(&llvm, object)){
@@ -1471,8 +1485,8 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     // Merge duplicate constants if '--merge-duplicate-data'
     if(compiler->traits & COMPILER_MERGE_DUPES){
-        LLVMAddConstantMergePass(pass_manager);
         LLVMAddGlobalOptimizerPass(pass_manager);
+        LLVMAddConstantMergePass(pass_manager);
         LLVMRunPassManager(pass_manager, llvm.module);
     }
     
@@ -1567,4 +1581,54 @@ LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler){
     case OPTIMIZATION_AGGRESSIVE: return LLVMCodeGenLevelAggressive;
     default: return LLVMCodeGenLevelDefault;
     }
+}
+
+LLVMValueRef llvm_string_table_find(llvm_string_table_t *table, weak_cstr_t array, length_t length){
+    // If not found returns NULL else returns global variable value
+
+    maybe_index_t first, middle, last, comparison;
+    first = 0; last = table->length - 1;
+
+    llvm_string_table_entry_t target;
+    target.data = array;
+    target.length = length;
+    // (neglect target.global_data)
+
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = llvm_string_table_entry_cmp(&table->entries[middle], &target);
+
+        if(comparison == 0) return table->entries[middle].global_data;
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
+    }
+
+    return NULL;
+}
+
+void llvm_string_table_add(llvm_string_table_t *table, weak_cstr_t name, length_t length, LLVMValueRef global_data){
+    expand((void**) &table->entries, sizeof(llvm_string_table_entry_t), table->length, &table->capacity, 1, 64);
+
+    llvm_string_table_entry_t entry;
+    entry.data = name;
+    entry.length = length;
+    entry.global_data = global_data;
+
+    length_t insert_position = find_insert_position(table->entries, table->length, llvm_string_table_entry_cmp, &entry, sizeof(llvm_string_table_entry_t));
+
+    // Move other entries over, so that the new entry has space
+    memmove(&table->entries[insert_position + 1], &table->entries[insert_position], sizeof(llvm_string_table_entry_t) * (table->length - insert_position));
+
+    table->entries[insert_position] = entry;
+    table->length++;
+}
+
+int llvm_string_table_entry_cmp(const void *va, const void *vb){
+    const llvm_string_table_entry_t *a = (llvm_string_table_entry_t*) va;
+    const llvm_string_table_entry_t *b = (llvm_string_table_entry_t*) vb;
+
+    // Don't use '-' cause could overflow with large values
+    if(a->length != b->length) return a->length < b->length ? -1 : 1;
+
+    return strncmp(a->data, b->data, a->length);
 }
