@@ -52,7 +52,6 @@ TODO:
 * ~!__primitive__
 * local functions
 * function aliases
-* scoped constants
 * reverse repeat
 * conform default arguments to required argument type
 
@@ -152,3 +151,5 @@ COMPLETED:
 + Standard library component imports and default_stdlib
 + [] operator overload
 + vararg bindings
++ Make --no-typeinfo and no_type_info have the same spacing
++ scoped constants

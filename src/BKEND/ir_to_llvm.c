@@ -1479,7 +1479,6 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();
     LLVMCodeGenFileType codegen = LLVMObjectFile;
     
-    LLVMAddGlobalOptimizerPass(pass_manager);
     LLVMAddConstantMergePass(pass_manager);
     LLVMRunPassManager(pass_manager, llvm.module);
     
