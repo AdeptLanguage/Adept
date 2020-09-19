@@ -181,11 +181,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
         }
     case VALUE_TYPE_CSTR_OF_LEN: {
             ir_value_cstr_of_len_t *cstr_of_len = value->extra;
-            LLVMValueRef global_data = NULL;
-            
-            if(llvm->compiler->traits & COMPILER_MERGE_DUPES){
-                global_data = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->length);
-            }
+            LLVMValueRef global_data = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->length);
 
             if(global_data == NULL){
                 global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), "");
@@ -193,16 +189,13 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
                 LLVMSetGlobalConstant(global_data, true);
                 LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));
 
-                if(llvm->compiler->traits & COMPILER_MERGE_DUPES){
-                    llvm_string_table_add(&llvm->string_table, cstr_of_len->array, cstr_of_len->length, global_data);
-                }
+                llvm_string_table_add(&llvm->string_table, cstr_of_len->array, cstr_of_len->length, global_data);
             }
             
             LLVMValueRef indices[2];
             indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-            LLVMValueRef literal = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
-            return literal;
+            return LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
         }
     case VALUE_TYPE_CONST_BITCAST:
             return LLVMConstBitCast(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
@@ -1482,13 +1475,10 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     debug_signal(compiler, DEBUG_SIGNAL_AT_OUT, NULL);
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();
     LLVMCodeGenFileType codegen = LLVMObjectFile;
-
-    // Merge duplicate constants if '--merge-duplicate-data'
-    if(compiler->traits & COMPILER_MERGE_DUPES){
-        LLVMAddGlobalOptimizerPass(pass_manager);
-        LLVMAddConstantMergePass(pass_manager);
-        LLVMRunPassManager(pass_manager, llvm.module);
-    }
+    
+    LLVMAddGlobalOptimizerPass(pass_manager);
+    LLVMAddConstantMergePass(pass_manager);
+    LLVMRunPassManager(pass_manager, llvm.module);
     
     if(LLVMTargetMachineEmitToFile(target_machine, llvm.module, object_filename, codegen, &error_message)){
         redprintf("INTERNAL ERROR: LLVMTargetMachineEmitToFile failed: %s\n", error_message);
