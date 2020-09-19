@@ -99,15 +99,6 @@ typedef struct {
     source_t source;
 } ast_alias_t;
 
-// ---------------- ast_constant_t ----------------
-// A global constant expression within the root AST
-typedef struct {
-    weak_cstr_t name;
-    ast_expr_t *expression;
-    trait_t traits;
-    source_t source;
-} ast_constant_t;
-
 // ---------------- ast_global_t ----------------
 // A global variable within the root AST
 typedef struct {

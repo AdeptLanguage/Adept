@@ -65,7 +65,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-errorcode_t parse_constant_global(parse_ctx_t *ctx){
+errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_constant){
     // const NAME = value
     //   ^
 
@@ -86,16 +86,23 @@ errorcode_t parse_constant_global(parse_ctx_t *ctx){
     ast_expr_t *value;
     if(parse_expr(ctx, &value)) return FAILURE;
 
-    // Make room for another constant
-    ast_t *ast = ctx->ast;
-    expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
+    // Construct the new constant value
+    out_constant->name = name;
+    out_constant->expression = value;
+    out_constant->traits = TRAIT_NONE;
+    out_constant->source = source;
+    return SUCCESS;
+}
 
-    // Add the new constant value
-    ast_constant_t *constant = &ast->constants[ast->constants_length++];
-    constant->name = name;
-    constant->expression = value;
-    constant->traits = TRAIT_NONE;
-    constant->source = source;
+errorcode_t parse_global_constant_declaration(parse_ctx_t *ctx){
+    ast_t *ast = ctx->ast;
+
+    ast_constant_t new_constant;
+    if(parse_constant_declaration(ctx, &new_constant)) return FAILURE;
+
+    // Make room for another constant
+    expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
+    ast->constants[ast->constants_length++] = new_constant;
     return SUCCESS;
 }
 

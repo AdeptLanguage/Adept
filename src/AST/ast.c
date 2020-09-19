@@ -210,7 +210,7 @@ void ast_free_structs(ast_struct_t *structs, length_t structs_length){
 void ast_free_constants(ast_constant_t *constants, length_t constants_length){
     for(length_t i = 0; i != constants_length; i++){
         ast_constant_t *constant = &constants[i];
-        ast_expr_free_fully(constant->expression);
+        if(constant->expression) ast_expr_free_fully(constant->expression);
     }
 }
 

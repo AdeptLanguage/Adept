@@ -53,6 +53,8 @@ call :compile constants
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile constants_old_style
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile constants_scoped
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile continue
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile continue_to

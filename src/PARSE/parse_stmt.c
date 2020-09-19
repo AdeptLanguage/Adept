@@ -5,6 +5,7 @@
 #include "PARSE/parse_stmt.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
+#include "PARSE/parse_global.h"
 
 void defer_scope_init(defer_scope_t *defer_scope, defer_scope_t *parent, weak_cstr_t label, trait_t traits){
     defer_scope->list.statements = NULL;
@@ -117,6 +118,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 stmt_list->statements[stmt_list->length++] = expression;
             }
+            break;
+        case TOKEN_CONST:
+            if(parse_local_constant_declaration(ctx, stmt_list, source)) return FAILURE;
             break;
         case TOKEN_WORD: {
                 source = sources[(*i)++]; // Read ahead to see what type of statement this is
@@ -1226,6 +1230,24 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     stmt->destination = mutable_expression;
     stmt->value = value_expression;
     stmt->is_pod = is_pod;
+    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+    return SUCCESS;
+}
+
+errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source){
+    // NOTE: Assumes 'stmt_list' has enough space for another statement
+    // NOTE: expand() should've already been used on stmt_list to make room
+    
+    ast_constant_t constant;
+
+    // Parse constant
+    if(parse_constant_declaration(ctx, &constant)) return FAILURE;
+
+    // Turn into declare constant statement
+    ast_expr_declare_constant_t *stmt = malloc(sizeof(ast_expr_declare_constant_t));
+    stmt->id = EXPR_DECLARE_CONSTANT;
+    stmt->source = source;
+    stmt->constant = constant;
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     return SUCCESS;
 }

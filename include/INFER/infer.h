@@ -44,6 +44,10 @@ typedef struct {
 typedef struct infer_var_scope_t {
     struct infer_var_scope_t *parent;
     infer_var_list_t list;
+
+    ast_constant_t *constants;
+    length_t constants_length;
+    length_t constants_capacity;
 } infer_var_scope_t;
 
 // ---------------- undetermined_expr_list_t ----------------
@@ -76,6 +80,10 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
 // ---------------- infer_expr_inner ----------------
 // Infers an inner expression within the root
 errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope);
+
+// ---------------- infer_expr_inner_variable ----------------
+// Infers an inner expression that is variable-like
+errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope);
 
 // ---------------- undetermined_expr_list_give ----------------
 // Gives a potential solution for an undetermined list
@@ -126,9 +134,19 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope);
 // Finds a variable mapping within an inference variable scope
 infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name);
 
+// ---------------- infer_var_scope_find_constant ----------------
+// Finds a constant expression mapping within an inference variable scope
+ast_constant_t* infer_var_scope_find_constant(infer_var_scope_t *scope, const char *name);
+
 // ---------------- infer_var_scope_add_variable ----------------
 // Adds a variables to an inference variable scope
 void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used);
+
+// ---------------- infer_var_scope_add_constant ----------------
+// Adds a constant expression mapping to an inference variable scope
+// NOTE: 'new_constant_data' pointer is only read from and not stored,
+//       only the data pointed to is read from and stored
+void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t *new_constant_data);
 
 // ---------------- infer_var_scope_nearest ----------------
 // Finds the nearest variable name to the given variable name

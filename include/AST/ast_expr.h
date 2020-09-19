@@ -19,118 +19,119 @@ extern "C" {
 // =============================================================
 // ---------------- Possible AST Expression IDs ----------------
 // =============================================================
-#define EXPR_NONE            0x00000000
+#define EXPR_NONE             0x00000000
 // Literal values ---------------------
-#define EXPR_BYTE            0x00000001
-#define EXPR_UBYTE           0x00000002
-#define EXPR_SHORT           0x00000003
-#define EXPR_USHORT          0x00000004
-#define EXPR_INT             0x00000005
-#define EXPR_UINT            0x00000006
-#define EXPR_LONG            0x00000007
-#define EXPR_ULONG           0x00000008
-#define EXPR_USIZE           0x00000009
-#define EXPR_FLOAT           0x0000000A
-#define EXPR_DOUBLE          0x0000000B
-#define EXPR_BOOLEAN         0x0000000C
-#define EXPR_STR             0x0000000D
-#define EXPR_CSTR            0x0000000E
-#define EXPR_NULL            0x0000000F
-#define EXPR_GENERIC_INT     0x00000010
-#define EXPR_GENERIC_FLOAT   0x00000011
+#define EXPR_BYTE             0x00000001
+#define EXPR_UBYTE            0x00000002
+#define EXPR_SHORT            0x00000003
+#define EXPR_USHORT           0x00000004
+#define EXPR_INT              0x00000005
+#define EXPR_UINT             0x00000006
+#define EXPR_LONG             0x00000007
+#define EXPR_ULONG            0x00000008
+#define EXPR_USIZE            0x00000009
+#define EXPR_FLOAT            0x0000000A
+#define EXPR_DOUBLE           0x0000000B
+#define EXPR_BOOLEAN          0x0000000C
+#define EXPR_STR              0x0000000D
+#define EXPR_CSTR             0x0000000E
+#define EXPR_NULL             0x0000000F
+#define EXPR_GENERIC_INT      0x00000010
+#define EXPR_GENERIC_FLOAT    0x00000011
 // Basic operators --------------------
-#define EXPR_ADD             0x00000012
-#define EXPR_SUBTRACT        0x00000013
-#define EXPR_MULTIPLY        0x00000014
-#define EXPR_DIVIDE          0x00000015
-#define EXPR_MODULUS         0x00000016
-#define EXPR_EQUALS          0x00000017
-#define EXPR_NOTEQUALS       0x00000018
-#define EXPR_GREATER         0x00000019
-#define EXPR_LESSER          0x0000001A
-#define EXPR_GREATEREQ       0x0000001B
-#define EXPR_LESSEREQ        0x0000001C
-#define EXPR_AND             0x0000001D
-#define EXPR_OR              0x0000001E
-#define EXPR_NOT             0x0000001F
-#define EXPR_BIT_AND         0x00000020
-#define EXPR_BIT_OR          0x00000021
-#define EXPR_BIT_XOR         0x00000022
-#define EXPR_BIT_COMPLEMENT  0x00000023
-#define EXPR_BIT_LSHIFT      0x00000024
-#define EXPR_BIT_RSHIFT      0x00000025
-#define EXPR_BIT_LGC_LSHIFT  0x00000026
-#define EXPR_BIT_LGC_RSHIFT  0x00000027
-#define EXPR_NEGATE          0x00000028
-#define EXPR_AT              0x00000029
+#define EXPR_ADD              0x00000012
+#define EXPR_SUBTRACT         0x00000013
+#define EXPR_MULTIPLY         0x00000014
+#define EXPR_DIVIDE           0x00000015
+#define EXPR_MODULUS          0x00000016
+#define EXPR_EQUALS           0x00000017
+#define EXPR_NOTEQUALS        0x00000018
+#define EXPR_GREATER          0x00000019
+#define EXPR_LESSER           0x0000001A
+#define EXPR_GREATEREQ        0x0000001B
+#define EXPR_LESSEREQ         0x0000001C
+#define EXPR_AND              0x0000001D
+#define EXPR_OR               0x0000001E
+#define EXPR_NOT              0x0000001F
+#define EXPR_BIT_AND          0x00000020
+#define EXPR_BIT_OR           0x00000021
+#define EXPR_BIT_XOR          0x00000022
+#define EXPR_BIT_COMPLEMENT   0x00000023
+#define EXPR_BIT_LSHIFT       0x00000024
+#define EXPR_BIT_RSHIFT       0x00000025
+#define EXPR_BIT_LGC_LSHIFT   0x00000026
+#define EXPR_BIT_LGC_RSHIFT   0x00000027
+#define EXPR_NEGATE           0x00000028
+#define EXPR_AT               0x00000029
 // Complex operators ------------------
-#define EXPR_CALL            0x0000002A
-#define EXPR_VARIABLE        0x0000002B
-#define EXPR_MEMBER          0x0000002C
-#define EXPR_ADDRESS         0x0000002D
-#define EXPR_FUNC_ADDR       0x0000002E
-#define EXPR_DEREFERENCE     0x0000002F
-#define EXPR_ARRAY_ACCESS    0x00000030
-#define EXPR_CAST            0x00000031
-#define EXPR_SIZEOF          0x00000032
-#define EXPR_SIZEOF_VALUE    0x00000033
-#define EXPR_CALL_METHOD     0x00000034
-#define EXPR_NEW             0x00000035
-#define EXPR_NEW_CSTRING     0x00000036
-#define EXPR_ENUM_VALUE      0x00000037
-#define EXPR_STATIC_ARRAY    0x00000038
-#define EXPR_STATIC_STRUCT   0x00000039
-#define EXPR_TYPEINFO        0x0000003A
-#define EXPR_TERNARY         0x0000003B
-#define EXPR_PREINCREMENT    0x0000003C
-#define EXPR_PREDECREMENT    0x0000003D
-#define EXPR_POSTINCREMENT   0x0000003E
-#define EXPR_POSTDECREMENT   0x0000003F
-#define EXPR_PHANTOM         0x00000040
-#define EXPR_TOGGLE          0x00000041
-#define EXPR_VA_ARG          0x00000042
+#define EXPR_CALL             0x0000002A
+#define EXPR_VARIABLE         0x0000002B
+#define EXPR_MEMBER           0x0000002C
+#define EXPR_ADDRESS          0x0000002D
+#define EXPR_FUNC_ADDR        0x0000002E
+#define EXPR_DEREFERENCE      0x0000002F
+#define EXPR_ARRAY_ACCESS     0x00000030
+#define EXPR_CAST             0x00000031
+#define EXPR_SIZEOF           0x00000032
+#define EXPR_SIZEOF_VALUE     0x00000033
+#define EXPR_CALL_METHOD      0x00000034
+#define EXPR_NEW              0x00000035
+#define EXPR_NEW_CSTRING      0x00000036
+#define EXPR_ENUM_VALUE       0x00000037
+#define EXPR_STATIC_ARRAY     0x00000038
+#define EXPR_STATIC_STRUCT    0x00000039
+#define EXPR_TYPEINFO         0x0000003A
+#define EXPR_TERNARY          0x0000003B
+#define EXPR_PREINCREMENT     0x0000003C
+#define EXPR_PREDECREMENT     0x0000003D
+#define EXPR_POSTINCREMENT    0x0000003E
+#define EXPR_POSTDECREMENT    0x0000003F
+#define EXPR_PHANTOM          0x00000040
+#define EXPR_TOGGLE           0x00000041
+#define EXPR_VA_ARG           0x00000042
 // Exclusive statements ---------------
-#define EXPR_DECLARE         0x00000050
-#define EXPR_DECLAREUNDEF    0x00000051
-#define EXPR_ILDECLARE       0x00000052
-#define EXPR_ILDECLAREUNDEF  0x00000053
-#define EXPR_ASSIGN          0x00000054
-#define EXPR_ADD_ASSIGN      0x00000055
-#define EXPR_SUBTRACT_ASSIGN 0x00000056
-#define EXPR_MULTIPLY_ASSIGN 0x00000057
-#define EXPR_DIVIDE_ASSIGN   0x00000058
-#define EXPR_MODULUS_ASSIGN  0x00000059
-#define EXPR_AND_ASSIGN      0x0000005A
-#define EXPR_OR_ASSIGN       0x0000005B
-#define EXPR_XOR_ASSIGN      0x0000005C
-#define EXPR_LS_ASSIGN       0x0000005D
-#define EXPR_RS_ASSIGN       0x0000005E
-#define EXPR_LGC_LS_ASSIGN   0x0000005F
-#define EXPR_LGC_RS_ASSIGN   0x00000060
-#define EXPR_RETURN          0x00000061
-#define EXPR_IF              0x00000062
-#define EXPR_UNLESS          0x00000063
-#define EXPR_IFELSE          0x00000064
-#define EXPR_UNLESSELSE      0x00000065
-#define EXPR_WHILE           0x00000066
-#define EXPR_UNTIL           0x00000067
-#define EXPR_WHILECONTINUE   0x00000068
-#define EXPR_UNTILBREAK      0x00000069
-#define EXPR_EACH_IN         0x0000006A
-#define EXPR_REPEAT          0x0000006B
-#define EXPR_DELETE          0x0000006C
-#define EXPR_BREAK           0x0000006D
-#define EXPR_CONTINUE        0x0000006E
-#define EXPR_FALLTHROUGH     0x0000006F
-#define EXPR_BREAK_TO        0x00000070
-#define EXPR_CONTINUE_TO     0x00000071
-#define EXPR_SWITCH          0x00000072
-#define EXPR_VA_START        0x00000073
-#define EXPR_VA_END          0x00000074
-#define EXPR_VA_COPY         0x00000075
-#define EXPR_FOR             0x00000076
+#define EXPR_DECLARE          0x00000050
+#define EXPR_DECLAREUNDEF     0x00000051
+#define EXPR_ILDECLARE        0x00000052
+#define EXPR_ILDECLAREUNDEF   0x00000053
+#define EXPR_ASSIGN           0x00000054
+#define EXPR_ADD_ASSIGN       0x00000055
+#define EXPR_SUBTRACT_ASSIGN  0x00000056
+#define EXPR_MULTIPLY_ASSIGN  0x00000057
+#define EXPR_DIVIDE_ASSIGN    0x00000058
+#define EXPR_MODULUS_ASSIGN   0x00000059
+#define EXPR_AND_ASSIGN       0x0000005A
+#define EXPR_OR_ASSIGN        0x0000005B
+#define EXPR_XOR_ASSIGN       0x0000005C
+#define EXPR_LS_ASSIGN        0x0000005D
+#define EXPR_RS_ASSIGN        0x0000005E
+#define EXPR_LGC_LS_ASSIGN    0x0000005F
+#define EXPR_LGC_RS_ASSIGN    0x00000060
+#define EXPR_RETURN           0x00000061
+#define EXPR_IF               0x00000062
+#define EXPR_UNLESS           0x00000063
+#define EXPR_IFELSE           0x00000064
+#define EXPR_UNLESSELSE       0x00000065
+#define EXPR_WHILE            0x00000066
+#define EXPR_UNTIL            0x00000067
+#define EXPR_WHILECONTINUE    0x00000068
+#define EXPR_UNTILBREAK       0x00000069
+#define EXPR_EACH_IN          0x0000006A
+#define EXPR_REPEAT           0x0000006B
+#define EXPR_DELETE           0x0000006C
+#define EXPR_BREAK            0x0000006D
+#define EXPR_CONTINUE         0x0000006E
+#define EXPR_FALLTHROUGH      0x0000006F
+#define EXPR_BREAK_TO         0x00000070
+#define EXPR_CONTINUE_TO      0x00000071
+#define EXPR_SWITCH           0x00000072
+#define EXPR_VA_START         0x00000073
+#define EXPR_VA_END           0x00000074
+#define EXPR_VA_COPY          0x00000075
+#define EXPR_FOR              0x00000076
+#define EXPR_DECLARE_CONSTANT 0x00000077
 
-#define MAX_AST_EXPR EXPR_VA_COPY
+#define MAX_AST_EXPR EXPR_DECLARE_CONSTANT
 
 // Static data that stores general expression syntax representations
 extern const char *global_expression_rep_table[];
@@ -141,6 +142,9 @@ typedef struct {
     unsigned int id;  // What type of expression
     source_t source;  // Where in source code
 } ast_expr_t;
+
+// "AST/ast_constant.h" requires ast_expr_t to be defined
+#include "AST/ast_constant.h"
 
 // ---------------- ast_expr_list_t ----------------
 // List structure for holding statements/expressions
@@ -626,6 +630,9 @@ typedef struct {
     ast_expr_t *condition;
     ast_expr_list_t statements;
 } ast_expr_for_t;
+
+// ---------------- ast_expr_declare_constant_t ----------------
+// (NOTE: ast_expr_declare_constant_t is declared in AST/ast_constant.h)
 
 // ---------------- expr_is_mutable ----------------
 // Tests to see if the result of an expression will be mutable

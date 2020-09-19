@@ -304,6 +304,13 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 infer_var_scope_pop(ctx->compiler, &scope);
             }
             break;
+        case EXPR_DECLARE_CONSTANT: {
+                ast_expr_declare_constant_t *declare_constant_stmt = (ast_expr_declare_constant_t*) statements[s];
+
+                infer_var_scope_add_constant(scope, &declare_constant_stmt->constant);
+                ast_constant_make_empty(&declare_constant_stmt->constant);
+            }
+            break;
         default: break;
             // Ignore this statement, it doesn't contain any expressions that we need to worry about
         }
@@ -407,67 +414,8 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         type_table_give_base(ctx->type_table, "bool");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
-    case EXPR_VARIABLE: {
-            bool found_variable = false;
-            char *variable_name = ((ast_expr_variable_t*) *expr)->name;
-            ast_type_t *variable_type;
-
-            if(ast_func == NULL || scope == NULL){
-                compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
-                return FAILURE;
-            }
-
-            infer_var_t *infer_var = infer_var_scope_find(scope, variable_name);
-
-            if(infer_var != NULL){
-                variable_type = infer_var->type;
-                infer_var->used = true;
-                found_variable = true;
-            }
-
-            ast_t *ast = ctx->ast;
-
-            // Search in globals if local one couldn't be found
-            if(!found_variable){
-                for(length_t g = 0; g != ast->globals_length; g++){
-                    if(strcmp(variable_name, ast->globals[g].name) == 0){
-                        variable_type = &ast->globals[g].type;
-                        found_variable = true;
-                        break;
-                    }
-                }
-            }
-
-            // See if this is a constant
-            if(!found_variable){
-                length_t constant_index = ast_find_constant(ast->constants, ast->constants_length, variable_name);
-
-                if(constant_index != -1){
-                    // Constant does exist, substitute it's value
-
-                    // DANGEROUS: Manually freeing variable expression
-                    free(*expr);
-
-                    *expr = ast_expr_clone(ast->constants[constant_index].expression); // Clone constant expression
-                    if(infer_expr_inner(ctx, ast_func, expr, undetermined, scope)) return FAILURE;
-
-                    break; // The identifier has been resovled, so break
-                }
-            }
-
-            if(!found_variable){
-                compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
-                const char *nearest = infer_var_scope_nearest(scope, variable_name);
-                if(nearest) printf("\nDid you mean '%s'?\n", nearest);
-                return FAILURE;
-            }
-
-            // Return if we already know the solution primitive
-            if(undetermined->solution != EXPR_NONE) return SUCCESS;
-
-            unsigned int var_expr_primitive = ast_primitive_from_ast_type(variable_type);
-            if(undetermined_expr_list_give_solution(ctx, undetermined, var_expr_primitive)) return FAILURE;
-        }
+    case EXPR_VARIABLE:
+        if(infer_expr_inner_variable(ctx, ast_func, expr, undetermined, scope)) return FAILURE;
         break;
     case EXPR_STR: break;
     case EXPR_CSTR: break;
@@ -712,6 +660,78 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         compiler_panic(ctx->compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
         return FAILURE;
     }
+
+    return SUCCESS;
+}
+
+errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope){
+
+    // Setup for searching
+    char *variable_name = ((ast_expr_variable_t*) *expr)->name;
+    ast_type_t *variable_type;
+    unsigned int var_expr_primitive;
+
+    // Can't search for identifier if not in function or no scope exists
+    if(ast_func == NULL || scope == NULL){
+        compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
+        return FAILURE;
+    }
+
+    // Search in local variables scope first
+    infer_var_t *infer_var = infer_var_scope_find(scope, variable_name);
+    
+    if(infer_var != NULL){
+        variable_type = infer_var->type;
+        infer_var->used = true;
+        goto found_variable;
+    }
+
+    // Search in global variables scope
+    ast_t *ast = ctx->ast;
+    maybe_index_t global_variable_index = ast_find_global(ast->globals, ast->globals_length, variable_name);
+
+    if(global_variable_index != -1){
+        variable_type = &ast->globals[global_variable_index].type;
+        goto found_variable;
+    }
+
+    // Search in local constants scope
+    ast_constant_t *constant = infer_var_scope_find_constant(scope, variable_name);
+    if(constant) goto found_constant;
+    
+    // Search in global constants scope
+    length_t constant_index = ast_find_constant(ast->constants, ast->constants_length, variable_name);
+
+    if(constant_index != -1){
+        constant = &ast->constants[constant_index];
+        goto found_constant;
+    }
+
+    // Couldn't find identifier
+    compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
+    const char *nearest = infer_var_scope_nearest(scope, variable_name);
+    if(nearest) printf("\nDid you mean '%s'?\n", nearest);
+    return FAILURE;
+
+found_constant:
+    // Constant does exist, substitute it's value
+
+    // DANGEROUS: Manually freeing variable expression
+    free(*expr);
+
+    // Clone expression of named constant expression
+    *expr = ast_expr_clone(constant->expression);
+    if(infer_expr_inner(ctx, ast_func, (ast_expr_t**) expr, undetermined, scope)) return FAILURE;
+    
+    return SUCCESS;
+
+found_variable:
+    // We don't have to infer any types if we already know the solution primitive
+    if(undetermined->solution != EXPR_NONE) return SUCCESS;
+    
+    // Attempt to boil down undetermined primitive types
+    var_expr_primitive = ast_primitive_from_ast_type(variable_type);
+    if(undetermined_expr_list_give_solution(ctx, undetermined, var_expr_primitive)) return FAILURE;
 
     return SUCCESS;
 }
@@ -1034,6 +1054,9 @@ void infer_var_scope_init(infer_var_scope_t *out_scope, infer_var_scope_t *paren
     out_scope->list.variables = NULL;
     out_scope->list.length = 0;
     out_scope->list.capacity = 0;
+    out_scope->constants = NULL;
+    out_scope->constants_length = 0;
+    out_scope->constants_capacity = 0;
 }
 
 void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
@@ -1053,6 +1076,11 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
     }
 
     free(scope->list.variables);
+
+    if(scope->constants){
+        ast_free_constants(scope->constants, scope->constants_length);
+        free(scope->constants);
+    }
 }
 
 void infer_var_scope_push(infer_var_scope_t **scope){
@@ -1088,6 +1116,22 @@ infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name){
     }
 }
 
+
+ast_constant_t* infer_var_scope_find_constant(infer_var_scope_t *scope, const char *name){
+    // If the scope has local constants, search through them
+    if(scope->constants_length != 0){
+        maybe_index_t index = ast_find_constant(scope->constants, scope->constants_length, name);
+        if(index != -1) return &scope->constants[index];
+    }
+
+    // Otherwise try in parent scope
+    if(scope->parent){
+        return infer_var_scope_find_constant(scope->parent, name);
+    } else {
+        return NULL;
+    }
+}
+
 void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used){
     // NOTE: Assumes name is a valid C-String
 
@@ -1099,6 +1143,18 @@ void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, as
     var->type = type;
     var->source = source;
     var->used = force_used || name[0] == '_';
+}
+
+void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t *new_constant_data){
+    expand((void**) &scope->constants, sizeof(ast_constant_t), scope->constants_length, &scope->constants_capacity, 1, 4);
+
+    length_t insert_position = find_insert_position(scope->constants, scope->constants_length, ast_constants_cmp, new_constant_data, sizeof(ast_constant_t));
+
+    // Move other constants over, so that the list will be sorted
+    memmove(&scope->constants[insert_position + 1], &scope->constants[insert_position], sizeof(ast_constant_t) * (scope->constants_length - insert_position));
+
+    scope->constants[insert_position] = *new_constant_data;
+    scope->constants_length++;
 }
 
 const char* infer_var_scope_nearest(infer_var_scope_t *scope, const char *name){

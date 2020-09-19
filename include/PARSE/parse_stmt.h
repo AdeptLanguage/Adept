@@ -75,6 +75,12 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
 // NOTE: expand() should be used on stmt_list to make room sometime before calling
 errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
 
+// ------------------ parse_local_constant_declaration ------------------
+// Parses a local named constant expression declaration
+// NOTE: Assumes 'stmt_list' has enough space for another statement
+// NOTE: expand() should be used on stmt_list to make room sometime before calling
+errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source);
+
 #ifdef __cplusplus
 }
 #endif

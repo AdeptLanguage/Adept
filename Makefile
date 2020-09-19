@@ -101,7 +101,7 @@ ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
 endif
 
 LDFLAGS=$(LIBCURL_LINKER_FLAGS) $(LLVM_LINKER_FLAGS)
-SOURCES= src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c src/BRIDGE/bridge.c src/BRIDGE/type_table.c \
+SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c src/BRIDGE/bridge.c src/BRIDGE/type_table.c \
 	src/BRIDGE/rtti.c src/DRVR/compiler.c src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir.c src/IR/ir_lowering.c src/IRGEN/ir_builder.c \
 	src/IRGEN/ir_cache.c src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
 	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_alias.c src/PARSE/parse_ctx.c src/PARSE/parse_dependency.c src/PARSE/parse_enum.c src/PARSE/parse_expr.c src/PARSE/parse_func.c src/PARSE/parse_global.c src/PARSE/parse_meta.c src/PARSE/parse_pragma.c \
@@ -134,6 +134,7 @@ insight: $(SOURCES)
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/UTIL
 	
 #   Insight - Required Header Files
+	@cp include/AST/ast_constant.h $(INSIGHT_OUT_DIR)/include/AST/ast_constant.h
 	@cp include/AST/ast_expr.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr.h
 	@cp include/AST/ast_type.h $(INSIGHT_OUT_DIR)/include/AST/ast_type.h
 	@cp include/AST/ast.h $(INSIGHT_OUT_DIR)/include/AST/ast.h
@@ -179,6 +180,7 @@ insight: $(SOURCES)
 	@cp include/UTIL/util.h $(INSIGHT_OUT_DIR)/include/UTIL/util.h
 	
 #   Insight - Required Source Code Files
+	@cp src/AST/ast_constant.c $(INSIGHT_OUT_DIR)/src/AST/ast_constant.c
 	@cp src/AST/ast_expr.c $(INSIGHT_OUT_DIR)/src/AST/ast_expr.c
 	@cp src/AST/ast_type.c $(INSIGHT_OUT_DIR)/src/AST/ast_type.c
 	@cp src/AST/ast.c $(INSIGHT_OUT_DIR)/src/AST/ast.c

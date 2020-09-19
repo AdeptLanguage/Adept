@@ -67,7 +67,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_struct(ctx, true)) return FAILURE;
             break;
         case TOKEN_CONST:
-            if(parse_constant_global(ctx)) return FAILURE;
+            if(parse_global_constant_declaration(ctx)) return FAILURE;
             break;
         case TOKEN_WORD:
             if(ctx->compiler->traits & COMPILER_COLON_COLON && tokens[i + 1].id == TOKEN_NAMESPACE){

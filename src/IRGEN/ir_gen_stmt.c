@@ -1783,6 +1783,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 builder->break_continue_scope = prev_break_continue_scope;
             }
             break;
+        case EXPR_DECLARE_CONSTANT:
+            // This statement was handled during the inference stage
+            break;
         default:
             compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_statements()");
             return FAILURE;

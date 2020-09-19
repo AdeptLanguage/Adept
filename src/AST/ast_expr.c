@@ -677,6 +677,11 @@ void ast_expr_free(ast_expr_t *expr){
             ast_free_statements_fully(for_loop->statements.statements, for_loop->statements.length);
         }
         break;
+    case EXPR_DECLARE_CONSTANT: {
+            ast_expr_declare_constant_t *declare_constant = (ast_expr_declare_constant_t*) expr;
+            ast_free_constants(&declare_constant->constant, 1);
+        }
+        break;
     }
 }
 
@@ -1241,6 +1246,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_for
         #undef clone_as_for
+    case EXPR_DECLARE_CONSTANT:
+        #define expr_as_declare_constant ((ast_expr_declare_constant_t*) expr)
+        #define clone_as_declare_constant ((ast_expr_declare_constant_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_declare_constant_t));
+        clone_as_declare_constant->constant = ast_constant_clone(&expr_as_declare_constant->constant);
+        break;
+
+        #undef expr_as_declare_constant
+        #undef clone_as_declare_constant
     default:
         redprintf("INTERNAL ERROR: ast_expr_clone received unimplemented expression id 0x%08X\n", expr->id);
         redprintf("Returning NULL... a crash will probably follow\n");
