@@ -2329,7 +2329,7 @@ ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *ex
     *ir_value = build_value_from_prev_instruction(builder);
 
     // Result type is the AST type of expression 'A'
-    *out_expr_type = ast_type_clone(&ast_type_a);
+    if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&ast_type_a);
     
     ast_type_free(&ast_type_a);
     ast_type_free(&ast_type_b);
