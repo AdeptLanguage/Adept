@@ -87,7 +87,7 @@ errorcode_t parse_constant_global(parse_ctx_t *ctx){
     if(parse_expr(ctx, &value)) return FAILURE;
 
     // Make room for another constant
-    ast_t *ast = &ctx->object->ast;
+    ast_t *ast = ctx->ast;
     expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
 
     // Add the new constant value
