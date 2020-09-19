@@ -26,7 +26,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     const char * const directives[] = {
         "__builtin_warn_bad_printf_format", "compiler_supports", "compiler_version", "default_stdlib", "deprecated", "disable_warnings",
         "enable_experimental_colon_before_type_syntax", "enable_experimental_colon_colon_syntax", "enable_warnings", "help", "ignore_all", "ignore_deprecation", "ignore_early_return",
-        "ignore_obsolete", "ignore_partial_support", "ignore_unrecognized_directives", "ignore_unused", "libm", "linux_only", "mac_only",
+        "ignore_obsolete", "ignore_partial_support", "ignore_unrecognized_directives", "ignore_unused", "libm", "linux_only", "mac_only", "merge_duplicate_data",
         "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name",
         "short_warnings", "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "warn_short", "windows_only"
     };
@@ -56,21 +56,22 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     #define PRAGMA_LIBM                             0x00000011
     #define PRAGMA_LINUX_ONLY                       0x00000012
     #define PRAGMA_MAC_ONLY                         0x00000013
-    #define PRAGMA_NO_TYPE_INFO                     0x00000014
-    #define PRAGMA_NO_TYPEINFO                      0x00000015
-    #define PRAGMA_NO_UNDEF                         0x00000016
-    #define PRAGMA_NULL_CHECKS                      0x00000017
-    #define PRAGMA_OPTIMIZATION                     0x00000018
-    #define PRAGMA_OPTIONS                          0x00000019
-    #define PRAGMA_PACKAGE                          0x0000001A
-    #define PRAGMA_PROJECT_NAME                     0x0000001B
-    #define PRAGMA_SHORT_WARNINGS                   0x0000001C
-    #define PRAGMA_UNSAFE_META                      0x0000001D
-    #define PRAGMA_UNSAFE_NEW                       0x0000001E
-    #define PRAGMA_UNSUPPORTED                      0x0000001F
-    #define PRAGMA_WARN_AS_ERROR                    0x00000020
-    #define PRAGMA_WARN_SHORT                       0x00000021
-    #define PRAGMA_WINDOWS_ONLY                     0x00000022
+    #define PRAGMA_MERGE_DUPLICATE_DATA             0x00000014
+    #define PRAGMA_NO_TYPE_INFO                     0x00000015
+    #define PRAGMA_NO_TYPEINFO                      0x00000016
+    #define PRAGMA_NO_UNDEF                         0x00000017
+    #define PRAGMA_NULL_CHECKS                      0x00000018
+    #define PRAGMA_OPTIMIZATION                     0x00000019
+    #define PRAGMA_OPTIONS                          0x0000001A
+    #define PRAGMA_PACKAGE                          0x0000001B
+    #define PRAGMA_PROJECT_NAME                     0x0000001C
+    #define PRAGMA_SHORT_WARNINGS                   0x0000001D
+    #define PRAGMA_UNSAFE_META                      0x0000001E
+    #define PRAGMA_UNSAFE_NEW                       0x0000001F
+    #define PRAGMA_UNSUPPORTED                      0x00000020
+    #define PRAGMA_WARN_AS_ERROR                    0x00000021
+    #define PRAGMA_WARN_SHORT                       0x00000022
+    #define PRAGMA_WINDOWS_ONLY                     0x00000023
 
     maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
@@ -199,6 +200,9 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         }
         #endif
         return SUCCESS;
+    case PRAGMA_MERGE_DUPLICATE_DATA:
+        ctx->compiler->traits |= COMPILER_MERGE_DUPES;
+        break;
     case PRAGMA_LINUX_ONLY: // 'linux_only' directive
         #ifdef __linux__
         if(ctx->compiler->cross_compile_for != CROSS_COMPILE_NONE){

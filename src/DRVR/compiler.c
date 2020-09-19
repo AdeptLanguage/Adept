@@ -392,6 +392,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_UNSAFE_META;
             } else if(strcmp(argv[arg_index], "--unsafe-new") == 0){
                 compiler->traits |= COMPILER_UNSAFE_NEW;
+            } else if(strcmp(argv[arg_index], "--merge-duplicate-data") == 0){
+                compiler->traits |= COMPILER_MERGE_DUPES;
             } else if(strcmp(argv[arg_index], "--null-checks") == 0){
                 compiler->checks |= COMPILER_NULL_CHECKS;
             } else if(strcmp(argv[arg_index], "--ignore-all") == 0){

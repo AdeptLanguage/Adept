@@ -4,6 +4,7 @@
 #include <llvm-c/Target.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/BitWriter.h>
+#include <llvm-c/Transforms/IPO.h>
 #include <ctype.h>
 
 #include "IR/ir.h"
@@ -1468,6 +1469,13 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();
     LLVMCodeGenFileType codegen = LLVMObjectFile;
 
+    // Merge duplicate constants if '--merge-duplicate-data'
+    if(compiler->traits & COMPILER_MERGE_DUPES){
+        LLVMAddConstantMergePass(pass_manager);
+        LLVMAddGlobalOptimizerPass(pass_manager);
+        LLVMRunPassManager(pass_manager, llvm.module);
+    }
+    
     if(LLVMTargetMachineEmitToFile(target_machine, llvm.module, object_filename, codegen, &error_message)){
         redprintf("INTERNAL ERROR: LLVMTargetMachineEmitToFile failed: %s\n", error_message);
         LLVMDisposeTargetData(data_layout);

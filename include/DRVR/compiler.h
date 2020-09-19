@@ -37,6 +37,7 @@ extern "C" {
 #define COMPILER_SHORT_WARNINGS   TRAIT_2_1
 #define COMPILER_COLON_COLON      TRAIT_2_2
 #define COMPILER_TYPE_COLON       TRAIT_2_3
+#define COMPILER_MERGE_DUPES      TRAIT_2_4
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
