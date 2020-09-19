@@ -50,7 +50,8 @@ errorcode_t parse_import(parse_ctx_t *ctx){
         free(file);
         return FAILURE;
     }
-
+    
+    free(file);
     return SUCCESS;
 }
 

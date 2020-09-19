@@ -502,6 +502,7 @@ errorcode_t parse_meta_import_stdlib(parse_ctx_t *ctx, source_t source){
         return FAILURE;
     }
 
+    free(file);
     return SUCCESS;
 }
 

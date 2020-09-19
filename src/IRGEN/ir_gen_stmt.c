@@ -1752,6 +1752,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     return FAILURE;
                 }
 
+                // Dispose of temporary AST type of condition
+                ast_type_free(&temporary_type);
+
                 // Generate conditional break
                 built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
                 ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;

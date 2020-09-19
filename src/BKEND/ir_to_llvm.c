@@ -1350,10 +1350,13 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         free(llvm.func_skeletons);
         free(llvm.global_variables);
         free(llvm.anon_global_variables);
+        free(llvm.string_table.entries);
         LLVMDisposeTargetData(data_layout);
         LLVMDisposeTargetMachine(target_machine);
         return FAILURE;
     }
+
+    free(llvm.string_table.entries);
 
     #ifdef ENABLE_DEBUG_FEATURES
     if(compiler->debug_traits & COMPILER_DEBUG_LLVMIR) LLVMDumpModule(llvm.module);

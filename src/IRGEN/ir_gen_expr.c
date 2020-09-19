@@ -550,12 +550,12 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
         // Handle variadic argument packing if applicable
         if(ir_gen_expr_call_procedure_handle_variadic_packing(builder, &arg_values, arg_types, &arity, &pair, &stack_pointer, expr->source)){
-            ast_types_free(arg_types, unpacked_arity);
+            ast_types_free_fully(arg_types, unpacked_arity);
             return FAILURE;
         }
         
         // Free AST types of the expressions given for the arguments
-        ast_types_free(arg_types, unpacked_arity);
+        ast_types_free_fully(arg_types, unpacked_arity);
         
         // Call the actual function
         ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
@@ -2329,7 +2329,10 @@ ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *ex
     *ir_value = build_value_from_prev_instruction(builder);
 
     // Result type is the AST type of expression 'A'
-    if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&ast_type_a);
+    *out_expr_type = ast_type_clone(&ast_type_a);
+    
+    ast_type_free(&ast_type_a);
+    ast_type_free(&ast_type_b);
     return instruction;
 }
 
