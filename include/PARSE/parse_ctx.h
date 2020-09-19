@@ -110,19 +110,21 @@ maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error);
 // ==================================================
 
 // ------------------ parse_grab_word ------------------
-// Returns the word held by the token after current token.
+// Returns the word held by the token AFTER the current token.
 // If that token isn't a word, then 'error' will be spit out
 // and NULL will be returned.
 // (NOTE: error can be NULL to indicate no error should be printed)
 // (NOTE: ownership isn't taken)
+// (NOTE: *ctx->i is moved ahead by 1)
 maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error);
 
 // ------------------ parse_grab_string ------------------
-// Returns the string held by the token after current token.
+// Returns the string held by the token AFTER the current token.
 // If that token isn't a string, then 'error' will be spit out
 // and NULL will be returned.
 // (NOTE: error can be NULL to indicate no error should be printed)
 // (NOTE: ownership isn't taken)
+// (NOTE: *ctx->i is moved ahead by 1)
 maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error);
 
 #ifdef __cplusplus

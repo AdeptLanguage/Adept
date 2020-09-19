@@ -37,7 +37,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     if(name == NULL) return FAILURE;
 
     if(tokens[*i].id == TOKEN_EQUALS){
-        return parse_constant_global(ctx, name, source);
+        return parse_old_style_constant_global(ctx, name, source);
     }
 
     if(tokens[*i].id == TOKEN_POD){
@@ -65,7 +65,41 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-errorcode_t parse_constant_global(parse_ctx_t *ctx, char *name, source_t source){
+errorcode_t parse_constant_global(parse_ctx_t *ctx){
+    // const NAME = value
+    //   ^
+
+    // NOTE: Assumes first token is 'const' keyword
+    source_t source = ctx->tokenlist->sources[*ctx->i];
+
+    // Get the name of the constant value
+    weak_cstr_t name = parse_grab_word(ctx, "Expected name for constant value after 'const' keyword");
+    if(name == NULL) return FAILURE;
+
+    // Move to the next token after the name we got
+    (*ctx->i)++;
+
+    // Eat '='
+    if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after name of constant")) return FAILURE;
+
+    // Parse the expression of the constant
+    ast_expr_t *value;
+    if(parse_expr(ctx, &value)) return FAILURE;
+
+    // Make room for another constant
+    ast_t *ast = &ctx->object->ast;
+    expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
+
+    // Add the new constant value
+    ast_constant_t *constant = &ast->constants[ast->constants_length++];
+    constant->name = name;
+    constant->expression = value;
+    constant->traits = TRAIT_NONE;
+    constant->source = source;
+    return SUCCESS;
+}
+
+errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, weak_cstr_t name, source_t source){
     // SOME_CONSTANT == value
     //               ^
 
@@ -82,6 +116,5 @@ errorcode_t parse_constant_global(parse_ctx_t *ctx, char *name, source_t source)
     constant->expression = value;
     constant->traits = TRAIT_NONE;
     constant->source = source;
-
     return SUCCESS;
 }

@@ -14,7 +14,11 @@ errorcode_t parse_global(parse_ctx_t *ctx);
 
 // ------------------ parse_constant_global ------------------
 // Parses a global constant
-errorcode_t parse_constant_global(parse_ctx_t *ctx, char *name, source_t source);
+errorcode_t parse_constant_global(parse_ctx_t *ctx);
+
+// ------------------ parse_old_style_constant_global ------------------
+// Parses a global constant
+errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, weak_cstr_t name, source_t source);
 
 #ifdef __cplusplus
 }

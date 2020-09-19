@@ -34,6 +34,7 @@ compile character_literals || exit $?
 compile complement || exit $?
 compile conditionless_break_label || exit $?
 compile constants || exit $?
+compile constants_old_style || exit $?
 compile continue || exit $?
 compile continue_to || exit $?
 compile default_args || exit $?
