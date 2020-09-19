@@ -23,51 +23,14 @@ errorcode_t parse_import(parse_ctx_t *ctx){
         // import standard_library_module
         //   ^
 
-        // Read component name
-        maybe_null_strong_cstr_t full_component = NULL;
-        length_t full_component_length = 0;
-        length_t full_component_capacity = 0;
-
-        maybe_null_weak_cstr_t first_part_of_component = parse_grab_word(ctx, "INTERNAL ERROR: Failed assumption of word after 'import' keyword");
-        if(first_part_of_component == NULL) return FAILURE;
-
-        // Set base source
-        source = ctx->tokenlist->sources[*ctx->i];
-
-        while(ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_DIVIDE){
-            // Skip over previous component name
-            (*ctx->i)++;
-
-            maybe_null_weak_cstr_t additional_part = parse_grab_word(ctx, "Expected component name after '/' in 'import' statement");
-            if(additional_part == NULL) return FAILURE;
-
-            length_t additional_part_length = strlen(additional_part);
-
-            if(full_component == NULL){
-                length_t first_part_of_component_length = strlen(first_part_of_component);
-
-                expand((void**) &full_component, sizeof(char), full_component_length, &full_component_capacity, first_part_of_component_length, 256);
-                memcpy(full_component, first_part_of_component, first_part_of_component_length);
-                full_component_length = first_part_of_component_length;
-            }
-            
-            expand((void**) &full_component, sizeof(char), full_component_length, &full_component_capacity, additional_part_length + 2, 256);
-            full_component[full_component_length] = '/';
-            memcpy(&full_component[full_component_length + 1], additional_part, additional_part_length);
-            full_component[full_component_length + 1 + additional_part_length] = '\0';
-
-            full_component_length += 1 + additional_part_length;
-        }
-        
-        // Update source stride if using 'thing1/...'
-        // HACK: For 'import thing1/thing2/thing3', assume that there are no spaces in between the slashes
-        if(full_component) source.stride = full_component_length;
-
         // Get stdlib location
         strong_cstr_t standard_library_folder = compiler_get_stdlib(ctx->compiler, ctx->object);
 
+        strong_cstr_t full_component = parse_standard_library_component(ctx, &source);
+        if(full_component == NULL) return FAILURE;
+
         // Combine standard library and component name to create the filename
-        file = mallocandsprintf("%s%s.adept", standard_library_folder, full_component ? full_component : first_part_of_component);
+        file = mallocandsprintf("%s%s.adept", standard_library_folder, full_component);
         free(full_component);
         free(standard_library_folder);
     } else {
@@ -78,19 +41,27 @@ errorcode_t parse_import(parse_ctx_t *ctx){
         file = file ? strclone(file) : NULL;
 
         // Set code source
-        source = ctx->tokenlist->sources[*ctx->i];
+        source = ctx->tokenlist->sources[(*ctx->i)++];
     }
     
     if(file == NULL) return FAILURE;
 
-    maybe_null_strong_cstr_t target = parse_find_import(ctx, file, source, !is_standard_library_component);
-    free(file);
+    if(parse_do_import(ctx, file, source, !is_standard_library_component)){
+        free(file);
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t parse_do_import(parse_ctx_t *ctx, weak_cstr_t file, source_t source, bool allow_local){
+    maybe_null_strong_cstr_t target = parse_find_import(ctx, file, source, allow_local);
 
     if(target == NULL){
-        if(is_standard_library_component){
+        if(!allow_local){
             printf("\nPerhaps you are using the wrong standard library version?\n\n");
         }
-
+        
         return FAILURE;
     }
 
@@ -106,9 +77,7 @@ errorcode_t parse_import(parse_ctx_t *ctx){
         return SUCCESS;
     }
 
-    *ctx->i += 1;
     if(parse_import_object(ctx, target, absolute)) return FAILURE;
-
     return SUCCESS;
 }
 
@@ -167,6 +136,53 @@ errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filenam
     if(parse_tokens(&ctx_fork)) return FAILURE;
 
     return SUCCESS;
+}
+
+maybe_null_strong_cstr_t parse_standard_library_component(parse_ctx_t *ctx, source_t *out_source){
+    // Read component name
+    maybe_null_strong_cstr_t full_component = NULL;
+    length_t full_component_length = 0;
+    length_t full_component_capacity = 0;
+
+    maybe_null_weak_cstr_t first_part_of_component = parse_grab_word(ctx, "Expected standard library component name");
+    if(first_part_of_component == NULL) return NULL;
+
+    // Set base source
+    *out_source = ctx->tokenlist->sources[*ctx->i];
+
+    while(ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_DIVIDE){
+        // Skip over previous component name
+        (*ctx->i)++;
+
+        maybe_null_weak_cstr_t additional_part = parse_grab_word(ctx, "Expected component name after '/' in 'import' statement");
+        if(additional_part == NULL) return NULL;
+
+        length_t additional_part_length = strlen(additional_part);
+
+        if(full_component == NULL){
+            length_t first_part_of_component_length = strlen(first_part_of_component);
+
+            expand((void**) &full_component, sizeof(char), full_component_length, &full_component_capacity, first_part_of_component_length, 256);
+            memcpy(full_component, first_part_of_component, first_part_of_component_length);
+            full_component_length = first_part_of_component_length;
+        }
+        
+        expand((void**) &full_component, sizeof(char), full_component_length, &full_component_capacity, additional_part_length + 2, 256);
+        full_component[full_component_length] = '/';
+        memcpy(&full_component[full_component_length + 1], additional_part, additional_part_length);
+        full_component[full_component_length + 1 + additional_part_length] = '\0';
+
+        full_component_length += 1 + additional_part_length;
+    }
+
+    // Advance past the last component part
+    (*ctx->i)++;
+    
+    // Update source stride if using 'thing1/...'
+    // HACK: For 'import thing1/thing2/thing3', assume that there are no spaces in between the slashes
+    if(full_component) out_source->stride = full_component_length;
+
+    return full_component ? full_component : strclone(first_part_of_component);
 }
 
 maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename, source_t source, bool allow_local_import){

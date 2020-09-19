@@ -268,6 +268,12 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
         break;
     case META_DIRECTIVE_IMPORT: {
             length_t old_i = (*i)++;
+
+            if(ctx->tokenlist->tokens[*i].id == TOKEN_LESSTHAN){
+                // Do special stuff for #import <library>
+                if(parse_meta_import_stdlib(ctx, ctx->tokenlist->sources[old_i])) return FAILURE;
+                return SUCCESS;
+            }
             
             meta_expr_t *value;
             if(parse_meta_expr(ctx, &value)) return FAILURE;
@@ -465,6 +471,34 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
         break;
     default:
         compiler_panicf(ctx->compiler, source, "Unimplemented meta directive #%s", directive_name);
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t parse_meta_import_stdlib(parse_ctx_t *ctx, source_t source){
+    // #import <library>
+    //         ^
+
+    // NOTE: Assumes '#import <' is present
+
+    // Get stdlib location
+    strong_cstr_t standard_library_folder = compiler_get_stdlib(ctx->compiler, ctx->object);
+
+    // Get component name
+    source_t component_source;
+    strong_cstr_t full_component = parse_standard_library_component(ctx, &component_source);
+    if(full_component == NULL) return FAILURE;
+
+    // Combine standard library and component name to create the filename
+    strong_cstr_t file = mallocandsprintf("%s%s.adept", standard_library_folder, full_component);
+    free(full_component);
+    free(standard_library_folder);
+
+    if(parse_eat(ctx, TOKEN_GREATERTHAN, "Expected '>' after component name in #import")
+    || parse_do_import(ctx, file, source, false)){
+        free(file);
         return FAILURE;
     }
 

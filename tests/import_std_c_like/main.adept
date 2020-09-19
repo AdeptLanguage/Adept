@@ -1,0 +1,6 @@
+
+#import <basics>
+
+func main {
+    print("Hello World")
+}

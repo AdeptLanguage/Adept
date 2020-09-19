@@ -69,6 +69,7 @@ compile if || exit $?
 compile ifelse || exit $?
 compile import || exit $?
 compile import_std || exit $?
+compile import_std_c_like || exit $?
 compile increment || exit $?
 compile increment_stmt || exit $?
 compile inline_declaration || exit $?

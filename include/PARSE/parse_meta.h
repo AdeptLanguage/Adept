@@ -11,6 +11,7 @@ extern "C" {
 #include "AST/meta_directives.h"
 
 errorcode_t parse_meta(parse_ctx_t *ctx);
+errorcode_t parse_meta_import_stdlib(parse_ctx_t *ctx, source_t source);
 errorcode_t parse_meta_expr(parse_ctx_t *ctx, meta_expr_t **out_expr);
 errorcode_t parse_meta_primary_expr(parse_ctx_t *ctx, meta_expr_t **out_expr);
 errorcode_t parse_meta_op_expr(parse_ctx_t *ctx, int precedence, meta_expr_t **inout_left);

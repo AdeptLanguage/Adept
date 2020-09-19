@@ -124,6 +124,8 @@ call :compile import
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile import_std
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile import_std_c_like
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile increment
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile increment_stmt

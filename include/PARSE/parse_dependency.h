@@ -13,6 +13,10 @@ extern "C" {
 // Parses an 'import' statement
 errorcode_t parse_import(parse_ctx_t* ctx);
 
+// ------------------ parse_do_import ------------------
+// Performs an 'import' statement
+errorcode_t parse_do_import(parse_ctx_t *ctx, weak_cstr_t file, source_t source, bool allow_local);
+
 // ------------------ parse_foreign_library ------------------
 // Parses a foreign library (ex: foreign 'libcustom.a')
 errorcode_t parse_foreign_library(parse_ctx_t* ctx);
@@ -25,6 +29,10 @@ errorcode_t parse_import_object(parse_ctx_t *ctx, strong_cstr_t relative_filenam
 // Finds the best file to use given a filename
 // NOTE: Returns NULL on error
 maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filename, source_t source, bool allow_local_import);
+
+// ------------------ parse_standard_library_component ------------------
+// Parses a standard library component such as "a/b/c/d" into a string
+maybe_null_strong_cstr_t parse_standard_library_component(parse_ctx_t *ctx, source_t *out_source);
 
 // ------------------ parse_resolve_import ------------------
 // Attempts to create an absolute filename for a file
