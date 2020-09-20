@@ -868,12 +868,24 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
     return -1;
 }
 
-maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, const char *name){
+maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, weak_cstr_t name){
     // If not found returns -1 else returns index inside array
 
-    // TODO: SPEED: PERFORMANCE: Make this not be a linear search
-    for(length_t i = 0; i != globals_length; i++){
-        if(strcmp(globals[i].name, name) == 0) return i;
+    maybe_index_t first, middle, last, comparison;
+    first = 0; last = globals_length - 1;
+
+    ast_global_t target;
+    target.name = name;
+    target.name_length = strlen(name);
+    // (neglect other fields of 'target')
+
+    while(first <= last){
+        middle = (first + last) / 2;
+        comparison = ast_globals_cmp(&globals[middle], &target);
+
+        if(comparison == 0) return middle;
+        else if(comparison > 0) last = middle - 1;
+        else first = middle + 1;
     }
 
     return -1;
@@ -905,6 +917,7 @@ void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *i
 
     ast_global_t *global = &ast->globals[ast->globals_length++];
     global->name = name;
+    global->name_length = strlen(name);
     global->type = type;
     global->initial = initial_value;
     global->traits = traits;
@@ -985,4 +998,20 @@ int ast_polymorphic_funcs_cmp(const void *a, const void *b){
     int diff = strcmp(((ast_polymorphic_func_t*) a)->name, ((ast_polymorphic_func_t*) b)->name);
     if(diff != 0) return diff;
     return (int) ((ast_polymorphic_func_t*) a)->ast_func_id - (int) ((ast_polymorphic_func_t*) b)->ast_func_id;
+}
+
+int ast_globals_cmp(const void *ga, const void *gb){
+    #define global_a ((ast_global_t*) ga)
+    #define global_b ((ast_global_t*) gb)
+
+    if(global_a->name_length != global_b->name_length){
+        // DANGEROUS: Assume that the length difference isn't of
+        // magnitudes big enough to cause overflow of 'int' value
+        return (int) global_a->name_length - (int) global_b->name_length;
+    }
+
+    return strncmp(global_a->name, global_b->name, global_a->name_length);
+    
+    #undef global_a
+    #undef global_b
 }

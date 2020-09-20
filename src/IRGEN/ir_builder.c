@@ -76,6 +76,7 @@ ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t va
 }
 
 ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
+    // Build gvarptr instruction
     ir_basicblock_new_instructions(builder->current_block, 1);
     ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
     instruction->id = INSTRUCTION_GLOBALVARPTR;

@@ -103,6 +103,7 @@ typedef struct {
 // A global variable within the root AST
 typedef struct {
     weak_cstr_t name;
+    length_t name_length;
     ast_type_t type;
     ast_expr_t *initial;
     trait_t traits;
@@ -282,7 +283,8 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
 
 // ---------------- ast_find_global ----------------
 // Finds a global variable by name
-maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, const char *name);
+// NOTE: Requires that 'globals' is sorted
+maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, weak_cstr_t name);
 
 // ---------------- ast_add_enum ----------------
 // Adds an enum to the global scope of an AST
@@ -334,6 +336,10 @@ int ast_enums_cmp(const void *a, const void *b);
 // Compares two 'ast_func_t*' structures by name.
 // Used for qsort()
 int ast_polymorphic_funcs_cmp(const void *a, const void *b);
+
+// ---------------- ast_globals_cmp ----------------
+// Compares two 'ast_global_t*' structures by name
+int ast_globals_cmp(const void *ga, const void *gb);
 
 #ifdef __cplusplus
 }

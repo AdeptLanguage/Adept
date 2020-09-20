@@ -24,6 +24,7 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     qsort(ast->aliases, ast->aliases_length, sizeof(ast_alias_t), ast_aliases_cmp);
     qsort(ast->constants, ast->constants_length, sizeof(ast_constant_t), ast_constants_cmp);
     qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
+    qsort(ast->globals, ast->globals_length, sizeof(ast_global_t), ast_globals_cmp);
 
     for(length_t a = 0; a != ast->aliases_length; a++){
         if(infer_type(&ctx, &ast->aliases[a].type)) return FAILURE;

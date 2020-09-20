@@ -140,7 +140,7 @@ bool ir_lowering_tests(){
     printf("%s\n", s);
     free(s);
 
-    ir_lower_const_bitcast(&pool, &casted);
+    ir_lower_const_bitcast(&casted);
 
     s = ir_value_str(casted);
     printf("%s\n", s);

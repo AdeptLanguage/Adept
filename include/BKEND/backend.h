@@ -24,4 +24,4 @@
 // some backend.
 errorcode_t ir_export(compiler_t *compiler, object_t *object, unsigned int backend);
 
-#endif // _ISAAC_BACKED_H
+#endif // _ISAAC_BACKEND_H
