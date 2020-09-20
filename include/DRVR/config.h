@@ -38,11 +38,11 @@ typedef struct {
 void config_prepare(config_t *config);
 void config_free(config_t *config);
 successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *out_warning);
-successful_t config_update_last_updated(config_t *config, weak_cstr_t filename, weak_cstr_t buffer, length_t buffer_length, jsmntok_t last_update);
+successful_t config_update_last_updated(weak_cstr_t filename, weak_cstr_t buffer, length_t buffer_length, jsmntok_t last_update);
 successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, jsmntok_t *out_maybe_last_update);
 
 successful_t update_installation(config_t *config, download_buffer_t dlbuffer);
-successful_t process_adept_stash_value(config_t *config, stash_header_t *out_header, download_buffer_t dlbuffer, jsmntok_t *tokens, length_t num_tokens, length_t index);
+successful_t process_adept_stash_value(stash_header_t *out_header, download_buffer_t dlbuffer, jsmntok_t *tokens, length_t num_tokens, length_t index);
 
 #ifdef __cplusplus
 }

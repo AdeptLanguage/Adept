@@ -61,7 +61,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     {
         funcpair_t result;
         bool is_unique;
-        if(ir_gen_find_func_named(compiler, object, "__variadic_array__", &is_unique, &result) == SUCCESS){
+        if(ir_gen_find_func_named(object, "__variadic_array__", &is_unique, &result) == SUCCESS){
             // FOUND '__variadic_array__' function
             
             if(!is_unique){

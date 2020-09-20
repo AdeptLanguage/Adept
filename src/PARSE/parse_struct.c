@@ -251,6 +251,9 @@ void parse_struct_grow_fields(char ***names, ast_type_t **types, length_t length
             return;
         }
 
+        // Ignore unused variable if backfill isn't used in implementation of 'grow'
+        (void) backfill;
+
         *capacity *= 2;
         grow((void**) names, sizeof(char*), length, *capacity);
         grow((void**) types, sizeof(ast_type_t), length - backfill, *capacity);

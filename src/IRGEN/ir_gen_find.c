@@ -37,7 +37,7 @@ errorcode_t ir_gen_find_func(ir_builder_t *builder, const char *name,
         return SUCCESS;
     }
 
-    while(++index != ir_module->funcs_length){
+    while((length_t) ++index != ir_module->funcs_length){
         mapping = &ir_module->func_mappings[index];
         ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
 
@@ -58,8 +58,7 @@ errorcode_t ir_gen_find_func(ir_builder_t *builder, const char *name,
     return FAILURE; // No function with that definition found
 }
 
-errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
-        const char *name, bool *out_is_unique, funcpair_t *result){
+errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result){
     ir_module_t *ir_module = &object->ir_module;
 
     maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
@@ -68,7 +67,7 @@ errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
     if(out_is_unique){
         *out_is_unique = true;
 
-        if(index + 1 != ir_module->funcs_length){
+        if((length_t) index + 1 != ir_module->funcs_length){
             ir_func_mapping_t *mapping = &ir_module->func_mappings[index + 1];
             if(mapping->is_beginning_of_group == -1){
                 mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index].name) != 0);
@@ -114,7 +113,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
             return SUCCESS;
         }
 
-        while(++index != ir_module->funcs_length){
+        while((length_t) ++index != ir_module->funcs_length){
             mapping = &ir_module->func_mappings[index];
             ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
 
@@ -148,7 +147,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
             found_compatible = true;
-        } else while(++poly_index != ast->polymorphic_funcs_length){
+        } else while((length_t) ++poly_index != ast->polymorphic_funcs_length){
             poly_func = &ast->polymorphic_funcs[poly_index];
             poly_template = &ast->funcs[poly_func->ast_func_id];
 
@@ -334,7 +333,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
             return SUCCESS;
         }
 
-        while(++index != ir_module->methods_length){
+        while((length_t) ++index != ir_module->methods_length){
             method = &ir_module->methods[index];
             ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
@@ -368,7 +367,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
             found_compatible = poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0;
-        } else while(++poly_index != ast->polymorphic_methods_length){
+        } else while((length_t) ++poly_index != ast->polymorphic_methods_length){
             poly_func = &ast->polymorphic_methods[poly_index];
             poly_template = &ast->funcs[poly_func->ast_func_id];
 
@@ -443,7 +442,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
             return SUCCESS;
         }
 
-        while(++index != ir_module->generic_base_methods_length){
+        while((length_t) ++index != ir_module->generic_base_methods_length){
             method = &ir_module->generic_base_methods[index];
             ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
@@ -477,7 +476,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
             found_compatible = poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0;
-        } else while(++poly_index != ast->polymorphic_methods_length){
+        } else while((length_t) ++poly_index != ast->polymorphic_methods_length){
             poly_func = &ast->polymorphic_methods[poly_index];
             poly_template = &ast->funcs[poly_func->ast_func_id];
 

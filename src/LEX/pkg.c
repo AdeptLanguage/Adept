@@ -82,7 +82,7 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
     return SUCCESS;
 }
 
-errorcode_t pkg_read(compiler_t *compiler, object_t *object){
+errorcode_t pkg_read(object_t *object){
     object->buffer = NULL;
     
     tokenlist_t *tokenlist = &object->tokenlist;

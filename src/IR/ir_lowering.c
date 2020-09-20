@@ -13,7 +13,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
 
     switch(value_type){
     case VALUE_TYPE_CONST_BITCAST:
-        if(ir_lower_const_bitcast(pool, inout_value)) return FAILURE;
+        if(ir_lower_const_bitcast(inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_ZEXT:
         if(ir_lower_const_zext(pool, inout_value)) return FAILURE;
@@ -25,10 +25,10 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_fext(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_TRUNC:
-        if(ir_lower_const_trunc(pool, inout_value)) return FAILURE;
+        if(ir_lower_const_trunc(inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_FTRUNC:
-        if(ir_lower_const_ftrunc(pool, inout_value)) return FAILURE;
+        if(ir_lower_const_ftrunc(inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_INTTOPTR:
         // Operate using 'zext' operation
@@ -36,7 +36,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         break;
     case VALUE_TYPE_CONST_PTRTOINT:
         // Operate using 'trunc' operation
-        if(ir_lower_const_trunc(pool, inout_value)) return FAILURE;
+        if(ir_lower_const_trunc(inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_FPTOUI:
         if(ir_lower_const_fptoui(pool, inout_value)) return FAILURE;
@@ -51,14 +51,14 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_sitofp(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_REINTERPRET:
-        if(ir_lower_const_reinterpret(pool, inout_value)) return FAILURE;
+        if(ir_lower_const_reinterpret(inout_value)) return FAILURE;
         break;
     }
 
     return SUCCESS;
 }
 
-errorcode_t ir_lower_const_bitcast(ir_pool_t *pool, ir_value_t **inout_value){
+errorcode_t ir_lower_const_bitcast(ir_value_t **inout_value){
     // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
     //       In other words, that the value inside the given value is not another constant cast
 
@@ -86,7 +86,7 @@ errorcode_t ir_lower_const_bitcast(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
-errorcode_t ir_lower_const_trunc(ir_pool_t *pool, ir_value_t **inout_value){
+errorcode_t ir_lower_const_trunc(ir_value_t **inout_value){
     // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
     //       In other words, that the value inside the given value is not another constant cast
 
@@ -253,7 +253,7 @@ errorcode_t ir_lower_const_fext(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
-errorcode_t ir_lower_const_ftrunc(ir_pool_t *pool, ir_value_t **inout_value){
+errorcode_t ir_lower_const_ftrunc(ir_value_t **inout_value){
     // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
     //       In other words, that the value inside the given value is not another constant cast
 
@@ -479,7 +479,7 @@ errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
-errorcode_t ir_lower_const_reinterpret(ir_pool_t *pool, ir_value_t **inout_value){
+errorcode_t ir_lower_const_reinterpret(ir_value_t **inout_value){
     // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
     //       In other words, that the value inside the given value is not another constant cast
 

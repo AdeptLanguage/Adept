@@ -215,7 +215,7 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         if(ir_gen_expr_sizeof_value(builder, (ast_expr_sizeof_value_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_PHANTOM:
-        if(ir_gen_expr_phantom(builder, (ast_expr_phantom_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        if(ir_gen_expr_phantom((ast_expr_phantom_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_CALL_METHOD:
         if(ir_gen_expr_call_method(builder, (ast_expr_call_method_t*) expr, ir_value, out_expr_type)) return FAILURE;
@@ -491,7 +491,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         *ir_value = build_load(builder, *ir_value, expr->source);
 
         // Call function pointer value
-        errorcode_t error = ir_gen_call_function_value(builder, tmp_ast_variable_type, tmp_ir_variable_type, expr, arg_values, arg_types, ir_value, out_expr_type);
+        errorcode_t error = ir_gen_call_function_value(builder, tmp_ast_variable_type, expr, arg_values, arg_types, ir_value, out_expr_type);
         ast_types_free_fully(arg_types, arity);
 
         // Propagate failure if failed to call function pointer value
@@ -614,7 +614,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         *ir_value = build_load(builder, build_gvarptr(builder, tmp_ir_variable_type, global_variable_index), expr->source);
 
         // Call the function pointer value
-        errorcode_t error = ir_gen_call_function_value(builder, tmp_ast_variable_type, tmp_ir_variable_type, expr, arg_values, arg_types, ir_value, out_expr_type);
+        errorcode_t error = ir_gen_call_function_value(builder, tmp_ast_variable_type, expr, arg_values, arg_types, ir_value, out_expr_type);
         ast_types_free_fully(arg_types, expr->arity);
 
         // Propogate failure to call function pointer value
@@ -1067,7 +1067,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     if(expr->has_match_args == false){
         bool is_unique;
 
-        if(ir_gen_find_func_named(builder->compiler, builder->object, expr->name, &is_unique, &pair)){
+        if(ir_gen_find_func_named(builder->object, expr->name, &is_unique, &pair)){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;
 
@@ -1232,7 +1232,7 @@ errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_acces
         // to use the __access__ management method (if the array value is a structure)
         
         ast_type_t element_pointer_type;
-        *ir_value = handle_access_management(builder, array_value, index_value, expr->source, &array_type, &index_type, &element_pointer_type);
+        *ir_value = handle_access_management(builder, array_value, index_value, &array_type, &index_type, &element_pointer_type);
         if(*ir_value == NULL) goto array_access_not_allowed;
 
         // If successful in calling __access__ method, then swap the array type to the *Element type
@@ -1352,7 +1352,7 @@ errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_valu
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_phantom(ir_builder_t *builder, ast_expr_phantom_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+errorcode_t ir_gen_expr_phantom(ast_expr_phantom_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
     // Value is phantom IR value
     *ir_value = (ir_value_t*) expr->ir_value;
 
@@ -2337,7 +2337,7 @@ ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *ex
 }
 
 errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_ast_variable_type,
-        ir_type_t *tmp_ir_variable_type, ast_expr_call_t *call, ir_value_t **arg_values, ast_type_t *arg_types,
+        ast_expr_call_t *call, ir_value_t **arg_values, ast_type_t *arg_types,
         ir_value_t **inout_ir_value, ast_type_t *out_expr_type){
     // NOTE: arg_types is not freed
     // NOTE: inout_ir_value is not modified unless 'SUCCESS'ful

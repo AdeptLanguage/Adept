@@ -41,7 +41,7 @@ errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_acces
 errorcode_t ir_gen_expr_cast(ir_builder_t *builder, ast_expr_cast_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_sizeof(ir_builder_t *builder, ast_expr_sizeof_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_value_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
-errorcode_t ir_gen_expr_phantom(ir_builder_t *builder, ast_expr_phantom_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_phantom(ast_expr_phantom_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_unary(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_new(ir_builder_t *builder, ast_expr_new_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
@@ -105,7 +105,7 @@ ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *ex
 // ---------------- ir_gen_call_function_value ----------------
 // Generates instructions for calling a value that's a function pointer
 errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_var_type,
-        ir_type_t *ir_var_type, ast_expr_call_t *call, ir_value_t **arg_values, ast_type_t *arg_types,
+        ast_expr_call_t *call, ir_value_t **arg_values, ast_type_t *arg_types,
         ir_value_t **inout_ir_value, ast_type_t *out_expr_type);
 
 // ---------------- ir_gen_expr_math ----------------

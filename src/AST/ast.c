@@ -763,7 +763,7 @@ void ast_polymorphic_struct_init(ast_polymorphic_struct_t *structure, strong_cst
 void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source){
     alias->name = name;
     alias->type = type;
-    alias->traits = TRAIT_NONE;
+    alias->traits = traits;
     alias->source = source;
 }
 

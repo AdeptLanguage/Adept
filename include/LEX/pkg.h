@@ -37,7 +37,7 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist);
 
 // ---------------- pkg_read ----------------
 // Reads a package from disk
-errorcode_t pkg_read(compiler_t *compiler, object_t *object);
+errorcode_t pkg_read(object_t *object);
 
 // ---------------- pkg_compress_word ----------------
 // Attempts to compress a word, then writes it to disk

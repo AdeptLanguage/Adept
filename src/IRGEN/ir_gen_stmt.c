@@ -908,10 +908,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t target_block_id = 0;
                 bridge_scope_t *block_scope;
 
-                for(length_t i = builder->block_stack_length - 1; i != -1 /* overflow occurs */; i--){
-                    if(strcmp(target_label, builder->block_stack_labels[i]) == 0){
-                        target_block_id = builder->block_stack_break_ids[i];
-                        block_scope = builder->block_stack_scopes[i];
+                for(length_t i = builder->block_stack_length; i != 0; i--){
+                    if(strcmp(target_label, builder->block_stack_labels[i - 1]) == 0){
+                        target_block_id = builder->block_stack_break_ids[i - 1];
+                        block_scope = builder->block_stack_scopes[i - 1];
                         break;
                     }
                 }
@@ -935,10 +935,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t target_block_id = 0;
                 bridge_scope_t *block_scope;
 
-                for(length_t i = builder->block_stack_length - 1; i != -1 /* overflow occurs */; i--){
-                    if(strcmp(target_label, builder->block_stack_labels[i]) == 0){
-                        target_block_id = builder->block_stack_continue_ids[i];
-                        block_scope = builder->block_stack_scopes[i];
+                for(length_t i = builder->block_stack_length; i != 0; i--){
+                    if(strcmp(target_label, builder->block_stack_labels[i - 1]) == 0){
+                        target_block_id = builder->block_stack_continue_ids[i - 1];
+                        block_scope = builder->block_stack_scopes[i - 1];
                         break;
                     }
                 }

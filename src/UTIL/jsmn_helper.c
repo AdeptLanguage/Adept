@@ -175,7 +175,7 @@ length_t jsmn_helper_subtoken_count(jsmntok_t *tokens, length_t start_index){
     switch(token.type){
     case JSMN_UNDEFINED: case JSMN_PRIMITIVE: return 1;
     case JSMN_OBJECT: case JSMN_STRING: case JSMN_ARRAY:
-        for(length_t i = 0; i != token.size; i++){
+        for(int i = 0; i != token.size; i++){
             index += jsmn_helper_subtoken_count(tokens, index);
         }
         return index - start_index;

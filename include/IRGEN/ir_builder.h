@@ -357,7 +357,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 // NOTE: Returns SUCCESS if nothing went wrong
 // NOTE: Returns FAILURE if compile time error occured
 ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
-    source_t expr_source, ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type);
+    ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type);
 
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function

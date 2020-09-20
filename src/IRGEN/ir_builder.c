@@ -1463,7 +1463,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 }
 
 ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
-        source_t expr_source, ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type){
+        ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type){
     
     // Ensure 'array_mutable_struct_value' is of type '*Structure'
     if(array_mutable_struct_value->type->kind != TYPE_KIND_POINTER) return NULL;

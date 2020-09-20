@@ -217,7 +217,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 here.index = i;
                 here.object_index = object->index;
                 here.stride = 0;
-                compiler_print_source(compiler, line, column, here);
+                compiler_print_source(compiler, line, here);
                 lex_state_free(&lex_state);
                 return FAILURE;
             }
@@ -303,7 +303,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 default:
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Unknown escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
-                    compiler_print_source(compiler, line, column, (source_t){i - 1, object_index, 2});
+                    compiler_print_source(compiler, line, (source_t){i - 1, object_index, 2});
                     lex_state_free(&lex_state);
                     return FAILURE;
                 }
@@ -364,7 +364,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 default:
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Unknown escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);
-                    compiler_print_source(compiler, line, column, (source_t){i - 1, object_index, 2});
+                    compiler_print_source(compiler, line, (source_t){i - 1, object_index, 2});
                     lex_state_free(&lex_state);
                     return FAILURE;
                 }
@@ -759,7 +759,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             break;
         }
 
-        compiler_print_source(compiler, line, column, (*sources)[tokenlist->length]);
+        compiler_print_source(compiler, line, (*sources)[tokenlist->length]);
         lex_state_free(&lex_state);
         return FAILURE;
     }

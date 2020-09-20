@@ -700,7 +700,7 @@ errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, as
     if(constant) goto found_constant;
     
     // Search in global constants scope
-    length_t constant_index = ast_find_constant(ast->constants, ast->constants_length, variable_name);
+    maybe_index_t constant_index = ast_find_constant(ast->constants, ast->constants_length, variable_name);
 
     if(constant_index != -1){
         constant = &ast->constants[constant_index];
@@ -1208,7 +1208,7 @@ void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out
     }
 
     // Minimum number of changes to override NULL
-    length_t minimum = 3;
+    int minimum = 3;
 
     // Find the name with the shortest distance
     for(length_t i = 0; i != list_length; i++){

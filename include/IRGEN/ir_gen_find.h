@@ -28,8 +28,7 @@ errorcode_t ir_gen_find_func(ir_builder_t *builder, const char *name,
 // Result info stored 'result'
 // Optionally, whether the function has a unique name is
 // stored into 'out_is_unique'
-errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object,
-    const char *name, bool *out_is_unique, funcpair_t *result);
+errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result);
 
 // ---------------- ir_gen_find_func_conforming ----------------
 // Finds a function that has the given name and conforms

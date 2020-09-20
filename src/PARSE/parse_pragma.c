@@ -329,13 +329,13 @@ errorcode_t parse_pragma_cloptions(parse_ctx_t *ctx){
 
     // Parse the compiler options
     if(parse_arguments(ctx->compiler, ctx->object, options_argc, options_argv)){
-        for(length_t a = 1; a != options_argc; a++) free(options_argv[a]);
+        for(int a = 1; a != options_argc; a++) free(options_argv[a]);
         free(options_argv);
         return FAILURE;
     }
 
     // Free allocated options array
-    for(length_t a = 1; a != options_argc; a++) free(options_argv[a]);
+    for(int a = 1; a != options_argc; a++) free(options_argv[a]);
     free(options_argv);
 
     // Perform actions needed for flags for previously missed events

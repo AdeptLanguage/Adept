@@ -40,7 +40,7 @@ void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id,
     }
 
     free(format);
-    compiler_print_source(ctx->compiler, line, column, source);
+    compiler_print_source(ctx->compiler, line, source);
 
     if(ctx->compiler->error == NULL){
         strong_cstr_t buffer = calloc(256, 1);

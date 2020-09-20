@@ -198,7 +198,7 @@ strong_cstr_t compiler_get_stdlib(compiler_t *compiler, object_t *optional_objec
 
 // ---------------- compiler_print_source ----------------
 // Prints the source code at a given 'source_t'
-void compiler_print_source(compiler_t *compiler, int line, int column, source_t source);
+void compiler_print_source(compiler_t *compiler, int line, source_t source);
 
 // ---------------- compiler_panic (and friends) ----------------
 // Prints a compiler error message at a given 'source_t'

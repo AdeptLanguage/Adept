@@ -754,7 +754,7 @@ errorcode_t compiler_read_file(compiler_t *compiler, object_t *object){
     length_t filename_length = strlen(object->filename);
 
     if(filename_length >= 4 && strcmp(&object->filename[filename_length - 4], ".dep") == 0){
-        return pkg_read(compiler, object);
+        return pkg_read(object);
     } else {
         return lex(compiler, object);
     }
@@ -775,12 +775,12 @@ strong_cstr_t compiler_get_stdlib(compiler_t *compiler, object_t *optional_objec
     return mallocandsprintf("%s/", standard_library_folder);
 }
 
-void compiler_print_source(compiler_t *compiler, int line, int column, source_t source){
+void compiler_print_source(compiler_t *compiler, int line, source_t source){
     object_t *relevant_object = compiler->objects[source.object_index];
     if(relevant_object->buffer == NULL || relevant_object->traits & OBJECT_PACKAGE) return;
 
     length_t line_index = 0;
-    for(length_t current_line = 1; current_line != line; line_index++){
+    for(int current_line = 1; current_line != line; line_index++){
         if(relevant_object->buffer[line_index] == '\n') current_line++;
     }
 
@@ -824,7 +824,7 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
         } else {
             lex_get_location(relevant_object->buffer, source.index, &line, &column);
             redprintf("%s:%d:%d:\n", filename_name_const(relevant_object->filename), line, column);
-            compiler_print_source(compiler, line, column, source);
+            compiler_print_source(compiler, line, source);
         }
         return;
     }
@@ -834,7 +834,7 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
     } else {
         lex_get_location(relevant_object->buffer, source.index, &line, &column);
         redprintf("%s:%d:%d: %s!\n", filename_name_const(relevant_object->filename), line, column, message);
-        compiler_print_source(compiler, line, column, source);
+        compiler_print_source(compiler, line, source);
     }
     #endif // !ADEPT_INSIGHT_BUILD
 
@@ -868,7 +868,7 @@ void compiler_vpanicf(compiler_t *compiler, source_t source, const char *format,
         } else {
             lex_get_location(relevant_object->buffer, source.index, &line, &column);
             redprintf("%s:%d:%d:\n", filename_name_const(relevant_object->filename), line, column);
-            compiler_print_source(compiler, line, column, source);
+            compiler_print_source(compiler, line, source);
         }
         return;
     }
@@ -886,7 +886,7 @@ void compiler_vpanicf(compiler_t *compiler, source_t source, const char *format,
     printf("!\n");
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
 
-    compiler_print_source(compiler, line, column, source);
+    compiler_print_source(compiler, line, source);
     #endif // !ADEPT_INSIGHT_BUILD
 
     if(compiler->error == NULL){
@@ -915,7 +915,7 @@ bool compiler_warn(compiler_t *compiler, source_t source, const char *message){
     yellowprintf("%s:%d:%d: %s\n", filename_name_const(relevant_object->filename), line, column, message);
 
     if(!(compiler->traits & COMPILER_SHORT_WARNINGS)){
-        compiler_print_source(compiler, line, column, source);
+        compiler_print_source(compiler, line, source);
     }
     #endif
 
@@ -970,7 +970,7 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
 
     if(!(compiler->traits & COMPILER_SHORT_WARNINGS)){
-        compiler_print_source(compiler, line, column, source);
+        compiler_print_source(compiler, line, source);
     }
     #endif
 
@@ -1012,7 +1012,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         if(mapping->is_beginning_of_group == 1 && index != original_index) break;
 
         print_candidate(&object->ast.funcs[mapping->ast_func_id]);
-    } while(++index != ir_module->funcs_length);
+    } while((length_t) ++index != ir_module->funcs_length);
 
     index = poly_index;
 
@@ -1025,7 +1025,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 
         print_candidate(&object->ast.funcs[poly->ast_func_id]);
-    } while(++index != object->ast.polymorphic_funcs_length);
+    } while((length_t) ++index != object->ast.polymorphic_funcs_length);
 }
 
 void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t source,
@@ -1097,7 +1097,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
 
             // Print method candidate for basic struct type
             print_candidate(&object->ast.funcs[method->ast_func_id]);
-        } while(++index != ir_module->methods_length);
+        } while((length_t) ++index != ir_module->methods_length);
 
         // Print potential candidates for generic struct
         else if(kind == AST_ELEM_GENERIC_BASE) do {
@@ -1123,7 +1123,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
             if(generics_match_up){
                 print_candidate(&object->ast.funcs[generic_base_method->ast_func_id]);
             }
-        } while(++index != ir_module->generic_base_methods_length);
+        } while((length_t) ++index != ir_module->generic_base_methods_length);
     }
 
     index = poly_index;
@@ -1165,7 +1165,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         }
 
         print_candidate(ast_func);
-    } while(++index != object->ast.polymorphic_funcs_length);
+    } while((length_t) ++index != object->ast.polymorphic_funcs_length);
 }
 #endif
 

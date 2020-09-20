@@ -54,7 +54,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
     jsmn_init(&parser);
     int parse_error = jsmn_parse(&parser, buffer, length, tokens, required_tokens);
     
-    if(parse_error < 0 || required_tokens != parse_error){
+    if(parse_error < 0 || (int) required_tokens != parse_error){
         redprintf("Failed to parse %s, %s\n", filename_name_const(filename), jsmn_helper_parse_fail_reason(parse_error));
         free(tokens);
         free(buffer);
@@ -150,7 +150,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
     return true;
 }
 
-successful_t config_update_last_updated(config_t *config, weak_cstr_t filename, weak_cstr_t buffer, length_t buffer_length, jsmntok_t last_update){
+successful_t config_update_last_updated(weak_cstr_t filename, weak_cstr_t buffer, length_t buffer_length, jsmntok_t last_update){
     if(last_update.type != JSMN_PRIMITIVE) return false;
 
     FILE *f = fopen(filename, "wb");
@@ -183,7 +183,7 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
 
     jsmntok_t main_object_token = tokens[index++];
 
-    for(length_t i = 0; i != main_object_token.size; i++){
+    for(int i = 0; i != main_object_token.size; i++){
         if(!jsmn_helper_get_string(buffer, tokens, num_tokens, index, content, max_content)){
             printf("WARNING: config_read_adept_config_value() -> jsmn_helper_get_string() failed\n");
             return false;
@@ -243,7 +243,7 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
     jsmn_parser parser;
     jsmn_init(&parser);
 
-    length_t required_tokens = jsmn_parse(&parser, dlbuffer.bytes, dlbuffer.length, NULL, 0);
+    int required_tokens = jsmn_parse(&parser, dlbuffer.bytes, dlbuffer.length, NULL, 0);
     jsmntok_t *tokens = malloc(sizeof(jsmntok_t) * required_tokens);
 
     jsmn_init(&parser);
@@ -282,7 +282,7 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
             stash_header_t stash_header;
             memset(&stash_header, 0, sizeof(stash_header_t));
 
-            if(!process_adept_stash_value(config, &stash_header, dlbuffer, tokens, required_tokens, section_token_index)){
+            if(!process_adept_stash_value(&stash_header, dlbuffer, tokens, required_tokens, section_token_index)){
                 redprintf("Failed to handle value while processing stash header of downloaded JSON file\n");
                 return false;
             }
@@ -306,7 +306,7 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
     return true;
 }
 
-successful_t process_adept_stash_value(config_t *config, stash_header_t *out_header, download_buffer_t dlbuffer, jsmntok_t *tokens, length_t num_tokens, length_t index){
+successful_t process_adept_stash_value(stash_header_t *out_header, download_buffer_t dlbuffer, jsmntok_t *tokens, length_t num_tokens, length_t index){
     char content[1024];
     length_t max_content = 1024;
     long long integer_value;
@@ -315,7 +315,7 @@ successful_t process_adept_stash_value(config_t *config, stash_header_t *out_hea
 
     jsmntok_t main_object_token = tokens[index++];
 
-    for(length_t i = 0; i != main_object_token.size; i++){
+    for(int i = 0; i != main_object_token.size; i++){
         if(!jsmn_helper_get_string(dlbuffer.bytes, tokens, num_tokens, index, content, max_content)) return false;
 
         if(strcmp(content, "minSpecVersion") == 0){

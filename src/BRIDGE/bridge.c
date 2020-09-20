@@ -116,7 +116,7 @@ void bridge_var_list_nearest(bridge_var_list_t *list, const char *name, char **o
     }
 
     // Minimum number of changes to override NULL
-    length_t minimum = 3;
+    int minimum = 3;
 
     // Find the name with the shortest distance
     for(length_t i = 0; i != list_length; i++){
