@@ -1261,6 +1261,7 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
             // (Used for __types__ and __types_length__)
             LLVMSetInitializer(llvm->global_variables[i], ir_to_llvm_value(llvm, globals[i].trusted_static_initializer));
         } else if(!is_external){
+            LLVMSetExternallyInitialized(llvm->global_variables[i], true);
             LLVMSetInitializer(llvm->global_variables[i], LLVMGetUndef(global_llvm_type));
         }
     }
@@ -1479,6 +1480,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();
     LLVMCodeGenFileType codegen = LLVMObjectFile;
     
+    LLVMAddGlobalOptimizerPass(pass_manager);
     LLVMAddConstantMergePass(pass_manager);
     LLVMRunPassManager(pass_manager, llvm.module);
     
