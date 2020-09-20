@@ -34,6 +34,7 @@ typedef struct object {
     strong_cstr_t filename;      // Filename
     strong_cstr_t full_filename; // Absolute filename (used for testing duplicate imports)
     strong_cstr_t buffer;        // Text buffer
+    length_t buffer_length;      // Length of text buffer
     tokenlist_t tokenlist;       // Token list
     ast_t ast;                   // Abstract syntax tree
 

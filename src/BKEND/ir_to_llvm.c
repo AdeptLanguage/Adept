@@ -149,7 +149,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             }
 
             LLVMValueRef static_array = LLVMConstArray(type, values, array_literal->length);
-            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(type, array_literal->length), "");
+            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(type, array_literal->length), "A");
             LLVMSetLinkage(global_data, LLVMInternalLinkage);
             LLVMSetGlobalConstant(global_data, true);
             LLVMSetInitializer(global_data, static_array);
@@ -184,7 +184,11 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             LLVMValueRef global_data = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->length);
 
             if(global_data == NULL){
-                global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), "");
+                // DANGEROUS: TODO: Remove this!!!
+                static int i = 0;
+                char name_buffer[256];
+                sprintf(name_buffer, "S%X", i++);
+                global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), name_buffer);
                 LLVMSetLinkage(global_data, LLVMInternalLinkage);
                 LLVMSetGlobalConstant(global_data, true);
                 LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));

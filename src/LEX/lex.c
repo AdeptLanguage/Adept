@@ -27,7 +27,8 @@ errorcode_t lex(compiler_t *compiler, object_t *object){
 
     buffer[buffer_size] = '\n';   // Append newline to flush everything
     buffer[++buffer_size] = '\0'; // Terminate the string for debug purposes
-    object->buffer = buffer;      // Pass ownership to object instance
+    object->buffer = buffer;
+    object->buffer_length = buffer_size;
 
     return lex_buffer(compiler, object);
 }
@@ -40,10 +41,13 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
     lex_state_t lex_state;
     tokenlist_t *tokenlist = &object->tokenlist;
 
-    tokenlist->tokens = malloc(sizeof(token_t) * 1024);
+    length_t estimate = object->buffer_length / 3;
+    if(estimate < 1024) estimate = 1024;
+
+    tokenlist->tokens = malloc(sizeof(token_t) * estimate);
     tokenlist->length = 0;
-    tokenlist->capacity = 1024;
-    tokenlist->sources = malloc(sizeof(source_t) * 1024);
+    tokenlist->capacity = estimate;
+    tokenlist->sources = malloc(sizeof(source_t) * estimate);
 
     // By this point we have a buffer and a tokenlist
     object->compilation_stage = COMPILATION_STAGE_TOKENLIST;
@@ -60,7 +64,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
 
     for(length_t i = 0; i != buffer_size; i++){
         coexpand((void**) &tokenlist->tokens, sizeof(token_t), (void**) &tokenlist->sources,
-                sizeof(source_t), tokenlist->length, &tokenlist->capacity, 1, 1024);
+                sizeof(source_t), tokenlist->length, &tokenlist->capacity, 1, estimate);
 
         // Macro to map a character to a single token
         #define LEX_SINGLE_TOKEN_MAPPING_MACRO(_token_id, _token_index, _token_stride) { \
