@@ -788,15 +788,15 @@ void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope){
     }
 }
 
-void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length){
+void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length, length_t func_mappings_length_guess){
     ir_pool_init(&ir_module->pool);
     
     ir_module->funcs = malloc(sizeof(ir_func_t) * funcs_capacity);
     ir_module->funcs_length = 0;
     ir_module->funcs_capacity = funcs_capacity;
-    ir_module->func_mappings = NULL;
+    ir_module->func_mappings = malloc(sizeof(ir_func_mapping_t) * func_mappings_length_guess);
     ir_module->func_mappings_length = 0;
-    ir_module->func_mappings_capacity = 0;
+    ir_module->func_mappings_capacity = func_mappings_length_guess;
     ir_module->methods = NULL;
     ir_module->methods_length = 0;
     ir_module->methods_capacity = 0;
@@ -992,7 +992,7 @@ bool preserve_sortedness){
     }
 }
 
-ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness, length_t initial_mappings_capacity){
+ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness){
     ir_func_mapping_t mapping, *result;
     mapping.name = name;
     mapping.ir_func_id = ir_func_id;
@@ -1000,7 +1000,7 @@ ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_
     mapping.is_beginning_of_group = -1;
 
     // Make room for the additional function mapping
-    expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, initial_mappings_capacity);
+    expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings_length, &module->func_mappings_capacity, 1, 32);
 
     if(preserve_sortedness){
         // Find where to insert into the mappings list

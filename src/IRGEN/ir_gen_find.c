@@ -6,32 +6,19 @@
 #include "IRGEN/ir_gen_type.h"
 #include "IRGEN/ir_builder.h"
 
-errorcode_t ir_gen_find_func(ir_builder_t *builder, const char *name,
+errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
         ast_type_t *arg_types, length_t arg_types_length, funcpair_t *result){
-    ir_module_t *ir_module = &builder->object->ir_module;
-
+    
+    ir_module_t *ir_module = &object->ir_module;
     maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
-    if(index == -1){
-        if(strcmp(name, "__pass__") == 0
-        && attempt_autogen___pass__(builder, arg_types, arg_types_length, result) == SUCCESS){
-            // Auto-generate __pass__ function if possible
-            return SUCCESS;
-        }
-
-        if(strcmp(name, "__defer__") == 0
-        && attempt_autogen___defer__(builder, arg_types, arg_types_length, result) == SUCCESS){
-            // Auto-generate __defer__ method if possible
-            return SUCCESS;
-        }
-        return FAILURE;
-    }
+    if(index == -1) goto couldnt_find_suitable_function;
     
     ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
-    ast_func_t *ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
+    ast_func_t *ast_func = &object->ast.funcs[mapping->ast_func_id];
 
     if(func_args_match(ast_func, arg_types, arg_types_length)){
         result->ast_func = ast_func;
-        result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
+        result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
         result->ast_func_id = mapping->ast_func_id;
         result->ir_func_id = mapping->ir_func_id;
         return SUCCESS;
@@ -39,22 +26,35 @@ errorcode_t ir_gen_find_func(ir_builder_t *builder, const char *name,
 
     while((length_t) ++index != ir_module->funcs_length){
         mapping = &ir_module->func_mappings[index];
-        ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
+        ast_func = &object->ast.funcs[mapping->ast_func_id];
 
         if(mapping->is_beginning_of_group == -1){
             mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
         }
-        if(mapping->is_beginning_of_group == 1) return FAILURE;
+        if(mapping->is_beginning_of_group == 1) goto couldnt_find_suitable_function;
 
         if(func_args_match(ast_func, arg_types, arg_types_length)){
             result->ast_func = ast_func;
-            result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
+            result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
             result->ast_func_id = mapping->ast_func_id;
             result->ir_func_id = mapping->ir_func_id;
             return SUCCESS;
         }
     }
 
+couldnt_find_suitable_function:
+    if(strcmp(name, "__pass__") == 0
+    && attempt_autogen___pass__(compiler, object, job_list, arg_types, arg_types_length, result) == SUCCESS){
+        // Auto-generate __pass__ function if possible
+        return SUCCESS;
+    }
+
+    if(strcmp(name, "__defer__") == 0
+    && attempt_autogen___defer__(compiler, object, job_list, arg_types, arg_types_length, result) == SUCCESS){
+        // Auto-generate __defer__ method if possible
+        return SUCCESS;
+    }
+    
     return FAILURE; // No function with that definition found
 }
 
@@ -180,13 +180,13 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
     }
 
     if(strcmp(name, "__pass__") == 0
-    && attempt_autogen___pass__(builder, arg_types, type_list_length, result) == SUCCESS){
+    && attempt_autogen___pass__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result) == SUCCESS){
         // Auto-generate __pass__ function if possible
         return SUCCESS;
     }
 
     if(strcmp(name, "__defer__") == 0
-    && attempt_autogen___defer__(builder, arg_types, type_list_length, result) == SUCCESS){
+    && attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result) == SUCCESS){
         // Auto-generate __defer__ method if possible
         return SUCCESS;
     }
@@ -400,7 +400,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
     }
 
     if(strcmp(name, "__defer__") == 0
-    && attempt_autogen___defer__(builder, arg_types, type_list_length, result) == SUCCESS){
+    && attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result) == SUCCESS){
         // Auto-generate __defer__ method if possible
         return SUCCESS;
     }
@@ -513,7 +513,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
     }
 
     if(strcmp(name, "__defer__") == 0
-    && attempt_autogen___defer__(builder, arg_types, type_list_length, result) == SUCCESS){
+    && attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result) == SUCCESS){
         // Auto-generate __defer__ method if possible
         return SUCCESS;
     }

@@ -45,7 +45,7 @@ typedef struct {
     length_t next_var_id;
     length_t *next_reference_id;
     troolean has_string_struct;
-    ir_jobs_t *jobs;
+    ir_job_list_t *job_list;
     ast_type_t static_bool;
     ast_elem_base_t static_bool_base;
     ast_elem_t *static_bool_elems;
@@ -368,15 +368,15 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_pol
 // Attempts to auto-generate __defer__ management method
 // NOTE: Does NOT check for existing suitable __defer__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ast_type_t *arg_types,
-        length_t type_list_length, funcpair_t *result);
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
+        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result);
 
 // ---------------- attempt_autogen___pass__ ----------------
 // Attempts to auto-generate __pass__ management function
 // NOTE: Does NOT check for existing suitable __pass__ functions
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ast_type_t *arg_types,
-        length_t type_list_length, funcpair_t *result);
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
+        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result);
 
 // ---------------- resolve_type_polymorphics ----------------
 // Resolves any polymorphic type variables within an AST type

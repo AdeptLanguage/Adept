@@ -57,6 +57,7 @@ compile fixed_array_assign || exit $?
 compile fixed_array_deference || exit $?
 compile fixed_array_pass || exit $?
 compile for || exit $?
+compile func_aliases || exit $?
 compile funcaddr || exit $?
 compile funcaddr_autogen || exit $?
 compile funcaddrnull || exit $?

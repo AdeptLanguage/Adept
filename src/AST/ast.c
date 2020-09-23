@@ -7,6 +7,9 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->funcs = malloc(sizeof(ast_func_t) * 8);
     ast->funcs_length = 0;
     ast->funcs_capacity = 8;
+    ast->func_aliases = NULL;
+    ast->func_aliases_length = 0;
+    ast->func_aliases_capacity = 0;
     ast->structs = malloc(sizeof(ast_struct_t) * 4);
     ast->structs_length = 0;
     ast->structs_capacity = 4;
@@ -106,6 +109,7 @@ void ast_free(ast_t *ast){
 
     ast_free_enums(ast->enums, ast->enums_length);
     ast_free_functions(ast->funcs, ast->funcs_length);
+    ast_free_function_aliases(ast->func_aliases, ast->func_aliases_length);
     ast_free_structs(ast->structs, ast->structs_length);
     ast_free_globals(ast->globals, ast->globals_length);
     ast_free_constants(ast->constants, ast->constants_length);
@@ -121,6 +125,7 @@ void ast_free(ast_t *ast){
 
     free(ast->enums);
     free(ast->funcs);
+    free(ast->func_aliases);
     free(ast->structs);
     free(ast->constants);
     free(ast->globals);
@@ -180,6 +185,13 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
         ast_free_statements(func->statements, func->statements_length);
         free(func->statements);
         ast_type_free(&func->return_type);
+    }
+}
+
+void ast_free_function_aliases(ast_func_alias_t *faliases, length_t length){
+    for(length_t i = 0; i != length; i++){
+        ast_func_alias_t *falias = &faliases[i];
+        ast_types_free_fully(falias->arg_types, falias->arity);
     }
 }
 

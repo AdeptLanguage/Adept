@@ -18,26 +18,33 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ast_t *ast = &object->ast;
 
+    ir_job_list_t job_list;
+    memset(&job_list, 0, sizeof(ir_job_list_t));
+
     ir_implementation_setup();
-    ir_module_init(module, ast->funcs_length, ast->globals_length);
+    ir_module_init(module, ast->funcs_length, ast->globals_length, ast->funcs_length + ast->func_aliases_length + 32);
     object->compilation_stage = COMPILATION_STAGE_IR_MODULE;
 
     if(ir_gen_type_mappings(compiler, object)
     || ir_gen_globals(compiler, object)
-    || ir_gen_functions(compiler, object)
-    || ir_gen_functions_body(compiler, object)
+    || ir_gen_functions(compiler, object, &job_list)
+    || ir_gen_functions_body(compiler, object, &job_list)
     || ir_gen_special_globals(compiler, object)
-    || ir_gen_fill_in_rtti(compiler, object)) return FAILURE;
+    || ir_gen_fill_in_rtti(compiler, object)){
+        free(job_list.jobs);
+        return FAILURE;
+    }
 
     return SUCCESS;
 }
 
-errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list_t *job_list){
     // NOTE: Only ir_gens function skeletons
 
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
     ast_func_t **ast_funcs = &ast->funcs;
+    ast_func_alias_t **ast_func_aliases = &ast->func_aliases;
 
     // Setup IR variadic array type if it exists
     if(ast->common.ast_variadic_array){
@@ -56,6 +63,21 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
     qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
     qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
+
+    if(ir_gen_job_list(object, job_list)) return FAILURE;
+
+    // Generate function aliases
+    for(length_t ast_func_alias_id = 0; ast_func_alias_id != ast->func_aliases_length; ast_func_alias_id++){
+        ast_func_alias_t *falias = &(*ast_func_aliases)[ast_func_alias_id];
+
+        funcpair_t pair;
+        if(ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, &pair)){
+            compiler_panicf(compiler, falias->source, "Failed to find proper destination function '%s'", falias->to);
+            return FAILURE;
+        }
+        
+        ir_module_insert_func_mapping(module, falias->from, pair.ir_func_id, pair.ast_func_id, true);
+    }
 
     // Find __variadic_array__ (if it exists)
     {
@@ -128,7 +150,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
     module->funcs_length++;
 
-    ir_func_mapping_t *new_mapping = ir_module_insert_func_mapping(module, ast_func->name, ir_func_id, ast_func_id, preserve_sortedness, object->ast.funcs_length);
+    ir_func_mapping_t *new_mapping = ir_module_insert_func_mapping(module, ast_func->name, ir_func_id, ast_func_id, preserve_sortedness);
     if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
 
     if(!(ast_func->traits & AST_FUNC_FOREIGN)){
@@ -213,30 +235,29 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     return SUCCESS;
 }
 
-errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job_list_t *job_list){
     // NOTE: Only ir_gens function body; assumes skeleton already exists
 
     ast_func_t **ast_funcs = &object->ast.funcs;
-    length_t *mappings_length = &object->ir_module.func_mappings_length;
 
-    // Create jobs for already existing function mappings
-    ir_jobs_t jobs;
-    jobs.jobs = malloc(sizeof(ir_func_mapping_t) * (*mappings_length + 4));
-    jobs.length = *mappings_length;
-    jobs.capacity = *mappings_length + 4;
-    memcpy(jobs.jobs, object->ir_module.func_mappings, sizeof(ir_func_mapping_t) * *mappings_length);
-
-    while(jobs.length != 0){
-        ir_func_mapping_t *job = &jobs.jobs[--jobs.length];
+    while(job_list->length != 0){
+        ir_func_mapping_t *job = &job_list->jobs[--job_list->length];
         if((*ast_funcs)[job->ast_func_id].traits & AST_FUNC_FOREIGN) continue;
 
-        if(ir_gen_func_statements(compiler, object, job->ast_func_id, job->ir_func_id, &jobs)){
-            free(jobs.jobs);
-            return FAILURE;
-        }
+        if(ir_gen_func_statements(compiler, object, job->ast_func_id, job->ir_func_id, job_list)) return FAILURE;
     }
 
-    free(jobs.jobs);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_job_list(object_t *object, ir_job_list_t *job_list){
+    length_t *mappings_length = &object->ir_module.func_mappings_length;
+
+    job_list->jobs = malloc(sizeof(ir_func_mapping_t) * (*mappings_length + 4));
+    job_list->length = *mappings_length;
+    job_list->capacity = *mappings_length + 4;
+
+    memcpy(job_list->jobs, object->ir_module.func_mappings, sizeof(ir_func_mapping_t) * *mappings_length);
     return SUCCESS;
 }
 

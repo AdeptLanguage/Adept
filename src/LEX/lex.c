@@ -385,14 +385,14 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 lex_state.buildup_inner_stride++;
             }
             break;
-        case LEX_STATE_EQUALS:   LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_EQUALS, TOKEN_ASSIGN);                      break;
+        case LEX_STATE_EQUALS:   LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_EQUALS, '>', TOKEN_STRONG_ARROW, TOKEN_ASSIGN); break;
         case LEX_STATE_NOT:      LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_NOTEQUALS, '!', TOKEN_TOGGLE, TOKEN_NOT); break;
         case LEX_STATE_COLON:    LEX_OPTIONAL_MOD_TOKEN_MAPPING(':', TOKEN_NAMESPACE, TOKEN_COLON);                    break;
         case LEX_STATE_ADD:
             LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_ADD_ASSIGN, '+', TOKEN_INCREMENT, TOKEN_ADD);
             break;
         case LEX_STATE_MULTIPLY: LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MULTIPLY_ASSIGN, TOKEN_MULTIPLY);   break;
-        case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUS_ASSIGN,  TOKEN_MODULUS);     break;
+        case LEX_STATE_MODULUS:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_MODULUS_ASSIGN,  TOKEN_MODULUS);    break;
         case LEX_STATE_BIT_XOR:  LEX_OPTIONAL_MOD_TOKEN_MAPPING('=', TOKEN_BIT_XOR_ASSIGN,  TOKEN_BIT_XOR);    break;
         case LEX_STATE_LESS:
             if(buffer[i] == '<'){

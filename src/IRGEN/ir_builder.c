@@ -1607,16 +1607,17 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_pol
     }
 
     // Add mapping to IR jobs
-    ir_jobs_t *jobs = builder->jobs;
-    expand((void**) &jobs->jobs, sizeof(ir_func_mapping_t), jobs->length, &jobs->capacity, 1, 4);
-    jobs->jobs[jobs->length++] = newest_mapping;
+    ir_job_list_t *job_list = builder->job_list;
+    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
+    job_list->jobs[job_list->length++] = newest_mapping;
 
     if(out_mapping) *out_mapping = newest_mapping;
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ast_type_t *arg_types,
-        length_t type_list_length, funcpair_t *result){
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
+        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
+    
     if(type_list_length != 1) return FAILURE; // Require single argument ('this') for auto-generated __defer__
 
     bool is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
@@ -1626,8 +1627,8 @@ errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ast_type_t *arg_typ
         return FAILURE; // Require '*Type' or '*<...> Type' for 'this' type
     }
 
-    ast_t *ast = &builder->object->ast;
-    ir_module_t *module = &builder->object->ir_module;
+    ast_t *ast = &object->ast;
+    ir_module_t *module = &object->ir_module;
 
     if(is_base_ptr){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
@@ -1671,14 +1672,13 @@ errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ast_type_t *arg_typ
     // of the auto-generated function
 
     ir_func_mapping_t newest_mapping;
-    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id, true, &newest_mapping)){
+    if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
         return FAILURE;
     }
 
     // Add mapping to IR jobs
-    ir_jobs_t *jobs = builder->jobs;
-    expand((void**) &jobs->jobs, sizeof(ir_func_mapping_t), jobs->length, &jobs->capacity, 1, 4);
-    jobs->jobs[jobs->length++] = newest_mapping;
+    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
+    job_list->jobs[job_list->length++] = newest_mapping;
 
     result->ast_func_id = ast_func_id;
     result->ir_func_id = newest_mapping.ir_func_id;
@@ -1687,8 +1687,9 @@ errorcode_t attempt_autogen___defer__(ir_builder_t *builder, ast_type_t *arg_typ
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ast_type_t *arg_types,
-        length_t type_list_length, funcpair_t *result){
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
+        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
+    
     if(type_list_length != 1) return FAILURE; // Require single argument for auto-generated __pass__
 
     bool is_base = ast_type_is_base(&arg_types[0]);
@@ -1699,8 +1700,8 @@ errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ast_type_t *arg_type
         return FAILURE; // Require 'Type' or '<...> Type' for 'this' type
     }
 
-    ast_t *ast = &builder->object->ast;
-    ir_module_t *module = &builder->object->ir_module;
+    ast_t *ast = &object->ast;
+    ir_module_t *module = &object->ir_module;
 
     if(is_base){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[0])->base;
@@ -1751,14 +1752,13 @@ errorcode_t attempt_autogen___pass__(ir_builder_t *builder, ast_type_t *arg_type
     // of the auto-generated function
 
     ir_func_mapping_t newest_mapping;
-    if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id, true, &newest_mapping)){
+    if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
         return FAILURE;
     }
 
     // Add mapping to IR jobs
-    ir_jobs_t *jobs = builder->jobs;
-    expand((void**) &jobs->jobs, sizeof(ir_func_mapping_t), jobs->length, &jobs->capacity, 1, 4);
-    jobs->jobs[jobs->length++] = newest_mapping;
+    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
+    job_list->jobs[job_list->length++] = newest_mapping;
 
     result->ast_func_id = ast_func_id;
     result->ir_func_id = newest_mapping.ir_func_id;

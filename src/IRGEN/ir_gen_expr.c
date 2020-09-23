@@ -510,7 +510,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     // If there doesn't exist a nearby scoped variable with the same name, look for function
     funcpair_t pair;
     errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &pair);
-    
+
     // Propagate failure if something went wrong during the search
     if(error == ALT_FAILURE){
         ast_types_free_fully(arg_types, arity);
@@ -1083,7 +1083,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     }
     
     // Otherwise we have arguments we can try to match against
-    else if(ir_gen_find_func(builder, expr->name, expr->match_args, expr->match_args_length, &pair)){
+    else if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, &pair)){
         // If nothing exists and the lookup is tentative, fail tentatively
         if(expr->tentative) goto fail_tentatively;
 

@@ -190,6 +190,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_INCREMENT:      printf("Increment\n"); break;
         case TOKEN_DECREMENT:      printf("Decrement\n"); break;
         case TOKEN_TOGGLE:         printf("Toggle\n"); break;
+        case TOKEN_STRONG_ARROW:   printf("Strong Arrow\n"); break;
         default:
             printf("unknown token 0x%08X: THIS TOKEN HAS AN UNKNOWN ID\n", tokenlist->tokens[i].id);
         }
@@ -279,7 +280,7 @@ const char *global_token_name_table[] = {
     "increment",                          // 0x00000044
     "decrement",                          // 0x00000045
     "toggle",                             // 0x00000046
-    "reserved",                           // 0x00000047
+    "strong arrow",                       // 0x00000047
     "reserved",                           // 0x00000048
     "reserved",                           // 0x00000049
     "reserved",                           // 0x0000004A

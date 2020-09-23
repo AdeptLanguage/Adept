@@ -581,13 +581,13 @@ typedef struct {
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_generic_base_method_t;
 
-// ---------------- ir_jobs_t ----------------
+// ---------------- ir_job_list_t ----------------
 // List of jobs required during IR generation
 typedef struct {
     ir_func_mapping_t *jobs;
     length_t length;
     length_t capacity;
-} ir_jobs_t;
+} ir_job_list_t;
 
 // ---------------- ir_global_t ----------------
 // An intermediate representation global variable
@@ -701,7 +701,7 @@ void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope);
 
 // ---------------- ir_module_free ----------------
 // Initializes an IR module for use
-void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t globals_length);
+void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t globals_length, length_t func_mappings_length_guess);
 
 // ---------------- ir_module_free ----------------
 // Frees data within an IR module
@@ -755,7 +755,7 @@ bool preserve_sortedness);
 
 // ---------------- ir_module_insert_generic_method ----------------
 // Inserts a new function mapping into a module's function mappings list
-ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness, length_t initial_mappings_capacity);
+ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness);
 
 // ---------------- ir_module_find_insert_method_position ----------------
 // Finds the position to insert a method into a module's method list

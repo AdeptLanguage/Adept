@@ -11,7 +11,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "BRIDGE/bridge.h"
 
-errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_jobs_t *jobs){
+errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list){
     // ir_gens statements into basicblocks with instructions and sets in 'module_func'
 
     ir_module_t *ir_module = &object->ir_module;
@@ -68,7 +68,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
     bridge_scope_init(module_func->scope, NULL);
     module_func->scope->first_var_id = 0;
     builder.scope = module_func->scope;
-    builder.jobs = jobs;
+    builder.job_list = job_list;
 
     builder.static_bool_base.id = AST_ELEM_BASE;
     builder.static_bool_base.source = NULL_SOURCE;

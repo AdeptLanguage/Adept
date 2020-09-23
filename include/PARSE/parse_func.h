@@ -50,6 +50,14 @@ void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_ve
 // Frees function arguments that never got backfilled
 void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill);
 
+// ------------------ parse_func_alias ------------------
+// Parses a function alias
+errorcode_t parse_func_alias(parse_ctx_t *ctx);
+
+// ------------------ parse_func_alias_args ------------------
+// Parses argument types for function alias
+errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, length_t *out_arity, trait_t *out_required_traits);
+
 #ifdef __cplusplus
 }
 #endif

@@ -20,7 +20,7 @@
 // Generates the required intermediate representation for
 // statements inside an AST function. Internally it
 // creates an 'ir_builder_t' and calls 'ir_gen_statements'
-errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_jobs_t *jobs);
+errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list);
 
 // ---------------- ir_gen_statements ----------------
 // Generates intermediate representation for
