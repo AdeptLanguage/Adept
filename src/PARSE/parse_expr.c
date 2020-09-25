@@ -454,7 +454,7 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
             source = sources[*i];
             
             // NOTE: Must be sorted
-            const static int op_termination_tokens[] = {
+            static const int op_termination_tokens[] = {
                 TOKEN_ASSIGN,             // 0x00000008
                 TOKEN_CLOSE,              // 0x00000011
                 TOKEN_BEGIN,              // 0x00000012

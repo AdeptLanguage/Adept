@@ -218,18 +218,18 @@ void compiler_free_objects(compiler_t *compiler){
             #ifndef ADEPT_INSIGHT_BUILD
             ir_module_free(&object->ir_module);
             #endif
-            // [fallthrough]
+            // fallthrough
         case COMPILATION_STAGE_AST:    
             ast_free(&object->ast);
-            // [fallthrough]
+            // fallthrough
         case COMPILATION_STAGE_TOKENLIST:
             free(object->buffer);
             tokenlist_free(&object->tokenlist);
-            // [fallthrough]
+            // fallthrough
         case COMPILATION_STAGE_FILENAME:
             free(object->filename);
             free(object->full_filename);
-            // [fallthrough]
+            // fallthrough
         case COMPILATION_STAGE_NONE:
             // Nothing to free up
             break;
