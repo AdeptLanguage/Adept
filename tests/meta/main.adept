@@ -1,9 +1,12 @@
 
+#pragma compiler_version '2.4'
+
 // #set
 // #get
 // #if
 // #elif
 // #end
+// #pragma
 // #print
 // #place
 // #print_error

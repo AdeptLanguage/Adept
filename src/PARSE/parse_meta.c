@@ -5,6 +5,7 @@
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_meta.h"
 #include "PARSE/parse_util.h"
+#include "PARSE/parse_pragma.h"
 #include "PARSE/parse_dependency.h"
 
 errorcode_t parse_meta(parse_ctx_t *ctx){
@@ -18,29 +19,30 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
     const char *standard_directives[] = {
         "default", "define", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
-        "print", "print_error", "print_warning", "set", "unless", "warning"
+        "pragma", "print", "print_error", "print_warning", "set", "unless", "warning"
     };
 
-    #define META_DIRECTIVE_DEFAULT 0
-    #define META_DIRECTIVE_DEFINE 1
-    #define META_DIRECTIVE_ELIF 2
-    #define META_DIRECTIVE_ELSE 3
-    #define META_DIRECTIVE_END 4
-    #define META_DIRECTIVE_ERROR 5
-    #define META_DIRECTIVE_GET 6
-    #define META_DIRECTIVE_HALT 7
-    #define META_DIRECTIVE_IF 8
-    #define META_DIRECTIVE_IMPORT 9
-    #define META_DIRECTIVE_INPUT 10
-    #define META_DIRECTIVE_PLACE 11
-    #define META_DIRECTIVE_PLACE_ERROR 12
+    #define META_DIRECTIVE_DEFAULT        0
+    #define META_DIRECTIVE_DEFINE         1
+    #define META_DIRECTIVE_ELIF           2
+    #define META_DIRECTIVE_ELSE           3
+    #define META_DIRECTIVE_END            4
+    #define META_DIRECTIVE_ERROR          5
+    #define META_DIRECTIVE_GET            6
+    #define META_DIRECTIVE_HALT           7
+    #define META_DIRECTIVE_IF             8
+    #define META_DIRECTIVE_IMPORT         9
+    #define META_DIRECTIVE_INPUT         10
+    #define META_DIRECTIVE_PLACE         11
+    #define META_DIRECTIVE_PLACE_ERROR   12
     #define META_DIRECTIVE_PLACE_WARNING 13
-    #define META_DIRECTIVE_PRINT 14
-    #define META_DIRECTIVE_PRINT_ERROR 15
-    #define META_DIRECTIVE_PRINT_WARNING 16
-    #define META_DIRECTIVE_SET 17
-    #define META_DIRECTIVE_UNLESS 18
-    #define META_DIRECTIVE_WARNING 19
+    #define META_DIRECTIVE_PRAGMA        14
+    #define META_DIRECTIVE_PRINT         15
+    #define META_DIRECTIVE_PRINT_ERROR   16
+    #define META_DIRECTIVE_PRINT_WARNING 17
+    #define META_DIRECTIVE_SET           18
+    #define META_DIRECTIVE_UNLESS        19
+    #define META_DIRECTIVE_WARNING       20
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -373,6 +375,9 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
             meta_expr_free_fully(value);
         }
+        break;
+    case META_DIRECTIVE_PRAGMA: // pragma
+        if(parse_pragma(ctx)) return FAILURE;
         break;
     case META_DIRECTIVE_PRINT: { // print
             (*i)++;
