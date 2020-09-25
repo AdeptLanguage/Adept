@@ -211,12 +211,13 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
 
             // Find polymorphic structure
             ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
-            created_type->kind = template->traits & AST_STRUCT_IS_UNION ? TYPE_KIND_UNION : TYPE_KIND_STRUCTURE;
 
             if(template == NULL){
                 compiler_panicf(compiler, generic_base->source, "Undeclared type '%s'", generic_base->name);
                 return FAILURE;
             }
+
+            created_type->kind = template->traits & AST_STRUCT_IS_UNION ? TYPE_KIND_UNION : TYPE_KIND_STRUCTURE;
             
             if(generic_base->generics_length != template->generics_length){
                 const char *message = generic_base->generics_length < template->generics_length ?
