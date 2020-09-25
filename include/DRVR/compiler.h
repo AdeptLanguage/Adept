@@ -115,6 +115,8 @@ typedef struct compiler {
 
     bool show_unused_variables_how_to_disable;
     unsigned int cross_compile_for;
+    
+    weak_cstr_t entry_point;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00

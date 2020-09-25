@@ -715,7 +715,7 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length){
     }
 }
 
-void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim, source_t source){
+void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim, source_t source, bool is_entry){
     func->name = name;
     func->arg_names = NULL;
     func->arg_types = NULL;
@@ -736,7 +736,7 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     func->statements_capacity = 0;
     func->source = source;
 
-    if(strcmp(name, "main") == 0)      func->traits |= AST_FUNC_MAIN;
+    if(is_entry)                       func->traits |= AST_FUNC_MAIN;
     if(strcmp(name, "__defer__") == 0) func->traits |= AST_FUNC_DEFER | (is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
     if(strcmp(name, "__pass__") == 0)  func->traits |= AST_FUNC_PASS  | (is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
     if(is_stdcall)                     func->traits |= AST_FUNC_STDCALL;

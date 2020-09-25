@@ -32,7 +32,8 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, source);
+    bool is_entry = strcmp(name, ctx->compiler->entry_point) == 0;
+    ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, source, is_entry);
 
     if(ctx->next_builtin_traits != TRAIT_NONE){
         func->traits |= ctx->next_builtin_traits;

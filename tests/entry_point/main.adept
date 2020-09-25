@@ -1,0 +1,10 @@
+
+pragma compiler_version '2.4'
+pragma entry_point myEntryPoint
+
+import basics
+
+func myEntryPoint(argc int, argv **ubyte) int {
+    printf("%S\n", toString(argv, argc))
+    return 0
+}

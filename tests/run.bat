@@ -79,6 +79,8 @@ call :compile each_in_list
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile each_in_static
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile entry_point
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile enums
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile equals_func

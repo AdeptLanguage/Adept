@@ -284,8 +284,10 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
 
         LLVMValueRef *skeleton = &func_skeletons[ir_func_id];
 
-        if(ir_func->traits & IR_FUNC_FOREIGN || ir_func->traits & IR_FUNC_MAIN){
+        if(ir_func->traits & IR_FUNC_FOREIGN){
             *skeleton = LLVMAddFunction(llvm_module, ir_func->name, llvm_func_type);
+        } else if(ir_func->traits & IR_FUNC_MAIN){
+            *skeleton = LLVMAddFunction(llvm_module, "main", llvm_func_type);
         } else {
             char adept_implementation_name[256];
             ir_implementation(ir_func_id, 'a', adept_implementation_name);
@@ -593,13 +595,15 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
                         char adept_implementation_name[256];
                         ir_func_t *target_ir_func = &object->ir_module.funcs[((ir_instr_call_t*) instr)->ir_func_id];
 
-                        if(target_ir_func->traits & IR_FUNC_FOREIGN || target_ir_func->traits & IR_FUNC_MAIN){
+                        if(target_ir_func->traits & IR_FUNC_FOREIGN){
                             implementation_name = target_ir_func->name;
+                        } else if(target_ir_func->traits & IR_FUNC_MAIN){
+                            implementation_name = "main";
                         } else {
                             ir_implementation(((ir_instr_call_t*) instr)->ir_func_id, 'a', adept_implementation_name);
                             implementation_name = adept_implementation_name;
                         }
-
+                        
                         LLVMValueRef named_func = LLVMGetNamedFunction(llvm_module, implementation_name);
                         assert(named_func != NULL);
 
