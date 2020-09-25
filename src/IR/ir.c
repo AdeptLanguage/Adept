@@ -1016,7 +1016,7 @@ ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_
         // Invalidate whether mapping after is beginning of group
         if(insert_position != module->func_mappings_length++)
             module->func_mappings[insert_position + 1].is_beginning_of_group = -1;
-
+        
         // New mapping available
         result = &module->func_mappings[insert_position];
     } else {

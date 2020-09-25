@@ -24,7 +24,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list
         return SUCCESS;
     }
 
-    while((length_t) ++index != ir_module->funcs_length){
+    while((length_t) ++index != ir_module->func_mappings_length){
         mapping = &ir_module->func_mappings[index];
         ast_func = &object->ast.funcs[mapping->ast_func_id];
 
@@ -67,7 +67,7 @@ errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out
     if(out_is_unique){
         *out_is_unique = true;
 
-        if((length_t) index + 1 != ir_module->funcs_length){
+        if((length_t) index + 1 != ir_module->func_mappings_length){
             ir_func_mapping_t *mapping = &ir_module->func_mappings[index + 1];
             if(mapping->is_beginning_of_group == -1){
                 mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index].name) != 0);
@@ -113,7 +113,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
             return SUCCESS;
         }
 
-        while((length_t) ++index != ir_module->funcs_length){
+        while((length_t) ++index != ir_module->func_mappings_length){
             mapping = &ir_module->func_mappings[index];
             ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
 
