@@ -634,9 +634,16 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
     if(parse_eat(ctx, TOKEN_ALIAS, "Expected 'alias' keyword for function alias")) return FAILURE;
 
     // Get from alias name
-    weak_cstr_t from = parse_eat_word(ctx, "Expected function alias name");
-    if(from == NULL) return FAILURE;
+    weak_cstr_t from;
 
+    if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+        from = ctx->prename;
+        ctx->prename = NULL;
+    } else {
+        from = parse_eat_word(ctx, "Expected function alias name");
+        if(from == NULL) return FAILURE;
+    }
+    
     ast_type_t *arg_types;
     length_t arity;
     trait_t required_traits;    
