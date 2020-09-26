@@ -49,6 +49,7 @@ typedef struct {
     length_t arity;
     trait_t required_traits;
     source_t source;
+    bool match_first_of_name;
 } ast_func_alias_t;
 
 #define AST_FUNC_ARG_TYPE_TRAIT_POD TRAIT_1

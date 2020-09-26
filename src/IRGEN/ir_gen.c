@@ -71,8 +71,21 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
         ast_func_alias_t *falias = &(*ast_func_aliases)[ast_func_alias_id];
 
         funcpair_t pair;
-        if(ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, &pair)){
+        errorcode_t error;
+        bool is_unique = true;
+
+        if(falias->match_first_of_name){
+            error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
+        } else {
+            error = ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, &pair);
+        }
+
+        if(error){
             compiler_panicf(compiler, falias->source, "Failed to find proper destination function '%s'", falias->to);
+            return FAILURE;
+        }
+
+        if(!is_unique && compiler_warnf(compiler, falias->source, "Multiple functions named '%s', using the first of them", falias->to)){
             return FAILURE;
         }
         

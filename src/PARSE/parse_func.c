@@ -643,11 +643,12 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
         from = parse_eat_word(ctx, "Expected function alias name");
         if(from == NULL) return FAILURE;
     }
-    
+
     ast_type_t *arg_types;
     length_t arity;
     trait_t required_traits;    
-    if(parse_func_alias_args(ctx, &arg_types, &arity, &required_traits)) return FAILURE;
+    bool match_first_of_name;
+    if(parse_func_alias_args(ctx, &arg_types, &arity, &required_traits, &match_first_of_name)) return FAILURE;
 
     // Eat '=>'
     if(parse_eat(ctx, TOKEN_STRONG_ARROW, "Expected '=>' after argument types for function alias")){
@@ -670,20 +671,25 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
     falias->arity = arity;
     falias->required_traits = required_traits;
     falias->source = source;
+    falias->match_first_of_name = match_first_of_name;
     return SUCCESS;
 }
 
-errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, length_t *out_arity, trait_t *out_required_traits){
+errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, length_t *out_arity, trait_t *out_required_traits, bool *out_match_first_of_name){
     // func alias myAlias(...) => otherFunction
     //                   ^
-
-    *out_required_traits = TRAIT_NONE;
-    *out_arity = 0;
-    *out_arg_types = NULL;
 
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     length_t args_capacity = 0;
+
+    *out_required_traits = TRAIT_NONE;
+    *out_arity = 0;
+    *out_arg_types = NULL;
+    *out_match_first_of_name = tokens[*i].id != TOKEN_OPEN;
+
+    // Don't parse argument types if we're going to match the first of the same name
+    if(*out_match_first_of_name) return SUCCESS;
 
     // Eat '('
     if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' after function alias name")) return FAILURE;

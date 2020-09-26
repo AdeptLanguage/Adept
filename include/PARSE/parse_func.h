@@ -56,7 +56,7 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx);
 
 // ------------------ parse_func_alias_args ------------------
 // Parses argument types for function alias
-errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, length_t *out_arity, trait_t *out_required_traits);
+errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, length_t *out_arity, trait_t *out_required_traits, bool *out_match_first_of_name);
 
 #ifdef __cplusplus
 }

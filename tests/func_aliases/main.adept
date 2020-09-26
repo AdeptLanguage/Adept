@@ -8,9 +8,15 @@ func main {
     echo("Hello World")
     echo()
     echo("This is a test")
-    echo(12345)
+    echo(myFunc(1, 2, 3))
 }
 
 func echo(value int){
     print("Function echo: " + toString(value).reversed())
+}
+
+func alias myFunc => myFunction
+
+func myFunction(a, b, c int) int {
+    return a + b + c
 }
