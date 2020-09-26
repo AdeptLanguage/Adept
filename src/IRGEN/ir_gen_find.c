@@ -7,7 +7,7 @@
 #include "IRGEN/ir_builder.h"
 
 errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
-        ast_type_t *arg_types, length_t arg_types_length, funcpair_t *result){
+        ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, funcpair_t *result){
     
     ir_module_t *ir_module = &object->ir_module;
     maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
@@ -16,7 +16,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list
     ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
     ast_func_t *ast_func = &object->ast.funcs[mapping->ast_func_id];
 
-    if(func_args_match(ast_func, arg_types, arg_types_length)){
+    if((ast_func->traits & mask) == req_traits && func_args_match(ast_func, arg_types, arg_types_length)){
         result->ast_func = ast_func;
         result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
         result->ast_func_id = mapping->ast_func_id;
@@ -33,7 +33,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list
         }
         if(mapping->is_beginning_of_group == 1) goto couldnt_find_suitable_function;
 
-        if(func_args_match(ast_func, arg_types, arg_types_length)){
+        if((ast_func->traits & mask) == req_traits && func_args_match(ast_func, arg_types, arg_types_length)){
             result->ast_func = ast_func;
             result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
             result->ast_func_id = mapping->ast_func_id;

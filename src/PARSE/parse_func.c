@@ -697,17 +697,35 @@ errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, 
     while(tokens[*i].id != TOKEN_CLOSE){
         expand((void**) out_arg_types, sizeof(ast_type_t), *out_arity, &args_capacity, 1, 4);
 
-        if(parse_ignore_newlines(ctx, "Expected argument type for function alias")) return FAILURE;
-        if(parse_type(ctx, &(*out_arg_types)[*out_arity])) return FAILURE;
-        if(parse_ignore_newlines(ctx, "Expected argument type for function alias")) return FAILURE;
+        if(parse_ignore_newlines(ctx, "Expected argument type for function alias")) goto failure;
 
-        // Increase arity
-        (*out_arity)++;
-        
+        if(tokens[*i].id == TOKEN_ELLIPSIS){
+            // '...'
+            *out_required_traits |= AST_FUNC_VARARG;
+            (*i)++;
+        } else if(tokens[*i].id == TOKEN_RANGE){
+            // '..'
+            *out_required_traits |= AST_FUNC_VARIADIC;
+            (*i)++;
+        } else {
+            // Type
+            if(parse_type(ctx, &(*out_arg_types)[*out_arity])) goto failure;
+
+            // Increase arity
+            (*out_arity)++;
+        }
+
+        if(parse_ignore_newlines(ctx, "Expected argument type for function alias")) goto failure;
+
         if(tokens[*i].id == TOKEN_NEXT){
+            if(*out_required_traits & AST_FUNC_VARARG || *out_required_traits & AST_FUNC_VARIADIC){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ')' after variadic argument");
+                goto failure;
+            }
+
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected type after ',' in argument types");
-                return FAILURE;
+                goto failure;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
             bool takes_variable_arity = *out_required_traits & AST_FUNC_VARIADIC || *out_required_traits & AST_FUNC_VARARG;
@@ -717,11 +735,15 @@ errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, 
                     : "Expected ',' after argument type";
             
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], error_message);
-            return FAILURE;
+            goto failure;
         }
     }
 
     // Eat ')'
-    if(parse_eat(ctx, TOKEN_CLOSE, "Expected ')' after function alias argument types")) return FAILURE;
+    if(parse_eat(ctx, TOKEN_CLOSE, "Expected ')' after function alias argument types")) goto failure;
     return SUCCESS;
+
+failure:
+    ast_types_free_fully(*out_arg_types, *out_arity);
+    return FAILURE;
 }

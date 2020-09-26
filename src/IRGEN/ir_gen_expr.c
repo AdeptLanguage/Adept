@@ -1083,7 +1083,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     }
     
     // Otherwise we have arguments we can try to match against
-    else if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, &pair)){
+    else if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &pair)){
         // If nothing exists and the lookup is tentative, fail tentatively
         if(expr->tentative) goto fail_tentatively;
 

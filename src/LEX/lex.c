@@ -151,10 +151,16 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 (*sources)[tokenlist->length].object_index = object_index;
                 t = &((*tokens)[tokenlist->length]);
                 t->data = NULL;
-                if(buffer[i + 1] == '.' && buffer[i + 2] == '.'){
-                    t->id = TOKEN_ELLIPSIS;
-                    i += 2;
-                    (*sources)[tokenlist->length++].stride = 3;
+                if(buffer[i + 1] == '.'){
+                    if(buffer[i + 2] == '.'){
+                        t->id = TOKEN_ELLIPSIS;
+                        i += 2;
+                        (*sources)[tokenlist->length++].stride = 3;
+                    } else {
+                        t->id = TOKEN_RANGE;
+                        i += 1;
+                        (*sources)[tokenlist->length++].stride = 2;
+                    }
                 } else {
                     t->id = TOKEN_MEMBER;
                     (*sources)[tokenlist->length++].stride = 1;

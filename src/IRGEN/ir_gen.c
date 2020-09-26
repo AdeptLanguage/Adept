@@ -67,6 +67,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
     if(ir_gen_job_list(object, job_list)) return FAILURE;
 
     // Generate function aliases
+    trait_t req_traits_mask = AST_FUNC_VARARG | AST_FUNC_VARIADIC;
     for(length_t ast_func_alias_id = 0; ast_func_alias_id != ast->func_aliases_length; ast_func_alias_id++){
         ast_func_alias_t *falias = &(*ast_func_aliases)[ast_func_alias_id];
 
@@ -77,7 +78,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
         if(falias->match_first_of_name){
             error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
         } else {
-            error = ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, &pair);
+            error = ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, &pair);
         }
 
         if(error){

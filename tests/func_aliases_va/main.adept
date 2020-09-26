@@ -1,0 +1,10 @@
+
+import basics
+
+func alias strictPrintf(*ubyte, ...) => printf
+func alias newPrintf(String, ..) => printf
+
+func main {
+    strictPrintf('Hello %s!\n', 'World')
+    newPrintf("Hello %S!\n", "World")
+}

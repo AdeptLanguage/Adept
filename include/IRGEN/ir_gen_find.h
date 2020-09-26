@@ -20,8 +20,9 @@
 // ---------------- ir_gen_find_func ----------------
 // Finds a function that exactly matches the given
 // name and arguments. Result info stored 'result'
+// NOTE: optional_required_traits can be TRAIT_NONE
 errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
-    ast_type_t *arg_types, length_t arg_types_length, funcpair_t *result);
+    ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, funcpair_t *result);
 
 // ---------------- ir_gen_find_func_named ----------------
 // Finds a function that exactly matches the given name.

@@ -104,6 +104,8 @@ call :compile for
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile func_aliases
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile func_aliases_va
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddr
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddr_autogen
