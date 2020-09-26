@@ -247,6 +247,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
             if(compiler_warn(ctx->compiler, ctx->tokenlist->sources[*i], "WARNING: 'pragma no_type_info' is obsolete, use 'pragma no_typeinfo' instead"))
                 return FAILURE;
         }
+        // fallthrough
     case PRAGMA_NO_TYPEINFO: // 'no_typeinfo'  directive
         ctx->compiler->traits |= COMPILER_NO_TYPEINFO;
         return SUCCESS;

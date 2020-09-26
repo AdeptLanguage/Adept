@@ -711,7 +711,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *buil
         memcpy(padded_type_traits, target_arg_type_traits, sizeof(trait_t) * arity);
 
         // Fill in type traits for additional optional arguments with regular argument traits
-        memset(&padded_type_traits[arity], TRAIT_NONE, sizeof(trait_t) * extra_argument_count);
+        memset(&padded_type_traits[arity_without_variadic_arguments], TRAIT_NONE, sizeof(trait_t) * extra_argument_count);
         
         // Use padded argument traits for functions with variable arity
         if(handle_pass_management(builder, arg_values, arg_types, padded_type_traits, arity)) return FAILURE;
