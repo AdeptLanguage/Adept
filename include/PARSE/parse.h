@@ -27,6 +27,10 @@ errorcode_t parse(compiler_t *compiler, object_t *object);
 // parsing context that has already been created.
 errorcode_t parse_tokens(parse_ctx_t *ctx);
 
+// ------------------ parse_namespace ------------------
+// Parses 'namespace' directive
+errorcode_t parse_namespace(parse_ctx_t *ctx);
+
 #ifdef __cplusplus
 }
 #endif

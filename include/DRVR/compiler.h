@@ -106,7 +106,7 @@ typedef struct compiler {
 
     // Default standard library to import from (global version)
     // If NULL, then use ADEPT_VERSION_STRING
-    maybe_null_weak_cstr_t default_stblib;
+    maybe_null_weak_cstr_t default_stdlib;
 
     adept_error_t *error;
     adept_warning_t *warnings;

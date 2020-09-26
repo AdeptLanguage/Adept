@@ -854,12 +854,23 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
 
     stmt = malloc(sizeof(ast_expr_call_t));
     stmt->id = EXPR_CALL;
+
     // DANGEROUS: Using is_tentative to determine location of word
-    stmt->source = sources[*i - 2 - (int) is_tentative];
-    stmt->name = (char*) tokens[*i - 2 - (int) is_tentative].data;
+    length_t name_index = *i - 2 - (int) is_tentative;
+
+    stmt->source = sources[name_index];
+    stmt->name = (char*) tokens[name_index].data;
+    tokens[name_index].data = NULL;
     stmt->arity = 0;
     stmt->args = NULL;
     stmt->is_tentative = is_tentative;
+
+    if(parse_relocate_name(ctx, stmt->source, &stmt->name)){
+        ctx->ignore_newlines_in_expr_depth--;
+        free(stmt->name);
+        free(stmt);
+        return FAILURE;
+    }
 
     // Ignore newline termination within children expressions
     ctx->ignore_newlines_in_expr_depth++;
@@ -868,6 +879,7 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
         if(parse_ignore_newlines(ctx, "Expected function argument") || parse_expr(ctx, &arg_expr)){
             ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(stmt->args, stmt->arity);
+            free(stmt->name);
             free(stmt);
             return FAILURE;
         }
@@ -879,6 +891,7 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
         if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")){
             ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(stmt->args, stmt->arity);
+            free(stmt->name);
             free(stmt);
             return FAILURE;
         }
@@ -889,6 +902,7 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
             ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(stmt->args, stmt->arity);
+            free(stmt->name);
             free(stmt);
             return FAILURE;
         }

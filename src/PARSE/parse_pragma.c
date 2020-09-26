@@ -104,8 +104,8 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         }
 
         // Guess default standard library version from 'pragma compiler_version' if none specified
-        if(!(ctx->compiler->traits & COMPILER_FORCE_STDLIB) && ctx->compiler->default_stblib == NULL && strcmp(directive_string, "compiler_version") == 0){
-            ctx->compiler->default_stblib = read;
+        if(!(ctx->compiler->traits & COMPILER_FORCE_STDLIB) && ctx->compiler->default_stdlib == NULL && strcmp(directive_string, "compiler_version") == 0){
+            ctx->compiler->default_stdlib = read;
         }
 
         return SUCCESS;
@@ -119,11 +119,11 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         
         if(!(ctx->compiler->traits & COMPILER_FORCE_STDLIB)){
             // Store default_stdlib per compilation object
-            ctx->object->default_stblib = read;
+            ctx->object->default_stdlib = read;
 
             // If the primary file, store default_stdlib as global default as well
             if(ctx->object->index == 0){
-                ctx->compiler->default_stblib = read;
+                ctx->compiler->default_stdlib = read;
             }
         }
         break;

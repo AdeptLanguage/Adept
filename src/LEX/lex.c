@@ -192,7 +192,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 break;
             default:
                 // Test for word
-                if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122)){
+                if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122) || buffer[i] == '\\' ){
                     (*sources)[tokenlist->length].index = i;
                     (*sources)[tokenlist->length].object_index = object_index;
                     (*sources)[tokenlist->length].stride = 0;
@@ -234,7 +234,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             break;
         case LEX_STATE_WORD:
             tmp = buffer[i];
-            if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9')){
+            if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9') || tmp == '\\'){
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
             } else {
@@ -244,7 +244,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 const char * const keywords[] = {
                     "POD", "alias", "and", "as", "at", "break", "case", "cast", "const", "continue", "def", "default", "defer",
                     "delete", "each", "else", "enum", "exhaustive", "external", "fallthrough", "false", "for", "foreign", "func",
-                    "funcptr", "global", "if", "import", "in", "inout", "new", "null", "or", "out", "packed",
+                    "funcptr", "global", "if", "import", "in", "inout", "namespace", "new", "null", "or", "out", "packed",
                     "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch", "thread_local",
                     "true", "typeinfo", "undef", "union", "unless", "until", "va_arg", "va_copy", "va_end", "va_start", "verbatim", "while"
                 };
@@ -393,7 +393,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             break;
         case LEX_STATE_EQUALS:   LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_EQUALS, '>', TOKEN_STRONG_ARROW, TOKEN_ASSIGN); break;
         case LEX_STATE_NOT:      LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_NOTEQUALS, '!', TOKEN_TOGGLE, TOKEN_NOT); break;
-        case LEX_STATE_COLON:    LEX_OPTIONAL_MOD_TOKEN_MAPPING(':', TOKEN_NAMESPACE, TOKEN_COLON);                    break;
+        case LEX_STATE_COLON:    LEX_OPTIONAL_MOD_TOKEN_MAPPING(':', TOKEN_ASSOCIATE, TOKEN_COLON);                    break;
         case LEX_STATE_ADD:
             LEX_OPTIONAL_2MODS_TOKEN_MAPPING('=', TOKEN_ADD_ASSIGN, '+', TOKEN_INCREMENT, TOKEN_ADD);
             break;

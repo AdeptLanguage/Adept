@@ -1,4 +1,5 @@
 
+#include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "PARSE/parse_ctx.h"
 
@@ -162,4 +163,42 @@ maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error){
     // ERROR: That token isn't a string
     if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], error);
     return NULL;
+}
+
+void parse_prepend_namespace(parse_ctx_t *ctx, strong_cstr_t *inout_name){
+    // Don't modify anything if no current namespace
+    if(ctx->object->current_namespace == NULL) return;
+
+    strong_cstr_t new_name = mallocandsprintf("%s\\%s", ctx->object->current_namespace, *inout_name);
+    free(*inout_name);
+    *inout_name = new_name;
+}
+
+errorcode_t parse_relocate_name(parse_ctx_t *ctx, source_t source, strong_cstr_t *inout_name){
+    // Don't operate on non-'local\' names
+    if(strncmp(*inout_name, "local\\", 6) != 0) return SUCCESS;
+
+    weak_cstr_t namespace = ctx->object->current_namespace;
+    length_t namespace_length = ctx->object->current_namespace_length;
+
+    if(namespace == NULL){
+        compiler_panicf(ctx->compiler, source, "Cannot use 'local\\' when not in namespace");
+        return FAILURE;
+    }
+
+    if(namespace_length <= 5){
+        // Overwrite if enough room
+        memcpy(*inout_name, namespace, namespace_length);
+
+        // Move rest of name backwards to fit
+        if(namespace_length != 5)
+            memmove(&((*inout_name)[namespace_length]), &((*inout_name)[5]), strlen(*inout_name) + 2);
+    } else {
+        // Otherwise, we're going to have to allocate a new string
+        strong_cstr_t new_name = mallocandsprintf("%s%s", namespace, &((*inout_name)[5]));
+        free(*inout_name);
+        *inout_name = new_name;
+    }
+
+    return SUCCESS;
 }

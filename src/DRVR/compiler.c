@@ -184,7 +184,7 @@ void compiler_init(compiler_t *compiler){
     compiler->debug_traits = TRAIT_NONE;
     #endif // ENABLE_DEBUG_FEATURES
     
-    compiler->default_stblib = NULL;
+    compiler->default_stdlib = NULL;
     compiler->error = NULL;
     compiler->warnings = NULL;
     compiler->warnings_length = 0;
@@ -219,8 +219,9 @@ void compiler_free_objects(compiler_t *compiler){
             ir_module_free(&object->ir_module);
             #endif
             // fallthrough
-        case COMPILATION_STAGE_AST:    
+        case COMPILATION_STAGE_AST:
             ast_free(&object->ast);
+            free(object->current_namespace);
             // fallthrough
         case COMPILATION_STAGE_TOKENLIST:
             free(object->buffer);
@@ -281,7 +282,9 @@ object_t* compiler_new_object(compiler_t *compiler){
     (*object_reference)->compilation_stage = COMPILATION_STAGE_NONE;
     (*object_reference)->index = compiler->objects_length++;
     (*object_reference)->traits = OBJECT_NONE;
-    (*object_reference)->default_stblib = NULL;
+    (*object_reference)->default_stdlib = NULL;
+    (*object_reference)->current_namespace = NULL;
+    (*object_reference)->current_namespace_length = 0;
     return *object_reference;
 }
 
@@ -431,10 +434,10 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(strcmp(argv[arg_index], "--libm") == 0){
                 compiler->use_libm = true;
             } else if(strncmp(argv[arg_index], "-std=", 5) == 0){
-                compiler->default_stblib = &argv[arg_index][5];
+                compiler->default_stdlib = &argv[arg_index][5];
                 compiler->traits |= COMPILER_FORCE_STDLIB;
             } else if(strncmp(argv[arg_index], "--std=", 6) == 0){
-                compiler->default_stblib = &argv[arg_index][6];
+                compiler->default_stdlib = &argv[arg_index][6];
                 compiler->traits |= COMPILER_FORCE_STDLIB;
             } else if(strcmp(argv[arg_index], "--repl") == 0){
                 compiler->traits |= COMPILER_REPL;
@@ -763,9 +766,9 @@ errorcode_t compiler_read_file(compiler_t *compiler, object_t *object){
 
 strong_cstr_t compiler_get_stdlib(compiler_t *compiler, object_t *optional_object){
     // Find which standard library to use
-    maybe_null_weak_cstr_t standard_library_folder = optional_object ? optional_object->default_stblib : NULL;
+    maybe_null_weak_cstr_t standard_library_folder = optional_object ? optional_object->default_stdlib : NULL;
 
-    if(standard_library_folder == NULL) standard_library_folder = compiler->default_stblib;
+    if(standard_library_folder == NULL) standard_library_folder = compiler->default_stdlib;
     if(standard_library_folder == NULL) standard_library_folder = ADEPT_VERSION_STRING;
     
     length_t length = strlen(standard_library_folder);

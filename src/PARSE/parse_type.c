@@ -64,6 +64,14 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             base_elem->base = tokens[*i].data;
             base_elem->source = sources[*i];
             tokens[(*i)++].data = NULL; // Take ownership
+
+            if(parse_relocate_name(ctx, base_elem->source, &base_elem->base)){
+                ast_type_free(out_type);
+                free(base_elem->base);
+                free(base_elem);
+                return FAILURE;
+            }
+
             out_type->elements[out_type->elements_length] = (ast_elem_t*) base_elem;
         }
         break;

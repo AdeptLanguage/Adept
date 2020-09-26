@@ -214,6 +214,9 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out
         }
 
         if(*out_name == NULL) return FAILURE;
+
+        // If not in struct association, then prepend current namespace
+        if(ctx->struct_association == NULL) parse_prepend_namespace(ctx, out_name);
         return SUCCESS;
     }
 

@@ -141,6 +141,8 @@ errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *ou
         }
     }
 
+    parse_prepend_namespace(ctx, out_name);
+
     *out_generics = generics;
     *out_generics_length = generics_length;
     return SUCCESS;

@@ -318,6 +318,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     call_expr->id = EXPR_CALL_METHOD;
                     call_expr->value = *inout_expr;
                     call_expr->name = (char*) tokens[*i].data;
+                    tokens[*i].data = NULL;
                     call_expr->source = sources[*i - 2];
                     call_expr->arity = 0;
                     call_expr->args = NULL;
@@ -333,10 +334,19 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     // Ignore newline termination within children expressions
                     ctx->ignore_newlines_in_expr_depth++;
 
+                    // Relocate callee name
+                    if(parse_relocate_name(ctx, call_expr->source, &call_expr->name)){
+                        ctx->ignore_newlines_in_expr_depth--;
+                        free(call_expr->name);
+                        free(call_expr);
+                        return FAILURE;
+                    }
+
                     while(tokens[*i].id != TOKEN_CLOSE){
                         if(parse_ignore_newlines(ctx, "Expected method argument")){
                             ctx->ignore_newlines_in_expr_depth--;
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
+                            free(call_expr->name);
                             free(call_expr);
                             return FAILURE;
                         }
@@ -344,6 +354,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                         if(parse_expr(ctx, &arg_expr)){
                             ctx->ignore_newlines_in_expr_depth--;
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
+                            free(call_expr->name);
                             free(call_expr);
                             return FAILURE;
                         }
@@ -366,6 +377,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                         if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")){
                             ctx->ignore_newlines_in_expr_depth--;
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
+                            free(call_expr->name);
                             free(call_expr);
                             return FAILURE;
                         }
@@ -375,6 +387,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                             ctx->ignore_newlines_in_expr_depth--;
                             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
                             ast_exprs_free_fully(call_expr->args, call_expr->arity);
+                            free(call_expr->name);
                             free(call_expr);
                             return FAILURE;
                         }
@@ -606,7 +619,7 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr){
 
     switch(tokens[*i + 1].id){
     case TOKEN_OPEN:      return parse_expr_call(ctx, out_expr);
-    case TOKEN_NAMESPACE: return parse_expr_enum_value(ctx, out_expr);
+    case TOKEN_ASSOCIATE: return parse_expr_enum_value(ctx, out_expr);
     }
 
     weak_cstr_t variable_name = tokens[*i].data;
@@ -620,9 +633,18 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
-
-    weak_cstr_t name = tokens[*i].data;
     source_t source = sources[*i];
+
+    // Steal callee name
+    strong_cstr_t name = tokens[*i].data;
+    tokens[*i].data = NULL;
+
+    // Relocate callee name
+    if(parse_relocate_name(ctx, source, &name)){
+        free(name);
+        return FAILURE;
+    }
+
     length_t arity = 0;
     ast_expr_t **args = NULL;
 
@@ -633,7 +655,10 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     bool is_tentative;
     (*i)++;
 
-    if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
+    if(parse_ignore_newlines(ctx, "Unexpected statement termination")){
+        free(name);
+        return FAILURE;
+    }
 
     if(tokens[(*i)++].id == TOKEN_MAYBE){
         is_tentative = true;
@@ -649,6 +674,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         if(parse_ignore_newlines(ctx, "Expected function argument") || parse_expr(ctx, &arg)){
             ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(args, arity);
+            free(name);
             return FAILURE;
         }
 
@@ -659,6 +685,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         if(parse_ignore_newlines(ctx, "Expected ',' or ')' after expression")){
             ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(args, arity);
+            free(name);
             return FAILURE;
         }
 
@@ -668,6 +695,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' or ')' after expression");
             ctx->ignore_newlines_in_expr_depth--;
             ast_exprs_free_fully(args, arity);
+            free(name);
             return FAILURE;
         }
     }
@@ -676,6 +704,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         compiler_panic(ctx->compiler, source, "Tentative calls cannot be used in expressions");
         ctx->ignore_newlines_in_expr_depth--;
         ast_exprs_free_fully(args, arity);
+        free(name);
         return FAILURE;
     }
 
@@ -695,7 +724,7 @@ errorcode_t parse_expr_enum_value(parse_ctx_t *ctx, ast_expr_t **out_expr){
     source_t source = ctx->tokenlist->sources[(*i)++];
 
     // (Shouldn't fail unless something weird is going on)
-    if(parse_eat(ctx, TOKEN_NAMESPACE, "Expected namespace '::' operator for enum value")) return FAILURE;
+    if(parse_eat(ctx, TOKEN_ASSOCIATE, "Expected '::' operator for enum value")) return FAILURE;
 
     weak_cstr_t kind_name = parse_eat_word(ctx, "Expected enum value name after '::' operator");
     if(kind_name == NULL) return FAILURE;

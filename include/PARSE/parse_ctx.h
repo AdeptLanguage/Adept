@@ -127,6 +127,16 @@ maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error);
 // (NOTE: *ctx->i is moved ahead by 1)
 maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error);
 
+// ------------------ parse_prepend_namespace ------------------
+// Prepends the current namespace to a strong cstring
+void parse_prepend_namespace(parse_ctx_t *ctx, strong_cstr_t *inout_name);
+
+// ------------------ parse_relocate_name ------------------
+// Modifies names such as 'local\myFunction' to point to the
+// local namespace. If the name provided is not a 'local\'
+// name, then nothing will be modified.
+errorcode_t parse_relocate_name(parse_ctx_t *ctx, source_t source, strong_cstr_t *inout_name);
+
 #ifdef __cplusplus
 }
 #endif

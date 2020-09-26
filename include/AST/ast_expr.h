@@ -370,7 +370,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    weak_cstr_t name;
+    strong_cstr_t name;
     ast_expr_t **args;
     length_t arity;
     bool is_tentative;
@@ -456,7 +456,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
-    weak_cstr_t name;
+    strong_cstr_t name;
     ast_expr_t *value;
     ast_expr_t **args;
     length_t arity;
@@ -688,7 +688,7 @@ void ast_expr_create_null(ast_expr_t **out_expr, source_t source);
 
 // ---------------- ast_expr_create_call ----------------
 // Creates a call expression
-void ast_expr_create_call(ast_expr_t **out_expr, weak_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, source_t source);
+void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, source_t source);
 
 // ---------------- ast_expr_create_variable ----------------
 // Creates a variable expression
