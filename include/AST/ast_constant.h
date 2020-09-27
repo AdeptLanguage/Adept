@@ -18,7 +18,7 @@ extern "C" {
 // ---------------- ast_constant_t ----------------
 // A named constant expression
 typedef struct ast_constant {
-    weak_cstr_t name;
+    strong_cstr_t name;
     ast_expr_t *expression;
     trait_t traits;
     source_t source;

@@ -3,6 +3,7 @@
 #include "UTIL/util.h"
 #include "UTIL/search.h"
 #include "PARSE/parse_type.h"
+#include "PARSE/parse_util.h"
 #include "PARSE/parse_alias.h"
 
 errorcode_t parse_alias(parse_ctx_t *ctx){
@@ -18,8 +19,20 @@ errorcode_t parse_alias(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    maybe_null_weak_cstr_t name = parse_eat_word(ctx, "Expected alias name after 'alias' keyword");
-    if (name == NULL) return FAILURE;
+    maybe_null_strong_cstr_t name;
+    
+    if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+        name = ctx->prename;
+        ctx->prename = NULL;
+    } else {
+        name = parse_take_word(ctx, "Expected alias name after 'alias' keyword");
+    }
+    
+    // Ensure we have a name for the alias
+    if(name == NULL) return FAILURE;
+
+    // Prepend namespace name
+    parse_prepend_namespace(ctx, &name);
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -30,11 +43,16 @@ errorcode_t parse_alias(parse_ctx_t *ctx){
 
     if(binary_string_search(invalid_names, invalid_names_length, name) != -1){
         compiler_panicf(ctx->compiler, source, "Reserved type name '%s' can't be used to create an alias", name);
+        free(name);
         return FAILURE;
     }
 
-    if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after alias name")) return FAILURE;
-    if(parse_type(ctx, &type)) return FAILURE;
+    if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after alias name")
+    || parse_ignore_newlines(ctx, "Expcted type after '=' in alias")
+    || parse_type(ctx, &type)){
+        free(name);
+        return FAILURE;
+    }
 
     expand((void**) &ast->aliases, sizeof(ast_alias_t), ast->aliases_length, &ast->aliases_capacity, 1, 8);
 

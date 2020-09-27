@@ -22,7 +22,9 @@ errorcode_t parse_namespace(parse_ctx_t *ctx){
 
     if(parse_eat(ctx, TOKEN_NAMESPACE, "Expected 'namespace' keyword for namespace")) return FAILURE;
 
-    if(tokens[*i].id == TOKEN_NEWLINE){
+    bool has_prename = ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename;
+
+    if(tokens[*i].id == TOKEN_NEWLINE && !has_prename){
         free(ctx->object->current_namespace);
 
         // Reset namespace to no namespace
@@ -31,7 +33,15 @@ errorcode_t parse_namespace(parse_ctx_t *ctx){
         return SUCCESS;
     }
 
-    strong_cstr_t new_namespace = parse_take_word(ctx, "Expected name of namespace after 'namespace' keyword");
+    strong_cstr_t new_namespace;
+    
+    if(has_prename){
+        new_namespace = ctx->prename;
+        ctx->prename = NULL;
+    } else {
+        new_namespace = parse_take_word(ctx, "Expected name of namespace after 'namespace' keyword");;
+    }
+    
     if(new_namespace == NULL) return FAILURE;
 
     // Ignore any newlines, don't error if nothing afterwards

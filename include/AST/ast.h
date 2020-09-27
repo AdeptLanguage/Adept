@@ -105,7 +105,7 @@ typedef struct {
 // ---------------- ast_alias_t ----------------
 // A type alias within the root AST
 typedef struct {
-    weak_cstr_t name;
+    strong_cstr_t name;
     ast_type_t type;
     trait_t traits;
     source_t source;
@@ -227,6 +227,7 @@ void ast_free_statements(ast_expr_t **statements, length_t length);
 void ast_free_statements_fully(ast_expr_t **statements, length_t length);
 void ast_free_structs(ast_struct_t *structs, length_t structs_length);
 void ast_free_constants(ast_constant_t *constants, length_t constants_length);
+void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length);
 void ast_free_globals(ast_global_t *globals, length_t globals_length);
 void ast_free_enums(ast_enum_t *enums, length_t enums_length);
 

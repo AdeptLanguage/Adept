@@ -113,6 +113,7 @@ void ast_free(ast_t *ast){
     ast_free_structs(ast->structs, ast->structs_length);
     ast_free_globals(ast->globals, ast->globals_length);
     ast_free_constants(ast->constants, ast->constants_length);
+    ast_free_aliases(ast->aliases, ast->aliases_length);
 
     for(i = 0; i != ast->aliases_length; i++){
         // Delete stuff within alias
@@ -223,6 +224,13 @@ void ast_free_constants(ast_constant_t *constants, length_t constants_length){
     for(length_t i = 0; i != constants_length; i++){
         ast_constant_t *constant = &constants[i];
         if(constant->expression) ast_expr_free_fully(constant->expression);
+        free(constant->name);
+    }
+}
+
+void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length){
+    for(length_t i = 0; i != aliases_length; i++){
+        free(aliases[i].name);
     }
 }
 

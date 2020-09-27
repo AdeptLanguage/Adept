@@ -37,7 +37,18 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     if(name == NULL) return FAILURE;
 
     if(tokens[*i].id == TOKEN_EQUALS){
-        return parse_old_style_constant_global(ctx, name, source);
+        // Handle old style constant '==' syntax
+
+        // Convert 'name' to a strong_cstr_t, by
+        // taking ownership away from its token
+        tokens[*i - 1].data = NULL;
+
+        if(parse_old_style_constant_global(ctx, name, source)){
+            free(name);
+            return FAILURE;
+        }
+
+        return SUCCESS;
     }
 
     if(tokens[*i].id == TOKEN_POD){
@@ -70,21 +81,34 @@ errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_con
     //   ^
 
     // NOTE: Assumes first token is 'const' keyword
-    source_t source = ctx->tokenlist->sources[*ctx->i];
+    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
 
     // Get the name of the constant value
-    weak_cstr_t name = parse_grab_word(ctx, "Expected name for constant value after 'const' keyword");
+    strong_cstr_t name;
+    
+    if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+        name = ctx->prename;
+        ctx->prename = NULL;
+    } else {
+        name = parse_take_word(ctx, "Expected name for constant value after 'const' keyword");
+    }
     if(name == NULL) return FAILURE;
 
-    // Move to the next token after the name we got
-    (*ctx->i)++;
+    // Prepend namespace name
+    parse_prepend_namespace(ctx, &name);
 
     // Eat '='
-    if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after name of constant")) return FAILURE;
+    if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after name of constant")){
+        free(name);
+        return FAILURE;
+    }
 
     // Parse the expression of the constant
     ast_expr_t *value;
-    if(parse_expr(ctx, &value)) return FAILURE;
+    if(parse_expr(ctx, &value)){
+        free(name);
+        return FAILURE;
+    }
 
     // Construct the new constant value
     out_constant->name = name;
@@ -106,7 +130,7 @@ errorcode_t parse_global_constant_declaration(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, weak_cstr_t name, source_t source){
+errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, strong_cstr_t name, source_t source){
     // SOME_CONSTANT == value
     //               ^
 
@@ -117,6 +141,9 @@ errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, weak_cstr_t name, 
     if(parse_expr(ctx, &value)) return FAILURE;
 
     expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
+
+    // Prepend namespace name
+    parse_prepend_namespace(ctx, &name);
 
     ast_constant_t *constant = &ast->constants[ast->constants_length++];
     constant->name = name;

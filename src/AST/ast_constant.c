@@ -1,9 +1,10 @@
 
+#include "UTIL/util.h"
 #include "AST/ast_constant.h"
 
 ast_constant_t ast_constant_clone(ast_constant_t *original){
     ast_constant_t clone;
-    clone.name = original->name;
+    clone.name = strclone(original->name);
     clone.expression = ast_expr_clone(original->expression);
     clone.traits = original->traits;
     clone.source = original->source;
