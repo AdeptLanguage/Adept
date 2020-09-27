@@ -14,6 +14,7 @@
 #include "PARSE/parse_global.h"
 #include "PARSE/parse_pragma.h"
 #include "PARSE/parse_struct.h"
+#include "PARSE/parse_namespace.h"
 #include "PARSE/parse_dependency.h"
 #include "BRIDGE/any.h"
 
@@ -95,14 +96,22 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_meta(ctx)) return FAILURE;
             break;
         case TOKEN_END:
-            if(ctx->struct_association == NULL){
+            if(ctx->has_namespace_scope){
+                ctx->has_namespace_scope = false;
+                ctx->object->current_namespace = NULL;
+                ctx->object->current_namespace_length = 0;
+            } else if(ctx->struct_association != NULL){
+                ctx->struct_association = NULL;
+            } else {
                 compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Unexpected trailing closing brace '}'");
                 return FAILURE;
             }
-            ctx->struct_association = NULL;
             break;
         case TOKEN_NAMESPACE:
             if(parse_namespace(ctx)) return FAILURE;
+            break;
+        case TOKEN_USING:
+            if(parse_using_namespace(ctx)) return FAILURE;
             break;
         default:
             parse_panic_token(ctx, ctx->tokenlist->sources[i], tokens[i].id, "Encountered unexpected token '%s' in global scope");
@@ -115,32 +124,5 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    return SUCCESS;
-}
-
-errorcode_t parse_namespace(parse_ctx_t *ctx){
-    // namespace mynamespace
-    //     ^
-
-    token_t *tokens = ctx->tokenlist->tokens;
-    length_t *i = ctx->i;
-
-    if(parse_eat(ctx, TOKEN_NAMESPACE, "Expected 'namespace' keyword for namespace")) return FAILURE;
-
-    if(tokens[*i].id == TOKEN_NEWLINE){
-        free(ctx->object->current_namespace);
-
-        // Reset namespace to no namespace
-        ctx->object->current_namespace = NULL;
-        ctx->object->current_namespace_length = 0;
-        return SUCCESS;
-    }
-
-    strong_cstr_t new_namespace = parse_take_word(ctx, "Expected name of namespace after 'namespace' keyword");
-    if(new_namespace == NULL) return FAILURE;
-
-    free(ctx->object->current_namespace);
-    ctx->object->current_namespace = new_namespace;
-    ctx->object->current_namespace_length = strlen(new_namespace);
     return SUCCESS;
 }

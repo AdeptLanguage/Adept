@@ -815,11 +815,12 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->rtti_relocations_capacity = 0;
 
     // Initialize common data
-    ir_module->common.ir_usize = NULL;
-    ir_module->common.ir_usize_ptr = NULL;
-    ir_module->common.ir_bool = NULL;
-    ir_module->common.rtti_array_index = 0;
-    ir_module->common.has_rtti_array = TROOLEAN_UNKNOWN;
+    ir_shared_common_t *common = &ir_module->common;
+    common->ir_usize = NULL;
+    common->ir_usize_ptr = NULL;
+    common->ir_bool = NULL;
+    common->rtti_array_index = 0;
+    common->has_rtti_array = TROOLEAN_UNKNOWN;
 }
 
 void ir_module_free(ir_module_t *ir_module){

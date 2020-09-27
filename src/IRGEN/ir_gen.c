@@ -76,7 +76,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
         bool is_unique = true;
 
         if(falias->match_first_of_name){
-            error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
+            error = ir_gen_find_func_named(compiler, object, falias->to, &is_unique, &pair);
         } else {
             error = ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, &pair);
         }
@@ -97,7 +97,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
     {
         funcpair_t result;
         bool is_unique;
-        if(ir_gen_find_func_named(object, "__variadic_array__", &is_unique, &result) == SUCCESS){
+        if(ir_gen_find_func_named(compiler, object, "__variadic_array__", &is_unique, &result) == SUCCESS){
             // FOUND '__variadic_array__' function
             
             if(!is_unique){
@@ -188,9 +188,9 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     }
 
                     // Find the target structure
-                    ast_struct_t *target = ast_struct_find(&object->ast, ((ast_elem_base_t*) this_type->elements[1])->base);
+                    ast_struct_t *target = object_struct_find(NULL, object, &compiler->tmp, ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
                     if(target == NULL){
-                        compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base);
+                        compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
                         return FAILURE;
                     }
 
@@ -201,10 +201,10 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                 break;
             case AST_ELEM_GENERIC_BASE: {
                     ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
-                    ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
+                    ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
                     
                     if(template == NULL){
-                        compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", generic_base->name);
+                        compiler_panicf(compiler, this_type->source, "Undeclared polymorphic struct '%s'", generic_base->name);
                         return FAILURE;
                     }
 
@@ -483,7 +483,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
                         
                         // Find polymorphic struct
-                        ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
+                        ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
                         
                         if(template == NULL){
                             redprintf("INTERNAL ERROR: Failed to find polymorphic struct '%s' that should exist when generating runtime type table!\n", generic_base->name);
@@ -547,7 +547,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_type_var_catalog_free(&catalog);
                     } else if(elem->id == AST_ELEM_BASE){
                         const char *struct_name = ((ast_elem_base_t*) elem)->base;
-                        ast_struct_t *structure = ast_struct_find(&object->ast, struct_name);
+                        ast_struct_t *structure = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
 
                         if(structure == NULL){
                             redprintf("INTERNAL ERROR: Failed to find struct '%s' that should exist when generating runtime type table!\n", struct_name);

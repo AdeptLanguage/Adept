@@ -786,7 +786,7 @@ void ast_enum_init(ast_enum_t *inum,  weak_cstr_t name, weak_cstr_t *kinds, leng
     inum->source = source;
 }
 
-ast_struct_t *ast_struct_find(ast_t *ast, const char *name){
+ast_struct_t *ast_struct_find_exact(ast_t *ast, const char *name){
     // TODO: Maybe sort and do a binary serach or something
     for(length_t i = 0; i != ast->structs_length; i++){
         if(strcmp(ast->structs[i].name, name) == 0){
@@ -806,7 +806,7 @@ successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, l
     return false;
 }
 
-ast_polymorphic_struct_t *ast_polymorphic_struct_find(ast_t *ast, const char *name){
+ast_polymorphic_struct_t *ast_polymorphic_struct_find_exact(ast_t *ast, const char *name){
     // TODO: Maybe sort and do a binary serach or something
     for(length_t i = 0; i != ast->polymorphic_structs_length; i++){
         if(strcmp(ast->polymorphic_structs[i].name, name) == 0){

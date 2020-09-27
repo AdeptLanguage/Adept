@@ -1,0 +1,10 @@
+
+import basics
+
+namespace library {
+    struct Value (string String)
+
+    func test(value Value) {
+        print("Hello " + value.string)
+    }
+}

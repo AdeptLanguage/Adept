@@ -911,7 +911,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
     if(elem->id == AST_ELEM_BASE){
         // Basic 'Struct' structure type
         weak_cstr_t struct_name = ((ast_elem_base_t*) elem)->base;
-        ast_struct_t *target = ast_struct_find(&builder->object->ast, struct_name);
+        ast_struct_t *target = object_struct_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
 
         // If we didn't find the structure, show an error message and return failure
         if(target == NULL){
@@ -942,7 +942,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
 
         weak_cstr_t struct_name = generic_base->name;
-        ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&builder->object->ast, struct_name);
+        ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
 
         // Find the polymorphic structure
         if(template == NULL){
@@ -1067,7 +1067,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     if(expr->has_match_args == false){
         bool is_unique;
 
-        if(ir_gen_find_func_named(builder->object, expr->name, &is_unique, &pair)){
+        if(ir_gen_find_func_named(builder->compiler, builder->object, expr->name, &is_unique, &pair)){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;
 
@@ -1770,7 +1770,7 @@ errorcode_t ir_gen_expr_static_struct(ir_builder_t *builder, ast_expr_static_dat
 
     // Find the AST structure
     const char *base = ((ast_elem_base_t*) expr->type.elements[0])->base;
-    ast_struct_t *structure = ast_struct_find(&builder->object->ast, base);
+    ast_struct_t *structure = object_struct_find(NULL, builder->object, builder->tmpbuf, base, NULL);
     if(structure == NULL) return FAILURE;
 
     // Ensure the number of fields given is correct

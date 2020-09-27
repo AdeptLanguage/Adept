@@ -72,6 +72,13 @@ typedef long long maybe_index_t;
 // 3-state value
 typedef signed char troolean;
 
+// ---------------- lenstr_t and friends ----------------
+// C-String with cached length
+typedef struct {
+    char *cstr;
+    length_t length;
+} lenstr_t, strong_lenstr_t, weak_lenstr_t;
+
 #define TROOLEAN_TRUE 1
 #define TROOLEAN_FALSE 0
 #define TROOLEAN_UNKNOWN 2

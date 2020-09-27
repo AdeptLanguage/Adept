@@ -1,0 +1,10 @@
+
+import "library.adept"
+
+using namespace library
+
+func main {
+    value Value
+    value.string = "Isaac"
+    test(value)
+}

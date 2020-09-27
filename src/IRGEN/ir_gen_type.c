@@ -210,7 +210,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             created_type->extra = extra;
 
             // Find polymorphic structure
-            ast_polymorphic_struct_t *template = ast_polymorphic_struct_find(&object->ast, generic_base->name);
+            ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
 
             if(template == NULL){
                 compiler_panicf(compiler, generic_base->source, "Undeclared polymorphic type '%s'", generic_base->name);

@@ -571,7 +571,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             }
 
             const char *base = ((ast_elem_base_t*) static_data->type.elements[0])->base;
-            ast_struct_t *structure = ast_struct_find(ctx->ast, base);
+            ast_struct_t *structure = object_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, NULL);
 
             if(structure == NULL){
                 if(typename_is_entended_builtin_type(base)){
@@ -989,7 +989,7 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
 
 errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
     // NOTE: Expands 'type' by resolving any aliases
-
+    
     ast_alias_t *aliases = ctx->ast->aliases;
     length_t aliases_length = ctx->ast->aliases_length;
 
@@ -1003,7 +1003,11 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
 
         switch(elem->id){
         case AST_ELEM_BASE: {
-                int alias_index = ast_find_alias(aliases, aliases_length, ((ast_elem_base_t*) elem)->base);
+                weak_cstr_t base = ((ast_elem_base_t*) elem)->base;
+                ast_struct_t *impl_struct;
+
+                int alias_index = ast_find_alias(aliases, aliases_length, base);
+                
                 if(alias_index != -1){
                     // NOTE: The alias target type was already resolved of any aliases,
                     //       so we don't have to scan the new elements
@@ -1022,6 +1026,17 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                     free(cloned.elements);
                     continue; // Don't do normal stuff that follows
                 }
+
+                bool requires_namespace;
+                impl_struct = object_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
+
+                if(impl_struct && requires_namespace){
+                    // If we can find the definite implmentation of this type, than change the name
+                    // to the full namespaced version
+                    free(base);
+                    base = strclone(impl_struct->name);
+                    ((ast_elem_base_t*) elem)->base = base;
+                }
             }
             break;
         case AST_ELEM_FUNC:
@@ -1030,9 +1045,24 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
             }
             if(infer_type(ctx, ((ast_elem_func_t*) elem)->return_type)) return FAILURE;
             break;
-        case AST_ELEM_GENERIC_BASE:
-            for(length_t a = 0; a != ((ast_elem_generic_base_t*) elem)->generics_length; a++){
-                if(infer_type(ctx, &((ast_elem_generic_base_t*) elem)->generics[a])) return FAILURE;
+        case AST_ELEM_GENERIC_BASE: {
+                weak_cstr_t base = ((ast_elem_generic_base_t*) elem)->name;
+                ast_polymorphic_struct_t *impl_struct;
+
+                bool requires_namespace;
+                impl_struct = object_polymorphic_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
+
+                if(impl_struct && requires_namespace){
+                    // If we can find the definite implmentation of this type, than change the name
+                    // to the full namespaced version
+                    free(base);
+                    base = strclone(impl_struct->name);
+                    ((ast_elem_generic_base_t*) elem)->name = base;
+                }
+
+                for(length_t a = 0; a != ((ast_elem_generic_base_t*) elem)->generics_length; a++){
+                    if(infer_type(ctx, &((ast_elem_generic_base_t*) elem)->generics[a])) return FAILURE;
+                }
             }
             break;
         }

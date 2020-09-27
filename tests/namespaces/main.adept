@@ -24,7 +24,7 @@ func test {
 
 func testLocal {
     print("Hello from 'implicit\\testLocal', calling 'local\\test'")
-    local\test()
+    test()
 }
 
 namespace

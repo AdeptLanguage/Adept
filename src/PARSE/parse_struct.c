@@ -180,7 +180,7 @@ errorcode_t parse_struct_body(parse_ctx_t *ctx, strong_cstr_t **names, ast_type_
                 return FAILURE;
             }
 
-            ast_struct_t *inner_struct = ast_struct_find(ctx->ast, inner_struct_name);
+            ast_struct_t *inner_struct = object_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, inner_struct_name, NULL);
             if(inner_struct == NULL){
                 compiler_panicf(ctx->compiler, sources[*i], "Struct '%s' must already be declared", inner_struct_name);
                 parse_struct_free_fields(*names, *types, *length, backfill);

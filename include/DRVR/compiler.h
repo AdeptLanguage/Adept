@@ -17,6 +17,7 @@ extern "C" {
 #include "UTIL/ground.h"
 #include "DRVR/config.h"
 #include "DRVR/object.h"
+#include "UTIL/tmpbuf.h"
 
 // Possible compiler trait options
 #define COMPILER_SHOW_CONSOLE     TRAIT_1
@@ -112,6 +113,7 @@ typedef struct compiler {
     adept_warning_t *warnings;
     length_t warnings_length;
     length_t warnings_capacity;
+    tmpbuf_t tmp;
 
     bool show_unused_variables_how_to_disable;
     unsigned int cross_compile_for;
@@ -221,6 +223,18 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
     const char *name, ast_type_t *types, length_t arity);
 
+// ---------------- compiler_undeclared_function_possiblities ----------------
+// Checks for all potential function candidates
+// If 'should_print', will print them
+// Returns whether any candidates exist
+bool compiler_undeclared_function_possiblities(object_t *object, tmpbuf_t *tmpbuf, const char *name, bool should_print);
+
+// ---------------- compiler_undeclared_function_possible_name ----------------
+// Checks for a single possible name for the function
+// If 'should_print', will print them
+// Returns whether any candidates exist
+bool compiler_undeclared_function_possible_name(object_t *object, const char *name, bool should_print);
+
 // ---------------- compiler_undeclared_method ----------------
 // Prints an error message for an undeclared method
 void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t source,
@@ -238,7 +252,6 @@ strong_cstr_t make_args_string(ast_type_t *types, ast_expr_t **defaults, length_
 // ---------------- object_panic_plain ----------------
 // Prints a plain compiler error given an object
 void object_panic_plain(object_t *object, const char *message);
-
 
 // ---------------- object_panic_plain ----------------
 // Prints a plain compiler error given an object

@@ -53,6 +53,7 @@ typedef struct {
     ir_type_t *s8_type;
     ir_type_t *ptr_type;
     type_table_t *type_table;
+    tmpbuf_t *tmpbuf;
 } ir_builder_t;
 
 // ---------------- build_basicblock ----------------

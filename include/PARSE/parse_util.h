@@ -11,6 +11,7 @@ extern "C" {
 
 // ------------------ parse_ignore_newlines ------------------
 // Passes over newlines until something else is encountered
+// NOTE: Won't print error message if 'error_message' is NULL
 errorcode_t parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message);
 
 // ------------------ parse_panic_token ------------------

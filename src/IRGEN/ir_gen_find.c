@@ -9,6 +9,30 @@
 errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
         ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, funcpair_t *result){
     
+    errorcode_t error;
+    weak_cstr_t try_name;
+    
+    // First, try to locate in the current namespace
+    if(object->current_namespace){
+        try_name = tmpbuf_quick_concat3(&compiler->tmp, object->current_namespace, "\\", name);
+        error = ir_gen_find_func_inner(compiler, object, job_list, try_name, arg_types, arg_types_length, mask, req_traits, result);
+        if(error != FAILURE) return error;
+    }
+
+    // Second, try to locate in 'used' namespaces
+    for(length_t i = 0; i != object->using_namespaces_length; i++){
+        try_name = tmpbuf_quick_concat3(&compiler->tmp, object->using_namespaces[i].cstr, "\\", name);
+        error = ir_gen_find_func_inner(compiler, object, job_list, try_name, arg_types, arg_types_length, mask, req_traits, result);
+        if(error != FAILURE) return error;
+    }
+
+    // Lastly, try to locate in global namespace
+    return ir_gen_find_func_inner(compiler, object, job_list, name, arg_types, arg_types_length, mask, req_traits, result);
+}
+
+errorcode_t ir_gen_find_func_inner(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
+        ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, funcpair_t *result){
+    
     ir_module_t *ir_module = &object->ir_module;
     maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
     if(index == -1) goto couldnt_find_suitable_function;
@@ -58,7 +82,29 @@ couldnt_find_suitable_function:
     return FAILURE; // No function with that definition found
 }
 
-errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result){
+errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object, const char *name, bool *out_is_unique, funcpair_t *result){
+    errorcode_t error;
+    weak_cstr_t try_name;
+    
+    // First, try to locate in the current namespace
+    if(object->current_namespace){
+        try_name = tmpbuf_quick_concat3(&compiler->tmp, object->current_namespace, "\\", name);
+        error = ir_gen_find_func_named_inner(object, try_name, out_is_unique, result);
+        if(error != FAILURE) return error;
+    }
+
+    // Second, try to locate in 'used' namespaces
+    for(length_t i = 0; i != object->using_namespaces_length; i++){
+        try_name = tmpbuf_quick_concat3(&compiler->tmp, object->using_namespaces[i].cstr, "\\", name);
+        error = ir_gen_find_func_named_inner(object, try_name, out_is_unique, result);
+        if(error != FAILURE) return error;
+    }
+
+    // Lastly, try to locate in global namespace
+    return ir_gen_find_func_named_inner(object, name, out_is_unique, result);
+}
+
+errorcode_t ir_gen_find_func_named_inner(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result){
     ir_module_t *ir_module = &object->ir_module;
 
     maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
@@ -85,6 +131,31 @@ errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out
 }
 
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
+        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
+    
+    errorcode_t error;
+    weak_cstr_t try_name;
+    object_t *object = builder->object;
+    
+    // First, try to locate in the current namespace
+    if(object->current_namespace){
+        try_name = tmpbuf_quick_concat3(&builder->compiler->tmp, object->current_namespace, "\\", name);
+        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, result);
+        if(error != FAILURE) return error;
+    }
+
+    // Second, try to locate in 'used' namespaces
+    for(length_t i = 0; i != object->using_namespaces_length; i++){
+        try_name = tmpbuf_quick_concat3(&builder->compiler->tmp, object->using_namespaces[i].cstr, "\\", name);
+        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, result);
+        if(error != FAILURE) return error;
+    }
+
+    // Lastly, try to locate in global namespace
+    return ir_gen_find_func_conforming_inner(builder, name, arg_values, arg_types, type_list_length, result);
+}
+
+errorcode_t ir_gen_find_func_conforming_inner(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
     
     // Do strict argument type conforming rules first
@@ -885,7 +956,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                 // If we failed a special prereq, then return false
                 if(special_prereq != - 1) return FAILURE;
 
-                ast_struct_t *similar = ast_struct_find(&builder->object->ast, prereq->similarity_prerequisite);
+                ast_struct_t *similar = object_struct_find(NULL, builder->object, builder->tmpbuf, prereq->similarity_prerequisite, NULL);
 
                 if(similar == NULL){
                     compiler_panicf(builder->compiler, prereq->source, "Undeclared struct '%s'", prereq->similarity_prerequisite);
@@ -894,7 +965,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
 
                 if(concrete_type->elements[i]->id == AST_ELEM_BASE){
                     char *given_name = ((ast_elem_base_t*) concrete_type->elements[i])->base;
-                    ast_struct_t *given = ast_struct_find(&builder->object->ast, given_name);
+                    ast_struct_t *given = object_struct_find(NULL, builder->object, builder->tmpbuf, given_name, NULL);
 
                     if(given == NULL){
                         // Undeclared struct given, no error should be necessary
@@ -916,7 +987,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                     }
 
                     char *given_name = ((ast_elem_generic_base_t*) concrete_type->elements[i])->name;
-                    ast_polymorphic_struct_t *given = ast_polymorphic_struct_find(&builder->object->ast, given_name);
+                    ast_polymorphic_struct_t *given = object_polymorphic_struct_find(NULL, builder->object, builder->tmpbuf, given_name, NULL);
 
                     if(given == NULL){
                         redprintf("INTERNAL ERROR: arg_type_polymorphable failed to find polymophic struct '%s' which should exist\n", given_name);

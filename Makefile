@@ -101,11 +101,20 @@ ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
 endif
 
 LDFLAGS=$(LIBCURL_LINKER_FLAGS) $(LLVM_LINKER_FLAGS)
-SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c src/BRIDGE/bridge.c src/BRIDGE/type_table.c \
-	src/BRIDGE/rtti.c src/DRVR/compiler.c src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir.c src/IR/ir_lowering.c src/IRGEN/ir_builder.c \
-	src/IRGEN/ir_cache.c src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
-	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_alias.c src/PARSE/parse_ctx.c src/PARSE/parse_dependency.c src/PARSE/parse_enum.c src/PARSE/parse_expr.c src/PARSE/parse_func.c src/PARSE/parse_global.c src/PARSE/parse_meta.c src/PARSE/parse_pragma.c \
-	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c src/PARSE/parse.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/util.c
+SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c \
+	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c \
+	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
+	src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c \
+	src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir.c src/IR/ir_lowering.c \
+	src/IRGEN/ir_builder.c src/IRGEN/ir_cache.c src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c \
+	src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c src/LEX/lex.c src/LEX/pkg.c \
+	src/LEX/token.c src/PARSE/parse_alias.c src/PARSE/parse_ctx.c src/PARSE/parse_dependency.c \
+	src/PARSE/parse_enum.c src/PARSE/parse_expr.c src/PARSE/parse_func.c src/PARSE/parse_global.c \
+	src/PARSE/parse_meta.c src/PARSE/parse_namespace.c src/PARSE/parse_pragma.c \
+	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c \
+	src/PARSE/parse.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c src/UTIL/builtin_type.c \
+	src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c src/UTIL/memory.c \
+	src/UTIL/search.c src/UTIL/tmpbuf.c src/UTIL/util.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj
@@ -156,6 +165,7 @@ insight: $(SOURCES)
 	@cp include/PARSE/parse_func.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_func.h
 	@cp include/PARSE/parse_global.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_global.h
 	@cp include/PARSE/parse_meta.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_meta.h
+	@cp include/PARSE/parse_namespace.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_namespace.h
 	@cp include/PARSE/parse_pragma.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_pragma.h
 	@cp include/PARSE/parse_stmt.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_stmt.h
 	@cp include/PARSE/parse_struct.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_struct.h
@@ -177,6 +187,7 @@ insight: $(SOURCES)
 	@cp include/UTIL/memory.h $(INSIGHT_OUT_DIR)/include/UTIL/memory.h
 	@cp include/UTIL/search.h $(INSIGHT_OUT_DIR)/include/UTIL/search.h
 	@cp include/UTIL/trait.h $(INSIGHT_OUT_DIR)/include/UTIL/trait.h
+	@cp include/UTIL/tmpbuf.h $(INSIGHT_OUT_DIR)/include/UTIL/tmpbuf.h
 	@cp include/UTIL/util.h $(INSIGHT_OUT_DIR)/include/UTIL/util.h
 	
 #   Insight - Required Source Code Files
@@ -202,6 +213,7 @@ insight: $(SOURCES)
 	@cp src/PARSE/parse_func.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_func.c
 	@cp src/PARSE/parse_global.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_global.c
 	@cp src/PARSE/parse_meta.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_meta.c
+	@cp src/PARSE/parse_namespace.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_namespace.c
 	@cp src/PARSE/parse_pragma.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_pragma.c
 	@cp src/PARSE/parse_stmt.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_stmt.c
 	@cp src/PARSE/parse_struct.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_struct.c
@@ -217,6 +229,7 @@ insight: $(SOURCES)
 	@cp src/UTIL/jsmn_helper.c $(INSIGHT_OUT_DIR)/src/UTIL/jsmn_helper.c
 	@cp src/UTIL/levenshtein.c $(INSIGHT_OUT_DIR)/src/UTIL/levenshtein.c
 	@cp src/UTIL/search.c $(INSIGHT_OUT_DIR)/src/UTIL/search.c
+	@cp src/UTIL/tmpbuf.c $(INSIGHT_OUT_DIR)/src/UTIL/tmpbuf.c
 	@cp src/UTIL/util.c $(INSIGHT_OUT_DIR)/src/UTIL/util.c
 
 	@cp include/UTIL/__insight.h $(INSIGHT_OUT_DIR)/insight.h

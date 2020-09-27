@@ -9,7 +9,7 @@ errorcode_t parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message){
     length_t length = ctx->tokenlist->length;
 
     while(tokens[*i].id == TOKEN_NEWLINE) if(length == ++(*i)){
-        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], error_message);
+        if(error_message) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i - 1], error_message);
         return FAILURE;
     }
 

@@ -865,13 +865,6 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
     stmt->args = NULL;
     stmt->is_tentative = is_tentative;
 
-    if(parse_relocate_name(ctx, stmt->source, &stmt->name)){
-        ctx->ignore_newlines_in_expr_depth--;
-        free(stmt->name);
-        free(stmt);
-        return FAILURE;
-    }
-
     // Ignore newline termination within children expressions
     ctx->ignore_newlines_in_expr_depth++;
 

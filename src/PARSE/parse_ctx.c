@@ -14,6 +14,7 @@ void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object){
     memset(ctx->meta_else_allowed_flag, 0, sizeof(ctx->meta_else_allowed_flag));
     ctx->angle_bracket_repeat = 0;
     ctx->struct_association = NULL;
+    ctx->has_namespace_scope = false;
     ctx->ignore_newlines_in_expr_depth = 0;
     ctx->allow_polymorphic_prereqs = false;
     ctx->next_builtin_traits = TRAIT_NONE;
@@ -24,6 +25,17 @@ void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx
     *out_ctx_fork = *ctx;
     out_ctx_fork->object = new_object;
     out_ctx_fork->tokenlist = &new_object->tokenlist;
+    
+    out_ctx_fork->func = NULL;
+    out_ctx_fork->meta_ends_expected = 0;
+    memset(out_ctx_fork->meta_else_allowed_flag, 0, sizeof(out_ctx_fork->meta_else_allowed_flag));
+    out_ctx_fork->angle_bracket_repeat = 0;
+    out_ctx_fork->struct_association = NULL;
+    out_ctx_fork->has_namespace_scope = false;
+    out_ctx_fork->ignore_newlines_in_expr_depth = 0;
+    out_ctx_fork->allow_polymorphic_prereqs = false;
+    out_ctx_fork->next_builtin_traits = TRAIT_NONE;
+    out_ctx_fork->prename = NULL;
 }
 
 void parse_ctx_set_meta_else_allowed(parse_ctx_t *ctx, length_t at_ends_expected, bool allowed){
@@ -172,33 +184,4 @@ void parse_prepend_namespace(parse_ctx_t *ctx, strong_cstr_t *inout_name){
     strong_cstr_t new_name = mallocandsprintf("%s\\%s", ctx->object->current_namespace, *inout_name);
     free(*inout_name);
     *inout_name = new_name;
-}
-
-errorcode_t parse_relocate_name(parse_ctx_t *ctx, source_t source, strong_cstr_t *inout_name){
-    // Don't operate on non-'local\' names
-    if(strncmp(*inout_name, "local\\", 6) != 0) return SUCCESS;
-
-    weak_cstr_t namespace = ctx->object->current_namespace;
-    length_t namespace_length = ctx->object->current_namespace_length;
-
-    if(namespace == NULL){
-        compiler_panicf(ctx->compiler, source, "Cannot use 'local\\' when not in namespace");
-        return FAILURE;
-    }
-
-    if(namespace_length <= 5){
-        // Overwrite if enough room
-        memcpy(*inout_name, namespace, namespace_length);
-
-        // Move rest of name backwards to fit
-        if(namespace_length != 5)
-            memmove(&((*inout_name)[namespace_length]), &((*inout_name)[5]), strlen(*inout_name) + 2);
-    } else {
-        // Otherwise, we're going to have to allocate a new string
-        strong_cstr_t new_name = mallocandsprintf("%s%s", namespace, &((*inout_name)[5]));
-        free(*inout_name);
-        *inout_name = new_name;
-    }
-
-    return SUCCESS;
 }

@@ -334,14 +334,6 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     // Ignore newline termination within children expressions
                     ctx->ignore_newlines_in_expr_depth++;
 
-                    // Relocate callee name
-                    if(parse_relocate_name(ctx, call_expr->source, &call_expr->name)){
-                        ctx->ignore_newlines_in_expr_depth--;
-                        free(call_expr->name);
-                        free(call_expr);
-                        return FAILURE;
-                    }
-
                     while(tokens[*i].id != TOKEN_CLOSE){
                         if(parse_ignore_newlines(ctx, "Expected method argument")){
                             ctx->ignore_newlines_in_expr_depth--;
@@ -638,12 +630,6 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     // Steal callee name
     strong_cstr_t name = tokens[*i].data;
     tokens[*i].data = NULL;
-
-    // Relocate callee name
-    if(parse_relocate_name(ctx, source, &name)){
-        free(name);
-        return FAILURE;
-    }
 
     length_t arity = 0;
     ast_expr_t **args = NULL;

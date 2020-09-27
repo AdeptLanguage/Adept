@@ -269,13 +269,15 @@ void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait
 // Initializes an AST enum
 void ast_enum_init(ast_enum_t *inum, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
 
-// ---------------- ast_struct_find ----------------
-// Finds a structure by name
-ast_struct_t *ast_struct_find(ast_t *ast, const char *name);
+// ---------------- ast_struct_find_exact ----------------
+// Finds a structure by its exact name
+// For more flexible struct finding, use 'object_struct_find()'
+ast_struct_t *ast_struct_find_exact(ast_t *ast, const char *name);
 
-// ---------------- ast_polymorphic_struct_find ----------------
-// Finds a polymorphic structure by name
-ast_polymorphic_struct_t *ast_polymorphic_struct_find(ast_t *ast, const char *name);
+// ---------------- ast_polymorphic_struct_find_exact ----------------
+// Finds a polymorphic structure by its exact name
+// For more flexible struct finding, use 'object_polymorphic_struct_find()'
+ast_polymorphic_struct_t *ast_polymorphic_struct_find_exact(ast_t *ast, const char *name);
 
 // ---------------- ast_struct_find_field ----------------
 // Finds a field by name within a structure

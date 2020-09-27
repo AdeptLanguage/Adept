@@ -192,6 +192,8 @@ void compiler_init(compiler_t *compiler){
     compiler->show_unused_variables_how_to_disable = false;
     compiler->cross_compile_for = CROSS_COMPILE_NONE;
     compiler->entry_point = "main";
+
+    tmpbuf_init(&compiler->tmp);
 }
 
 void compiler_free(compiler_t *compiler){
@@ -207,6 +209,7 @@ void compiler_free(compiler_t *compiler){
     compiler_free_error(compiler);
     compiler_free_warnings(compiler);
     config_free(&compiler->config);
+    tmpbuf_free(&compiler->tmp);
 }
 
 void compiler_free_objects(compiler_t *compiler){
@@ -222,6 +225,7 @@ void compiler_free_objects(compiler_t *compiler){
         case COMPILATION_STAGE_AST:
             ast_free(&object->ast);
             free(object->current_namespace);
+            free(object->using_namespaces);
             // fallthrough
         case COMPILATION_STAGE_TOKENLIST:
             free(object->buffer);
@@ -285,6 +289,9 @@ object_t* compiler_new_object(compiler_t *compiler){
     (*object_reference)->default_stdlib = NULL;
     (*object_reference)->current_namespace = NULL;
     (*object_reference)->current_namespace_length = 0;
+    (*object_reference)->using_namespaces = NULL;
+    (*object_reference)->using_namespaces_length = 0;
+    (*object_reference)->using_namespaces_capacity = 0;
     return *object_reference;
 }
 
@@ -987,12 +994,10 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 #ifndef ADEPT_INSIGHT_BUILD
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
         const char *name, ast_type_t *types, length_t arity){
+    
+    bool has_potential_candidates = compiler_undeclared_function_possiblities(object, &compiler->tmp, name, false);
 
-    ir_module_t *ir_module = &object->ir_module;
-    maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
-
-    if(original_index == -1 && poly_index == -1){
+    if(!has_potential_candidates){
         // No other function with that name exists
         compiler_panicf(compiler, source, "Undeclared function '%s'", name);
         return;
@@ -1004,6 +1009,32 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
 
         printf("\nPotential Candidates:\n");
     }
+
+    compiler_undeclared_function_possiblities(object, &compiler->tmp, name, true);
+}
+
+bool compiler_undeclared_function_possiblities(object_t *object, tmpbuf_t *tmpbuf, const char *name, bool should_print){
+    weak_cstr_t try_name;
+
+    if(object->current_namespace){
+        try_name = tmpbuf_quick_concat3(tmpbuf, object->current_namespace, "\\", name);
+        if(compiler_undeclared_function_possible_name(object, try_name, should_print) && !should_print) return true;
+    }
+
+    for(length_t i = 0; i != object->using_namespaces_length; i++){
+        try_name = tmpbuf_quick_concat3(tmpbuf, object->using_namespaces[i].cstr, "\\", name);
+        if(compiler_undeclared_function_possible_name(object, try_name, should_print) && !should_print) return true;
+    }
+
+    return compiler_undeclared_function_possible_name(object, name, should_print);
+}
+
+bool compiler_undeclared_function_possible_name(object_t *object, const char *name, bool should_print){
+    ir_module_t *ir_module = &object->ir_module;
+
+    maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
+    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
+    if(!should_print) goto return_result;
 
     maybe_index_t index = original_index;
 
@@ -1030,6 +1061,9 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
 
         print_candidate(&object->ast.funcs[poly->ast_func_id]);
     } while((length_t) ++index != object->ast.polymorphic_funcs_length);
+
+return_result:
+    return original_index != -1 || poly_index != -1;
 }
 
 void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t source,

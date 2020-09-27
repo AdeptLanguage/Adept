@@ -159,6 +159,7 @@ compile unlesselse || exit $?
 !(compile unsupported) || exit $?
 compile until || exit $?
 compile until_break || exit $?
+compile using_namespace || exit $?
 compile va_args || exit $?
 compile varargs || exit $?
 compile variables || exit $?
