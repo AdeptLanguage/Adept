@@ -29,7 +29,7 @@ void terminal_set_color_win32(char color);
 void terminal_set_color_posix(char color);
 #endif
 
-#ifdef ADEPT_INSIGHT_BUILD
+#if defined(ADEPT_INSIGHT_BUILD) && !defined(__EMSCRIPTEN__)
 #define redprintf(...) ((void) 0)
 #define yellowprintf(...) ((void) 0)
 #define whiteprintf(...) ((void) 0)

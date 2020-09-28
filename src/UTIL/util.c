@@ -1,4 +1,8 @@
 
+#if __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <stdarg.h>
 #include "UTIL/util.h"
 
@@ -174,11 +178,124 @@ length_t find_insert_position(void *array, length_t length, int(*compare)(const 
     return first;
 }
 
+#if __EMSCRIPTEN__
+EM_JS(int, node_fs_existsSync, (const char *filename), {
+	var fs = require('fs');
+    return fs.existsSync(UTF8ToString(filename)) ? 1 : 0;
+});
+
+EM_JS(strong_cstr_t, node_fs_readFileSync, (const char *filename, bool will_append_newline), {
+	var fs = require('fs');
+
+    try {
+	    contents = fs.readFileSync(UTF8ToString(filename), "utf8");
+    } catch(error){
+        return null;
+    }
+
+	bytes = lengthBytesUTF8(contents);
+	ptr = _malloc(bytes + (will_append_newline ? 2 : 1));
+	stringToUTF8(contents, ptr, bytes + 1);
+	return ptr;
+});
+
+EM_JS(strong_cstr_t, node_fs_readFileSync_binary_hex, (const char *filename), {
+	var fs = require('fs');
+
+    try {
+	    contents = fs.readFileSync(UTF8ToString(filename)).toString('hex');
+    } catch(error){
+        return null;
+    }
+
+	bytes = lengthBytesUTF8(contents);
+	ptr = _malloc(bytes + 1);
+	stringToUTF8(contents, ptr, bytes + 1);
+	return ptr;
+});
+#endif
+
 bool file_exists(weak_cstr_t filename){
+    #if __EMSCRIPTEN__
+    return node_fs_existsSync(filename) != 0;
+    #else
     FILE *f = fopen(filename, "r");
     if(f != NULL){
         fclose(f);
         return true;
     }
     return false;
+    #endif
+}
+
+bool file_text_contents(weak_cstr_t filename, strong_cstr_t *out_contents, length_t *out_length, bool append_newline){
+    char *buffer;
+    length_t buffer_size;
+
+    #if __EMSCRIPTEN__
+    buffer = node_fs_readFileSync(filename, append_newline);
+    if(buffer == NULL) return false;
+
+    buffer_size = strlen(buffer);
+    #else
+    FILE *file = fopen(filename, "r");
+    if(file == NULL) return false;
+
+    fseek(file, 0, SEEK_END);
+    buffer_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    buffer = malloc(buffer_size + 2);
+    buffer_size = fread(buffer, 1, buffer_size, file);
+    fclose(file);
+    #endif
+
+    if(append_newline){
+        buffer[buffer_size] = '\n';   // Append newline to flush everything
+        buffer[++buffer_size] = '\0'; // Terminate the string for good measure
+    }
+
+    *out_contents = buffer;
+    *out_length = buffer_size;
+    return true;
+}
+
+bool file_binary_contents(weak_cstr_t filename, strong_cstr_t *out_contents, length_t *out_length){
+    char *buffer;
+    length_t buffer_size;
+
+    #if __EMSCRIPTEN__
+    char *hex = node_fs_readFileSync_binary_hex(filename);
+    if(hex == NULL) return false;
+
+    buffer_size = strlen(hex) / 2;
+    buffer = malloc(buffer_size);
+
+    // NOTE: Assumes proper hexadecimal
+    for(length_t i = 0; i != buffer_size; i++){
+        char bigger = hex[i * 2];
+        char lesser = hex[i * 2 + 1];
+
+        char bigger_value = bigger < 'A'? bigger - '0' : bigger < 'a' ? bigger - 'A' + 10 : bigger - 'a' + 10;
+        char lesser_value = lesser < 'A'? lesser - '0' : lesser < 'a' ? lesser - 'A' + 10 : lesser - 'a' + 10;
+        buffer[i] = bigger_value * 16 + lesser_value;
+    }
+
+    free(hex);
+    #else
+    FILE *file = fopen(filename, "rb");
+    if(file == NULL) return false;
+
+    fseek(file, 0, SEEK_END);
+    buffer_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    buffer = malloc(buffer_size + 1);
+    buffer_size = fread(buffer, 1, buffer_size, file);
+    fclose(file);
+    #endif
+
+    *out_contents = buffer;
+    *out_length = buffer_size;
+    return true;
 }

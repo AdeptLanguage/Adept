@@ -14,6 +14,7 @@
 extern "C" {
 #endif
 
+#ifndef __EMSCRIPTEN__
 extern char insight_buffer[2560];
 extern char insight_tmp_buffer[1280];
 extern size_t insight_buffer_index;
@@ -29,6 +30,7 @@ extern size_t insight_tmp_buffer_length;
 }
 
 #define puts(a) printf("%s\n", a)
+#endif // !__EMSCRIPTEN__
 
 #ifdef __cplusplus
 }

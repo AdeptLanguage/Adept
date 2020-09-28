@@ -217,7 +217,7 @@ bool compiler_warn(compiler_t *compiler, source_t source, const char *message);
 bool compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...);
 void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, va_list args);
 
-#ifndef ADEPT_INSIGHT_BUILD
+#if !defined(ADEPT_INSIGHT_BUILD) || defined(__EMSCRIPTEN__)
 // ---------------- compiler_undeclared_function ----------------
 // Prints an error message for an undeclared function
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,

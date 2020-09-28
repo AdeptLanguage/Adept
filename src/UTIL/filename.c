@@ -1,4 +1,8 @@
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -162,8 +166,28 @@ strong_cstr_t filename_ext(const char *filename, const char *ext_without_dot){
     return with_ext;
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(strong_cstr_t, node_path_resolve, (const char *filename), {
+	var path = require('path');
+    var contents;
+
+    try {
+	    contents = path.resolve(UTF8ToString(filename));
+    } catch(error){
+        return null;
+    }
+
+	bytes = lengthBytesUTF8(contents);
+	ptr = _malloc(bytes + 1);
+	stringToUTF8(contents, ptr, bytes + 1);
+	return ptr;
+});
+#endif
+
 strong_cstr_t filename_absolute(const char *filename){
-    #if defined(_WIN32) || defined(_WIN64)
+    #if defined(__EMSCRIPTEN__)
+    return node_path_resolve(filename);
+    #elif defined(_WIN32) || defined(_WIN64)
 
     char *buffer = malloc(512);
     if(GetFullPathName(filename, 512, buffer, NULL) == 0){
@@ -178,8 +202,8 @@ strong_cstr_t filename_absolute(const char *filename){
 
     if(buffer == NULL){
         // Failed to get path
-	redprintf("INTERNAL ERROR: filename_absolute() failed to get absolute path for '%s'\n", filename);
-	exit(1);
+        redprintf("INTERNAL ERROR: filename_absolute() failed to get absolute path for '%s'\n", filename);
+        exit(1);
     }
 
     #ifdef TRACK_MEMORY_USAGE
@@ -187,9 +211,8 @@ strong_cstr_t filename_absolute(const char *filename){
         memory_track_external_allocation(buffer, strlen(buffer) + 1, __FILE__, __LINE__);
     #endif
     
-    #endif
-    
     return buffer;
+    #endif    
 }
 
 void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_for, unsigned int mode){

@@ -7,28 +7,10 @@
 #include "UTIL/filename.h"
 
 errorcode_t lex(compiler_t *compiler, object_t *object){
-    FILE *file = fopen(object->filename, "r");
-
-    char *buffer;
-    length_t buffer_size;
-    
-    if(file == NULL){
+    if(!file_text_contents(object->filename, &object->buffer, &object->buffer_length, true)){
         redprintf("The file '%s' doesn't exist or can't be accessed\n", object->filename);
         return FAILURE;
     }
-
-    fseek(file, 0, SEEK_END);
-    buffer_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    buffer = malloc(buffer_size + 2);
-    buffer_size = fread(buffer, 1, buffer_size, file);
-    fclose(file);
-
-    buffer[buffer_size] = '\n';   // Append newline to flush everything
-    buffer[++buffer_size] = '\0'; // Terminate the string for debug purposes
-    object->buffer = buffer;
-    object->buffer_length = buffer_size;
 
     return lex_buffer(compiler, object);
 }
@@ -222,7 +204,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
 
                 lex_get_location(buffer, i, &line, &column);
                 redprintf("%s:%d:%d: Unrecognized symbol '%c' (0x%02X)\n", filename_name_const(object->filename), line, column, buffer[i], (int) buffer[i]);
-
+                
                 source_t here;
                 here.index = i;
                 here.object_index = object->index;

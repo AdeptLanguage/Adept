@@ -191,12 +191,12 @@ maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filenam
 
     if(allow_local_import){
         test = filename_local(ctx->object->filename, filename);
-        if(access(test, F_OK) != -1) return test;
+        if(file_exists(test)) return test;
         free(test);
     }
 
     test = filename_adept_import(ctx->compiler->root, filename);
-    if(access(test, F_OK) != -1) return test;
+    if(file_exists(test)) return test;
     
     compiler_panicf(ctx->compiler, source, "The file '%s' doesn't exist", filename);
     free(test);
