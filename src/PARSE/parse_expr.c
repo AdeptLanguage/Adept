@@ -460,6 +460,7 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
             
             // NOTE: Must be sorted
             static const int op_termination_tokens[] = {
+                TOKEN_WORD,               // 0x00000001
                 TOKEN_ASSIGN,             // 0x00000008
                 TOKEN_CLOSE,              // 0x00000011
                 TOKEN_BEGIN,              // 0x00000012
@@ -481,7 +482,24 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
                 TOKEN_BIT_LGC_RS_ASSIGN,  // 0x00000033
                 TOKEN_TERMINATE_JOIN,     // 0x00000037
                 TOKEN_COLON,              // 0x00000038
+
+                TOKEN_BREAK,              // 0x00000055
+                TOKEN_CONTINUE,           // 0x00000059
+                TOKEN_DEFER,              // 0x0000005C
+                TOKEN_DELETE,             // 0x0000005D
                 TOKEN_ELSE,               // 0x0000005E
+                TOKEN_EXHAUSTIVE,         // 0x00000061
+                TOKEN_FOR,                // 0x00000065
+                TOKEN_IF,                 // 0x0000006A
+                TOKEN_REPEAT,             // 0x00000077
+                TOKEN_RETURN,             // 0x00000078
+                TOKEN_SWITCH,             // 0x0000007D
+                TOKEN_UNLESS,             // 0x00000083
+                TOKEN_UNTIL,              // 0x00000084
+                TOKEN_VA_ARG,             // 0x00000086
+                TOKEN_VA_END,             // 0x00000087
+                TOKEN_VA_START,           // 0x00000089
+                TOKEN_WHILE,              // 0x0000008B
             };
 
             // Terminate operator expression portion if termination operator encountered

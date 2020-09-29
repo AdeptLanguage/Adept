@@ -171,11 +171,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     return FAILURE;
                 }
 
-                switch(tokens[(*i)++].id){
-                case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
-                case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
-                default:
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after conditional expression");
+                if(parse_block_beginning(ctx, "conditional", &stmts_mode)){
                     ast_expr_free_fully(conditional);
                     return FAILURE;
                 }
@@ -298,11 +294,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     return FAILURE;
                 }
 
-                switch(tokens[(*i)++].id){
-                case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
-                case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
-                default:
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after conditional expression");
+                if(parse_block_beginning(ctx, "conditional", &stmts_mode)){
                     ast_expr_free_fully(conditional);
                     return FAILURE;
                 }
@@ -438,11 +430,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     return FAILURE;
                 }
 
-                switch(tokens[(*i)++].id){
-                case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
-                case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
-                default:
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'each in' expression");
+                if(parse_block_beginning(ctx, "'each in'", &stmts_mode)){
                     ast_type_free_fully(it_type);
                     ast_expr_free_fully(low_array);
                     ast_expr_free_fully(length_limit);
@@ -511,11 +499,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     return FAILURE;
                 }
 
-                switch(tokens[(*i)++].id){
-                case TOKEN_BEGIN: stmts_mode = PARSE_STMTS_STANDARD; break;
-                case TOKEN_NEXT:  stmts_mode = PARSE_STMTS_SINGLE;   break;
-                default:
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after 'repeat' expression");
+                if(parse_block_beginning(ctx, "'repeat'", &stmts_mode)){
                     ast_expr_free_fully(limit);
                     return FAILURE;
                 }
@@ -1257,4 +1241,42 @@ errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *
     stmt->constant = constant;
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     return SUCCESS;
+}
+
+errorcode_t parse_block_beginning(parse_ctx_t *ctx, weak_cstr_t block_readable_mother, unsigned int *out_stmts_mode){
+    switch(ctx->tokenlist->tokens[*ctx->i].id){
+    case TOKEN_BEGIN:
+        *out_stmts_mode = PARSE_STMTS_STANDARD;
+        (*ctx->i)++;
+        return SUCCESS;
+    case TOKEN_NEXT:
+        *out_stmts_mode = PARSE_STMTS_SINGLE;
+        (*ctx->i)++;
+        return SUCCESS;
+    case TOKEN_WORD:
+    case TOKEN_BREAK:
+    case TOKEN_CONTINUE:
+    case TOKEN_DEFER:
+    case TOKEN_DELETE:
+    case TOKEN_ELSE:
+    case TOKEN_EXHAUSTIVE:
+    case TOKEN_FOR:
+    case TOKEN_IF:
+    case TOKEN_REPEAT:
+    case TOKEN_RETURN:
+    case TOKEN_SWITCH:
+    case TOKEN_UNLESS:
+    case TOKEN_UNTIL:
+    case TOKEN_VA_ARG:
+    case TOKEN_VA_END:
+    case TOKEN_VA_START:
+    case TOKEN_WHILE:
+        // Specially allowed expression terminators
+        *out_stmts_mode = PARSE_STMTS_SINGLE;
+        return SUCCESS;
+    default:
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Expected '{' or ',' after %s expression", block_readable_mother);
+        return FAILURE;
+    }
+    return FAILURE;
 }

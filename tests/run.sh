@@ -111,6 +111,7 @@ compile order || exit $?
 compile package || exit $?
 compile package_use || exit $?
 compile pass_func || exit $?
+compile permissive_blocks || exit $?
 compile poly_default_args || exit $?
 compile polymorphic_functions || exit $?
 compile polymorphic_inner || exit $?

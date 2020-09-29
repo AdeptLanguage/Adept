@@ -1,0 +1,11 @@
+
+import basics
+
+func main {
+    name String = "Isaac Shelton"
+
+    if name.startsWith("Isaac") print(name)
+    while name.endsWith("Shelton") name = ""
+    until name.length > 10 name.append(toString(name.length))
+    print(name)
+}

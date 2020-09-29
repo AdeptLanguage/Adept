@@ -153,7 +153,7 @@ extern const char *global_token_name_table[];
 #define TOKEN_BREAK            0x00000055
 #define TOKEN_CASE             0x00000056
 #define TOKEN_CAST             0x00000057
-#define TOKEN_CONST            0x00000058             
+#define TOKEN_CONST            0x00000058
 #define TOKEN_CONTINUE         0x00000059
 #define TOKEN_DEF              0x0000005A
 #define TOKEN_DEFAULT          0x0000005B

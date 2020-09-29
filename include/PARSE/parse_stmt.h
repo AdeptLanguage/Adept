@@ -81,6 +81,14 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
 // NOTE: expand() should be used on stmt_list to make room sometime before calling
 errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source);
 
+// ------------------ parse_block_begin ------------------
+// Parses the token that begins a block
+// Usually this would be '{' or ','
+// But it can also be things like words and keywords
+// Stores the specified statement mode in 'out_stmts_mode' if successful
+// Returns FAILURE on failure and SUCCESS on success
+errorcode_t parse_block_beginning(parse_ctx_t *ctx, weak_cstr_t block_readable_mother, unsigned int *out_stmts_mode);
+
 #ifdef __cplusplus
 }
 #endif
