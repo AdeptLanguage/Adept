@@ -273,6 +273,11 @@ void compiler_create_warning(compiler_t *compiler, strong_cstr_t message, source
 // Frees an array of warnings and the memory it occupies
 void adept_warnings_free_fully(adept_warning_t *warnings, length_t length);
 
+// ---------------- compiler_unnamespaced_name ----------------
+// Returns weak C-string to unnamespaced versoin of an identifier
+// e.g. "namespace\thing" => 'thing'
+weak_cstr_t compiler_unnamespaced_name(weak_cstr_t input);
+
 #ifdef __cplusplus
 }
 #endif

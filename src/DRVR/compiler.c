@@ -1323,3 +1323,13 @@ void adept_warnings_free_fully(adept_warning_t *warnings, length_t length){
     for(length_t i = 0; i != length; i++) free(warnings[i].message);
     free(warnings);
 }
+
+weak_cstr_t compiler_unnamespaced_name(weak_cstr_t input){
+    length_t end = strlen(input);
+
+    if(end != 0) while(input[end - 1] != '\\'){
+        if(--end == 0) break;
+    }
+    
+    return &input[end];
+}
