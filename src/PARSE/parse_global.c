@@ -72,6 +72,13 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         }
     }
 
+    if(tokens[*i].id != TOKEN_NEWLINE){
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Expected end-of-line after global variable definition");
+        if(initial_value) ast_expr_free_fully(initial_value);
+        ast_type_free(&type);
+        return FAILURE;
+    }
+
     ast_add_global(ast, name, type, initial_value, traits, source);
     return SUCCESS;
 }
@@ -110,6 +117,13 @@ errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_con
         return FAILURE;
     }
 
+    if(ctx->tokenlist->tokens[*ctx->i].id != TOKEN_NEWLINE){
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected after constant expression definition");
+        ast_expr_free_fully(value);
+        free(name);
+        return FAILURE;
+    }
+
     // Construct the new constant value
     out_constant->name = name;
     out_constant->expression = value;
@@ -144,6 +158,13 @@ errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, strong_cstr_t name
 
     // Prepend namespace name
     parse_prepend_namespace(ctx, &name);
+
+    if(ctx->tokenlist->tokens[*ctx->i].id != TOKEN_NEWLINE){
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected after constant expression definition");
+        ast_expr_free_fully(value);
+        free(name);
+        return FAILURE;
+    }
 
     ast_constant_t *constant = &ast->constants[ast->constants_length++];
     constant->name = name;

@@ -44,7 +44,7 @@ void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id,
 
     if(ctx->compiler->error == NULL){
         strong_cstr_t buffer = calloc(256, 1);
-        snprintf(buffer, 256, "%s", message);
+        snprintf(buffer, 256, message, global_token_name_table[token_id]);
         ctx->compiler->error = adept_error_create(buffer, source);
     }
 }

@@ -115,20 +115,20 @@ char *mallocandsprintf(const char *format, ...){
     return destination;
 }
 
-strong_cstr_t string_to_escaped_string(char *array, length_t length){
+strong_cstr_t string_to_escaped_string(char *array, length_t length, char escaped_quote){
     length_t put_index = 1;
     length_t special_characters = 0;
 
     // Count number of special characters (\n, \t, \b, etc.)
     for(length_t i = 0; i != length; i++){
-        if(array[i] <= 0x1F || array[i] == '\\') special_characters++;
+        if(array[i] <= 0x1F || array[i] == '\\' || array[i] == escaped_quote) special_characters++;
     }
 
     strong_cstr_t string = malloc(length + special_characters + 3);
-    string[0] = '\"';
+    string[0] = escaped_quote;
     
     for(length_t i = 0; i != length; i++){
-        if(array[i] <= 0x1F || array[i] == '\\'){
+        if(array[i] <= 0x1F || array[i] == '\\' || array[i] == escaped_quote){
             // Escape special character
             string[put_index++] = '\\';
         } else {
@@ -136,6 +136,7 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length){
             string[put_index++] = array[i];
             continue;
         }
+
         switch(array[i]){
         case '\0': string[put_index++] =  '0'; break;
         case '\t': string[put_index++] =  't'; break;
@@ -144,14 +145,18 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length){
         case '\b': string[put_index++] =  'b'; break;
         case '\e': string[put_index++] =  'e'; break;
         case '\\': string[put_index++] = '\\'; break;
-        case '"':  string[put_index++] =  '"'; break;
         default:
+            if(array[i] == escaped_quote){
+                string[put_index++] = escaped_quote;
+                break;
+            }
+
             // Unrecognized special character, don't escape
             string[put_index - 1] = array[i];
         }
     }
 
-    string[put_index++] = '"';
+    string[put_index++] = escaped_quote;
     string[put_index++] = '\0';
     return string;
 }
@@ -180,38 +185,38 @@ length_t find_insert_position(void *array, length_t length, int(*compare)(const 
 
 #if __EMSCRIPTEN__
 EM_JS(int, node_fs_existsSync, (const char *filename), {
-	var fs = require('fs');
+    var fs = require('fs');
     return fs.existsSync(UTF8ToString(filename)) ? 1 : 0;
 });
 
-EM_JS(strong_cstr_t, node_fs_readFileSync, (const char *filename, bool will_append_newline), {
-	var fs = require('fs');
+    EM_JS(strong_cstr_t, node_fs_readFileSync, (const char *filename, bool will_append_newline), {
+    var fs = require('fs');
 
     try {
-	    contents = fs.readFileSync(UTF8ToString(filename), "utf8");
+        contents = fs.readFileSync(UTF8ToString(filename), "utf8");
     } catch(error){
         return null;
     }
 
-	bytes = lengthBytesUTF8(contents);
-	ptr = _malloc(bytes + (will_append_newline ? 2 : 1));
-	stringToUTF8(contents, ptr, bytes + 1);
-	return ptr;
+    bytes = lengthBytesUTF8(contents);
+    ptr = _malloc(bytes + (will_append_newline ? 2 : 1));
+    stringToUTF8(contents, ptr, bytes + 1);
+    return ptr;
 });
 
 EM_JS(strong_cstr_t, node_fs_readFileSync_binary_hex, (const char *filename), {
-	var fs = require('fs');
+    var fs = require('fs');
 
     try {
-	    contents = fs.readFileSync(UTF8ToString(filename)).toString('hex');
+        contents = fs.readFileSync(UTF8ToString(filename)).toString('hex');
     } catch(error){
         return null;
     }
 
-	bytes = lengthBytesUTF8(contents);
-	ptr = _malloc(bytes + 1);
-	stringToUTF8(contents, ptr, bytes + 1);
-	return ptr;
+    bytes = lengthBytesUTF8(contents);
+    ptr = _malloc(bytes + 1);
+    stringToUTF8(contents, ptr, bytes + 1);
+    return ptr;
 });
 #endif
 

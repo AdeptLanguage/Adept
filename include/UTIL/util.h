@@ -60,7 +60,7 @@ strong_cstr_t mallocandsprintf(const char *format, ...);
 // Escapes the contents of a modern string so that
 // special characters such as \n are transfromed into \\n
 // and surrounds the string with double quotes
-strong_cstr_t string_to_escaped_string(char *array, length_t length);
+strong_cstr_t string_to_escaped_string(char *array, length_t length, char escaped_quote);
 
 // ---------------- string_count_character ----------------
 // Returns the number of occurances of 'character' in modern

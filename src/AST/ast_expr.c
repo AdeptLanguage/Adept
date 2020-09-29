@@ -61,7 +61,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_NULL:
         return strclone("null");
     case EXPR_STR:
-        return string_to_escaped_string(((ast_expr_str_t*) expr)->array, ((ast_expr_str_t*) expr)->length);
+        return string_to_escaped_string(((ast_expr_str_t*) expr)->array, ((ast_expr_str_t*) expr)->length, '"');
     case EXPR_CSTR: {
             char *string_data = ((ast_expr_cstr_t*) expr)->value;
             length_t string_data_length = strlen(string_data);
