@@ -174,7 +174,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 break;
             default:
                 // Test for word
-                if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122) || buffer[i] == '\\' ){
+                if(buffer[i] == '_' || (buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122) || buffer[i] == '\\'){
                     (*sources)[tokenlist->length].index = i;
                     (*sources)[tokenlist->length].object_index = object_index;
                     (*sources)[tokenlist->length].stride = 0;
@@ -216,48 +216,59 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             break;
         case LEX_STATE_WORD:
             tmp = buffer[i];
+
             if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9') || tmp == '\\'){
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
-            } else {
-                // NOTE: MUST be pre sorted alphabetically (used for string_search)
-                //         Make sure to update values inside token.h and token.c after modifying this list
-
-                const char * const keywords[] = {
-                    "POD", "alias", "and", "as", "at", "break", "case", "cast", "const", "continue", "def", "default", "defer",
-                    "delete", "each", "else", "enum", "exhaustive", "external", "fallthrough", "false", "for", "foreign", "func",
-                    "funcptr", "global", "if", "import", "in", "inout", "namespace", "new", "null", "or", "out", "packed",
-                    "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch", "thread_local",
-                    "true", "typeinfo", "undef", "union", "unless", "until", "using", "va_arg", "va_copy", "va_end", "va_start", "verbatim", "while"
-                };
-
-                const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
-
-                // Terminate string buildup buffer
-                expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
-                lex_state.buildup[lex_state.buildup_length] = '\0';
-
-                // Search for string inside keyword list
-                maybe_index_t array_index = binary_string_search(keywords, keywords_length, lex_state.buildup);
-
-                if(array_index == -1){
-                    // Isn't a keyword, just an identifier
-                    t = &((*tokens)[tokenlist->length]);
-                    t->id = TOKEN_WORD;
-                    t->data = malloc(lex_state.buildup_length + 1);
-                    memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
-                    ((char*) t->data)[lex_state.buildup_length] = '\0';
-                } else {
-                    // Is a keyword, figure out token index from array index
-                    t = &((*tokens)[tokenlist->length]);
-                    t->id = BEGINNING_OF_KEYWORD_TOKENS + (unsigned int) array_index; // Values 0x00000050..0x0000009F are reserved for keywords
-                    t->data = NULL;
+                break;
+            } else if(tmp == ':' && i + 1 < buffer_size){
+                tmp = buffer[i + 1];
+                if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9') || tmp == '\\'){
+                    expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
+                    lex_state.buildup[lex_state.buildup_length++] = '\\';
+                    break;
                 }
-
-                (*sources)[tokenlist->length++].stride = lex_state.buildup_length;
-                lex_state.state = LEX_STATE_IDLE;
-                i--;
             }
+
+            // We have reached the end of the word
+
+            // NOTE: MUST be pre sorted alphabetically (used for string_search)
+            //         Make sure to update values inside token.h and token.c after modifying this list
+
+            const char * const keywords[] = {
+                "POD", "alias", "and", "as", "at", "break", "case", "cast", "const", "continue", "def", "default", "defer",
+                "delete", "each", "else", "enum", "exhaustive", "external", "fallthrough", "false", "for", "foreign", "func",
+                "funcptr", "global", "if", "import", "in", "inout", "namespace", "new", "null", "or", "out", "packed",
+                "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch", "thread_local",
+                "true", "typeinfo", "undef", "union", "unless", "until", "using", "va_arg", "va_copy", "va_end", "va_start", "verbatim", "while"
+            };
+
+            const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
+
+            // Terminate string buildup buffer
+            expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
+            lex_state.buildup[lex_state.buildup_length] = '\0';
+
+            // Search for string inside keyword list
+            maybe_index_t array_index = binary_string_search(keywords, keywords_length, lex_state.buildup);
+
+            if(array_index == -1){
+                // Isn't a keyword, just an identifier
+                t = &((*tokens)[tokenlist->length]);
+                t->id = TOKEN_WORD;
+                t->data = malloc(lex_state.buildup_length + 1);
+                memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
+                ((char*) t->data)[lex_state.buildup_length] = '\0';
+            } else {
+                // Is a keyword, figure out token index from array index
+                t = &((*tokens)[tokenlist->length]);
+                t->id = BEGINNING_OF_KEYWORD_TOKENS + (unsigned int) array_index; // Values 0x00000050..0x0000009F are reserved for keywords
+                t->data = NULL;
+            }
+
+            (*sources)[tokenlist->length++].stride = lex_state.buildup_length;
+            lex_state.state = LEX_STATE_IDLE;
+            i--;
             break;
         case LEX_STATE_STRING:
             if(buffer[i] == '\"'){
