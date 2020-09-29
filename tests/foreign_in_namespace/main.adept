@@ -1,0 +1,8 @@
+
+namespace libc {
+    foreign printf(*ubyte, ...) int
+}
+
+func main {
+    libc\printf('Hello World!\n')
+}

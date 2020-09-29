@@ -102,6 +102,8 @@ call :compile fixed_array_pass
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile for
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile foreign_in_namespace
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile func_aliases
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile func_aliases_va
@@ -327,6 +329,6 @@ exit /b 0
 
 :compile
 echo ^=^> Compiling Test Program^: ^'%~1^'
-adept_debug %~1/main.adept %~2
+adept_debug %~1/main.adept --no-result %~2
 exit /b %errorlevel%
 GOTO:EOF

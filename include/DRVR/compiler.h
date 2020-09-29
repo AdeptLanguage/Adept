@@ -65,6 +65,7 @@ extern "C" {
 #define COMPILER_DEBUG_DUMP            TRAIT_2
 #define COMPILER_DEBUG_LLVMIR          TRAIT_3
 #define COMPILER_DEBUG_NO_VERIFICATION TRAIT_4
+#define COMPILER_DEBUG_NO_RESULT       TRAIT_5
 #endif // ENABLE_DEBUG_FEATURES
 
 // Possible compiler result flags (for internal use)
@@ -274,7 +275,7 @@ void compiler_create_warning(compiler_t *compiler, strong_cstr_t message, source
 void adept_warnings_free_fully(adept_warning_t *warnings, length_t length);
 
 // ---------------- compiler_unnamespaced_name ----------------
-// Returns weak C-string to unnamespaced versoin of an identifier
+// Returns weak C-string to unnamespaced version of an identifier
 // e.g. "namespace\thing" => 'thing'
 weak_cstr_t compiler_unnamespaced_name(weak_cstr_t input);
 

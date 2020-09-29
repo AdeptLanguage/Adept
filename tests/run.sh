@@ -6,7 +6,7 @@ pushd $SCRIPT_DIR > /dev/null
 
 function compile() {
     echo "=> Compiling Test Program: '$1'"
-    adept_debug $1/main.adept $2
+    adept_debug $1/main.adept --no-result $2
 }
 
 compile address || exit $?
@@ -58,6 +58,7 @@ compile fixed_array_assign || exit $?
 compile fixed_array_deference || exit $?
 compile fixed_array_pass || exit $?
 compile for || exit $?
+compile foreign_in_namespace || exit $?
 compile func_aliases || exit $?
 compile func_aliases_va || exit $?
 compile funcaddr || exit $?

@@ -478,7 +478,10 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->debug_traits |= COMPILER_DEBUG_LLVMIR;
             } else if(strcmp(argv[arg_index], "--no-verification") == 0){
                 compiler->debug_traits |= COMPILER_DEBUG_NO_VERIFICATION;
+            } else if(strcmp(argv[arg_index], "--no-result") == 0){
+                compiler->debug_traits |= COMPILER_DEBUG_NO_RESULT;
             }
+
             #endif // ENABLE_DEBUG_FEATURES ///////////////////////////////
 
             else {

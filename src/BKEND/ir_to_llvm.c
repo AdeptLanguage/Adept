@@ -1490,6 +1490,11 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     debug_signal(compiler, DEBUG_SIGNAL_AT_OUT, NULL);
     LLVMPassManagerRef pass_manager = LLVMCreatePassManager();
+
+    #if ENABLE_DEBUG_FEATURES
+    if(!(compiler->debug_traits & COMPILER_DEBUG_NO_RESULT)){
+    #endif
+
     LLVMCodeGenFileType codegen = LLVMObjectFile;
     
     LLVMAddGlobalOptimizerPass(pass_manager);
@@ -1509,6 +1514,10 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         return FAILURE;
     }
 
+    #if ENABLE_DEBUG_FEATURES
+    }
+    #endif
+
     LLVMDisposeTargetData(data_layout);
     LLVMRunPassManager(pass_manager, llvm.module);
     LLVMDisposeTargetMachine(target_machine);
@@ -1525,6 +1534,10 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     }
     
     debug_signal(compiler, DEBUG_SIGNAL_AT_LINKING, NULL);
+
+    #if ENABLE_DEBUG_FEATURES
+    if(!(compiler->debug_traits & COMPILER_DEBUG_NO_RESULT)){
+    #endif
     
     // TODO: SECURITY: Stop using system(3) call to invoke linker
     if(system(link_command) != 0){
@@ -1552,6 +1565,10 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 		free(executable);
         #endif
     }
+
+    #if ENABLE_DEBUG_FEATURES
+    }
+    #endif
 
     if(!(compiler->traits & COMPILER_NO_REMOVE_OBJECT)) remove(object_filename);
     free(object_filename);
