@@ -446,6 +446,12 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(strncmp(argv[arg_index], "--std=", 6) == 0){
                 compiler->default_stdlib = &argv[arg_index][6];
                 compiler->traits |= COMPILER_FORCE_STDLIB;
+            } else if(strcmp(argv[arg_index], "--entry") == 0){
+                if(arg_index + 1 == argc){
+                    redprintf("Expected entry point after '--entry' flag\n");
+                    return FAILURE;
+                }
+                compiler->entry_point = argv[++arg_index];
             } else if(strcmp(argv[arg_index], "--repl") == 0){
                 compiler->traits |= COMPILER_REPL;
             } else if(strcmp(argv[arg_index], "--windows") == 0){
@@ -1330,6 +1336,6 @@ weak_cstr_t compiler_unnamespaced_name(weak_cstr_t input){
     if(end != 0) while(input[end - 1] != '\\'){
         if(--end == 0) break;
     }
-    
+
     return &input[end];
 }
