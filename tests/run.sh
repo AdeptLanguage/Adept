@@ -93,6 +93,7 @@ compile meta_dynamic || exit $?
 compile meta_get || exit $?
 compile methods || exit $?
 compile multiple_declaration || exit $?
+compile namespace_alternative_syntax || exit $?
 
 #compile native_linking || exit $?
 printf "Skipping \033[0;31mnative_linking\033[0m test program\n"
