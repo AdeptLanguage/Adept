@@ -1334,11 +1334,14 @@ void adept_warnings_free_fully(adept_warning_t *warnings, length_t length){
 }
 
 weak_cstr_t compiler_unnamespaced_name(weak_cstr_t input){
-    length_t end = strlen(input);
+    length_t i = 0;
+    length_t beginning = 0;
 
-    if(end != 0) while(input[end - 1] != '\\'){
-        if(--end == 0) break;
+    while(true){
+        char tmp = input[i++];
+        if(tmp == '\0') return &input[beginning];
+        if(tmp == '\\') beginning = i;
     }
 
-    return &input[end];
+    return NULL; // [unreachable]
 }
