@@ -118,7 +118,7 @@ errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_con
     }
 
     if(ctx->tokenlist->tokens[*ctx->i].id != TOKEN_NEWLINE){
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected after constant expression definition");
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected end-of-line after constant expression definition");
         ast_expr_free_fully(value);
         free(name);
         return FAILURE;
@@ -160,7 +160,7 @@ errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, strong_cstr_t name
     parse_prepend_namespace(ctx, &name);
 
     if(ctx->tokenlist->tokens[*ctx->i].id != TOKEN_NEWLINE){
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected after constant expression definition");
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected end-of-line after constant expression definition");
         ast_expr_free_fully(value);
         free(name);
         return FAILURE;
