@@ -834,7 +834,7 @@ void compiler_print_source(compiler_t *compiler, int line, source_t source){
 }
 
 void compiler_panic(compiler_t *compiler, source_t source, const char *message){
-    #if defined(ADEPT_INSIGHT_BUILD) && !defined(__EMSCRIPTEN__)
+    #if !defined(ADEPT_INSIGHT_BUILD) || defined(__EMSCRIPTEN__)
     object_t *relevant_object = compiler->objects[source.object_index];
     int line, column;
 

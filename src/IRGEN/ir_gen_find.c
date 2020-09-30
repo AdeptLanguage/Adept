@@ -1148,7 +1148,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
 }
 
 errorcode_t ir_gen_find_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, length_t *out_ir_func_id){
-    // Finds a special function (such as __variadic_array__ or __initializer_list__)
+    // Finds a special function (such as __variadic_array__)
     // Sets 'out_ir_func_id' ONLY IF the IR function was found.
     // Returns SUCCESS if found
     // Returns FAILURE if not found

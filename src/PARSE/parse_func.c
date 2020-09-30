@@ -146,12 +146,6 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     }
 
     if(strcmp(func->name, "__initializer_list__") == 0){
-        if(ctx->ast->common.ast_initializer_list != NULL){
-            compiler_panic(ctx->compiler, source, "The function __initializer_list__ can only be defined once");
-            compiler_panic(ctx->compiler, ctx->ast->common.ast_initializer_list_source, "Previous definition");
-            return FAILURE;
-        }
-
         if(ast_type_is_void(&func->return_type)){
             compiler_panic(ctx->compiler, source, "The function __initializer_list__ must return a value");
             return FAILURE;
@@ -159,7 +153,6 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
         if(func->traits != TRAIT_NONE
         || func->arity != 2
-        || !ast_type_is_base_of(&func->arg_types[0], "ptr")
         || !ast_type_is_base_of(&func->arg_types[1], "usize")
         || func->arg_type_traits[0] != TRAIT_NONE
         || func->arg_type_traits[1] != TRAIT_NONE
