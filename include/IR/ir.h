@@ -639,8 +639,8 @@ typedef struct {
     ir_type_t *ir_string_struct;
     length_t rtti_array_index;
     troolean has_rtti_array;
-    ir_type_t *ir_variadic_array;  // NOTE: Can be NULL
-    length_t variadic_ir_func_id;  // NOTE: Only exists if 'ir_variadic_array' isn't null
+    ir_type_t *ir_variadic_array;         // NOTE: Can be NULL
+    length_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
 } ir_shared_common_t;
 
 // ---------------- ir_module_t ----------------

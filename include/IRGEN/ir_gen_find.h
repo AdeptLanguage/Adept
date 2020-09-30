@@ -136,4 +136,12 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
 errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog);
 
+// ---------------- ir_gen_find_special_func ----------------
+// Finds a special function (such as __variadic_array__ or __initializer_list__)
+// Sets 'out_ir_func_id' ONLY IF the IR function was found.
+// Returns SUCCESS if found
+// Returns FAILURE if not found
+// Returns ALT_FAILURE if something went wrong
+errorcode_t ir_gen_find_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, length_t *out_ir_func_id);
+
 #endif // _ISAAC_IR_GEN_FIND_H

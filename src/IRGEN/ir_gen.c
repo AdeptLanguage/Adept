@@ -93,22 +93,12 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
         ir_module_insert_func_mapping(module, falias->from, pair.ir_func_id, pair.ast_func_id, true);
     }
 
+    errorcode_t error;
+
     // Find __variadic_array__ (if it exists)
-    {
-        funcpair_t result;
-        bool is_unique;
-        if(ir_gen_find_func_named(compiler, object, "__variadic_array__", &is_unique, &result) == SUCCESS){
-            // FOUND '__variadic_array__' function
-            
-            if(!is_unique){
-                if(compiler_warn(compiler, result.ast_func->source, "Warning: Using this definition of __variadic_array__, but there are multiple possibilities"))
-                    return FAILURE;
-            }
-
-            module->common.variadic_ir_func_id = result.ir_func_id;
-        }
-    }
-
+    error = ir_gen_find_special_func(compiler, object, "__variadic_array__", &module->common.variadic_ir_func_id);
+    if(error == ALT_FAILURE) return FAILURE;
+    
     return SUCCESS;
 }
 

@@ -1146,3 +1146,26 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
 
     return SUCCESS;
 }
+
+errorcode_t ir_gen_find_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, length_t *out_ir_func_id){
+    // Finds a special function (such as __variadic_array__ or __initializer_list__)
+    // Sets 'out_ir_func_id' ONLY IF the IR function was found.
+    // Returns SUCCESS if found
+    // Returns FAILURE if not found
+    // Returns ALT_FAILURE if something went wrong
+
+    funcpair_t result;
+    bool is_unique;
+    if(ir_gen_find_func_named(compiler, object, func_name, &is_unique, &result) == SUCCESS){
+        // Found special function
+        
+        if(!is_unique && compiler_warnf(compiler, result.ast_func->source, "Warning: Using this definition of %s, but there are multiple possibilities", func_name)){
+            return ALT_FAILURE;
+        }
+
+        *out_ir_func_id = result.ir_func_id;
+        return SUCCESS;
+    }
+    
+    return FAILURE;
+}

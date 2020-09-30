@@ -144,6 +144,34 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         *ctx->ast->common.ast_variadic_array = ast_type_clone(&func->return_type);
         ctx->ast->common.ast_variadic_source = func->source;
     }
+
+    if(strcmp(func->name, "__initializer_list__") == 0){
+        if(ctx->ast->common.ast_initializer_list != NULL){
+            compiler_panic(ctx->compiler, source, "The function __initializer_list__ can only be defined once");
+            compiler_panic(ctx->compiler, ctx->ast->common.ast_initializer_list_source, "Previous definition");
+            return FAILURE;
+        }
+
+        if(ast_type_is_void(&func->return_type)){
+            compiler_panic(ctx->compiler, source, "The function __initializer_list__ must return a value");
+            return FAILURE;
+        }
+
+        if(func->traits != TRAIT_NONE
+        || func->arity != 2
+        || !ast_type_is_base_of(&func->arg_types[0], "ptr")
+        || !ast_type_is_base_of(&func->arg_types[1], "usize")
+        || func->arg_type_traits[0] != TRAIT_NONE
+        || func->arg_type_traits[1] != TRAIT_NONE
+        ){
+            compiler_panic(ctx->compiler, source, "Special function __initializer_list__ must be declared like:\n'__initializer_list__(array *$T, length usize) <$T> ReturnType'");
+            return FAILURE;
+        }
+
+        ctx->ast->common.ast_initializer_list = malloc(sizeof(ast_type_t));
+        *ctx->ast->common.ast_initializer_list = ast_type_clone(&func->return_type);
+        ctx->ast->common.ast_initializer_list_source = func->source;
+    }
     
     static const char *math_management_funcs[] = {
         "__add__", "__divide__", "__equals__", "__greater_than__",
