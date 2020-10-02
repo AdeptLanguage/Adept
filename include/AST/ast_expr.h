@@ -374,6 +374,10 @@ typedef struct {
     ast_expr_t **args;
     length_t arity;
     bool is_tentative;
+
+    // Optional return type matching, only
+    // exists if 'gives.elements_length' isn't zero
+    ast_type_t gives;
 } ast_expr_call_t;
 
 // ---------------- ast_expr_variable_t ----------------
@@ -461,6 +465,10 @@ typedef struct {
     ast_expr_t **args;
     length_t arity;
     bool is_tentative;
+
+    // Optional return type matching, only
+    // exists if 'gives.elements_length' isn't zero
+    ast_type_t gives;
 } ast_expr_call_method_t;
 
 // ---------------- ast_expr_va_arg_t ----------------
@@ -688,7 +696,7 @@ void ast_expr_create_null(ast_expr_t **out_expr, source_t source);
 
 // ---------------- ast_expr_create_call ----------------
 // Creates a call expression
-void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, source_t source);
+void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t gives, source_t source);
 
 // ---------------- ast_expr_create_variable ----------------
 // Creates a variable expression

@@ -486,6 +486,12 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
             return FAILURE;
         }
 
+        if(expr->gives.elements_length != 0){
+            compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function variable");
+            ast_types_free_fully(arg_types, arity);
+            return FAILURE;
+        }
+
         // Load function pointer value from variable
         *ir_value = build_varptr(builder, tmp_ir_variable_type, var->id);
         *ir_value = build_load(builder, *ir_value, expr->source);
@@ -509,7 +515,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
     // If there doesn't exist a nearby scoped variable with the same name, look for function
     funcpair_t pair;
-    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &pair);
+    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, &pair);
 
     // Propagate failure if something went wrong during the search
     if(error == ALT_FAILURE){
@@ -586,6 +592,12 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         tmp_ir_variable_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
         tmp_ir_variable_type->kind = TYPE_KIND_POINTER;
 
+        if(expr->gives.elements_length != 0){
+            compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function via global variable");
+            ast_types_free_fully(arg_types, arity);
+            return FAILURE;
+        }
+
         if(ir_gen_resolve_type(builder->compiler, builder->object, tmp_ast_variable_type, (ir_type_t**) &tmp_ir_variable_type->extra)){
             ast_types_free_fully(arg_types, expr->arity);
             return FAILURE;
@@ -640,7 +652,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     }
 
     // Otherwise, print an error messsage
-    compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity);
+    compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives);
     ast_types_free_fully(arg_types, expr->arity);
     return FAILURE;
 }
@@ -708,7 +720,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *buil
         trait_t padded_type_traits[arity];
         
         // Copy type traits for required arguments with the specified argument traits
-        memcpy(padded_type_traits, target_arg_type_traits, sizeof(trait_t) * arity);
+        memcpy(padded_type_traits, target_arg_type_traits, sizeof(trait_t) * arity_without_variadic_arguments);
 
         // Fill in type traits for additional optional arguments with regular argument traits
         memset(&padded_type_traits[arity_without_variadic_arguments], TRAIT_NONE, sizeof(trait_t) * extra_argument_count);
@@ -1088,7 +1100,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
         if(expr->tentative) goto fail_tentatively;
 
         // Otherwise, we failed to find a function we were expecting to find
-        compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length);
+        compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL);
         return FAILURE;
     }
 
@@ -1429,7 +1441,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     // Find the appropriate method to call
     funcpair_t pair;
-    errorcode_t error = ir_gen_expr_call_method_find_appropriate_method(builder, expr, arg_values, arg_types, &pair);
+    errorcode_t error = ir_gen_expr_call_method_find_appropriate_method(builder, expr, arg_values, arg_types, &expr->gives, &pair);
     
     // If we couldn't find a suitable method, handle the failure
     if(error != SUCCESS){
@@ -1507,7 +1519,9 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values, ast_type_t *arg_types, funcpair_t *result){
+errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values,
+        ast_type_t *arg_types, ast_type_t *gives, funcpair_t *result){
+    
     weak_cstr_t subject;
     ast_type_t *subject_type = &arg_types[0];
     errorcode_t error;
@@ -1515,11 +1529,11 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
     // Obtain the name of the subject and find the appropriate method
     if(ast_type_is_pointer_to_base(subject_type)){
         subject = ((ast_elem_base_t*) subject_type->elements[1])->base;
-        error = ir_gen_find_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, result);
+        error = ir_gen_find_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, result);
     }
     else if(ast_type_is_pointer_to_generic_base(subject_type)){
         subject = ((ast_elem_generic_base_t*) subject_type->elements[1])->name;
-        error = ir_gen_find_generic_base_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, result);
+        error = ir_gen_find_generic_base_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, result);
     }
     else {
         redprintf("INTERNAL ERROR: ir_gen_expr_call_method_find_appropriate_method() received bad subject AST type\n")

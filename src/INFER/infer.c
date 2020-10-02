@@ -146,6 +146,10 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 for(length_t a = 0; a != call_stmt->arity; a++){
                     if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return FAILURE;
                 }
+
+                if(call_stmt->gives.elements_length != 0){
+                    if(infer_type(ctx, &call_stmt->gives)) return FAILURE;
+                }
             }
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
@@ -214,6 +218,10 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 if(infer_expr(ctx, func, &call_stmt->value, EXPR_NONE, scope)) return FAILURE;
                 for(length_t a = 0; a != call_stmt->arity; a++){
                     if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, scope)) return FAILURE;
+                }
+
+                if(call_stmt->gives.elements_length != 0){
+                    if(infer_type(ctx, &call_stmt->gives)) return FAILURE;
                 }
             }
             break;

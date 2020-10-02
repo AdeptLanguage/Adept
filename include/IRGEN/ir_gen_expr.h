@@ -81,7 +81,8 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         length_t *field_index, ir_type_t **field_type, bool *is_via_union, ast_type_t *out_expr_type);
 
 // Finds the appropriate method for a 'CALL METHOD' expression to call
-errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values, ast_type_t *arg_types, funcpair_t *result);
+errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values,
+        ast_type_t *arg_types, ast_type_t *gives, funcpair_t *result);
 
 // Fills in any missing arguments for a 'CALL'/'CALL METHOD' expression
 errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types,

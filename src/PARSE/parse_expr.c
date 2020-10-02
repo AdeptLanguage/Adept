@@ -385,9 +385,23 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                         }
                     }
 
+                    if(tokens[++(*i)].id == TOKEN_GIVES){
+                        // Skip over '~>'
+                        (*i)++;
+
+                        if(parse_type(ctx, &call_expr->gives)){
+                            ctx->ignore_newlines_in_expr_depth--;
+                            ast_exprs_free_fully(call_expr->args, call_expr->arity);
+                            free(call_expr->name);
+                            free(call_expr);
+                            return FAILURE;
+                        }
+                    } else {
+                        memset(&call_expr->gives, 0, sizeof(ast_type_t));
+                    }
+
                     ctx->ignore_newlines_in_expr_depth--;
                     *inout_expr = (ast_expr_t*) call_expr;
-                    (*i)++;
                 } else {
                     if(is_tentative){
                         compiler_panic(ctx->compiler, sources[*i - 2], "Cannot have tentative field access");
@@ -712,9 +726,24 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         return FAILURE;
     }
 
+    ast_type_t gives;
+
+    if(tokens[++(*i)].id == TOKEN_GIVES){
+        // Skip over '~>'
+        (*i)++;
+
+        if(parse_type(ctx, &gives)){
+            ctx->ignore_newlines_in_expr_depth--;
+            ast_exprs_free_fully(args, arity);
+            free(name);
+            return FAILURE;
+        }
+    } else {
+        memset(&gives, 0, sizeof(ast_type_t));
+    }
+
     ctx->ignore_newlines_in_expr_depth--;
-    ast_expr_create_call(out_expr, name, arity, args, is_tentative, source);
-    (*i)++;
+    ast_expr_create_call(out_expr, name, arity, args, is_tentative, gives, source);
     return SUCCESS;
 }
 

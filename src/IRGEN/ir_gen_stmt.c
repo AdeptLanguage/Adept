@@ -1064,6 +1064,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     } else {
                         // STRUCTURE
                         // Get array length by calling the __length__() method
+                        // DANGEROUS: Manually creating 'ast_expr_call_method_t' expression
+                        // TODO: Replace with something like 'ast_expr_create_call_method'
                         ast_expr_call_method_t length_call;
                         length_call.id = EXPR_CALL_METHOD;
                         length_call.source = phantom_list_value.source;
@@ -1072,6 +1074,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         length_call.args = NULL;
                         length_call.arity = 0;
                         length_call.is_tentative = false;
+                        memset(&length_call.gives, 0, sizeof(ast_type_t));
 
                         if(ir_gen_expr(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
                             ast_type_free(&phantom_list_value.type);
@@ -1161,6 +1164,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 } else if(list_precomputed){
                     // STRUCTURE
                     // Call the '__array__()' method to get the value for the array
+                    // DANGEROUS: Manually creating 'ast_expr_call_method_t' expression
+                    // TODO: Replace with something like 'ast_expr_create_call_method'
                     ast_expr_call_method_t array_call;
                     array_call.id = EXPR_CALL_METHOD;
                     array_call.source = phantom_list_value.source;
@@ -1169,6 +1174,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     array_call.args = NULL;
                     array_call.arity = 0;
                     array_call.is_tentative = false;
+                    memset(&array_call.gives, 0, sizeof(ast_type_t));
 
                     if(ir_gen_expr(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
                         ast_type_free(&phantom_list_value.type);

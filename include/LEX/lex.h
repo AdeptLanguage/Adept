@@ -33,30 +33,31 @@ typedef struct {
 // ==============================================================
 // -------------- Possible lexical analysis states --------------
 // ==============================================================
-#define LEX_STATE_IDLE         0x00000000
-#define LEX_STATE_WORD         0x00000001
-#define LEX_STATE_STRING       0x00000002
-#define LEX_STATE_CSTRING      0x00000003
-#define LEX_STATE_EQUALS       0x00000004
-#define LEX_STATE_NOT          0x00000005
-#define LEX_STATE_NUMBER       0x00000006
-#define LEX_STATE_CONSTANT     0x00000007
-#define LEX_STATE_ADD          0x00000008
-#define LEX_STATE_SUBTRACT     0x00000009
-#define LEX_STATE_MULTIPLY     0x0000000A
-#define LEX_STATE_DIVIDE       0x0000000B
-#define LEX_STATE_MODULUS      0x0000000C
-#define LEX_STATE_BIT_XOR      0x0000000D
-#define LEX_STATE_LINECOMMENT  0x0000000E
-#define LEX_STATE_LONGCOMMENT  0x0000000F
-#define LEX_STATE_ENDCOMMENT   0x00000010
-#define LEX_STATE_LESS         0x00000011
-#define LEX_STATE_GREATER      0x00000012
-#define LEX_STATE_UBERAND      0x00000013
-#define LEX_STATE_UBEROR       0x00000014
-#define LEX_STATE_COLON        0x00000015
-#define LEX_STATE_META         0x00000016
-#define LEX_STATE_POLYMORPH    0x00000017
+#define LEX_STATE_IDLE        0x00000000
+#define LEX_STATE_WORD        0x00000001
+#define LEX_STATE_STRING      0x00000002
+#define LEX_STATE_CSTRING     0x00000003
+#define LEX_STATE_EQUALS      0x00000004
+#define LEX_STATE_NOT         0x00000005
+#define LEX_STATE_NUMBER      0x00000006
+#define LEX_STATE_CONSTANT    0x00000007
+#define LEX_STATE_ADD         0x00000008
+#define LEX_STATE_SUBTRACT    0x00000009
+#define LEX_STATE_MULTIPLY    0x0000000A
+#define LEX_STATE_DIVIDE      0x0000000B
+#define LEX_STATE_MODULUS     0x0000000C
+#define LEX_STATE_BIT_XOR     0x0000000D
+#define LEX_STATE_LINECOMMENT 0x0000000E
+#define LEX_STATE_LONGCOMMENT 0x0000000F
+#define LEX_STATE_ENDCOMMENT  0x00000010
+#define LEX_STATE_LESS        0x00000011
+#define LEX_STATE_GREATER     0x00000012
+#define LEX_STATE_UBERAND     0x00000013
+#define LEX_STATE_UBEROR      0x00000014
+#define LEX_STATE_COLON       0x00000015
+#define LEX_STATE_META        0x00000016
+#define LEX_STATE_POLYMORPH   0x00000017
+#define LEX_STATE_COMPLEMENT  0x00000018
 
 // ---------------- lex ----------------
 // Entry point for lexical analysis

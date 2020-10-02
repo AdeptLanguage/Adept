@@ -230,6 +230,8 @@ call :compile repeat_fields
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile repeat_static
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile return_matching
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile return_ten
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile scientific

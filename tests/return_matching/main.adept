@@ -1,0 +1,25 @@
+
+pragma ignore_unused
+
+import basics
+
+func something int {
+    return 42
+}
+
+func something float {
+    return 3.1415
+}
+
+func something <float> List {
+    floats <float> List
+    repeat 3, floats.add(idx as float)
+    return floats.commit()
+}
+
+func main {
+    // Use '~>' operator to specify return type
+    print(something() ~> int)
+    print(something() ~> float)
+    print(something() ~> <float> List)
+}

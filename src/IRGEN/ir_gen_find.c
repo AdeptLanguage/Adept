@@ -131,7 +131,7 @@ errorcode_t ir_gen_find_func_named_inner(object_t *object, const char *name, boo
 }
 
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result){
     
     errorcode_t error;
     weak_cstr_t try_name;
@@ -140,43 +140,46 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
     // First, try to locate in the current namespace
     if(object->current_namespace){
         try_name = tmpbuf_quick_concat3(&builder->compiler->tmp, object->current_namespace, "\\", name);
-        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, result);
+        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, gives, result);
         if(error != FAILURE) return error;
     }
 
     // Second, try to locate in 'used' namespaces
     for(length_t i = 0; i != object->using_namespaces_length; i++){
         try_name = tmpbuf_quick_concat3(&builder->compiler->tmp, object->using_namespaces[i].cstr, "\\", name);
-        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, result);
+        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, gives, result);
         if(error != FAILURE) return error;
     }
 
     // Lastly, try to locate in global namespace
-    return ir_gen_find_func_conforming_inner(builder, name, arg_values, arg_types, type_list_length, result);
+    return ir_gen_find_func_conforming_inner(builder, name, arg_values, arg_types, type_list_length, gives, result);
 }
 
 errorcode_t ir_gen_find_func_conforming_inner(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result){
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result){
     
     // Do strict argument type conforming rules first
-    errorcode_t strict_errorcode = ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS);
+    errorcode_t strict_errorcode = ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS);
     if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
 
     // If no strict match was found, try a looser match
-    return ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
+    return ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
 }
 
 errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result, trait_t conform_mode){
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result, trait_t conform_mode){
     
     ir_module_t *ir_module = &builder->object->ir_module;
     maybe_index_t index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
+
+    // Allow for '.elements_length' to be zero to indicate no return matching
+    if(gives && gives->elements_length == 0) gives = NULL;
 
     if(index != -1){
         ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
         ast_func_t *ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
 
-        if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, conform_mode)){
+        if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
             result->ast_func = ast_func;
             result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
             result->ast_func_id = mapping->ast_func_id;
@@ -193,7 +196,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
             }
             if(mapping->is_beginning_of_group == 1) break;
 
-            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, conform_mode)){
+            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
                 result->ast_func = ast_func;
                 result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
                 result->ast_func_id = mapping->ast_func_id;
@@ -213,7 +216,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
         bool found_compatible = false;
         ast_type_var_catalog_t using_catalog;
 
-        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, conform_mode);
+        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -227,7 +230,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
-            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, conform_mode);
+            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
             if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -289,7 +292,7 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
     }
 
     // Whether we have a __pass__ function is unknown, so lets try to see if we have one
-    errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, result);
+    errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, NULL, result);
     if(errorcode != SUCCESS){
         if(errorcode == FAILURE) cache_entry->has_pass_func = TROOLEAN_FALSE;
         return errorcode;
@@ -344,12 +347,12 @@ errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument,
     switch(arg_type->elements[0]->id){
     case AST_ELEM_BASE: {
             weak_cstr_t struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
-            errorcode = ir_gen_find_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, result);
+            errorcode = ir_gen_find_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, NULL, result);
         }
         break;
     case AST_ELEM_GENERIC_BASE: {
             weak_cstr_t struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
-            errorcode = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, result);
+            errorcode = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, NULL, result);
         }
         break;
     default:
@@ -372,23 +375,26 @@ errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument,
 
 errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
         const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-        length_t type_list_length, funcpair_t *result){
+        length_t type_list_length, ast_type_t *gives, funcpair_t *result){
     
     // Do strict argument type conforming rules first
-    errorcode_t strict_errorcode = ir_gen_find_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS);
+    errorcode_t strict_errorcode = ir_gen_find_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS);
     if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
 
     // If no strict match was found, try a looser match
-    return ir_gen_find_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
+    return ir_gen_find_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
 }
 
 errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *struct_name,
         const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-        length_t type_list_length, funcpair_t *result, trait_t conform_mode){
+        length_t type_list_length, ast_type_t *gives, funcpair_t *result, trait_t conform_mode){
 
     // NOTE: arg_values, arg_types, etc. must contain an additional beginning
     //           argument for the object being called on
     ir_module_t *ir_module = &builder->object->ir_module;
+
+    // Allow for '.elements_length' to be zero to indicate no return matching
+    if(gives && gives->elements_length == 0) gives = NULL;
 
     maybe_index_t index = find_beginning_of_method_group(ir_module->methods, ir_module->methods_length, struct_name, name);
 
@@ -396,7 +402,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
         ir_method_t *method = &ir_module->methods[index];
         ast_func_t *ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
-        if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, conform_mode)){
+        if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
             result->ast_func = ast_func;
             result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
             result->ast_func_id = method->ast_func_id;
@@ -413,7 +419,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
             }
             if(method->is_beginning_of_group == 1) break;
 
-            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, conform_mode)){
+            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
                 result->ast_func = ast_func;
                 result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
                 result->ast_func_id = method->ast_func_id;
@@ -433,7 +439,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
         bool found_compatible = false;
         ast_type_var_catalog_t using_catalog;
 
-        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, conform_mode);
+        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -447,7 +453,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
-            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, conform_mode);
+            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
             if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -481,23 +487,26 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
 
 errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, const char *generic_base,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, funcpair_t *result){
+    length_t type_list_length, ast_type_t *gives, funcpair_t *result){
     
     // Do strict argument type conforming rules first
-    errorcode_t strict_errorcode = ir_gen_find_generic_base_method_conforming_to(builder, generic_base, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS);
+    errorcode_t strict_errorcode = ir_gen_find_generic_base_method_conforming_to(builder, generic_base, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS);
     if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
 
     // If no strict match was found, try a looser match
-    return ir_gen_find_generic_base_method_conforming_to(builder, generic_base, name, arg_values, arg_types, type_list_length, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
+    return ir_gen_find_generic_base_method_conforming_to(builder, generic_base, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
 }
 
 errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder, const char *generic_base,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, funcpair_t *result, trait_t conform_mode){
+    length_t type_list_length, ast_type_t *gives, funcpair_t *result, trait_t conform_mode){
     
     // NOTE: arg_values, arg_types, etc. must contain an additional beginning
     //           argument for the object being called on
     ir_module_t *ir_module = &builder->object->ir_module;
+
+    // Allow for '.elements_length' to be zero to indicate no return matching
+    if(gives && gives->elements_length == 0) gives = NULL;
 
     maybe_index_t index = find_beginning_of_generic_base_method_group(ir_module->generic_base_methods, ir_module->generic_base_methods_length, generic_base, name);
 
@@ -505,7 +514,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
         ir_generic_base_method_t *method = &ir_module->generic_base_methods[index];
         ast_func_t *ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
-        if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, conform_mode)){
+        if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
             result->ast_func = ast_func;
             result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
             result->ast_func_id = method->ast_func_id;
@@ -522,7 +531,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
             }
             if(method->is_beginning_of_group == 1) break;
 
-            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, conform_mode)){
+            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
                 result->ast_func = ast_func;
                 result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
                 result->ast_func_id = method->ast_func_id;
@@ -542,7 +551,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
         bool found_compatible = false;
         ast_type_var_catalog_t using_catalog;
 
-        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, conform_mode);
+        errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
         if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -556,7 +565,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
             }
             if(poly_func->is_beginning_of_group == 1) break;
 
-            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, conform_mode);
+            res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
             if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
 
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
@@ -760,7 +769,7 @@ successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t t
 }
 
 successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
-            ast_type_t *arg_type_list, length_t type_list_length, trait_t conform_mode){
+            ast_type_t *arg_type_list, length_t type_list_length, ast_type_t *gives, trait_t conform_mode){
 
     ast_type_t *arg_types = func->arg_types;
     length_t required_arity = func->arity;
@@ -772,6 +781,9 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
         (conform_mode & CONFORM_MODE_VARIADIC ? !(func->traits & AST_FUNC_VARIADIC) : true)
     ) return false;
     
+    // Ensure return type matches if provided
+    if(gives && !ast_types_identical(gives, &func->return_type)) return false;
+
     // Determine whether we are missing arguments
     bool requires_use_of_defaults = required_arity > type_list_length;
 
@@ -822,7 +834,7 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 }
 
 errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
-        length_t type_list_length, ast_type_var_catalog_t *out_catalog, trait_t conform_mode){
+        length_t type_list_length, ast_type_var_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode){
 
     length_t required_arity = poly_template->arity;
 
@@ -865,7 +877,10 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
     memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
 
-    for(length_t i = 0; i != type_list_length; i++){
+    // Number of polymorphic paramater types that have been processed (used for cleanup)
+    length_t i;
+
+    for(i = 0; i != type_list_length; i++){
         errorcode_t res = SUCCESS;
 
         if(ast_type_has_polymorph(&poly_template->arg_types[i]))
@@ -874,14 +889,23 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
             res = ast_types_conform(builder, &arg_value_list[i], &arg_types[i], &poly_template->arg_types[i], conform_mode) ? SUCCESS : FAILURE;
 
         if(res != SUCCESS){
-            // Restore pool snapshot
-            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            i++;
+            goto polymorphic_failure;
+        }
+    }
 
-            // Undo any modifications to the function arguments
-            memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * (i + 1));
-            free(arg_value_list_unmodified);
-            ast_type_var_catalog_free(&catalog);
-            return res;
+    // Ensure return type matches if provided
+    if(gives && gives->elements_length != 0){
+        ast_type_t concrete_return_type;
+        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &poly_template->return_type, &concrete_return_type)){
+            goto polymorphic_failure;
+        }
+
+        bool meets_return_matching_requirement = ast_types_identical(gives, &concrete_return_type);
+        ast_type_free(&concrete_return_type);
+
+        if(!meets_return_matching_requirement){
+            goto polymorphic_failure;
         }
     }
 
@@ -889,6 +913,16 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     else ast_type_var_catalog_free(&catalog);
     free(arg_value_list_unmodified);
     return SUCCESS;
+
+polymorphic_failure:
+    // Restore pool snapshot
+    ir_pool_snapshot_restore(builder->pool, &snapshot);
+
+    // Undo any modifications to the function arguments
+    memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * i);
+    free(arg_value_list_unmodified);
+    ast_type_var_catalog_free(&catalog);
+    return FAILURE;
 }
 
 errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog){

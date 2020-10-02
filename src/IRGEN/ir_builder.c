@@ -1034,8 +1034,9 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
             arguments[0] = build_load(builder, mutable_value, ast_type->source);
 
-            if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, &pass_func)){
+            if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, NULL, &pass_func)){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+
                 return FAILURE;
             }
         }
@@ -1372,7 +1373,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     case AST_ELEM_BASE:
         struct_name = ((ast_elem_base_t*) ast_destination_type->elements[0])->base;
 
-        if(ir_gen_find_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, &result) == FAILURE){
+        if(ir_gen_find_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, &result) == FAILURE){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             ast_type_free(&arg_types[0]);
             // NOTE: Don't free arg_types[1] because we don't have ownership
@@ -1382,7 +1383,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     case AST_ELEM_GENERIC_BASE:
         struct_name = ((ast_elem_generic_base_t*) ast_destination_type->elements[0])->name;
 
-        if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, &result) == FAILURE){
+        if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, &result) == FAILURE){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             ast_type_free(&arg_types[0]);
             // NOTE: Don't free arg_types[1] because we don't have ownership
@@ -1441,7 +1442,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
         ast_type_t types[2] = {*lhs_type, *rhs_type};
 
-        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, &result)
+        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, NULL, &result)
         || handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2)){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             return NULL;
@@ -1485,7 +1486,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     ast_type_make_base_ptr(&argument_ast_types[0], strclone(struct_name));
     argument_ast_types[1] = *index_type;
     
-    if(ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, &result)
+    if(ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, &result)
     || handle_pass_management(builder, arguments, argument_ast_types, result.ast_func->arg_type_traits, 2)
     ){
         ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1890,6 +1891,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
             for(length_t a = 0; a != call_stmt->arity; a++){
                 if(resolve_expr_polymorphics(compiler, type_table, catalog, call_stmt->args[a])) return FAILURE;
             }
+
+            if(call_stmt->gives.elements_length != 0){
+                if(resolve_type_polymorphics(compiler, type_table, catalog, &call_stmt->gives, NULL)) return FAILURE;
+            }
         }
         break;
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
@@ -1952,6 +1957,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
 
             for(length_t a = 0; a != call_stmt->arity; a++){
                 if(resolve_expr_polymorphics(compiler, type_table, catalog, call_stmt->args[a])) return FAILURE;
+            }
+
+            if(call_stmt->gives.elements_length != 0){
+                if(resolve_type_polymorphics(compiler, type_table, catalog, &call_stmt->gives, NULL)) return FAILURE;
             }
         }
         break;

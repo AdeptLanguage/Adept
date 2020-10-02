@@ -1002,9 +1002,13 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 
 #if !defined(ADEPT_INSIGHT_BUILD) || defined(__EMSCRIPTEN__)
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
-        const char *name, ast_type_t *types, length_t arity){
+        const char *name, ast_type_t *types, length_t arity, ast_type_t *gives){
     
     bool has_potential_candidates = compiler_undeclared_function_possiblities(object, &compiler->tmp, name, false);
+
+    // Allow for '.elements_length' to be zero
+    // to indicate to return matching
+    if(gives->elements_length == 0) gives = NULL;
 
     if(!has_potential_candidates){
         // No other function with that name exists
@@ -1013,7 +1017,9 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
     } else {
         // Other functions have the same name
         char *args_string = make_args_string(types, NULL, arity, TRAIT_NONE);
-        compiler_panicf(compiler, source, "Undeclared function %s(%s)", name, args_string ? args_string : "");
+        char *gives_string = gives ? ast_type_str(gives) : NULL;
+        compiler_panicf(compiler, source, "Undeclared function %s(%s)%s%s", name, args_string ? args_string : "", gives ? " ~> " : "", gives ? gives_string : "");
+        free(gives_string);
         free(args_string);
 
         printf("\nPotential Candidates:\n");

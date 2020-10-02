@@ -244,12 +244,29 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             memcpy(&args_representation[args_representation_index], ")", 2);
             args_representation_index += 1;
 
-            // name   |   (arg1, arg2, arg3)   |   \0
+            strong_cstr_t gives = NULL;
+            length_t gives_bytes = 0;
+            length_t gives_length = 0;
+            if(call_expr->gives.elements_length != 0){
+                gives_bytes += 4; // " ~> "
+                gives = ast_type_str(&call_expr->gives);
+                gives_length = strlen(gives);
+                gives_bytes += gives_length;
+            }
+
+            // name   |   (arg1, arg2, arg3)   |   ~> ReturnType   |   \0
             length_t name_length = strlen(call_expr->name);
             representation = malloc(name_length + args_representation_length + 1);
             memcpy(representation, call_expr->name, name_length);
             memcpy(&representation[name_length], args_representation, args_representation_length + 1);
             for(length_t i = 0; i != call_expr->arity; i++) free(arg_strings[i]);
+
+            if(gives){
+                memcpy(&representation[name_length + args_representation_length], " ~> ", 4);
+                memcpy(&representation[name_length + args_representation_length + 4], gives, gives_length + 1);
+                free(gives);
+            }
+
             free(arg_strings);
             free(args_representation);
             return representation;
@@ -353,12 +370,16 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             memcpy(&args_representation[args_representation_index], ")", 2);
             args_representation_index += 1;
 
-            // name   |   (arg1, arg2, arg3)   |   \0
-            representation = mallocandsprintf("%s.%s%s", value_rep, call_expr->name, args_representation);
+            strong_cstr_t gives = call_expr->gives.elements_length != 0 ? ast_type_str(&call_expr->gives) : NULL;
+            
+            // name   |   (arg1, arg2, arg3)   |   ~> ReturnType   |   \0
+            representation = mallocandsprintf("%s.%s%s%s%s", value_rep, call_expr->name, args_representation, gives ? " ~> " : "", gives ? gives : "");
             for(length_t i = 0; i != call_expr->arity; i++) free(arg_strings[i]);
+
             free(value_rep);
             free(arg_strings);
             free(args_representation);
+            free(gives);
             return representation;
         }
     case EXPR_NOT: {
@@ -531,6 +552,10 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_CALL:
         ast_exprs_free_fully(((ast_expr_call_t*) expr)->args, ((ast_expr_call_t*) expr)->arity);
+
+        if(((ast_expr_call_t*) expr)->gives.elements_length != 0){
+            ast_type_free(&((ast_expr_call_t*) expr)->gives);
+        }
         break;
     case EXPR_VARIABLE:
         // name is a weak_cstr_t so we don't have to worry about it
@@ -563,6 +588,10 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_CALL_METHOD:
         ast_expr_free_fully( ((ast_expr_call_method_t*) expr)->value );
         ast_exprs_free_fully(((ast_expr_call_method_t*) expr)->args, ((ast_expr_call_method_t*) expr)->arity);
+
+        if(((ast_expr_call_method_t*) expr)->gives.elements_length != 0){
+            ast_type_free(&((ast_expr_call_method_t*) expr)->gives);
+        }
         break;
     case EXPR_VA_ARG:
         ast_expr_free_fully( ((ast_expr_va_arg_t*) expr)->va_list );
@@ -791,6 +820,12 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         for(length_t i = 0; i != expr_as_call->arity; i++){
             clone_as_call->args[i] = ast_expr_clone(expr_as_call->args[i]);
         }
+
+        if(expr_as_call->gives.elements_length != 0){
+            clone_as_call->gives = ast_type_clone(&expr_as_call->gives);
+        } else {
+            memset(&clone_as_call->gives, 0, sizeof(ast_type_t));
+        }
         break;
 
         #undef expr_as_call
@@ -930,6 +965,13 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         for(length_t i = 0; i != expr_as_call_method->arity; i++){
             clone_as_call_method->args[i] = ast_expr_clone(expr_as_call_method->args[i]);
         }
+
+        if(expr_as_call_method->gives.elements_length != 0){
+            clone_as_call_method->gives = ast_type_clone(&expr_as_call_method->gives);
+        } else {
+            memset(&clone_as_call_method->gives, 0, sizeof(ast_type_t));
+        }
+
         break;
         
         #undef expr_as_call_method
@@ -1316,7 +1358,7 @@ void ast_expr_create_variable(ast_expr_t **out_expr, weak_cstr_t name, source_t 
     ((ast_expr_variable_t*) *out_expr)->source = source;
 }
 
-void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, source_t source){
+void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t gives, source_t source){
     *out_expr = malloc(sizeof(ast_expr_call_t));
     ((ast_expr_call_t*) *out_expr)->id = EXPR_CALL;
     ((ast_expr_call_t*) *out_expr)->name = name;
@@ -1324,6 +1366,7 @@ void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t ar
     ((ast_expr_call_t*) *out_expr)->args = args;
     ((ast_expr_call_t*) *out_expr)->is_tentative = is_tentative;
     ((ast_expr_call_t*) *out_expr)->source = source;
+    ((ast_expr_call_t*) *out_expr)->gives = gives;
 }
 
 void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cstr_t kind, source_t source){

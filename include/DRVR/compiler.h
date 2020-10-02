@@ -221,8 +221,10 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 #if !defined(ADEPT_INSIGHT_BUILD) || defined(__EMSCRIPTEN__)
 // ---------------- compiler_undeclared_function ----------------
 // Prints an error message for an undeclared function
+// NOTE: 'gives' can be NULL or 'gives.elements_length' can be zero
+//       to indicate to return matching
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
-    const char *name, ast_type_t *types, length_t arity);
+    const char *name, ast_type_t *types, length_t arity, ast_type_t *gives);
 
 // ---------------- compiler_undeclared_function_possiblities ----------------
 // Checks for all potential function candidates

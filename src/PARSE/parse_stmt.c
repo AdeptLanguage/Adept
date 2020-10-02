@@ -885,9 +885,25 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
         }
     }
 
+    (*i)++;
+
+    if(tokens[*i].id == TOKEN_GIVES){
+        // Skip over '~>'
+        (*i)++;
+
+        if(parse_type(ctx, &stmt->gives)){
+            ctx->ignore_newlines_in_expr_depth--;
+            ast_exprs_free_fully(stmt->args, stmt->arity);
+            free(stmt->name);
+            free(stmt);
+            return FAILURE;
+        }
+    } else {
+        memset(&stmt->gives, 0, sizeof(ast_type_t));
+    }
+
     ctx->ignore_newlines_in_expr_depth--;
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
-    (*i)++;
     return SUCCESS;
 }
 
