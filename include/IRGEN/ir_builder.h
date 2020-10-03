@@ -311,7 +311,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder);
 // NOTE: Assumes (ast_type->elements_length == 1)
 // NOTE: Returns SUCCESS if value was utilized in deference
 //       Returns FAILURE if value was not utilized in deference
-//       Returns ALT_FAILURE if a compile time error occured
+//       Returns ALT_FAILURE if a compile time error occurred
 errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value);
 
 errorcode_t handle_children_deference(ir_builder_t *builder);
@@ -324,7 +324,7 @@ bool could_have_deference(ast_type_t *ast_type);
 // Handles '__pass__' management function calls for passing arguments
 // NOTE: 'arg_type_traits' can be NULL
 // NOTE: Returns SUCCESS if nothing went wrong
-// NOTE: Returns FAILURE if compile time error occured
+// NOTE: Returns FAILURE if compile time error occurred
 errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity);
 
 // ---------------- handle_single_pass ----------------
@@ -332,7 +332,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
 // NOTE: Assumes (ast_type->elements_length == 1)
 // NOTE: Returns SUCCESS if value was utilized in passing
 //       Returns FAILURE if value was not utilized in passing
-//       Returns ALT_FAILURE if a compiler time error occured
+//       Returns ALT_FAILURE if a compiler time error occurred
 errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value);
 
 errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_return);
@@ -356,7 +356,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 // ---------------- handle_access_management ----------------
 // Handles '__access__' management function calls for [] operator
 // NOTE: Returns SUCCESS if nothing went wrong
-// NOTE: Returns FAILURE if compile time error occured
+// NOTE: Returns FAILURE if compile time error occurred
 ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
     ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type);
 

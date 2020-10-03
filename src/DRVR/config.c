@@ -133,7 +133,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
 
         // Ignore failure to update last updated
         if(maybe_last_update.type == JSMN_PRIMITIVE)
-            config_update_last_updated(config, filename, buffer, length, maybe_last_update);
+            config_update_last_updated(filename, buffer, length, maybe_last_update);
 
         download_buffer_t dlbuffer;
         if(download_to_memory(config->stash, &dlbuffer)){

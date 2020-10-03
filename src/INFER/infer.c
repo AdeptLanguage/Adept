@@ -941,8 +941,8 @@ unsigned int generics_primitive_type(ast_expr_t **expressions, length_t expressi
     // NOTE: This function determines what the primitive type should be of a list of
     //           generic expressions 'expressions' that don't have any outside influence
     //           with concrete primitives
-    //       e.g. the primitve type of (10 + 8.0 + 3) is a double
-    //       e.g. the primitve type of (10 + 3) is an int
+    //       e.g. the primitive type of (10 + 8.0 + 3) is a double
+    //       e.g. the primitive type of (10 + 3) is an int
 
     // Do best to find a common type for generic types
     char generics = 0x00;
@@ -1039,7 +1039,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                 impl_struct = object_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
 
                 if(impl_struct && requires_namespace){
-                    // If we can find the definite implmentation of this type, than change the name
+                    // If we can find the definite implementation of this type, than change the name
                     // to the full namespaced version
                     free(base);
                     base = strclone(impl_struct->name);
@@ -1061,7 +1061,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                 impl_struct = object_polymorphic_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
 
                 if(impl_struct && requires_namespace){
-                    // If we can find the definite implmentation of this type, than change the name
+                    // If we can find the definite implementation of this type, than change the name
                     // to the full namespaced version
                     free(base);
                     base = strclone(impl_struct->name);
@@ -1262,7 +1262,7 @@ void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out
 }
 
 void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expression_literal_id){
-    // HACK: Mention types created through primative data to the type table
+    // HACK: Mention types created through primitive data to the type table
     // (since with the current system, we can't know what types we will need very well)
     // TODO: Change the system so the resolution of rtti is further delayed
     // - Isaac Shelton, January 20th 2019

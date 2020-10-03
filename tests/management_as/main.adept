@@ -38,7 +38,7 @@ func sum(a, b int) int {
     implicit func __as__(string String) float  = string.toFloat()
     implicit func __as__(string String) double = string.toDouble()
 #else
-    // When using regular version, we will have to manully cast
+    // When using regular version, we will have to manually cast
 
     func __as__(string String) int    = string.toInt()
     func __as__(string String) float  = string.toFloat()

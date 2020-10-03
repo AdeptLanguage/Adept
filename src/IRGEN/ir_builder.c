@@ -680,7 +680,7 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
             // Revert recent pool allocations
             ir_pool_snapshot_restore(builder->pool, &snapshot);
 
-            // Real failure if a compile time error occured
+            // Real failure if a compile time error occurred
             if(failed == ALT_FAILURE) return FAILURE;
         }
     }
@@ -726,7 +726,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
             // Revert recent pool allocations
             ir_pool_snapshot_restore(builder->pool, &snapshot);
 
-            // Real failure if a compile time error occured
+            // Real failure if a compile time error occurred
             if(failed == ALT_FAILURE) return FAILURE;
         }
     }
@@ -738,7 +738,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     // NOTE: Assumes (ast_type->elements_length >= 1)
     // NOTE: Returns SUCCESS if mutable_value was utilized in deference
     //       Returns FAILURE if mutable_value was not utilized in deference
-    //       Returns ALT_FAILURE if a compiler time error occured
+    //       Returns ALT_FAILURE if a compiler time error occurred
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
     funcpair_t defer_func;
@@ -828,7 +828,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
     ir_pool_snapshot_t snapshot;
 
     if(this_ast_type == NULL || this_ast_type->elements_length != 2){
-        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_dereference() encountered unrecognzied format of __defer__ management method");
+        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_dereference() encountered unrecognized format of __defer__ management method");
         return FAILURE;
     }
 
@@ -837,7 +837,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
     ast_elem_t *concrete_elem = this_ast_type->elements[1];
 
     if(this_ast_type->elements[0]->id != AST_ELEM_POINTER || !(concrete_elem->id == AST_ELEM_BASE || concrete_elem->id == AST_ELEM_GENERIC_BASE)){
-        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_dereference() encountered unrecognzied argument types of __defer__ management method");
+        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_dereference() encountered unrecognized argument types of __defer__ management method");
         return FAILURE;
     }
 
@@ -1017,7 +1017,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     // NOTE: Assumes (ast_type->elements_length >= 1)
     // NOTE: Returns SUCCESS if mutable_value was utilized in deference
     //       Returns FAILURE if mutable_value was not utilized in deference
-    //       Returns ALT_FAILURE if a compiler time error occured
+    //       Returns ALT_FAILURE if a compiler time error occurred
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
     funcpair_t pass_func;
@@ -1141,7 +1141,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
     ir_pool_snapshot_t snapshot;
 
     if(passed_ast_type == NULL || passed_ast_type->elements_length < 1){
-        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_pass() encountered unrecognzied format of __pass__ management method");
+        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_pass() encountered unrecognized format of __pass__ management method");
         return FAILURE;
     }
 
@@ -1333,7 +1333,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
         }
         break;
     default:
-        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_pass() encountered unrecognzied argument types of __pass__ management method");
+        compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_pass() encountered unrecognized argument types of __pass__ management method");
         return FAILURE;
     }
 

@@ -1,5 +1,5 @@
 
-// A general implementation of levanshtein's distance algorithm
+// A general implementation of levenshtein's distance algorithm
 // I did not write this code myself, this is a public implementation
 // SOURCE: https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
 

@@ -1767,7 +1767,7 @@ errorcode_t ir_gen_expr_static_array(ir_builder_t *builder, ast_expr_static_data
             return FAILURE;
         }
 
-        // Dipose of temporary AST member type
+        // Dispose of temporary AST member type
         ast_type_free(&member_type);
     }
 
@@ -1831,7 +1831,7 @@ errorcode_t ir_gen_expr_static_struct(ir_builder_t *builder, ast_expr_static_dat
             return FAILURE;
         }
 
-        // Dipose of temporary member AST type
+        // Dispose of temporary member AST type
         ast_type_free(&member_type);
     }
 
@@ -2318,7 +2318,7 @@ ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *ex
 
     // NOTE: Returns the generated instruction
     // NOTE: The instruction id still must be specified after this call
-    // NOTE: Returns NULL if an error occured
+    // NOTE: Returns NULL if an error occurred
     // NOTE:'op_res' should be either MATH_OP_RESULT_MATCH
 
     ir_value_t *a, *b;

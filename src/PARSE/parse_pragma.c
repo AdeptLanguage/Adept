@@ -271,7 +271,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         else if(strcmp(read, "normal") == 0)     ctx->compiler->optimization = OPTIMIZATION_DEFAULT;
         else if(strcmp(read, "aggressive") == 0) ctx->compiler->optimization = OPTIMIZATION_AGGRESSIVE;
         else {
-            // Invalid optimiztaion level
+            // Invalid optimization level
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Invalid optimization level after 'pragma optimization'");
             printf("Possible levels are: none, less, normal or aggressive\n");
             return FAILURE;

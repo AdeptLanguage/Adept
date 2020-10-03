@@ -658,7 +658,7 @@ void ast_dump_structs(FILE *file, ast_struct_t *structs, length_t structs_length
             fields_string[fields_string_length + name_length] = ' ';
             memcpy(&fields_string[fields_string_length + name_length + 1], typename, typename_length);
 
-            // Some unnecessary copying of '\0', but whatever it doens't really matter cause
+            // Some unnecessary copying of '\0', but whatever it doesn't really matter cause
             //     this is just ast dump code
             if(f + 1 == structure->field_count){
                 fields_string[fields_string_length + name_length + 1 + typename_length] = '\0';
@@ -796,7 +796,7 @@ void ast_enum_init(ast_enum_t *inum,  weak_cstr_t name, weak_cstr_t *kinds, leng
 }
 
 ast_struct_t *ast_struct_find_exact(ast_t *ast, const char *name){
-    // TODO: Maybe sort and do a binary serach or something
+    // TODO: Maybe sort and do a binary search or something
     for(length_t i = 0; i != ast->structs_length; i++){
         if(strcmp(ast->structs[i].name, name) == 0){
             return &ast->structs[i];
@@ -816,7 +816,7 @@ successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, l
 }
 
 ast_polymorphic_struct_t *ast_polymorphic_struct_find_exact(ast_t *ast, const char *name){
-    // TODO: Maybe sort and do a binary serach or something
+    // TODO: Maybe sort and do a binary search or something
     for(length_t i = 0; i != ast->polymorphic_structs_length; i++){
         if(strcmp(ast->polymorphic_structs[i].name, name) == 0){
             return &ast->polymorphic_structs[i];

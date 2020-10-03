@@ -809,7 +809,7 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-    // Store a copy of the unmodifed function argument values
+    // Store a copy of the unmodified function argument values
     ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
     memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
 
@@ -873,7 +873,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-    // Store a copy of the unmodifed function argument values
+    // Store a copy of the unmodified function argument values
     ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
     memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
 

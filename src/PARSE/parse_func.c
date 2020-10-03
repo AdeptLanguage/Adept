@@ -56,7 +56,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         }
     }
     
-    // enforce specific arguements for special functions & methods
+    // enforce specific arguments for special functions & methods
     if(func->traits == AST_FUNC_DEFER && (
         !ast_type_is_void(&func->return_type)
         || func->arity != 1

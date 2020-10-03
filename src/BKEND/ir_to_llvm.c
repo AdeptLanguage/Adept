@@ -309,7 +309,7 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
 
 errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
     // Generates llvm function bodies from ir function data
-    // NOTE: Expects function skeltons to already be present
+    // NOTE: Expects function skeletons to already be present
 
     LLVMModuleRef llvm_module = llvm->module;
     ir_func_t *module_funcs = object->ir_module.funcs;
