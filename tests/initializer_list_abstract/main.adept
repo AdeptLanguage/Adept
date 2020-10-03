@@ -1,0 +1,55 @@
+
+func main {
+    initializer_list <int> MyInitializerList = {0, 1, 2, 3, 4, 5}
+    list_from_variable <int> List = initializer_list
+    list_from_value <int> List = {0, 1, 2, 3, 4, 5}
+
+    each int in list_from_variable {
+        printf('list[%d] = %d\n', idx, it)
+    }
+
+    nested <<int> List> List = {list_from_variable, list_from_value}
+    each <int> List in nested {
+        nest_idx int = idx
+        
+        each int in it {
+            printf('nested[%d][%d] = %d\n', nest_idx as int, idx as int, it)
+        }
+    }
+}
+
+struct <$T> MyInitializerList (array *$T, length usize) {
+    func __array__ *$T    = this.array
+    func __length__ usize = this.length
+    func __access__(index usize) *$T = this.array at index
+}
+
+func __initializer_list__(array *$T, length usize) <$T> MyInitializerList {
+    list POD <$T> MyInitializerList
+    list.array = array
+    list.length = length
+    return list
+}
+
+implicit func __as__(initializer <$T> MyInitializerList) <$T> List {
+    return list(initializer.array, initializer.length, Ownership::REFERENCE)
+}
+
+implicit func __as__(initializer <long> MyInitializerList) <int> List {
+    list <int> List
+    each long in initializer, list.add(it as int)
+    return list.commit()
+}
+
+implicit func __as__(initializer <long> MyInitializerList) <int> MyInitializerList {
+    // DANGEROUS: Modifies memory of initializer list
+
+    repeat initializer.length {
+        (initializer.array as *int)[idx] = initializer.array[idx]
+    }
+
+    return *cast *<int> MyInitializerList (&initializer)
+}
+
+// Prefer our definitons over those declared in the standard library
+import basics

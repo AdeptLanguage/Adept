@@ -77,6 +77,7 @@ compile import_std || exit $?
 compile import_std_c_like || exit $?
 compile increment || exit $?
 compile increment_stmt || exit $?
+compile initializer_list_abstract || exit $?
 compile inline_declaration || exit $?
 compile inner_struct || exit $?
 compile int_ptr_cast || exit $?
