@@ -1161,7 +1161,7 @@ errorcode_t ir_gen_expr_initlist(ir_builder_t *builder, ast_expr_initlist_t *exp
     // DANGEROUS: Using constant string for strong_cstr_t name,
     // we must reset 'name' to be NULL before freeing it
     ast_expr_call_t as_call;
-    ast_expr_create_call_in_place(&as_call, "__initializer_list__", 2, args, false, NULL, NULL_SOURCE);
+    ast_expr_create_call_in_place(&as_call, "__initializer_list__", 2, args, true, NULL, NULL_SOURCE);
 
     ir_value_t *initializer_list;
     errorcode_t error = ir_gen_expr(builder, (ast_expr_t*) &as_call, &initializer_list, false, &temporary_type);
@@ -1178,6 +1178,8 @@ errorcode_t ir_gen_expr_initlist(ir_builder_t *builder, ast_expr_initlist_t *exp
     if(error) return FAILURE;
 
     if(ast_type_is_void(&temporary_type)){
+        compiler_panicf(builder->compiler, expr->source, "__initializer_list__ must be defined in order to use initializer lists");
+        printf("\nTry importing '%s/InitializerList.adept'\n", ADEPT_VERSION_STRING);
         ast_type_free(&temporary_type);
         return FAILURE;
     }
