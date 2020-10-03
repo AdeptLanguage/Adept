@@ -196,6 +196,9 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_VA_ARG:
         if(ir_gen_expr_va_arg(builder, (ast_expr_va_arg_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
+    case EXPR_INITLIST:
+        if(ir_gen_expr_initlist(builder, (ast_expr_initlist_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        break;
     case EXPR_FUNC_ADDR:
         if(ir_gen_expr_func_addr(builder, (ast_expr_func_addr_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
@@ -254,7 +257,7 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         if(ir_gen_expr_inline_declare(builder, (ast_expr_inline_declare_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     default:
-        compiler_panic(builder->compiler, expr->source, "Unknown expression type id in expression");
+        compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Unknown expression type id in expression");
         return FAILURE;
     }
 
@@ -1076,6 +1079,118 @@ errorcode_t ir_gen_expr_va_arg(ir_builder_t *builder, ast_expr_va_arg_t *expr, i
 
     // Result type is the AST type given to va_arg expression
     if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&expr->arg_type);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_initlist(ir_builder_t *builder, ast_expr_initlist_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ast_type_t master_type;
+    ast_type_t temporary_type;
+    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * expr->length);
+
+    if(expr->length == 0){
+        compiler_panicf(builder->compiler, expr->source, "Empty initializer lists are not supported");
+        return FAILURE;
+    }
+
+    memset(&master_type, 0, sizeof(ast_type_t));
+
+    // Generate IR values for every element
+    for(length_t i = 0; i != expr->length; i++){
+        if(ir_gen_expr(builder, expr->elements[i], &values[i], false, &temporary_type)){
+            if(master_type.elements_length != 0) ast_type_free(&master_type);
+            return FAILURE;
+        }
+
+        if(i == 0){
+            // If first element in list, then its type will be the master type
+            master_type = temporary_type;
+        } else {
+            // Otherwise, conform the IR value to the master type
+            if(!ast_types_conform(builder, &values[i], &temporary_type, &master_type, CONFORM_MODE_ALL)){
+                char *master_string = ast_type_str(&master_type);
+                char *element_string = ast_type_str(&temporary_type);
+
+                compiler_panicf(builder->compiler, expr->elements[i]->source, "%d%s element of initializer list cannot be converted from type '%s' to '%s'",
+                    i + 1, get_numeric_ending(i + 1), element_string, master_string);
+                
+                free(element_string);
+                free(master_string);
+
+                ast_type_free(&master_type);
+                ast_type_free(&temporary_type);
+                return FAILURE;
+            }
+            ast_type_free(&temporary_type);
+        }
+    }
+
+    // Allocate memory on stack
+    ir_value_t *memory = build_alloc_array(builder, values[0]->type, build_literal_usize(builder->pool, expr->length));
+
+    // Store POD element values
+    // TODO: Maybe don't unroll loop for large initializer lists
+    for(length_t i = 0; i != expr->length; i++){
+        build_store(builder, values[i], build_array_access(builder, memory, build_literal_usize(builder->pool, i), expr->source), expr->source);
+    }
+
+    // Create AST phantom value for memory pointer
+    ast_expr_phantom_t phantom_memory_value;
+    phantom_memory_value.id = EXPR_PHANTOM;
+    phantom_memory_value.ir_value = memory;
+    phantom_memory_value.source = NULL_SOURCE;
+    phantom_memory_value.is_mutable = false;
+    phantom_memory_value.type = master_type;
+    ast_type_prepend_ptr(&phantom_memory_value.type);
+
+    // Create AST phantom value for memory length
+    ast_expr_phantom_t phantom_length_value;
+    phantom_length_value.id = EXPR_PHANTOM;
+    phantom_length_value.ir_value = build_literal_usize(builder->pool, expr->length);
+    phantom_length_value.source = NULL_SOURCE;
+    phantom_length_value.is_mutable = false;
+    ast_type_make_base(&phantom_length_value.type, strclone("usize"));
+
+    // Setup AST values to call special function
+    ast_expr_t *args[2];
+    args[0] = (ast_expr_t*) &phantom_memory_value;
+    args[1] = (ast_expr_t*) &phantom_length_value;
+
+    // DANGEROUS: Using stack-allocated argument expressions,
+    // we must reset 'arity' to zero and 'args' to NULL before
+    // freeing it
+    // DANGEROUS: Using constant string for strong_cstr_t name,
+    // we must reset 'name' to be NULL before freeing it
+    ast_expr_call_t as_call;
+    ast_expr_create_call_in_place(&as_call, "__initializer_list__", 2, args, false, NULL, NULL_SOURCE);
+
+    ir_value_t *initializer_list;
+    errorcode_t error = ir_gen_expr(builder, (ast_expr_t*) &as_call, &initializer_list, false, &temporary_type);
+
+    as_call.name = NULL;
+    as_call.args = NULL;
+    as_call.arity = 0;
+    ast_expr_free((ast_expr_t*) &as_call);
+
+    ast_type_free(&phantom_memory_value.type);
+    ast_type_free(&phantom_length_value.type);
+
+    // Ensure tentative call was successful
+    if(error) return FAILURE;
+
+    if(ast_type_is_void(&temporary_type)){
+        ast_type_free(&temporary_type);
+        return FAILURE;
+    }
+    
+    // Result value is the received initializer list
+    *ir_value = initializer_list;
+
+    // Result type is received AST type of initializer list value
+    if(out_expr_type){
+        *out_expr_type = temporary_type;
+    } else {
+        ast_type_free(&temporary_type);
+    }
     return SUCCESS;
 }
 

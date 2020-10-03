@@ -495,6 +495,32 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(type_str);
             return representation;
         }
+    case EXPR_INITLIST: {
+            char *compound = NULL;
+            length_t compound_length = 0;
+            length_t compound_capacity = 0;
+
+            for(length_t i = 0; i != ((ast_expr_initlist_t*) expr)->length; i++){
+                char *s = ast_expr_str(((ast_expr_initlist_t*) expr)->elements[i]);
+                length_t s_length = strlen(s);
+
+                if(i != 0){
+                    expand((void**) &compound, sizeof(char), compound_length, &compound_capacity, 3, 256);
+                    memcpy(&compound[compound_length], " ,", 3);
+                    compound_length += 3;
+                }
+
+                expand((void**) &compound, sizeof(char), compound_length, &compound_capacity, 1, 256);
+                memcpy(&compound[compound_length], s, s_length + 1);
+                compound_length += s_length;
+
+                free(s);
+            }
+
+            representation = mallocandsprintf("{%s}", compound ? compound : "");
+            free(compound);
+            return representation;
+        }
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -596,6 +622,9 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_VA_ARG:
         ast_expr_free_fully( ((ast_expr_va_arg_t*) expr)->va_list );
         ast_type_free( &(((ast_expr_va_arg_t*) expr)->arg_type) );
+        break;
+    case EXPR_INITLIST:
+        ast_exprs_free_fully(((ast_expr_initlist_t*) expr)->elements, ((ast_expr_initlist_t*) expr)->length);
         break;
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
@@ -1058,6 +1087,22 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_va_arg
         #undef clone_as_va_arg
+    case EXPR_INITLIST:
+        #define expr_as_initlist ((ast_expr_initlist_t*) expr)
+        #define clone_as_initlist ((ast_expr_initlist_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_initlist_t));
+        clone_as_initlist->elements = malloc(sizeof(ast_expr_t*) * expr_as_initlist->length);
+        clone_as_initlist->length = expr_as_initlist->length;
+
+        for(length_t i = 0; i != expr_as_initlist->length; i++){
+            clone_as_initlist->elements[i] = ast_expr_clone(expr_as_initlist->elements[i]);
+        }
+
+        break;
+
+        #undef expr_as_initlist
+        #undef clone_as_initlist
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         #define expr_as_declare ((ast_expr_declare_t*) expr)
@@ -1489,23 +1534,23 @@ const char *global_expression_rep_table[] = {
     "[]",                         // 0x00000030
     "<cast>",                     // 0x00000031
     "<sizeof>",                   // 0x00000032
-    "<call method>",              // 0x00000033
-    "<new>",                      // 0x00000034
-    "<new cstring>",              // 0x00000035
-    "<enum value>",               // 0x00000036
-    "<static array>",             // 0x00000037
-    "<static struct value>",      // 0x00000038
-    "<typeinfo for type>",        // 0x00000039
-    "<ternary>",                  // 0x0000003A
-    "<pre-increment>",            // 0x0000003B
-    "<pre-decrement>",            // 0x0000003C
-    "<post-increment>",           // 0x0000003D
-    "<post-decrement>",           // 0x0000003E
-    "<phantom>",                  // 0x0000003F
-    "<toggle>",                   // 0x00000040
-    "<va_arg>",                   // 0x00000041
-    "<reserved>",                 // 0x00000042
-    "<reserved>",                 // 0x00000043
+    "<sizeof value>",             // 0x00000033
+    "<call method>",              // 0x00000034
+    "<new>",                      // 0x00000035
+    "<new cstring>",              // 0x00000036
+    "<enum value>",               // 0x00000037
+    "<static array>",             // 0x00000038
+    "<static struct value>",      // 0x00000039
+    "<typeinfo for type>",        // 0x0000003A
+    "<ternary>",                  // 0x0000003B
+    "<pre-increment>",            // 0x0000003C
+    "<pre-decrement>",            // 0x0000003D
+    "<post-increment>",           // 0x0000003E
+    "<post-decrement>",           // 0x0000003F
+    "<phantom>",                  // 0x00000040
+    "<toggle>",                   // 0x00000041
+    "<va_arg>",                   // 0x00000042
+    "<initlist>",                 // 0x00000043
     "<reserved>",                 // 0x00000044
     "<reserved>",                 // 0x00000045
     "<reserved>",                 // 0x00000046

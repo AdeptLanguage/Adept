@@ -646,7 +646,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     if(ast_types_identical(ast_from_type, ast_to_type)) return true;
 
     // Worst case scenario, we try to use user-defined __as__ method
-    if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT) && ast_type_is_base(ast_from_type) && ast_type_is_base(ast_to_type)){
+    if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT) && ast_type_is_base_like(ast_from_type) && ast_type_is_base_like(ast_to_type)){
         ast_expr_phantom_t phantom_value;
         phantom_value.id = EXPR_PHANTOM;
         phantom_value.ir_value = *ir_value;
@@ -680,6 +680,8 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         as_call.arity = 0;
         as_call.gives.elements_length = 0;
         ast_expr_free((ast_expr_t*) &as_call);
+        
+        ast_type_free(&phantom_value.type);
 
         // Ensure tentative call was successful
         if(error || ast_type_is_void(&temporary_type)) return false;

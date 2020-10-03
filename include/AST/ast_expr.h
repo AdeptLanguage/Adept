@@ -89,6 +89,7 @@ extern "C" {
 #define EXPR_PHANTOM          0x00000040
 #define EXPR_TOGGLE           0x00000041
 #define EXPR_VA_ARG           0x00000042
+#define EXPR_INITLIST         0x00000043
 // Exclusive statements ---------------
 #define EXPR_DECLARE          0x00000050
 #define EXPR_DECLAREUNDEF     0x00000051
@@ -485,6 +486,15 @@ typedef struct {
     ast_expr_t *va_list;
     ast_type_t arg_type;
 } ast_expr_va_arg_t;
+
+// ---------------- ast_expr_initlist_t ----------------
+// Expression for initializer lists
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_expr_t **elements;
+    length_t length;
+} ast_expr_initlist_t;
 
 // ---------------- ast_expr_declare_t ----------------
 // Expression for declaring a variable

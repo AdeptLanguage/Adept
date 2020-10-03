@@ -105,6 +105,10 @@ errorcode_t parse_expr_preincrement(parse_ctx_t *ctx, ast_expr_t **out_expr);
 // Parses a pre-decrement expression
 errorcode_t parse_expr_predecrement(parse_ctx_t *ctx, ast_expr_t **out_expr);
 
+// ------------------ parse_expr_initlist ------------------
+// Parses an initializer list expression
+errorcode_t parse_expr_initlist(parse_ctx_t *ctx, ast_expr_t **out_expr);
+
 // ------------------ parse_get_precedence ------------------
 // Returns the precedence of the expression that will
 // be created by a given token id.

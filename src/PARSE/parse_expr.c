@@ -250,6 +250,10 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             *out_expr = (ast_expr_t*) va_arg_expr;
         }
         break;
+    case TOKEN_BEGIN: {
+            if(parse_expr_initlist(ctx, out_expr)) return FAILURE;
+        }
+        break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
         return FAILURE;
@@ -1237,6 +1241,57 @@ errorcode_t parse_expr_predecrement(parse_ctx_t *ctx, ast_expr_t **out_expr){
     
     *out_expr = (ast_expr_t*) predecrement_expr;
     return SUCCESS;
+}
+
+errorcode_t parse_expr_initlist(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    // NOTE: Assumes first token is '{'
+    
+    ast_expr_t **values = NULL;
+    length_t length = 0;
+    length_t capacity = 0;
+    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    token_t *tokens = ctx->tokenlist->tokens;
+    length_t *i = ctx->i;
+
+    if(parse_ignore_newlines(ctx, "Expected '}' or ',' in initializer list before end of file")) return FAILURE;
+
+    while(tokens[*i].id != TOKEN_END){
+        expand((void**) &values, sizeof(ast_expr_t*), length, &capacity, 1, 16);
+
+        // Parse single value
+        if(parse_expr(ctx, &values[length])) goto failed_to_parse_values;
+
+        // Increase number of expressions.
+        // NOTE: This cannot be combined with 'parse_expr' statement, because
+        // whether or not it succeeds influences what expressions
+        // we need to free on failure
+        length++;
+
+        if(parse_ignore_newlines(ctx, "Expected '}' or ',' in initializer list before end of file")) goto failed_to_parse_values;
+
+        if(tokens[*i].id == TOKEN_NEXT){
+            // Allow ',' instead of '}'
+            (*i)++;
+        } else if(tokens[*i].id != TOKEN_END){
+            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected '}' or ',' in initializer list");
+            goto failed_to_parse_values;
+        }
+    }
+    // Skip over '}' token
+    (*i)++;
+
+    ast_expr_initlist_t *initlist_expr = malloc(sizeof(ast_expr_initlist_t));
+    initlist_expr->id = EXPR_INITLIST;
+    initlist_expr->source = source;
+    initlist_expr->elements = values;
+    initlist_expr->length = length;
+    *out_expr = (ast_expr_t*) initlist_expr;
+    return SUCCESS;
+
+failed_to_parse_values:
+    ast_exprs_free_fully(values, length);
+    return FAILURE;
 }
 
 int parse_get_precedence(unsigned int id){

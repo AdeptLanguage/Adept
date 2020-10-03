@@ -664,9 +664,16 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             if(infer_type(ctx, &va->arg_type)) return FAILURE;
         }
         break;
+    case EXPR_INITLIST: {
+            ast_expr_initlist_t *initlist = (ast_expr_initlist_t*) *expr;
+            
+            for(length_t i = 0; i != initlist->length; i++){
+                if(infer_expr(ctx, ast_func, &initlist->elements[i], EXPR_NONE, scope)) return FAILURE;
+            }
+        }
+        break;
     default:
-        printf("%08X\n", (*expr)->id);
-        compiler_panic(ctx->compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type inside infer_expr_inner");
+        compiler_panicf(ctx->compiler, (*expr)->source, "INTERNAL ERROR: Unimplemented expression type 0x%08X inside infer_expr_inner", (*expr)->id);
         return FAILURE;
     }
 
