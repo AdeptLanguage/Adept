@@ -1,0 +1,46 @@
+
+#define use_implicit_as true
+
+import basics
+
+func main {
+    value_string String = "10"
+
+    #if use_implicit_as
+    value1 int = value_string
+    value2 float = value_string
+    value3 double = value_string
+    #else
+    value1 int = value_string as int
+    value2 float = value_string as float
+    value3 double = value_string as double
+    #end
+
+    print(value1)
+    print(value2)
+    print(value3)
+
+    #if use_implicit_as
+    print(sum("1234", "1234"))
+    #else
+    print(sum("1234" as int, "1234" as int))
+    #end
+}
+
+func sum(a, b int) int {
+    return a + b
+}
+
+#if use_implicit_as
+    // When using 'implicit', we won't have to manually cast
+
+    implicit func __as__(string String) int    = string.toInt()
+    implicit func __as__(string String) float  = string.toFloat()
+    implicit func __as__(string String) double = string.toDouble()
+#else
+    // When using regular version, we will have to manully cast
+
+    func __as__(string String) int    = string.toInt()
+    func __as__(string String) float  = string.toFloat()
+    func __as__(string String) double = string.toDouble()
+#end

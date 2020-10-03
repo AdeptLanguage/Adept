@@ -523,6 +523,13 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         return FAILURE;
     }
 
+    // If requires implicit, fail if conforming function isn't marked as implicit
+    if(expr->only_implicit && expr->is_tentative && !(pair.ast_func->traits & AST_FUNC_IMPLICIT)){
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
+        ast_types_free_fully(arg_types, arity);
+        return SUCCESS;
+    }
+
     // Found function that fits given name and arguments
     if(error == SUCCESS){
 

@@ -138,10 +138,10 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         module_func->maybe_column_number = column;
     }
 
-    #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN  && \
-        AST_FUNC_VARARG      == IR_FUNC_VARARG   && \
-        AST_FUNC_MAIN        == IR_FUNC_MAIN     && \
-        AST_FUNC_STDCALL     == IR_FUNC_STDCALL  && \
+    #if AST_FUNC_FOREIGN     == IR_FUNC_FOREIGN      && \
+        AST_FUNC_VARARG      == IR_FUNC_VARARG       && \
+        AST_FUNC_MAIN        == IR_FUNC_MAIN         && \
+        AST_FUNC_STDCALL     == IR_FUNC_STDCALL      && \
         AST_FUNC_POLYMORPHIC == IR_FUNC_POLYMORPHIC
     module_func->traits = ast_func->traits & 0x1F;
     #else

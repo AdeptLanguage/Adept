@@ -1004,10 +1004,10 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
         const char *name, ast_type_t *types, length_t arity, ast_type_t *gives){
     
-    bool has_potential_candidates = compiler_undeclared_function_possiblities(object, &compiler->tmp, name, false);
+    bool has_potential_candidates = compiler_undeclared_function_possibilities(object, &compiler->tmp, name, false);
 
     // Allow for '.elements_length' to be zero
-    // to indicate to return matching
+    // to indicate no return matching
     if(gives->elements_length == 0) gives = NULL;
 
     if(!has_potential_candidates){
@@ -1025,10 +1025,10 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         printf("\nPotential Candidates:\n");
     }
 
-    compiler_undeclared_function_possiblities(object, &compiler->tmp, name, true);
+    compiler_undeclared_function_possibilities(object, &compiler->tmp, name, true);
 }
 
-bool compiler_undeclared_function_possiblities(object_t *object, tmpbuf_t *tmpbuf, const char *name, bool should_print){
+bool compiler_undeclared_function_possibilities(object_t *object, tmpbuf_t *tmpbuf, const char *name, bool should_print){
     weak_cstr_t try_name;
 
     if(object->current_namespace){
@@ -1173,7 +1173,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
             if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
                 if(!ast_types_identical(&maybe_generic_base->generics[i], &generic_base_method->generics[i])){
                     // && !ast_type_has_polymorph(&generic_base_method->generics[i])
-                    // is unnessary because generic_base_methods my themselves will never contain polymorphic type variables
+                    // is unnecessary because generic_base_methods my themselves will never contain polymorphic type variables
                     generics_match_up = false;
                     break;
                 }

@@ -19,9 +19,9 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     }
 
     strong_cstr_t name;
-    bool is_stdcall, is_foreign, is_verbatim;
+    bool is_stdcall, is_foreign, is_verbatim, is_implicit;
     
-    if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign, &is_verbatim)) return FAILURE;
+    if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign, &is_verbatim, &is_implicit)) return FAILURE;
 
     if(is_foreign && ctx->struct_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
@@ -33,7 +33,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     bool is_entry = strcmp(name, ctx->compiler->entry_point) == 0;
-    ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, source, is_entry);
+    ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, is_implicit, source, is_entry);
 
     if(ctx->next_builtin_traits != TRAIT_NONE){
         func->traits |= ctx->next_builtin_traits;
@@ -218,8 +218,10 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_stdcall, bool *out_is_foreign, bool *out_is_verbatim){
-    parse_func_prefixes(ctx, out_is_stdcall, out_is_verbatim);
+errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name,
+        bool *out_is_stdcall, bool *out_is_foreign, bool *out_is_verbatim, bool *out_is_implicit){
+    
+    parse_func_prefixes(ctx, out_is_stdcall, out_is_verbatim, out_is_implicit);
 
     tokenid_t id = ctx->tokenlist->tokens[(*ctx->i)++].id;
     *out_is_foreign = (id == TOKEN_FOREIGN);
@@ -614,24 +616,30 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
         grow((void**) &func->arg_defaults, sizeof(ast_expr_t*), func->arity + backfill, *capacity);
 }
 
-void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim){
+void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim, bool *out_is_implicit){
     tokenid_t token_id = ctx->tokenlist->tokens[*ctx->i].id;
 
     *out_is_stdcall = false;
     *out_is_verbatim = false;
+    *out_is_implicit = false;
 
     // NOTE: Duplicates are allowed, maybe they shouldn't be or does it really matter?
     while(true){
-        if(token_id == TOKEN_STDCALL){
+        switch(token_id){
+        case TOKEN_STDCALL:
             token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
             *out_is_stdcall = true;
             continue;
-        }
-        if(token_id == TOKEN_VERBATIM){
+        case TOKEN_VERBATIM:
             token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
             *out_is_verbatim = true;
             continue;
+        case TOKEN_IMPLICIT:
+            token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
+            *out_is_implicit = true;
+            continue;
         }
+
         return;
     }
 

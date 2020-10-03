@@ -378,6 +378,12 @@ typedef struct {
     // Optional return type matching, only
     // exists if 'gives.elements_length' isn't zero
     ast_type_t gives;
+
+    // Special flag to make this call
+    // fail if it's tentative and the target function
+    // isn't marked as implicit
+    // (used for internal implicit calls)
+    bool only_implicit;
 } ast_expr_call_t;
 
 // ---------------- ast_expr_variable_t ----------------
@@ -696,7 +702,28 @@ void ast_expr_create_null(ast_expr_t **out_expr, source_t source);
 
 // ---------------- ast_expr_create_call ----------------
 // Creates a call expression
-void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t gives, source_t source);
+// NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
+//       to indicate no return matching
+void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
+
+// ---------------- ast_expr_create_call_in_place ----------------
+// Creates a call expression without allocating memory on the heap
+// NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
+//       to indicate no return matching
+void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
+
+// ---------------- ast_expr_create_method_call ----------------
+// Creates a call method expression
+// NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
+//       to indicate no return matching
+void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
+
+// ---------------- ast_expr_create_call_method_in_place ----------------
+// Creates a call method expression without allocating memory on the heap
+// NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
+//       to indicate no return matching
+void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, strong_cstr_t name, ast_expr_t *value,
+        length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
 
 // ---------------- ast_expr_create_variable ----------------
 // Creates a variable expression

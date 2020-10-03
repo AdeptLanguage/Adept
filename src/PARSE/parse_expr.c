@@ -743,7 +743,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
     }
 
     ctx->ignore_newlines_in_expr_depth--;
-    ast_expr_create_call(out_expr, name, arity, args, is_tentative, gives, source);
+    ast_expr_create_call(out_expr, name, arity, args, is_tentative, &gives, source);
     return SUCCESS;
 }
 

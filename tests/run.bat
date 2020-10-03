@@ -154,6 +154,8 @@ call :compile list_map
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_access
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile management_as
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_assign
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_defer

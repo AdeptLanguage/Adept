@@ -149,6 +149,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_FUNCPTR:           printf("Keyword: funcptr\n"); break;
         case TOKEN_GLOBAL:            printf("Keyword: global\n"); break;
         case TOKEN_IF:                printf("Keyword: if\n"); break;
+        case TOKEN_IMPLICIT:          printf("Keyword: implicit\n"); break;
         case TOKEN_IMPORT:            printf("Keyword: import\n"); break;
         case TOKEN_IN:                printf("Keyword: in\n"); break;
         case TOKEN_INOUT:             printf("Keyword: inout\n"); break;
@@ -320,40 +321,40 @@ const char *global_token_name_table[] = {
     "funcptr keyword",                    // 0x00000068
     "global keyword",                     // 0x00000069
     "if keyword",                         // 0x0000006A
-    "import keyword",                     // 0x0000006B
-    "in keyword",                         // 0x0000006C
-    "inout keyword",                      // 0x0000006D
-    "namespace keyword",                  // 0x0000006E
-    "new keyword",                        // 0x0000006F
-    "null keyword",                       // 0x00000070
-    "or keyword",                         // 0x00000071
-    "out keyword",                        // 0x00000072
-    "packed keyword",                     // 0x00000073
-    "pragma keyword",                     // 0x00000074
-    "private keyword",                    // 0x00000075
-    "public keyword",                     // 0x00000076
-    "repeat keyword",                     // 0x00000077
-    "return keyword",                     // 0x00000078
-    "sizeof keyword",                     // 0x00000079
-    "static keyword",                     // 0x0000007A
-    "stdcall keyword",                    // 0x0000007B
-    "struct keyword",                     // 0x0000007C
-    "switch keyword",                     // 0x0000007D
-    "thread_local keyword",               // 0x0000007E
-    "true keyword",                       // 0x0000007F
-    "typeinfo keyword",                   // 0x00000080
-    "undef keyword",                      // 0x00000081
-    "union keyword",                      // 0x00000082
-    "unless keyword",                     // 0x00000083
-    "until keyword",                      // 0x00000084
-    "using keyword",                      // 0x00000085
-    "va_arg keyword",                     // 0x00000086
-    "va_copy keyword",                    // 0x00000087
-    "va_end keyword",                     // 0x00000088
-    "va_start keyword",                   // 0x00000089
-    "verbatim keyword",                   // 0x0000008A
-    "while keyword",                      // 0x0000008B
-    "reserved",                           // 0x0000008C
+    "implicit keyword",                   // 0x0000006B
+    "import keyword",                     // 0x0000006C
+    "in keyword",                         // 0x0000006D
+    "inout keyword",                      // 0x0000006E
+    "namespace keyword",                  // 0x0000006F
+    "new keyword",                        // 0x00000070
+    "null keyword",                       // 0x00000071
+    "or keyword",                         // 0x00000072
+    "out keyword",                        // 0x00000073
+    "packed keyword",                     // 0x00000074
+    "pragma keyword",                     // 0x00000075
+    "private keyword",                    // 0x00000076
+    "public keyword",                     // 0x00000077
+    "repeat keyword",                     // 0x00000078
+    "return keyword",                     // 0x00000079
+    "sizeof keyword",                     // 0x0000007A
+    "static keyword",                     // 0x0000007B
+    "stdcall keyword",                    // 0x0000007C
+    "struct keyword",                     // 0x0000007D
+    "switch keyword",                     // 0x0000007E
+    "thread_local keyword",               // 0x0000007F
+    "true keyword",                       // 0x00000080
+    "typeinfo keyword",                   // 0x00000081
+    "undef keyword",                      // 0x00000082
+    "union keyword",                      // 0x00000083
+    "unless keyword",                     // 0x00000084
+    "until keyword",                      // 0x00000085
+    "using keyword",                      // 0x00000086
+    "va_arg keyword",                     // 0x00000087
+    "va_copy keyword",                    // 0x00000088
+    "va_end keyword",                     // 0x00000089
+    "va_start keyword",                   // 0x0000008A
+    "verbatim keyword",                   // 0x0000008B
+    "while keyword",                      // 0x0000008C
     "reserved",                           // 0x0000008D
     "reserved",                           // 0x0000008E
     "reserved",                           // 0x0000008F

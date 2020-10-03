@@ -226,11 +226,11 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
     const char *name, ast_type_t *types, length_t arity, ast_type_t *gives);
 
-// ---------------- compiler_undeclared_function_possiblities ----------------
+// ---------------- compiler_undeclared_function_possibilities ----------------
 // Checks for all potential function candidates
 // If 'should_print', will print them
 // Returns whether any candidates exist
-bool compiler_undeclared_function_possiblities(object_t *object, tmpbuf_t *tmpbuf, const char *name, bool should_print);
+bool compiler_undeclared_function_possibilities(object_t *object, tmpbuf_t *tmpbuf, const char *name, bool should_print);
 
 // ---------------- compiler_undeclared_function_possible_name ----------------
 // Checks for a single possible name for the function

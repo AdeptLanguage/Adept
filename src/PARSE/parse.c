@@ -51,7 +51,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
         switch(tokens[i].id){
         case TOKEN_NEWLINE:
             break;
-        case TOKEN_FUNC: case TOKEN_STDCALL: case TOKEN_VERBATIM:
+        case TOKEN_FUNC: case TOKEN_STDCALL: case TOKEN_VERBATIM: case TOKEN_IMPLICIT:
             if(parse_func(ctx)) return FAILURE;
             break;
         case TOKEN_FOREIGN:

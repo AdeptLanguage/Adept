@@ -1556,7 +1556,8 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_pol
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     bool is_entry = strcmp(poly_func->name, builder->compiler->entry_point) == 0;
 
-    ast_func_create_template(func, strclone(poly_func->name), poly_func->traits & AST_FUNC_STDCALL, false, !(poly_func->traits & AST_FUNC_AUTOGEN), poly_func->source, is_entry);
+    ast_func_create_template(func, strclone(poly_func->name), poly_func->traits & AST_FUNC_STDCALL, false,
+        !(poly_func->traits & AST_FUNC_AUTOGEN), poly_func->traits & AST_FUNC_IMPLICIT, poly_func->source, is_entry);
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * poly_func->arity);
     func->arg_types = malloc(sizeof(ast_type_t) * poly_func->arity);
@@ -1649,7 +1650,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone("__defer__"), false, false, false, NULL_SOURCE, false);
+    ast_func_create_template(func, strclone("__defer__"), false, false, false, false, NULL_SOURCE, false);
     func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
@@ -1729,7 +1730,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone("__pass__"), false, false, false, NULL_SOURCE, false);
+    ast_func_create_template(func, strclone("__pass__"), false, false, false, false, NULL_SOURCE, false);
     func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);

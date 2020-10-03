@@ -976,7 +976,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
                 ir_value_t *idx_ptr = build_varptr(builder, idx_ir_type_ptr, idx_var_id);
 
-                // Set 'idx' to inital value of zero
+                // Set 'idx' to initial value of zero
                 ir_value_t *initial_idx = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
                 initial_idx->value_type = VALUE_TYPE_LITERAL;
                 initial_idx->type = idx_ir_type;
@@ -1064,17 +1064,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     } else {
                         // STRUCTURE
                         // Get array length by calling the __length__() method
-                        // DANGEROUS: Manually creating 'ast_expr_call_method_t' expression
-                        // TODO: Replace with something like 'ast_expr_create_call_method'
                         ast_expr_call_method_t length_call;
-                        length_call.id = EXPR_CALL_METHOD;
-                        length_call.source = phantom_list_value.source;
-                        length_call.name = "__length__";
-                        length_call.value = (ast_expr_t*) &phantom_list_value;
-                        length_call.args = NULL;
-                        length_call.arity = 0;
-                        length_call.is_tentative = false;
-                        memset(&length_call.gives, 0, sizeof(ast_type_t));
+                        ast_expr_create_call_method_in_place(&length_call, "__length__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, NULL, phantom_list_value.source);
 
                         if(ir_gen_expr(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
                             ast_type_free(&phantom_list_value.type);
@@ -1164,17 +1155,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 } else if(list_precomputed){
                     // STRUCTURE
                     // Call the '__array__()' method to get the value for the array
-                    // DANGEROUS: Manually creating 'ast_expr_call_method_t' expression
-                    // TODO: Replace with something like 'ast_expr_create_call_method'
                     ast_expr_call_method_t array_call;
-                    array_call.id = EXPR_CALL_METHOD;
-                    array_call.source = phantom_list_value.source;
-                    array_call.name = "__array__";
-                    array_call.value = (ast_expr_t*) &phantom_list_value;
-                    array_call.args = NULL;
-                    array_call.arity = 0;
-                    array_call.is_tentative = false;
-                    memset(&array_call.gives, 0, sizeof(ast_type_t));
+                    ast_expr_create_call_method_in_place(&array_call, "__array__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, NULL, phantom_list_value.source);
 
                     if(ir_gen_expr(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
                         ast_type_free(&phantom_list_value.type);
@@ -1263,16 +1245,16 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_one_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
                 *((unsigned long long*) ir_one_value->extra) = 1;
 
-                // Increament
+                // Increment
                 built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
                 ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ADD;
                 ((ir_instr_math_t*) built_instr)->result_type = current_idx->type;
                 ((ir_instr_math_t*) built_instr)->a = current_idx;
                 ((ir_instr_math_t*) built_instr)->b = ir_one_value;
-                ir_value_t *increamented = build_value_from_prev_instruction(builder);
+                ir_value_t *incremented = build_value_from_prev_instruction(builder);
 
                 // Store
-                build_store(builder, increamented, idx_ptr, stmt->source);
+                build_store(builder, incremented, idx_ptr, stmt->source);
 
                 // Jump Prep
                 build_break(builder, prep_basicblock_id);
@@ -1324,7 +1306,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
                 ir_value_t *idx_ptr = build_varptr(builder, idx_ir_type_ptr, idx_var_id);
 
-                // Set 'idx' to inital value of zero
+                // Set 'idx' to initial value of zero
                 ir_value_t *initial_idx = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
                 initial_idx->value_type = VALUE_TYPE_LITERAL;
                 initial_idx->type = idx_ir_type;
@@ -1408,16 +1390,16 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_one_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
                 *((unsigned long long*) ir_one_value->extra) = 1;
 
-                // Increament
+                // Increment
                 built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
                 ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ADD;
                 ((ir_instr_math_t*) built_instr)->result_type = current_idx->type;
                 ((ir_instr_math_t*) built_instr)->a = current_idx;
                 ((ir_instr_math_t*) built_instr)->b = ir_one_value;
-                ir_value_t *increamented = build_value_from_prev_instruction(builder);
+                ir_value_t *incremented = build_value_from_prev_instruction(builder);
 
                 // Store
-                build_store(builder, increamented, idx_ptr, stmt->source);
+                build_store(builder, incremented, idx_ptr, stmt->source);
 
                 // Jump Prep
                 build_break(builder, prep_basicblock_id);
@@ -1451,7 +1433,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 #error "EXPR_SWITCH in ir_gen_stmt.c assumes IR integer type kinds are between 0x00000002 and 0x00000009"
                 #endif
 
-                // Use the assumtion that IR integer type kinds are in the expected range to check integer-ness
+                // Use the assumption that IR integer type kinds are in the expected range to check integer-ness
                 bool integer_like = tmp_range(condition->type->kind);
                 #undef tmp_range
 

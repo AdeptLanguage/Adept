@@ -723,7 +723,7 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length){
     }
 }
 
-void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim, source_t source, bool is_entry){
+void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim, bool is_implicit, source_t source, bool is_entry){
     func->name = name;
     func->arg_names = NULL;
     func->arg_types = NULL;
@@ -749,6 +749,7 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     if(strcmp(name, "__pass__") == 0)  func->traits |= AST_FUNC_PASS  | (is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
     if(is_stdcall)                     func->traits |= AST_FUNC_STDCALL;
     if(is_foreign)                     func->traits |= AST_FUNC_FOREIGN;
+    if(is_implicit)                    func->traits |= AST_FUNC_IMPLICIT;
 }
 
 bool ast_func_is_polymorphic(ast_func_t *func){

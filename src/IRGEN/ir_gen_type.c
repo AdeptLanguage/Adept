@@ -1,4 +1,5 @@
 
+#include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
@@ -6,6 +7,8 @@
 #include "UTIL/builtin_type.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_type.h"
+#include "IRGEN/ir_gen_find.h"
+#include "IRGEN/ir_gen_expr.h"
 #include "BRIDGE/any.h"
 #include "BRIDGE/rtti.h"
 
@@ -306,16 +309,16 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         strcmp(((ast_elem_base_t*) ast_type->elements[0])->base, a) == 0)
     
     // Macro to determine whether a type is 'ptr'
-    #define MACRO_TYPE_IS_BASE_PTR(ast_type) MACRO_TYPE_IS_BASE(ast_type, "ptr")
+    #define MACRO_TYPE_IS_BASE_PTR(ast_type) ast_type_is_base_of(ast_type, "ptr")
 
     // Macro to determine whether a type is 'Any'
-    #define MACRO_TYPE_IS_BASE_ANY(ast_type) MACRO_TYPE_IS_BASE(ast_type, "Any")
+    #define MACRO_TYPE_IS_BASE_ANY(ast_type) ast_type_is_base_of(ast_type, "Any")
 
     // Macro to determine whether a type is a function pointer
     #define MACRO_TYPE_IS_FUNC_PTR(ast_type) (ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_FUNC)
 
     // Macro to determine whether a type is a '*something'
-    #define MACRO_TYPE_IS_POINTER(ast_type) (ast_type->elements_length > 1 && ast_type->elements[0]->id == AST_ELEM_POINTER)
+    #define MACRO_TYPE_IS_POINTER(ast_type) ast_type_is_pointer(ast_type)
 
     // Macro to determine whether a type is a 'n something'
     #define MACRO_TYPE_IS_FIXED_ARRAY(ast_type) (ast_type->elements_length > 1 && ast_type->elements[0]->id == AST_ELEM_FIXED_ARRAY)
@@ -640,6 +643,51 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         }
     }
 
+    if(ast_types_identical(ast_from_type, ast_to_type)) return true;
+
+    // Worst case senerio, we try to use user-defined __as__ method
+    if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT) && ast_type_is_base(ast_from_type) && ast_type_is_base(ast_to_type)){
+        ast_expr_phantom_t phantom_value;
+        phantom_value.id = EXPR_PHANTOM;
+        phantom_value.ir_value = *ir_value;
+        phantom_value.source = NULL_SOURCE;
+        phantom_value.is_mutable = false;
+        phantom_value.type = ast_type_clone(ast_from_type);
+
+        ast_expr_t *args = (ast_expr_t*) &phantom_value;
+
+        // DANGEROUS: Sharing 'gives' memory with existing type,
+        // we must reset 'as_call.gives.elements_length' to zero before
+        // freeing it
+        // DANGEROUS: Using stack-allocated argument expressions,
+        // we must reset 'arity' to zero and 'args' to NULL before
+        // freeing it
+        // DANGEROUS: Using constant string for strong_cstr_t name,
+        // we must reset 'name' to be NULL before freeing it
+        ast_expr_call_t as_call;
+        ast_expr_create_call_in_place(&as_call, "__as__", 1, &args, true, ast_to_type, NULL_SOURCE);
+
+        // Mark special flag 'only_implicit' if explicit user-defined conversions
+        // aren't allowed for this particular cast
+        as_call.only_implicit = !(mode & CONFORM_MODE_USER_EXPLICIT);
+
+        ir_value_t *converted;
+        ast_type_t temporary_type;
+        errorcode_t error = ir_gen_expr(builder, (ast_expr_t*) &as_call, &converted, false, &temporary_type);
+
+        as_call.name = NULL;
+        as_call.args = NULL;
+        as_call.arity = 0;
+        as_call.gives.elements_length = 0;
+        ast_expr_free((ast_expr_t*) &as_call);
+
+        // Ensure tentative call was successful
+        if(error || ast_type_is_void(&temporary_type)) return false;
+        
+        *ir_value = converted;
+        return true;
+    }
+
     #undef TYPE_TRAIT_POINTER
     #undef TYPE_TRAIT_BASE_PTR
     #undef TYPE_TRAIT_FUNC_PTR
@@ -649,7 +697,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     #undef MACRO_TYPE_IS_FUNC_PTR
     #undef MACRO_TYPE_IS_POINTER
 
-    return ast_types_identical(ast_from_type, ast_to_type);
+    return false;
 }
 
 successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b){

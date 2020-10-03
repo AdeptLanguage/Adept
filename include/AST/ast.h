@@ -65,8 +65,9 @@ typedef struct {
 #define AST_FUNC_PASS        TRAIT_8
 #define AST_FUNC_AUTOGEN     TRAIT_9
 #define AST_FUNC_VARIADIC    TRAIT_A
+#define AST_FUNC_IMPLICIT    TRAIT_B
 
-// Addional AST function traits for builtin uses
+// Additional AST function traits for builtin uses
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
 
 // ---------------- ast_struct_t, ast_union_t ----------------
@@ -248,7 +249,7 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
 
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function
-void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim, source_t source, bool is_entry);
+void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim, bool is_implicit, source_t source, bool is_entry);
 
 // ---------------- ast_func_is_polymorphic ----------------
 // Returns whether an AST function has polymorphic arguments
