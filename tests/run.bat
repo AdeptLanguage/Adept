@@ -140,6 +140,8 @@ call :compile increment
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile increment_stmt
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile initializer_list
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile initializer_list_abstract
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile inline_declaration

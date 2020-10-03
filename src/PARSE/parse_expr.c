@@ -1273,6 +1273,8 @@ errorcode_t parse_expr_initlist(parse_ctx_t *ctx, ast_expr_t **out_expr){
         if(tokens[*i].id == TOKEN_NEXT){
             // Allow ',' instead of '}'
             (*i)++;
+
+            if(parse_ignore_newlines(ctx, "Expected '}' or ',' in initializer list before end of file")) goto failed_to_parse_values;
         } else if(tokens[*i].id != TOKEN_END){
             compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected '}' or ',' in initializer list");
             goto failed_to_parse_values;

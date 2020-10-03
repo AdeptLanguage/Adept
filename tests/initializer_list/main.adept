@@ -1,0 +1,28 @@
+
+import basics
+
+func main {
+    my_integers <int> List = {0, 1, 2, 3, 4, 5}
+    my_matrix <<int> List> List = {my_integers, my_integers, my_integers, my_integers}
+
+    printMatrix(my_matrix)
+
+    float_matrix <<float> List> List = {
+        {1.0f, 0.0f, 0.0f, 0.0f} as <float> List,
+        {0.0f, 1.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f, 1.0f}
+    }
+
+    printMatrix(float_matrix)
+}
+
+func printMatrix(matrix <<$T> List> List) {
+    each list <$T> List in matrix {
+        each item $T in list {
+            place(item)
+            place(" ")
+        }
+        newline()
+    }
+}
