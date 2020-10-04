@@ -521,7 +521,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
     // If there doesn't exist a nearby scoped variable with the same name, look for function
     funcpair_t pair;
-    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, &pair);
+    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, expr->no_user_casts, &pair);
 
     // Propagate failure if something went wrong during the search
     if(error == ALT_FAILURE){
@@ -529,15 +529,14 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         return FAILURE;
     }
 
-    // If requires implicit, fail if conforming function isn't marked as implicit
-    if(expr->only_implicit && expr->is_tentative && !(pair.ast_func->traits & AST_FUNC_IMPLICIT)){
-        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
-        ast_types_free_fully(arg_types, arity);
-        return SUCCESS;
-    }
-
     // Found function that fits given name and arguments
     if(error == SUCCESS){
+        // If requires implicit, fail if conforming function isn't marked as implicit
+        if(expr->only_implicit && expr->is_tentative && !(pair.ast_func->traits & AST_FUNC_IMPLICIT)){
+            if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
+            ast_types_free_fully(arg_types, arity);
+            return SUCCESS;
+        }
 
         // Fill in default arguments
         if(ir_gen_expr_call_procedure_fill_in_default_arguments(builder, &arg_values, &arg_types, arity, pair.ast_func->arg_defaults, pair.ast_func->arity, expr->source)){

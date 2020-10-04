@@ -45,10 +45,10 @@ errorcode_t ir_gen_find_func_named_inner(object_t *object, const char *name, boo
 // NOTE: 'gives' may be NULL or have '.elements_length' be zero
 //       to indicate no return matching
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result);
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, funcpair_t *result);
 
 errorcode_t ir_gen_find_func_conforming_inner(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result);
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, funcpair_t *result);
 
 errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result, trait_t conform_mode);

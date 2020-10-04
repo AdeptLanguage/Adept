@@ -131,7 +131,7 @@ errorcode_t ir_gen_find_func_named_inner(object_t *object, const char *name, boo
 }
 
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result){
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, funcpair_t *result){
     
     errorcode_t error;
     weak_cstr_t try_name;
@@ -140,30 +140,31 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
     // First, try to locate in the current namespace
     if(object->current_namespace){
         try_name = tmpbuf_quick_concat3(&builder->compiler->tmp, object->current_namespace, "\\", name);
-        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, gives, result);
+        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, gives, no_user_casts, result);
         if(error != FAILURE) return error;
     }
 
     // Second, try to locate in 'used' namespaces
     for(length_t i = 0; i != object->using_namespaces_length; i++){
         try_name = tmpbuf_quick_concat3(&builder->compiler->tmp, object->using_namespaces[i].cstr, "\\", name);
-        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, gives, result);
+        error = ir_gen_find_func_conforming_inner(builder, try_name, arg_values, arg_types, type_list_length, gives, no_user_casts, result);
         if(error != FAILURE) return error;
     }
 
     // Lastly, try to locate in global namespace
-    return ir_gen_find_func_conforming_inner(builder, name, arg_values, arg_types, type_list_length, gives, result);
+    return ir_gen_find_func_conforming_inner(builder, name, arg_values, arg_types, type_list_length, gives, no_user_casts, result);
 }
 
 errorcode_t ir_gen_find_func_conforming_inner(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, funcpair_t *result){
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, funcpair_t *result){
     
     // Do strict argument type conforming rules first
     errorcode_t strict_errorcode = ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS);
     if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
 
     // If no strict match was found, try a looser match
-    return ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
+    unsigned int loose_mode = no_user_casts ? CONFORM_MODE_CALL_ARGUMENTS_LOOSE_NOUSER : CONFORM_MODE_CALL_ARGUMENTS_LOOSE; 
+    return ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, result, loose_mode);
 }
 
 errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
@@ -292,7 +293,7 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
     }
 
     // Whether we have a __pass__ function is unknown, so lets try to see if we have one
-    errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, NULL, result);
+    errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, NULL, true, result);
     if(errorcode != SUCCESS){
         if(errorcode == FAILURE) cache_entry->has_pass_func = TROOLEAN_FALSE;
         return errorcode;

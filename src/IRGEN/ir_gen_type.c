@@ -647,47 +647,53 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     // Worst case scenario, we try to use user-defined __as__ method
     if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT)){
-        ast_expr_phantom_t phantom_value;
-        phantom_value.id = EXPR_PHANTOM;
-        phantom_value.ir_value = *ir_value;
-        phantom_value.source = NULL_SOURCE;
-        phantom_value.is_mutable = false;
-        phantom_value.type = ast_type_clone(ast_from_type);
+        bool can_do = (ast_type_is_base_like(ast_from_type) || ast_type_is_fixed_array(ast_from_type)) &&
+                      (ast_type_is_base_like(ast_to_type) || ast_type_is_fixed_array(ast_to_type));
 
-        ast_expr_t *args = (ast_expr_t*) &phantom_value;
+        if(can_do){
+            ast_expr_phantom_t phantom_value;
+            phantom_value.id = EXPR_PHANTOM;
+            phantom_value.ir_value = *ir_value;
+            phantom_value.source = NULL_SOURCE;
+            phantom_value.is_mutable = false;
+            phantom_value.type = ast_type_clone(ast_from_type);
 
-        // DANGEROUS: Sharing 'gives' memory with existing type,
-        // we must reset 'as_call.gives.elements_length' to zero before
-        // freeing it
-        // DANGEROUS: Using stack-allocated argument expressions,
-        // we must reset 'arity' to zero and 'args' to NULL before
-        // freeing it
-        // DANGEROUS: Using constant string for strong_cstr_t name,
-        // we must reset 'name' to be NULL before freeing it
-        ast_expr_call_t as_call;
-        ast_expr_create_call_in_place(&as_call, "__as__", 1, &args, true, ast_to_type, NULL_SOURCE);
+            ast_expr_t *args = (ast_expr_t*) &phantom_value;
 
-        // Mark special flag 'only_implicit' if explicit user-defined conversions
-        // aren't allowed for this particular cast
-        as_call.only_implicit = !(mode & CONFORM_MODE_USER_EXPLICIT);
+            // DANGEROUS: Sharing 'gives' memory with existing type,
+            // we must reset 'as_call.gives.elements_length' to zero before
+            // freeing it
+            // DANGEROUS: Using stack-allocated argument expressions,
+            // we must reset 'arity' to zero and 'args' to NULL before
+            // freeing it
+            // DANGEROUS: Using constant string for strong_cstr_t name,
+            // we must reset 'name' to be NULL before freeing it
+            ast_expr_call_t as_call;
+            ast_expr_create_call_in_place(&as_call, "__as__", 1, &args, true, ast_to_type, NULL_SOURCE);
 
-        ir_value_t *converted;
-        ast_type_t temporary_type;
-        errorcode_t error = ir_gen_expr(builder, (ast_expr_t*) &as_call, &converted, false, &temporary_type);
+            // Mark special flag 'only_implicit' if explicit user-defined conversions
+            // aren't allowed for this particular cast
+            as_call.only_implicit = !(mode & CONFORM_MODE_USER_EXPLICIT);
+            as_call.no_user_casts = true;
 
-        as_call.name = NULL;
-        as_call.args = NULL;
-        as_call.arity = 0;
-        as_call.gives.elements_length = 0;
-        ast_expr_free((ast_expr_t*) &as_call);
-        
-        ast_type_free(&phantom_value.type);
+            ir_value_t *converted;
+            ast_type_t temporary_type;
+            errorcode_t error = ir_gen_expr(builder, (ast_expr_t*) &as_call, &converted, false, &temporary_type);
 
-        // Ensure tentative call was successful
-        if(error || ast_type_is_void(&temporary_type)) return false;
-        
-        *ir_value = converted;
-        return true;
+            as_call.name = NULL;
+            as_call.args = NULL;
+            as_call.arity = 0;
+            as_call.gives.elements_length = 0;
+            ast_expr_free((ast_expr_t*) &as_call);
+            
+            ast_type_free(&phantom_value.type);
+
+            // Ensure tentative call was successful
+            if(error || ast_type_is_void(&temporary_type)) return false;
+            
+            *ir_value = converted;
+            return true;
+        }
     }
 
     #undef TYPE_TRAIT_POINTER

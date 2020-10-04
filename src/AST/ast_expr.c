@@ -851,6 +851,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_call->arity = expr_as_call->arity;
         clone_as_call->is_tentative = expr_as_call->is_tentative;
         clone_as_call->only_implicit = expr_as_call->only_implicit;
+        clone_as_call->no_user_casts = expr_as_call->no_user_casts;
 
         for(length_t i = 0; i != expr_as_call->arity; i++){
             clone_as_call->args[i] = ast_expr_clone(expr_as_call->args[i]);
@@ -1439,6 +1440,7 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
         memset(&out_expr->gives, 0, sizeof(ast_type_t));
     
     out_expr->only_implicit = false;
+    out_expr->no_user_casts = false;
 }
 
 void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source){

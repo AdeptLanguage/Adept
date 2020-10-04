@@ -1035,7 +1035,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
             arguments[0] = build_load(builder, mutable_value, ast_type->source);
 
-            if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, NULL, &pass_func)){
+            if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, NULL, false, &pass_func)){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
 
                 return FAILURE;
@@ -1443,7 +1443,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
         ast_type_t types[2] = {*lhs_type, *rhs_type};
 
-        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, NULL, &result)
+        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, NULL, false, &result)
         || handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2)){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             return NULL;

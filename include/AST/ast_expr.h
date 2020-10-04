@@ -386,6 +386,10 @@ typedef struct {
     // isn't marked as implicit
     // (used for internal implicit calls)
     bool only_implicit;
+
+    // Special flag to make this call
+    // Not allow for implicit user casts
+    bool no_user_casts;
 } ast_expr_call_t;
 
 // ---------------- ast_expr_variable_t ----------------
