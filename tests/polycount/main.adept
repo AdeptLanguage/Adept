@@ -1,0 +1,23 @@
+
+import basics
+
+func main {
+    array 10 int
+    printNumberOfElements(array)
+    initializeFixedArray(&array)
+    print(array)
+
+    floats 4 float
+    printNumberOfElements(floats)
+    initializeFixedArray(&floats)
+    print(floats)
+}
+
+func printNumberOfElements(_fixed_array $#N $T) {
+    print($#N)
+}
+
+func initializeFixedArray(fixed_array *$#N $T~__primitive__) {
+    pointer_duplicate_using_polycount *$#N $T = fixed_array
+    each $T in *fixed_array, (*pointer_duplicate_using_polycount)[idx] = idx as $T
+}

@@ -118,6 +118,7 @@ compile package_use || exit $?
 compile pass_func || exit $?
 compile permissive_blocks || exit $?
 compile poly_default_args || exit $?
+compile polycount || exit $?
 compile polymorphic_functions || exit $?
 compile polymorphic_inner || exit $?
 compile polymorphic_methods || exit $?
