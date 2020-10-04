@@ -642,14 +642,15 @@ void close_scope(ir_builder_t *builder){
         redprintf("INTERNAL ERROR: TRIED TO CLOSE BRIDGE SCOPE WITH NO PARENT, probably will crash...\n");
 }
 
-void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
+void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits, ir_value_t *anon_global){
     bridge_var_list_t *list = &builder->scope->list;
     expand((void**) &list->variables, sizeof(bridge_var_t), list->length, &list->capacity, 1, 4);
     list->variables[list->length].name = name;
     list->variables[list->length].ast_type = ast_type;
-    list->variables[list->length].ir_type = ir_type;
     list->variables[list->length].id = builder->next_var_id;
     list->variables[list->length].traits = traits;
+    list->variables[list->length].ir_type = ir_type;
+    list->variables[list->length].anon_global = anon_global;
     builder->next_var_id++;
     list->length++;
 }
@@ -660,7 +661,7 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
 
         // Don't perform defer management on POD variables or non-struct types
         trait_t traits = variable->traits;
-        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE ||
+        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE || traits & BRIDGE_VAR_STATIC ||
             !(variable->ir_type->kind == TYPE_KIND_STRUCTURE || variable->ir_type->kind == TYPE_KIND_FIXED_ARRAY)) continue;
 
         // Ensure we're working with a single AST type element in the type for structs

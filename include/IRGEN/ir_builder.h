@@ -294,7 +294,8 @@ void close_scope(ir_builder_t *builder);
 
 // ---------------- add_variable ----------------
 // Adds a variable to the current bridge_scope_t
-void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
+// NOTE: 'anon_global' should be not if !(traits & BRIDGE_VAR_STATIC)
+void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits, ir_value_t *anon_global);
 
 // ---------------- handle_deference_for_variables ----------------
 // Handles deference for variables in a variable list

@@ -153,6 +153,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 }
             }
             break;
+        case TOKEN_STATIC:
+            if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
+            break;
         case TOKEN_MULTIPLY: case TOKEN_OPEN: case TOKEN_INCREMENT: case TOKEN_DECREMENT:
         case TOKEN_BIT_AND: case TOKEN_BIT_OR: case TOKEN_BIT_XOR: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_RSHIFT:
         case TOKEN_BIT_LGC_LSHIFT: case TOKEN_BIT_LGC_RSHIFT: /* DUPLICATE: case TOKEN_ADDRESS: */
@@ -926,6 +929,12 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     bool is_assign_pod = false;
     ast_expr_t *decl_value = NULL;
     ast_type_t decl_type;
+    bool is_static = false;
+
+    if(tokens[*i].id == TOKEN_STATIC){
+        is_static = true;
+        (*i)++;
+    }
 
     unsigned int declare_stmt_type = EXPR_DECLARE;
 
@@ -992,6 +1001,7 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         stmt->name = decl_names[v];
         stmt->is_pod = is_pod;
         stmt->is_assign_pod = is_assign_pod;
+        stmt->is_static = is_static;
 
         if(v + 1 == length){
             stmt->type = decl_type;

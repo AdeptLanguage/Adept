@@ -103,14 +103,14 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         
         trait_t arg_traits = BRIDGE_VAR_UNDEF;
         if(ast_func->arg_type_traits[module_func->arity] & AST_FUNC_ARG_TYPE_TRAIT_POD) arg_traits |= BRIDGE_VAR_POD;
-        add_variable(&builder, ast_func->arg_names[module_func->arity], &ast_func->arg_types[module_func->arity], module_func->argument_types[module_func->arity], arg_traits);
+        add_variable(&builder, ast_func->arg_names[module_func->arity], &ast_func->arg_types[module_func->arity], module_func->argument_types[module_func->arity], arg_traits, NULL);
         module_func->arity++;
     }
 
     // Append variadic array argument for variadic functions
     if(ast_func->traits & AST_FUNC_VARIADIC){
         // AST variadic type is already guaranteed to exist
-        add_variable(&builder, ast_func->variadic_arg_name, object->ast.common.ast_variadic_array, ir_module->common.ir_variadic_array, TRAIT_NONE);
+        add_variable(&builder, ast_func->variadic_arg_name, object->ast.common.ast_variadic_array, ir_module->common.ir_variadic_array, TRAIT_NONE, NULL);
         module_func->arity++;
     }
     
@@ -393,6 +393,15 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
                 if(ir_gen_resolve_type(builder->compiler, builder->object, &declare_stmt->type, &ir_decl_type)) return FAILURE;
 
+                // Create variable traits
+                trait_t variable_traits = declare_stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE;
+                ir_value_t *maybe_global = NULL;
+
+                if(declare_stmt->is_static){
+                    variable_traits |= BRIDGE_VAR_STATIC;
+                    maybe_global = build_anon_global(&builder->object->ir_module, ir_decl_type, false);
+                }
+
                 if(declare_stmt->value != NULL){
                     // Regular declare statement initial assign value
                     ir_value_t *initial;
@@ -411,27 +420,33 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
 
                     ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
-                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits, maybe_global);
 
-                    if(declare_stmt->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &declare_stmt->type, true)){
+                    if(declare_stmt->is_static){
+                        // TODO: Don't use initializer, instead initialize inside of main
+                        build_anon_global_initializer(&builder->object->ir_module, maybe_global, initial);
+                    } else if(declare_stmt->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &declare_stmt->type, true)){
                         build_store(builder, initial, destination, stmt->source);
                     }
 
                     ast_type_free(&temporary_type);
                 } else if(stmt->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
                     // Mark the variable as undefined memory so it isn't auto-initialized later on
-                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
+                    
+                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits | BRIDGE_VAR_UNDEF, maybe_global);
                 } else /* plain DECLARE or --no-undef DECLAREUNDEF */ {
                     // Variable declaration without default value
-                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, declare_stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits, maybe_global);
 
-                    // Zero initialize the variable
-                    ir_basicblock_new_instructions(builder->current_block, 1);
-                    instr = &builder->current_block->instructions[builder->current_block->instructions_length++];
-                    *instr = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
-                    ((ir_instr_varzeroinit_t*) *instr)->id = INSTRUCTION_VARZEROINIT;
-                    ((ir_instr_varzeroinit_t*) *instr)->result_type = NULL;
-                    ((ir_instr_varzeroinit_t*) *instr)->index = builder->next_var_id - 1;
+                    if(maybe_global == NULL){
+                        // Zero initialize the variable
+                        ir_basicblock_new_instructions(builder->current_block, 1);
+                        instr = &builder->current_block->instructions[builder->current_block->instructions_length++];
+                        *instr = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
+                        ((ir_instr_varzeroinit_t*) *instr)->id = INSTRUCTION_VARZEROINIT;
+                        ((ir_instr_varzeroinit_t*) *instr)->result_type = NULL;
+                        ((ir_instr_varzeroinit_t*) *instr)->index = builder->next_var_id - 1;
+                    }
                 }
             }
             break;
@@ -973,7 +988,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Create 'idx' variable
                 length_t idx_var_id = builder->next_var_id;
-                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF, NULL);
                 ir_value_t *idx_ptr = build_varptr(builder, idx_ir_type_ptr, idx_var_id);
 
                 // Set 'idx' to initial value of zero
@@ -1210,7 +1225,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 char *it_name = each_in->it_name ? each_in->it_name : "it";
 
                 // Generate new block statements to update 'it' variable
-                add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE);
+                add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE, NULL);
                 
                 ir_value_t *it_ptr = build_varptr(builder, array->type, it_var_id);
                 ir_value_t *it_idx = build_load(builder, idx_ptr, stmt->source);
@@ -1303,7 +1318,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Create 'idx' variable
                 length_t idx_var_id = builder->next_var_id;
-                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF, NULL);
                 ir_value_t *idx_ptr = build_varptr(builder, idx_ir_type_ptr, idx_var_id);
 
                 // Set 'idx' to initial value of zero

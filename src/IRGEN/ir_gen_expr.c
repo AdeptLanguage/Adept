@@ -2298,7 +2298,7 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
 
         // Add the variable
         ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE, NULL);
 
         // Assign the initial value to the newly created variable
         if(def->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
@@ -2312,13 +2312,13 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         *ir_value = destination;
     } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
         // Mark the variable as undefined memory so it isn't auto-initialized later on
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF, NULL);
 
         // Result is pointer to variable on stack
         *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
     } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
         // Variable declaration without initial value
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE, NULL);
         
         // Zero initialize the variable
         ir_instr_varzeroinit_t *instruction = (ir_instr_varzeroinit_t*) build_instruction(builder, sizeof(ir_instr_varzeroinit_t));

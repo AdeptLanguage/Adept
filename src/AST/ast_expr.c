@@ -1114,6 +1114,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_declare->value = expr_as_declare->value ? ast_expr_clone(expr_as_declare->value) : NULL;
         clone_as_declare->is_pod = expr_as_declare->is_pod;
         clone_as_declare->is_assign_pod = expr_as_declare->is_assign_pod;
+        clone_as_declare->is_static = expr_as_declare->is_static;
         break;
 
         #undef expr_as_declare

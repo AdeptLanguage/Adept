@@ -1,5 +1,6 @@
 
 #include "UTIL/color.h"
+#include "UTIL/datatypes.h"
 #include "IR/ir_lowering.h"
 #include "IR/ir_type_spec.h"
 

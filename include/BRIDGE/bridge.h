@@ -16,23 +16,26 @@ extern "C" {
 #include "AST/ast_type.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
+#include "IR/ir_value.h"
 #include "IR/ir_type.h"
 #endif
 
 #define BRIDGE_VAR_UNDEF        TRAIT_1 // Variable is to be uninitialized
 #define BRIDGE_VAR_REFERENCE    TRAIT_2 // Variable is to be treated as a mutable reference
 #define BRIDGE_VAR_POD          TRAIT_3 // Variable is to be treated as plain old data
+#define BRIDGE_VAR_STATIC       TRAIT_4 // Variable is to static (global-like)
 
 typedef struct {
-    weak_cstr_t name;     // name of the variable
-    ast_type_t *ast_type; // AST type of the variable
+    weak_cstr_t name;        // name of the variable
+    ast_type_t *ast_type;    // AST type of the variable
+
+    length_t id;             // ID of the variable within the function stack
+    trait_t traits;          // traits of the variable
 
     #ifndef ADEPT_INSIGHT_BUILD
-    ir_type_t *ir_type;   // IR type of the variable
+    ir_type_t *ir_type;      // IR type of the variable
+    ir_value_t *anon_global; // Used for static variables
     #endif
-
-    length_t id;          // ID of the variable within the function stack
-    trait_t traits;       // traits of the variable
 } bridge_var_t;
 
 // ---------------- bridge_var_list_t ----------------

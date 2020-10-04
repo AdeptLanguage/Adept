@@ -1248,6 +1248,7 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
 
     for(length_t i = 0; i != anon_globals_length; i++){
         if(anon_globals[i].initializer == NULL) continue;
+        if(!VALUE_TYPE_IS_CONSTANT(anon_globals[i].initializer->value_type)) continue;
         LLVMSetInitializer(llvm->anon_global_variables[i], ir_to_llvm_value(llvm, anon_globals[i].initializer));
     }
 
