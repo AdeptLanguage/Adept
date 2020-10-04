@@ -256,6 +256,9 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         if(ir_gen_expr_inline_declare(builder, (ast_expr_inline_declare_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
+    case EXPR_POLYCOUNT:
+        compiler_panic(builder->compiler, expr->source, "Unresolved polymorphic count variable in expression");
+        return FAILURE;
     default:
         compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Unknown expression type id in expression");
         return FAILURE;
@@ -981,31 +984,31 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         }
 
         // Create a catalog of all the known polymorphic type substitutions
-        ast_type_var_catalog_t catalog;
-        ast_type_var_catalog_init(&catalog);
+        ast_poly_catalog_t catalog;
+        ast_poly_catalog_init(&catalog);
 
         // Ensure that the number of parameters given for the generic base is the same as expected for the polymorphic structure
         if(template->generics_length != generic_base->generics_length){
             compiler_panicf(builder->compiler, expr->source, "Polymorphic struct '%s' type parameter length mismatch!", generic_base->name);
-            ast_type_var_catalog_free(&catalog);
+            ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
 
         // Add each entry given for the generic base structure type to the list of known polymorphic type substitutions
         for(length_t i = 0; i != template->generics_length; i++){
-            ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+            ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
         }
 
         // Get the AST field type of the target field by index and resolve any polymorphs
         ast_type_t ast_field_type;
         if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &template->field_types[*field_index], &ast_field_type)){
-            ast_type_var_catalog_free(&catalog);
+            ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
 
         // Get the IR type of the target field
         if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, field_type)){
-            ast_type_var_catalog_free(&catalog);
+            ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
 
@@ -1017,7 +1020,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         *is_via_union = template->traits & AST_STRUCT_IS_UNION;
 
         // Dispose of the polymorphic substituions catalog
-        ast_type_var_catalog_free(&catalog);
+        ast_poly_catalog_free(&catalog);
         return SUCCESS;
     }
 

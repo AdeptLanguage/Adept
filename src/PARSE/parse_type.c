@@ -28,7 +28,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         id = tokens[start].id;
     }
 
-    while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT){
+    while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT || id == TOKEN_POLYCOUNT){
         expand((void**) &out_type->elements, sizeof(ast_elem_t*), out_type->elements_length, &elements_capacity, 1, 2);
 
         if(id == TOKEN_MULTIPLY){
@@ -49,6 +49,19 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             out_type->elements[out_type->elements_length] = (ast_elem_t*) fixed_array;
             out_type->elements[out_type->elements_length]->id = AST_ELEM_FIXED_ARRAY;
             out_type->elements[out_type->elements_length]->source = fixed_array_source;
+            out_type->elements_length++;
+            id = tokens[++(*i)].id;
+            continue;
+        }
+
+        if(id == TOKEN_POLYCOUNT){
+            ast_elem_polycount_t *polycount = malloc(sizeof(ast_elem_polycount_t));
+            polycount->id = AST_ELEM_POLYCOUNT;
+            polycount->name = tokens[*i].data;
+            tokens[*i].data = NULL;
+            polycount->source = sources[*i];
+
+            out_type->elements[out_type->elements_length] = (ast_elem_t*) polycount;
             out_type->elements_length++;
             id = tokens[++(*i)].id;
             continue;
@@ -88,7 +101,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             bool allow_auto_conversion = false;
             tokens[(*i)++].data = NULL; // Take ownership
 
-            // If polymorph tokens starts with tilda, then we allow auto conversion
+            // If polymorph tokens starts with tilde, then we allow auto conversion
             if(name[0] == '~'){
                 allow_auto_conversion = true;
                 memmove(name, &name[1], strlen(name) /* - 1 + 1*/);

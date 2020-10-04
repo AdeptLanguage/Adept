@@ -411,6 +411,9 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         type_table_give_base(ctx->type_table, "usize");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
+    case EXPR_POLYCOUNT:
+        if(undetermined_expr_list_give_solution(ctx, undetermined, EXPR_USIZE)) return FAILURE;
+        break;
     case EXPR_FLOAT:
         type_table_give_base(ctx->type_table, "float");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;

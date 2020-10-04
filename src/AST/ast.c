@@ -760,6 +760,7 @@ bool ast_func_is_polymorphic(ast_func_t *func){
     for(length_t i = 0; i != func->arity; i++){
         if(ast_type_has_polymorph(&func->arg_types[i])) return true;
     }
+    if(ast_type_has_polymorph(&func->return_type)) return true;
     return false;
 }
 

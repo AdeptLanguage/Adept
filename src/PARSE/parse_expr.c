@@ -254,6 +254,15 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             if(parse_expr_initlist(ctx, out_expr)) return FAILURE;
         }
         break;
+    case TOKEN_POLYCOUNT: {
+            ast_expr_polycount_t *polycount_expr = malloc(sizeof(ast_expr_polycount_t));
+            polycount_expr->id = EXPR_POLYCOUNT;
+            polycount_expr->name = tokens[*i].data;
+            tokens[*i].data = NULL;
+            polycount_expr->source = sources[(*i)++];
+            *out_expr = (ast_expr_t*) polycount_expr;
+        }
+        break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
         return FAILURE;

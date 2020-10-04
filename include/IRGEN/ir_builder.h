@@ -364,7 +364,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function
 errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_poly_func_id, ast_type_t *types,
-    length_t types_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping);
+    length_t types_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping);
 
 // ---------------- attempt_autogen___defer__ ----------------
 // Attempts to auto-generate __defer__ management method
@@ -386,11 +386,11 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
 // NOTE: in_type == out_type is allowed
 // NOTE: out_type is same as in_type if out_type == null
 // NOTE: Will also give result to type_table if not NULL and !(compiler->traits & COMPILER_NO_TYPEINFO)
-errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
+errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
 
 // ---------------- resolve_expr_polymorphics ----------------
 // Resovles any polymorphic type variables within an AST expression
-errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_expr_t *expr);
+errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t *expr);
 
 // ---------------- is_allowed_auto_conversion ----------------
 // Returns whether a builtin auto conversion is allowed

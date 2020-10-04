@@ -1,0 +1,11 @@
+
+import basics
+
+func main {
+    arr 10 int = {1, 2, 3, 4}
+    printFixedArray(arr)
+}
+
+func printFixedArray(arr $#N $T) {
+    print(array(&arr as *$T, $#N))
+}

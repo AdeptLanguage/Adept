@@ -481,22 +481,22 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         }
 
                         // Substitute generic type parameters
-                        ast_type_var_catalog_t catalog;
-                        ast_type_var_catalog_init(&catalog);
+                        ast_poly_catalog_t catalog;
+                        ast_poly_catalog_init(&catalog);
 
                         if(template->generics_length != generic_base->generics_length){
                             redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
-                            ast_type_var_catalog_free(&catalog);
+                            ast_poly_catalog_free(&catalog);
                             return FAILURE;
                         }
 
                         for(length_t i = 0; i != template->generics_length; i++){
-                            ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+                            ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
                         }
 
                         ast_type_t container_ast_type;
                         if(resolve_type_polymorphics(compiler, type_table, &catalog, &type_table->entries[i].ast_type, &container_ast_type)){
-                            ast_type_var_catalog_free(&catalog);
+                            ast_poly_catalog_free(&catalog);
                             return FAILURE;
                         }
 
@@ -506,7 +506,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                             // DANGEROUS: WARNING: Accessing 'template->field_types' based on index going to 'composite->subtypes_length'
                             if(resolve_type_polymorphics(compiler, type_table, &catalog, &template->field_types[s], &member_ast_type)){
-                                ast_type_var_catalog_free(&catalog);
+                                ast_poly_catalog_free(&catalog);
                                 return FAILURE;
                             }
                             
@@ -534,7 +534,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         }
 
                         ast_type_free(&container_ast_type);
-                        ast_type_var_catalog_free(&catalog);
+                        ast_poly_catalog_free(&catalog);
                     } else if(elem->id == AST_ELEM_BASE){
                         const char *struct_name = ((ast_elem_base_t*) elem)->base;
                         ast_struct_t *structure = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);

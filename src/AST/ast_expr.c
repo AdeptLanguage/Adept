@@ -521,6 +521,8 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(compound);
             return representation;
         }
+    case EXPR_POLYCOUNT:
+        return mallocandsprintf("$#%s", ((ast_expr_polycount_t*) expr)->name);
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -625,6 +627,9 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_INITLIST:
         ast_exprs_free_fully(((ast_expr_initlist_t*) expr)->elements, ((ast_expr_initlist_t*) expr)->length);
+        break;
+    case EXPR_POLYCOUNT:
+        free(((ast_expr_polycount_t*) expr)->name);
         break;
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
@@ -1103,6 +1108,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_initlist
         #undef clone_as_initlist
+    case EXPR_POLYCOUNT:
+        #define expr_as_polycount ((ast_expr_polycount_t*) expr)
+        #define clone_as_polycount ((ast_expr_polycount_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_polycount_t));
+        clone_as_polycount->name = strclone(expr_as_polycount->name);
+        break;
+
+        #undef expr_as_polycount
+        #undef clone_as_polycount
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         #define expr_as_declare ((ast_expr_declare_t*) expr)
@@ -1552,7 +1567,7 @@ const char *global_expression_rep_table[] = {
     "<toggle>",                   // 0x00000041
     "<va_arg>",                   // 0x00000042
     "<initlist>",                 // 0x00000043
-    "<reserved>",                 // 0x00000044
+    "<polycount>",                // 0x00000044
     "<reserved>",                 // 0x00000045
     "<reserved>",                 // 0x00000046
     "<reserved>",                 // 0x00000047

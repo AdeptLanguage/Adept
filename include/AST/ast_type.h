@@ -31,8 +31,9 @@ extern "C" {
 #define AST_ELEM_GENERIC_FLOAT    0x06
 #define AST_ELEM_FUNC             0x07
 #define AST_ELEM_POLYMORPH        0x08
-#define AST_ELEM_POLYMORPH_PREREQ 0x09
-#define AST_ELEM_GENERIC_BASE     0x0A
+#define AST_ELEM_POLYCOUNT        0x09
+#define AST_ELEM_POLYMORPH_PREREQ 0x0A
+#define AST_ELEM_GENERIC_BASE     0x0B
 
 // Possible data flow patterns
 #define FLOW_NONE  0x00
@@ -106,6 +107,14 @@ typedef struct {
     bool allow_auto_conversion;
 } ast_elem_polymorph_t;
 
+// ---------------- ast_elem_polycount_t ----------------
+// Type element for a polymorphic count variable
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_t name;
+} ast_elem_polycount_t;
+
 // ---------------- ast_elem_polymorph_prereq_t ----------------
 // Type element for a polymorphic type variable which only fits
 // for structs that match the similarity prerequisite
@@ -120,7 +129,7 @@ typedef struct {
 } ast_elem_polymorph_prereq_t;
 
 // ---------------- ast_elem_generic_base_t ----------------
-// Type element for a varient of a generic base
+// Type element for a variant of a generic base
 typedef struct {
     unsigned int id;
     source_t source;
@@ -138,20 +147,30 @@ typedef struct {
     char flow; // in | out | inout
 } ast_unnamed_arg_t;
 
-// ---------------- ast_type_var_t ----------------
+// ---------------- ast_poly_catalog_type_t ----------------
 // Data structure for a single polymorphic type binding
 typedef struct {
     weak_cstr_t name;
     ast_type_t binding;
-} ast_type_var_t;
+} ast_poly_catalog_type_t;
 
-// ---------------- ast_type_var_catalog_t ----------------
+// ---------------- ast_poly_catalog_count_t ----------------
+// Data structure for a single polymorphic count binding
+typedef struct {
+    weak_cstr_t name;
+    length_t binding;
+} ast_poly_catalog_count_t;
+
+// ---------------- ast_poly_catalog_t ----------------
 // Data structure for polymorphic type bindings
 typedef struct {
-    ast_type_var_t *type_vars;
-    length_t length;
-    length_t capacity;
-} ast_type_var_catalog_t;
+    ast_poly_catalog_type_t *types;
+    length_t types_length;
+    length_t types_capacity;
+    ast_poly_catalog_count_t *counts;
+    length_t counts_length;
+    length_t counts_capacity;
+} ast_poly_catalog_t;
 
 // ---------------- ast_elem_clone ----------------
 // Clones an AST type element, producing a duplicate
@@ -296,22 +315,31 @@ bool ast_type_has_polymorph(const ast_type_t *type);
 // NOTE: Frees memory allocated for the pointer element
 void ast_type_dereference(ast_type_t *inout_type);
 
-// ---------------- ast_type_var_catalog_init ----------------
+// ---------------- ast_poly_catalog_init ----------------
 // Initializes an AST type var catalog
-void ast_type_var_catalog_init(ast_type_var_catalog_t *catalog);
+void ast_poly_catalog_init(ast_poly_catalog_t *catalog);
 
-// ---------------- ast_type_var_catalog_free ----------------
+// ---------------- ast_poly_catalog_free ----------------
 // Frees an AST type var catalog
-void ast_type_var_catalog_free(ast_type_var_catalog_t *catalog);
+void ast_poly_catalog_free(ast_poly_catalog_t *catalog);
 
-// ---------------- ast_type_var_catalog_add ----------------
+// ---------------- ast_poly_catalog_add_type ----------------
 // Adds an AST type variable binding to an AST type var catalog
 // NOTE: 'binding' doesn't have to be preserved after this call
-void ast_type_var_catalog_add(ast_type_var_catalog_t *catalog, weak_cstr_t name, ast_type_t *binding);
+void ast_poly_catalog_add_type(ast_poly_catalog_t *catalog, weak_cstr_t name, ast_type_t *binding);
 
-// ---------------- ast_type_var_catalog_find ----------------
+// ---------------- ast_poly_catalog_add_count ----------------
+// Adds an AST count variable binding to an AST type var catalog
+// NOTE: 'binding' doesn't have to be preserved after this call
+void ast_poly_catalog_add_count(ast_poly_catalog_t *catalog, weak_cstr_t name, length_t binding);
+
+// ---------------- ast_poly_catalog_find_type ----------------
 // Finds an AST type variable binding within an AST type var catalog
-ast_type_var_t *ast_type_var_catalog_find(ast_type_var_catalog_t *catalog, weak_cstr_t name);
+ast_poly_catalog_type_t *ast_poly_catalog_find_type(ast_poly_catalog_t *catalog, weak_cstr_t name);
+
+// ---------------- ast_poly_catalog_find_count ----------------
+// Finds an AST count variable binding within an AST type var catalog
+ast_poly_catalog_count_t *ast_poly_catalog_find_count(ast_poly_catalog_t *catalog, weak_cstr_t name);
 
 // ---------------- ast_type_hash ----------------
 // Hashes an AST type

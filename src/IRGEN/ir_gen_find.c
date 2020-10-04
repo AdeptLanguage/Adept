@@ -214,7 +214,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
         ast_polymorphic_func_t *poly_func = &ast->polymorphic_funcs[poly_index];
         ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
         bool found_compatible = false;
-        ast_type_var_catalog_t using_catalog;
+        ast_poly_catalog_t using_catalog;
 
         errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
@@ -243,7 +243,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
             ir_func_mapping_t instance;
             
             if(instantiate_polymorphic_func(builder, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
-            ast_type_var_catalog_free(&using_catalog);
+            ast_poly_catalog_free(&using_catalog);
 
             result->ast_func = &builder->object->ast.funcs[instance.ast_func_id];
             result->ir_func = &builder->object->ir_module.funcs[instance.ir_func_id];
@@ -437,7 +437,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
         ast_polymorphic_func_t *poly_func = &ast->polymorphic_methods[poly_index];
         ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
         bool found_compatible = false;
-        ast_type_var_catalog_t using_catalog;
+        ast_poly_catalog_t using_catalog;
 
         errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
@@ -466,7 +466,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
             ir_func_mapping_t instance;
 
             if(instantiate_polymorphic_func(builder, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
-            ast_type_var_catalog_free(&using_catalog);
+            ast_poly_catalog_free(&using_catalog);
 
             result->ast_func = &builder->object->ast.funcs[instance.ast_func_id];
             result->ir_func = &builder->object->ir_module.funcs[instance.ir_func_id];
@@ -549,7 +549,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
         ast_polymorphic_func_t *poly_func = &ast->polymorphic_methods[poly_index];
         ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
         bool found_compatible = false;
-        ast_type_var_catalog_t using_catalog;
+        ast_poly_catalog_t using_catalog;
 
         errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
         if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
@@ -578,11 +578,11 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
             ir_func_mapping_t instance;
 
             if(instantiate_polymorphic_func(builder, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
-                ast_type_var_catalog_free(&using_catalog);
+                ast_poly_catalog_free(&using_catalog);
                 return ALT_FAILURE;
             }
             
-            ast_type_var_catalog_free(&using_catalog);
+            ast_poly_catalog_free(&using_catalog);
 
             result->ast_func = &builder->object->ast.funcs[instance.ast_func_id];
             result->ir_func = &builder->object->ir_module.funcs[instance.ir_func_id];
@@ -834,7 +834,7 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 }
 
 errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
-        length_t type_list_length, ast_type_var_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode){
+        length_t type_list_length, ast_poly_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode){
 
     length_t required_arity = poly_template->arity;
 
@@ -867,8 +867,8 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
         // and leave processing and conforming the default arguments to higher level functions
     }
     
-    ast_type_var_catalog_t catalog;
-    ast_type_var_catalog_init(&catalog);
+    ast_poly_catalog_t catalog;
+    ast_poly_catalog_init(&catalog);
 
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
@@ -896,6 +896,10 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 
     // Ensure return type matches if provided
     if(gives && gives->elements_length != 0){
+        if(arg_type_polymorphable(builder, &poly_template->return_type, gives, &catalog)){
+            goto polymorphic_failure;
+        }
+
         ast_type_t concrete_return_type;
         if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &poly_template->return_type, &concrete_return_type)){
             goto polymorphic_failure;
@@ -910,7 +914,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     }
 
     if(out_catalog) *out_catalog = catalog;
-    else ast_type_var_catalog_free(&catalog);
+    else ast_poly_catalog_free(&catalog);
     free(arg_value_list_unmodified);
     return SUCCESS;
 
@@ -921,11 +925,11 @@ polymorphic_failure:
     // Undo any modifications to the function arguments
     memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * i);
     free(arg_value_list_unmodified);
-    ast_type_var_catalog_free(&catalog);
+    ast_poly_catalog_free(&catalog);
     return FAILURE;
 }
 
-errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog){
+errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_poly_catalog_t *catalog){
     if(polymorphic_type->elements_length > concrete_type->elements_length) return FAILURE;
 
     for(length_t i = 0; i != concrete_type->elements_length; i++){
@@ -980,7 +984,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
             }
 
             if(!meets_special_prereq && prereq->allow_auto_conversion){
-                ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, prereq->name);
+                ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, prereq->name);
 
                 // Determine special allowed auto conversions
                 meets_special_prereq = type_var ? is_allowed_auto_conversion(builder, &type_var->binding, concrete_type) : false;
@@ -1057,7 +1061,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
             replacement.source = replacement.elements[0]->source;
 
             // Ensure consistency with catalog
-            ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, prereq->name);
+            ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, prereq->name);
 
             if(type_var){
                 if(!ast_types_identical(&replacement, &type_var->binding)){
@@ -1067,7 +1071,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                 }
             } else {
                 // Add to catalog since it's not already present
-                ast_type_var_catalog_add(catalog, prereq->name, &replacement);
+                ast_poly_catalog_add_type(catalog, prereq->name, &replacement);
             }
 
             i = concrete_type->elements_length - 1;
@@ -1093,7 +1097,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
 
             // Ensure consistency with catalog
             ast_elem_polymorph_t *polymorphic_elem = (ast_elem_polymorph_t*) polymorphic_type->elements[i];
-            ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, polymorphic_elem->name);
+            ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, polymorphic_elem->name);
 
             if(type_var){
                 if(!ast_types_identical(&replacement, &type_var->binding)){
@@ -1105,7 +1109,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                 }
             } else {
                 // Add to catalog since it's not already present
-                ast_type_var_catalog_add(catalog, polymorphic_elem->name, &replacement);
+                ast_poly_catalog_add_type(catalog, polymorphic_elem->name, &replacement);
             }
 
             i = concrete_type->elements_length - 1;
@@ -1113,6 +1117,30 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
             continue;
         }
 
+        // Check whether element is a polymorphic count
+        if(poly_elem_id == AST_ELEM_POLYCOUNT){
+            if(concrete_type->elements[i]->id != AST_ELEM_FIXED_ARRAY){
+                // Concrete type must have a fixed array element here
+                return FAILURE;
+            }
+
+            length_t required_binding = ((ast_elem_fixed_array_t*) concrete_type->elements[i])->length;
+            
+            // Ensure consistency with catalog
+            ast_elem_polycount_t *polycount_elem = (ast_elem_polycount_t*) polymorphic_type->elements[i];
+            ast_poly_catalog_count_t *count_var = ast_poly_catalog_find_count(catalog, polycount_elem->name);
+
+            if(count_var){
+                // Can't polycount if existing count don't match
+                if(count_var->binding != required_binding) return FAILURE;
+            } else {
+                // Add to catalog since it's not already present
+                ast_poly_catalog_add_count(catalog, polycount_elem->name, required_binding);
+            }
+
+            continue;
+        }
+        
         // If the polymorphic type doesn't have a polymorphic element for the current element,
         // then the type element ids must match
         if(poly_elem_id != concrete_type->elements[i]->id) return FAILURE;

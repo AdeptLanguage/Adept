@@ -716,23 +716,39 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             if(buffer[i] == '/') { lex_state.state = LEX_STATE_IDLE; }
             else lex_state.state = LEX_STATE_LONGCOMMENT;
             break;
-        case LEX_STATE_META: case LEX_STATE_POLYMORPH:
+        case LEX_STATE_META: case LEX_STATE_POLYMORPH: case LEX_STATE_POLYCOUNT:
             tmp = buffer[i];
             if(tmp == '_' || (tmp >= 65 && tmp <= 90) || (tmp >= 97 && tmp <= 122) || (tmp >= '0' && tmp <= '9')){
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length++] = buffer[i];
             } else if(lex_state.buildup_length == 0 && lex_state.state == LEX_STATE_POLYMORPH && tmp == '~'){
-                // Allow tilda for first character of polymorph
+                // Allow tilde for first character of polymorph
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
-                lex_state.buildup[lex_state.buildup_length++] = '~';
+                lex_state.buildup[lex_state.buildup_length++] = tmp;
+            } else if(lex_state.buildup_length == 0 && lex_state.state == LEX_STATE_POLYMORPH && tmp == '#'){
+                // Allow tilde for first character of polymorph
+                lex_state.state = LEX_STATE_POLYCOUNT;
             } else {
                 // Terminate string buildup buffer
                 expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
                 lex_state.buildup[lex_state.buildup_length] = '\0';
 
-                (*sources)[tokenlist->length].stride = lex_state.buildup_length + 1;
+                (*sources)[tokenlist->length].stride = lex_state.buildup_length + (lex_state.state == LEX_STATE_POLYCOUNT ? 2 : 1);
                 t = &((*tokens)[tokenlist->length++]);
-                t->id = lex_state.state == LEX_STATE_META ? TOKEN_META : TOKEN_POLYMORPH;
+
+                switch(lex_state.state){
+                case LEX_STATE_META:
+                    t->id = TOKEN_META;
+                    break;
+                case LEX_STATE_POLYMORPH:
+                    t->id = TOKEN_POLYMORPH;
+                    break;
+                case LEX_STATE_POLYCOUNT:
+                    t->id = TOKEN_POLYCOUNT;
+                    
+                    break;
+                }
+
                 t->data = malloc(lex_state.buildup_length + 1);
                 memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
                 ((char*) t->data)[lex_state.buildup_length] = '\0';

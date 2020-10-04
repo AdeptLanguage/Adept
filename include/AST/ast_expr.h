@@ -90,6 +90,7 @@ extern "C" {
 #define EXPR_TOGGLE           0x00000041
 #define EXPR_VA_ARG           0x00000042
 #define EXPR_INITLIST         0x00000043
+#define EXPR_POLYCOUNT        0x00000044
 // Exclusive statements ---------------
 #define EXPR_DECLARE          0x00000050
 #define EXPR_DECLAREUNDEF     0x00000051
@@ -495,6 +496,15 @@ typedef struct {
     ast_expr_t **elements;
     length_t length;
 } ast_expr_initlist_t;
+
+// ---------------- ast_expr_polycount_t ----------------
+// Expression for polymorphic count variable
+// DANGEROUS: NOTE: 'sizeof(ast_expr_polycount_t) <= sizeof(ast_expr_usize_t)'
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_t name;
+} ast_expr_polycount_t;
 
 // ---------------- ast_expr_declare_t ----------------
 // Expression for declaring a variable

@@ -189,13 +189,14 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
         case TOKEN_POLYMORPH:
             printf("Polymorph: \"%s\"\n", (char*) tokenlist->tokens[i].data);
             break;
-        case TOKEN_MAYBE:          printf("Maybe\n"); break;
-        case TOKEN_INCREMENT:      printf("Increment\n"); break;
-        case TOKEN_DECREMENT:      printf("Decrement\n"); break;
-        case TOKEN_TOGGLE:         printf("Toggle\n"); break;
-        case TOKEN_STRONG_ARROW:   printf("Strong Arrow\n"); break;
-        case TOKEN_RANGE:          printf("Range\n"); break;
-        case TOKEN_GIVES:          printf("Gives\n"); break;
+        case TOKEN_MAYBE:             printf("Maybe\n"); break;
+        case TOKEN_INCREMENT:         printf("Increment\n"); break;
+        case TOKEN_DECREMENT:         printf("Decrement\n"); break;
+        case TOKEN_TOGGLE:            printf("Toggle\n"); break;
+        case TOKEN_STRONG_ARROW:      printf("Strong Arrow\n"); break;
+        case TOKEN_RANGE:             printf("Range\n"); break;
+        case TOKEN_GIVES:             printf("Gives\n"); break;
+        case TOKEN_POLYCOUNT:         printf("Polycount\n"); break;
         default:
             printf("unknown token 0x%08X: THIS TOKEN HAS AN UNKNOWN ID\n", tokenlist->tokens[i].id);
         }
@@ -288,7 +289,7 @@ const char *global_token_name_table[] = {
     "strong arrow",                       // 0x00000047
     "range",                              // 0x00000048
     "gives",                              // 0x00000049
-    "reserved",                           // 0x0000004A
+    "polycount",                          // 0x0000004A
     "reserved",                           // 0x0000004B
     "reserved",                           // 0x0000004C
     "reserved",                           // 0x0000004D

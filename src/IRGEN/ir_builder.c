@@ -895,17 +895,17 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             if(template == NULL) return FAILURE;
 
             // Substitution Catalog
-            ast_type_var_catalog_t catalog;
-            ast_type_var_catalog_init(&catalog);
+            ast_poly_catalog_t catalog;
+            ast_poly_catalog_init(&catalog);
 
             if(template->generics_length != generic_base->generics_length){
                 redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating child deference!\n", generic_base->name);
-                ast_type_var_catalog_free(&catalog);
+                ast_poly_catalog_free(&catalog);
                 return ALT_FAILURE;
             }
 
             for(length_t i = 0; i != template->generics_length; i++){
-                ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+                ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
             }
 
             for(length_t f = 0; f != template->field_count; f++){
@@ -913,7 +913,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 ast_type_t ast_field_type;
 
                 if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
-                    ast_type_var_catalog_free(&catalog);
+                    ast_poly_catalog_free(&catalog);
                     return ALT_FAILURE;
                 }
 
@@ -925,7 +925,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type) ||
                     ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type)
                 ){
-                    ast_type_var_catalog_free(&catalog);
+                    ast_poly_catalog_free(&catalog);
                     ast_type_free(&ast_field_type);
                     return ALT_FAILURE;
                 }
@@ -945,13 +945,13 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
 
                     // Propogate alternate failure cause
                     if(failed == ALT_FAILURE){
-                        ast_type_var_catalog_free(&catalog);
+                        ast_poly_catalog_free(&catalog);
                         return ALT_FAILURE;
                     }
                 }
             }
 
-            ast_type_var_catalog_free(&catalog);
+            ast_poly_catalog_free(&catalog);
         }
         break;
     default:
@@ -1210,17 +1210,17 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             if(template == NULL) return FAILURE;
 
             // Substitution Catalog
-            ast_type_var_catalog_t catalog;
-            ast_type_var_catalog_init(&catalog);
+            ast_poly_catalog_t catalog;
+            ast_poly_catalog_init(&catalog);
 
             if(template->generics_length != generic_base->generics_length){
                 redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating child passing!\n", generic_base->name);
-                ast_type_var_catalog_free(&catalog);
+                ast_poly_catalog_free(&catalog);
                 return ALT_FAILURE;
             }
 
             for(length_t i = 0; i != template->generics_length; i++){
-                ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+                ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
             }
 
             for(length_t f = 0; f != template->field_count; f++){
@@ -1228,7 +1228,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ast_type_t ast_field_type;
 
                 if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
-                    ast_type_var_catalog_free(&catalog);
+                    ast_poly_catalog_free(&catalog);
                     return ALT_FAILURE;
                 }
 
@@ -1240,7 +1240,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type) ||
                     ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type)
                 ){
-                    ast_type_var_catalog_free(&catalog);
+                    ast_poly_catalog_free(&catalog);
                     ast_type_free(&ast_field_type);
                     return ALT_FAILURE;
                 }
@@ -1266,13 +1266,13 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                     // Propogate alternate failure cause
                     if(failed == ALT_FAILURE){
-                        ast_type_var_catalog_free(&catalog);
+                        ast_poly_catalog_free(&catalog);
                         return ALT_FAILURE;
                     }
                 }
             }
 
-            ast_type_var_catalog_free(&catalog);
+            ast_poly_catalog_free(&catalog);
         }
         break;
     case AST_ELEM_FIXED_ARRAY: {
@@ -1511,7 +1511,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 }
 
 errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_poly_func_id, ast_type_t *types,
-        length_t types_list_length, ast_type_var_catalog_t *catalog, ir_func_mapping_t *out_mapping){
+        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping){
 
     ast_func_t *poly_func = &builder->object->ast.funcs[ast_poly_func_id];
     length_t required_arity = poly_func->arity;
@@ -1773,7 +1773,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
     return SUCCESS;
 }
 
-errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){
+errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){
     ast_elem_t **elements = NULL;
     length_t length = 0;
     length_t capacity = 0;
@@ -1846,7 +1846,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
         case AST_ELEM_POLYMORPH: {
                 // Find the determined type for the polymorphic type variable
                 ast_elem_polymorph_t *polymorphic_element = (ast_elem_polymorph_t*) in_type->elements[i];
-                ast_type_var_t *type_var = ast_type_var_catalog_find(catalog, polymorphic_element->name);
+                ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, polymorphic_element->name);
 
                 if(type_var == NULL){
                     compiler_panicf(compiler, in_type->source, "Undetermined polymorphic type variable '$%s'", polymorphic_element->name);
@@ -1858,6 +1858,24 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
                 for(length_t j = 0; j != type_var->binding.elements_length; j++){
                     elements[length++] = ast_elem_clone(type_var->binding.elements[j]);
                 }
+            }
+            break;
+        case AST_ELEM_POLYCOUNT: {
+                // Find the determined type for the polymorphic count variable
+                ast_elem_polycount_t *polycount_element = (ast_elem_polycount_t*) in_type->elements[i];
+                ast_poly_catalog_count_t *count_var = ast_poly_catalog_find_count(catalog, polycount_element->name);
+
+                if(count_var == NULL){
+                    compiler_panicf(compiler, in_type->source, "Undetermined polymorphic count variable '$#%s'", polycount_element->name);
+                    return FAILURE;
+                }
+
+                // Replace the polymorphic type variable with the determined type
+                ast_elem_fixed_array_t *resolved = malloc(sizeof(ast_elem_fixed_array_t));
+                resolved->id = AST_ELEM_FIXED_ARRAY;
+                resolved->source = polycount_element->source;
+                resolved->length = count_var->binding;
+                elements[length++] = (ast_elem_t*) resolved;
             }
             break;
         default:
@@ -1881,7 +1899,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
     return SUCCESS;
 }
 
-errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_type_var_catalog_t *catalog, ast_expr_t *expr){
+errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t *expr){
     switch(expr->id){
     case EXPR_RETURN: {
             ast_expr_return_t *return_stmt = (ast_expr_return_t*) expr;
@@ -2102,6 +2120,22 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
             ||(def->value != NULL && resolve_expr_polymorphics(compiler, type_table, catalog, def->value))){
                 return FAILURE;
             }
+        }
+        break;
+    case EXPR_POLYCOUNT: {
+            // Find the determined type for the polymorphic count variable
+            ast_poly_catalog_count_t *count_var = ast_poly_catalog_find_count(catalog, ((ast_expr_polycount_t*) expr)->name);
+
+            if(count_var == NULL){
+                compiler_panicf(compiler, expr->source, "Undetermined polymorphic count variable '$#%s'", ((ast_expr_polycount_t*) expr)->name);
+                return FAILURE;
+            }
+
+            // Replace the polymorphic count variable with the determined count
+            // DANGEROUS: Assuming that 'sizeof(ast_expr_polycount_t) <= sizeof(ast_expr_usize_t)'
+            ast_expr_free(expr);
+            expr->id = EXPR_USIZE;
+            ((ast_expr_usize_t*) expr)->value = count_var->binding;
         }
         break;
     default: break;

@@ -131,14 +131,14 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 // NOTE: Returns FAILURE if couldn't fully resolve
 // NOTE: 'gives' may be NULL
 errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
-        length_t type_length, ast_type_var_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode);
+        length_t type_length, ast_poly_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode);
 
 // ---------------- ast_type_has_polymorph ----------------
 // Finds whether a concrete AST type is valid for a given polymorphic type
 // NOTE: Returns SUCCESS if true
 // NOTE: Returns FAILURE if false
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
-errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_type_var_catalog_t *catalog);
+errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
 
 // ---------------- ir_gen_find_special_func ----------------
 // Finds a special function (such as __variadic_array__)

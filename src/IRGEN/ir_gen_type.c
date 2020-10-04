@@ -231,11 +231,11 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
                 return FAILURE;
             }
 
-            ast_type_var_catalog_t catalog;
-            ast_type_var_catalog_init(&catalog);
+            ast_poly_catalog_t catalog;
+            ast_poly_catalog_init(&catalog);
 
             for(length_t i = 0; i != template->generics_length; i++){
-                ast_type_var_catalog_add(&catalog, template->generics[i], &generic_base->generics[i]);
+                ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
             }
 
             extra->subtypes = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t*) * template->field_count);
@@ -244,13 +244,13 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             for(length_t i = 0; i != extra->subtypes_length; i++){
                 ast_type_t tmp_ast_type;
                 if(resolve_type_polymorphics(compiler, object->ast.type_table, &catalog, &template->field_types[i], &tmp_ast_type)){
-                    ast_type_var_catalog_free(&catalog);
+                    ast_poly_catalog_free(&catalog);
                     return FAILURE;
                 }
 
                 if(ir_gen_resolve_type(compiler, object, &tmp_ast_type, &extra->subtypes[i])){
                     ast_type_free(&tmp_ast_type);
-                    ast_type_var_catalog_free(&catalog);
+                    ast_poly_catalog_free(&catalog);
                     return FAILURE;
                 }
                 ast_type_free(&tmp_ast_type);
@@ -258,7 +258,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
 
             extra->traits = TRAIT_NONE;
             *resolved_type = created_type;
-            ast_type_var_catalog_free(&catalog);
+            ast_poly_catalog_free(&catalog);
         }
         break;
     default: {
@@ -646,7 +646,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     if(ast_types_identical(ast_from_type, ast_to_type)) return true;
 
     // Worst case scenario, we try to use user-defined __as__ method
-    if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT) && ast_type_is_base_like(ast_from_type) && ast_type_is_base_like(ast_to_type)){
+    if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT)){
         ast_expr_phantom_t phantom_value;
         phantom_value.id = EXPR_PHANTOM;
         phantom_value.ir_value = *ir_value;

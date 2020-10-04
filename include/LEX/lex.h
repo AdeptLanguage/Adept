@@ -58,6 +58,7 @@ typedef struct {
 #define LEX_STATE_META        0x00000016
 #define LEX_STATE_POLYMORPH   0x00000017
 #define LEX_STATE_COMPLEMENT  0x00000018
+#define LEX_STATE_POLYCOUNT   0x00000019
 
 // ---------------- lex ----------------
 // Entry point for lexical analysis
