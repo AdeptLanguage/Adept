@@ -1,8 +1,5 @@
 
 pragma ignore_unused
-pragma enable_experimental_colon_colon_syntax
-pragma enable_experimental_colon_before_type_syntax
-
 import basics
 
 people :: namespace {

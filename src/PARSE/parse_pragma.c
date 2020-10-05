@@ -25,11 +25,10 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     // NOTE: Must be presorted alphabetically and match with indicies below
     const char * const directives[] = {
         "__builtin_warn_bad_printf_format", "compiler_supports", "compiler_version", "default_stdlib", "deprecated", "disable_warnings",
-        "enable_experimental_colon_before_type_syntax", "enable_experimental_colon_colon_syntax", "enable_warnings", "entry_point", "help",
-        "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete", "ignore_partial_support", "ignore_unrecognized_directives",
-        "ignore_unused", "libm", "linux_only", "mac_only", "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization",
-        "options", "package", "project_name", "short_warnings", "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error",
-        "warn_short", "windows_only"
+        "enable_warnings", "entry_point", "help", "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete",
+        "ignore_partial_support", "ignore_unrecognized_directives", "ignore_unused", "libm", "linux_only", "mac_only",
+        "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name", "short_warnings",
+        "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "warn_short", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -43,36 +42,34 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     #define PRAGMA_DEFAULT_STDLIB                   0x00000003
     #define PRAGMA_DEPRECATED                       0x00000004
     #define PRAGMA_DISABLE_WARNINGS                 0x00000005
-    #define PRAGMA_ENABLE_TYPE_COLON                0x00000006
-    #define PRAGMA_ENABLE_COLON_COLON               0x00000007
-    #define PRAGMA_ENABLE_WARNINGS                  0x00000008
-    #define PRAGMA_ENTRY_POINT                      0x00000009
-    #define PRAGMA_HELP                             0x0000000A
-    #define PRAGMA_IGNORE_ALL                       0x0000000B
-    #define PRAGMA_IGNORE_DEPRECATION               0x0000000C
-    #define PRAGMA_IGNORE_EARLY_RETURN              0x0000000D
-    #define PRAGMA_IGNORE_OBSOLETE                  0x0000000E
-    #define PRAGMA_IGNORE_PARTIAL_SUPPORT           0x0000000F
-    #define PRAGMA_IGNORE_UNRECOGNIZED_DIRECTIVES   0x00000010
-    #define PRAGMA_IGNORE_UNUSED                    0x00000011
-    #define PRAGMA_LIBM                             0x00000012
-    #define PRAGMA_LINUX_ONLY                       0x00000013
-    #define PRAGMA_MAC_ONLY                         0x00000014
-    #define PRAGMA_NO_TYPE_INFO                     0x00000015
-    #define PRAGMA_NO_TYPEINFO                      0x00000016
-    #define PRAGMA_NO_UNDEF                         0x00000017
-    #define PRAGMA_NULL_CHECKS                      0x00000018
-    #define PRAGMA_OPTIMIZATION                     0x00000019
-    #define PRAGMA_OPTIONS                          0x0000001A
-    #define PRAGMA_PACKAGE                          0x0000001B
-    #define PRAGMA_PROJECT_NAME                     0x0000001C
-    #define PRAGMA_SHORT_WARNINGS                   0x0000001D
-    #define PRAGMA_UNSAFE_META                      0x0000001E
-    #define PRAGMA_UNSAFE_NEW                       0x0000001F
-    #define PRAGMA_UNSUPPORTED                      0x00000020
-    #define PRAGMA_WARN_AS_ERROR                    0x00000021
-    #define PRAGMA_WARN_SHORT                       0x00000022
-    #define PRAGMA_WINDOWS_ONLY                     0x00000023
+    #define PRAGMA_ENABLE_WARNINGS                  0x00000006
+    #define PRAGMA_ENTRY_POINT                      0x00000007
+    #define PRAGMA_HELP                             0x00000008
+    #define PRAGMA_IGNORE_ALL                       0x00000009
+    #define PRAGMA_IGNORE_DEPRECATION               0x0000000A
+    #define PRAGMA_IGNORE_EARLY_RETURN              0x0000000B
+    #define PRAGMA_IGNORE_OBSOLETE                  0x0000000C
+    #define PRAGMA_IGNORE_PARTIAL_SUPPORT           0x0000000D
+    #define PRAGMA_IGNORE_UNRECOGNIZED_DIRECTIVES   0x0000000E
+    #define PRAGMA_IGNORE_UNUSED                    0x0000000F
+    #define PRAGMA_LIBM                             0x00000010
+    #define PRAGMA_LINUX_ONLY                       0x00000011
+    #define PRAGMA_MAC_ONLY                         0x00000012
+    #define PRAGMA_NO_TYPE_INFO                     0x00000013
+    #define PRAGMA_NO_TYPEINFO                      0x00000014
+    #define PRAGMA_NO_UNDEF                         0x00000015
+    #define PRAGMA_NULL_CHECKS                      0x00000016
+    #define PRAGMA_OPTIMIZATION                     0x00000017
+    #define PRAGMA_OPTIONS                          0x00000018
+    #define PRAGMA_PACKAGE                          0x00000019
+    #define PRAGMA_PROJECT_NAME                     0x0000001A
+    #define PRAGMA_SHORT_WARNINGS                   0x0000001B
+    #define PRAGMA_UNSAFE_META                      0x0000001C
+    #define PRAGMA_UNSAFE_NEW                       0x0000001D
+    #define PRAGMA_UNSUPPORTED                      0x0000001E
+    #define PRAGMA_WARN_AS_ERROR                    0x0000001F
+    #define PRAGMA_WARN_SHORT                       0x00000020
+    #define PRAGMA_WINDOWS_ONLY                     0x00000021
 
     maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
@@ -151,12 +148,6 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return SUCCESS;
     case PRAGMA_DISABLE_WARNINGS: // 'disable_warnings' directive
         ctx->compiler->traits |= COMPILER_NO_WARN;
-        return SUCCESS;
-    case PRAGMA_ENABLE_TYPE_COLON: // 'enable_experimental_colon_colon_syntax' directive
-        ctx->compiler->traits |= COMPILER_TYPE_COLON;
-        return SUCCESS;
-    case PRAGMA_ENABLE_COLON_COLON: // 'enable_experimental_colon_colon_syntax' directive
-        ctx->compiler->traits |= COMPILER_COLON_COLON;
         return SUCCESS;
     case PRAGMA_ENABLE_WARNINGS: // 'enable_warnings' directive
         ctx->compiler->traits &= ~COMPILER_NO_WARN;

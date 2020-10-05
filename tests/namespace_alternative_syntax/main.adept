@@ -1,7 +1,5 @@
 
 #import <basics>
-#pragma enable_experimental_colon_colon_syntax
-#pragma enable_experimental_colon_before_type_syntax
 #pragma ignore_unused
 
 io:printf :: func alias (String, ..) => printf
