@@ -193,6 +193,9 @@ void compiler_init(compiler_t *compiler){
     compiler->cross_compile_for = CROSS_COMPILE_NONE;
     compiler->entry_point = "main";
 
+    // Allow '::' and ': Type' by default
+    compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
+
     tmpbuf_init(&compiler->tmp);
 }
 
