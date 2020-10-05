@@ -18,7 +18,7 @@
 // ---------------- ir_builder_t ----------------
 // Container for storing general information
 // about the building state
-typedef struct {
+typedef struct ir_builder {
     ir_basicblock_t *basicblocks;
     length_t basicblocks_length;
     length_t basicblocks_capacity;
@@ -75,12 +75,25 @@ ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
 
 // ---------------- build_varptr ----------------
-// Builds a varptr instruction
-ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
+// Builds a varptr instruction to either static or local
+// variable based on bridge_var_t
+ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, bridge_var_t *var);
+
+// ---------------- build_lvarptr ----------------
+// Builds a localvarptr instruction
+ir_value_t *build_lvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
 // ---------------- build_varptr ----------------
 // Builds a globalvarptr instruction
 ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
+
+// ---------------- build_svarptr ----------------
+// Builds a staticvarptr instruction
+ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
+
+// ---------------- build_zeroinit ----------------
+// Builds a zero initialization instruction
+void build_zeroinit(ir_builder_t *builder, ir_value_t *destination);
 
 // ---------------- build_load ----------------
 // Builds a load instruction
@@ -294,8 +307,7 @@ void close_scope(ir_builder_t *builder);
 
 // ---------------- add_variable ----------------
 // Adds a variable to the current bridge_scope_t
-// NOTE: 'anon_global' should be not if !(traits & BRIDGE_VAR_STATIC)
-void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits, ir_value_t *anon_global);
+void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
 
 // ---------------- handle_deference_for_variables ----------------
 // Handles deference for variables in a variable list

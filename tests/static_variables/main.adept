@@ -1,0 +1,21 @@
+
+import basics
+
+func main {
+    next()
+    next()
+    next()
+    print("[done]")
+}
+
+func next {
+    static x int = 0
+    static y int = 0
+    static z int = 0
+    static string String = "-> "
+
+    place(x++, y++, z++)
+
+    string.append("Hello ")
+    print(string)
+}

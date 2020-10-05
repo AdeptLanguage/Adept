@@ -16,6 +16,10 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_builder.h"
 
+// ---------------- ir_builder_init ----------------
+// Initializes an IR builder
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list, bool static_builder);
+
 // ---------------- ir_gen_func_statements ----------------
 // Generates the required intermediate representation for
 // statements inside an AST function. Internally it

@@ -260,6 +260,8 @@ call :compile static_arrays
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile static_structs
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile static_variables
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile stdcall
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile string

@@ -227,6 +227,12 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         }
     }
 
+    if(ast_func->traits & AST_FUNC_MAIN){
+        module->common.has_main = true;
+        module->common.ast_main_id = ast_func_id;
+        module->common.ir_main_id = ir_func_id;
+    }
+
     if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&ast_func->return_type)){
         // If it's the main function and returns void, return int under the hood
         module_func->return_type = ir_pool_alloc(&module->pool, sizeof(ir_type_t));
@@ -243,6 +249,8 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
     // NOTE: Only ir_gens function body; assumes skeleton already exists
 
     ast_func_t **ast_funcs = &object->ast.funcs;
+    
+    ir_builder_init(object->ir_module.init_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, job_list, true);
 
     while(job_list->length != 0){
         ir_func_mapping_t *job = &job_list->jobs[--job_list->length];
@@ -250,7 +258,7 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
 
         if(ir_gen_func_statements(compiler, object, job->ast_func_id, job->ir_func_id, job_list)) return FAILURE;
     }
-
+    
     return SUCCESS;
 }
 

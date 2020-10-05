@@ -65,25 +65,42 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
     return ir_value;
 }
 
-ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
+ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, bridge_var_t *var){
+    if(var->traits & BRIDGE_VAR_STATIC)
+        return build_svarptr(builder, ptr_type, var->static_id);
+    else
+        return build_lvarptr(builder, ptr_type, var->id);
+}
+
+ir_value_t *build_lvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
+    ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) build_instruction(builder, sizeof(ir_instr_varptr_t));
     instruction->id = INSTRUCTION_VARPTR;
     instruction->result_type = ptr_type;
     instruction->index = variable_id;
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
     // Build gvarptr instruction
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varptr_t));
+    ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) build_instruction(builder, sizeof(ir_instr_varptr_t));
     instruction->id = INSTRUCTION_GLOBALVARPTR;
     instruction->result_type = ptr_type;
     instruction->index = variable_id;
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
     return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
+    ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) build_instruction(builder, sizeof(ir_instr_varptr_t));
+    instruction->id = INSTRUCTION_STATICVARPTR;
+    instruction->result_type = ptr_type;
+    instruction->index = variable_id;
+    return build_value_from_prev_instruction(builder);
+}
+
+void build_zeroinit(ir_builder_t *builder, ir_value_t *destination){
+    ir_instr_zeroinit_t *instruction = (ir_instr_zeroinit_t*) build_instruction(builder, sizeof(ir_instr_zeroinit_t));
+    instruction->id = INSTRUCTION_ZEROINIT;
+    instruction->destination = destination;
 }
 
 ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source){
@@ -642,16 +659,29 @@ void close_scope(ir_builder_t *builder){
         redprintf("INTERNAL ERROR: TRIED TO CLOSE BRIDGE SCOPE WITH NO PARENT, probably will crash...\n");
 }
 
-void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits, ir_value_t *anon_global){
+void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
     expand((void**) &list->variables, sizeof(bridge_var_t), list->length, &list->capacity, 1, 4);
     list->variables[list->length].name = name;
     list->variables[list->length].ast_type = ast_type;
-    list->variables[list->length].id = builder->next_var_id;
     list->variables[list->length].traits = traits;
     list->variables[list->length].ir_type = ir_type;
-    list->variables[list->length].anon_global = anon_global;
-    builder->next_var_id++;
+
+    if(traits & BRIDGE_VAR_STATIC){
+        ir_module_t *ir_module = &builder->object->ir_module;
+        expand((void**) &ir_module->static_variables, sizeof(ir_static_variable_t), ir_module->static_variables_length, &ir_module->static_variables_capacity, 1, 8);
+
+        list->variables[list->length].static_id = builder->object->ir_module.common.next_static_variable_id;
+        list->variables[list->length].id = -1;
+
+        // Create ir_static_variable_t
+        ir_module->static_variables[builder->object->ir_module.common.next_static_variable_id++].type = ir_type;
+        ir_module->static_variables_length++;
+    } else {
+        list->variables[list->length].static_id = -1;
+        list->variables[list->length].id = builder->next_var_id++;
+    }
+
     list->length++;
 }
 
@@ -671,7 +701,7 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         ir_pool_snapshot_t snapshot;
         ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-        ir_value_t *ir_var_value = build_varptr(builder, ir_type_pointer_to(builder->pool, variable->ir_type), variable->id);
+        ir_value_t *ir_var_value = build_varptr(builder, ir_type_pointer_to(builder->pool, variable->ir_type), variable);
         errorcode_t failed = handle_single_deference(builder, variable->ast_type, ir_var_value);
 
         if(failed){
@@ -866,7 +896,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     return ALT_FAILURE;
                 }
 
-                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
+                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
                 ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
                 errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value);
@@ -930,7 +960,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     return ALT_FAILURE;
                 }
 
-                ir_value_t *this_ir_value = build_load(builder, build_varptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
+                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
                 ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
                 errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value);
@@ -1123,7 +1153,7 @@ errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_re
         return FAILURE;
     }
 
-    ir_value_t *variable_reference = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+    ir_value_t *variable_reference = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
     ir_value_t *return_value = build_load(builder, variable_reference, passed_ast_type->source);
 
     // Return modified value
@@ -1181,7 +1211,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     continue;
                 }
 
-                ir_value_t *mutable_passed_ir_value = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
                 ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type->source);
                 errorcode_t failed = handle_single_pass(builder, ast_field_type, ir_field_reference);
@@ -1251,7 +1281,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     continue;
                 }
 
-                ir_value_t *mutable_passed_ir_value = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
                 ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type.source);
                 errorcode_t failed = handle_single_pass(builder, &ast_field_type, ir_field_reference);
@@ -1311,7 +1341,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ir_type_t *ir_element_ptr_type = ir_type_pointer_to(builder->pool, ir_element_type);
 
                 // Get pointer to elements of fixed array variable
-                ir_value_t *mutable_passed_ir_value = build_varptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
                 mutable_passed_ir_value = build_bitcast(builder, mutable_passed_ir_value, ir_element_ptr_type);
 
                 // Access 'e'th element
@@ -1399,13 +1429,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     }
 
     if(zero_initialize){
-        // Zero initialize for declaration assignments
-        ir_basicblock_new_instructions(builder->current_block, 1);
-        ir_instr_varzeroinit_t *zero_instr = (ir_instr_varzeroinit_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
-        zero_instr->id = INSTRUCTION_VARZEROINIT;
-        zero_instr->result_type = NULL;
-        zero_instr->index = builder->next_var_id - 1;
-        builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) zero_instr;
+        build_zeroinit(builder, destination);
     }
 
     if(handle_pass_management(builder, arguments, arg_types, result.ast_func->arg_type_traits, 2)){

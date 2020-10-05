@@ -84,7 +84,7 @@
 #define INSTRUCTION_OR             0x00000042 // ir_instr_math_t
 #define INSTRUCTION_SIZEOF         0x00000043
 #define INSTRUCTION_OFFSETOF       0x00000044
-#define INSTRUCTION_VARZEROINIT    0x00000045
+#define INSTRUCTION_ZEROINIT       0x00000045
 #define INSTRUCTION_MEMCPY         0x00000046
 #define INSTRUCTION_BIT_AND        0x00000047 // ir_instr_math_t
 #define INSTRUCTION_BIT_OR         0x00000048 // ir_instr_math_t
@@ -104,6 +104,7 @@
 #define INSTRUCTION_VA_END         0x00000056 // ir_instr_unary_t
 #define INSTRUCTION_VA_ARG         0x00000057 // ir_instr_va_arg_t
 #define INSTRUCTION_VA_COPY        0x00000058 // ir_instr_va_copy_t
+#define INSTRUCTION_STATICVARPTR   0x00000059 // ir_instr_varptr_t
 
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type
@@ -227,7 +228,7 @@ typedef struct {
 // ---------------- ir_instr_varptr_t ----------------
 // An IR pseudo-instruction for getting a pointer to a
 // statically allocated variable
-// Used for (INSTRUCTION_VARPTR and INSTRUCTION_GLOBALVARPTR)
+// Used for (INSTRUCTION_VARPTR and INSTRUCTION_GLOBALVARPTR and INSTRUCTION_STATICVARPTR)
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
@@ -314,13 +315,12 @@ typedef struct {
     length_t index;
 } ir_instr_offsetof_t;
 
-// ---------------- ir_instr_varzeroinit_t ----------------
-// An IR instruction for zero-initializing a stack allocated variable
+// ---------------- ir_instr_zeroinit_t ----------------
+// An IR instruction for zero-initializing a value
 typedef struct {
     unsigned int id;
-    ir_type_t *result_type;
-    length_t index;
-} ir_instr_varzeroinit_t;
+    ir_value_t *destination;
+} ir_instr_zeroinit_t;
 
 // ---------------- ir_instr_memcpy_t ----------------
 // An IR instruction for copying chunks of memory from one place to another
@@ -520,7 +520,19 @@ typedef struct {
     troolean has_rtti_array;
     ir_type_t *ir_variadic_array;         // NOTE: Can be NULL
     length_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
+    bool has_main;
+    length_t ast_main_id;
+    length_t ir_main_id;
+    length_t next_static_variable_id;
 } ir_shared_common_t;
+
+// ---------------- ir_static_variable_t ----------------
+// A static variable in an IR module
+typedef struct {
+    ir_type_t *type;
+} ir_static_variable_t;
+
+struct ir_builder;
 
 // ---------------- ir_module_t ----------------
 // An intermediate representation module
@@ -550,6 +562,10 @@ typedef struct {
     rtti_relocation_t *rtti_relocations;
     length_t rtti_relocations_length;
     length_t rtti_relocations_capacity;
+    struct ir_builder *init_builder;
+    ir_static_variable_t *static_variables;
+    length_t static_variables_length;
+    length_t static_variables_capacity;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------
@@ -573,6 +589,7 @@ void ir_module_dump(ir_module_t *ir_module, const char *filename);
 // ---------------- ir_dump_functions (and friends) ----------------
 // Dumps a specific part of an IR module
 void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_length);
+void ir_dump_basicsblocks(FILE *file, ir_basicblock_t *basicblocks, length_t basicblocks_length, ir_func_t *functions);
 void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, const char *instruction_name);
 void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, const char *real_name);
 void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instruction, int i);
@@ -585,6 +602,10 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t glob
 // ---------------- ir_module_free ----------------
 // Frees data within an IR module
 void ir_module_free(ir_module_t *ir_module);
+
+// ---------------- ir_basicblock_free ----------------
+// Frees an IR basicblock
+void ir_basicblock_free(ir_basicblock_t *basicblock);
 
 // ---------------- ir_module_free_funcs ----------------
 // Frees data within each IR function in a list

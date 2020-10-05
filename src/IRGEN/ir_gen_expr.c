@@ -415,7 +415,7 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
         ir_type_t *ir_ptr_type = ir_type_pointer_to(builder->pool, variable->ir_type);
 
         // Variable-Pointer instruction to get pointer to stack variable
-        *ir_value = build_varptr(builder, ir_ptr_type, variable->id);
+        *ir_value = build_varptr(builder, ir_ptr_type, variable);
 
         // Load if the variable is a reference
         if(variable->traits & BRIDGE_VAR_REFERENCE) *ir_value = build_load(builder, *ir_value, expr->source);
@@ -499,7 +499,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         }
 
         // Load function pointer value from variable
-        *ir_value = build_varptr(builder, tmp_ir_variable_type, var->id);
+        *ir_value = build_varptr(builder, tmp_ir_variable_type, var);
         *ir_value = build_load(builder, *ir_value, expr->source);
 
         // Call function pointer value
@@ -1018,7 +1018,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         // Write whether member access should take place via union access
         *is_via_union = template->traits & AST_STRUCT_IS_UNION;
 
-        // Dispose of the polymorphic substituions catalog
+        // Dispose of the polymorphic substitutions catalog
         ast_poly_catalog_free(&catalog);
         return SUCCESS;
     }
@@ -2299,8 +2299,8 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         }
 
         // Add the variable
-        ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE, NULL);
+        ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id);
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
         // Assign the initial value to the newly created variable
         if(def->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
@@ -2314,22 +2314,21 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         *ir_value = destination;
     } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
         // Mark the variable as undefined memory so it isn't auto-initialized later on
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF, NULL);
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
 
         // Result is pointer to variable on stack
-        *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
+        *ir_value = build_lvarptr(builder, var_pointer_type, builder->next_var_id - 1);
     } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
         // Variable declaration without initial value
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE, NULL);
         
+        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+
         // Zero initialize the variable
-        ir_instr_varzeroinit_t *instruction = (ir_instr_varzeroinit_t*) build_instruction(builder, sizeof(ir_instr_varzeroinit_t));
-        instruction->id = INSTRUCTION_VARZEROINIT;
-        instruction->result_type = NULL;
-        instruction->index = builder->next_var_id - 1;
+        ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id - 1);
+        build_zeroinit(builder, destination);
         
         // Result is pointer to variable on stack
-        *ir_value = build_varptr(builder, var_pointer_type, builder->next_var_id - 1);
+        *ir_value = destination;
     }
 
     // Result type is pointer to AST declaration type

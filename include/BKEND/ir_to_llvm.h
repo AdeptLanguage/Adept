@@ -35,6 +35,25 @@ typedef struct {
     length_t capacity;
 } llvm_string_table_t;
 
+typedef struct {
+    LLVMValueRef phi;
+    LLVMValueRef a;
+    LLVMValueRef b;
+    length_t basicblock_a;
+    length_t basicblock_b;
+} llvm_phi2_relocation_t;
+
+typedef struct {
+    llvm_phi2_relocation_t *unrelocated;
+    length_t length;
+    length_t capacity;
+} llvm_phi2_relocation_list_t;
+
+typedef struct {
+    LLVMValueRef global;
+    LLVMTypeRef type;
+} llvm_static_global_t;
+
 // ---------------- llvm_context_t ----------------
 // A general container for the LLVM exporting context
 typedef struct {
@@ -54,6 +73,7 @@ typedef struct {
     LLVMValueRef va_end_intrinsic;
     LLVMValueRef va_copy_intrinsic;
     compiler_t *compiler;
+    object_t *object;
 
     // Variables only used for compilation with null checks
     LLVMBasicBlockRef null_check_on_fail_block;
@@ -63,15 +83,15 @@ typedef struct {
     bool has_null_check_failure_message_bytes;
 
     llvm_string_table_t string_table;
-} llvm_context_t;
+    llvm_phi2_relocation_list_t relocation_list;
 
-typedef struct {
-    LLVMValueRef phi;
-    LLVMValueRef a;
-    LLVMValueRef b;
-    length_t basicblock_a;
-    length_t basicblock_b;
-} llvm_phi2_relocation_t;
+    llvm_static_global_t *static_globals;
+    length_t static_globals_length;
+    length_t static_globals_capacity;
+    LLVMBasicBlockRef static_globals_initialization_routine;
+    LLVMBasicBlockRef static_globals_initialization_post;
+    LLVMBasicBlockRef boot;
+} llvm_context_t;
 
 // ---------------- ir_to_llvm_type ----------------
 // Converts an IR type to an LLVM type
@@ -88,6 +108,24 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object);
 // ---------------- ir_to_llvm_function_bodies ----------------
 // Generates LLVM function bodies for IR functions
 errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object);
+
+// ---------------- ir_to_llvm_instructions ----------------
+// Generates LLVM instructions from IR instructions
+errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructions, length_t instructions_length, length_t basicblock_id,
+        length_t f, LLVMBasicBlockRef *llvm_blocks, LLVMBasicBlockRef *llvm_exit_blocks);
+
+// ---------------- ir_to_llvm_basicblocks ----------------
+// Generates LLVM basicblocks and instructions from IR basicblocks and instructions
+errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblock_t *basicblocks, length_t basicblocks_length, LLVMValueRef func_skeleton,
+        ir_func_t *module_func, LLVMBasicBlockRef *llvm_blocks, LLVMBasicBlockRef *llvm_exit_blocks, length_t f);
+
+// ---------------- ir_to_llvm_allocate_stack_variables ----------------
+// Generates stack variables
+errorcode_t ir_to_llvm_allocate_stack_variables(llvm_context_t *llvm, varstack_t *stack, LLVMValueRef func_skeleton, ir_func_t *module_func);
+
+// ---------------- build_llvm_null_check_on_failure_block ----------------
+// Creates 'llvm->null_check_on_fail_block'
+void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_skeleton, ir_func_t *module_func);
 
 // ---------------- ir_to_llvm_globals ----------------
 // Generates LLVM globals for IR globals
@@ -113,5 +151,22 @@ void llvm_string_table_add(llvm_string_table_t *table, weak_cstr_t name, length_
 // ---------------- llvm_string_table_entry_cmp ----------------
 // Compares two entries in the string table
 int llvm_string_table_entry_cmp(const void *va, const void *vb);
+
+// ---------------- llvm_create_static_variable ----------------
+// Creates a static variable
+LLVMValueRef llvm_create_static_variable(llvm_context_t *llvm, ir_type_t *type, ir_value_t *optional_initializer);
+
+// ---------------- value_catalog_prepare ----------------
+// Creates a value_catalog_t cabable of holding value results
+// for a list of basicblocks
+void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblock_t *basicblocks, length_t basicblocks_length);
+
+// ---------------- value_catalog_free ----------------
+// Frees memory allocated by a value_catalog_t
+void value_catalog_free(value_catalog_t *catalog);
+
+// ---------------- ir_to_llvm_inject_init ----------------
+// Injects basicblocks from 'init_builder' into the initialization point
+errorcode_t ir_to_llvm_inject_init(llvm_context_t *llvm);
 
 #endif // _ISAAC_IR_TO_LLVM_H

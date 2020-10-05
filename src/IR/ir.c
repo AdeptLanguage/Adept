@@ -1,6 +1,7 @@
 
 #include "IR/ir.h"
 #include "IR/ir_lowering.h"
+#include "IRGEN/ir_builder.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
@@ -326,373 +327,384 @@ void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_leng
             fprintf(file, "    {%d BBs, %d INSTRs, %d VARs}\n", (int) functions[f].basicblocks_length, (int) total_instructions, (int) functions[f].variable_count);
 
         ir_dump_var_scope_layout(file, functions[f].scope);
+        ir_dump_basicsblocks(file, functions[f].basicblocks, functions[f].basicblocks_length, functions);
+    }
+}
 
-        char *val_str, *dest_str, *idx_str;
+void ir_dump_basicsblocks(FILE *file, ir_basicblock_t *basicblocks, length_t basicblocks_length, ir_func_t *functions){
+    char *val_str, *dest_str, *idx_str;
 
-        for(length_t b = 0; b != functions[f].basicblocks_length; b++){
-            fprintf(file, "  BASICBLOCK |%d|\n", (int) b);
-            for(length_t i = 0; i != functions[f].basicblocks[b].instructions_length; i++){
-                switch(functions[f].basicblocks[b].instructions[i]->id){
-                case INSTRUCTION_RET: {
-                        ir_value_t *val = ((ir_instr_ret_t*) functions[f].basicblocks[b].instructions[i])->value;
-                        if(val != NULL){
-                            val_str = ir_value_str(val);
-                            fprintf(file, "    0x%08X ret %s\n", (int) i, val_str);
-                            free(val_str);
-                        } else {
-                            fprintf(file, "    0x%08X ret\n", (int) i);
-                        }
-                        break;
-                    }
-                case INSTRUCTION_ADD:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "add");
-                    break;
-                case INSTRUCTION_FADD:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fadd");
-                    break;
-                case INSTRUCTION_SUBTRACT:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "sub");
-                    break;
-                case INSTRUCTION_FSUBTRACT:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fsub");
-                    break;
-                case INSTRUCTION_MULTIPLY:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "mul");
-                    break;
-                case INSTRUCTION_FMULTIPLY:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fmul");
-                    break;
-                case INSTRUCTION_UDIVIDE:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "udiv");
-                    break;
-                case INSTRUCTION_SDIVIDE:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "sdiv");
-                    break;
-                case INSTRUCTION_FDIVIDE:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fdiv");
-                    break;
-                case INSTRUCTION_UMODULUS:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "urem");
-                    break;
-                case INSTRUCTION_SMODULUS:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "srem");
-                    break;
-                case INSTRUCTION_FMODULUS:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "frem");
-                    break;
-                case INSTRUCTION_CALL: {
-                        const char *real_name = functions[((ir_instr_call_t*) functions[f].basicblocks[b].instructions[i])->ir_func_id].name;
-                        ir_dump_call_instruction(file, (ir_instr_call_t*) functions[f].basicblocks[b].instructions[i], i, real_name);
+    for(length_t b = 0; b != basicblocks_length; b++){
+        fprintf(file, "  BASICBLOCK |%d|\n", (int) b);
+        for(length_t i = 0; i != basicblocks[b].instructions_length; i++){
+            switch(basicblocks[b].instructions[i]->id){
+            case INSTRUCTION_RET: {
+                    ir_value_t *val = ((ir_instr_ret_t*) basicblocks[b].instructions[i])->value;
+                    if(val != NULL){
+                        val_str = ir_value_str(val);
+                        fprintf(file, "    0x%08X ret %s\n", (int) i, val_str);
+                        free(val_str);
+                    } else {
+                        fprintf(file, "    0x%08X ret\n", (int) i);
                     }
                     break;
-                case INSTRUCTION_CALL_ADDRESS:
-                    ir_dump_call_address_instruction(file, (ir_instr_call_address_t*) functions[f].basicblocks[b].instructions[i], i);
-                    break;
-                case INSTRUCTION_MALLOC: {
-                        ir_instr_malloc_t *malloc_instr = (ir_instr_malloc_t*) functions[f].basicblocks[b].instructions[i];
-                        char *typename = ir_type_str(malloc_instr->type);
-                        if(malloc_instr->amount == NULL){
-                            fprintf(file, "    0x%08X malloc %s\n", (int) i, typename);
-                        } else {
-                            char *a = ir_value_str(malloc_instr->amount);
-                            fprintf(file, "    0x%08X malloc %s * %s\n", (int) i, typename, a);
-                            free(a);
-                        }
+                }
+            case INSTRUCTION_ADD:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "add");
+                break;
+            case INSTRUCTION_FADD:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fadd");
+                break;
+            case INSTRUCTION_SUBTRACT:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "sub");
+                break;
+            case INSTRUCTION_FSUBTRACT:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fsub");
+                break;
+            case INSTRUCTION_MULTIPLY:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "mul");
+                break;
+            case INSTRUCTION_FMULTIPLY:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fmul");
+                break;
+            case INSTRUCTION_UDIVIDE:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "udiv");
+                break;
+            case INSTRUCTION_SDIVIDE:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "sdiv");
+                break;
+            case INSTRUCTION_FDIVIDE:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fdiv");
+                break;
+            case INSTRUCTION_UMODULUS:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "urem");
+                break;
+            case INSTRUCTION_SMODULUS:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "srem");
+                break;
+            case INSTRUCTION_FMODULUS:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "frem");
+                break;
+            case INSTRUCTION_CALL: {
+                    const char *real_name = functions[((ir_instr_call_t*) basicblocks[b].instructions[i])->ir_func_id].name;
+                    ir_dump_call_instruction(file, (ir_instr_call_t*) basicblocks[b].instructions[i], i, real_name);
+                }
+                break;
+            case INSTRUCTION_CALL_ADDRESS:
+                ir_dump_call_address_instruction(file, (ir_instr_call_address_t*) basicblocks[b].instructions[i], i);
+                break;
+            case INSTRUCTION_MALLOC: {
+                    ir_instr_malloc_t *malloc_instr = (ir_instr_malloc_t*) basicblocks[b].instructions[i];
+                    char *typename = ir_type_str(malloc_instr->type);
+                    if(malloc_instr->amount == NULL){
+                        fprintf(file, "    0x%08X malloc %s\n", (int) i, typename);
+                    } else {
+                        char *a = ir_value_str(malloc_instr->amount);
+                        fprintf(file, "    0x%08X malloc %s * %s\n", (int) i, typename, a);
+                        free(a);
+                    }
+                    free(typename);
+                }
+                break;
+            case INSTRUCTION_FREE: {
+                    val_str = ir_value_str(((ir_instr_free_t*) basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X free %s\n", (int) i, val_str);
+                    free(val_str);
+                }
+                break;
+            case INSTRUCTION_STORE:
+                val_str = ir_value_str(((ir_instr_store_t*) basicblocks[b].instructions[i])->value);
+                dest_str = ir_value_str(((ir_instr_store_t*) basicblocks[b].instructions[i])->destination);
+                fprintf(file, "    0x%08X store %s, %s\n", (int) i, dest_str, val_str);
+                free(val_str);
+                free(dest_str);
+                break;
+            case INSTRUCTION_LOAD:
+                val_str = ir_value_str(((ir_instr_load_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X load %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_VARPTR: {
+                    char *var_type = ir_type_str(basicblocks[b].instructions[i]->result_type);
+                    fprintf(file, "    0x%08X var %s 0x%08X\n", (int) i, var_type, (int) ((ir_instr_varptr_t*) basicblocks[b].instructions[i])->index);
+                    free(var_type);
+                }
+                break;
+            case INSTRUCTION_GLOBALVARPTR: {
+                    char *var_type = ir_type_str(basicblocks[b].instructions[i]->result_type);
+                    fprintf(file, "    0x%08X gvar %s 0x%08X\n", (int) i, var_type, (int) ((ir_instr_varptr_t*) basicblocks[b].instructions[i])->index);
+                    free(var_type);
+                }
+                break;
+            case INSTRUCTION_STATICVARPTR: {
+                    char *var_type = ir_type_str(basicblocks[b].instructions[i]->result_type);
+                    fprintf(file, "    0x%08X svar %s 0x%08X\n", (int) i, var_type, (int) ((ir_instr_varptr_t*) basicblocks[b].instructions[i])->index);
+                    free(var_type);
+                }
+                break;
+            case INSTRUCTION_BREAK:
+                fprintf(file, "    0x%08X br |%d|\n", (int) i, (int) ((ir_instr_break_t*) basicblocks[b].instructions[i])->block_id);
+                break;
+            case INSTRUCTION_CONDBREAK:
+                val_str = ir_value_str(((ir_instr_cond_break_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X cbr %s, |%d|, |%d|\n", (int) i, val_str, (int) ((ir_instr_cond_break_t*) basicblocks[b].instructions[i])->true_block_id,
+                    (int) ((ir_instr_cond_break_t*) basicblocks[b].instructions[i])->false_block_id);
+                free(val_str);
+                break;
+            case INSTRUCTION_EQUALS:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "eq");
+                break;
+            case INSTRUCTION_FEQUALS:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "feq");
+                break;
+            case INSTRUCTION_NOTEQUALS:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "neq");
+                break;
+            case INSTRUCTION_FNOTEQUALS:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fneq");
+                break;
+            case INSTRUCTION_UGREATER:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "ugt");
+                break;
+            case INSTRUCTION_SGREATER:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "sgt");
+                break;
+            case INSTRUCTION_FGREATER:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fgt");
+                break;
+            case INSTRUCTION_ULESSER:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "ult");
+                break;
+            case INSTRUCTION_SLESSER:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "slt");
+                break;
+            case INSTRUCTION_FLESSER:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "flt");
+                break;
+            case INSTRUCTION_UGREATEREQ:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "uge");
+                break;
+            case INSTRUCTION_SGREATEREQ:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "sge");
+                break;
+            case INSTRUCTION_FGREATEREQ:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fge");
+                break;
+            case INSTRUCTION_ULESSEREQ:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "ule");
+                break;
+            case INSTRUCTION_SLESSEREQ:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "sle");
+                break;
+            case INSTRUCTION_FLESSEREQ:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "fle");
+                break;
+            case INSTRUCTION_MEMBER:
+                val_str = ir_value_str(((ir_instr_member_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X memb %s, %d\n", (unsigned int) i, val_str, (int) ((ir_instr_member_t*) basicblocks[b].instructions[i])->member);
+                free(val_str);
+                break;
+            case INSTRUCTION_ARRAY_ACCESS:
+                val_str = ir_value_str(((ir_instr_array_access_t*) basicblocks[b].instructions[i])->value);
+                idx_str = ir_value_str(((ir_instr_array_access_t*) basicblocks[b].instructions[i])->index);
+                fprintf(file, "    0x%08X arracc %s, %s\n", (unsigned int) i, val_str, idx_str);
+                free(val_str);
+                free(idx_str);
+                break;
+            case INSTRUCTION_FUNC_ADDRESS:
+                if(((ir_instr_func_address_t*) basicblocks[b].instructions[i])->name == NULL){
+                    char buffer[32];
+                    ir_implementation(((ir_instr_func_address_t*) basicblocks[b].instructions[i])->ir_func_id, 0x00, buffer);
+                    fprintf(file, "    0x%08X funcaddr 0x%s\n", (unsigned int) i, buffer);
+                } else
+                    fprintf(file, "    0x%08X funcaddr %s\n", (unsigned int) i, ((ir_instr_func_address_t*) basicblocks[b].instructions[i])->name);
+                break;
+            case INSTRUCTION_BITCAST: case INSTRUCTION_ZEXT: case INSTRUCTION_SEXT:
+            case INSTRUCTION_FEXT: case INSTRUCTION_TRUNC: case INSTRUCTION_FTRUNC:
+            case INSTRUCTION_INTTOPTR: case INSTRUCTION_PTRTOINT: case INSTRUCTION_FPTOUI:
+            case INSTRUCTION_FPTOSI: case INSTRUCTION_UITOFP: case INSTRUCTION_SITOFP:
+            case INSTRUCTION_REINTERPRET: {
+                    char *instr_name = "";
+
+                    switch(basicblocks[b].instructions[i]->id){
+                    case INSTRUCTION_BITCAST:     instr_name = "bc";     break;
+                    case INSTRUCTION_ZEXT:        instr_name = "zext";   break;
+                    case INSTRUCTION_SEXT:        instr_name = "sext";   break;
+                    case INSTRUCTION_FEXT:        instr_name = "fext";   break;
+                    case INSTRUCTION_TRUNC:       instr_name = "trunc";  break;
+                    case INSTRUCTION_FTRUNC:      instr_name = "ftrunc"; break;
+                    case INSTRUCTION_INTTOPTR:    instr_name = "i2p";    break;
+                    case INSTRUCTION_PTRTOINT:    instr_name = "p2i";    break;
+                    case INSTRUCTION_FPTOUI:      instr_name = "fp2ui";  break;
+                    case INSTRUCTION_FPTOSI:      instr_name = "fp2si";  break;
+                    case INSTRUCTION_UITOFP:      instr_name = "ui2fp";  break;
+                    case INSTRUCTION_SITOFP:      instr_name = "si2fp";  break;
+                    case INSTRUCTION_REINTERPRET: instr_name = "reinterp";  break;
+                    }
+
+                    char *to_type = ir_type_str(basicblocks[b].instructions[i]->result_type);
+                    val_str = ir_value_str(((ir_instr_cast_t*) basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X %s %s to %s\n", (int) i, instr_name, val_str, to_type);
+                    free(to_type);
+                    free(val_str);
+                }
+                break;
+            case INSTRUCTION_ISZERO: case INSTRUCTION_ISNTZERO: {
+                    char *instr_name = basicblocks[b].instructions[i]->id == INSTRUCTION_ISZERO ? "isz" : "inz";
+                    val_str = ir_value_str(((ir_instr_cast_t*) basicblocks[b].instructions[i])->value);
+                    fprintf(file, "    0x%08X %s %s\n", (int) i, instr_name, val_str);
+                    free(val_str);
+                }
+                break;
+            case INSTRUCTION_AND:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "and");
+                break;
+            case INSTRUCTION_OR:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "or");
+                break;
+            case INSTRUCTION_SIZEOF: {
+                    char *typename = ir_type_str(((ir_instr_sizeof_t*) basicblocks[b].instructions[i])->type);
+                    fprintf(file, "    0x%08X sizeof %s\n", (int) i, typename);
+                    free(typename);
+                }
+                break;
+            case INSTRUCTION_OFFSETOF: {
+                    char *typename = ir_type_str(((ir_instr_offsetof_t*) basicblocks[b].instructions[i])->type);
+                    fprintf(file, "    0x%08X offsetof %s\n", (int) i, typename);
+                    free(typename);
+                }
+                break;
+            case INSTRUCTION_ZEROINIT:
+                val_str = ir_value_str(((ir_instr_zeroinit_t*) basicblocks[b].instructions[i])->destination);
+                fprintf(file, "    0x%08X zi %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_MEMCPY: {
+                    ir_instr_memcpy_t *memcpy_instr = (ir_instr_memcpy_t*) basicblocks[b].instructions[i];
+                    strong_cstr_t destination = ir_value_str(memcpy_instr->destination);
+                    strong_cstr_t value = ir_value_str(memcpy_instr->value);
+                    strong_cstr_t bytes = ir_value_str(memcpy_instr->bytes);
+                    fprintf(file, "    0x%08X memcpy %s, %s, %s\n", (int) i, destination, value, bytes);
+                    free(destination);
+                    free(value);
+                    free(bytes);
+                }
+                break;
+            case INSTRUCTION_BIT_AND:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "band");
+                break;
+            case INSTRUCTION_BIT_OR:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "bor");
+                break;
+            case INSTRUCTION_BIT_XOR:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "bxor");
+                break;
+            case INSTRUCTION_BIT_LSHIFT:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "lshift");
+                break;
+            case INSTRUCTION_BIT_RSHIFT:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "rshift");
+                break;
+            case INSTRUCTION_BIT_LGC_RSHIFT:
+                ir_dump_math_instruction(file, (ir_instr_math_t*) basicblocks[b].instructions[i], i, "lgcrshift");
+                break;
+            case INSTRUCTION_BIT_COMPLEMENT:
+                val_str = ir_value_str(((ir_instr_load_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X compl %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_NEGATE:
+                val_str = ir_value_str(((ir_instr_load_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X neg %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_FNEGATE:
+                val_str = ir_value_str(((ir_instr_load_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X fneg %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_PHI2: {
+                    ir_instr_phi2_t *phi2 = (ir_instr_phi2_t*) basicblocks[b].instructions[i];
+                    char *a = ir_value_str(phi2->a);
+                    char *b = ir_value_str(phi2->b);
+                    fprintf(file, "    0x%08X phi2 |%d| -> %s, |%d| -> %s\n", (int) i, (int) phi2->block_id_a, a, (int) phi2->block_id_b, b);
+                    free(a);
+                    free(b);
+                }
+                break;
+            case INSTRUCTION_SWITCH: {
+                    ir_instr_switch_t *switch_instr = (ir_instr_switch_t*) basicblocks[b].instructions[i];
+                    char *cond = ir_value_str(switch_instr->condition);
+                    fprintf(file, "    0x%08X switch %s\n", (int) i, cond);
+                    for(length_t i = 0; i != switch_instr->cases_length; i++){
+                        char *v = ir_value_str(switch_instr->case_values[i]);
+                        fprintf(file, "               (%s) -> |%d|\n", v, (int) switch_instr->case_block_ids[i]);
+                        free(v);
+                    }
+                    free(cond);
+
+                    if(switch_instr->default_block_id != switch_instr->resume_block_id){
+                        // Default case exists
+                        fprintf(file, "               default -> |%d|\n", (int) switch_instr->case_block_ids[i]);
+                    }
+                }
+                break;
+            case INSTRUCTION_ALLOC: {
+                    ir_instr_alloc_t *alloc = (ir_instr_alloc_t*) basicblocks[b].instructions[i];
+                    ir_type_t *alloc_result_type = alloc->result_type;
+                    
+                    if(alloc_result_type->kind != TYPE_KIND_POINTER){
+                        fprintf(file, "    0x%08X alloc (malformed)\n", (int) i);
+                    } else {
+                        char *typename = ir_type_str(alloc_result_type->extra);
+                        char *count = alloc->count ? ir_value_str(alloc->count) : strclone("single");
+                        fprintf(file, "    0x%08X alloc %s, aligned %d, count %s\n", (int) i, typename, alloc->alignment, count);
+                        free(count);
                         free(typename);
                     }
-                    break;
-                case INSTRUCTION_FREE: {
-                        val_str = ir_value_str(((ir_instr_free_t*) functions[f].basicblocks[b].instructions[i])->value);
-                        fprintf(file, "    0x%08X free %s\n", (int) i, val_str);
-                        free(val_str);
-                    }
-                    break;
-                case INSTRUCTION_STORE:
-                    val_str = ir_value_str(((ir_instr_store_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    dest_str = ir_value_str(((ir_instr_store_t*) functions[f].basicblocks[b].instructions[i])->destination);
-                    fprintf(file, "    0x%08X store %s, %s\n", (int) i, dest_str, val_str);
+                }
+                break;
+            case INSTRUCTION_STACK_SAVE:
+                fprintf(file, "    0x%08X ssave\n", (int) i);
+                break;
+            case INSTRUCTION_STACK_RESTORE:
+                val_str = ir_value_str(((ir_instr_stack_restore_t*) basicblocks[b].instructions[i])->stack_pointer);
+                fprintf(file, "    0x%08X srestore %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_VA_START:
+                val_str = ir_value_str(((ir_instr_unary_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X va_start %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_VA_END:
+                val_str = ir_value_str(((ir_instr_unary_t*) basicblocks[b].instructions[i])->value);
+                fprintf(file, "    0x%08X va_end %s\n", (int) i, val_str);
+                free(val_str);
+                break;
+            case INSTRUCTION_VA_ARG: {
+                    val_str = ir_value_str(((ir_instr_va_arg_t*) basicblocks[b].instructions[i])->va_list);
+                    strong_cstr_t type_str = ir_type_str(((ir_instr_va_arg_t*) basicblocks[b].instructions[i])->result_type);
+
+                    fprintf(file, "    0x%08X va_arg %s, %s\n", (int) i, val_str, type_str);
+                    
+                    free(val_str);
+                    free(type_str);
+                }
+                break;
+            case INSTRUCTION_VA_COPY: {
+                    strong_cstr_t dest_str = ir_value_str(((ir_instr_va_copy_t*) basicblocks[b].instructions[i])->dest_value);
+                    val_str = ir_value_str(((ir_instr_va_copy_t*) basicblocks[b].instructions[i])->src_value);
+
+                    fprintf(file, "    0x%08X va_copy %s, %s\n", (int) i, dest_str, val_str);
+                    
                     free(val_str);
                     free(dest_str);
-                    break;
-                case INSTRUCTION_LOAD:
-                    val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X load %s\n", (int) i, val_str);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_VARPTR: {
-                        char *var_type = ir_type_str(functions[f].basicblocks[b].instructions[i]->result_type);
-                        fprintf(file, "    0x%08X var %s 0x%08X\n", (int) i, var_type, (int) ((ir_instr_varptr_t*) functions[f].basicblocks[b].instructions[i])->index);
-                        free(var_type);
-                    }
-                    break;
-                case INSTRUCTION_GLOBALVARPTR: {
-                        char *var_type = ir_type_str(functions[f].basicblocks[b].instructions[i]->result_type);
-                        fprintf(file, "    0x%08X gvar %s 0x%08X\n", (int) i, var_type, (int) ((ir_instr_varptr_t*) functions[f].basicblocks[b].instructions[i])->index);
-                        free(var_type);
-                    }
-                    break;
-                case INSTRUCTION_BREAK:
-                    fprintf(file, "    0x%08X br |%d|\n", (int) i, (int) ((ir_instr_break_t*) functions[f].basicblocks[b].instructions[i])->block_id);
-                    break;
-                case INSTRUCTION_CONDBREAK:
-                    val_str = ir_value_str(((ir_instr_cond_break_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X cbr %s, |%d|, |%d|\n", (int) i, val_str, (int) ((ir_instr_cond_break_t*) functions[f].basicblocks[b].instructions[i])->true_block_id,
-                        (int) ((ir_instr_cond_break_t*) functions[f].basicblocks[b].instructions[i])->false_block_id);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_EQUALS:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "eq");
-                    break;
-                case INSTRUCTION_FEQUALS:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "feq");
-                    break;
-                case INSTRUCTION_NOTEQUALS:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "neq");
-                    break;
-                case INSTRUCTION_FNOTEQUALS:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fneq");
-                    break;
-                case INSTRUCTION_UGREATER:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "ugt");
-                    break;
-                case INSTRUCTION_SGREATER:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "sgt");
-                    break;
-                case INSTRUCTION_FGREATER:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fgt");
-                    break;
-                case INSTRUCTION_ULESSER:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "ult");
-                    break;
-                case INSTRUCTION_SLESSER:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "slt");
-                    break;
-                case INSTRUCTION_FLESSER:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "flt");
-                    break;
-                case INSTRUCTION_UGREATEREQ:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "uge");
-                    break;
-                case INSTRUCTION_SGREATEREQ:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "sge");
-                    break;
-                case INSTRUCTION_FGREATEREQ:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fge");
-                    break;
-                case INSTRUCTION_ULESSEREQ:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "ule");
-                    break;
-                case INSTRUCTION_SLESSEREQ:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "sle");
-                    break;
-                case INSTRUCTION_FLESSEREQ:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "fle");
-                    break;
-                case INSTRUCTION_MEMBER:
-                    val_str = ir_value_str(((ir_instr_member_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X memb %s, %d\n", (unsigned int) i, val_str, (int) ((ir_instr_member_t*) functions[f].basicblocks[b].instructions[i])->member);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_ARRAY_ACCESS:
-                    val_str = ir_value_str(((ir_instr_array_access_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    idx_str = ir_value_str(((ir_instr_array_access_t*) functions[f].basicblocks[b].instructions[i])->index);
-                    fprintf(file, "    0x%08X arracc %s, %s\n", (unsigned int) i, val_str, idx_str);
-                    free(val_str);
-                    free(idx_str);
-                    break;
-                case INSTRUCTION_FUNC_ADDRESS:
-                    if(((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name == NULL){
-                        char buffer[32];
-                        ir_implementation(((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->ir_func_id, 0x00, buffer);
-                        fprintf(file, "    0x%08X funcaddr 0x%s\n", (unsigned int) i, buffer);
-                    } else
-                        fprintf(file, "    0x%08X funcaddr %s\n", (unsigned int) i, ((ir_instr_func_address_t*) functions[f].basicblocks[b].instructions[i])->name);
-                    break;
-                case INSTRUCTION_BITCAST: case INSTRUCTION_ZEXT: case INSTRUCTION_SEXT:
-                case INSTRUCTION_FEXT: case INSTRUCTION_TRUNC: case INSTRUCTION_FTRUNC:
-                case INSTRUCTION_INTTOPTR: case INSTRUCTION_PTRTOINT: case INSTRUCTION_FPTOUI:
-                case INSTRUCTION_FPTOSI: case INSTRUCTION_UITOFP: case INSTRUCTION_SITOFP:
-                case INSTRUCTION_REINTERPRET: {
-                        char *instr_name = "";
-
-                        switch(functions[f].basicblocks[b].instructions[i]->id){
-                        case INSTRUCTION_BITCAST:     instr_name = "bc";     break;
-                        case INSTRUCTION_ZEXT:        instr_name = "zext";   break;
-                        case INSTRUCTION_SEXT:        instr_name = "sext";   break;
-                        case INSTRUCTION_FEXT:        instr_name = "fext";   break;
-                        case INSTRUCTION_TRUNC:       instr_name = "trunc";  break;
-                        case INSTRUCTION_FTRUNC:      instr_name = "ftrunc"; break;
-                        case INSTRUCTION_INTTOPTR:    instr_name = "i2p";    break;
-                        case INSTRUCTION_PTRTOINT:    instr_name = "p2i";    break;
-                        case INSTRUCTION_FPTOUI:      instr_name = "fp2ui";  break;
-                        case INSTRUCTION_FPTOSI:      instr_name = "fp2si";  break;
-                        case INSTRUCTION_UITOFP:      instr_name = "ui2fp";  break;
-                        case INSTRUCTION_SITOFP:      instr_name = "si2fp";  break;
-                        case INSTRUCTION_REINTERPRET: instr_name = "reinterp";  break;
-                        }
-
-                        char *to_type = ir_type_str(functions[f].basicblocks[b].instructions[i]->result_type);
-                        val_str = ir_value_str(((ir_instr_cast_t*) functions[f].basicblocks[b].instructions[i])->value);
-                        fprintf(file, "    0x%08X %s %s to %s\n", (int) i, instr_name, val_str, to_type);
-                        free(to_type);
-                        free(val_str);
-                    }
-                    break;
-                case INSTRUCTION_ISZERO: case INSTRUCTION_ISNTZERO: {
-                        char *instr_name = functions[f].basicblocks[b].instructions[i]->id == INSTRUCTION_ISZERO ? "isz" : "inz";
-                        val_str = ir_value_str(((ir_instr_cast_t*) functions[f].basicblocks[b].instructions[i])->value);
-                        fprintf(file, "    0x%08X %s %s\n", (int) i, instr_name, val_str);
-                        free(val_str);
-                    }
-                    break;
-                case INSTRUCTION_AND:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "and");
-                    break;
-                case INSTRUCTION_OR:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "or");
-                    break;
-                case INSTRUCTION_SIZEOF: {
-                        char *typename = ir_type_str(((ir_instr_sizeof_t*) functions[f].basicblocks[b].instructions[i])->type);
-                        fprintf(file, "    0x%08X sizeof %s\n", (int) i, typename);
-                        free(typename);
-                    }
-                    break;
-                case INSTRUCTION_OFFSETOF: {
-                        char *typename = ir_type_str(((ir_instr_offsetof_t*) functions[f].basicblocks[b].instructions[i])->type);
-                        fprintf(file, "    0x%08X offsetof %s\n", (int) i, typename);
-                        free(typename);
-                    }
-                    break;
-                case INSTRUCTION_VARZEROINIT:
-                    fprintf(file, "    0x%08X varzi 0x%08X\n", (int) i, (int) ((ir_instr_varptr_t*) functions[f].basicblocks[b].instructions[i])->index);
-                    break;
-                case INSTRUCTION_MEMCPY: {
-                        ir_instr_memcpy_t *memcpy_instr = (ir_instr_memcpy_t*) functions[f].basicblocks[b].instructions[i];
-                        strong_cstr_t destination = ir_value_str(memcpy_instr->destination);
-                        strong_cstr_t value = ir_value_str(memcpy_instr->value);
-                        strong_cstr_t bytes = ir_value_str(memcpy_instr->bytes);
-                        fprintf(file, "    0x%08X memcpy %s, %s, %s\n", (int) i, destination, value, bytes);
-                        free(destination);
-                        free(value);
-                        free(bytes);
-                    }
-                    break;
-                case INSTRUCTION_BIT_AND:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "band");
-                    break;
-                case INSTRUCTION_BIT_OR:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "bor");
-                    break;
-                case INSTRUCTION_BIT_XOR:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "bxor");
-                    break;
-                case INSTRUCTION_BIT_LSHIFT:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "lshift");
-                    break;
-                case INSTRUCTION_BIT_RSHIFT:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "rshift");
-                    break;
-                case INSTRUCTION_BIT_LGC_RSHIFT:
-                    ir_dump_math_instruction(file, (ir_instr_math_t*) functions[f].basicblocks[b].instructions[i], i, "lgcrshift");
-                    break;
-                case INSTRUCTION_BIT_COMPLEMENT:
-                    val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X compl %s\n", (int) i, val_str);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_NEGATE:
-                    val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X neg %s\n", (int) i, val_str);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_FNEGATE:
-                    val_str = ir_value_str(((ir_instr_load_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X fneg %s\n", (int) i, val_str);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_PHI2: {
-                        ir_instr_phi2_t *phi2 = (ir_instr_phi2_t*) functions[f].basicblocks[b].instructions[i];
-                        char *a = ir_value_str(phi2->a);
-                        char *b = ir_value_str(phi2->b);
-                        fprintf(file, "    0x%08X phi2 |%d| -> %s, |%d| -> %s\n", (int) i, (int) phi2->block_id_a, a, (int) phi2->block_id_b, b);
-                        free(a);
-                        free(b);
-                    }
-                    break;
-                case INSTRUCTION_SWITCH: {
-                        ir_instr_switch_t *switch_instr = (ir_instr_switch_t*) functions[f].basicblocks[b].instructions[i];
-                        char *cond = ir_value_str(switch_instr->condition);
-                        fprintf(file, "    0x%08X switch %s\n", (int) i, cond);
-                        for(length_t i = 0; i != switch_instr->cases_length; i++){
-                            char *v = ir_value_str(switch_instr->case_values[i]);
-                            fprintf(file, "               (%s) -> |%d|\n", v, (int) switch_instr->case_block_ids[i]);
-                            free(v);
-                        }
-                        free(cond);
-
-                        if(switch_instr->default_block_id != switch_instr->resume_block_id){
-                            // Default case exists
-                            fprintf(file, "               default -> |%d|\n", (int) switch_instr->case_block_ids[i]);
-                        }
-                    }
-                    break;
-                case INSTRUCTION_ALLOC: {
-                        ir_instr_alloc_t *alloc = (ir_instr_alloc_t*) functions[f].basicblocks[b].instructions[i];
-                        ir_type_t *alloc_result_type = alloc->result_type;
-                        
-                        if(alloc_result_type->kind != TYPE_KIND_POINTER){
-                            fprintf(file, "    0x%08X alloc (malformed)\n", (int) i);
-                        } else {
-                            char *typename = ir_type_str(alloc_result_type->extra);
-                            char *count = alloc->count ? ir_value_str(alloc->count) : strclone("single");
-                            fprintf(file, "    0x%08X alloc %s, aligned %d, count %s\n", (int) i, typename, alloc->alignment, count);
-                            free(count);
-                            free(typename);
-                        }
-                    }
-                    break;
-                case INSTRUCTION_STACK_SAVE:
-                    fprintf(file, "    0x%08X ssave\n", (int) i);
-                    break;
-                case INSTRUCTION_STACK_RESTORE:
-                    val_str = ir_value_str(((ir_instr_stack_restore_t*) functions[f].basicblocks[b].instructions[i])->stack_pointer);
-                    fprintf(file, "    0x%08X srestore %s\n", (int) i, val_str);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_VA_START:
-                    val_str = ir_value_str(((ir_instr_unary_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X va_start %s\n", (int) i, val_str);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_VA_END:
-                    val_str = ir_value_str(((ir_instr_unary_t*) functions[f].basicblocks[b].instructions[i])->value);
-                    fprintf(file, "    0x%08X va_end %s\n", (int) i, val_str);
-                    free(val_str);
-                    break;
-                case INSTRUCTION_VA_ARG: {
-                        val_str = ir_value_str(((ir_instr_va_arg_t*) functions[f].basicblocks[b].instructions[i])->va_list);
-                        strong_cstr_t type_str = ir_type_str(((ir_instr_va_arg_t*) functions[f].basicblocks[b].instructions[i])->result_type);
-
-                        fprintf(file, "    0x%08X va_arg %s, %s\n", (int) i, val_str, type_str);
-                        
-                        free(val_str);
-                        free(type_str);
-                    }
-                    break;
-                case INSTRUCTION_VA_COPY: {
-                        strong_cstr_t dest_str = ir_value_str(((ir_instr_va_copy_t*) functions[f].basicblocks[b].instructions[i])->dest_value);
-                        val_str = ir_value_str(((ir_instr_va_copy_t*) functions[f].basicblocks[b].instructions[i])->src_value);
-
-                        fprintf(file, "    0x%08X va_copy %s, %s\n", (int) i, dest_str, val_str);
-                        
-                        free(val_str);
-                        free(dest_str);
-                    }
-                    break;
-                default:
-                    printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) functions[f].basicblocks[b].instructions[i]->id);
-                    fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);
                 }
+                break;
+            default:
+                printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) basicblocks[b].instructions[i]->id);
+                fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);
             }
         }
     }
@@ -813,6 +825,10 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->rtti_relocations = NULL;
     ir_module->rtti_relocations_length = 0;
     ir_module->rtti_relocations_capacity = 0;
+    ir_module->init_builder = malloc(sizeof(ir_builder_t));
+    ir_module->static_variables = NULL;
+    ir_module->static_variables_length = 0;
+    ir_module->static_variables_capacity = 0;
 
     // Initialize common data
     ir_shared_common_t *common = &ir_module->common;
@@ -821,6 +837,10 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     common->ir_bool = NULL;
     common->rtti_array_index = 0;
     common->has_rtti_array = TROOLEAN_UNKNOWN;
+    common->has_main = false;
+    common->ast_main_id = 0;
+    common->ir_main_id = 0;
+    common->next_static_variable_id = 0;
 }
 
 void ir_module_free(ir_module_t *ir_module){
@@ -834,6 +854,12 @@ void ir_module_free(ir_module_t *ir_module){
     free(ir_module->anon_globals);
     ir_pool_free(&ir_module->pool);
     ir_gen_sf_cache_free(&ir_module->sf_cache);
+
+    for(length_t i = 0; i < ir_module->init_builder->basicblocks_length; i++){
+        ir_basicblock_free(&ir_module->init_builder->basicblocks[i]);
+    }
+    free(ir_module->init_builder);
+    free(ir_module->static_variables);
     
     for(length_t i = 0; i != ir_module->rtti_relocations_length; i++){
         free(ir_module->rtti_relocations[i].human_notation);
@@ -844,7 +870,7 @@ void ir_module_free(ir_module_t *ir_module){
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
     for(length_t f = 0; f != funcs_length; f++){
         for(length_t b = 0; b != funcs[f].basicblocks_length; b++){
-            free(funcs[f].basicblocks[b].instructions);
+            ir_basicblock_free(&funcs[f].basicblocks[b]);
         }
         free(funcs[f].basicblocks);
         free(funcs[f].argument_types);
@@ -854,6 +880,10 @@ void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
             free(funcs[f].scope);
         }
     }
+}
+
+void ir_basicblock_free(ir_basicblock_t *basicblock){
+    free(basicblock->instructions);
 }
 
 char *ir_implementation_encoding = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

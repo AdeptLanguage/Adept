@@ -11,11 +11,79 @@
 #include "IRGEN/ir_gen_type.h"
 #include "BRIDGE/bridge.h"
 
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list, bool static_builder){
+    builder->basicblocks = malloc(sizeof(ir_basicblock_t) * 4);
+    builder->basicblocks_length = 1;
+    builder->basicblocks_capacity = 4;
+    builder->pool = &object->ir_module.pool;
+    builder->type_map = &object->ir_module.type_map;
+    builder->compiler = compiler;
+    builder->object = object;
+    builder->ast_func_id = ast_func_id;
+    builder->ir_func_id = ir_func_id;
+    builder->next_var_id = 0;
+    builder->has_string_struct = TROOLEAN_UNKNOWN;
+
+    ir_basicblock_t *entry_block = &builder->basicblocks[0];
+    entry_block->instructions = malloc(sizeof(ir_instr_t*) * 16);
+    entry_block->instructions_length = 0;
+    entry_block->instructions_capacity = 16;
+    entry_block->traits = TRAIT_NONE;
+
+    // Set current block
+    builder->current_block = entry_block;
+    builder->current_block_id = 0;
+
+    // Zero indicates no block to continue/break to since block 0 would make no sense
+    builder->break_block_id = 0;
+    builder->continue_block_id = 0;
+    builder->fallthrough_block_id = 0;
+
+    // Block stack, used for breaking and continuing by label
+    // NOTE: Unlabeled blocks won't go in this array
+    builder->block_stack_labels = NULL;
+    builder->block_stack_break_ids = NULL;
+    builder->block_stack_continue_ids = NULL;
+    builder->block_stack_scopes = NULL;
+    builder->block_stack_length = 0;
+    builder->block_stack_capacity = 0;
+
+    if(!static_builder){
+        ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
+        module_func->scope = malloc(sizeof(bridge_scope_t));
+        bridge_scope_init(module_func->scope, NULL);
+        module_func->scope->first_var_id = 0;
+        builder->scope = module_func->scope;
+    } else {
+        builder->scope = NULL;
+    }
+
+    builder->job_list = job_list;
+
+    builder->static_bool_base.id = AST_ELEM_BASE;
+    builder->static_bool_base.source = NULL_SOURCE;
+    builder->static_bool_base.source.object_index = builder->object->index;
+    builder->static_bool_base.base = "bool";
+    builder->static_bool_elems = (ast_elem_t*) &builder->static_bool_base;
+    builder->static_bool.elements = &builder->static_bool_elems;
+    builder->static_bool.elements_length = 1;
+    builder->static_bool.source = NULL_SOURCE;
+    builder->static_bool.source.object_index = builder->object->index;
+
+    builder->s8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    builder->s8_type->kind = TYPE_KIND_S8;
+    // neglect builder.s8_type->extra
+
+    builder->stack_pointer_type = NULL;
+    builder->ptr_type = ir_type_pointer_to(builder->pool, builder->s8_type);
+    builder->type_table = object->ast.type_table;
+    builder->tmpbuf = &compiler->tmp;
+}
+
 errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list){
     // ir_gens statements into basicblocks with instructions and sets in 'module_func'
 
     ir_module_t *ir_module = &object->ir_module;
-    ir_pool_t *pool = &ir_module->pool;
 
     // NOTE: These may be invalidated during statement generation
     ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
@@ -28,66 +96,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 
     // Used for constructing array of basicblocks
     ir_builder_t builder;
-    builder.basicblocks = malloc(sizeof(ir_basicblock_t) * 4);
-    builder.basicblocks_length = 1;
-    builder.basicblocks_capacity = 4;
-    builder.pool = pool;
-    builder.type_map = &ir_module->type_map;
-    builder.compiler = compiler;
-    builder.object = object;
-    builder.ast_func_id = ast_func_id;
-    builder.ir_func_id = ir_func_id;
-    builder.next_var_id = 0;
-    builder.has_string_struct = TROOLEAN_UNKNOWN;
-
-    ir_basicblock_t *entry_block = &builder.basicblocks[0];
-    entry_block->instructions = malloc(sizeof(ir_instr_t*) * 16);
-    entry_block->instructions_length = 0;
-    entry_block->instructions_capacity = 16;
-    entry_block->traits = TRAIT_NONE;
-
-    // Set current block
-    builder.current_block = entry_block;
-    builder.current_block_id = 0;
-
-    // Zero indicates no block to continue/break to since block 0 would make no sense
-    builder.break_block_id = 0;
-    builder.continue_block_id = 0;
-    builder.fallthrough_block_id = 0;
-
-    // Block stack, used for breaking and continuing by label
-    // NOTE: Unlabeled blocks won't go in this array
-    builder.block_stack_labels = NULL;
-    builder.block_stack_break_ids = NULL;
-    builder.block_stack_continue_ids = NULL;
-    builder.block_stack_scopes = NULL;
-    builder.block_stack_length = 0;
-    builder.block_stack_capacity = 0;
-
-    module_func->scope = malloc(sizeof(bridge_scope_t));
-    bridge_scope_init(module_func->scope, NULL);
-    module_func->scope->first_var_id = 0;
-    builder.scope = module_func->scope;
-    builder.job_list = job_list;
-
-    builder.static_bool_base.id = AST_ELEM_BASE;
-    builder.static_bool_base.source = NULL_SOURCE;
-    builder.static_bool_base.source.object_index = builder.object->index;
-    builder.static_bool_base.base = "bool";
-    builder.static_bool_elems = (ast_elem_t*) &builder.static_bool_base;
-    builder.static_bool.elements = &builder.static_bool_elems;
-    builder.static_bool.elements_length = 1;
-    builder.static_bool.source = NULL_SOURCE;
-    builder.static_bool.source.object_index = builder.object->index;
-
-    builder.s8_type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    builder.s8_type->kind = TYPE_KIND_S8;
-    // neglect builder.s8_type->extra
-
-    builder.stack_pointer_type = NULL;
-    builder.ptr_type = ir_type_pointer_to(pool, builder.s8_type);
-    builder.type_table = object->ast.type_table;
-    builder.tmpbuf = &compiler->tmp;
+    ir_builder_init(&builder, compiler, object, ast_func_id, ir_func_id, job_list, false);
 
     while(module_func->arity != ast_func->arity){
         if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
@@ -103,14 +112,14 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
         
         trait_t arg_traits = BRIDGE_VAR_UNDEF;
         if(ast_func->arg_type_traits[module_func->arity] & AST_FUNC_ARG_TYPE_TRAIT_POD) arg_traits |= BRIDGE_VAR_POD;
-        add_variable(&builder, ast_func->arg_names[module_func->arity], &ast_func->arg_types[module_func->arity], module_func->argument_types[module_func->arity], arg_traits, NULL);
+        add_variable(&builder, ast_func->arg_names[module_func->arity], &ast_func->arg_types[module_func->arity], module_func->argument_types[module_func->arity], arg_traits);
         module_func->arity++;
     }
 
     // Append variadic array argument for variadic functions
     if(ast_func->traits & AST_FUNC_VARIADIC){
         // AST variadic type is already guaranteed to exist
-        add_variable(&builder, ast_func->variadic_arg_name, object->ast.common.ast_variadic_array, ir_module->common.ir_variadic_array, TRAIT_NONE, NULL);
+        add_variable(&builder, ast_func->variadic_arg_name, object->ast.common.ast_variadic_array, ir_module->common.ir_variadic_array, TRAIT_NONE);
         module_func->arity++;
     }
     
@@ -227,7 +236,6 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 
 errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated){
     ir_instr_t *built_instr;
-    ir_instr_t **instr = NULL;
     ir_value_t *expression_value = NULL;
     ast_type_t temporary_type;
 
@@ -238,7 +246,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
         switch(stmt->id){
         case EXPR_RETURN: {        
-                // DANGEROUS: Could be invalidated by 'ir_gen_expr' call, in which case it should no longer be used
+                // DANGEROUS: 'ast_func' and 'return_type' could be invalidated by 'ir_gen_expr' call, in which case it should no longer be used
                 ast_func_t *ast_func = &builder->object->ast.funcs[builder->ast_func_id];
                 ast_type_t *return_type = &ast_func->return_type;
                 ast_expr_return_t *return_stmt = (ast_expr_return_t*) stmt;
@@ -395,21 +403,34 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Create variable traits
                 trait_t variable_traits = declare_stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE;
-                ir_value_t *maybe_global = NULL;
+
+                ir_builder_t *init_builder;
+                ir_builder_t *initialization_builder = builder->object->ir_module.init_builder;
 
                 if(declare_stmt->is_static){
                     variable_traits |= BRIDGE_VAR_STATIC;
-                    maybe_global = build_anon_global(&builder->object->ir_module, ir_decl_type, false);
+
+                    if(!builder->object->ir_module.common.has_main){
+                        redprintf("INTERNAL ERROR: Cannot use static variables without a main function!\n");
+                        return FAILURE;
+                    }
+
+                    init_builder = initialization_builder;
+                    initialization_builder->scope = malloc(sizeof(bridge_scope_t));
+                    bridge_scope_init(initialization_builder->scope, NULL);
+                } else {
+                    init_builder = builder;
                 }
 
+                // TODO: Clean up this messy code
                 if(declare_stmt->value != NULL){
                     // Regular declare statement initial assign value
                     ir_value_t *initial;
                     ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
 
-                    if(ir_gen_expr(builder, declare_stmt->value, &initial, false, &temporary_type)) return FAILURE;
+                    if(ir_gen_expr(init_builder, declare_stmt->value, &initial, false, &temporary_type)) return FAILURE;
 
-                    if(!ast_types_conform(builder, &initial, &temporary_type, &declare_stmt->type, CONFORM_MODE_ASSIGNING)){
+                    if(!ast_types_conform(init_builder, &initial, &temporary_type, &declare_stmt->type, CONFORM_MODE_ASSIGNING)){
                         char *a_type_str = ast_type_str(&temporary_type);
                         char *b_type_str = ast_type_str(&declare_stmt->type);
                         compiler_panicf(builder->compiler, declare_stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
@@ -419,34 +440,46 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                         return FAILURE;
                     }
 
-                    ir_value_t *destination = build_varptr(builder, var_pointer_type, builder->next_var_id);
-                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits, maybe_global);
+                    ir_value_t *destination;
 
                     if(declare_stmt->is_static){
-                        // TODO: Don't use initializer, instead initialize inside of main
-                        build_anon_global_initializer(&builder->object->ir_module, maybe_global, initial);
-                    } else if(declare_stmt->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &declare_stmt->type, true)){
-                        build_store(builder, initial, destination, stmt->source);
+                        destination = build_svarptr(init_builder, var_pointer_type, builder->object->ir_module.common.next_static_variable_id);
+                    } else {
+                        destination = build_lvarptr(init_builder, var_pointer_type, builder->next_var_id);
+                    }
+
+                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits);
+
+                    if(declare_stmt->is_assign_pod || !handle_assign_management(init_builder, initial, &temporary_type, destination, &declare_stmt->type, true)){
+                        build_store(init_builder, initial, destination, stmt->source);
                     }
 
                     ast_type_free(&temporary_type);
                 } else if(stmt->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
                     // Mark the variable as undefined memory so it isn't auto-initialized later on
-                    
-                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits | BRIDGE_VAR_UNDEF, maybe_global);
+
+                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits | BRIDGE_VAR_UNDEF);
                 } else /* plain DECLARE or --no-undef DECLAREUNDEF */ {
                     // Variable declaration without default value
-                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits, maybe_global);
+                    add_variable(builder, declare_stmt->name, &declare_stmt->type, ir_decl_type, variable_traits);
 
-                    if(maybe_global == NULL){
-                        // Zero initialize the variable
-                        ir_basicblock_new_instructions(builder->current_block, 1);
-                        instr = &builder->current_block->instructions[builder->current_block->instructions_length++];
-                        *instr = (ir_instr_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_varzeroinit_t));
-                        ((ir_instr_varzeroinit_t*) *instr)->id = INSTRUCTION_VARZEROINIT;
-                        ((ir_instr_varzeroinit_t*) *instr)->result_type = NULL;
-                        ((ir_instr_varzeroinit_t*) *instr)->index = builder->next_var_id - 1;
+                    ir_basicblock_new_instructions(init_builder->current_block, 1);
+
+                    ir_value_t *destination;
+                    ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
+
+                    if(declare_stmt->is_static){
+                        destination = build_svarptr(init_builder, var_pointer_type, builder->object->ir_module.common.next_static_variable_id - 1);
+                    } else {
+                        destination = build_lvarptr(init_builder, var_pointer_type, builder->next_var_id - 1);
                     }
+
+                    build_zeroinit(init_builder, destination);
+                }
+
+                if(init_builder == initialization_builder){
+                    bridge_scope_free(initialization_builder->scope);
+                    free(initialization_builder->scope);
                 }
             }
             break;
@@ -988,8 +1021,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Create 'idx' variable
                 length_t idx_var_id = builder->next_var_id;
-                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF, NULL);
-                ir_value_t *idx_ptr = build_varptr(builder, idx_ir_type_ptr, idx_var_id);
+                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+                ir_value_t *idx_ptr = build_lvarptr(builder, idx_ir_type_ptr, idx_var_id);
 
                 // Set 'idx' to initial value of zero
                 ir_value_t *initial_idx = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
@@ -1225,9 +1258,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 char *it_name = each_in->it_name ? each_in->it_name : "it";
 
                 // Generate new block statements to update 'it' variable
-                add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE, NULL);
+                add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE);
                 
-                ir_value_t *it_ptr = build_varptr(builder, array->type, it_var_id);
+                ir_value_t *it_ptr = build_lvarptr(builder, array->type, it_var_id);
                 ir_value_t *it_idx = build_load(builder, idx_ptr, stmt->source);
 
                 // Update 'it' value
@@ -1318,8 +1351,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Create 'idx' variable
                 length_t idx_var_id = builder->next_var_id;
-                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF, NULL);
-                ir_value_t *idx_ptr = build_varptr(builder, idx_ir_type_ptr, idx_var_id);
+                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+                ir_value_t *idx_ptr = build_lvarptr(builder, idx_ir_type_ptr, idx_var_id);
 
                 // Set 'idx' to initial value of zero
                 ir_value_t *initial_idx = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
