@@ -261,6 +261,12 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             ast_poly_catalog_free(&catalog);
         }
         break;
+    case AST_ELEM_POLYCOUNT: {
+            ast_elem_polycount_t *polycount = (ast_elem_polycount_t*) unresolved_type->elements[non_concrete_layers];
+            compiler_panicf(compiler, unresolved_type->source, "Undetermined polycount '$#%s' in type", polycount->name);
+            return FAILURE;
+        }
+        break;
     default: {
             char *unresolved_str_rep = ast_type_str(unresolved_type);
             compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown type element id in type '%s'", unresolved_str_rep);

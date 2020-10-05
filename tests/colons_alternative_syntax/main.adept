@@ -1,0 +1,31 @@
+
+pragma ignore_unused
+pragma enable_experimental_colon_colon_syntax
+pragma enable_experimental_colon_before_type_syntax
+
+import basics
+
+people :: namespace {
+    Person :: struct (firstname, lastname String)
+}
+
+pi :: namespace
+
+almost_pi :: const = 3.123456
+
+namespace
+
+PePerson :: alias = people\Person
+
+main :: func {
+    person: PePerson
+    scan("Enter your name: ", &person.firstname)
+    myPrintf("Hello %f %S!", pi\almost_pi, person.firstname)
+}
+
+myPrintf :: func (format String, arguments ...) : int {
+    name: String = "Hello"
+    vsprintf(def result String, format, arguments)
+    print(result)
+    return 0
+}

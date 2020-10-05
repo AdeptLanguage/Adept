@@ -27,44 +27,63 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         start = ++(*i);
         id = tokens[start].id;
     }
+    
 
-    while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT || id == TOKEN_POLYCOUNT){
+    while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT || id == TOKEN_POLYCOUNT || id == TOKEN_BRACKET_OPEN){
         expand((void**) &out_type->elements, sizeof(ast_elem_t*), out_type->elements_length, &elements_capacity, 1, 2);
 
-        if(id == TOKEN_MULTIPLY){
-            out_type->elements[out_type->elements_length] = malloc(sizeof(ast_elem_pointer_t));
-            out_type->elements[out_type->elements_length]->id = AST_ELEM_POINTER;
-            out_type->elements[out_type->elements_length]->source = sources[*i];
-            out_type->elements_length++;
-            id = tokens[++(*i)].id;
-            continue;
+        bool no_match = false;
+        bool expect_count = id == TOKEN_BRACKET_OPEN;
+        if(expect_count) id = tokens[++(*i)].id;
+
+        switch(id){
+        case TOKEN_MULTIPLY: {
+                if(expect_count){
+                    compiler_panicf(ctx->compiler, sources[*i], "Expected size of fixed array after '[' in type");
+                    return FAILURE;
+                }
+
+                out_type->elements[out_type->elements_length] = malloc(sizeof(ast_elem_pointer_t));
+                out_type->elements[out_type->elements_length]->id = AST_ELEM_POINTER;
+                out_type->elements[out_type->elements_length]->source = sources[*i];
+                out_type->elements_length++;
+                id = tokens[++(*i)].id;
+            }
+            break;
+        case TOKEN_GENERIC_INT: {
+                ast_elem_fixed_array_t *fixed_array = malloc(sizeof(ast_elem_fixed_array_t));
+                source_t fixed_array_source = sources[*i];
+
+                fixed_array->length = *((adept_generic_int*) tokens[*i].data);
+
+                out_type->elements[out_type->elements_length] = (ast_elem_t*) fixed_array;
+                out_type->elements[out_type->elements_length]->id = AST_ELEM_FIXED_ARRAY;
+                out_type->elements[out_type->elements_length]->source = fixed_array_source;
+                out_type->elements_length++;
+                id = tokens[++(*i)].id;
+            }
+            break;
+        case TOKEN_POLYCOUNT: {
+                ast_elem_polycount_t *polycount = malloc(sizeof(ast_elem_polycount_t));
+                polycount->id = AST_ELEM_POLYCOUNT;
+                polycount->name = tokens[*i].data;
+                tokens[*i].data = NULL;
+                polycount->source = sources[*i];
+
+                out_type->elements[out_type->elements_length] = (ast_elem_t*) polycount;
+                out_type->elements_length++;
+                id = tokens[++(*i)].id;
+            }
+            break;
+        default:
+            no_match = true;
         }
 
-        if(id == TOKEN_GENERIC_INT){
-            ast_elem_fixed_array_t *fixed_array = malloc(sizeof(ast_elem_fixed_array_t));
-            source_t fixed_array_source = sources[*i];
-
-            fixed_array->length = *((adept_generic_int*) tokens[*i].data);
-
-            out_type->elements[out_type->elements_length] = (ast_elem_t*) fixed_array;
-            out_type->elements[out_type->elements_length]->id = AST_ELEM_FIXED_ARRAY;
-            out_type->elements[out_type->elements_length]->source = fixed_array_source;
-            out_type->elements_length++;
-            id = tokens[++(*i)].id;
-            continue;
-        }
-
-        if(id == TOKEN_POLYCOUNT){
-            ast_elem_polycount_t *polycount = malloc(sizeof(ast_elem_polycount_t));
-            polycount->id = AST_ELEM_POLYCOUNT;
-            polycount->name = tokens[*i].data;
-            tokens[*i].data = NULL;
-            polycount->source = sources[*i];
-
-            out_type->elements[out_type->elements_length] = (ast_elem_t*) polycount;
-            out_type->elements_length++;
-            id = tokens[++(*i)].id;
-            continue;
+        // Eat ']' if expecting one
+        if(expect_count){
+            weak_cstr_t message_on_error = no_match ? "Expected size of fixed array after '[' in type" : "Expected ']' after size of fixed array in type";
+            if(parse_eat(ctx, TOKEN_BRACKET_CLOSE, message_on_error)) return FAILURE;
+            id = tokens[*i].id;
         }
     }
 

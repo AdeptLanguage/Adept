@@ -45,6 +45,8 @@ call :compile cast
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile character_literals
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile colons_alternative_syntax
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile complement
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile conditionless_break_label
@@ -93,6 +95,8 @@ REM if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fallthrough
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile fixed_array_alternative_syntax
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile fixed_array_assign
 if %errorlevel% neq 0 popd & exit /b %errorlevel%

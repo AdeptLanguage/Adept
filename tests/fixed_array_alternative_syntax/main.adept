@@ -1,0 +1,13 @@
+
+#import <basics>
+
+main :: func {
+    array : [5] int = {0, 1, 2, 3, 4}
+    print(array)
+    zeroize(&array)
+    print(array)
+}
+
+func zeroize(array : *[$#N] int) : void {
+    each int in *array, it = 0
+}

@@ -31,6 +31,7 @@ compile break || exit $?
 compile break_to || exit $?
 compile cast || exit $?
 compile character_literals || exit $?
+compile colons_alternative_syntax || exit $?
 compile complement || exit $?
 compile conditionless_break_label || exit $?
 compile constants || exit $?
@@ -54,6 +55,7 @@ compile equals_func || exit $?
 compile external || exit $?
 compile fallthrough || exit $?
 compile fixed_array || exit $?
+compile fixed_array_alternative_syntax || exit $?
 compile fixed_array_assign || exit $?
 compile fixed_array_deference || exit $?
 compile fixed_array_pass || exit $?
