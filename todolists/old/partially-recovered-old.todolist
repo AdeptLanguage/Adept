@@ -7,7 +7,7 @@ MAYBE:
 - Init and free functionality
 - for loops (maybe? don't really need cause other lang features)
 - 'weak' or another keyword for single statements {...} in expressions
-- increament and decreament operators?
+- increment and decrement operators?
 - power '**' operator?
 
 TODO:

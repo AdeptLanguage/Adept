@@ -1,0 +1,26 @@
+# Overall Things for Adept 2.4
+
+HIGH-PRIORITY:
+
+MEDIUM-PRIORITY:
+* Replace 'const a = 0' with 'declare a = 0'
+
+LOW-PRIORITY:
+* Finish 'Any'
+    * Casting to Any from non-builtin types
+* __assign__ auto-generation
+* __assign__ for fixed arrays maybe
+* Allow polymorphic names for generic bases
+* Add full linux cross-compilation support
+
+COMPLETED:
++ Standard Library Imports
++ [] operator overload
++ Better var args support
++ Ensure that trying to use variadic arguments without __variadic_array__ defined, fails smoothly
++ Better constants syntax
++ Scoped constants
++ ~> operator
++ __as__
++ implicit vs explicit __as__
++ __initializer_list__
