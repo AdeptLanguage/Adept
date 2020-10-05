@@ -521,6 +521,7 @@ typedef struct {
     bool is_pod;
     bool is_assign_pod;
     bool is_static;
+    bool is_const;
 } ast_expr_declare_t;
 
 // ---------------- ast_expr_inline_declare_t ----------------

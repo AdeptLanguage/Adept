@@ -51,6 +51,8 @@ call :compile complement
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile conditionless_break_label
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile const_variables
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile constants
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile constants_old_style

@@ -29,6 +29,7 @@ typedef struct {
     ast_type_t *type;
     source_t source;
     bool used;
+    bool is_const;
 } infer_var_t;
 
 // ---------------- infer_var_list_t ----------------
@@ -75,15 +76,15 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
 
 // ---------------- infer_expr ----------------
 // Infers an expression from the root of it
-errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope);
+errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope, bool must_be_mutable);
 
 // ---------------- infer_expr_inner ----------------
 // Infers an inner expression within the root
-errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope);
+errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope, bool must_be_mutable);
 
 // ---------------- infer_expr_inner_variable ----------------
 // Infers an inner expression that is variable-like
-errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope);
+errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope, bool must_be_mutable);
 
 // ---------------- undetermined_expr_list_give ----------------
 // Gives a potential solution for an undetermined list
@@ -140,7 +141,7 @@ ast_constant_t* infer_var_scope_find_constant(infer_var_scope_t *scope, const ch
 
 // ---------------- infer_var_scope_add_variable ----------------
 // Adds a variables to an inference variable scope
-void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used);
+void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const);
 
 // ---------------- infer_var_scope_add_constant ----------------
 // Adds a constant expression mapping to an inference variable scope

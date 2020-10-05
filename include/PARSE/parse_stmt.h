@@ -81,6 +81,11 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
 // NOTE: expand() should be used on stmt_list to make room sometime before calling
 errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source);
 
+// ------------------ parse_local_constant_declaration_should_be_variable ------------------
+// Looks ahead at 'const x .....' declaration to see if it should be a
+// variable or a constant expression
+bool parse_local_constant_declaration_should_be_variable(parse_ctx_t *ctx);
+
 // ------------------ parse_block_begin ------------------
 // Parses the token that begins a block
 // Usually this would be '{' or ','

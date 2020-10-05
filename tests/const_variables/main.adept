@@ -1,0 +1,17 @@
+
+import basics
+
+func main {
+    // [10, 11, 12]
+    const x = getIntegerValue()
+    print({x, x, x} as <int> Array)
+
+    // [13, 13, 13]
+    const y int = getIntegerValue()
+    print({y, y, y} as <int> Array)
+}
+
+func getIntegerValue int {
+    static next int = 10
+    return next++
+}

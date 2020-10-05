@@ -407,9 +407,8 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 bool is_undef = statements[s]->id == EXPR_DECLAREUNDEF;
                 ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) statements[s];
 
-                if(declare_stmt->is_static){
-                    fprintf(file, "static ");
-                }
+                if(declare_stmt->is_const)  fprintf(file, "const ");
+                if(declare_stmt->is_static) fprintf(file, "static ");
 
                 char *variable_type_str = ast_type_str(&declare_stmt->type);
                 fprintf(file, (declare_stmt->value == NULL && !is_undef) ? "%s %s\n" : "%s %s = ", declare_stmt->name, variable_type_str);

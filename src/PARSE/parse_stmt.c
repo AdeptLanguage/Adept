@@ -120,7 +120,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
             }
             break;
         case TOKEN_CONST:
-            if(parse_local_constant_declaration(ctx, stmt_list, source)) return FAILURE;
+            if(parse_local_constant_declaration(ctx, stmt_list, sources[*i])) return FAILURE;
             break;
         case TOKEN_WORD: {
                 source = sources[(*i)++]; // Read ahead to see what type of statement this is
@@ -930,9 +930,13 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     bool is_assign_pod = false;
     ast_expr_t *decl_value = NULL;
     ast_type_t decl_type;
+    bool is_const = false;
     bool is_static = false;
 
-    if(tokens[*i].id == TOKEN_STATIC){
+    if(tokens[*i].id == TOKEN_CONST){
+        is_const = true;
+        (*i)++;
+    } else if(tokens[*i].id == TOKEN_STATIC){
         is_static = true;
         (*i)++;
     }
@@ -1003,6 +1007,7 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         stmt->is_pod = is_pod;
         stmt->is_assign_pod = is_assign_pod;
         stmt->is_static = is_static;
+        stmt->is_const = is_const;
 
         if(v + 1 == length){
             stmt->type = decl_type;
@@ -1255,6 +1260,11 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source){
     // NOTE: Assumes 'stmt_list' has enough space for another statement
     // NOTE: expand() should've already been used on stmt_list to make room
+
+    // Look ahead to see is constant expression or constant variable
+    if(parse_local_constant_declaration_should_be_variable(ctx)){
+        return parse_stmt_declare(ctx, stmt_list);
+    }
     
     ast_constant_t constant;
 
@@ -1268,6 +1278,21 @@ errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *
     stmt->constant = constant;
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     return SUCCESS;
+}
+
+bool parse_local_constant_declaration_should_be_variable(parse_ctx_t *ctx){
+    length_t restore_i = *ctx->i;
+
+    if(parse_eat(ctx, TOKEN_CONST, NULL)
+    || parse_eat(ctx, TOKEN_WORD, NULL)
+    || parse_ignore_newlines(ctx, NULL)
+    || ctx->tokenlist->tokens[*ctx->i].id == TOKEN_ASSIGN){
+        *ctx->i = restore_i;
+        return false;
+    }
+
+    *ctx->i = restore_i;
+    return true;
 }
 
 errorcode_t parse_block_beginning(parse_ctx_t *ctx, weak_cstr_t block_readable_mother, unsigned int *out_stmts_mode){
