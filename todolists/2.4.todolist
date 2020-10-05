@@ -4,6 +4,7 @@ HIGH-PRIORITY:
 
 MEDIUM-PRIORITY:
 * Replace 'const a = 0' with 'declare a = 0'
+* Allow for '*void' as an alternative to 'ptr'
 
 LOW-PRIORITY:
 * Finish 'Any'
