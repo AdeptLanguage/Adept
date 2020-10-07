@@ -3,8 +3,6 @@
 HIGH-PRIORITY:
 
 MEDIUM-PRIORITY:
-* Replace 'const a = 0' with 'declare a = 0'
-* Allow for '*void' as an alternative to 'ptr'
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -13,6 +11,7 @@ LOW-PRIORITY:
 * __assign__ for fixed arrays maybe
 * Allow polymorphic names for generic bases
 * Add full linux cross-compilation support
+* Make 'typeinfo' work better with aliases and '*void'
 
 COMPLETED:
 + Standard Library Imports
@@ -25,3 +24,5 @@ COMPLETED:
 + __as__
 + implicit vs explicit __as__
 + __initializer_list__
++ Replace 'const a = 0' with 'declare a = 0'
++ Allow for '*void' as an alternative to 'ptr'

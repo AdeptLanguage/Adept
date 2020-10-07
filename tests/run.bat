@@ -331,6 +331,8 @@ call :compile variadic_print
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile version
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile void_ptr
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile while
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile while_continue

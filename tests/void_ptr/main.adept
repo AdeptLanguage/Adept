@@ -1,0 +1,8 @@
+
+import 'sys/cstdio.adept'
+
+func main {
+    x int = 10
+    value *void = &x
+    *cast *int value = 21
+}

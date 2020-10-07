@@ -1041,6 +1041,26 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                 weak_cstr_t base = ((ast_elem_base_t*) elem)->base;
                 ast_struct_t *impl_struct;
 
+                if(strcmp(base, "void") == 0 && type->elements_length > 1 && e != 0 && type->elements[e - 1]->id == AST_ELEM_POINTER){
+                    // Substitute '*void' with 'ptr'
+
+                    // Set alias name to be original type
+                    maybe_alias_name = ast_type_str(type);
+
+                    // Create replacement element
+                    ast_elem_base_t *ptr_elem = malloc(sizeof(ast_elem_base_t));
+                    ptr_elem->id = AST_ELEM_BASE;
+                    ptr_elem->source = type->elements[e]->source;
+                    ptr_elem->base = strclone("ptr");
+
+                    // DANGEROUS: Manually freeing pointer ast_elem_pointer_t element
+                    free(new_elements[length - 1]);
+
+                    // Replace previous '*' with 'ptr'
+                    new_elements[length - 1] = (ast_elem_t*) ptr_elem;
+                    continue;
+                }
+
                 int alias_index = ast_find_alias(aliases, aliases_length, base);
                 
                 if(alias_index != -1){
