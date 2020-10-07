@@ -2,9 +2,9 @@
 import 'sys/cstdio.adept'
 import 'sys/cstdlib.adept'
 
-const MY_CONSTANT = 7 * 3
-const APPLICATION_NAME = 'Constants Example Program'
-const SOLVED_GENERIC_CONSTANT = 3
+define MY_CONSTANT = 7 * 3
+define APPLICATION_NAME = 'Constants Example Program'
+define SOLVED_GENERIC_CONSTANT = 3
 
 func main(in argc int, in argv **ubyte) int {
     printf('MY_CONSTANT = %d\n', MY_CONSTANT)

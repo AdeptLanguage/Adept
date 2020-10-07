@@ -2,10 +2,10 @@
 import basics
 
 func main {
-    const MY_VALUE = 1.234567
+    define MY_VALUE = 1.234567
 
     if true {
-        const MY_VALUE = "Hello World"        
+        define MY_VALUE = "Hello World"        
         print(MY_VALUE)
     }
 }

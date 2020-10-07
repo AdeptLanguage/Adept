@@ -119,7 +119,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt_list->statements[stmt_list->length++] = expression;
             }
             break;
-        case TOKEN_CONST:
+        case TOKEN_DEFINE:
             if(parse_local_constant_declaration(ctx, stmt_list, sources[*i])) return FAILURE;
             break;
         case TOKEN_WORD: {
@@ -154,7 +154,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 }
             }
             break;
-        case TOKEN_STATIC:
+        case TOKEN_CONST: case TOKEN_STATIC:
             if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
             break;
         case TOKEN_MULTIPLY: case TOKEN_OPEN: case TOKEN_INCREMENT: case TOKEN_DECREMENT:
@@ -1260,16 +1260,11 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source){
     // NOTE: Assumes 'stmt_list' has enough space for another statement
     // NOTE: expand() should've already been used on stmt_list to make room
-
-    // Look ahead to see is constant expression or constant variable
-    if(parse_local_constant_declaration_should_be_variable(ctx)){
-        return parse_stmt_declare(ctx, stmt_list);
-    }
     
     ast_constant_t constant;
 
     // Parse constant
-    if(parse_constant_declaration(ctx, &constant)) return FAILURE;
+    if(parse_constant_definition(ctx, &constant)) return FAILURE;
 
     // Turn into declare constant statement
     ast_expr_declare_constant_t *stmt = malloc(sizeof(ast_expr_declare_constant_t));
@@ -1278,21 +1273,6 @@ errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *
     stmt->constant = constant;
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     return SUCCESS;
-}
-
-bool parse_local_constant_declaration_should_be_variable(parse_ctx_t *ctx){
-    length_t restore_i = *ctx->i;
-
-    if(parse_eat(ctx, TOKEN_CONST, NULL)
-    || parse_eat(ctx, TOKEN_WORD, NULL)
-    || parse_ignore_newlines(ctx, NULL)
-    || ctx->tokenlist->tokens[*ctx->i].id == TOKEN_ASSIGN){
-        *ctx->i = restore_i;
-        return false;
-    }
-
-    *ctx->i = restore_i;
-    return true;
 }
 
 errorcode_t parse_block_beginning(parse_ctx_t *ctx, weak_cstr_t block_readable_mother, unsigned int *out_stmts_mode){

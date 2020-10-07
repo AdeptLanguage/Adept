@@ -8,7 +8,7 @@ people :: namespace {
 
 pi :: namespace
 
-almost_pi :: const = 3.123456
+almost_pi :: define = 3.123456
 
 namespace
 

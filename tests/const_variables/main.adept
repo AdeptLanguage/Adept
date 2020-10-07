@@ -3,7 +3,7 @@ import basics
 
 func main {
     // [10, 11, 12]
-    const x = getIntegerValue()
+    define x = getIntegerValue()
     print({x, x, x} as <int> Array)
 
     // [13, 13, 13]

@@ -236,7 +236,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             //         Make sure to update values inside token.h and token.c after modifying this list
 
             const char * const keywords[] = {
-                "POD", "alias", "and", "as", "at", "break", "case", "cast", "const", "continue", "def", "default", "defer",
+                "POD", "alias", "and", "as", "at", "break", "case", "cast", "const", "continue", "def", "default", "defer", "define",
                 "delete", "each", "else", "enum", "exhaustive", "external", "fallthrough", "false", "for", "foreign", "func",
                 "funcptr", "global", "if", "implicit", "import", "in", "inout", "namespace", "new", "null", "or", "out", "packed",
                 "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch", "thread_local",

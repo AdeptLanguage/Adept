@@ -12,13 +12,13 @@ extern "C" {
 // Parses a global variable or constant
 errorcode_t parse_global(parse_ctx_t *ctx);
 
-// ------------------ parse_constant_declaration ------------------
+// ------------------ parse_constant_definition ------------------
 // Parses a constant expression declaration
-errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_constant);
+errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_constant);
 
-// ------------------ parse_global_constant_declaration ------------------
+// ------------------ parse_global_constant_definition ------------------
 // Parses a global constant expression declaration
-errorcode_t parse_global_constant_declaration(parse_ctx_t *ctx);
+errorcode_t parse_global_constant_definition(parse_ctx_t *ctx);
 
 // ------------------ parse_old_style_constant_global ------------------
 // Parses a global constant

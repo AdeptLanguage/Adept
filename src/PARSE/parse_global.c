@@ -83,11 +83,11 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_constant){
-    // const NAME = value
+errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_constant){
+    // define NAME = value
     //   ^
 
-    // NOTE: Assumes first token is 'const' keyword
+    // NOTE: Assumes first token is 'define' keyword
     source_t source = ctx->tokenlist->sources[(*ctx->i)++];
 
     // Get the name of the constant value
@@ -97,7 +97,7 @@ errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_con
         name = ctx->prename;
         ctx->prename = NULL;
     } else {
-        name = parse_take_word(ctx, "Expected name for constant value after 'const' keyword");
+        name = parse_take_word(ctx, "Expected name for constant definition after 'define' keyword");
     }
     if(name == NULL) return FAILURE;
 
@@ -118,7 +118,7 @@ errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_con
     }
 
     if(ctx->tokenlist->tokens[*ctx->i].id != TOKEN_NEWLINE){
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected end-of-line after constant expression definition");
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected end-of-line after constant definition");
         ast_expr_free_fully(value);
         free(name);
         return FAILURE;
@@ -132,11 +132,11 @@ errorcode_t parse_constant_declaration(parse_ctx_t *ctx, ast_constant_t *out_con
     return SUCCESS;
 }
 
-errorcode_t parse_global_constant_declaration(parse_ctx_t *ctx){
+errorcode_t parse_global_constant_definition(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
 
     ast_constant_t new_constant;
-    if(parse_constant_declaration(ctx, &new_constant)) return FAILURE;
+    if(parse_constant_definition(ctx, &new_constant)) return FAILURE;
 
     // Make room for another constant
     expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
