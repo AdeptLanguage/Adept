@@ -1177,7 +1177,7 @@ void infer_var_scope_push(infer_var_scope_t **scope){
 
 void infer_var_scope_pop(compiler_t *compiler, infer_var_scope_t **scope){
     if((*scope)->parent == NULL){
-        redprintf("INTERNAL ERROR: TRIED TO POP INFER VARIABLE SCOPE WITH NO PARENT\n");
+        internalerrorprintf("TRIED TO POP INFER VARIABLE SCOPE WITH NO PARENT\n");
         return;
     }
 
@@ -1386,7 +1386,7 @@ void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expres
         type_table_give_base(ctx->type_table, "String");
         break;
     default:
-        redprintf("INTERNAL ERROR: Failed to mention type to type table for primitive from generic!\n");
+        internalerrorprintf("Failed to mention type to type table for primitive from generic!\n");
         redprintf("Continuing regardless...\n");
     }
 }

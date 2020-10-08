@@ -251,7 +251,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         }
         break;
     default:
-        redprintf("INTERNAL ERROR: Unexpected value type of value in ir_value_str function\n");
+        internalerrorprintf("Unexpected value type of value in ir_value_str function\n");
         free(typename);
         return NULL;
     }

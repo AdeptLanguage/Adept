@@ -105,7 +105,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
     // Retrieves a literal or previously computed value
 
     if(value == NULL){
-        redprintf("INTERNAL ERROR: ir_to_llvm_value() got NULL pointer\n");
+        internalerrorprintf("ir_to_llvm_value() got NULL pointer\n");
         return NULL;
     }
 
@@ -124,7 +124,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             case TYPE_KIND_DOUBLE: return LLVMConstReal(LLVMDoubleType(), *((adept_double*) value->extra));
             case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((adept_bool*) value->extra), false);
             default:
-                redprintf("INTERNAL ERROR: Unknown type kind literal in ir_to_llvm_value\n");
+                internalerrorprintf("Unknown type kind literal in ir_to_llvm_value\n");
                 return NULL;
             }
         }
@@ -254,7 +254,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             return LLVMConstAdd(ir_to_llvm_value(llvm, const_add->a), ir_to_llvm_value(llvm, const_add->b));
         }
     default:
-        redprintf("INTERNAL ERROR: Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
+        internalerrorprintf("Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
         return NULL;
     }
 
@@ -438,7 +438,7 @@ errorcode_t ir_to_llvm_allocate_stack_variables(llvm_context_t *llvm, varstack_t
         bridge_var_t *var = bridge_scope_find_var_by_id(module_func->scope, s);
 
         if(var == NULL){
-            redprintf("INTERNAL ERROR: VAR IN EXPORT STAGE COULD NOT BE FOUND (id: %d)\n", (int) s);
+            internalerrorprintf("VAR IN EXPORT STAGE COULD NOT BE FOUND (id: %d)\n", (int) s);
             return FAILURE;
         }
 
@@ -935,7 +935,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 case TYPE_KIND_FUNCPTR:
                 case TYPE_KIND_POINTER: zero = LLVMConstNull(ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->value->type)); break;
                 default:
-                    redprintf("INTERNAL ERROR: INSTRUCTION_ISxxZERO received unknown type kind\n");
+                    internalerrorprintf("INSTRUCTION_ISxxZERO received unknown type kind\n");
                     return FAILURE;
                 }
 
@@ -1154,7 +1154,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 ir_type_t *target_result_type = alloc->result_type;
 
                 if(target_result_type->kind != TYPE_KIND_POINTER){
-                    redprintf("INTERNAL ERROR: INSTRUCTION_ALLOC got non-pointer result type when exporting ir to llvm\n");
+                    internalerrorprintf("INSTRUCTION_ALLOC got non-pointer result type when exporting ir to llvm\n");
                     catalog->blocks[b].value_references[i] = LLVMConstPointerNull(ir_to_llvm_type(llvm, target_result_type));
                     break;
                 }
@@ -1247,7 +1247,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         default:
-            redprintf("INTERNAL ERROR: Unexpected instruction '%d' when exporting ir to llvm\n", instructions[i]->id);
+            internalerrorprintf("Unexpected instruction '%d' when exporting ir to llvm\n", instructions[i]->id);
             return FAILURE;
         }
     }
@@ -1352,7 +1352,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     char *error_message; LLVMTargetRef target;
     if(LLVMGetTargetFromTriple(triple, &target, &error_message)){
-        redprintf("INTERNAL ERROR: LLVMGetTargetFromTriple failed: %s\n", error_message);
+        internalerrorprintf("LLVMGetTargetFromTriple failed: %s\n", error_message);
         LLVMDisposeMessage(error_message);
         return FAILURE;
     }
@@ -1558,7 +1558,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMRunPassManager(pass_manager, llvm.module);
     
     if(LLVMTargetMachineEmitToFile(target_machine, llvm.module, object_filename, codegen, &error_message)){
-        redprintf("INTERNAL ERROR: LLVMTargetMachineEmitToFile failed: %s\n", error_message);
+        internalerrorprintf("LLVMTargetMachineEmitToFile failed: %s\n", error_message);
         LLVMDisposeTargetData(data_layout);
         LLVMRunPassManager(pass_manager, llvm.module);
         LLVMDisposeTargetMachine(target_machine);
@@ -1597,7 +1597,8 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     
     // TODO: SECURITY: Stop using system(3) call to invoke linker
     if(system(link_command) != 0){
-        redprintf("EXTERNAL ERROR: link command failed\n%s\n", link_command);
+        redprintf("external-error: ");
+        printf("link command failed\n%s\n", link_command);
         free(object_filename);
         free(link_command);
         return FAILURE;

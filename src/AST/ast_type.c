@@ -96,7 +96,7 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
             break;
         }
     default:
-        redprintf("INTERNAL ERROR: Encountered unexpected type element id when cloning ast_elem_t, a crash will probably follow...\n");
+        internalerrorprintf("Encountered unexpected type element id when cloning ast_elem_t, a crash will probably follow...\n");
     }
 
     return new_element;
@@ -159,7 +159,7 @@ void ast_type_free(ast_type_t *type){
             }
             break;
         default:
-            redprintf("INTERNAL ERROR: Encountered unexpected type element id when freeing ast_type_t\n");
+            internalerrorprintf("Encountered unexpected type element id when freeing ast_type_t\n");
         }
     }
 
@@ -553,7 +553,7 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 ast_elem_generic_base_t *generic_base_b = (ast_elem_generic_base_t*) b->elements[i];
 
                 if(generic_base_a->name_is_polymorphic || generic_base_b->name_is_polymorphic){
-                    redprintf("INTERNAL ERROR: polymorphic names for generic structs not implemented in ast_types_identical\n");
+                    internalerrorprintf("polymorphic names for generic structs not implemented in ast_types_identical\n");
                     return false;
                 }
 
@@ -587,7 +587,7 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
             }
             break;
         default:
-            redprintf("INTERNAL ERROR: ast_types_identical received unknown element id\n");
+            internalerrorprintf("ast_types_identical received unknown element id\n");
             return false;
         }
     }
@@ -740,7 +740,7 @@ bool ast_type_has_polymorph(const ast_type_t *type){
             }
             break;
         default:
-            redprintf("INTERNAL ERROR: ast_type_has_polymorph encountered unknown element id 0x%08X\n", type->elements[i]->id);
+            internalerrorprintf("ast_type_has_polymorph encountered unknown element id 0x%08X\n", type->elements[i]->id);
         }
     }
     return false;
@@ -748,7 +748,7 @@ bool ast_type_has_polymorph(const ast_type_t *type){
 
 void ast_type_dereference(ast_type_t *inout_type){
     if(inout_type->elements_length < 2 || inout_type->elements[0]->id != AST_ELEM_POINTER){
-        redprintf("INTERNAL ERROR: ast_type_dereference received non pointer type\n");
+        internalerrorprintf("ast_type_dereference received non pointer type\n");
         return;
     }
 
@@ -877,7 +877,7 @@ hash_t ast_elem_hash(ast_elem_t *element){
         }
         break;
     default:
-        redprintf("INTERNAL ERROR: Encountered unexpected type element id when cloning ast_elem_t, a crash will probably follow...\n");
+        internalerrorprintf("Encountered unexpected type element id when cloning ast_elem_t, a crash will probably follow...\n");
     }
 
     return element_hash;

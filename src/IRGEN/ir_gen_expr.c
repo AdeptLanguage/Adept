@@ -1662,7 +1662,7 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
         error = ir_gen_find_generic_base_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, result);
     }
     else {
-        redprintf("INTERNAL ERROR: ir_gen_expr_call_method_find_appropriate_method() received bad subject AST type\n")
+        internalerrorprintf("ir_gen_expr_call_method_find_appropriate_method() received bad subject AST type\n");
         return FAILURE;
     }
     

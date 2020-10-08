@@ -623,7 +623,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         }
 
         if(!ir_type_map_find(builder->type_map, "Any", &any_type)){
-            redprintf("INTERNAL ERROR: Failed to find 'Any' type used by the runtime type table that should've been injected\n");
+            internalerrorprintf("Failed to find 'Any' type used by the runtime type table that should've been injected\n");
             return false;
         }
         

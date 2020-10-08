@@ -66,7 +66,8 @@ static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items
     char *reallocated = realloc(buffer->bytes, buffer->length + total_append_size + 1);
 
     if(reallocated == NULL){
-        redprintf("EXTERNAL ERROR: download_write_data_to_memory() ran out of memory!\n");
+        redprintf("external-error: ");
+        printf("download_write_data_to_memory() ran out of memory!\n");
         free(buffer->bytes);
         return 0;
     }

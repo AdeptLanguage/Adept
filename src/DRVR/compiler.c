@@ -78,14 +78,15 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
 
     if(compiler->location == NULL){
         if(argv == NULL || argv[0] == NULL || strcmp(argv[0], "") == 0){
-    		redprintf("EXTERNAL ERROR: Compiler was invoked with NULL or empty argv[0]\n");
+            redprintf("external-error: ");
+    		printf("Compiler was invoked with NULL or empty argv[0]\n");
     	} else {
             compiler->location = filename_absolute(argv[0]);
         }
     }
 
     if(compiler->location == NULL){
-        redprintf("INTERNAL ERROR: Compiler failed to locate itself\n");
+        internalerrorprintf("Compiler failed to locate itself\n");
         exit(1);
     }
     #endif
@@ -517,7 +518,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
 
             if(object->full_filename == NULL){
                 object->compilation_stage = COMPILATION_STAGE_NONE;
-                redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", object->filename);
+                internalerrorprintf("Failed to get absolute path of filename '%s'\n", object->filename);
                 free(object->filename);
                 return FAILURE;
             }
@@ -541,7 +542,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
 
             if(object->full_filename == NULL){
                 object->compilation_stage = COMPILATION_STAGE_NONE;
-                redprintf("INTERNAL ERROR: Failed to get absolute path of filename '%s'\n", object->filename);
+                internalerrorprintf("Failed to get absolute path of filename '%s'\n", object->filename);
                 free(object->filename);
                 return FAILURE;
             }

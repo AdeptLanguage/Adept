@@ -411,7 +411,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     variable_traits |= BRIDGE_VAR_STATIC;
 
                     if(!builder->object->ir_module.common.has_main){
-                        redprintf("INTERNAL ERROR: Cannot use static variables without a main function!\n");
+                        internalerrorprintf("Cannot use static variables without a main function!\n");
                         return FAILURE;
                     }
 

@@ -177,7 +177,7 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
     bool boolean;
 
     if(!jsmn_helper_get_object(buffer, tokens, num_tokens, index)){
-        warningprintf("config_read_adept_config_value() -> jsmn_helper_get_object() failed\n");
+        internalwarningprintf("config_read_adept_config_value() -> jsmn_helper_get_object() failed\n");
         return false;
     }
 
@@ -185,7 +185,7 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
 
     for(int i = 0; i != main_object_token.size; i++){
         if(!jsmn_helper_get_string(buffer, tokens, num_tokens, index, content, max_content)){
-            warningprintf("config_read_adept_config_value() -> jsmn_helper_get_string() failed\n");
+            internalwarningprintf("config_read_adept_config_value() -> jsmn_helper_get_string() failed\n");
             return false;
         }
 

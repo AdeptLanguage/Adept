@@ -67,3 +67,19 @@ void warningprintf(const char *format, ...){
     vprintf(format, args);
     va_end(args);
 }
+
+void internalerrorprintf(const char *format, ...){
+    va_list args;
+    va_start(args, format);
+    redprintf("internal-error: ");
+    vprintf(format, args);
+    va_end(args);
+}
+
+void internalwarningprintf(const char *format, ...){
+    va_list args;
+    va_start(args, format);
+    yellowprintf("internal-warning: ");
+    vprintf(format, args);
+    va_end(args);
+}

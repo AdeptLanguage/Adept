@@ -202,7 +202,7 @@ strong_cstr_t filename_absolute(const char *filename){
 
     if(buffer == NULL){
         // Failed to get path
-        redprintf("INTERNAL ERROR: filename_absolute() failed to get absolute path for '%s'\n", filename);
+        internalerrorprintf("filename_absolute() failed to get absolute path for '%s'\n", filename);
         exit(1);
     }
 

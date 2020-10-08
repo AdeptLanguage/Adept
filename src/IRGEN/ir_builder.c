@@ -56,7 +56,7 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
 
     // Little test to make sure ir_value->type is valid
     if(ir_value->type == NULL){
-        redprintf("INTERNAL ERROR: build_value_from_prev_instruction() tried to create value from instruction without return_type set\n");
+        internalerrorprintf("build_value_from_prev_instruction() tried to create value from instruction without return_type set\n");
         redprintf("Previous instruction id: 0x%08X\n", (int) result->instruction_id);
         redprintf("Returning NULL, a crash will probably follow...\n");
         return NULL;
@@ -167,7 +167,7 @@ ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
 ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source){
     // NOTE: Array access is only for pointer values
     if(value->type->kind != TYPE_KIND_POINTER){
-        redprintf("INTERNAL ERROR: build_array_access called on non-pointer value\n");
+        internalerrorprintf("build_array_access called on non-pointer value\n");
         redprintf("                (value left unmodified)");
         return value;
     }
@@ -318,7 +318,7 @@ ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_cons
 
 void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer){
     if(anon_global->value_type != VALUE_TYPE_ANON_GLOBAL && anon_global->value_type != VALUE_TYPE_CONST_ANON_GLOBAL){
-        redprintf("INTERNAL ERROR: Failed to set initializer on value that isn't an anonymous global reference\n");
+        internalerrorprintf("Failed to set initializer on value that isn't an anonymous global reference\n");
         return;
     }
 
@@ -460,7 +460,7 @@ ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type
     ir_type_t *ubyte_type;
 
     if(!ir_type_map_find(type_map, "ubyte", &ubyte_type)){
-        redprintf("INTERNAL ERROR: ir_type_map_find failed to find mapping for ubyte for build_literal_cstr_of_length_ex!\n");
+        internalerrorprintf("ir_type_map_find failed to find mapping for ubyte for build_literal_cstr_of_length_ex!\n");
         return NULL;
     }
 
@@ -656,7 +656,7 @@ void close_scope(ir_builder_t *builder){
     builder->scope = builder->scope->parent;
     
     if(builder->scope == NULL)
-        redprintf("INTERNAL ERROR: TRIED TO CLOSE BRIDGE SCOPE WITH NO PARENT, probably will crash...\n");
+        internalerrorprintf("TRIED TO CLOSE BRIDGE SCOPE WITH NO PARENT, probably will crash...\n");
 }
 
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
@@ -929,7 +929,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             ast_poly_catalog_init(&catalog);
 
             if(template->generics_length != generic_base->generics_length){
-                redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating child deference!\n", generic_base->name);
+                internalerrorprintf("Polymorphic struct '%s' type parameter length mismatch when generating child deference!\n", generic_base->name);
                 ast_poly_catalog_free(&catalog);
                 return ALT_FAILURE;
             }
@@ -1244,7 +1244,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             ast_poly_catalog_init(&catalog);
 
             if(template->generics_length != generic_base->generics_length){
-                redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating child passing!\n", generic_base->name);
+                internalerrorprintf("Polymorphic struct '%s' type parameter length mismatch when generating child passing!\n", generic_base->name);
                 ast_poly_catalog_free(&catalog);
                 return ALT_FAILURE;
             }

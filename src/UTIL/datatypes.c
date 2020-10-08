@@ -133,6 +133,6 @@ bool string_to_int_must_be_uint64(weak_cstr_t string, length_t length, int base)
     if(base == 16) return length != 16 ? length > 16 : strncmp(string, "7FFFFFFFFFFFFFFF", 16) > 0;
     
     // Base Unimplemented
-    redprintf("INTERNAL ERROR: string_to_int_must_be_uint64() got unimplemented base %d\n", base);
+    internalerrorprintf("string_to_int_must_be_uint64() got unimplemented base %d\n", base);
     return false;
 }

@@ -104,7 +104,7 @@ char *mallocandsprintf(const char *format, ...){
                 size += strlen(va_arg(transverse, char*));
                 break;
             default:
-                warningprintf("mallocandsprintf() received non %%s in format\n");
+                internalwarningprintf("mallocandsprintf() received non %%s in format\n");
                 size += 50; // Assume whatever it is, it will fit in 50 bytes
             }
         } else size++;

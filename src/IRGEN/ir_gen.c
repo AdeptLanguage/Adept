@@ -356,7 +356,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     ptr_to_type->extra = NULL;
 
     if(ir_gen_resolve_type(compiler, object, &ast_global->type, (ir_type_t**) &ptr_to_type->extra)){
-        redprintf("INTERNAL ERROR: Failed to get IR type for special global variable\n");
+        internalerrorprintf("Failed to get IR type for special global variable\n");
         return FAILURE;
     }
 
@@ -369,7 +369,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         
         if(compiler->traits & COMPILER_NO_TYPEINFO){
             if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)){
-                redprintf("INTERNAL ERROR: Failed to get 'AnyType' which should've been injected\n");
+                internalerrorprintf("Failed to get 'AnyType' which should've been injected\n");
                 redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)\n")
                 return FAILURE;
             }
@@ -384,7 +384,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         || !ir_type_map_find(&ir_module->type_map, "AnyUnionType", &any_union_type_type)
         || !ir_type_map_find(&ir_module->type_map, "AnyPtrType", &any_ptr_type_type)
         || !ir_type_map_find(&ir_module->type_map, "ubyte", &ubyte_ptr_type)){
-            redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
+            internalerrorprintf("Failed to find types used by the runtime type table that should've been injected\n");
             return FAILURE;
         }
 
@@ -484,7 +484,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
                         
                         if(template == NULL){
-                            redprintf("INTERNAL ERROR: Failed to find polymorphic struct '%s' that should exist when generating runtime type table!\n", generic_base->name);
+                            internalerrorprintf("Failed to find polymorphic struct '%s' that should exist when generating runtime type table!\n", generic_base->name);
                             return FAILURE;
                         }
 
@@ -493,7 +493,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_poly_catalog_init(&catalog);
 
                         if(template->generics_length != generic_base->generics_length){
-                            redprintf("INTERNAL ERROR: Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
+                            internalerrorprintf("Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
                             ast_poly_catalog_free(&catalog);
                             return FAILURE;
                         }
@@ -530,7 +530,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                             ir_type_t *struct_ir_type;
                             if(ir_gen_resolve_type(compiler, object, &container_ast_type, &struct_ir_type)){
-                                redprintf("INTERNAL ERROR: ir_gen_resolve_type for RTTI composite offset computation failed!\n");
+                                internalerrorprintf("ir_gen_resolve_type for RTTI composite offset computation failed!\n");
                                 ast_type_free(&container_ast_type);
                                 ast_type_free(&member_ast_type);
                                 return FAILURE;
@@ -548,12 +548,12 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_struct_t *structure = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
 
                         if(structure == NULL){
-                            redprintf("INTERNAL ERROR: Failed to find struct '%s' that should exist when generating runtime type table!\n", struct_name);
+                            internalerrorprintf("Failed to find struct '%s' that should exist when generating runtime type table!\n", struct_name);
                             return FAILURE;
                         }
 
                         if(structure->field_count != composite->subtypes_length){
-                            redprintf("INTERNAL ERROR: Mismatching member count of IR as AST types for struct '%s' when generating runtime type table!\n", struct_name);
+                            internalerrorprintf("Mismatching member count of IR as AST types for struct '%s' when generating runtime type table!\n", struct_name);
                             return FAILURE;
                         }
 
@@ -574,7 +574,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                             ir_type_t *struct_ir_type;
                             if(ir_gen_resolve_type(compiler, object, &struct_ast_type, &struct_ir_type)){
-                                redprintf("INTERNAL ERROR: ir_gen_resolve_type for RTTI composite offset computation failed!\n");
+                                internalerrorprintf("ir_gen_resolve_type for RTTI composite offset computation failed!\n");
                                 ast_type_free(&struct_ast_type);
                                 return FAILURE;
                             }
@@ -585,7 +585,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                             composite_member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, structure->field_names[s]);
                         }
                     } else {
-                        redprintf("INTERNAL ERROR: Unknown AST type element for TYPE_KIND_STRUCTURE when generating runtime type information!\n");
+                        internalerrorprintf("Unknown AST type element for TYPE_KIND_STRUCTURE when generating runtime type information!\n");
                         return FAILURE;
                     }
 
@@ -672,7 +672,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         ir_type_t *ubyte_ptr_type, *ubyte_ptr_ptr_type;
 
         if(!ir_type_map_find(&ir_module->type_map, "ubyte", &ubyte_ptr_type)){
-            redprintf("INTERNAL ERROR: Failed to find types used by the runtime type table that should've been injected\n");
+            internalerrorprintf("Failed to find types used by the runtime type table that should've been injected\n");
             return FAILURE;
         }
 
@@ -717,7 +717,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     }
 
     // Should never reach
-    redprintf("INTERNAL ERROR: Encountered unknown special global variable '%s'!\n", ast_global->name);
+    internalerrorprintf("Encountered unknown special global variable '%s'!\n", ast_global->name);
     return FAILURE;
 }
 

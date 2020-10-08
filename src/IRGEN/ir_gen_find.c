@@ -357,7 +357,7 @@ errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument,
         }
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_gen_find_defer_func got unknown first element kind for arg_type\n");
+        internalerrorprintf("ir_gen_find_defer_func got unknown first element kind for arg_type\n");
         return ALT_FAILURE;
     }
     
@@ -1021,7 +1021,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                     // therefore 'given' is similar to 'similar' and the prerequisite is met
                 } else if(concrete_type->elements[i]->id != AST_ELEM_GENERIC_BASE){
                     if(((ast_elem_generic_base_t*) concrete_type->elements[i])->name_is_polymorphic){
-                        redprintf("INTERNAL ERROR: arg_type_polymorphable encountered polymorphic generic struct name in middle of AST type\n");
+                        internalerrorprintf("arg_type_polymorphable encountered polymorphic generic struct name in middle of AST type\n");
                         return ALT_FAILURE;
                     }
 
@@ -1029,7 +1029,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                     ast_polymorphic_struct_t *given = object_polymorphic_struct_find(NULL, builder->object, builder->tmpbuf, given_name, NULL);
 
                     if(given == NULL){
-                        redprintf("INTERNAL ERROR: arg_type_polymorphable failed to find polymophic struct '%s' which should exist\n", given_name);
+                        internalerrorprintf("arg_type_polymorphable failed to find polymophic struct '%s' which should exist\n", given_name);
                         return FAILURE;
                     }
 
@@ -1049,7 +1049,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
             
             // Ensure there aren't other elements following the polymorphic element
             if(i + 1 != polymorphic_type->elements_length){
-                redprintf("INTERNAL ERROR: arg_type_polymorphable encountered polymorphic element in middle of AST type\n");
+                internalerrorprintf("arg_type_polymorphable encountered polymorphic element in middle of AST type\n");
                 return ALT_FAILURE;
             }
 
@@ -1084,7 +1084,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
         if(poly_elem_id == AST_ELEM_POLYMORPH){
             // Ensure there aren't other elements following the polymorphic element
             if(i + 1 != polymorphic_type->elements_length){
-                redprintf("INTERNAL ERROR: arg_type_polymorphable encountered polymorphic element in middle of AST type\n");
+                internalerrorprintf("arg_type_polymorphable encountered polymorphic element in middle of AST type\n");
                 return ALT_FAILURE;
             }
 
@@ -1184,7 +1184,7 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                 ast_elem_generic_base_t *generic_base_b = (ast_elem_generic_base_t*) concrete_type->elements[i];
 
                 if(generic_base_a->name_is_polymorphic || generic_base_b->name_is_polymorphic){
-                    redprintf("INTERNAL ERROR: polymorphic names for generic structs not implemented in arg_type_polymorphable\n");
+                    internalerrorprintf("polymorphic names for generic structs not implemented in arg_type_polymorphable\n");
                     return ALT_FAILURE;
                 }
 
@@ -1199,10 +1199,10 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
             break;
         case AST_ELEM_POLYMORPH:
         case AST_ELEM_POLYMORPH_PREREQ:
-            redprintf("INTERNAL ERROR: arg_type_polymorphable encountered uncaught polymorphic type element\n");
+            internalerrorprintf("arg_type_polymorphable encountered uncaught polymorphic type element\n");
             return ALT_FAILURE;
         default:
-            redprintf("INTERNAL ERROR: arg_type_polymorphable encountered unknown element id 0x%8X\n", polymorphic_type->elements[i]->id);
+            internalerrorprintf("arg_type_polymorphable encountered unknown element id 0x%8X\n", polymorphic_type->elements[i]->id);
             return ALT_FAILURE;
         }
     }

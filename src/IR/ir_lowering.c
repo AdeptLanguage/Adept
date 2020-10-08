@@ -70,12 +70,12 @@ errorcode_t ir_lower_const_bitcast(ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes != from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_bitcast() called for types of different sizes!\n");
+        internalerrorprintf("ir_lower_const_bitcast() called for types of different sizes!\n");
         return FAILURE;
     }
 
     if((to_spec.traits & IR_TYPE_TRAIT_POINTER) ^ (from_spec.traits & IR_TYPE_TRAIT_POINTER)){
-        redprintf("INTERNAL ERROR: ir_lower_const_bitcast() called for a single pointer type!\n");
+        internalerrorprintf("ir_lower_const_bitcast() called for a single pointer type!\n");
         return FAILURE;
     }
     
@@ -98,7 +98,7 @@ errorcode_t ir_lower_const_trunc(ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes >= from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_trunc() called when target type is equal size of larger!\n");
+        internalerrorprintf("ir_lower_const_trunc() called when target type is equal size of larger!\n");
         return FAILURE;
     }
 
@@ -130,7 +130,7 @@ errorcode_t ir_lower_const_zext(ir_pool_t *pool, ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_zext() called when target type is smaller!\n");
+        internalerrorprintf("ir_lower_const_zext() called when target type is smaller!\n");
         return FAILURE;
     }
 
@@ -164,7 +164,7 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_sext() called when target type is smaller!\n");
+        internalerrorprintf("ir_lower_const_sext() called when target type is smaller!\n");
         return FAILURE;
     }
 
@@ -189,7 +189,7 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
         *((int64_t*) pointer) *= -1;
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_sext() failed to swap sign bit!\n");
+        internalerrorprintf("ir_lower_const_sext() failed to swap sign bit!\n");
         return FAILURE;
     }
 
@@ -214,7 +214,7 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
         *((int64_t*) new_pointer) *= -1;
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_sext() failed to swap sign bit!\n");
+        internalerrorprintf("ir_lower_const_sext() failed to swap sign bit!\n");
         return FAILURE;
     }
 
@@ -238,7 +238,7 @@ errorcode_t ir_lower_const_fext(ir_pool_t *pool, ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes < from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_fext() called when target type is smaller!\n");
+        internalerrorprintf("ir_lower_const_fext() called when target type is smaller!\n");
         return FAILURE;
     }
 
@@ -265,7 +265,7 @@ errorcode_t ir_lower_const_ftrunc(ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes > from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_ftrunc() called when target type is smaller!\n");
+        internalerrorprintf("ir_lower_const_ftrunc() called when target type is smaller!\n");
         return FAILURE;
     }
 
@@ -305,7 +305,7 @@ errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value){
         as_unsigned = *((adept_double*) ((*child)->extra));
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_fptoui() failed!\n");
+        internalerrorprintf("ir_lower_const_fptoui() failed!\n");
         return FAILURE;
     }
     
@@ -348,7 +348,7 @@ errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
         as_signed = *((adept_double*) ((*child)->extra));
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_fptosi() failed!\n");
+        internalerrorprintf("ir_lower_const_fptosi() failed!\n");
         return FAILURE;
     }
 
@@ -373,7 +373,7 @@ errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
         *((int64_t*) new_pointer) *= -1;
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_fptosi() failed to swap sign bit!\n");
+        internalerrorprintf("ir_lower_const_fptosi() failed to swap sign bit!\n");
         return FAILURE;
     }
     
@@ -413,7 +413,7 @@ errorcode_t ir_lower_const_uitofp(ir_pool_t *pool, ir_value_t **inout_value){
         as_float = *((uint64_t*) ((*child)->extra));
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_uitofp() failed!\n");
+        internalerrorprintf("ir_lower_const_uitofp() failed!\n");
         return FAILURE;
     }
     
@@ -460,7 +460,7 @@ errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
         as_float = *((int64_t*) ((*child)->extra));
         break;
     default:
-        redprintf("INTERNAL ERROR: ir_lower_const_sitofp() failed!\n");
+        internalerrorprintf("ir_lower_const_sitofp() failed!\n");
         return FAILURE;
     }
     
@@ -491,7 +491,7 @@ errorcode_t ir_lower_const_reinterpret(ir_value_t **inout_value){
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
     if(to_spec.bytes != from_spec.bytes){
-        redprintf("INTERNAL ERROR: ir_lower_const_reinterpret() called for types of different sizes!\n");
+        internalerrorprintf("ir_lower_const_reinterpret() called for types of different sizes!\n");
         return FAILURE;
     }
 
