@@ -21,26 +21,21 @@ void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id,
     // Expects 'message' to have a '%s' to display the token name
 
     int line, column;
-    length_t message_length = strlen(message);
-    char *format = malloc(message_length + 13);
 
     if(ctx->object->traits & OBJECT_PACKAGE){
-        line = 1;
-        column = 1;
-        memcpy(format, "%s: ", 4);
-        memcpy(&format[4], message, message_length);
-        memcpy(&format[4 + message_length], "!\n", 3);
-        redprintf(format, filename_name_const(ctx->object->filename), global_token_name_table[token_id]);
+        printf("%s: ", filename_name_const(ctx->object->filename));
     } else {
         lex_get_location(ctx->object->buffer, source.index, &line, &column);
-        memcpy(format, "%s:%d:%d: ", 10);
-        memcpy(&format[10], message, message_length);
-        memcpy(&format[10 + message_length], "!\n", 3);
-        redprintf(format, filename_name_const(ctx->object->filename), line, column, global_token_name_table[token_id]);
+        printf("%s:%d:%d: ", filename_name_const(ctx->object->filename), line, column);
     }
 
-    free(format);
-    compiler_print_source(ctx->compiler, line, source);
+    redprintf("error: ");
+    printf(message, global_token_name_table[token_id]);
+    printf("!\n");
+
+    if(!(ctx->object->traits & OBJECT_PACKAGE)){
+        compiler_print_source(ctx->compiler, line, source);
+    }
 
     if(ctx->compiler->error == NULL){
         strong_cstr_t buffer = calloc(256, 1);

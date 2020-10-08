@@ -1222,7 +1222,7 @@ errorcode_t ir_gen_find_special_func(compiler_t *compiler, object_t *object, wea
     if(ir_gen_find_func_named(compiler, object, func_name, &is_unique, &result) == SUCCESS){
         // Found special function
         
-        if(!is_unique && compiler_warnf(compiler, result.ast_func->source, "Warning: Using this definition of %s, but there are multiple possibilities", func_name)){
+        if(!is_unique && compiler_warnf(compiler, result.ast_func->source, "Using this definition of %s, but there are multiple possibilities", func_name)){
             return ALT_FAILURE;
         }
 

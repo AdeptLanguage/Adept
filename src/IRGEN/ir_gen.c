@@ -1028,7 +1028,7 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
             }
             break;
         default:
-            if(compiler_warnf(builder->compiler, source, "WARNING: Unrecognized format specifier '%%%c'", *(p - 1)))
+            if(compiler_warnf(builder->compiler, source, "Unrecognized format specifier '%%%c'", *(p - 1)))
                 return FAILURE;
         }
     }

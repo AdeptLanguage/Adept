@@ -988,7 +988,7 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
         
         if(sizeof(va_list) != 24){
             // Neglect whether to terminate, since this is not a fixable warning
-            compiler_warnf(compiler, NULL_SOURCE, "WARNING: Assuming Intel x86_64 va_list\n");
+            compiler_warnf(compiler, NULL_SOURCE, "Assuming Intel x86_64 va_list\n");
         }
 
         strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 4);

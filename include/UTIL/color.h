@@ -68,4 +68,12 @@ void terminal_set_color_posix(char color);
 }
 #endif
 
+// ---------------- errorprintf  ----------------
+// Version of 'printf' for non-specific errors
+void errorprintf(const char *format, ...);
+
+// ---------------- warningprintf ----------------
+// Version of 'printf' for non-specific warnings
+void warningprintf(const char *format, ...);
+
 #endif // _ISAAC_COLOR_H

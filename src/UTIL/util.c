@@ -5,6 +5,7 @@
 
 #include <stdarg.h>
 #include "UTIL/util.h"
+#include "UTIL/color.h"
 
 void expand(void **inout_memory, length_t unit_size, length_t length, length_t *inout_capacity, length_t amount, length_t default_capacity){
     // Expands an array in memory to be able to fit more units
@@ -103,7 +104,7 @@ char *mallocandsprintf(const char *format, ...){
                 size += strlen(va_arg(transverse, char*));
                 break;
             default:
-                printf("WARNING: mallocandsprintf() received non %%s in format\n");
+                warningprintf("mallocandsprintf() received non %%s in format\n");
                 size += 50; // Assume whatever it is, it will fit in 50 bytes
             }
         } else size++;

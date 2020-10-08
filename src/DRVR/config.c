@@ -24,7 +24,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
 
     FILE *f = fopen(filename, "rb");
     if(f == NULL){
-        *out_warning = "WARNING: Adept failed to read local configuration file, adept.config";
+        *out_warning = "Adept failed to read local configuration file, adept.config";
         return false;
     }
 
@@ -36,7 +36,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
     if(buffer == NULL){
         fclose(f);
 
-        *out_warning = "WARNING: Adept failed to read local configuration file due to not enough memory";
+        *out_warning = "Adept failed to read local configuration file due to not enough memory";
         return false;
     }
 
@@ -62,7 +62,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
     }
 
     if(!jsmn_helper_get_object(buffer, tokens, required_tokens, 0)){
-        *out_warning = "WARNING: Invalid Adept Configuration File";
+        *out_warning = "Invalid Adept Configuration File";
         free(tokens);
         free(buffer);
         return false;
@@ -80,7 +80,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
 
     for(length_t section = 0; section != total_sections; section++){
         if(!jsmn_helper_get_string(buffer, tokens, required_tokens, section_token_index++, key, sizeof(key))){
-            *out_warning = "WARNING: Configuration file expected section key";
+            *out_warning = "Configuration file expected section key";
             free(tokens);
             free(buffer);
             return false;
@@ -95,7 +95,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
         } else if(strcmp(key, "imports") == 0){
             // Local imports
         } else {
-            yellowprintf("WARNING: Invalid section key '%s' in configuration file, %s\n", key, filename_name_const(filename));
+            yellowprintf("Invalid section key '%s' in configuration file, %s\n", key, filename_name_const(filename));
         }
 
         section_token_index += jsmn_helper_subtoken_count(tokens, section_token_index);
@@ -177,7 +177,7 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
     bool boolean;
 
     if(!jsmn_helper_get_object(buffer, tokens, num_tokens, index)){
-        printf("WARNING: config_read_adept_config_value() -> jsmn_helper_get_object() failed\n");
+        warningprintf("config_read_adept_config_value() -> jsmn_helper_get_object() failed\n");
         return false;
     }
 
@@ -185,13 +185,13 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
 
     for(int i = 0; i != main_object_token.size; i++){
         if(!jsmn_helper_get_string(buffer, tokens, num_tokens, index, content, max_content)){
-            printf("WARNING: config_read_adept_config_value() -> jsmn_helper_get_string() failed\n");
+            warningprintf("config_read_adept_config_value() -> jsmn_helper_get_string() failed\n");
             return false;
         }
 
         if(strcmp(content, "lastUpdated") == 0){
             if(!jsmn_helper_get_integer(buffer, tokens, num_tokens, ++index, &integer_value)){
-                printf("WARNING: Failed to parse integer value for label '%s'\n", content);
+                warningprintf("Failed to parse integer value for label '%s'\n", content);
                 return false;
             }
             config->last_updated = integer_value;
@@ -199,7 +199,7 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
             index++;
         } else if(strcmp(content, "update") == 0){
             if(!jsmn_helper_get_string(buffer, tokens, num_tokens, ++index, content, max_content)){
-                printf("WARNING: Failed to parse string value for label '%s'\n", content);
+                warningprintf("Failed to parse string value for label '%s'\n", content);
                 return false;
             }
             
@@ -215,7 +215,7 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
             index++;
         } else if(strcmp(content, "stash") == 0){
             if(!jsmn_helper_get_string(buffer, tokens, num_tokens, ++index, content, max_content)){
-                printf("WARNING: Failed to parse string value for label '%s'\n", content);
+                warningprintf("Failed to parse string value for label '%s'\n", content);
                 return false;
             }
 
@@ -224,14 +224,14 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
             index++;
         } else if(strcmp(content, "showNewCompilerAvailable") == 0){
             if(!jsmn_helper_get_boolean(buffer, tokens, num_tokens, ++index, &boolean)){
-                printf("WARNING: Failed to parse boolean value for label '%s'\n", content);
+                warningprintf("Failed to parse boolean value for label '%s'\n", content);
                 return false;
             }
 
             config->show_new_compiler_available = boolean;
             index++;
         } else {
-            yellowprintf("WARNING: Ignoring unrecognized option '%s' in adept configuration file\n", content);
+            warningprintf("Ignoring unrecognized option '%s' in adept configuration file\n", content);
             index += jsmn_helper_subtoken_count(tokens, index + 1) + 1;
         }
     }
