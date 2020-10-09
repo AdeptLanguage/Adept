@@ -31,7 +31,7 @@ void parse_panic_token(parse_ctx_t *ctx, source_t source, unsigned int token_id,
 
     redprintf("error: ");
     printf(message, global_token_name_table[token_id]);
-    printf("!\n");
+    printf("\n");
 
     if(!(ctx->object->traits & OBJECT_PACKAGE)){
         compiler_print_source(ctx->compiler, line, source);
