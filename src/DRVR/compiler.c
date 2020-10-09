@@ -809,7 +809,7 @@ void compiler_print_source(compiler_t *compiler, int line, source_t source){
     }
 
     char prefix[128];
-    sprintf(prefix, "%d|", line);
+    sprintf(prefix, "  %d| ", line);
     length_t prefix_length = strlen(prefix);
     printf("%s", prefix);
 
@@ -833,7 +833,7 @@ void compiler_print_source(compiler_t *compiler, int line, source_t source){
     for(length_t i = line_index; i != source.index; i++) printf(relevant_object->buffer[i] != '\t' ? " " : "    ");
 
     for(length_t i = 0; i != source.stride; i++)
-        printf("^");
+        whiteprintf("^");
     printf("\n");
 }
 
@@ -858,12 +858,12 @@ void compiler_panic(compiler_t *compiler, source_t source, const char *message){
     if(relevant_object->traits & OBJECT_PACKAGE){
         printf("%s:?:?: ", filename_name_const(relevant_object->filename));
         redprintf("error: ");
-        printf("%s!\n", message);
+        printf("%s\n", message);
     } else {
         lex_get_location(relevant_object->buffer, source.index, &line, &column);
         printf("%s:%d:%d: ", filename_name_const(relevant_object->filename), line, column);
         redprintf("error: ");
-        printf("%s!\n", message);
+        printf("%s\n", message);
         compiler_print_source(compiler, line, source);
     }
     #endif // !ADEPT_INSIGHT_BUILD
@@ -915,7 +915,7 @@ void compiler_vpanicf(compiler_t *compiler, source_t source, const char *format,
 
     redprintf("error: ");
     vprintf(format, args);
-    printf("!\n");
+    printf("\n");
 
     compiler_print_source(compiler, line, source);
     #endif // !ADEPT_INSIGHT_BUILD
@@ -1318,7 +1318,7 @@ void object_panicf_plain(object_t *object, const char *format, ...){
     printf("%s: ", filename_name_const(object->filename));
 
     vprintf(format, args);
-    printf("!\n");
+    printf("\n");
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
 
     va_end(args);
