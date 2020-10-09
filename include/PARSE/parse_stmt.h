@@ -69,6 +69,11 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
 // Parses a switch statement
 errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *parent_defer_scope, bool is_exhaustive);
 
+// ------------------ parse_onetime_conditional ------------------
+// Parses a onetime-evaluated conditional,
+// such as 'if' or 'unless'
+errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope);
+
 // ------------------ parse_assign ------------------
 // Parses an assignment statement
 // NOTE: Assumes 'stmt_list' has enough space for another statement

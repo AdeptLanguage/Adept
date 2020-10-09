@@ -669,6 +669,7 @@ void show_help(bool show_advanced_options){
         printf("    --unsafe-meta     Allow unsafe usage of meta constructs\n");
         printf("    --unsafe-new      Disables zero-initialization of memory allocated with new\n");
         printf("    --null-checks     Enable runtime null-checks\n");
+        printf("    --entry           Set the entry point of the program\n");
 
         printf("\nMachine Code Options:\n");
         printf("    --PIC             Forces PIC relocation model\n");

@@ -252,18 +252,31 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             // Search for string inside keyword list
             maybe_index_t array_index = binary_string_search(keywords, keywords_length, lex_state.buildup);
 
-            if(array_index == -1){
+            if(array_index != -1){
+                // Is a keyword, figure out token index from array index
+                t = &((*tokens)[tokenlist->length]);
+                t->id = BEGINNING_OF_KEYWORD_TOKENS + (unsigned int) array_index; // Values 0x00000050..0x0000009F are reserved for keywords
+                t->data = NULL;
+            } else if(strcmp(lex_state.buildup, "elif") == 0){
+                // Is a shorthand keyword
+                t = &((*tokens)[tokenlist->length]);
+                t->id = TOKEN_ELSE;
+                t->data = NULL;
+                (*sources)[tokenlist->length++].stride = lex_state.buildup_length;
+
+                coexpand((void**) &tokenlist->tokens, sizeof(token_t), (void**) &tokenlist->sources,
+                    sizeof(source_t), tokenlist->length, &tokenlist->capacity, 1, estimate);
+
+                t = &((*tokens)[tokenlist->length]);
+                t->id = TOKEN_IF;
+                t->data = NULL;
+            } else {
                 // Isn't a keyword, just an identifier
                 t = &((*tokens)[tokenlist->length]);
                 t->id = TOKEN_WORD;
                 t->data = malloc(lex_state.buildup_length + 1);
                 memcpy(t->data, lex_state.buildup, lex_state.buildup_length);
                 ((char*) t->data)[lex_state.buildup_length] = '\0';
-            } else {
-                // Is a keyword, figure out token index from array index
-                t = &((*tokens)[tokenlist->length]);
-                t->id = BEGINNING_OF_KEYWORD_TOKENS + (unsigned int) array_index; // Values 0x00000050..0x0000009F are reserved for keywords
-                t->data = NULL;
             }
 
             (*sources)[tokenlist->length++].stride = lex_state.buildup_length;

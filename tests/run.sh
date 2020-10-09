@@ -50,6 +50,7 @@ compile each_in || exit $?
 compile each_in_fixed || exit $?
 compile each_in_list || exit $?
 compile each_in_static || exit $?
+compile elif || exit $?
 compile entry_point || exit $?
 compile enums || exit $?
 compile equals_func || exit $?

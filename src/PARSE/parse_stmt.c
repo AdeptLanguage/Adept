@@ -162,105 +162,8 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_BIT_LGC_LSHIFT: case TOKEN_BIT_LGC_RSHIFT: /* DUPLICATE: case TOKEN_ADDRESS: */
             if(parse_assign(ctx, stmt_list)) return FAILURE;
             break;
-        case TOKEN_IF: case TOKEN_UNLESS: {
-                unsigned int conditional_type = tokens[*i].id;
-                source = sources[(*i)++];
-                ast_expr_t *conditional;
-                trait_t stmts_mode;
-
-                if(parse_expr(ctx, &conditional)) return FAILURE;
-
-                if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
-                    ast_expr_free_fully(conditional);
-                    return FAILURE;
-                }
-
-                if(parse_block_beginning(ctx, "conditional", &stmts_mode)){
-                    ast_expr_free_fully(conditional);
-                    return FAILURE;
-                }
-
-                ast_expr_list_t if_stmt_list;
-                if_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
-                if_stmt_list.length = 0;
-                if_stmt_list.capacity = 4;
-
-                defer_scope_t if_defer_scope;
-                defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
-
-                if(parse_stmts(ctx, &if_stmt_list, &if_defer_scope, stmts_mode)){
-                    ast_free_statements_fully(if_stmt_list.statements, if_stmt_list.length);
-                    ast_expr_free_fully(conditional);
-                    defer_scope_free(&if_defer_scope);
-                    return FAILURE;
-                }
-
-                defer_scope_free(&if_defer_scope);
-
-                if(!(stmts_mode & PARSE_STMTS_SINGLE)) (*i)++;
-
-                // Read ahead of newlines to check for 'else'
-                length_t i_readahead = *i;
-                while(tokens[i_readahead].id == TOKEN_NEWLINE && i_readahead != ctx->tokenlist->length) i_readahead++;
-
-                if(tokens[i_readahead].id == TOKEN_ELSE){
-                    *i = i_readahead;
-
-                    switch(tokens[++(*i)].id){
-                    case TOKEN_NEXT:
-                        stmts_mode = PARSE_STMTS_SINGLE;
-                        (*i)++; break;
-                    case TOKEN_BEGIN:
-                        stmts_mode = PARSE_STMTS_STANDARD;
-                        (*i)++; break;
-                    default:
-                        stmts_mode = PARSE_STMTS_SINGLE;
-                    }
-
-                    ast_expr_list_t else_stmt_list;
-                    else_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
-                    else_stmt_list.length = 0;
-                    else_stmt_list.capacity = 4;
-
-                    // Reuse 'if_defer_scope' for else defer scope
-                    defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
-
-                    if(parse_stmts(ctx, &else_stmt_list, &if_defer_scope, stmts_mode)){
-                        ast_free_statements_fully(else_stmt_list.statements, else_stmt_list.length);
-                        ast_expr_free_fully(conditional);
-                        defer_scope_free(&if_defer_scope);
-                        return FAILURE;
-                    }
-
-                    defer_scope_free(&if_defer_scope);
-
-                    if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
-
-                    ast_expr_ifelse_t *stmt = malloc(sizeof(ast_expr_ifelse_t));
-                    stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESSELSE : EXPR_IFELSE;
-                    stmt->source = source;
-                    stmt->label = NULL;
-                    stmt->value = conditional;
-                    stmt->statements = if_stmt_list.statements;
-                    stmt->statements_length = if_stmt_list.length;
-                    stmt->statements_capacity = if_stmt_list.capacity;
-                    stmt->else_statements = else_stmt_list.statements;
-                    stmt->else_statements_length = else_stmt_list.length;
-                    stmt->else_statements_capacity = else_stmt_list.capacity;
-                    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
-                } else {
-                    if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--;
-                    ast_expr_if_t *stmt = malloc(sizeof(ast_expr_if_t));
-                    stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESS : EXPR_IF;
-                    stmt->source = source;
-                    stmt->label = NULL;
-                    stmt->value = conditional;
-                    stmt->statements = if_stmt_list.statements;
-                    stmt->statements_length = if_stmt_list.length;
-                    stmt->statements_capacity = if_stmt_list.capacity;
-                    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
-                }
-            }
+        case TOKEN_IF: case TOKEN_UNLESS:
+            if(parse_onetime_conditional(ctx, stmt_list, defer_scope)) return FAILURE;
             break;
         case TOKEN_WHILE: case TOKEN_UNTIL: {
                 unsigned int conditional_type = tokens[*i].id;
@@ -1163,6 +1066,112 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
 
     // Append the created switch statement
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) switch_expr;
+    return SUCCESS;
+}
+
+errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope){
+    token_t *tokens = ctx->tokenlist->tokens;
+    length_t *i = ctx->i;
+
+    unsigned int conditional_type = tokens[*i].id;
+    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    ast_expr_t *conditional;
+    trait_t stmts_mode;
+
+    if(parse_expr(ctx, &conditional)) return FAILURE;
+
+    if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
+        ast_expr_free_fully(conditional);
+        return FAILURE;
+    }
+
+    if(parse_block_beginning(ctx, "conditional", &stmts_mode)){
+        ast_expr_free_fully(conditional);
+        return FAILURE;
+    }
+
+    ast_expr_list_t if_stmt_list;
+    if_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
+    if_stmt_list.length = 0;
+    if_stmt_list.capacity = 4;
+
+    defer_scope_t if_defer_scope;
+    defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
+
+    if(parse_stmts(ctx, &if_stmt_list, &if_defer_scope, stmts_mode)){
+        ast_free_statements_fully(if_stmt_list.statements, if_stmt_list.length);
+        ast_expr_free_fully(conditional);
+        defer_scope_free(&if_defer_scope);
+        return FAILURE;
+    }
+
+    defer_scope_free(&if_defer_scope);
+
+    if(!(stmts_mode & PARSE_STMTS_SINGLE)) (*i)++;
+
+    // Read ahead of newlines to check for 'else'
+    length_t i_readahead = *i;
+    while(tokens[i_readahead].id == TOKEN_NEWLINE && i_readahead != ctx->tokenlist->length) i_readahead++;
+
+    if(tokens[i_readahead].id == TOKEN_ELSE){
+        *i = i_readahead;
+
+        switch(tokens[++(*i)].id){
+        case TOKEN_NEXT:
+            stmts_mode = PARSE_STMTS_SINGLE;
+            (*i)++; break;
+        case TOKEN_BEGIN:
+            stmts_mode = PARSE_STMTS_STANDARD;
+            (*i)++; break;
+        default:
+            stmts_mode = PARSE_STMTS_SINGLE;
+        }
+
+        ast_expr_list_t else_stmt_list;
+        else_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
+        else_stmt_list.length = 0;
+        else_stmt_list.capacity = 4;
+
+        // Reuse 'if_defer_scope' for else defer scope
+        defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
+
+        if(parse_stmts(ctx, &else_stmt_list, &if_defer_scope, stmts_mode)){
+            ast_free_statements_fully(else_stmt_list.statements, else_stmt_list.length);
+            ast_expr_free_fully(conditional);
+            defer_scope_free(&if_defer_scope);
+            return FAILURE;
+        }
+
+        defer_scope_free(&if_defer_scope);
+
+        if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--; else (*i)++;
+
+        ast_expr_ifelse_t *stmt = malloc(sizeof(ast_expr_ifelse_t));
+        stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESSELSE : EXPR_IFELSE;
+        stmt->source = source;
+        stmt->label = NULL;
+        stmt->value = conditional;
+        stmt->statements = if_stmt_list.statements;
+        stmt->statements_length = if_stmt_list.length;
+        stmt->statements_capacity = if_stmt_list.capacity;
+        stmt->else_statements = else_stmt_list.statements;
+        stmt->else_statements_length = else_stmt_list.length;
+        stmt->else_statements_capacity = else_stmt_list.capacity;
+        stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+    } else {
+        if(stmts_mode & PARSE_STMTS_SINGLE) (*i)--;
+        ast_expr_if_t *stmt = malloc(sizeof(ast_expr_if_t));
+        stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESS : EXPR_IF;
+        stmt->source = source;
+        stmt->label = NULL;
+        stmt->value = conditional;
+        stmt->statements = if_stmt_list.statements;
+        stmt->statements_length = if_stmt_list.length;
+        stmt->statements_capacity = if_stmt_list.capacity;
+        stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+    }
+
     return SUCCESS;
 }
 
