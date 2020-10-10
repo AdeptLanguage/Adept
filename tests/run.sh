@@ -13,6 +13,8 @@ compile address || exit $?
 compile aliases || exit $?
 compile andor || exit $?
 compile andor_circuit || exit $?
+compile any_fixed_array || exit $?
+compile any_function_pointer || exit $?
 compile any_type_as || exit $?
 compile any_type_info || exit $?
 compile any_type_inventory || exit $?

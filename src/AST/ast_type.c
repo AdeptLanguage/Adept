@@ -759,6 +759,19 @@ void ast_type_dereference(ast_type_t *inout_type){
     inout_type->elements_length--; // Reduce length accordingly
 }
 
+void ast_type_unwrap_fixed_array(ast_type_t *inout_type){
+    if(inout_type->elements_length < 2 || inout_type->elements[0]->id != AST_ELEM_FIXED_ARRAY){
+        internalerrorprintf("ast_type_unwrap_fixed_array received non fixed-array type\n");
+        return;
+    }
+
+    // Modify ast_type_t to remove a pointer element from the front
+    // DANGEROUS: Manually deleting ast_elem_pointer_t
+    free(inout_type->elements[0]);
+    memmove(inout_type->elements, &inout_type->elements[1], sizeof(ast_elem_t*) * (inout_type->elements_length - 1));
+    inout_type->elements_length--; // Reduce length accordingly
+}
+
 void ast_poly_catalog_init(ast_poly_catalog_t *catalog){
     catalog->types = NULL;
     catalog->types_length = 0;

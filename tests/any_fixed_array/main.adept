@@ -1,0 +1,12 @@
+
+pragma ignore_unused
+import basics
+
+func main {
+    my_fixed_array 100 int
+
+    fixed *AnyFixedArrayType = cast *AnyFixedArrayType typeinfo 100 int
+    printf("Information about '%s'\n", fixed.name)
+    printf("Number of elements: %d\n", fixed.length)
+    printf("Element Type: %s\n", fixed.subtype.name)
+}

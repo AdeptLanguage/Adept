@@ -1,0 +1,15 @@
+
+pragma ignore_unused
+import basics
+
+func main {
+    my_function_pointer func(int, float, double) long
+
+    fp *AnyFuncPtrType = cast *AnyFuncPtrType typeinfo func(int, float, double) long
+    printf("Information about '%s'\n", fp.name)
+
+    each *AnyType in [fp.args, fp.length] {
+        printf("  argument[%d] has type: %s\n", idx, it.name)
+    }
+    printf("  Return type is: %s\n", fp.return_type.name)
+}

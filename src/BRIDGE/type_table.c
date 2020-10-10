@@ -93,11 +93,23 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
     }
 
     // Mention sub types to the type table
-    if(type->elements_length != 0 && type->elements[0]->id == AST_ELEM_POINTER){
-        ast_type_t subtype = ast_type_clone(type);
-        ast_type_dereference(&subtype);
-        type_table_give(table, &subtype, NULL); // TODO: Maybe determine whether or not subtype is alias??
-        ast_type_free(&subtype);
+    if(type->elements_length != 0){
+        ast_type_t subtype;
+        
+        switch(type->elements[0]->id){
+        case AST_ELEM_POINTER:
+            subtype = ast_type_clone(type);
+            ast_type_dereference(&subtype);
+            type_table_give(table, &subtype, NULL); // TODO: Maybe determine whether or not subtype is alias??
+            ast_type_free(&subtype);
+            break;
+        case AST_ELEM_FIXED_ARRAY:
+            subtype = ast_type_clone(type);
+            ast_type_unwrap_fixed_array(&subtype);
+            type_table_give(table, &subtype, NULL); // TODO: Maybe determine whether or not subtype is alias??
+            ast_type_free(&subtype);
+            break;
+        }
     }
 }
 

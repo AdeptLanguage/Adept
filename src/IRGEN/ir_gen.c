@@ -363,9 +363,10 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     // NOTE: DANGEROUS: 'global_variable_id' is assumed to be the same between AST and IR global variable lists
     ir_global_t *ir_global = &ir_module->globals[global_variable_id];
 
+    // TODO: CLEANUP: Cleanup this messy code
     if(ast_global->traits & AST_GLOBAL___TYPES__){
         ir_type_t *any_type_type, *any_struct_type_type, *any_union_type_type, *any_ptr_type_type,
-            *any_type_ptr_type = NULL, *ubyte_ptr_type;
+            *any_funcptr_type_type, *any_fixed_array_type_type, *any_type_ptr_type = NULL, *ubyte_ptr_type;
         
         if(compiler->traits & COMPILER_NO_TYPEINFO){
             if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)){
@@ -383,6 +384,8 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         || !ir_type_map_find(&ir_module->type_map, "AnyStructType", &any_struct_type_type)
         || !ir_type_map_find(&ir_module->type_map, "AnyUnionType", &any_union_type_type)
         || !ir_type_map_find(&ir_module->type_map, "AnyPtrType", &any_ptr_type_type)
+        || !ir_type_map_find(&ir_module->type_map, "AnyFuncPtrType", &any_funcptr_type_type)
+        || !ir_type_map_find(&ir_module->type_map, "AnyFixedArrayType", &any_fixed_array_type_type)
         || !ir_type_map_find(&ir_module->type_map, "ubyte", &ubyte_ptr_type)){
             internalerrorprintf("Failed to find types used by the runtime type table that should've been injected\n");
             return FAILURE;
@@ -420,11 +423,18 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             case TYPE_KIND_UNION:
                 array_values[i] = build_anon_global(ir_module, any_union_type_type, true);
                 break;
+            case TYPE_KIND_FUNCPTR:
+                array_values[i] = build_anon_global(ir_module, any_funcptr_type_type, true);
+                break;
+            case TYPE_KIND_FIXED_ARRAY:
+                array_values[i] = build_anon_global(ir_module, any_fixed_array_type_type, true);
+                break;
             default:
                 array_values[i] = build_anon_global(ir_module, any_type_type, true);
             }
         }
 
+        // TODO: CLEANUP: Cleanup this messy code
         for(length_t i = 0; i != type_table->length; i++){
             ir_type_t *initializer_type;
             ir_value_t **initializer_members;
@@ -607,6 +617,86 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         initializer_members[6] = member_names_array;
                         initializer_type = any_union_type_type;
                     }
+                }
+                break;
+            case TYPE_KIND_FIXED_ARRAY: {
+                    /* struct AnyFixedArrayType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, subtype *AnyType, length usize) */
+
+                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
+                    initializer_members_length = 6;
+
+                    // DANGEROUS: NOTE: Assumes elements after AST_ELEM_FIXED_ARRAY
+                    ast_elem_fixed_array_t *elem = (ast_elem_fixed_array_t*) type_table->entries[i].ast_type.elements[0];
+
+                    maybe_index_t subtype_index = -1;
+
+                    // HACK: We really shouldn't be doing this
+                    if(type_table->entries[i].ast_type.elements_length > 1){
+                        ast_type_t unwrapped = ast_type_clone(&type_table->entries[i].ast_type);
+
+                        ast_type_unwrap_fixed_array(&unwrapped);
+
+                        char *unwrapped_name = ast_type_str(&unwrapped);
+                        subtype_index = type_table_find(type_table, unwrapped_name);
+                        ast_type_free(&unwrapped);
+                        free(unwrapped_name);
+                    }
+
+                    if(subtype_index == -1){
+                        ir_value_t *null_pointer = build_null_pointer_of_type(pool, any_type_ptr_type);
+                        initializer_members[4] = null_pointer; // subtype
+                    } else {
+                        initializer_members[4] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type); // subtype
+                    }
+
+                    initializer_members[5] = build_literal_usize(pool, elem->length);
+                    initializer_type = any_fixed_array_type_type;
+                }
+                break;
+            case TYPE_KIND_FUNCPTR: {
+                    /* struct AnyFuncPtrType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, args **AnyType, length usize, return_type *AnyType, is_vararg bool, is_stdcall bool) */
+
+                    initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
+                    initializer_members_length = 9;
+
+                    // DANGEROUS: NOTE: Assumes element is AST_ELEM_FUNC
+                    ast_elem_func_t *elem = (ast_elem_func_t*) type_table->entries[i].ast_type.elements[0];
+
+                    maybe_index_t subtype_index = -1;
+
+                    // TODO: CLEANUP: Clean up this messy code
+                    char *type_string;
+                    ir_value_t **args = ir_pool_alloc(pool, sizeof(ir_value_t*) * elem->arity);
+
+                    for(length_t i = 0; i != elem->arity; i++){
+                        type_string = ast_type_str(&elem->arg_types[i]);
+                        subtype_index = type_table_find(type_table, type_string);
+                        free(type_string);
+
+                        if(subtype_index == -1){
+                            args[i] = build_null_pointer_of_type(pool, any_type_ptr_type);
+                        } else {
+                            args[i] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type);
+                        }
+                    }
+
+                    type_string = ast_type_str(elem->return_type);
+                    subtype_index = type_table_find(type_table, type_string);
+                    free(type_string);
+                    
+                    ir_value_t *return_type;
+                    if(subtype_index == -1){
+                        return_type = build_null_pointer_of_type(pool, any_type_ptr_type);
+                    } else {
+                        return_type = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type);
+                    }
+
+                    initializer_members[4] = build_static_array(pool, any_type_ptr_type, args, elem->arity);
+                    initializer_members[5] = build_literal_usize(pool, elem->arity);
+                    initializer_members[6] = return_type;
+                    initializer_members[7] = build_bool(pool, elem->traits & AST_FUNC_VARARG);
+                    initializer_members[8] = build_bool(pool, elem->traits & AST_FUNC_STDCALL);
+                    initializer_type = any_funcptr_type_type;
                 }
                 break;
             default:
