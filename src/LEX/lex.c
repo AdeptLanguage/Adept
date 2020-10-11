@@ -232,25 +232,12 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
 
             // We have reached the end of the word
 
-            // NOTE: MUST be pre sorted alphabetically (used for string_search)
-            //         Make sure to update values inside token.h and token.c after modifying this list
-
-            const char * const keywords[] = {
-                "POD", "alias", "and", "as", "at", "break", "case", "cast", "const", "continue", "def", "default", "defer", "define",
-                "delete", "each", "else", "enum", "exhaustive", "external", "fallthrough", "false", "for", "foreign", "func",
-                "funcptr", "global", "if", "implicit", "import", "in", "inout", "namespace", "new", "null", "or", "out", "packed",
-                "pragma", "private", "public", "repeat", "return", "sizeof", "static", "stdcall", "struct", "switch", "thread_local",
-                "true", "typeinfo", "undef", "union", "unless", "until", "using", "va_arg", "va_copy", "va_end", "va_start", "verbatim", "while"
-            };
-
-            const length_t keywords_length = sizeof(keywords) / sizeof(const char * const);
-
             // Terminate string buildup buffer
             expand((void**) &lex_state.buildup, sizeof(char), lex_state.buildup_length, &lex_state.buildup_capacity, 1, 256);
             lex_state.buildup[lex_state.buildup_length] = '\0';
 
             // Search for string inside keyword list
-            maybe_index_t array_index = binary_string_search(keywords, keywords_length, lex_state.buildup);
+            maybe_index_t array_index = binary_string_search(global_token_keywords_list, global_token_keywords_list_length, lex_state.buildup);
 
             if(array_index != -1){
                 // Is a keyword, figure out token index from array index

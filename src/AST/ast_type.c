@@ -765,8 +765,8 @@ void ast_type_unwrap_fixed_array(ast_type_t *inout_type){
         return;
     }
 
-    // Modify ast_type_t to remove a pointer element from the front
-    // DANGEROUS: Manually deleting ast_elem_pointer_t
+    // Modify ast_type_t to remove a fixed-array element from the front
+    // DANGEROUS: Manually deleting ast_elem_fixed_array_t
     free(inout_type->elements[0]);
     memmove(inout_type->elements, &inout_type->elements[1], sizeof(ast_elem_t*) * (inout_type->elements_length - 1));
     inout_type->elements_length--; // Reduce length accordingly

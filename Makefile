@@ -112,7 +112,7 @@ SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_type.c src/AST/as
 	src/PARSE/parse_enum.c src/PARSE/parse_expr.c src/PARSE/parse_func.c src/PARSE/parse_global.c \
 	src/PARSE/parse_meta.c src/PARSE/parse_namespace.c src/PARSE/parse_pragma.c \
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c \
-	src/PARSE/parse.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c src/UTIL/builtin_type.c \
+	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c src/UTIL/builtin_type.c \
 	src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c src/UTIL/memory.c \
 	src/UTIL/search.c src/UTIL/tmpbuf.c src/UTIL/util.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
@@ -132,6 +132,7 @@ insight: $(SOURCES)
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/BRIDGE
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/DRVR
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/LEX
+	@mkdir -p $(INSIGHT_OUT_DIR)/include/TOKEN
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/PARSE
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/UTIL
 	@mkdir -p $(INSIGHT_OUT_DIR)/src
@@ -139,6 +140,7 @@ insight: $(SOURCES)
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/BRIDGE
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/DRVR
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/LEX
+	@mkdir -p $(INSIGHT_OUT_DIR)/src/TOKEN
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/PARSE
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/UTIL
 	
@@ -157,6 +159,7 @@ insight: $(SOURCES)
 	@cp include/LEX/lex.h $(INSIGHT_OUT_DIR)/include/LEX/lex.h
 	@cp include/LEX/pkg.h $(INSIGHT_OUT_DIR)/include/LEX/pkg.h
 	@cp include/LEX/token.h $(INSIGHT_OUT_DIR)/include/LEX/token.h
+	@cp include/TOKEN/token_data.h $(INSIGHT_OUT_DIR)/include/TOKEN/token_data.h
 	@cp include/PARSE/parse_alias.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_alias.h
 	@cp include/PARSE/parse_ctx.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_ctx.h
 	@cp include/PARSE/parse_dependency.h $(INSIGHT_OUT_DIR)/include/PARSE/parse_dependency.h
@@ -205,6 +208,7 @@ insight: $(SOURCES)
 	@cp src/LEX/lex.c $(INSIGHT_OUT_DIR)/src/LEX/lex.c
 	@cp src/LEX/pkg.c $(INSIGHT_OUT_DIR)/src/LEX/pkg.c
 	@cp src/LEX/token.c $(INSIGHT_OUT_DIR)/src/LEX/token.c
+	@cp src/TOKEN/token_data.c $(INSIGHT_OUT_DIR)/src/TOKEN/token_data.c
 	@cp src/PARSE/parse_alias.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_alias.c
 	@cp src/PARSE/parse_ctx.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_ctx.c
 	@cp src/PARSE/parse_dependency.c $(INSIGHT_OUT_DIR)/src/PARSE/parse_dependency.c
@@ -297,3 +301,6 @@ ifeq ($(OS), Windows_NT)
 else
 	@rm -rf $(INSIGHT_OUT_DIR)
 endif
+
+generate:
+	python3 include/TOKEN/generate_c.py
