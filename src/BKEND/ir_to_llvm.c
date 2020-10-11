@@ -1246,6 +1246,30 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 catalog->blocks[b].value_references[i] = NULL;
             }
             break;
+        case INSTRUCTION_ASM: {
+                instr = instructions[i];
+
+                ir_instr_asm_t *asm_instr = (ir_instr_asm_t*) instr;
+                LLVMValueRef *args = (LLVMValueRef*) malloc(sizeof(LLVMValueRef) * asm_instr->arity);
+                LLVMTypeRef *types = (LLVMTypeRef*) malloc(sizeof(LLVMTypeRef) * asm_instr->arity);
+
+                for(length_t a = 0; a != asm_instr->arity; a++){
+                    args[a] = ir_to_llvm_value(llvm, asm_instr->args[a]);
+                    types[a] = LLVMTypeOf(args[a]);
+                }
+
+                LLVMInlineAsmDialect dialect = asm_instr->is_intel ? LLVMInlineAsmDialectIntel : LLVMInlineAsmDialectATT;
+                LLVMTypeRef fty = LLVMFunctionType(LLVMVoidType(), types, asm_instr->arity, false);
+
+                LLVMValueRef inline_asm = LLVMGetInlineAsm(fty, asm_instr->assembly, 
+                    strlen(asm_instr->assembly), asm_instr->constraints,
+                    strlen(asm_instr->constraints), asm_instr->has_side_effects, asm_instr->is_stack_align, dialect);
+                
+                LLVMBuildCall(builder, inline_asm, args, asm_instr->arity, "");
+                free(args);
+                free(types);
+            }
+            break;
         default:
             internalerrorprintf("Unexpected instruction '%d' when exporting ir to llvm\n", instructions[i]->id);
             return FAILURE;

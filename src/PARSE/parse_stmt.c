@@ -695,6 +695,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;
+        case TOKEN_LLVM_ASM:
+            if(parse_llvm_asm(ctx, stmt_list)) return FAILURE;
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
             return FAILURE;
@@ -1262,6 +1265,152 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     stmt->destination = mutable_expression;
     stmt->value = value_expression;
     stmt->is_pod = is_pod;
+    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+    return SUCCESS;
+}
+
+errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
+    // llvm_asm dialect { ... } "contraints" (values)
+    //    ^
+
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist->tokens;
+    source_t source = ctx->tokenlist->sources[*i];
+
+    // Eat 'llvm_asm'
+    if(parse_eat(ctx, TOKEN_LLVM_ASM, "Expected 'llvm_asm' keyword for inline LLVM assembly code")) return FAILURE;
+
+    maybe_null_weak_cstr_t maybe_dialect = parse_eat_word(ctx, NULL);
+    troolean is_intel = TROOLEAN_UNKNOWN;
+
+    if(maybe_dialect == NULL){
+        compiler_panicf(ctx->compiler, source, "Expected either intel or att after llvm_asm keyword");
+        return FAILURE;
+    } else if(strcmp(maybe_dialect, "intel") == 0){
+        is_intel = TROOLEAN_TRUE;
+    } else if(strcmp(maybe_dialect, "att") == 0){
+        is_intel = TROOLEAN_FALSE;
+    } else {
+        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected either intel or att for LLVM inline assembly dialect");
+        return FAILURE;
+    }
+
+    bool has_side_effects = false;
+    bool is_stack_align = false;
+
+    maybe_null_weak_cstr_t additional_info;
+    
+    while((additional_info = parse_eat_word(ctx, NULL))){
+        if(strcmp(additional_info, "side_effects")){
+            has_side_effects = true;
+        } else if(strcmp(additional_info, "stack_align")){
+            is_stack_align = true;
+        } else {
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Unrecognized assembly trait '%s', valid traits are: 'side_effects', 'stack_align'", additional_info);
+            return FAILURE;
+        }
+    }
+
+    strong_cstr_t assembly = NULL;
+    length_t assembly_length = 0;
+    length_t assembly_capacity = 0;
+
+    if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after llvm_asm dialect")) return FAILURE;
+
+    while(tokens[*i].id != TOKEN_END){
+        switch(tokens[*i].id){
+        case TOKEN_STRING: {
+                token_string_data_t *string_data = (token_string_data_t*) tokens[*i].data;
+                expand((void**) &assembly, sizeof(char), assembly_length, &assembly_capacity, string_data->length + 2, 512);
+                memcpy(&assembly[assembly_length], string_data->array, string_data->length);
+                assembly_length += string_data->length;
+                assembly[assembly_length++] = '\n';
+                assembly[assembly_length] = '\0';
+            }
+            break;
+        case TOKEN_CSTRING: {
+                char *string = (char*) tokens[*i].data;
+                length_t length = strlen(string);
+                expand((void**) &assembly, sizeof(char), assembly_length, &assembly_capacity, length + 2, 512);
+                memcpy(&assembly[assembly_length], string, length);
+                assembly_length += length;
+                assembly[assembly_length++] = '\n';
+                assembly[assembly_length] = '\0';
+            }
+            break;
+        case TOKEN_NEXT: case TOKEN_NEWLINE:
+            break;
+        default:
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Expected string or ',' while inside { ... } for inline LLVM assembly");
+            free(assembly);
+            return FAILURE;
+        }
+        
+        if(++(*i) == ctx->tokenlist->length){
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Expected '}' for inline LLVM assembly before end-of-file");
+            return FAILURE;
+        }
+    }
+
+    maybe_null_weak_cstr_t constraints = parse_grab_string(ctx, "Expected constraints string after '}' for llvm_asm");
+    if(constraints == NULL){
+        free(assembly);
+        return FAILURE;
+    }
+
+    // Move past constraints string
+    (*i)++;
+
+    if(parse_eat(ctx, TOKEN_OPEN, "Expected '(' for beginning of LLVM assembly arguments")){
+        free(assembly);
+        return FAILURE;
+    }
+
+    ast_expr_t **args = NULL;
+    length_t arity = 0;
+    length_t arity_capacity = 0;
+    ast_expr_t *arg;
+
+    while(tokens[*i].id != TOKEN_CLOSE){
+        if(parse_ignore_newlines(ctx, "Expected argument to LLVM assembly") || parse_expr(ctx, &arg)){
+            ast_exprs_free_fully(args, arity);
+            free(assembly);
+            return FAILURE;
+        }
+
+        // Allocate room for more arguments if necessary
+        expand((void**) &args, sizeof(ast_expr_t*), arity, &arity_capacity, 1, 4);
+        args[arity++] = arg;
+        
+        if(parse_ignore_newlines(ctx, "Expected ',' or ')' after argument to LLVM assembly")){
+            ast_exprs_free_fully(args, arity);
+            free(assembly);
+            return FAILURE;
+        }
+
+        if(tokens[*i].id == TOKEN_NEXT){
+            (*i)++;
+        } else if(tokens[*i].id != TOKEN_CLOSE){
+            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' or ')' after after argument to LLVM assembly");
+            ast_exprs_free_fully(args, arity);
+            free(assembly);
+            return FAILURE;
+        }
+    }
+
+    // Move past closing ')'
+    (*i)++;
+
+    ast_expr_llvm_asm_t *stmt = malloc(sizeof(ast_expr_llvm_asm_t));
+    stmt->id = EXPR_LLVM_ASM;
+    stmt->source = source;
+    stmt->assembly = assembly ? assembly : strclone("");
+    stmt->constraints = constraints;
+    stmt->args = args;
+    stmt->arity = arity;
+    stmt->has_side_effects = has_side_effects;
+    stmt->is_stack_align = false;
+    stmt->is_intel = (is_intel == TROOLEAN_TRUE);
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     return SUCCESS;
 }

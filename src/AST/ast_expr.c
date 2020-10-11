@@ -631,6 +631,10 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_POLYCOUNT:
         free(((ast_expr_polycount_t*) expr)->name);
         break;
+    case EXPR_LLVM_ASM:
+        free(((ast_expr_llvm_asm_t*) expr)->assembly);
+        ast_exprs_free_fully(((ast_expr_llvm_asm_t*) expr)->args, ((ast_expr_llvm_asm_t*) expr)->arity);
+        break;
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
     case EXPR_BIT_COMPLEMENT:
@@ -1119,6 +1123,26 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_polycount
         #undef clone_as_polycount
+    case EXPR_LLVM_ASM:
+        #define expr_as_llvm_asm ((ast_expr_llvm_asm_t*) expr)
+        #define clone_as_llvm_asm ((ast_expr_llvm_asm_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_llvm_asm_t));
+        clone_as_llvm_asm->assembly = strclone(expr_as_llvm_asm->assembly);
+        clone_as_llvm_asm->constraints = expr_as_llvm_asm->constraints;
+        clone_as_llvm_asm->args = malloc(sizeof(ast_expr_t*) * expr_as_llvm_asm->arity);
+        clone_as_llvm_asm->arity = expr_as_llvm_asm->arity;
+        clone_as_llvm_asm->has_side_effects = expr_as_llvm_asm->has_side_effects;
+        clone_as_llvm_asm->is_stack_align =expr_as_llvm_asm->is_stack_align;
+        clone_as_llvm_asm->is_intel = expr_as_llvm_asm->is_intel;
+
+        for(length_t i = 0; i != expr_as_llvm_asm->arity; i++){
+            clone_as_llvm_asm->args[i] = ast_expr_clone(expr_as_llvm_asm->args[i]);
+        }
+        break;
+
+        #undef expr_as_llvm_asm
+        #undef clone_as_llvm_asm
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         #define expr_as_declare ((ast_expr_declare_t*) expr)

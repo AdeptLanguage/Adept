@@ -80,6 +80,10 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
 // NOTE: expand() should be used on stmt_list to make room sometime before calling
 errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
 
+// ------------------ parse_llvm_asm ------------------
+// Parses an inline LLVM assembly statement
+errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
+
 // ------------------ parse_local_constant_declaration ------------------
 // Parses a local named constant expression declaration
 // NOTE: Assumes 'stmt_list' has enough space for another statement

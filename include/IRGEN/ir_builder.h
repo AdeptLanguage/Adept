@@ -293,6 +293,10 @@ ir_value_t *build_bool(ir_pool_t *pool, bool value);
 //       it simply marks an RTTI index to be filled in later
 errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure);
 
+// ---------------- build_llvm_asm ----------------
+// Builds an inline assembly instruction
+void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, weak_cstr_t constraints, ir_value_t **args, length_t arity, bool has_side_effects, bool is_stack_align);
+
 // ---------------- prepare_for_new_label ----------------
 // Ensures there's enough room for another label
 void prepare_for_new_label(ir_builder_t *builder);

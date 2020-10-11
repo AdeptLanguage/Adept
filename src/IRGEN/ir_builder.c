@@ -612,6 +612,20 @@ errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_not
     return SUCCESS;
 }
 
+void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, weak_cstr_t constraints, ir_value_t **args, length_t arity, bool has_side_effects, bool is_stack_align){
+    ir_instr_asm_t *instruction = (ir_instr_asm_t*) build_instruction(builder, sizeof(ir_instr_asm_t));
+    instruction->id = INSTRUCTION_ASM;
+    instruction->result_type = NULL;
+    instruction->assembly = assembly;
+    instruction->constraints = constraints;
+    instruction->args = args;
+    instruction->arity = arity;
+    instruction->is_intel = is_intel;
+    instruction->has_side_effects = has_side_effects;
+    instruction->is_stack_align = is_stack_align;
+    return;
+}
+
 void prepare_for_new_label(ir_builder_t *builder){
     if(builder->block_stack_capacity == 0){
         builder->block_stack_labels = malloc(sizeof(char*) * 4);

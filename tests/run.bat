@@ -168,6 +168,8 @@ call :compile internal_deference_generic
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile list_map
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile llvm_asm
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_access
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_as

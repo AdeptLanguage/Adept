@@ -105,6 +105,7 @@
 #define INSTRUCTION_VA_ARG         0x00000057 // ir_instr_va_arg_t
 #define INSTRUCTION_VA_COPY        0x00000058 // ir_instr_va_copy_t
 #define INSTRUCTION_STATICVARPTR   0x00000059 // ir_instr_varptr_t
+#define INSTRUCTION_ASM            0x0000005A // ir_instr_asm_t
 
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type
@@ -392,6 +393,18 @@ typedef struct {
     ir_value_t *dest_value;
     ir_value_t *src_value;
 } ir_instr_va_copy_t;
+
+typedef struct {
+    unsigned int id;
+    ir_type_t *result_type;
+    weak_cstr_t assembly;
+    weak_cstr_t constraints;
+    ir_value_t **args;
+    length_t arity;
+    bool is_intel;
+    bool has_side_effects;
+    bool is_stack_align;
+} ir_instr_asm_t;
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block

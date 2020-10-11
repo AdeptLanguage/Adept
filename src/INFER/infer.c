@@ -327,6 +327,14 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_TOGGLE:
             if(infer_expr(ctx, func, &((ast_expr_unary_t*) statements[s])->value, EXPR_NONE, scope, true)) return FAILURE;
             break;
+        case EXPR_LLVM_ASM: {
+                ast_expr_llvm_asm_t *llvm_asm_stmt = (ast_expr_llvm_asm_t*) statements[s];
+
+                for(length_t a = 0; a != llvm_asm_stmt->arity; a++){
+                    if(infer_expr(ctx, func, &llvm_asm_stmt->args[a], EXPR_NONE, scope, false)) return FAILURE;
+                }
+            }
+            break;
         default: break;
             // Ignore this statement, it doesn't contain any expressions that we need to worry about
         }

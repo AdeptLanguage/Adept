@@ -91,6 +91,7 @@ extern "C" {
 #define EXPR_VA_ARG           0x00000042
 #define EXPR_INITLIST         0x00000043
 #define EXPR_POLYCOUNT        0x00000044
+#define EXPR_LLVM_ASM         0x00000045
 // Exclusive statements ---------------
 #define EXPR_DECLARE          0x00000050
 #define EXPR_DECLAREUNDEF     0x00000051
@@ -509,6 +510,18 @@ typedef struct {
     source_t source;
     strong_cstr_t name;
 } ast_expr_polycount_t;
+
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_t assembly;
+    weak_cstr_t constraints;
+    ast_expr_t **args;
+    length_t arity;
+    bool has_side_effects;
+    bool is_stack_align;
+    bool is_intel;
+} ast_expr_llvm_asm_t;
 
 // ---------------- ast_expr_declare_t ----------------
 // Expression for declaring a variable

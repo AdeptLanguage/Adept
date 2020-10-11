@@ -1826,6 +1826,21 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
         case EXPR_DECLARE_CONSTANT:
             // This statement was handled during the inference stage
             break;
+        case EXPR_LLVM_ASM: {
+                ast_expr_llvm_asm_t *asm_expr = (ast_expr_llvm_asm_t*) stmt;
+                ir_value_t **args = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * asm_expr->arity);
+
+                for(length_t i = 0; i != asm_expr->arity; i++){
+                    if(ir_gen_expr(builder, asm_expr->args[i], &args[i], false, NULL)){
+                        return FAILURE;
+                    }
+                }
+
+                build_llvm_asm(builder, asm_expr->is_intel, asm_expr->assembly,
+                    asm_expr->constraints, args, asm_expr->arity,
+                    asm_expr->has_side_effects, asm_expr->is_stack_align);
+            }
+            break;
         default:
             compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_statements()");
             return FAILURE;
