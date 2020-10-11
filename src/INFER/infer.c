@@ -1185,7 +1185,7 @@ void infer_var_scope_push(infer_var_scope_t **scope){
 
 void infer_var_scope_pop(compiler_t *compiler, infer_var_scope_t **scope){
     if((*scope)->parent == NULL){
-        internalerrorprintf("TRIED TO POP INFER VARIABLE SCOPE WITH NO PARENT\n");
+        internalerrorprintf("tried to pop infer variable scope with no parent\n");
         return;
     }
 

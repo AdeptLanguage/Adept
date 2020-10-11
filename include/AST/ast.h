@@ -38,6 +38,7 @@ typedef struct {
     length_t statements_length;
     length_t statements_capacity;
     source_t source;
+    maybe_null_strong_cstr_t export_as;
 } ast_func_t;
 
 // ---------------- ast_func_alias_t ----------------
@@ -249,7 +250,8 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
 
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function
-void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim, bool is_implicit, source_t source, bool is_entry);
+void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim,
+        bool is_implicit, source_t source, bool is_entry, maybe_null_strong_cstr_t export_as);
 
 // ---------------- ast_func_is_polymorphic ----------------
 // Returns whether an AST function has polymorphic arguments

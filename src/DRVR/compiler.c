@@ -243,7 +243,7 @@ void compiler_free_objects(compiler_t *compiler){
             // Nothing to free up
             break;
         default:
-            printf("INTERNAL ERROR: Failed to delete object that has an invalid compilation stage\n");
+            internalerrorprintf("Failed to delete object that has an invalid compilation stage\n");
         }
 
         free(object); // Free memory that the object is stored in
@@ -386,6 +386,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_SHORT_WARNINGS;
             } else if(strcmp(argv[arg_index], "-j") == 0){
                 compiler->traits |= COMPILER_NO_REMOVE_OBJECT;
+            } else if(strcmp(argv[arg_index], "-c") == 0){
+                compiler->traits |= COMPILER_NO_REMOVE_OBJECT | COMPILER_EMIT_OBJECT;
             } else if(strcmp(argv[arg_index], "-O0") == 0){
                 compiler->optimization = OPTIMIZATION_NONE;
             } else if(strcmp(argv[arg_index], "-O1") == 0){
@@ -649,7 +651,7 @@ void show_help(bool show_advanced_options){
         printf("    -d                Include debugging symbols [UNIMPLEMENTED]\n");
     }
 
-
+    printf("    -c                Emit object file\n");
     if(show_advanced_options)
         printf("    -j                Preserve generated object file\n");
     

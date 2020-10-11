@@ -168,7 +168,7 @@ ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_valu
     // NOTE: Array access is only for pointer values
     if(value->type->kind != TYPE_KIND_POINTER){
         internalerrorprintf("build_array_access called on non-pointer value\n");
-        redprintf("                (value left unmodified)");
+        redprintf("                (value left unmodified)\n");
         return value;
     }
 
@@ -670,7 +670,7 @@ void close_scope(ir_builder_t *builder){
     builder->scope = builder->scope->parent;
     
     if(builder->scope == NULL)
-        internalerrorprintf("TRIED TO CLOSE BRIDGE SCOPE WITH NO PARENT, probably will crash...\n");
+        internalerrorprintf("tried to close bridge scope with no parent, probably will crash...\n");
 }
 
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
@@ -1595,8 +1595,10 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_pol
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     bool is_entry = strcmp(poly_func->name, builder->compiler->entry_point) == 0;
 
+    maybe_null_strong_cstr_t export_name = poly_func->export_as ? strclone(poly_func->export_as) : NULL;
+    
     ast_func_create_template(func, strclone(poly_func->name), poly_func->traits & AST_FUNC_STDCALL, false,
-        !(poly_func->traits & AST_FUNC_AUTOGEN), poly_func->traits & AST_FUNC_IMPLICIT, poly_func->source, is_entry);
+        !(poly_func->traits & AST_FUNC_AUTOGEN), poly_func->traits & AST_FUNC_IMPLICIT, poly_func->source, is_entry, export_name);
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * poly_func->arity);
     func->arg_types = malloc(sizeof(ast_type_t) * poly_func->arity);
@@ -1689,7 +1691,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone("__defer__"), false, false, false, false, NULL_SOURCE, false);
+    ast_func_create_template(func, strclone("__defer__"), false, false, false, false, NULL_SOURCE, false, NULL);
     func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
@@ -1769,7 +1771,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone("__pass__"), false, false, false, false, NULL_SOURCE, false);
+    ast_func_create_template(func, strclone("__pass__"), false, false, false, false, NULL_SOURCE, false, NULL);
     func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);

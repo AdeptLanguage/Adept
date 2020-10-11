@@ -490,7 +490,7 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
             }
             break;
         default:
-            printf("INTERNAL ERROR: Encountered unexpected element type 0x%08X when converting ast_type_t to a string\n", type->elements[i]->id);
+            internalerrorprintf("Encountered unexpected element type 0x%08X when converting ast_type_t to a string\n", type->elements[i]->id);
             return NULL;
         }
     }

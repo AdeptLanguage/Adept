@@ -79,7 +79,7 @@ void meta_expr_free(meta_expr_t *expr){
         meta_expr_free_fully(((meta_expr_not_t*) expr)->value);
         break;
     default:
-        internalerrorprintf("meta_expr_free encountered unknown meta expression id %d!\n", (int) expr->id);
+        internalerrorprintf("meta_expr_free encountered unknown meta expression id %d\n", (int) expr->id);
     }
 }
 
@@ -683,7 +683,7 @@ meta_expr_t *meta_get_special_variable(compiler_t *compiler, object_t *object, w
         result->id = compiler->traits & COMPILER_NO_TYPEINFO ? META_EXPR_FALSE : META_EXPR_TRUE;
         break;
     default:
-        compiler_panic(compiler, variable_source, "INTERNAL ERROR: meta_get_special_variable() got unimplemented index");
+        internalerrorprintf("meta_get_special_variable() got unimplemented index\n");
         return NULL;
     }
     

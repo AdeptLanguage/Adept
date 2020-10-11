@@ -289,6 +289,8 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
             *skeleton = LLVMAddFunction(llvm_module, compiler_unnamespaced_name(ir_func->name), llvm_func_type);
         } else if(ir_func->traits & IR_FUNC_MAIN){
             *skeleton = LLVMAddFunction(llvm_module, "main", llvm_func_type);
+        } else if(ir_func->export_as){
+            *skeleton = LLVMAddFunction(llvm_module, ir_func->export_as, llvm_func_type);
         } else {
             char adept_implementation_name[256];
             ir_implementation(ir_func_id, 'a', adept_implementation_name);
@@ -667,6 +669,8 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                     implementation_name = compiler_unnamespaced_name(target_ir_func->name);
                 } else if(target_ir_func->traits & IR_FUNC_MAIN){
                     implementation_name = "main";
+                } else if(target_ir_func->export_as){
+                    implementation_name = target_ir_func->export_as;
                 } else {
                     ir_implementation(((ir_instr_call_t*) instr)->ir_func_id, 'a', adept_implementation_name);
                     implementation_name = adept_implementation_name;
@@ -842,10 +846,14 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             instr = instructions[i];
 
             if(((ir_instr_func_address_t*) instr)->name == NULL){
-                // Not a foreign function, so resolve via id
-                char implementation_name[256];
-                ir_implementation(((ir_instr_func_address_t*) instr)->ir_func_id, 'a', implementation_name);
-                llvm_result = LLVMGetNamedFunction(llvm->module, implementation_name);
+                if(llvm->object->ir_module.funcs[((ir_instr_func_address_t*) instr)->ir_func_id].export_as){
+                    llvm_result = LLVMGetNamedFunction(llvm->module, llvm->object->ir_module.funcs[((ir_instr_func_address_t*) instr)->ir_func_id].export_as);
+                } else {
+                    // Not a foreign function, so resolve via id
+                    char implementation_name[256];
+                    ir_implementation(((ir_instr_func_address_t*) instr)->ir_func_id, 'a', implementation_name);
+                    llvm_result = LLVMGetNamedFunction(llvm->module, implementation_name);
+                }
             } else {
                 // Is a foreign function, so get by name
                 llvm_result = LLVMGetNamedFunction(llvm->module, ((ir_instr_func_address_t*) instr)->name);
@@ -1603,6 +1611,12 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMDisposeTargetMachine(target_machine);
     LLVMDisposePassManager(pass_manager);
     if(disposeTriple) LLVMDisposeMessage(triple);
+
+    if(compiler->traits & COMPILER_EMIT_OBJECT){
+        free(object_filename);
+        free(link_command);
+        return SUCCESS;
+    }
 
     if(compiler->cross_compile_for == CROSS_COMPILE_MACOS){
         // Don't support linking output Mach-O object files

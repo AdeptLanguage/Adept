@@ -30,7 +30,7 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     || ir_gen_functions(compiler, object, &job_list)
     || ir_gen_functions_body(compiler, object, &job_list)
     || ir_gen_special_globals(compiler, object)
-    || ir_gen_fill_in_rtti(compiler, object)){
+    || ir_gen_fill_in_rtti(object)){
         free(job_list.jobs);
         return FAILURE;
     }
@@ -123,6 +123,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
     module_func->scope = NULL;
     module_func->variable_count = 0;
+    module_func->export_as = ast_func->export_as;
 
     if(ast_func->traits & AST_FUNC_VARIADIC){
         module_func->argument_types[ast_func->arity] = module->common.ir_variadic_array;
@@ -807,11 +808,11 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     }
 
     // Should never reach
-    internalerrorprintf("Encountered unknown special global variable '%s'!\n", ast_global->name);
+    internalerrorprintf("Encountered unknown special global variable '%s'\n", ast_global->name);
     return FAILURE;
 }
 
-errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_fill_in_rtti(object_t *object){
     ir_module_t *ir_module = &object->ir_module;
 
     type_table_t *type_table = object->ast.type_table;
@@ -821,7 +822,7 @@ errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object){
     length_t relocations_length = ir_module->rtti_relocations_length;
 
     for(length_t i = 0; i != relocations_length; i++){
-        if(rtti_resolve(compiler, type_table, &relocations[i])) return FAILURE;
+        if(rtti_resolve(type_table, &relocations[i])) return FAILURE;
     }
 
     return SUCCESS;

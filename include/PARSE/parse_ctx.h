@@ -90,6 +90,13 @@ errorcode_t parse_eat(parse_ctx_t *ctx, tokenid_t id, const char *error);
 // (NOTE: error can be NULL to indicate no error should be printed)
 maybe_null_weak_cstr_t parse_eat_word(parse_ctx_t *ctx, const char *error);
 
+// ------------------ parse_eat_string ------------------
+// Returns the string held by a string at the current
+// token index. If the current token isn't a word, 'error'
+// will be spit out and NULL will be returned.
+// (NOTE: error can be NULL to indicate no error should be printed)
+maybe_null_weak_cstr_t parse_eat_string(parse_ctx_t *ctx, const char *error);
+
 // ==================================================
 //                   PARSE_TAKE_*
 //  Same as parse_eat_* except ownership is taken

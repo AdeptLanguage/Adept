@@ -52,7 +52,7 @@ errorcode_t ir_gen_special_globals(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_fill_in_rtti ----------------
 // Fills in generated IR runtime type information data
-errorcode_t ir_gen_fill_in_rtti(compiler_t *compiler, object_t *object);
+errorcode_t ir_gen_fill_in_rtti(object_t *object);
 
 // ---------------- ir_gen_ast_definition_string ----------------
 // Makes a string containing the textual definition of an AST function using an IR memory pool

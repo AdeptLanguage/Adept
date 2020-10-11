@@ -98,6 +98,25 @@ maybe_null_weak_cstr_t parse_eat_word(parse_ctx_t *ctx, const char *error){
     return ctx->tokenlist->tokens[(*ctx->i)++].data;
 }
 
+maybe_null_weak_cstr_t parse_eat_string(parse_ctx_t *ctx, const char *error){
+    // NOTE: We don't need to check whether *ctx->i == ctx->tokenlist->length because
+    // every token list is terminated with a newline and this should never
+    // be called from a newline token
+
+    tokenid_t id = ctx->tokenlist->tokens[*ctx->i].id;
+
+    if(id == TOKEN_CSTRING)
+        return (char*) ctx->tokenlist->tokens[(*ctx->i)++].data;
+    
+    if(id == TOKEN_STRING)
+        // Do lazy conversion to weak c-string
+        return ((token_string_data_t*) ctx->tokenlist->tokens[(*ctx->i)++].data)->array;
+
+    // ERROR: That token isn't a string
+    if(error) compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], error);
+    return NULL;
+}
+
 // =================================================
 //                   parse_take_*
 // =================================================

@@ -431,6 +431,7 @@ typedef struct {
     length_t basicblocks_length;
     bridge_scope_t *scope;
     length_t variable_count;
+    weak_cstr_t export_as;
 } ir_func_t;
 
 // Possible traits for ir_func_t

@@ -1,4 +1,5 @@
 
+#include "UTIL/color.h"
 #include "BRIDGE/rtti.h"
 
 ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t source_on_failure){
@@ -14,12 +15,12 @@ ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t sourc
     return build_load(builder, build_array_access(builder, rtti_array, index, NULL_SOURCE), NULL_SOURCE);
 }
 
-errorcode_t rtti_resolve(compiler_t *compiler, type_table_t *type_table, rtti_relocation_t *relocation){
+errorcode_t rtti_resolve(type_table_t *type_table, rtti_relocation_t *relocation){
     strong_cstr_t human_notation = relocation->human_notation;
     maybe_index_t index = type_table_find(type_table, human_notation);
 
     if(index == -1){
-        compiler_panicf(compiler, relocation->source_on_failure, "INTERNAL ERROR: typeinfo failed to find info for type '%s', which should exist", human_notation);
+        internalerrorprintf("typeinfo failed to find info for type '%s', which should exist\n", human_notation);
         return FAILURE;
     }
 

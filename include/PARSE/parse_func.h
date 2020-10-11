@@ -15,8 +15,8 @@ errorcode_t parse_func(parse_ctx_t *ctx);
 
 // ------------------ parse_func_head ------------------
 // Parses the head of a function definition
-errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name,
-    bool *out_is_stdcall, bool *out_is_foreign, bool *out_is_verbatim, bool *out_is_implicit);
+errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_stdcall,
+        bool *out_is_foreign, bool *out_is_verbatim, bool *out_is_implicit, maybe_null_strong_cstr_t *out_export_name);
 
 // ------------------ parse_func_body ------------------
 // Parses the body of a function
@@ -43,8 +43,8 @@ void parse_func_backfill_arguments(ast_func_t *func, length_t *backfill);
 void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *capacity);
 
 // ------------------ parse_func_prefixes ------------------
-// Handles 'stdcall', 'verbatim', and 'implicit' descriptive keywords in function head
-void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim, bool *out_is_implicit);
+// Handles 'stdcall', 'verbatim', 'implicit', and 'external' descriptive keywords in function head
+void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim, bool *out_is_implicit, bool *out_is_external);
 
 // ------------------ parse_free_unbackfilled_arguments ------------------
 // Frees function arguments that never got backfilled

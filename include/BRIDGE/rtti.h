@@ -13,6 +13,6 @@ ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t sourc
 // ---------------- rtti_resolve ----------------
 // Resolves a single RTTI relocation
 // NOTE: Used to fill in requested indices for the __types__ runtime array
-errorcode_t rtti_resolve(compiler_t *compiler, type_table_t *type_table, rtti_relocation_t *relocation);
+errorcode_t rtti_resolve(type_table_t *type_table, rtti_relocation_t *relocation);
 
 #endif // _ISAAC_RTTI_H
