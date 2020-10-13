@@ -636,6 +636,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 fprintf(file, "llvm_asm ... { \"%s\" } ... (...)\n", assembly);
                 free(assembly);
             }
+            break;
         default:
             fprintf(file, "<unknown statement>\n");
         }

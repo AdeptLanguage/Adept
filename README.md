@@ -7,7 +7,7 @@ A blazing fast language for general purpose programming.
 [Download Adept v2.3 for MacOS](https://github.com/IsaacShelton/Adept/releases)
 
 [Download Adept v2.4 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
-
+p
 ## Command-Line Usage
 
 `adept [filename] [options]`
@@ -561,3 +561,4 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 - Newer LLVM Backend
 - Written in C instead of C++
 - Better system to build the compiler
+    
