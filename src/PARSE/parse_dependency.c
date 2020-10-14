@@ -197,9 +197,20 @@ maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filenam
 
     test = filename_adept_import(ctx->compiler->root, filename);
     if(file_exists(test)) return test;
+    free(test);
+
+    for(length_t i = 0; i != ctx->compiler->user_search_paths_length; i++){
+        weak_cstr_t path = ctx->compiler->user_search_paths[i];
+        length_t path_length = strlen(path);
+        
+        bool append_slash = path_length && path[path_length - 1] != '/' && path[path_length - 1] != '\\';
+        test = mallocandsprintf(append_slash ? "%s/%s" : "%s%s", path, filename);
+        if(file_exists(test)) return test;
+
+        free(test);
+    }
     
     compiler_panicf(ctx->compiler, source, "The file '%s' doesn't exist", filename);
-    free(test);
     return NULL;
 }
 

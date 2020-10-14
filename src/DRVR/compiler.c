@@ -196,6 +196,9 @@ void compiler_init(compiler_t *compiler){
     compiler->user_linker_options = NULL;
     compiler->user_linker_options_length = 0;
     compiler->user_linker_options_capacity = 0;
+    compiler->user_search_paths = NULL;
+    compiler->user_search_paths_length = 0;
+    compiler->user_search_paths_capacity = 0;
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
@@ -211,6 +214,8 @@ void compiler_free(compiler_t *compiler){
     free(compiler->location);
     free(compiler->root);
     free(compiler->output_filename);
+    free(compiler->user_linker_options);
+    free(compiler->user_search_paths);
 
     compiler_free_objects(compiler);
     compiler_free_error(compiler);
@@ -476,6 +481,16 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(argv[arg_index][0] == '-' && (argv[arg_index][1] == 'L' || argv[arg_index][1] == 'l')){
                 // Forward argument to linker
                 compiler_add_user_linker_option(compiler, argv[arg_index]);
+            } else if(argv[arg_index][0] == '-' && argv[arg_index][1] == 'I'){
+                if(argv[arg_index][2] == '\0'){
+                    if(arg_index + 1 == argc){
+                        redprintf("Expected search path after '-I' flag\n");
+                        return FAILURE;
+                    }
+                    compiler_add_user_search_path(compiler, argv[++arg_index]);
+                } else {
+                    compiler_add_user_search_path(compiler, &argv[arg_index][2]);
+                }
             }
             
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
@@ -772,6 +787,13 @@ void compiler_add_user_linker_option(compiler_t *compiler, weak_cstr_t option){
     compiler->user_linker_options[compiler->user_linker_options_length++] = ' ';
     memcpy(&compiler->user_linker_options[compiler->user_linker_options_length], option, length + 1);
     compiler->user_linker_options_length += length;
+}
+
+void compiler_add_user_search_path(compiler_t *compiler, weak_cstr_t search_path){
+    expand((void**) &compiler->user_search_paths, sizeof(weak_cstr_t), compiler->user_search_paths_length,
+        &compiler->user_search_paths_capacity, 1, 4);
+
+    compiler->user_search_paths[compiler->user_search_paths_length++] = search_path;
 }
 
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){

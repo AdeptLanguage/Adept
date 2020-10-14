@@ -124,6 +124,10 @@ typedef struct compiler {
     maybe_null_strong_cstr_t user_linker_options;
     length_t user_linker_options_length;
     length_t user_linker_options_capacity;
+
+    weak_cstr_t *user_search_paths;
+    length_t user_search_paths_length;
+    length_t user_search_paths_capacity;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00
@@ -196,6 +200,10 @@ strong_cstr_t compiler_get_string();
 // ---------------- compiler_add_user_linker_option ----------------
 // Adds user-supplied linker option
 void compiler_add_user_linker_option(compiler_t *compiler, weak_cstr_t option);
+
+// ---------------- compiler_add_user_search_path ----------------
+// Adds user-supplied search path
+void compiler_add_user_search_path(compiler_t *compiler, weak_cstr_t search_path);
 
 // ---------------- compiler_create_package ----------------
 // Creates and exports a package
