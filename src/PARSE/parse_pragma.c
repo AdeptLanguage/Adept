@@ -27,8 +27,8 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         "__builtin_warn_bad_printf_format", "compiler_supports", "compiler_version", "default_stdlib", "deprecated", "disable_warnings",
         "enable_warnings", "entry_point", "help", "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete",
         "ignore_partial_support", "ignore_unrecognized_directives", "ignore_unused", "libm", "linux_only", "mac_only",
-        "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name", "short_warnings",
-        "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "warn_short", "windows_only"
+        "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name", "search_path",
+        "short_warnings", "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "warn_short", "windows_only"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -63,13 +63,14 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     #define PRAGMA_OPTIONS                          0x00000018
     #define PRAGMA_PACKAGE                          0x00000019
     #define PRAGMA_PROJECT_NAME                     0x0000001A
-    #define PRAGMA_SHORT_WARNINGS                   0x0000001B
-    #define PRAGMA_UNSAFE_META                      0x0000001C
-    #define PRAGMA_UNSAFE_NEW                       0x0000001D
-    #define PRAGMA_UNSUPPORTED                      0x0000001E
-    #define PRAGMA_WARN_AS_ERROR                    0x0000001F
-    #define PRAGMA_WARN_SHORT                       0x00000020
-    #define PRAGMA_WINDOWS_ONLY                     0x00000021
+    #define PRAGMA_SEARCH_PATH                      0x0000001B
+    #define PRAGMA_SHORT_WARNINGS                   0x0000001C
+    #define PRAGMA_UNSAFE_META                      0x0000001D
+    #define PRAGMA_UNSAFE_NEW                       0x0000001E
+    #define PRAGMA_UNSUPPORTED                      0x0000001F
+    #define PRAGMA_WARN_AS_ERROR                    0x00000020
+    #define PRAGMA_WARN_SHORT                       0x00000021
+    #define PRAGMA_WINDOWS_ONLY                     0x00000022
 
     maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
@@ -282,6 +283,12 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
 
         free(ctx->compiler->output_filename);
         ctx->compiler->output_filename = filename_local(ctx->object->filename, read);
+        return SUCCESS;
+    case PRAGMA_SEARCH_PATH: // 'search_path' directive
+        read = parse_grab_string(ctx, "Expected search path 'pragma search_path'");
+        if(read == NULL) return FAILURE;
+
+        compiler_add_user_search_path(ctx->compiler, read, ctx->object->full_filename);
         return SUCCESS;
     case PRAGMA_UNSAFE_META: // 'unsafe_meta' directive
         ctx->compiler->traits |= COMPILER_UNSAFE_META;

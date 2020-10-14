@@ -1,0 +1,6 @@
+
+import basics
+
+func say(message String) {
+    print(message)
+}

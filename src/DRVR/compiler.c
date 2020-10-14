@@ -215,7 +215,7 @@ void compiler_free(compiler_t *compiler){
     free(compiler->root);
     free(compiler->output_filename);
     free(compiler->user_linker_options);
-    free(compiler->user_search_paths);
+    freestrs(compiler->user_search_paths, compiler->user_search_paths_length);
 
     compiler_free_objects(compiler);
     compiler_free_error(compiler);
@@ -487,9 +487,9 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                         redprintf("Expected search path after '-I' flag\n");
                         return FAILURE;
                     }
-                    compiler_add_user_search_path(compiler, argv[++arg_index]);
+                    compiler_add_user_search_path(compiler, argv[++arg_index], NULL);
                 } else {
-                    compiler_add_user_search_path(compiler, &argv[arg_index][2]);
+                    compiler_add_user_search_path(compiler, &argv[arg_index][2], NULL);
                 }
             }
             
@@ -673,15 +673,19 @@ void show_help(bool show_advanced_options){
     }
 
     printf("    -c                Emit object file\n");
-    if(show_advanced_options)
+    if(show_advanced_options){
         printf("    -j                Preserve generated object file\n");
+        printf("    -I<PATH>          Add directory to import search path\n");
+        printf("    -L<PATH>          Add directory to native library search path\n");
+        printf("    -l<LIBRARY>       Link against native library\n");
+    }
     
     printf("    -O0,-O1,-O2,-O3   Set optimization level\n");
     printf("    -std=2.x          Set standard library version\n");
     
     if(show_advanced_options)
         printf("    --fussy           Show insignificant warnings\n");
-    
+
     printf("    --version         Display compiler version\n");
     printf("    --help-advanced   Show lesser used compiler flags\n");
 
@@ -789,11 +793,17 @@ void compiler_add_user_linker_option(compiler_t *compiler, weak_cstr_t option){
     compiler->user_linker_options_length += length;
 }
 
-void compiler_add_user_search_path(compiler_t *compiler, weak_cstr_t search_path){
+void compiler_add_user_search_path(compiler_t *compiler, weak_cstr_t search_path, maybe_null_weak_cstr_t current_file){
     expand((void**) &compiler->user_search_paths, sizeof(weak_cstr_t), compiler->user_search_paths_length,
         &compiler->user_search_paths_capacity, 1, 4);
 
-    compiler->user_search_paths[compiler->user_search_paths_length++] = search_path;
+    if(current_file == NULL){
+        compiler->user_search_paths[compiler->user_search_paths_length++] = strclone(search_path);
+    } else {
+        strong_cstr_t current_path = filename_path(current_file);
+        compiler->user_search_paths[compiler->user_search_paths_length++] = mallocandsprintf("%s%s", current_path, search_path);
+        free(current_path);
+    }
 }
 
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){

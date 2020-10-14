@@ -1,0 +1,7 @@
+
+pragma search_path "other_files/"
+import "file.adept"
+
+func main {
+    say("Hello World!!!")
+}

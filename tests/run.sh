@@ -140,6 +140,7 @@ compile return_matching || exit $?
 compile return_ten || exit $?
 compile scientific || exit $?
 compile scoped_variables || exit $?
+compile search_path || exit $?
 compile similar || exit $?
 compile sizeof || exit $?
 compile sizeof_value || exit $?

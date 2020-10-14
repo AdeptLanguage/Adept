@@ -260,6 +260,8 @@ call :compile scientific
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile scoped_variables
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile search_path
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile similar
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile sizeof
