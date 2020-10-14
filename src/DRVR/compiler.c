@@ -193,6 +193,9 @@ void compiler_init(compiler_t *compiler){
     compiler->show_unused_variables_how_to_disable = false;
     compiler->cross_compile_for = CROSS_COMPILE_NONE;
     compiler->entry_point = "main";
+    compiler->user_linker_options = NULL;
+    compiler->user_linker_options_length = 0;
+    compiler->user_linker_options_capacity = 0;
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
@@ -470,6 +473,9 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 printf("[-] Cross compiling for MacOS x86_64\n");
                 compiler->cross_compile_for = CROSS_COMPILE_MACOS;
                 #endif
+            } else if(argv[arg_index][0] == '-' && (argv[arg_index][1] == 'L' || argv[arg_index][1] == 'l')){
+                // Forward argument to linker
+                compiler_add_user_linker_option(compiler, argv[arg_index]);
             }
             
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
@@ -755,6 +761,17 @@ void show_version(compiler_t *compiler){
 
 strong_cstr_t compiler_get_string(){
     return mallocandsprintf("Adept %s - Build %s %s CDT", ADEPT_VERSION_STRING, __DATE__, __TIME__);
+}
+
+void compiler_add_user_linker_option(compiler_t *compiler, weak_cstr_t option){
+    length_t length = strlen(option);
+
+    expand((void**) &compiler->user_linker_options, sizeof(char), compiler->user_linker_options_length,
+        &compiler->user_linker_options_capacity, length + 2, 512);
+    
+    compiler->user_linker_options[compiler->user_linker_options_length++] = ' ';
+    memcpy(&compiler->user_linker_options[compiler->user_linker_options_length], option, length + 1);
+    compiler->user_linker_options_length += length;
 }
 
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){

@@ -1471,7 +1471,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 	char *link_command; // Will be determined based on system
 
     char *linker_additional = "";
-    length_t linker_additional_length = 0;
+    length_t linker_additional_length = compiler->user_linker_options_length ? compiler->user_linker_options_length : 0;
     length_t linker_additional_index = 0;
 
     // TODO: Clean up this messy code
@@ -1493,6 +1493,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     // We need like a string builder or something
     if(linker_additional_length != 0){
         linker_additional = malloc(linker_additional_length + 1);
+
         for(length_t i = 0; i != object->ast.libraries_length; i++){
             switch(object->ast.library_kinds[i]){
             case LIBRARY_KIND_LIBRARY:
@@ -1522,6 +1523,12 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
             linker_additional_index += lib_length;
             linker_additional[linker_additional_index++] = '\"';
         }
+
+        if(compiler->user_linker_options_length != 0){
+            memcpy(&linker_additional[linker_additional_index], compiler->user_linker_options, compiler->user_linker_options_length);
+            linker_additional_index += compiler->user_linker_options_length;
+        }
+
         linker_additional[linker_additional_index] = '\0';
     } else {
         linker_additional = malloc(1);

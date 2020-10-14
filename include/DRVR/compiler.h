@@ -121,6 +121,9 @@ typedef struct compiler {
     unsigned int cross_compile_for;
     
     weak_cstr_t entry_point;
+    maybe_null_strong_cstr_t user_linker_options;
+    length_t user_linker_options_length;
+    length_t user_linker_options_capacity;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00
@@ -189,6 +192,10 @@ void show_version(compiler_t *compiler);
 // ---------------- compiler_get_string ----------------
 // Gets the string identifier of the compiler
 strong_cstr_t compiler_get_string();
+
+// ---------------- compiler_add_user_linker_option ----------------
+// Adds user-supplied linker option
+void compiler_add_user_linker_option(compiler_t *compiler, weak_cstr_t option);
 
 // ---------------- compiler_create_package ----------------
 // Creates and exports a package
