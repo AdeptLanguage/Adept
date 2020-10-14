@@ -561,3 +561,4 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 - Newer LLVM Backend
 - Written in C instead of C++
 - Better system to build the compiler
+    

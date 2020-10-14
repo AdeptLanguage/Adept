@@ -1409,7 +1409,7 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     stmt->args = args;
     stmt->arity = arity;
     stmt->has_side_effects = has_side_effects;
-    stmt->is_stack_align = false;
+    stmt->is_stack_align = is_stack_align;
     stmt->is_intel = (is_intel == TROOLEAN_TRUE);
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     return SUCCESS;
