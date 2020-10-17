@@ -798,11 +798,16 @@ void compiler_add_user_search_path(compiler_t *compiler, weak_cstr_t search_path
         &compiler->user_search_paths_capacity, 1, 4);
 
     if(current_file == NULL){
+        // Add absolute / cwd relative path
         compiler->user_search_paths[compiler->user_search_paths_length++] = strclone(search_path);
     } else {
+        // Add absolute / file relative path
         strong_cstr_t current_path = filename_path(current_file);
         compiler->user_search_paths[compiler->user_search_paths_length++] = mallocandsprintf("%s%s", current_path, search_path);
         free(current_path);
+
+        // Add absolute / cwd relative path
+        compiler->user_search_paths[compiler->user_search_paths_length++] = strclone(search_path);
     }
 }
 
