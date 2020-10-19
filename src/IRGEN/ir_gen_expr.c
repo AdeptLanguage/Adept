@@ -1869,7 +1869,7 @@ errorcode_t ir_gen_expr_static_array(ir_builder_t *builder, ast_expr_static_data
         if(ir_gen_expr(builder, expr->values[i], &values[i], false, &member_type)) return FAILURE;
 
         // Conform element to array element type
-        if(!ast_types_conform(builder, &values[i], &member_type, &expr->type, CONFORM_MODE_STANDARD)){
+        if(!ast_types_conform(builder, &values[i], &member_type, &expr->type, CONFORM_MODE_ASSIGNING)){
             char *a_type_str = ast_type_str(&member_type);
             char *b_type_str = ast_type_str(&expr->type);
             compiler_panicf(builder->compiler, expr->type.source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
