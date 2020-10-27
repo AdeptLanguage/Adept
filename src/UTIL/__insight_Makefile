@@ -9,7 +9,7 @@ endif
 
 SRCDIR=src
 OBJDIR=obj
-C_SOURCES=$(wildcard $(SRCDIR)/AST/*.c) $(wildcard $(SRCDIR)/BRIDGE/*.c) $(wildcard $(SRCDIR)/DRVR/*.c) $(wildcard $(SRCDIR)/LEX/*.c) $(wildcard $(SRCDIR)/PARSE/*.c) $(wildcard $(SRCDIR)/UTIL/*.c)
+C_SOURCES=$(wildcard $(SRCDIR)/AST/*.c) $(wildcard $(SRCDIR)/BRIDGE/*.c) $(wildcard $(SRCDIR)/DRVR/*.c) $(wildcard $(SRCDIR)/LEX/*.c) $(wildcard $(SRCDIR)/PARSE/*.c) $(wildcard $(SRCDIR)/TOKEN/*.c) $(wildcard $(SRCDIR)/UTIL/*.c)
 C_OBJECTS=$(C_SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 INSIGHT=../../obj/insight.a
 CFLAGS=-c -Wall -I"include" -O3 -DADEPT_INSIGHT_BUILD # -fmax-errors=5 -Werror
@@ -30,6 +30,7 @@ directories:
 	@if not exist obj\DRVR mkdir obj\DRVR
 	@if not exist obj\LEX mkdir obj\LEX
 	@if not exist obj\PARSE mkdir obj\PARSE
+	@if not exist obj\TOKEN mkdir obj\TOKEN
 	@if not exist obj\UTIL mkdir obj\UTIL
 else
 directories:
@@ -39,6 +40,7 @@ directories:
 	@mkdir -p obj/DRVR
 	@mkdir -p obj/LEX
 	@mkdir -p obj/PARSE
+	@mkdir -p obj/TOKEN
 	@mkdir -p obj/UTIL
 endif
 
@@ -50,6 +52,7 @@ ifeq ($(OS), Windows_NT)
 	del obj\DRVR\*.* /Q
 	del obj\LEX\*.* /Q
 	del obj\PARSE\*.* /Q
+	del obj\TOKEN\*.* /Q
 	del obj\UTIL\*.* /Q
 else
 	rm -f 2> /dev/null $(INSIGHT)
@@ -58,5 +61,6 @@ else
 	rm -f 2> /dev/null obj/DRVR/*.*
 	rm -f 2> /dev/null obj/LEX/*.*
 	rm -f 2> /dev/null obj/PARSE/*.*
+	rm -f 2> /dev/null obj/TOKEN/*.*
 	rm -f 2> /dev/null obj/UTIL/*.*
 endif

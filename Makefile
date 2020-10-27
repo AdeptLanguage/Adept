@@ -25,11 +25,19 @@ UNIX_LLVM_BUILD_INCLUDE=/Users/isaac/Projects/llvm-10.0.1.src/build/include
 UNIX_LIBCURL_LIB=/Users/isaac/Projects/curl-curl-7_71_1/lib/.libs
 UNIX_LIBCURL_INCLUDE=/Users/isaac/Projects/curl-curl-7_71_1/include
 UNIX_LIBCURL_BUILD_INCLUDE=/Users/isaac/Projects/curl-curl-7_71_1/lib/include
+DEBUG_ADDRESS_SANITIZE=true
 #UNIX_CC=gcc
 #UNIX_CXX=g++
 #UNIX_LLVM_LIB=/usr/lib/llvm-7/lib
 #UNIX_LLVM_INCLUDE=/usr/include/llvm-7 -I/usr/include/llvm-c-7
 #UNIX_LLVM_BUILD_INCLUDE=/usr/lib/llvm-7/include
+
+ifeq ($(DEBUG_ADDRESS_SANITIZE),true)
+	WINDOWS_CC=clang
+	WINDOWS_CXX=clang++
+	UNIX_CC=clang
+	UNIX_CXX=clang++
+endif
 
 INSIGHT_OUT_DIR=INSIGHT
 # ---------------------------------------------------------------------------
@@ -101,6 +109,12 @@ ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
 endif
 
 LDFLAGS=$(LIBCURL_LINKER_FLAGS) $(LLVM_LINKER_FLAGS)
+
+ifeq ($(DEBUG_ADDRESS_SANITIZE),true)
+	CFLAGS+= -fsanitize=address,undefined
+	LDFLAGS+= -fsanitize=address,undefined
+endif
+
 SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c \
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c \
 	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
