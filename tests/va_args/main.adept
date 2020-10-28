@@ -12,12 +12,12 @@ import basics
 
 func main {
     print(sizeof va_list)
-    print(addEmUp(4, 10, 11, 12, 13))
+    print(addEmUp(5uz, 4, 10, 11, 12, 13))
 }
 
-func addEmUp(count usize, ...) int {
+func addEmUp(count usize, ...) long {
     ap, ap2 va_list
-    sum int
+    sum long
 
     va_start ap
     defer va_end ap
@@ -25,8 +25,8 @@ func addEmUp(count usize, ...) int {
     va_copy(ap2, ap)
 
     repeat count {
-        sum += va_arg(ap, int)
-        sum += va_arg(ap2, int)
+        sum += va_arg(ap, long)
+        sum += va_arg(ap2, long)
     }
 
     return sum
