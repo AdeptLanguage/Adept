@@ -234,6 +234,15 @@ bool compiler_warn(compiler_t *compiler, source_t source, const char *message);
 bool compiler_warnf(compiler_t *compiler, source_t source, const char *format, ...);
 void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, va_list args);
 
+// ---------------- compiler_weak_panic (and friends) ----------------
+#ifdef ADEPT_INSIGHT_BUILD
+#define compiler_weak_panic(...)  compiler_warn(__VA_ARGS__)
+#define compiler_weak_panicf(...) compiler_warnf(__VA_ARGS__)
+#else
+#define compiler_weak_panic(...)  ((void) compiler_panic(__VA_ARGS__), true)
+#define compiler_weak_panicf(...) ((void) compiler_panicf(__VA_ARGS__), true)
+#endif
+
 #if !defined(ADEPT_INSIGHT_BUILD) || defined(__EMSCRIPTEN__)
 // ---------------- compiler_undeclared_function ----------------
 // Prints an error message for an undeclared function
