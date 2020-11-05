@@ -4,6 +4,10 @@
 #include "UTIL/color.h"
 #include "DRVR/compiler.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
+
 void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->funcs = malloc(sizeof(ast_func_t) * 8);
     ast->funcs_length = 0;
@@ -61,6 +65,10 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__windows__",
     #ifdef _WIN32
         cross_compile_for == CROSS_COMPILE_NONE
+    #elif defined(__EMSCRIPTEN__)
+        EM_ASM_INT({
+            return process.platform == 'win32' ? 1 : 0
+        }) == 1
     #else
         cross_compile_for == CROSS_COMPILE_WINDOWS
     #endif
@@ -70,6 +78,10 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__macos__",
     #if defined(__APPLE__) || defined(__MACH__)
         cross_compile_for == CROSS_COMPILE_NONE
+    #elif defined(__EMSCRIPTEN__)
+        EM_ASM_INT({
+            return process.platform == 'darwin' ? 1 : 0
+        }) == 1
     #else
         cross_compile_for == CROSS_COMPILE_MACOS
     #endif
@@ -79,6 +91,10 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__unix__",
     #if defined(__unix__) || defined(__unix) || defined(unix)
         cross_compile_for == CROSS_COMPILE_NONE
+    #elif defined(__EMSCRIPTEN__)
+        EM_ASM_INT({
+            return process.platform == 'darwin' || process.platform == 'linux' ? 1 : 0
+        }) == 1
     #else
         false
     #endif
@@ -88,6 +104,10 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__linux__",
     #if defined(__linux__) || defined(__linux) || defined(linux)
         cross_compile_for == CROSS_COMPILE_NONE
+    #elif defined(__EMSCRIPTEN__)
+        EM_ASM_INT({
+            return process.platform == 'linux' ? 1 : 0
+        }) == 1
     #else
         false
     #endif
