@@ -76,13 +76,14 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
                 ctx->prename = parse_take_word(ctx, "Expected pre-name for ::");
                 break;
             }
-            /* fallthrough */
+            if(parse_global(ctx)) return FAILURE;
+            break;
         case TOKEN_EXTERNAL: {
                 tokenid_t next = tokens[i + 1].id;
                 if(next == TOKEN_FUNC || next == TOKEN_STDCALL || next == TOKEN_VERBATIM || next == TOKEN_IMPLICIT){
                     if(parse_func(ctx)) return FAILURE;
                 } else {
-                    if(parse_global(ctx)) return FAILURE; 
+                    if(parse_global(ctx)) return FAILURE;
                 }
             }
             break;
