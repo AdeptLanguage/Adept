@@ -161,7 +161,7 @@ errorcode_t parse_struct_body(parse_ctx_t *ctx, strong_cstr_t **names, ast_type_
     length_t capacity = 0;
     length_t backfill = 0;
 
-    while(tokens[*i].id != TOKEN_CLOSE){
+    while(tokens[*i].id != TOKEN_CLOSE || backfill != 0){
         if(parse_ignore_newlines(ctx, "Expected name of field")){
             parse_struct_free_fields(*names, *types, *length, backfill);
             return FAILURE;

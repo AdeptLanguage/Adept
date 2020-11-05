@@ -102,6 +102,30 @@ successful_t jsmn_helper_get_string(weak_cstr_t buffer, jsmntok_t *tokens, lengt
     return true;
 }
 
+successful_t jsmn_helper_get_vstring(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, strong_cstr_t *out_content){
+    if(index >= num_tokens){
+        #ifdef JSMN_HELPER_LOG_ERRORS
+        internalwarningprintf("jsmn_helper_get_string() failed, out of tokens\n");
+        #endif
+        return false;
+    }
+
+    if(tokens[index].type != JSMN_STRING){
+        #ifdef JSMN_HELPER_LOG_ERRORS
+        internalwarningprintf("jsmn_helper_get_string() expected string, got something else\n");
+        printf("   Got: ");
+        jsmn_helper_print_token(buffer, tokens[index]);
+        #endif
+        return false;
+    }
+
+    length_t length = tokens[index].end - tokens[index].start;
+    *out_content = malloc(length + 1);
+    memcpy(*out_content, buffer + tokens[index].start, length);
+    (*out_content)[length] = 0x00;
+    return true;
+}
+
 successful_t jsmn_helper_get_integer(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, long long *out_value){
     if(index >= num_tokens){
         #ifdef JSMN_HELPER_LOG_ERRORS

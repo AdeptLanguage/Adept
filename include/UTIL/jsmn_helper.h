@@ -42,6 +42,11 @@ successful_t jsmn_helper_get_object(weak_cstr_t buffer, jsmntok_t *tokens, lengt
 // NOTE: max_output_size includes NULL terminating byte
 successful_t jsmn_helper_get_string(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, char *out_content, length_t max_output_size);
 
+// ---------------- jsmn_helper_get_string ----------------
+// Returns whether the token at 'index' is a JSMN_STRING token
+// Allocates and copies raw contents of string to 'out_content' if successful'
+successful_t jsmn_helper_get_vstring(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, strong_cstr_t *out_content);
+
 // ---------------- jsmn_helper_get_integer ----------------
 // Returns whether the token at 'index' is a JSMN_PRIMITIVE token
 //       and is number-like
