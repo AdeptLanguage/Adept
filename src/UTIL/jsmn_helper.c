@@ -105,14 +105,14 @@ successful_t jsmn_helper_get_string(weak_cstr_t buffer, jsmntok_t *tokens, lengt
 successful_t jsmn_helper_get_vstring(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, strong_cstr_t *out_content){
     if(index >= num_tokens){
         #ifdef JSMN_HELPER_LOG_ERRORS
-        internalwarningprintf("jsmn_helper_get_string() failed, out of tokens\n");
+        internalwarningprintf("jsmn_helper_get_vstring() failed, out of tokens\n");
         #endif
         return false;
     }
 
     if(tokens[index].type != JSMN_STRING){
         #ifdef JSMN_HELPER_LOG_ERRORS
-        internalwarningprintf("jsmn_helper_get_string() expected string, got something else\n");
+        internalwarningprintf("jsmn_helper_get_vstring() expected string, got something else\n");
         printf("   Got: ");
         jsmn_helper_print_token(buffer, tokens[index]);
         #endif
@@ -146,7 +146,7 @@ successful_t jsmn_helper_get_integer(weak_cstr_t buffer, jsmntok_t *tokens, leng
     char first_char = *(buffer + tokens[index].start);
     if(first_char != '-' && (first_char < '0' || first_char > '9')){
         #ifdef JSMN_HELPER_LOG_ERRORS
-        internalwarningprintf("jsmn_helper_get_string() expected integer, got a different primitive\n");
+        internalwarningprintf("jsmn_helper_get_integer() expected integer, got a different primitive\n");
         printf("   Got: ");
         jsmn_helper_print_token(buffer, tokens[index]);
         #endif

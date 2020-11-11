@@ -1162,7 +1162,9 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Hook up labels
                 if(each_in->label != NULL){
                     prepare_for_new_label(builder);
-                    
+                    builder->block_stack_labels[builder->block_stack_length] = each_in->label;
+                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
+                    builder->block_stack_continue_ids[builder->block_stack_length] = inc_basicblock_id;
                     builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
                     builder->block_stack_length++;
                 }
