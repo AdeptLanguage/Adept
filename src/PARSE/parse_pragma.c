@@ -36,7 +36,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     weak_cstr_t directive_string = parse_grab_word(ctx, "Expected pragma option after 'pragma' keyword");
     if(directive_string == NULL) return FAILURE;
 
-    #define PRAGMA___BULITIN_WARN_BAD_PRINTF_FORMAT 0x00000000
+    #define PRAGMA___BUILTIN_WARN_BAD_PRINTF_FORMAT 0x00000000
     #define PRAGMA_COMPILER_SUPPORTS                0x00000001
     #define PRAGMA_COMPILER_VERSION                 0x00000002
     #define PRAGMA_DEFAULT_STDLIB                   0x00000003
@@ -75,7 +75,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
     switch(directive){
-    case PRAGMA___BULITIN_WARN_BAD_PRINTF_FORMAT: // '__builtin_warn_bad_printf_format' directive
+    case PRAGMA___BUILTIN_WARN_BAD_PRINTF_FORMAT: // '__builtin_warn_bad_printf_format' directive
         ctx->next_builtin_traits |= AST_FUNC_WARN_BAD_PRINTF_FORMAT;
         return SUCCESS;
     case PRAGMA_COMPILER_SUPPORTS: // 'compiler_supports' directive

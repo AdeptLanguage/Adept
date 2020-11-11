@@ -39,7 +39,7 @@ errorcode_t parse_namespace(parse_ctx_t *ctx){
         new_namespace = ctx->prename;
         ctx->prename = NULL;
     } else {
-        new_namespace = parse_take_word(ctx, "Expected name of namespace after 'namespace' keyword");;
+        new_namespace = parse_take_word(ctx, "Expected name of namespace after 'namespace' keyword");
     }
     
     if(new_namespace == NULL) return FAILURE;
