@@ -635,17 +635,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t new_basicblock_id = build_basicblock(builder);
                 length_t end_basicblock_id = build_basicblock(builder);
 
-                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
-                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
-                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = expression_value;
-
                 if(conditional_type == EXPR_IF){
-                    ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
-                    ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
+                    build_cond_break(builder, expression_value, new_basicblock_id, end_basicblock_id);
                 } else {
-                    ((ir_instr_cond_break_t*) built_instr)->true_block_id = end_basicblock_id;
-                    ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
+                    build_cond_break(builder, expression_value, end_basicblock_id, new_basicblock_id);
                 }
 
                 ast_expr_t **if_stmts = ((ast_expr_if_t*) stmt)->statements;
@@ -688,17 +681,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t else_basicblock_id = build_basicblock(builder);
                 length_t end_basicblock_id = build_basicblock(builder);
 
-                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
-                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
-                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = expression_value;
-
                 if(conditional_type == EXPR_IFELSE){
-                    ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
-                    ((ir_instr_cond_break_t*) built_instr)->false_block_id = else_basicblock_id;
+                    build_cond_break(builder, expression_value, new_basicblock_id, else_basicblock_id);
                 } else {
-                    ((ir_instr_cond_break_t*) built_instr)->true_block_id = else_basicblock_id;
-                    ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
+                    build_cond_break(builder, expression_value, else_basicblock_id, new_basicblock_id);
                 }
 
                 ast_expr_t **if_stmts = ((ast_expr_ifelse_t*) stmt)->statements;
@@ -745,12 +731,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t end_basicblock_id = build_basicblock(builder);
 
                 if(((ast_expr_while_t*) stmt)->label != NULL){
-                    prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_while_t*) stmt)->label;
-                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
-                    builder->block_stack_continue_ids[builder->block_stack_length] = test_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
-                    builder->block_stack_length++;
+                    push_loop_label(builder, ((ast_expr_while_t*) stmt)->label, end_basicblock_id, test_basicblock_id);
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
@@ -792,17 +773,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 ast_type_free(&temporary_type);
 
-                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
-                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
-                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = expression_value;
-
                 if(conditional_type == EXPR_WHILE){
-                    ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
-                    ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
+                    build_cond_break(builder, expression_value, new_basicblock_id, end_basicblock_id);
                 } else {
-                    ((ir_instr_cond_break_t*) built_instr)->true_block_id = end_basicblock_id;
-                    ((ir_instr_cond_break_t*) built_instr)->false_block_id = new_basicblock_id;
+                    build_cond_break(builder, expression_value, end_basicblock_id, new_basicblock_id);
                 }
 
                 ast_expr_t **while_stmts = ((ast_expr_while_t*) stmt)->statements;
@@ -821,7 +795,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     build_break(builder, test_basicblock_id);
                 }
 
-                if(((ast_expr_while_t*) stmt)->label != NULL) builder->block_stack_length--;
+                if(((ast_expr_while_t*) stmt)->label != NULL) pop_loop_label(builder);
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
@@ -835,12 +809,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t end_basicblock_id = build_basicblock(builder);
 
                 if(((ast_expr_whilecontinue_t*) stmt)->label != NULL){
-                    prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = ((ast_expr_whilecontinue_t*) stmt)->label;
-                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
-                    builder->block_stack_continue_ids[builder->block_stack_length] = new_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
-                    builder->block_stack_length++;
+                    push_loop_label(builder, ((ast_expr_whilecontinue_t*) stmt)->label, end_basicblock_id, new_basicblock_id);
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
@@ -877,7 +846,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     }
                 }
 
-                if(((ast_expr_whilecontinue_t*) stmt)->label != NULL) builder->block_stack_length--;
+                if(((ast_expr_whilecontinue_t*) stmt)->label != NULL) pop_loop_label(builder);
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
@@ -1147,12 +1116,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Generate (idx < length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
-                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
-                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ULESSER;
-                ((ir_instr_math_t*) built_instr)->result_type = ir_builder_bool(builder);
-                ((ir_instr_math_t*) built_instr)->a = idx_value;
-                ((ir_instr_math_t*) built_instr)->b = array_length;
-                ir_value_t *whether_keep_going_value = build_value_from_prev_instruction(builder);
+                ir_value_t *whether_keep_going_value = build_math(builder, INSTRUCTION_ULESSER, idx_value, array_length, ir_builder_bool(builder));
 
                 // Generate body blocks
                 length_t new_basicblock_id  = build_basicblock(builder);
@@ -1161,12 +1125,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Hook up labels
                 if(each_in->label != NULL){
-                    prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = each_in->label;
-                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
-                    builder->block_stack_continue_ids[builder->block_stack_length] = inc_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
-                    builder->block_stack_length++;
+                    push_loop_label(builder, each_in->label, end_basicblock_id, inc_basicblock_id);
                 }
                 
                 length_t prev_break_block_id = builder->break_block_id;
@@ -1178,12 +1137,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 builder->break_continue_scope = builder->scope;
 
                 // Generate conditional break
-                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
-                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
-                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = whether_keep_going_value;
-                ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
-                ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
+                build_cond_break(builder, whether_keep_going_value, new_basicblock_id, end_basicblock_id);
 
                 if(each_in->is_static){
                     // Calculate array inside initial basicblock if static
@@ -1296,13 +1250,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 *((unsigned long long*) ir_one_value->extra) = 1;
 
                 // Increment
-                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
-                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ADD;
-                ((ir_instr_math_t*) built_instr)->result_type = current_idx->type;
-                ((ir_instr_math_t*) built_instr)->a = current_idx;
-                ((ir_instr_math_t*) built_instr)->b = ir_one_value;
-                ir_value_t *incremented = build_value_from_prev_instruction(builder);
-
+                ir_value_t *incremented = build_math(builder, INSTRUCTION_ADD, current_idx, ir_one_value, current_idx->type);
+                
                 // Store
                 build_store(builder, incremented, idx_ptr, stmt->source);
 
@@ -1312,7 +1261,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
-                if(each_in->label != NULL) builder->block_stack_length--;
+                if(each_in->label != NULL) pop_loop_label(builder);
 
                 builder->break_block_id = prev_break_block_id;
                 builder->continue_block_id = prev_continue_block_id;
@@ -1328,12 +1277,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t end_basicblock_id  = build_basicblock(builder);
                 
                 if(repeat->label != NULL){
-                    prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = repeat->label;
-                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
-                    builder->block_stack_continue_ids[builder->block_stack_length] = inc_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
-                    builder->block_stack_length++;
+                    push_loop_label(builder, repeat->label, end_basicblock_id, inc_basicblock_id);
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
@@ -1400,21 +1344,10 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 // Generate (idx < length)
                 ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
-                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
-                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ULESSER;
-                ((ir_instr_math_t*) built_instr)->result_type = ir_builder_bool(builder);
-                ((ir_instr_math_t*) built_instr)->a = idx_value;
-                ((ir_instr_math_t*) built_instr)->b = limit;
-                ir_value_t *whether_keep_going_value = build_value_from_prev_instruction(builder);
+                ir_value_t *whether_keep_going_value = build_math(builder, INSTRUCTION_ULESSER, idx_value, limit, ir_builder_bool(builder));
 
                 // Generate conditional break
-                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
-                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
-                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = whether_keep_going_value;
-                ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
-                ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
-
+                build_cond_break(builder, whether_keep_going_value, new_basicblock_id, end_basicblock_id);
                 build_using_basicblock(builder, new_basicblock_id);
 
                 // Generate new_block user-defined statements
@@ -1441,12 +1374,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 *((unsigned long long*) ir_one_value->extra) = 1;
 
                 // Increment
-                built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
-                ((ir_instr_math_t*) built_instr)->id = INSTRUCTION_ADD;
-                ((ir_instr_math_t*) built_instr)->result_type = current_idx->type;
-                ((ir_instr_math_t*) built_instr)->a = current_idx;
-                ((ir_instr_math_t*) built_instr)->b = ir_one_value;
-                ir_value_t *incremented = build_value_from_prev_instruction(builder);
+                ir_value_t *incremented = build_math(builder, INSTRUCTION_ADD, current_idx, ir_one_value, current_idx->type);
 
                 // Store
                 build_store(builder, incremented, idx_ptr, stmt->source);
@@ -1457,7 +1385,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
-                if(repeat->label != NULL) builder->block_stack_length--;
+                if(repeat->label != NULL) pop_loop_label(builder);
 
                 builder->break_block_id = prev_break_block_id;
                 builder->continue_block_id = prev_continue_block_id;
@@ -1721,12 +1649,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 length_t end_basicblock_id  = build_basicblock(builder);
 
                 if(for_loop->label != NULL){
-                    prepare_for_new_label(builder);
-                    builder->block_stack_labels[builder->block_stack_length] = for_loop->label;
-                    builder->block_stack_break_ids[builder->block_stack_length] = end_basicblock_id;
-                    builder->block_stack_continue_ids[builder->block_stack_length] = prep_basicblock_id;
-                    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
-                    builder->block_stack_length++;
+                    push_loop_label(builder, for_loop->label, end_basicblock_id, prep_basicblock_id);
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
@@ -1795,13 +1718,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 ast_type_free(&temporary_type);
 
                 // Generate conditional break
-                built_instr = build_instruction(builder, sizeof(ir_instr_cond_break_t));
-                ((ir_instr_cond_break_t*) built_instr)->id = INSTRUCTION_CONDBREAK;
-                ((ir_instr_cond_break_t*) built_instr)->result_type = NULL;
-                ((ir_instr_cond_break_t*) built_instr)->value = condition_value;
-                ((ir_instr_cond_break_t*) built_instr)->true_block_id = new_basicblock_id;
-                ((ir_instr_cond_break_t*) built_instr)->false_block_id = end_basicblock_id;
-
+                build_cond_break(builder, condition_value, new_basicblock_id, end_basicblock_id);
                 build_using_basicblock(builder, new_basicblock_id);
 
                 // Generate new_block user-defined statements
@@ -1818,7 +1735,7 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
-                if(for_loop->label != NULL) builder->block_stack_length--;
+                if(for_loop->label != NULL) pop_loop_label(builder);
 
                 builder->break_block_id = prev_break_block_id;
                 builder->continue_block_id = prev_continue_block_id;

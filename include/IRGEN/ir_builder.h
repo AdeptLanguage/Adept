@@ -29,7 +29,7 @@ typedef struct ir_builder {
     length_t fallthrough_block_id; // 0 == none
     bridge_scope_t *break_continue_scope;
     bridge_scope_t *fallthrough_scope;
-    strong_cstr_t *block_stack_labels;
+    weak_cstr_t *block_stack_labels;
     length_t *block_stack_break_ids;
     length_t *block_stack_continue_ids;
     bridge_scope_t **block_stack_scopes;
@@ -71,7 +71,7 @@ void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id);
 ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
 
 // ---------------- build_value_from_prev_instruction ----------------
-// Builds an IR value from the result of the previsous instruction
+// Builds an IR value from the result of the previous instruction
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
 
 // ---------------- build_varptr ----------------
@@ -308,6 +308,14 @@ void open_scope(ir_builder_t *builder);
 // ---------------- close_scope ----------------
 // Closes the current scope
 void close_scope(ir_builder_t *builder);
+
+// ---------------- push_loop_label ----------------
+// Pushes a block label off of the block label stack
+void push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id);
+
+// ---------------- pop_loop_label ----------------
+// Pops a block label off of the block label stack
+void pop_loop_label(ir_builder_t *builder);
 
 // ---------------- add_variable ----------------
 // Adds a variable to the current bridge_scope_t

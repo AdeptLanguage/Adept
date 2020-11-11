@@ -673,6 +673,19 @@ void close_scope(ir_builder_t *builder){
         internalerrorprintf("tried to close bridge scope with no parent, probably will crash...\n");
 }
 
+void push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id){
+    prepare_for_new_label(builder);
+    builder->block_stack_labels[builder->block_stack_length] = label;
+    builder->block_stack_break_ids[builder->block_stack_length] = break_basicblock_id;
+    builder->block_stack_continue_ids[builder->block_stack_length] = continue_basicblock_id;
+    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
+    builder->block_stack_length++;
+}
+
+void pop_loop_label(ir_builder_t *builder){
+    builder->block_stack_length--;
+}
+
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
     expand((void**) &list->variables, sizeof(bridge_var_t), list->length, &list->capacity, 1, 4);
