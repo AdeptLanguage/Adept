@@ -1531,10 +1531,10 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
         ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type){
     
-    // Ensure 'array_mutable_struct_value' is of type '*Structure'
+    // Ensure 'array_mutable_struct_value' is of type '*StructureLike'
     if(array_mutable_struct_value->type->kind != TYPE_KIND_POINTER) return NULL;
     if(((ir_type_t*) array_mutable_struct_value->type->extra)->kind != TYPE_KIND_STRUCTURE) return NULL;
-    if(array_type->elements_length != 1 || array_type->elements[0]->id != AST_ELEM_BASE) return NULL;
+    if(!ast_type_is_base_like(array_type)) return NULL;
 
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
@@ -1544,15 +1544,23 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     arguments[0] = array_mutable_struct_value;
     arguments[1] = index_value;
 
-    weak_cstr_t struct_name = ((ast_elem_base_t*) array_type->elements[0])->base;
-
     ast_type_t argument_ast_types[2];
-    ast_type_make_base_ptr(&argument_ast_types[0], strclone(struct_name));
+    argument_ast_types[0] = ast_type_clone(array_type);
+    ast_type_prepend_ptr(&argument_ast_types[0]);
     argument_ast_types[1] = *index_type;
+
+    errorcode_t search_error;
+    weak_cstr_t struct_name;
+
+    if(array_type->elements[0]->id == AST_ELEM_BASE){
+        struct_name = ((ast_elem_base_t*) array_type->elements[0])->base;
+        search_error = ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, &result);
+    } else {
+        struct_name = ((ast_elem_generic_base_t*) array_type->elements[0])->name;
+        search_error = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, &result);
+    }
     
-    if(ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, &result)
-    || handle_pass_management(builder, arguments, argument_ast_types, result.ast_func->arg_type_traits, 2)
-    ){
+    if(search_error || handle_pass_management(builder, arguments, argument_ast_types, result.ast_func->arg_type_traits, 2)){
         ir_pool_snapshot_restore(builder->pool, &snapshot);
         ast_type_free(&argument_ast_types[0]);
         return NULL;
