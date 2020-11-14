@@ -909,6 +909,9 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             // Don't bother with structs that don't exist
             if(ast_struct == NULL) return FAILURE;
 
+            // Don't handle children for union types
+            if(ast_struct->traits & AST_STRUCT_IS_UNION) return SUCCESS;
+
             for(length_t f = 0; f != ast_struct->field_count; f++){
                 ast_type_t *ast_field_type = &ast_struct->field_types[f];
 
@@ -950,6 +953,9 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
+
+            // Don't handle children for union types
+            if(template->traits & AST_STRUCT_IS_UNION) return SUCCESS;
 
             // Substitution Catalog
             ast_poly_catalog_t catalog;
@@ -1219,6 +1225,9 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             // Don't bother with structs that don't exist
             if(ast_struct == NULL) return FAILURE;
 
+            // Don't handle children for union types
+            if(ast_struct->traits & AST_STRUCT_IS_UNION) return SUCCESS;
+
             for(length_t f = 0; f != ast_struct->field_count; f++){
                 ast_type_t *ast_field_type = &ast_struct->field_types[f];
 
@@ -1265,6 +1274,9 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
+
+            // Don't handle children for union types
+            if(template->traits & AST_STRUCT_IS_UNION) return SUCCESS;
 
             // Substitution Catalog
             ast_poly_catalog_t catalog;
@@ -1691,13 +1703,28 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
 
     if(is_base_ptr){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
-        if(object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL) == NULL) return FAILURE; // Require structure to exist
+
+        ast_struct_t *ast_struct = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
+
+        // Require structure to exist
+        if(ast_struct == NULL) return FAILURE;
+
+        // Don't handle children for union types
+        if(ast_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
+
     } else if(is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
         weak_cstr_t struct_name = generic_base->name;
         ast_polymorphic_struct_t *polymorphic_struct = object_polymorphic_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
-        if(polymorphic_struct == NULL) return FAILURE; // Require generic structure to exist
-        if(polymorphic_struct->generics_length != generic_base->generics_length) return FAILURE; // Require generics count to match
+
+        // Require generic structure to exist
+        if(polymorphic_struct == NULL) return FAILURE;
+
+        // Require generics count to match
+        if(polymorphic_struct->generics_length != generic_base->generics_length) return FAILURE;
+
+        // Don't handle children for union types
+        if(polymorphic_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
     }
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
@@ -1764,13 +1791,28 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
 
     if(is_base){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[0])->base;
-        if(object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL) == NULL) return FAILURE; // Require structure to exist
+
+        ast_struct_t *ast_struct = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
+
+        // Require structure to exist
+        if(ast_struct == NULL) return FAILURE;
+
+        // Don't handle children for union types
+        if(ast_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
+
     } else if(is_generic_base){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[0];
         weak_cstr_t struct_name = generic_base->name;
         ast_polymorphic_struct_t *polymorphic_struct = object_polymorphic_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
-        if(polymorphic_struct == NULL) return FAILURE; // Require generic structure to exist
-        if(polymorphic_struct->generics_length != generic_base->generics_length) return FAILURE; // Require generics count to match
+
+        // Require generic structure to exist
+        if(polymorphic_struct == NULL) return FAILURE;
+
+        // Require generics count to match
+        if(polymorphic_struct->generics_length != generic_base->generics_length) return FAILURE;
+
+        // Don't handle children for union types
+        if(polymorphic_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
     }
 
     // Create function for autogen'd __pass__ function
