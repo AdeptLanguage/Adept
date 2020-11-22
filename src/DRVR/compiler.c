@@ -1076,7 +1076,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
 
     // Allow for '.elements_length' to be zero
     // to indicate no return matching
-    if(gives->elements_length == 0) gives = NULL;
+    if(gives && gives->elements_length == 0) gives = NULL;
 
     if(!has_potential_candidates){
         // No other function with that name exists
