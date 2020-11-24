@@ -307,6 +307,9 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
             LLVMAddAttributeAtIndex(*skeleton, LLVMAttributeFunctionIndex, nounwind);
     }
 
+    // Generate function to handle deinitialization of static variables
+    if(ir_to_llvm_generate_deinit_svars_function_head(llvm)) return FAILURE;
+
     return SUCCESS;
 }
 
@@ -1278,6 +1281,14 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 free(types);
             }
             break;
+        case INSTRUCTION_DEINIT_SVARS:
+            if(llvm->static_globals_deinitialization_function == NULL){
+                internalerrorprintf("INSTRUCTION_DEINIT_SVARS cannot operate since static_globals_deinitialization_function doesn't exist\n");
+                return FAILURE;
+            }
+
+            LLVMBuildCall(builder, llvm->static_globals_deinitialization_function, NULL, 0, "");
+            break;
         default:
             internalerrorprintf("Unexpected instruction '%d' when exporting ir to llvm\n", instructions[i]->id);
             return FAILURE;
@@ -1421,6 +1432,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.static_globals_capacity = 0;
     llvm.static_globals_initialization_routine = NULL;
     llvm.static_globals_initialization_post = NULL;
+    llvm.static_globals_deinitialization_function = NULL;
 
     llvm.relocation_list.unrelocated = NULL;
     llvm.relocation_list.length = 0;
@@ -1451,7 +1463,11 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         return FAILURE;
     }
 
-    if(llvm.static_globals_initialization_routine != NULL && ir_to_llvm_inject_init(&llvm)){
+    if(llvm.static_globals_initialization_routine != NULL && ir_to_llvm_inject_init_built(&llvm)){
+        return FAILURE;
+    }
+
+    if(llvm.static_globals_deinitialization_function != NULL && ir_to_llvm_inject_deinit_built(&llvm)){
         return FAILURE;
     }
 
@@ -1774,7 +1790,7 @@ void value_catalog_free(value_catalog_t *catalog){
     free(catalog->blocks);
 }
 
-errorcode_t ir_to_llvm_inject_init(llvm_context_t *llvm){
+errorcode_t ir_to_llvm_inject_init_built(llvm_context_t *llvm){
     object_t *object = llvm->object;
     ir_builder_t *init_builder = object->ir_module.init_builder;
 
@@ -1851,5 +1867,94 @@ errorcode_t ir_to_llvm_inject_init(llvm_context_t *llvm){
     free(llvm_exit_blocks);
 
     LLVMDisposeBuilder(builder);
+    return SUCCESS;
+}
+
+errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
+    // REFACTOR:
+    // TODO: Refactor this to abstract out the parts needed
+    // by 'ir_to_llvm_inject_init_built' vs 'ir_to_llvm_inject_deinit_built'
+
+    object_t *object = llvm->object;
+    ir_builder_t *deinit_builder = object->ir_module.deinit_builder;
+
+    LLVMBuilderRef builder = LLVMCreateBuilder();
+    ir_basicblock_t *basicblocks = deinit_builder->basicblocks;
+    length_t basicblocks_length = deinit_builder->basicblocks_length;
+
+    if(llvm->static_globals_deinitialization_function == NULL){
+        internalerrorprintf("ir_to_llvm_inject_deinit_built() called when no static_globals_deinitialization_function present\n");
+        return FAILURE;
+    }
+
+    value_catalog_t catalog;
+    value_catalog_prepare(&catalog, basicblocks, basicblocks_length);
+
+    varstack_t stack;
+    stack.values = NULL;
+    stack.types = NULL;
+    stack.length = 0;
+
+    llvm->builder = builder;
+    llvm->catalog = &catalog;
+    llvm->stack = &stack;
+
+    length_t f = object->ir_module.common.ir_main_id;
+    ir_func_t *module_func = &object->ir_module.funcs[f];
+
+    LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+    LLVMValueRef func_skeleton = llvm->static_globals_deinitialization_function;
+
+    // If the true exit point of a block changed, its real value will be in here
+    // (Used for PHI instructions to have the proper end point)
+    LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+
+    // Information about PHI instructions that need to have their incoming blocks delayed
+    llvm->relocation_list.length = 0;
+
+    // Create basicblocks
+    for(length_t b = 0; b != basicblocks_length; b++){
+        llvm_blocks[b] = LLVMAppendBasicBlock(func_skeleton, "");
+        llvm_exit_blocks[b] = llvm_blocks[b];
+    }
+
+    // Drop references to any old PHIs
+    llvm->line_phi = NULL;
+    llvm->column_phi = NULL;
+
+    if(ir_to_llvm_basicblocks(llvm, basicblocks, basicblocks_length, func_skeleton,
+            module_func, llvm_blocks, llvm_exit_blocks, f)){
+        value_catalog_free(&catalog);
+        free(stack.values);
+        free(stack.types);
+        free(llvm_blocks);
+        free(llvm_exit_blocks);
+        LLVMDisposeBuilder(builder);
+        return FAILURE;
+    }
+
+    value_catalog_free(&catalog);
+    free(stack.values);
+    free(stack.types);
+    free(llvm_blocks);
+    free(llvm_exit_blocks);
+
+    LLVMBuildRetVoid(builder);
+    LLVMDisposeBuilder(builder);
+    return SUCCESS;
+}
+
+errorcode_t ir_to_llvm_generate_deinit_svars_function_head(llvm_context_t *llvm){
+    if(llvm->static_globals_deinitialization_function != NULL){
+        internalerrorprintf("ir_to_llvm_generate_deinit_svars_function_head(): Static variable deinitialization function already exists\n");
+        return FAILURE;
+    }
+
+    // Create function head for function that will handle deinitialization
+    // of all static variables
+    LLVMTypeRef fty = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
+    llvm->static_globals_deinitialization_function = LLVMAddFunction(llvm->module, "____adeinitsvars", fty);
+    LLVMSetLinkage(llvm->static_globals_deinitialization_function, LLVMPrivateLinkage);
+
     return SUCCESS;
 }

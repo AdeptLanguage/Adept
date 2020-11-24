@@ -702,6 +702,13 @@ void ir_dump_basicsblocks(FILE *file, ir_basicblock_t *basicblocks, length_t bas
                     free(dest_str);
                 }
                 break;
+            case INSTRUCTION_ASM: {
+                    fprintf(file, "    0x%08X inlineasm\n", (int) i);
+                }
+                break;
+            case INSTRUCTION_DEINIT_SVARS:
+                fprintf(file, "    0x%08X deinit_svars\n", (int) i);
+                break;
             default:
                 printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) basicblocks[b].instructions[i]->id);
                 fprintf(file, "    0x%08X <unknown instruction>\n", (int) i);
@@ -826,6 +833,7 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->rtti_relocations_length = 0;
     ir_module->rtti_relocations_capacity = 0;
     ir_module->init_builder = malloc(sizeof(ir_builder_t));
+    ir_module->deinit_builder = malloc(sizeof(ir_builder_t));
     ir_module->static_variables = NULL;
     ir_module->static_variables_length = 0;
     ir_module->static_variables_capacity = 0;
@@ -855,10 +863,20 @@ void ir_module_free(ir_module_t *ir_module){
     ir_pool_free(&ir_module->pool);
     ir_gen_sf_cache_free(&ir_module->sf_cache);
 
+    // Free init_builder
+    // TODO: Maybe refactor this code
     for(length_t i = 0; i < ir_module->init_builder->basicblocks_length; i++){
         ir_basicblock_free(&ir_module->init_builder->basicblocks[i]);
     }
     free(ir_module->init_builder);
+
+    // Free deinit_builder
+    for(length_t i = 0; i < ir_module->deinit_builder->basicblocks_length; i++){
+        ir_basicblock_free(&ir_module->deinit_builder->basicblocks[i]);
+    }
+    free(ir_module->deinit_builder);
+
+
     free(ir_module->static_variables);
     
     for(length_t i = 0; i != ir_module->rtti_relocations_length; i++){

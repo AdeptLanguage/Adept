@@ -163,6 +163,7 @@ errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, lengt
 
         if(ast_func->traits & AST_FUNC_MAIN){
             handle_deference_for_globals(&builder);
+            build_deinit_svars(&builder);
         }
 
         // Make sure to again update references that may have been invalidated

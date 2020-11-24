@@ -106,6 +106,7 @@
 #define INSTRUCTION_VA_COPY        0x00000058 // ir_instr_va_copy_t
 #define INSTRUCTION_STATICVARPTR   0x00000059 // ir_instr_varptr_t
 #define INSTRUCTION_ASM            0x0000005A // ir_instr_asm_t
+#define INSTRUCTION_DEINIT_SVARS   0x0000005B // ir_instr_t
 
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type
@@ -577,6 +578,7 @@ typedef struct {
     length_t rtti_relocations_length;
     length_t rtti_relocations_capacity;
     struct ir_builder *init_builder;
+    struct ir_builder *deinit_builder;
     ir_static_variable_t *static_variables;
     length_t static_variables_length;
     length_t static_variables_capacity;

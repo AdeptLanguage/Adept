@@ -90,6 +90,7 @@ typedef struct {
     length_t static_globals_capacity;
     LLVMBasicBlockRef static_globals_initialization_routine;
     LLVMBasicBlockRef static_globals_initialization_post;
+    LLVMValueRef static_globals_deinitialization_function;
     LLVMBasicBlockRef boot;
 } llvm_context_t;
 
@@ -165,8 +166,17 @@ void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblock_t *basicb
 // Frees memory allocated by a value_catalog_t
 void value_catalog_free(value_catalog_t *catalog);
 
-// ---------------- ir_to_llvm_inject_init ----------------
+// ---------------- ir_to_llvm_inject_init_built ----------------
 // Injects basicblocks from 'init_builder' into the initialization point
-errorcode_t ir_to_llvm_inject_init(llvm_context_t *llvm);
+errorcode_t ir_to_llvm_inject_init_built(llvm_context_t *llvm);
+
+// ---------------- ir_to_llvm_inject_deinit_built ----------------
+// Injects basicblocks from 'deinit_builder' into the initialization point
+errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm);
+
+// ---------------- ir_to_llvm_generate_deinit_svars_function_head ----------------
+// Creates function head for the function that will handle deinitialization
+// of all static variables
+errorcode_t ir_to_llvm_generate_deinit_svars_function_head(llvm_context_t *llvm);
 
 #endif // _ISAAC_IR_TO_LLVM_H

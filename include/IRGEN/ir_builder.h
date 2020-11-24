@@ -297,6 +297,11 @@ errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_not
 // Builds an inline assembly instruction
 void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, weak_cstr_t constraints, ir_value_t **args, length_t arity, bool has_side_effects, bool is_stack_align);
 
+// ---------------- build_deinit_svars ----------------
+// Builds an instruction that will handle the deinitialization
+// of all static variables
+void build_deinit_svars(ir_builder_t *builder);
+
 // ---------------- prepare_for_new_label ----------------
 // Ensures there's enough room for another label
 void prepare_for_new_label(ir_builder_t *builder);

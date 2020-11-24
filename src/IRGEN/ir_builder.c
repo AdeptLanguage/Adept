@@ -626,6 +626,12 @@ void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, 
     return;
 }
 
+void build_deinit_svars(ir_builder_t *builder){
+    ir_instr_t *instruction = build_instruction(builder, sizeof(ir_instr_t));
+    instruction->id = INSTRUCTION_DEINIT_SVARS;
+    instruction->result_type = NULL;
+}
+
 void prepare_for_new_label(ir_builder_t *builder){
     if(builder->block_stack_capacity == 0){
         builder->block_stack_labels = malloc(sizeof(char*) * 4);
@@ -718,25 +724,30 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
 
         // Don't perform defer management on POD variables or non-struct types
         trait_t traits = variable->traits;
-        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE || traits & BRIDGE_VAR_STATIC ||
+        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE ||
             !(variable->ir_type->kind == TYPE_KIND_STRUCTURE || variable->ir_type->kind == TYPE_KIND_FIXED_ARRAY)) continue;
 
         // Ensure we're working with a single AST type element in the type for structs
         if(variable->ir_type->kind == TYPE_KIND_STRUCTURE && variable->ast_type->elements_length != 1) continue;
 
+        // Determine where to build the deference code
+        // Will build inline for regular variables
+        // Will build inside static variable deinitialization function for static variables
+        ir_builder_t *deinit_builder = traits & BRIDGE_VAR_STATIC ? builder->object->ir_module.deinit_builder : builder;
+
         // Capture snapshot of current pool state (for if we need to revert allocations)
         ir_pool_snapshot_t snapshot;
-        ir_pool_snapshot_capture(builder->pool, &snapshot);
+        ir_pool_snapshot_capture(deinit_builder->pool, &snapshot);
 
-        ir_value_t *ir_var_value = build_varptr(builder, ir_type_pointer_to(builder->pool, variable->ir_type), variable);
-        errorcode_t failed = handle_single_deference(builder, variable->ast_type, ir_var_value);
+        ir_value_t *ir_var_value = build_varptr(deinit_builder, ir_type_pointer_to(deinit_builder->pool, variable->ir_type), variable);
+        errorcode_t failed = handle_single_deference(deinit_builder, variable->ast_type, ir_var_value);
 
         if(failed){
             // Remove VARPTR instruction
-            builder->current_block->instructions_length--;
+            deinit_builder->current_block->instructions_length--;
 
             // Revert recent pool allocations
-            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            ir_pool_snapshot_restore(deinit_builder->pool, &snapshot);
 
             // Real failure if a compile time error occurred
             if(failed == ALT_FAILURE) return FAILURE;
