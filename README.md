@@ -19,6 +19,8 @@ A blazing fast language for general purpose programming.
 
 [Adept v2.4 Standard Library](https://github.com/IsaacShelton/AdeptImport)
 
+[Adept v2.4 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
+
 [Adept v2.4 IDE (deprecated)](https://github.com/IsaacShelton/AdeptIDE)
 
 ## Command-Line Usage
