@@ -1457,7 +1457,7 @@ errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_valu
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-    // DANGEROUS: Manully storing state of builder
+    // DANGEROUS: Manually storing state of builder
     length_t basicblocks_length = builder->basicblocks_length;
     length_t current_block_id = builder->current_block_id;
     length_t insturctions_length = builder->basicblocks[current_block_id].instructions_length;
@@ -1465,7 +1465,7 @@ errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_valu
     // Generate the expression to get back it's result type
     if(ir_gen_expr(builder, expr->value, NULL, true, &ast_type)) return FAILURE;
 
-    // DANGEROUS: Manully restoring state of builder
+    // DANGEROUS: Manually restoring state of builder
     builder->basicblocks_length = basicblocks_length;
     build_using_basicblock(builder, builder->current_block_id);
     builder->basicblocks[current_block_id].instructions_length = insturctions_length;

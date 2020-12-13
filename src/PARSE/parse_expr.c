@@ -981,7 +981,7 @@ errorcode_t parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr){
         sizeof_value_expr->id = EXPR_SIZEOF_VALUE;
         sizeof_value_expr->source = source;
 
-        if(parse_expr(ctx, &sizeof_value_expr->value)){
+        if(parse_primary_expr(ctx, &sizeof_value_expr->value)){
             free(sizeof_value_expr);
             return FAILURE;
         }
