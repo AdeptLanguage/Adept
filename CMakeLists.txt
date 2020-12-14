@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(Adept)
 
+option(ADEPT_LINK_LLVM_STATIC "ADEPT_LINK_LLVM_STATIC" OFF)
+
 find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -29,5 +31,11 @@ add_executable(adept
 	src/UTIL/search.c src/UTIL/tmpbuf.c src/UTIL/util.c
 )
 
-target_link_libraries(adept LLVM)
+if(ADEPT_LINK_LLVM_STATIC)
+	execute_process(COMMAND llvm-config --link-static --libs OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE llvm_static_libs)
+	target_link_libraries(adept ${llvm_static_libs})
+else()
+	target_link_libraries(adept LLVM)
+endif()
+
 target_link_libraries(adept m)
