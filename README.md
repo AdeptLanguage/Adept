@@ -9,7 +9,7 @@ A blazing fast language for general purpose programming.
 [Download Adept v2.4 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
 
 ## Resources
-[Adept v2.4 Documentation](https://github.com/IsaacShelton/AdeptLanguage/wiki)
+[Adept v2.4 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
 
 [Adept v2.4 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
 
@@ -17,7 +17,7 @@ A blazing fast language for general purpose programming.
 
 [Adept v2.4 VS-Code Basic Syntax Checking](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
 
-[Adept v2.4 Standard Library](https://github.com/IsaacShelton/AdeptImport)
+[Adept v2.4 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
 
 [Adept v2.4 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
 
