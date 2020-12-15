@@ -21,7 +21,7 @@ A blazing fast language for general purpose programming.
 
 [Adept v2.4 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
 
-[Adept v2.4 Homebrew Tap](https://github.com/AdeptLanguage/tap)
+[Adept v2.4 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
 
 [Adept v2.4 IDE (deprecated)](https://github.com/IsaacShelton/AdeptIDE)
 
