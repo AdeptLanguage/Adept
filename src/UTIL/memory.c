@@ -91,9 +91,9 @@ void memory_free(void* data){
     }
 
     #ifdef TRACK_MEMORY_FILE_AND_LINE
-    printf("INTERNAL ERROR: Tried to free memory that isn't in the global memblocks table! (Address: %p) - %s %d\n", data, file, line);
+    internalerrorprintf("Tried to free memory that isn't in the global memblocks table! (Address: %p) - %s %d\n", data, file, line);
     #else // TRACK_MEMORY_FILE_AND_LINE
-    printf("INTERNAL ERROR: Tried to free memory that isn't in the global memblocks table! (Address: %p)\n", data);
+    internalerrorprintf("Tried to free memory that isn't in the global memblocks table! (Address: %p)\n", data);
     #endif
     return;
 }

@@ -8,15 +8,11 @@
 
 strong_cstr_t ir_value_str(ir_value_t *value){
     if(value == NULL){
-        terminal_set_color(TERMINAL_COLOR_RED);
-        printf("INTERNAL ERROR: The value passed to ir_value_str is NULL, a crash will probably follow...\n");
-        terminal_set_color(TERMINAL_COLOR_DEFAULT);
+        internalerrorprintf("The value passed to ir_value_str is NULL, a crash will probably follow...\n");
     }
 
     if(value->type == NULL){
-        terminal_set_color(TERMINAL_COLOR_RED);
-        printf("INTERNAL ERROR: The value passed to ir_value_str has a type pointer to NULL, a crash will probably follow...\n");
-        terminal_set_color(TERMINAL_COLOR_DEFAULT);
+        internalerrorprintf("The value passed to ir_value_str has a type pointer to NULL, a crash will probably follow...\n");
     }
 
     char *typename = ir_type_str(value->type);

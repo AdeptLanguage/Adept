@@ -223,6 +223,9 @@ void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_f
 
     if(mode == FILENAME_AUTO_EXECUTABLE){
         #if defined(__WIN32__)
+            // Ignore unused variable 'cross_compile_for'
+            (void) cross_compile_for;
+
             // Windows file extensions
             filename_append_if_missing(out_filename, ".exe");
             return;
