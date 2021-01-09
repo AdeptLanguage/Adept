@@ -252,9 +252,9 @@ func main {
 ### Dynamic Memory Allocation
 
 ```
-import 'sys/cstdio.adept'
-import 'sys/cstdlib.adept'
-import 'sys/cstring.adept'
+import cstdio
+import cstdlib
+import cstring
 
 func main(in argc int, in argv **ubyte) int {
     usingMallocAndFree('Will', 'Johnson')
@@ -308,7 +308,7 @@ func main {
 ### Undef Keyword
 
 ```
-import 'sys/cstdio.adept'
+import cstdio
 
 func main(in argc int, in argv **ubyte) int {
     // Will be initialized to 0
@@ -344,7 +344,7 @@ func main {
 ### Primitive Types
 
 ```
-import 'sys/cstdio.adept'
+import cstdio
 
 func main(in argc int, in argv **ubyte) int {
     // 8-bit Types
