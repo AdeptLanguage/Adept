@@ -117,7 +117,7 @@ char *mallocandsprintf(const char *format, ...){
 }
 
 strong_cstr_t string_to_escaped_string(char *array, length_t length, char escaped_quote){
-    length_t put_index = 1;
+    length_t put_index = 0;
     length_t special_characters = 0;
 
     // Count number of special characters (\n, \t, \b, etc.)
@@ -126,10 +126,10 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length, char escape
     }
 
     strong_cstr_t string = malloc(length + special_characters + 3);
-    string[0] = escaped_quote;
+    if(escaped_quote) string[put_index++] = escaped_quote;
     
     for(length_t i = 0; i != length; i++){
-        if(array[i] <= 0x1F || array[i] == '\\' || array[i] == escaped_quote){
+        if(array[i] <= 0x1F || array[i] == '\\' || (array[i] == escaped_quote && escaped_quote)){
             // Escape special character
             string[put_index++] = '\\';
         } else {
@@ -157,10 +157,20 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length, char escape
         }
     }
 
-    string[put_index++] = escaped_quote;
+    if(escaped_quote) string[put_index++] = escaped_quote;
     string[put_index++] = '\0';
     return string;
 }
+
+bool string_needs_escaping(weak_cstr_t string, char escaped_quote){
+    // Count number of special characters (\n, \t, \b, etc.)
+    for(; *string; string++){
+        if(*string <= 0x1F || *string == '\\' || (*string == escaped_quote && escaped_quote)) return true;
+    }
+
+    return false;
+}
+
 
 length_t string_count_character(weak_cstr_t string, length_t length, char character){
     length_t count = 0;

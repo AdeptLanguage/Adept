@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(Adept)
 
-option(ADEPT_LINK_LLVM_STATIC "ADEPT_LINK_LLVM_STATIC" OFF)
+option(ADEPT_LINK_LLVM_STATIC "Link against LLVM using static libs" OFF)
 
 find_package(LLVM REQUIRED CONFIG)
 

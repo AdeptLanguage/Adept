@@ -15,3 +15,4 @@ counter.py
 *.DS_Store
 .vscode/*
 *.o
+build
