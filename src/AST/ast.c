@@ -15,9 +15,9 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->func_aliases = NULL;
     ast->func_aliases_length = 0;
     ast->func_aliases_capacity = 0;
-    ast->structs = malloc(sizeof(ast_struct_t) * 4);
-    ast->structs_length = 0;
-    ast->structs_capacity = 4;
+    ast->composites = malloc(sizeof(ast_composite_t) * 4);
+    ast->composites_length = 0;
+    ast->composites_capacity = 4;
     ast->aliases = malloc(sizeof(ast_alias_t) * 8);
     ast->aliases_length = 0;
     ast->aliases_capacity = 8;
@@ -47,9 +47,9 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->polymorphic_methods = NULL;
     ast->polymorphic_methods_length = 0;
     ast->polymorphic_methods_capacity = 0;
-    ast->polymorphic_structs = NULL;
-    ast->polymorphic_structs_length = 0;
-    ast->polymorphic_structs_capacity = 0;
+    ast->polymorphic_composites = NULL;
+    ast->polymorphic_composites_length = 0;
+    ast->polymorphic_composites_capacity = 0;
 
     // Add relevant standard meta definitions
 
@@ -131,7 +131,7 @@ void ast_free(ast_t *ast){
     ast_free_enums(ast->enums, ast->enums_length);
     ast_free_functions(ast->funcs, ast->funcs_length);
     ast_free_function_aliases(ast->func_aliases, ast->func_aliases_length);
-    ast_free_structs(ast->structs, ast->structs_length);
+    ast_free_composites(ast->composites, ast->composites_length);
     ast_free_globals(ast->globals, ast->globals_length);
     ast_free_constants(ast->constants, ast->constants_length);
     ast_free_aliases(ast->aliases, ast->aliases_length);
@@ -148,7 +148,7 @@ void ast_free(ast_t *ast){
     free(ast->enums);
     free(ast->funcs);
     free(ast->func_aliases);
-    free(ast->structs);
+    free(ast->composites);
     free(ast->constants);
     free(ast->globals);
     free(ast->aliases);
@@ -172,11 +172,13 @@ void ast_free(ast_t *ast){
     free(ast->meta_definitions);
     free(ast->polymorphic_funcs);
     free(ast->polymorphic_methods);
-    for(i = 0; i != ast->polymorphic_structs_length; i++){
-        ast_free_structs((ast_struct_t*) &ast->polymorphic_structs[i], 1);
-        freestrs(ast->polymorphic_structs[i].generics, ast->polymorphic_structs[i].generics_length);
+    for(i = 0; i != ast->polymorphic_composites_length; i++){
+        ast_polymorphic_composite_t *poly_composite = &ast->polymorphic_composites[i];
+
+        ast_free_composites((ast_composite_t*) poly_composite, 1);
+        freestrs(poly_composite->generics, poly_composite->generics_length);
     }
-    free(ast->polymorphic_structs);
+    free(ast->polymorphic_composites);
 }
 
 void ast_free_functions(ast_func_t *functions, length_t functions_length){
@@ -230,15 +232,12 @@ void ast_free_statements_fully(ast_expr_t **statements, length_t length){
     free(statements);
 }
 
-void ast_free_structs(ast_struct_t *structs, length_t structs_length){
-    for(length_t i = 0; i != structs_length; i++){
-        free(structs[i].name);
-        for(length_t f = 0; f != structs[i].field_count; f++){
-            free(structs[i].field_names[f]);
-            ast_type_free(&structs[i].field_types[f]);
-        }
-        free(structs[i].field_names);
-        free(structs[i].field_types);
+void ast_free_composites(ast_composite_t *composites, length_t composites_length){
+    for(length_t i = 0; i != composites_length; i++){
+        ast_composite_t *composite = &composites[i];
+
+        ast_layout_free(&composite->layout);
+        free(composite->name);
     }
 }
 
@@ -268,9 +267,9 @@ void ast_free_globals(ast_global_t *globals, length_t globals_length){
 
 void ast_free_enums(ast_enum_t *enums, length_t enums_length){
     for(length_t i = 0; i != enums_length; i++){
-        ast_enum_t *inum = &enums[i];
-        free(inum->name);
-        free(inum->kinds);
+        ast_enum_t *enum_definition = &enums[i];
+        free(enum_definition->name);
+        free(enum_definition->kinds);
     }
 }
 
@@ -284,12 +283,16 @@ void ast_dump(ast_t *ast, const char *filename){
     }
 
     ast_dump_enums(file, ast->enums, ast->enums_length);
-    ast_dump_structs(file, ast->structs, ast->structs_length);
+    ast_dump_composites(file, ast->composites, ast->composites_length);
     ast_dump_globals(file, ast->globals, ast->globals_length);
     ast_dump_functions(file, ast->funcs, ast->funcs_length);
 
     for(i = 0; i != ast->aliases_length; i++){
-        // Dump stuff within alias
+        ast_alias_t *alias = &ast->aliases[i];
+
+        char *s = ast_type_str(&alias->type);
+        fprintf(file, "alias %s = %s\n", alias->name, s);
+        free(s);
     }
 
     for(i = 0; i != ast->libraries_length; i++){
@@ -388,7 +391,7 @@ void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_le
 void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, length_t indentation){
     for(length_t s = 0; s != length; s++){
         // Print indentation
-        for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+        indent(file, indentation);
 
         // Print statement
         switch(statements[s]->id){
@@ -401,10 +404,10 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                     ast_dump_statements(file, last_minute.statements, last_minute.length, indentation + 1);
 
                     // Indent Remaining
-                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                    indent(file, indentation);
                     fprintf(file, "}\n");
 
-                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                    indent(file, indentation);
                 }
 
                 char *return_value_str = return_value == NULL ? "" : ast_expr_str(return_value);
@@ -517,7 +520,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
 
                 fprintf(file, "%s %s {\n", keyword_name, if_value_str);
                 ast_dump_statements(file, ((ast_expr_if_t*) statements[s])->statements, ((ast_expr_if_t*) statements[s])->statements_length, indentation+1);
-                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                indent(file, indentation);
                 fprintf(file, "}\n");
                 free(if_value_str);
             }
@@ -527,10 +530,10 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 strong_cstr_t if_value_str = ast_expr_str(if_value);
                 fprintf(file, "%s %s {\n", (statements[s]->id == EXPR_IFELSE ? "if" : "unless"), if_value_str);
                 ast_dump_statements(file, ((ast_expr_ifelse_t*) statements[s])->statements, ((ast_expr_ifelse_t*) statements[s])->statements_length, indentation+1);
-                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                indent(file, indentation);
                 fprintf(file, "} else {\n");
                 ast_dump_statements(file, ((ast_expr_ifelse_t*) statements[s])->else_statements, ((ast_expr_ifelse_t*) statements[s])->else_statements_length, indentation+1);
-                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                indent(file, indentation);
                 fprintf(file, "}\n");
                 free(if_value_str);
             }
@@ -542,7 +545,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 strong_cstr_t value_str = ast_expr_str(value);
                 fprintf(file, "repeat %s%s {\n", repeat->is_static ? "static " : "", value_str);
                 ast_dump_statements(file, repeat->statements, repeat->statements_length, indentation + 1);
-                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                indent(file, indentation);
                 fprintf(file, "}\n");
                 free(value_str);
             }
@@ -567,7 +570,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 }
 
                 ast_dump_statements(file, each_in->statements, each_in->statements_length, indentation + 1);
-                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                indent(file, indentation);
                 fprintf(file, "}\n");
             }
             break;
@@ -599,7 +602,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 free(value_str);
 
                 for(length_t c = 0; c != switch_stmt->cases_length; c++){
-                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                    indent(file, indentation);
                     ast_case_t *expr_case = &switch_stmt->cases[c];
                     strong_cstr_t condition_str = ast_expr_str(expr_case->condition);
                     fprintf(file, "case (%s)\n", condition_str);
@@ -608,12 +611,12 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 }
 
                 if(switch_stmt->default_statements_length != 0){
-                    for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                    indent(file, indentation);
                     fprintf(file, "default\n");
                     ast_dump_statements(file, switch_stmt->default_statements, switch_stmt->default_statements_length, indentation + 1);
                 }
 
-                for(length_t ind = 0; ind != indentation; ind++) fprintf(file, "    ");
+                indent(file, indentation);
                 fprintf(file, "}\n");
             }
             break;
@@ -663,49 +666,112 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
     }
 }
 
-void ast_dump_structs(FILE *file, ast_struct_t *structs, length_t structs_length){
-    char *fields_string = malloc(256);
-    length_t fields_string_capacity = 256;
-    fields_string[0] = '\0';
+void ast_dump_composites(FILE *file, ast_composite_t *composites, length_t composites_length){
+    for(length_t i = 0; i != composites_length; i++){
+        ast_dump_composite(file, &composites[i], 0);
+    }
+}
 
-    for(length_t i = 0; i != structs_length; i++){
-        ast_struct_t *structure = &structs[i];
-        length_t fields_string_length = 0;
+void ast_dump_composite(FILE *file, ast_composite_t *composite, length_t additional_indentation){
+    ast_layout_t *layout = &composite->layout;
 
-        for(length_t f = 0; f != structure->field_count; f++){
-            char *typename = ast_type_str(&structure->field_types[f]);
-            length_t typename_length = strlen(typename);
-            length_t name_length = strlen(structure->field_names[f]);
-            length_t append_length = (f + 1 == structure->field_count) ? (name_length + 1 + typename_length) : (name_length + 1 + typename_length + 2);
+    indent(file, additional_indentation);
 
-            while(fields_string_length + append_length + 1 >= fields_string_capacity){
-                fields_string_capacity *= 2;
-                char *new_fields_string = malloc(fields_string_capacity);
-                memcpy(new_fields_string, fields_string, fields_string_length);
-                free(fields_string);
-                fields_string = new_fields_string;
-            }
-
-            memcpy(&fields_string[fields_string_length], structure->field_names[f], name_length);
-            fields_string[fields_string_length + name_length] = ' ';
-            memcpy(&fields_string[fields_string_length + name_length + 1], typename, typename_length);
-
-            // Some unnecessary copying of '\0', but whatever it doesn't really matter cause
-            //     this is just ast dump code
-            if(f + 1 == structure->field_count){
-                fields_string[fields_string_length + name_length + 1 + typename_length] = '\0';
-            } else {
-                memcpy(&fields_string[fields_string_length + name_length + 1 + typename_length], ", ", 3);
-            }
-
-            fields_string_length += append_length;
-            free(typename);
-        }
-
-        fprintf(file, "%s %s (%s)\n", structure->traits & AST_STRUCT_IS_UNION ? "union" : "struct", structure->name, fields_string);
+    // Dump composite traits
+    if(layout->traits & AST_LAYOUT_PACKED){
+        fprintf(file, "packed ");
     }
 
-    free(fields_string);
+    // Dump composite kind
+    switch(layout->kind){
+    case AST_LAYOUT_STRUCT:
+        fprintf(file, "struct ");
+        break;
+    case AST_LAYOUT_UNION:
+        fprintf(file, "union ");
+        break;
+    default:
+        internalerrorprintf("ast_dump_composite() got unknown layout kind\n");
+        return;
+    }
+
+    // Dump generics "<$K, $V>" if the composite is polymorphic
+    if(composite->is_polymorphic){
+        ast_polymorphic_composite_t *poly_composite = (ast_polymorphic_composite_t*) composite;
+        bool printed_first_generic = false;
+
+        fprintf(file, "<");
+
+        for(length_t i = 0; i != poly_composite->generics_length; i++){
+            fprintf(file, "$%s", poly_composite->generics[i]);
+
+            if(printed_first_generic){
+                fprintf(file, ", ");
+            } else {
+                printed_first_generic = true;
+            }
+        }
+
+        fprintf(file, "> ");
+    }
+
+    fprintf(file, "%s (\n", composite->name);
+
+    ast_field_map_t *field_map = &layout->field_map;
+    ast_layout_skeleton_t *skeleton = &layout->skeleton;
+
+    ast_layout_endpoint_t child_endpoint;
+    ast_layout_endpoint_init(&child_endpoint);
+    
+    ast_dump_composite_subfields(file, skeleton, field_map, child_endpoint, additional_indentation + 1);
+    indent(file, additional_indentation);
+    fprintf(file, ")\n");
+}
+
+void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, ast_field_map_t *field_map, ast_layout_endpoint_t parent_endpoint, length_t indentation){
+    bool has_printed_first_field = false;
+
+    for(length_t i = 0; i != skeleton->bones_length; i++){
+        ast_layout_bone_t *bone = &skeleton->bones[i];
+
+        ast_layout_endpoint_t endpoint = parent_endpoint;
+        ast_layout_endpoint_add_index(&endpoint, i);
+
+        indent(file, indentation);
+        if(bone->traits & AST_LAYOUT_BONE_PACKED) fprintf(file, "packed ");
+
+        switch(bone->kind){
+        case AST_LAYOUT_BONE_KIND_TYPE: {
+                char *field_name = ast_field_map_get_name_of_endpoint(field_map, endpoint);
+                assert(field_name);
+
+                char *s = ast_type_str(&bone->type);
+                fprintf(file, "%s %s", field_name, s);
+                free(s);
+            }
+            break;
+        case AST_LAYOUT_BONE_KIND_UNION:
+            fprintf(file, "union (\n");
+            ast_dump_composite_subfields(file, &bone->children, field_map, endpoint, indentation + 1);
+            indent(file, indentation);
+            fprintf(file, ")\n");
+        case AST_LAYOUT_BONE_KIND_STRUCT:
+            fprintf(file, "struct (\n");
+            ast_dump_composite_subfields(file, &bone->children, field_map, endpoint, indentation + 1);
+            indent(file, indentation);
+            fprintf(file, ")\n");
+            break;
+        default:
+            internalerrorprintf("ast_dump_composite() got unknown bone kind\n");
+            return;
+        }
+
+        if(has_printed_first_field){
+            fprintf(file, ",\n");
+        } else {
+            has_printed_first_field = true;
+        }
+    }
 }
 
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length){
@@ -795,26 +861,20 @@ bool ast_func_is_polymorphic(ast_func_t *func){
     return false;
 }
 
-void ast_struct_init(ast_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source){
-    structure->name = name;
-    structure->field_names = names;
-    structure->field_types = types;
-    structure->field_count = length;
-    structure->traits = traits;
-    structure->source = source;
+void ast_composite_init(ast_composite_t *composite, strong_cstr_t name, ast_layout_t layout, source_t source){
+    composite->name = name;
+    composite->layout = layout;
+    composite->source = source;
+    composite->is_polymorphic = false;
 }
 
-void ast_polymorphic_struct_init(ast_polymorphic_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length){
-    structure->name = name;
-    structure->field_names = names;
-    structure->field_types = types;
-    structure->field_count = length;
-    structure->traits = traits;
-    structure->source = source;
-    structure->generics = generics;
-    structure->generics_length = generics_length;
+void ast_polymorphic_composite_init(ast_polymorphic_composite_t *composite, strong_cstr_t name, ast_layout_t layout, source_t source, strong_cstr_t *generics, length_t generics_length){
+    composite->name = name;
+    composite->layout = layout;
+    composite->source = source;
+    composite->is_polymorphic = true;
+    composite->generics = generics;
+    composite->generics_length = generics_length;
 }
 
 void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source){
@@ -824,38 +884,34 @@ void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait
     alias->source = source;
 }
 
-void ast_enum_init(ast_enum_t *inum,  weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
-    inum->name = name;
-    inum->kinds = kinds;
-    inum->length = length;
-    inum->source = source;
+void ast_enum_init(ast_enum_t *enum_definition,  weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
+    enum_definition->name = name;
+    enum_definition->kinds = kinds;
+    enum_definition->length = length;
+    enum_definition->source = source;
 }
 
-ast_struct_t *ast_struct_find_exact(ast_t *ast, const char *name){
+ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name){
     // TODO: Maybe sort and do a binary search or something
-    for(length_t i = 0; i != ast->structs_length; i++){
-        if(strcmp(ast->structs[i].name, name) == 0){
-            return &ast->structs[i];
+    for(length_t i = 0; i != ast->composites_length; i++){
+        if(strcmp(ast->composites[i].name, name) == 0){
+            return &ast->composites[i];
         }
     }
     return NULL;
 }
 
-successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, length_t *out_index){
-    for(length_t i = 0; i != ast_struct->field_count; i++){
-        if(strcmp(ast_struct->field_names[i], name) == 0){
-            *out_index = i;
-            return true;
-        }
-    }
-    return false;
+successful_t ast_composite_find_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path){
+    if(!ast_field_map_find(&composite->layout.field_map, name, out_endpoint)) return FAILURE;
+    if(!ast_layout_get_path(&composite->layout, *out_endpoint, out_path)) return FAILURE;
+    return true;
 }
 
-ast_polymorphic_struct_t *ast_polymorphic_struct_find_exact(ast_t *ast, const char *name){
+ast_polymorphic_composite_t *ast_polymorphic_composite_find_exact(ast_t *ast, const char *name){
     // TODO: Maybe sort and do a binary search or something
-    for(length_t i = 0; i != ast->polymorphic_structs_length; i++){
-        if(strcmp(ast->polymorphic_structs[i].name, name) == 0){
-            return &ast->polymorphic_structs[i];
+    for(length_t i = 0; i != ast->polymorphic_composites_length; i++){
+        if(strcmp(ast->polymorphic_composites[i].name, name) == 0){
+            return &ast->polymorphic_composites[i];
         }
     }
     return NULL;
@@ -907,7 +963,7 @@ maybe_index_t ast_find_constant(ast_constant_t *constants, length_t constants_le
     return -1;
 }
 
-maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char *inum){
+maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char *enum_name){
     // If not found returns -1 else returns index inside array
 
     maybe_index_t first, middle, last, comparison;
@@ -915,7 +971,7 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
 
     while(first <= last){
         middle = (first + last) / 2;
-        comparison = strcmp(enums[middle].name, inum);
+        comparison = strcmp(enums[middle].name, enum_name);
 
         if(comparison == 0) return middle;
         else if(comparison > 0) last = middle - 1;
@@ -953,20 +1009,20 @@ void ast_add_enum(ast_t *ast, strong_cstr_t name, weak_cstr_t *kinds, length_t l
     ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
 }
 
-ast_struct_t *ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source){
-    expand((void**) &ast->structs, sizeof(ast_struct_t), ast->structs_length, &ast->structs_capacity, 1, 4);
-    ast_struct_t *structure = &ast->structs[ast->structs_length++];
-    ast_struct_init(structure, name, names, types, length, traits, source);
-    return structure;
+ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source){
+    expand((void**) &ast->composites, sizeof(ast_composite_t), ast->composites_length, &ast->composites_capacity, 1, 4);
+
+    ast_composite_t *composite = &ast->composites[ast->composites_length++];
+    ast_composite_init(composite, name, layout, source);
+    return composite;
 }
 
-ast_polymorphic_struct_t *ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length){
-    expand((void**) &ast->polymorphic_structs, sizeof(ast_polymorphic_struct_t), ast->polymorphic_structs_length, &ast->polymorphic_structs_capacity, 1, 4);
-    ast_polymorphic_struct_t *poly_structure = &ast->polymorphic_structs[ast->polymorphic_structs_length++];
-    ast_polymorphic_struct_init(poly_structure, name, names, types, length, traits, source, generics, generics_length);
-    return poly_structure;
+ast_polymorphic_composite_t *ast_add_polymorphic_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, strong_cstr_t *generics, length_t generics_length){
+    expand((void**) &ast->polymorphic_composites, sizeof(ast_polymorphic_composite_t), ast->polymorphic_composites_length, &ast->polymorphic_composites_capacity, 1, 4);
+
+    ast_polymorphic_composite_t *poly_composite = &ast->polymorphic_composites[ast->polymorphic_composites_length++];
+    ast_polymorphic_composite_init(poly_composite, name, layout, source, generics, generics_length);
+    return poly_composite;
 }
 
 void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *initial_value, trait_t traits, source_t source){
@@ -1006,15 +1062,18 @@ ast_type_t* ast_get_usize(ast_t *ast){
 }
 
 void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
+    ast_layout_t layout;
+
     if(sizeof(va_list) <= 8){
         // Small va_list
-        strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 1);
+        strong_cstr_t names[1];
         names[0] = strclone("_opaque");
 
-        ast_type_t *types = malloc(sizeof(ast_type_t) * 1);
+        ast_type_t types[1];
         ast_type_make_base(&types[0], strclone("ptr"));
 
-        ast_add_struct(ast, strclone("va_list"), names, types, 1, TRAIT_NONE, NULL_SOURCE);
+        ast_layout_init_with_struct_fields(&layout, names, types, 1);
+        ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE);
     } else {
         // Larger Intel x86_64 va_list
         
@@ -1023,19 +1082,20 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
             compiler_warnf(compiler, NULL_SOURCE, "Assuming Intel x86_64 va_list\n");
         }
 
-        strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 4);
+        strong_cstr_t names[4];
         names[0] = strclone("_opaque1");
         names[1] = strclone("_opaque2");
         names[2] = strclone("_opaque3");
         names[3] = strclone("_opaque4");
 
-        ast_type_t *types = malloc(sizeof(ast_type_t) * 4);
+        ast_type_t types[4];
         ast_type_make_base(&types[0], strclone("int"));
         ast_type_make_base(&types[1], strclone("int"));
         ast_type_make_base(&types[2], strclone("ptr"));
         ast_type_make_base(&types[3], strclone("ptr"));
         
-        ast_add_struct(ast, strclone("va_list"), names, types, 4, TRAIT_NONE, NULL_SOURCE);
+        ast_layout_init_with_struct_fields(&layout, names, types, 1);
+        ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE);
     }
 }
 

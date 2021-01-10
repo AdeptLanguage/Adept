@@ -915,16 +915,19 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             weak_cstr_t struct_name = ((ast_elem_base_t*) concrete_elem)->base;
 
             // Attempt to call __defer__ on members
-            ast_struct_t *ast_struct = object_struct_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
+            ast_composite_t *composite = object_composite_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
 
             // Don't bother with structs that don't exist
-            if(ast_struct == NULL) return FAILURE;
+            if(composite == NULL) return FAILURE;
 
-            // Don't handle children for union types
-            if(ast_struct->traits & AST_STRUCT_IS_UNION) return SUCCESS;
+            // Don't handle children for complex composite types
+            if(!ast_layout_is_simple_struct(&composite->layout)) return SUCCESS;
 
-            for(length_t f = 0; f != ast_struct->field_count; f++){
-                ast_type_t *ast_field_type = &ast_struct->field_types[f];
+            ast_layout_skeleton_t *skeleton = &composite->layout.skeleton;
+            length_t field_count = ast_simple_field_map_get_count(&composite->layout.field_map);
+
+            for(length_t f = 0; f != field_count; f++){
+                ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
 
                 // Capture snapshot for if we need to backtrack
                 ir_pool_snapshot_capture(builder->pool, &snapshot);
@@ -960,13 +963,13 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             weak_cstr_t template_name = generic_base->name;
 
             // Attempt to call __defer__ on members
-            ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, builder->object, builder->tmpbuf, template_name, NULL);
+            ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, builder->object, builder->tmpbuf, template_name, NULL);
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
 
-            // Don't handle children for union types
-            if(template->traits & AST_STRUCT_IS_UNION) return SUCCESS;
+            // Don't handle children for complex composite types
+            if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
 
             // Substitution Catalog
             ast_poly_catalog_t catalog;
@@ -982,8 +985,11 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
             }
 
-            for(length_t f = 0; f != template->field_count; f++){
-                ast_type_t *ast_unresolved_field_type = &template->field_types[f];
+            ast_layout_skeleton_t *skeleton = &template->layout.skeleton;
+            length_t field_count = ast_simple_field_map_get_count(&template->layout.field_map);
+
+            for(length_t f = 0; f != field_count; f++){
+                ast_type_t *ast_unresolved_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
                 ast_type_t ast_field_type;
 
                 if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
@@ -1231,16 +1237,19 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             weak_cstr_t struct_name = ((ast_elem_base_t*) first_elem)->base;
 
             // Attempt to call __pass__ on members
-            ast_struct_t *ast_struct = object_struct_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
+            ast_composite_t *composite = object_composite_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
 
             // Don't bother with structs that don't exist
-            if(ast_struct == NULL) return FAILURE;
+            if(composite == NULL) return FAILURE;
 
-            // Don't handle children for union types
-            if(ast_struct->traits & AST_STRUCT_IS_UNION) return SUCCESS;
+            // Don't handle children for complex composite types
+            if(!ast_layout_is_simple_struct(&composite->layout)) return SUCCESS;
 
-            for(length_t f = 0; f != ast_struct->field_count; f++){
-                ast_type_t *ast_field_type = &ast_struct->field_types[f];
+            ast_layout_skeleton_t *skeleton = &composite->layout.skeleton;
+            length_t field_count = ast_simple_field_map_get_count(&composite->layout.field_map);
+
+            for(length_t f = 0; f != field_count; f++){
+                ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
 
                 // Capture snapshot for if we need to backtrack
                 ir_pool_snapshot_capture(builder->pool, &snapshot);
@@ -1281,13 +1290,13 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             weak_cstr_t template_name = generic_base->name;
 
             // Attempt to call __pass__ on members
-            ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, builder->object, builder->tmpbuf, template_name, NULL);
+            ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, builder->object, builder->tmpbuf, template_name, NULL);
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
 
-            // Don't handle children for union types
-            if(template->traits & AST_STRUCT_IS_UNION) return SUCCESS;
+            // Don't handle children for complex composite types
+            if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
 
             // Substitution Catalog
             ast_poly_catalog_t catalog;
@@ -1303,8 +1312,11 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
             }
 
-            for(length_t f = 0; f != template->field_count; f++){
-                ast_type_t *ast_unresolved_field_type = &template->field_types[f];
+            ast_layout_skeleton_t *skeleton = &template->layout.skeleton;
+            length_t field_count = ast_simple_field_map_get_count(&template->layout.field_map);
+
+            for(length_t f = 0; f != field_count; f++){
+                ast_type_t *ast_unresolved_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
                 ast_type_t ast_field_type;
 
                 if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
@@ -1723,27 +1735,27 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
     if(is_base_ptr){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
 
-        ast_struct_t *ast_struct = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        ast_composite_t *composite = object_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
 
         // Require structure to exist
-        if(ast_struct == NULL) return FAILURE;
+        if(composite == NULL) return FAILURE;
 
-        // Don't handle children for union types
-        if(ast_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
+        // Don't handle children for complex composite types
+        if(!ast_layout_is_simple_struct(&composite->layout)) return SUCCESS;
 
     } else if(is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
         weak_cstr_t struct_name = generic_base->name;
-        ast_polymorphic_struct_t *polymorphic_struct = object_polymorphic_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
 
         // Require generic structure to exist
-        if(polymorphic_struct == NULL) return FAILURE;
+        if(template == NULL) return FAILURE;
 
         // Require generics count to match
-        if(polymorphic_struct->generics_length != generic_base->generics_length) return FAILURE;
+        if(template->generics_length != generic_base->generics_length) return FAILURE;
 
-        // Don't handle children for union types
-        if(polymorphic_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
+        // Don't handle children for complex composite types
+        if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
     }
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
@@ -1811,27 +1823,28 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
     if(is_base){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[0])->base;
 
-        ast_struct_t *ast_struct = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        ast_composite_t *composite = object_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
 
         // Require structure to exist
-        if(ast_struct == NULL) return FAILURE;
+        if(composite == NULL) return FAILURE;
 
-        // Don't handle children for union types
-        if(ast_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
+        // Don't handle children for complex composite types
+        if(!ast_layout_is_simple_struct(&composite->layout)) return SUCCESS;
 
     } else if(is_generic_base){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[0];
         weak_cstr_t struct_name = generic_base->name;
-        ast_polymorphic_struct_t *polymorphic_struct = object_polymorphic_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        
+        ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
 
         // Require generic structure to exist
-        if(polymorphic_struct == NULL) return FAILURE;
+        if(template == NULL) return FAILURE;
 
         // Require generics count to match
-        if(polymorphic_struct->generics_length != generic_base->generics_length) return FAILURE;
+        if(template->generics_length != generic_base->generics_length) return FAILURE;
 
-        // Don't handle children for union types
-        if(polymorphic_struct->traits & AST_STRUCT_IS_UNION) return FAILURE;
+        // Don't handle children for complex composite types
+        if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
     }
 
     // Create function for autogen'd __pass__ function

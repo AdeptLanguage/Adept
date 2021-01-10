@@ -179,7 +179,8 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     }
 
                     // Find the target structure
-                    ast_struct_t *target = object_struct_find(NULL, object, &compiler->tmp, ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
+                    ast_composite_t *target = object_composite_find(NULL, object, &compiler->tmp, ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
+
                     if(target == NULL){
                         compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
                         return FAILURE;
@@ -192,7 +193,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                 break;
             case AST_ELEM_GENERIC_BASE: {
                     ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
-                    ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
+                    ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
                     
                     if(template == NULL){
                         compiler_panicf(compiler, this_type->source, "Undeclared polymorphic struct '%s'", generic_base->name);
@@ -479,13 +480,13 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                     /* struct AnyStructType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
                     /* struct AnyUnionType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, member_names **ubyte) */
 
-                    ir_type_extra_composite_t *composite = (ir_type_extra_composite_t*) type_table->entries[i].ir_type->extra;
+                    ir_type_extra_composite_t *extra = (ir_type_extra_composite_t*) type_table->entries[i].ir_type->extra;
                     initializer_members_length = type_type_kind == TYPE_KIND_STRUCTURE ? 9 : 7;
                     initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * initializer_members_length);
 
-                    ir_value_t **composite_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length);
-                    ir_value_t **composite_offsets = type_type_kind == TYPE_KIND_STRUCTURE ? ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length) : NULL;
-                    ir_value_t **composite_member_names = ir_pool_alloc(pool, sizeof(ir_value_t*) * composite->subtypes_length);
+                    ir_value_t **members = ir_pool_alloc(pool, sizeof(ir_value_t*) * extra->subtypes_length);
+                    ir_value_t **offsets = type_type_kind == TYPE_KIND_STRUCTURE ? ir_pool_alloc(pool, sizeof(ir_value_t*) * extra->subtypes_length) : NULL;
+                    ir_value_t **member_names = ir_pool_alloc(pool, sizeof(ir_value_t*) * extra->subtypes_length);
 
                     ast_elem_t *elem = type_table->entries[i].ast_type.elements[0];
 
@@ -493,10 +494,16 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
                         
                         // Find polymorphic struct
-                        ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
+                        ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
+
+                        // TODO: UNIMPLEMENTED: Complex composites are not supported in RTTI yet
+                        if(!(ast_layout_is_simple_struct(&template->layout) || ast_layout_is_simple_union(&template->layout))){
+                            internalwarningprintf("RTTI for complex composite %s will be left blank proper serialization is implementation\n", template->name);
+                            continue;
+                        }
                         
                         if(template == NULL){
-                            internalerrorprintf("Failed to find polymorphic struct '%s' that should exist when generating runtime type table!\n", generic_base->name);
+                            internalerrorprintf("Failed to find polymorphic composite '%s' that should exist when generating runtime type table!\n", generic_base->name);
                             return FAILURE;
                         }
 
@@ -505,7 +512,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_poly_catalog_init(&catalog);
 
                         if(template->generics_length != generic_base->generics_length){
-                            internalerrorprintf("Polymorphic struct '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
+                            internalerrorprintf("Polymorphic composite '%s' type parameter length mismatch when generating runtime type table!\n", generic_base->name);
                             ast_poly_catalog_free(&catalog);
                             return FAILURE;
                         }
@@ -521,11 +528,14 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         }
 
                         // Generate meta data
-                        for(length_t s = 0; s != composite->subtypes_length; s++){
+                        for(length_t s = 0; s != extra->subtypes_length; s++){
                             ast_type_t member_ast_type;
 
-                            // DANGEROUS: WARNING: Accessing 'template->field_types' based on index going to 'composite->subtypes_length'
-                            if(resolve_type_polymorphics(compiler, type_table, &catalog, &template->field_types[s], &member_ast_type)){
+                            // DANGEROUS: WARNING: Accessing field based on index going to 'composite->subtypes_length'
+                            // DANGEROUS: Assuming non-NULL return value
+                            ast_type_t *field_type = ast_layout_skeleton_get_type_at_index(&template->layout.skeleton, s);
+
+                            if(resolve_type_polymorphics(compiler, type_table, &catalog, field_type, &member_ast_type)){
                                 ast_poly_catalog_free(&catalog);
                                 return FAILURE;
                             }
@@ -535,9 +545,9 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                             free(member_type_name);
 
                             if(subtype_index == -1){
-                                composite_members[s] = build_null_pointer_of_type(pool, any_type_ptr_type); // members[s]
+                                members[s] = build_null_pointer_of_type(pool, any_type_ptr_type); // members[s]
                             } else {
-                                composite_members[s] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type); // members[s]
+                                members[s] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type); // members[s]
                             }
 
                             ir_type_t *struct_ir_type;
@@ -548,8 +558,8 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                                 return FAILURE;
                             }
 
-                            if(composite_offsets) composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
-                            composite_member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, template->field_names[s]);
+                            if(offsets) offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
+                            member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, ast_simple_field_map_get_name_at_index(&template->layout.field_map, s));
                             ast_type_free(&member_ast_type);
                         }
 
@@ -557,27 +567,37 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
                         ast_poly_catalog_free(&catalog);
                     } else if(elem->id == AST_ELEM_BASE){
                         const char *struct_name = ((ast_elem_base_t*) elem)->base;
-                        ast_struct_t *structure = object_struct_find(NULL, object, &compiler->tmp, struct_name, NULL);
+                        ast_composite_t *composite = object_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
 
-                        if(structure == NULL){
-                            internalerrorprintf("Failed to find struct '%s' that should exist when generating runtime type table!\n", struct_name);
+                        if(composite == NULL){
+                            internalerrorprintf("Failed to find composite '%s' that should exist when generating runtime type table!\n", struct_name);
                             return FAILURE;
                         }
 
-                        if(structure->field_count != composite->subtypes_length){
+                        // TODO: UNIMPLEMENTED: Complex composites are not supported in RTTI yet
+                        if(!(ast_layout_is_simple_struct(&composite->layout) || ast_layout_is_simple_union(&composite->layout))){
+                            internalwarningprintf("RTTI for complex composite %s will be left blank proper serialization is implementation\n", composite->name);
+                            continue;
+                        }
+
+                        length_t field_count = ast_simple_field_map_get_count(&composite->layout.field_map);
+
+                        if(field_count != extra->subtypes_length){
                             internalerrorprintf("Mismatching member count of IR as AST types for struct '%s' when generating runtime type table!\n", struct_name);
                             return FAILURE;
                         }
 
-                        for(length_t s = 0; s != composite->subtypes_length; s++){
-                            char *member_type_name = ast_type_str(&structure->field_types[s]);
+                        for(length_t s = 0; s != extra->subtypes_length; s++){
+                            ast_type_t *field_type = ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, s);
+
+                            char *member_type_name = ast_type_str(field_type);
                             maybe_index_t subtype_index = type_table_find(type_table, member_type_name);
                             free(member_type_name);
 
                             if(subtype_index == -1){
-                                composite_members[s] = build_null_pointer_of_type(pool, any_type_ptr_type); // members[s]
+                                members[s] = build_null_pointer_of_type(pool, any_type_ptr_type); // members[s]
                             } else {
-                                composite_members[s] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type); // members[s]
+                                members[s] = build_const_bitcast(pool, array_values[subtype_index], any_type_ptr_type); // members[s]
                             }
 
                             // SPEED: TODO: Make 'struct_ast_type' not dynamically allocated
@@ -593,29 +613,29 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                             ast_type_free(&struct_ast_type);
 
-                            if(composite_offsets) composite_offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
-                            composite_member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, structure->field_names[s]);
+                            if(offsets) offsets[s] = build_offsetof_ex(pool, usize_type, struct_ir_type, s);
+                            member_names[s] = build_literal_cstr_ex(pool, &ir_module->type_map, ast_simple_field_map_get_name_at_index(&composite->layout.field_map, s));
                         }
                     } else {
                         internalerrorprintf("Unknown AST type element for TYPE_KIND_STRUCTURE when generating runtime type information!\n");
                         return FAILURE;
                     }
 
-                    ir_value_t *members_array = build_static_array(pool, any_type_ptr_type, composite_members, composite->subtypes_length);
-                    ir_value_t *member_names_array = build_static_array(pool, ubyte_ptr_type, composite_member_names, composite->subtypes_length);
+                    ir_value_t *members_array = build_static_array(pool, any_type_ptr_type, members, extra->subtypes_length);
+                    ir_value_t *member_names_array = build_static_array(pool, ubyte_ptr_type, member_names, extra->subtypes_length);
                     
                     if(type_type_kind == TYPE_KIND_STRUCTURE){
-                        ir_value_t *offsets_array = build_static_array(pool, usize_type, composite_offsets, composite->subtypes_length);
+                        ir_value_t *offsets_array = build_static_array(pool, usize_type, offsets, extra->subtypes_length);
 
                         initializer_members[4] = members_array;
-                        initializer_members[5] = build_literal_usize(pool, composite->subtypes_length); // length
+                        initializer_members[5] = build_literal_usize(pool, extra->subtypes_length); // length
                         initializer_members[6] = offsets_array;
                         initializer_members[7] = member_names_array;
-                        initializer_members[8] = build_bool(pool, composite->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
+                        initializer_members[8] = build_bool(pool, extra->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
                         initializer_type = any_struct_type_type;
                     } else {
                         initializer_members[4] = members_array;
-                        initializer_members[5] = build_literal_usize(pool, composite->subtypes_length); // length
+                        initializer_members[5] = build_literal_usize(pool, extra->subtypes_length); // length
                         initializer_members[6] = member_names_array;
                         initializer_type = any_union_type_type;
                     }

@@ -16,6 +16,7 @@ extern "C" {
 #include "UTIL/ground.h"
 #include "AST/ast_type.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
 #include "AST/meta_directives.h"
 #include "BRIDGE/type_table.h"
 
@@ -71,38 +72,31 @@ typedef struct {
 // Additional AST function traits for builtin uses
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
 
-// ---------------- ast_struct_t, ast_union_t ----------------
-// A structure within the root AST
+// ---------------- ast_composite_t ----------------
+// A structure/union within the root AST
 typedef struct {
     strong_cstr_t name;
-    strong_cstr_t *field_names;
-    ast_type_t *field_types;
-    length_t field_count;
-    trait_t traits;
+    ast_layout_t layout;
     source_t source;
-} ast_struct_t, ast_union_t;
+    bool is_polymorphic;
+} ast_composite_t;
 
 // Possible AST structure traits
-#define AST_STRUCT_PACKED      TRAIT_1
-#define AST_STRUCT_POLYMORPHIC TRAIT_2
-#define AST_STRUCT_IS_UNION    TRAIT_3
+#define AST_STRUCT_POLYMORPHIC  TRAIT_1
+#define AST_UNION_POLYMORPHIC   AST_STRUCT_POLYMORPHIC
 
-#define AST_UNION_POLYMORPHIC  AST_STRUCT_POLYMORPHIC 
-
-// ---------------- ast_polymorphic_struct_t ----------------
-// A polymorphic structure
-// NOTE: Guaranteed to overlap with 'ast_struct_t'
+// ---------------- ast_polymorphic_composite_t ----------------
+// A polymorphic composite
+// NOTE: Guaranteed to overlap with 'ast_composite_t'
 typedef struct {
     strong_cstr_t name;
-    strong_cstr_t *field_names;
-    ast_type_t *field_types;
-    length_t field_count;
-    trait_t traits;
+    ast_layout_t layout;
     source_t source;
+    bool is_polymorphic;
     // ---------------------------
     strong_cstr_t *generics;
     length_t generics_length;
-} ast_polymorphic_struct_t;
+} ast_polymorphic_composite_t;
 
 // ---------------- ast_alias_t ----------------
 // A type alias within the root AST
@@ -166,9 +160,9 @@ typedef struct {
     ast_func_alias_t *func_aliases;
     length_t func_aliases_length;
     length_t func_aliases_capacity;
-    ast_struct_t *structs;
-    length_t structs_length;
-    length_t structs_capacity;
+    ast_composite_t *composites;
+    length_t composites_length;
+    length_t composites_capacity;
     ast_alias_t *aliases;
     length_t aliases_length;
     length_t aliases_capacity;
@@ -205,10 +199,10 @@ typedef struct {
     length_t polymorphic_methods_length;
     length_t polymorphic_methods_capacity;
 
-    // Polymorphic structures
-    ast_polymorphic_struct_t *polymorphic_structs;
-    length_t polymorphic_structs_length;
-    length_t polymorphic_structs_capacity;
+    // Polymorphic composites
+    ast_polymorphic_composite_t *polymorphic_composites;
+    length_t polymorphic_composites_length;
+    length_t polymorphic_composites_capacity;
 } ast_t;
 
 #define LIBRARY_KIND_NONE           0x00
@@ -229,7 +223,7 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length);
 void ast_free_function_aliases(ast_func_alias_t *faliases, length_t length);
 void ast_free_statements(ast_expr_t **statements, length_t length);
 void ast_free_statements_fully(ast_expr_t **statements, length_t length);
-void ast_free_structs(ast_struct_t *structs, length_t structs_length);
+void ast_free_composites(ast_composite_t *composites, length_t composites_length);
 void ast_free_constants(ast_constant_t *constants, length_t constants_length);
 void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length);
 void ast_free_globals(ast_global_t *globals, length_t globals_length);
@@ -244,7 +238,9 @@ void ast_dump(ast_t *ast, const char *filename);
 // Writes a specific part of an AST to a file
 void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_length);
 void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, length_t indentation);
-void ast_dump_structs(FILE *file, ast_struct_t *structs, length_t structs_length);
+void ast_dump_composites(FILE *file, ast_composite_t *composites, length_t composites_length);
+void ast_dump_composite(FILE *file, ast_composite_t *composite, length_t additional_indentation);
+void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, ast_field_map_t *field_map, ast_layout_endpoint_t parent_endpoint, length_t indentation);
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length);
 void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
 
@@ -257,15 +253,14 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
 // Returns whether an AST function has polymorphic arguments
 bool ast_func_is_polymorphic(ast_func_t *func);
 
-// ---------------- ast_struct_init ----------------
-// Initializes an AST struct
-void ast_struct_init(ast_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source);
+// ---------------- ast_composite_init ----------------
+// Initializes an AST composite
+void ast_composite_init(ast_composite_t *composite, strong_cstr_t name, ast_layout_t layout, source_t source);
 
-// ---------------- ast_polymorphic_struct_init ----------------
-// Initializes a polymorphic AST struct
-void ast_polymorphic_struct_init(ast_polymorphic_struct_t *structure, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length);
+// ---------------- ast_polymorphic_composite_init ----------------
+// Initializes a polymorphic AST composite
+void ast_polymorphic_composite_init(ast_polymorphic_composite_t *composite, strong_cstr_t name, ast_layout_t layout,
+    source_t source, strong_cstr_t *generics, length_t generics_length);
 
 // ---------------- ast_alias_init ----------------
 // Initializes an AST alias
@@ -273,21 +268,21 @@ void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait
 
 // ---------------- ast_enum_init ----------------
 // Initializes an AST enum
-void ast_enum_init(ast_enum_t *inum, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
+void ast_enum_init(ast_enum_t *enum_definition, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
 
-// ---------------- ast_struct_find_exact ----------------
-// Finds a structure by its exact name
-// For more flexible struct finding, use 'object_struct_find()'
-ast_struct_t *ast_struct_find_exact(ast_t *ast, const char *name);
+// ---------------- ast_composite_find_exact ----------------
+// Finds a composite by its exact name
+// For more flexible composite finding, use 'object_composite_find()'
+ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name);
 
-// ---------------- ast_polymorphic_struct_find_exact ----------------
-// Finds a polymorphic structure by its exact name
-// For more flexible struct finding, use 'object_polymorphic_struct_find()'
-ast_polymorphic_struct_t *ast_polymorphic_struct_find_exact(ast_t *ast, const char *name);
+// ---------------- ast_polymorphic_composite_find_exact ----------------
+// Finds a polymorphic composite by its exact name
+// For more flexible composite finding, use 'object_polymorphic_composite_find()'
+ast_polymorphic_composite_t *ast_polymorphic_composite_find_exact(ast_t *ast, const char *name);
 
-// ---------------- ast_struct_find_field ----------------
-// Finds a field by name within a structure
-successful_t ast_struct_find_field(ast_struct_t *ast_struct, const char *name, length_t *out_index);
+// ---------------- ast_composite_find_field ----------------
+// Finds a field by name within a composite
+successful_t ast_composite_find_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path);
 
 // ---------------- ast_enum_find_kind ----------------
 // Finds a kind by name within an enum
@@ -303,7 +298,7 @@ maybe_index_t ast_find_constant(ast_constant_t *constants, length_t constants_le
 
 // ---------------- ast_find_enum ----------------
 // Finds a enum expression by name
-maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char *inum);
+maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char *enum_name);
 
 // ---------------- ast_find_global ----------------
 // Finds a global variable by name
@@ -314,15 +309,14 @@ maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, we
 // Adds an enum to the global scope of an AST
 void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
 
-// ---------------- ast_add_struct ----------------
-// Adds a struct to the global scope of an AST
-ast_struct_t *ast_add_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source);
+// ---------------- ast_add_composite ----------------
+// Adds a composite to the global scope of an AST
+ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source);
 
-// ---------------- ast_add_polymorphic_struct ----------------
-// Adds a polymorphic struct to the global scope of an AST
-ast_polymorphic_struct_t *ast_add_polymorphic_struct(ast_t *ast, strong_cstr_t name, strong_cstr_t *names, ast_type_t *types,
-        length_t length, trait_t traits, source_t source, strong_cstr_t *generics, length_t generics_length);
+// ---------------- ast_add_polymorphic_composite ----------------
+// Adds a polymorphic composite to the global scope of an AST
+ast_polymorphic_composite_t *ast_add_polymorphic_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout,
+    source_t source, strong_cstr_t *generics, length_t generics_length);
 
 // ---------------- ast_add_global ----------------
 // Adds a global variable to the global scope of an AST

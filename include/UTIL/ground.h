@@ -12,7 +12,7 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
-#define ADEPT_VERSION_STRING "2.4"
+#define ADEPT_VERSION_STRING "2.5"
 
 #include <stdio.h>
 #include <assert.h>

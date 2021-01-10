@@ -17,7 +17,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     token_t *tokens = ctx->tokenlist->tokens;
     maybe_null_weak_cstr_t read = NULL;
 
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot pass pragma directives within struct domain");
         return FAILURE;
     }
@@ -95,9 +95,9 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
                 if(compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read))
                     return FAILURE;
             }
-        } else if(strcmp(read, "2.2") != 0 && strcmp(read, "2.3") != 0 && strcmp(read, "2.4") != 0){
+        } else if(strcmp(read, "2.2") != 0 && strcmp(read, "2.3") != 0 && strcmp(read, "2.4") != 0 && strcmp(read, "2.5") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
-            puts("\nSupported Versions: '2.4', '2.3', '2.2', '2.1', '2.0'");
+            puts("\nSupported Versions: '2.5', '2.4', '2.3', '2.2', '2.1', '2.0'");
             return FAILURE;
         }
 

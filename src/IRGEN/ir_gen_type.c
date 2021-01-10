@@ -25,7 +25,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
 
     ir_type_t *tmp_type;
     ir_type_map_t *type_map = &module->type_map;
-    type_map->mappings_length = ast->structs_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
+    type_map->mappings_length = ast->composites_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
     ir_type_mapping_t *mappings = malloc(sizeof(ir_type_mapping_t) * type_map->mappings_length);
 
     mappings[0].name = "byte";
@@ -65,23 +65,23 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     mappings[15].name = "void";
     mappings[15].type.kind = TYPE_KIND_VOID;
 
-    length_t beginning_of_structs = IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
+    length_t beginning_of_composites = IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
     length_t beginning_of_enums = type_map->mappings_length - ast->enums_length;
 
-    for(length_t i = beginning_of_structs; i != beginning_of_enums; i++){
-        // Create skeletons for struct type maps
-        ast_struct_t *structure = &ast->structs[i - IR_GEN_BASE_TYPE_MAPPINGS_COUNT];
-        mappings[i].name = structure->name; // Will live on
+    for(length_t i = beginning_of_composites; i != beginning_of_enums; i++){
+        // Create skeletons for composite type maps
+        ast_composite_t *composite = &ast->composites[i - IR_GEN_BASE_TYPE_MAPPINGS_COUNT];
+        mappings[i].name = composite->name; // Will live on
         mappings[i].type.kind = TYPE_KIND_STRUCTURE;
 
-        // Temporary use mappings[i].type.extra as a pointer to reference the ast_struct_t used
+        // Temporary use mappings[i].type.extra as a pointer to reference the ast_composite_t used
         // It will later be changed to the required composite data after this mappings have been sorted
-        mappings[i].type.extra = structure;
+        mappings[i].type.extra = composite;
     }
 
     for(length_t i = beginning_of_enums; i != type_map->mappings_length; i++){
-        ast_enum_t *inum = &ast->enums[i - beginning_of_enums];
-        mappings[i].name = inum->name;
+        ast_enum_t *enum_definition = &ast->enums[i - beginning_of_enums];
+        mappings[i].name = enum_definition->name;
         mappings[i].type.kind = TYPE_KIND_U64;
     }
 
@@ -96,9 +96,9 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
             object_panicf_plain(object, "Multiple definitions of type '%s'", name);
 
             // Find every struct with that name
-            for(length_t s = 0; s != ast->structs_length; s++){
-                if(strcmp(ast->structs[s].name, name) == 0)
-                    compiler_panic(compiler, ast->structs[s].source, "Here");
+            for(length_t s = 0; s != ast->composites_length; s++){
+                if(strcmp(ast->composites[s].name, name) == 0)
+                    compiler_panic(compiler, ast->composites[s].source, "Here");
             }
 
             // Find every enum with that name
@@ -112,21 +112,22 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     }
 
     for(length_t i = 0; i != type_map->mappings_length; i++){
-        // Fill in bodies for struct type maps
+        // Fill in bodies for struct/composite type maps
         if(mappings[i].type.kind != TYPE_KIND_STRUCTURE) continue;
 
-        // NOTE: mappings[i].type.extra is used temporary to store the ast_struct_t* used
-        ast_struct_t *structure = mappings[i].type.extra;
+        // NOTE: mappings[i].type.extra is used temporary to store the ast_composite_t* used
+        ast_composite_t *composite = mappings[i].type.extra;
 
         // Special enforcement of type 'String'
-        if(strcmp(structure->name, "String") == 0){
-            if(structure->traits != TRAIT_NONE
-            || structure->field_count != 4
-            || !ast_type_is_base_ptr_of(&structure->field_types[0], "ubyte")
-            || !ast_type_is_base_of(&structure->field_types[1], "usize")
-            || !ast_type_is_base_of(&structure->field_types[2], "usize")
-            || !ast_type_is_base_of(&structure->field_types[3], "StringOwnership")){
-                compiler_panic(compiler, structure->source, "Invalid definition of built-in type 'String'");
+        if(strcmp(composite->name, "String") == 0){
+            if(composite->layout.traits != TRAIT_NONE
+            || !ast_layout_is_simple_struct(&composite->layout)
+            || ast_simple_field_map_get_count(&composite->layout.field_map) != 4
+            || !ast_type_is_base_ptr_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 0), "ubyte")
+            || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 1), "usize")
+            || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 2), "usize")
+            || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 3), "StringOwnership")){
+                compiler_panic(compiler, composite->source, "Invalid definition of built-in type 'String'");
                 printf("\nShould be declared as:\n\nstruct String (\n    array *ubyte,   length usize,\n    capacity usize, ownership StringOwnership\n)\n");
                 return FAILURE;
             }
@@ -134,20 +135,12 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
             module->common.ir_string_struct = &mappings[i].type;
         }
 
-        // Transform union structures into actual union types
-        if(structure->traits & AST_STRUCT_IS_UNION) mappings[i].type.kind = TYPE_KIND_UNION;
+        ast_layout_bone_t layout_as_bone = ast_layout_as_bone(&composite->layout);
+        ir_type_t *ir_type_of_composite = ast_layout_bone_to_ir_type(compiler, object, &layout_as_bone, NULL);
+        if(ir_type_of_composite == NULL) return FAILURE;
 
-        // NOTE: This composite information will replace mappings[i].type.extra
-        ir_type_extra_composite_t *composite = ir_pool_alloc(pool, sizeof(ir_type_extra_composite_t));
-        composite->subtypes_length = structure->field_count;
-        composite->subtypes = ir_pool_alloc(pool, sizeof(ir_type_t*) * structure->field_count);
-        composite->traits = structure->traits & AST_STRUCT_PACKED ? TYPE_KIND_COMPOSITE_PACKED : TRAIT_NONE;
-        mappings[i].type.extra = composite;
-
-        // Resolve composite subtypes
-        for(length_t s = 0; s != structure->field_count; s++){
-            if(ir_gen_resolve_type(compiler, object, &structure->field_types[s], &composite->subtypes[s])) return FAILURE;
-        }
+        // Do memory copy of IR type, so that pointer to the original remain the same
+        mappings[i].type = *ir_type_of_composite;
     }
 
     return SUCCESS;
@@ -208,25 +201,20 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
         break;
     case AST_ELEM_GENERIC_BASE: {
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
-            ir_type_t *created_type = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t));
-            ir_type_extra_composite_t *extra = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_extra_composite_t));
-            created_type->extra = extra;
 
             // Find polymorphic structure
-            ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
+            ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
 
             if(template == NULL){
                 compiler_panicf(compiler, generic_base->source, "Undeclared polymorphic type '%s'", generic_base->name);
                 return FAILURE;
             }
-
-            created_type->kind = template->traits & AST_STRUCT_IS_UNION ? TYPE_KIND_UNION : TYPE_KIND_STRUCTURE;
             
             if(generic_base->generics_length != template->generics_length){
                 const char *message = generic_base->generics_length < template->generics_length ?
                                     "Not enough type parameters specified for %s '%s' (expected %d, got %d)"
                                     : "Too many type parameters specified for %s '%s' (expected %d, got %d)";
-                compiler_panicf(compiler, generic_base->source, message, template->traits & AST_STRUCT_IS_UNION ? "union" : "struct",
+                compiler_panicf(compiler, generic_base->source, message, ast_layout_kind_name(template->layout.kind),
                         generic_base->name, template->generics_length, generic_base->generics_length);
                 return FAILURE;
             }
@@ -238,25 +226,13 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
                 ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
             }
 
-            extra->subtypes = ir_pool_alloc(&object->ir_module.pool, sizeof(ir_type_t*) * template->field_count);
-            extra->subtypes_length = template->field_count;
-
-            for(length_t i = 0; i != extra->subtypes_length; i++){
-                ast_type_t tmp_ast_type;
-                if(resolve_type_polymorphics(compiler, object->ast.type_table, &catalog, &template->field_types[i], &tmp_ast_type)){
-                    ast_poly_catalog_free(&catalog);
-                    return FAILURE;
-                }
-
-                if(ir_gen_resolve_type(compiler, object, &tmp_ast_type, &extra->subtypes[i])){
-                    ast_type_free(&tmp_ast_type);
-                    ast_poly_catalog_free(&catalog);
-                    return FAILURE;
-                }
-                ast_type_free(&tmp_ast_type);
+            ast_layout_bone_t layout_as_bone = ast_layout_as_bone(&template->layout);
+            ir_type_t *created_type = ast_layout_bone_to_ir_type(compiler, object, &layout_as_bone, &catalog);
+            if(created_type == NULL){
+                ast_poly_catalog_free(&catalog);
+                return FAILURE;
             }
 
-            extra->traits = TRAIT_NONE;
             *resolved_type = created_type;
             ast_poly_catalog_free(&catalog);
         }
@@ -725,6 +701,62 @@ successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_
     if(ast_types_conform(builder, ir_value_a, ast_type_a, ast_type_b, CONFORM_MODE_STANDARD)) return false;
     if(ast_types_conform(builder, ir_value_b, ast_type_b, ast_type_a, CONFORM_MODE_STANDARD)) return false;
     return true;
+}
+
+ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, ast_layout_bone_t *bone, ast_poly_catalog_t *optional_catalog){
+    // Returns NULL when something goes wrong
+
+    // Handle AST Type bones
+    if(bone->kind == AST_LAYOUT_BONE_KIND_TYPE){
+        ir_type_t *result;
+
+        if(optional_catalog){
+            ast_type_t resolved_ast_type;
+
+            if(resolve_type_polymorphics(compiler, object->ast.type_table, optional_catalog, &bone->type, &resolved_ast_type)){
+                return NULL;
+            }
+
+            if(ir_gen_resolve_type(compiler, object, &resolved_ast_type, &result)){
+                ast_type_free(&resolved_ast_type);
+                return NULL;
+            }
+
+            ast_type_free(&resolved_ast_type);
+        } else if(ir_gen_resolve_type(compiler, object, &bone->type, &result)){
+            return NULL;
+        }
+
+        return result;
+    }
+
+    // Handle bones that have children
+    ir_pool_t *pool = &object->ir_module.pool;
+    ir_type_t *result = ir_pool_alloc(pool, sizeof(ir_type_t));
+    ir_type_extra_composite_t *extra = ir_pool_alloc(pool, sizeof(ir_type_extra_composite_t));
+    extra->subtypes = ir_pool_alloc(pool, sizeof(ir_type_t*) * bone->children.bones_length);
+    extra->subtypes_length = bone->children.bones_length;
+    extra->traits = TRAIT_NONE;
+
+    for(length_t i = 0; i != bone->children.bones_length; i++){
+        ir_type_t *subtype = ast_layout_bone_to_ir_type(compiler, object, &bone->children.bones[i], optional_catalog);
+        if(subtype == NULL) return NULL;
+        extra->subtypes[i] = subtype;
+    }
+
+    switch(bone->kind){
+    case AST_LAYOUT_BONE_KIND_UNION:
+        result->kind = TYPE_KIND_UNION;
+        break;
+    case AST_LAYOUT_BONE_KIND_STRUCT:
+        result->kind = TYPE_KIND_STRUCTURE;
+        break;
+    default:
+        internalerrorprintf("ast_layout_bone_to_ir_type() got unknown bone kind\n");
+    }
+    
+    result->extra = extra;
+    return result;
 }
 
 int ir_type_mapping_cmp(const void *a, const void *b){

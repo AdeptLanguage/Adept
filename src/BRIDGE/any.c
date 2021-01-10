@@ -28,34 +28,38 @@ void any_inject_ast_Any(ast_t *ast){
 
     /* struct Any (type *AnyType, placeholder ulong) */
 
-    strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 2);
+    strong_cstr_t names[2];
     names[0] = strclone("type");
     names[1] = strclone("placeholder");
 
-    ast_type_t *types = malloc(sizeof(ast_type_t) * 2);
+    ast_type_t types[2];
     ast_type_make_base_ptr(&types[0], strclone("AnyType"));
     ast_type_make_base(&types[1], strclone("ulong"));
 
-    ast_add_struct(ast, strclone("Any"), names, types, 2, TRAIT_NONE, NULL_SOURCE);
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, 2);
+    ast_add_composite(ast, strclone("Any"), layout, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyType(ast_t *ast){
 
     /* struct AnyType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize) */
 
-    strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 4);
+    strong_cstr_t names[4];
     names[0] = strclone("kind");
     names[1] = strclone("name");
     names[2] = strclone("is_alias");
     names[3] = strclone("size");
 
-    ast_type_t *types = malloc(sizeof(ast_type_t) * 4);
+    ast_type_t types[4];
     ast_type_make_base(&types[0], strclone("AnyTypeKind"));
     ast_type_make_base_ptr(&types[1], strclone("ubyte"));
     ast_type_make_base(&types[2], strclone("bool"));
     ast_type_make_base(&types[3], strclone("usize"));
 
-    ast_add_struct(ast, strclone("AnyType"), names, types, 4, TRAIT_NONE, NULL_SOURCE);
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, 4);
+    ast_add_composite(ast, strclone("AnyType"), layout, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyTypeKind(ast_t *ast){
@@ -85,28 +89,30 @@ void any_inject_ast_AnyPtrType(ast_t *ast){
 
     /* struct AnyPtrType(kind AnyTypeKind, name *ubyte, is_alias bool, size usize, subtype *AnyType) */
 
-    strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 5);
+    strong_cstr_t names[5];
     names[0] = strclone("kind");
     names[1] = strclone("name");
     names[2] = strclone("is_alias");
     names[3] = strclone("size");
     names[4] = strclone("subtype");
 
-    ast_type_t *types = malloc(sizeof(ast_type_t) * 5);
+    ast_type_t types[5];
     ast_type_make_base(&types[0], strclone("AnyTypeKind"));
     ast_type_make_base_ptr(&types[1], strclone("ubyte"));
     ast_type_make_base(&types[2], strclone("bool"));
     ast_type_make_base(&types[3], strclone("usize"));
     ast_type_make_base_ptr(&types[4], strclone("AnyType"));
 
-    ast_add_struct(ast, strclone("AnyPtrType"), names, types, 5, TRAIT_NONE, NULL_SOURCE);
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, 5);
+    ast_add_composite(ast, strclone("AnyPtrType"), layout, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyStructType(ast_t *ast){
 
     /* struct AnyStructType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
 
-    strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 9);
+    strong_cstr_t names[9];
     names[0] = strclone("kind");
     names[1] = strclone("name");
     names[2] = strclone("is_alias");
@@ -117,7 +123,7 @@ void any_inject_ast_AnyStructType(ast_t *ast){
     names[7] = strclone("member_names");
     names[8] = strclone("is_packed");
 
-    ast_type_t *types = malloc(sizeof(ast_type_t) * 9);
+    ast_type_t types[9];
     ast_type_make_base(&types[0], strclone("AnyTypeKind"));
     ast_type_make_base_ptr(&types[1], strclone("ubyte"));
     ast_type_make_base(&types[2], strclone("bool"));
@@ -128,14 +134,16 @@ void any_inject_ast_AnyStructType(ast_t *ast){
     ast_type_make_base_ptr_ptr(&types[7], strclone("ubyte"));
     ast_type_make_base(&types[8], strclone("bool"));
 
-    ast_add_struct(ast, strclone("AnyStructType"), names, types, 9, TRAIT_NONE, NULL_SOURCE);
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, 9);
+    ast_add_composite(ast, strclone("AnyStructType"), layout, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyUnionType(ast_t *ast){
 
     /* struct AnyUnionType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, member_names **ubyte) */
 
-    strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 7);
+    strong_cstr_t names[7];
     names[0] = strclone("kind");
     names[1] = strclone("name");
     names[2] = strclone("is_alias");
@@ -144,7 +152,7 @@ void any_inject_ast_AnyUnionType(ast_t *ast){
     names[5] = strclone("length");
     names[6] = strclone("member_names");
 
-    ast_type_t *types = malloc(sizeof(ast_type_t) * 7);
+    ast_type_t types[7];
     ast_type_make_base(&types[0], strclone("AnyTypeKind"));
     ast_type_make_base_ptr(&types[1], strclone("ubyte"));
     ast_type_make_base(&types[2], strclone("bool"));
@@ -153,14 +161,16 @@ void any_inject_ast_AnyUnionType(ast_t *ast){
     ast_type_make_base(&types[5], strclone("usize"));
     ast_type_make_base_ptr_ptr(&types[6], strclone("ubyte"));
 
-    ast_add_struct(ast, strclone("AnyUnionType"), names, types, 7, TRAIT_NONE, NULL_SOURCE);
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, 7);
+    ast_add_composite(ast, strclone("AnyUnionType"), layout, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyFuncPtrType(ast_t *ast){
     
     /* struct AnyFuncPtrType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, args **AnyType, length usize, return_type *AnyType, is_vararg bool, is_stdcall bool) */
 
-    strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 9);
+    strong_cstr_t names[9];
     names[0] = strclone("kind");
     names[1] = strclone("name");
     names[2] = strclone("is_alias");
@@ -171,7 +181,7 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast){
     names[7] = strclone("is_vararg");
     names[8] = strclone("is_stdcall");
 
-    ast_type_t *types = malloc(sizeof(ast_type_t) * 9);
+    ast_type_t types[9];
     ast_type_make_base(&types[0], strclone("AnyTypeKind"));
     ast_type_make_base_ptr(&types[1], strclone("ubyte"));
     ast_type_make_base(&types[2], strclone("bool"));
@@ -182,14 +192,16 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast){
     ast_type_make_base(&types[7], strclone("bool"));
     ast_type_make_base(&types[8], strclone("bool"));
 
-    ast_add_struct(ast, strclone("AnyFuncPtrType"), names, types, 9, TRAIT_NONE, NULL_SOURCE);
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, 9);
+    ast_add_composite(ast, strclone("AnyFuncPtrType"), layout, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyFixedArrayType(ast_t *ast){
     
     /* struct AnyFixedArrayType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, subtype *AnyType, length usize) */
 
-    strong_cstr_t *names = malloc(sizeof(strong_cstr_t) * 6);
+    strong_cstr_t names[6];
     names[0] = strclone("kind");
     names[1] = strclone("name");
     names[2] = strclone("is_alias");
@@ -197,7 +209,7 @@ void any_inject_ast_AnyFixedArrayType(ast_t *ast){
     names[4] = strclone("subtype");
     names[5] = strclone("length");
 
-    ast_type_t *types = malloc(sizeof(ast_type_t) * 6);
+    ast_type_t types[6];
     ast_type_make_base(&types[0], strclone("AnyTypeKind"));
     ast_type_make_base_ptr(&types[1], strclone("ubyte"));
     ast_type_make_base(&types[2], strclone("bool"));
@@ -205,7 +217,9 @@ void any_inject_ast_AnyFixedArrayType(ast_t *ast){
     ast_type_make_base_ptr(&types[4], strclone("AnyType"));
     ast_type_make_base(&types[5], strclone("usize"));
 
-    ast_add_struct(ast, strclone("AnyFixedArrayType"), names, types, 6, TRAIT_NONE, NULL_SOURCE);
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, 6);
+    ast_add_composite(ast, strclone("AnyFixedArrayType"), layout, NULL_SOURCE);
 }
 
 void any_inject_ast___types__(ast_t *ast){

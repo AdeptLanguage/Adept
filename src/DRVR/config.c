@@ -287,9 +287,9 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
                 return false;
             }
 
-            if(strcmp(stash_header.latest_compiler_version, "2.4-indev") != 0 && config->show_new_compiler_available){
+            if(strcmp(stash_header.latest_compiler_version, "2.5-indev") != 0 && config->show_new_compiler_available){
                 blueprintf("\nNEWS: A newer version of Adept is available!\n");
-                printf("    (Visit https://github.com/IsaacShelton/Adept for more information)\n\n");
+                printf("    (Visit https://github.com/AdeptLanguage/Adept for more information)\n\n");
                 return true;
             }
 

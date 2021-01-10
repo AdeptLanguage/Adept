@@ -995,16 +995,23 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                 // If we failed a special prereq, then return false
                 if(special_prereq != - 1) return FAILURE;
 
-                ast_struct_t *similar = object_struct_find(NULL, builder->object, builder->tmpbuf, prereq->similarity_prerequisite, NULL);
+                ast_composite_t *similar = object_composite_find(NULL, builder->object, builder->tmpbuf, prereq->similarity_prerequisite, NULL);
 
                 if(similar == NULL){
                     compiler_panicf(builder->compiler, prereq->source, "Undeclared struct '%s'", prereq->similarity_prerequisite);
                     return ALT_FAILURE;
                 }
 
+                if(!ast_layout_is_simple_struct(&similar->layout)){
+                    compiler_panicf(builder->compiler, prereq->source, "Cannot use complex composite type '%s' as struct prerequisite", prereq->similarity_prerequisite);
+                    return ALT_FAILURE;
+                }
+
+                length_t field_count = ast_simple_field_map_get_count(&similar->layout.field_map);
+
                 if(concrete_type->elements[i]->id == AST_ELEM_BASE){
                     char *given_name = ((ast_elem_base_t*) concrete_type->elements[i])->base;
-                    ast_struct_t *given = object_struct_find(NULL, builder->object, builder->tmpbuf, given_name, NULL);
+                    ast_composite_t *given = object_composite_find(NULL, builder->object, builder->tmpbuf, given_name, NULL);
 
                     if(given == NULL){
                         // Undeclared struct given, no error should be necessary
@@ -1012,32 +1019,37 @@ errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *poly
                     }
 
                     // Ensure polymorphic prerequisite met
-                    length_t dummy_field_index;
-                    for(length_t f = 0; f != similar->field_count; f++){
-                        if(!ast_struct_find_field(given, similar->field_names[f], &dummy_field_index)) return FAILURE;
+                    ast_layout_endpoint_t ignore_endpoint;
+                    for(length_t f = 0; f != field_count; f++){
+                        weak_cstr_t field_name = ast_simple_field_map_get_name_at_index(&similar->layout.field_map, f);
+
+                        // Ensure an endpoint with the same name exists
+                        if(!ast_field_map_find(&given->layout.field_map, field_name, &ignore_endpoint)) return FAILURE;
                     }
 
                     // All fields of struct 'similar' exist in struct 'given'
                     // therefore 'given' is similar to 'similar' and the prerequisite is met
                 } else if(concrete_type->elements[i]->id != AST_ELEM_GENERIC_BASE){
                     if(((ast_elem_generic_base_t*) concrete_type->elements[i])->name_is_polymorphic){
-                        internalerrorprintf("arg_type_polymorphable encountered polymorphic generic struct name in middle of AST type\n");
+                        internalerrorprintf("arg_type_polymorphable() encountered polymorphic generic struct name in middle of AST type\n");
                         return ALT_FAILURE;
                     }
 
                     char *given_name = ((ast_elem_generic_base_t*) concrete_type->elements[i])->name;
-                    ast_polymorphic_struct_t *given = object_polymorphic_struct_find(NULL, builder->object, builder->tmpbuf, given_name, NULL);
+                    ast_polymorphic_composite_t *given = object_polymorphic_composite_find(NULL, builder->object, builder->tmpbuf, given_name, NULL);
 
                     if(given == NULL){
-                        internalerrorprintf("arg_type_polymorphable failed to find polymophic struct '%s' which should exist\n", given_name);
+                        internalerrorprintf("arg_type_polymorphable() failed to find polymophic struct '%s' which should exist\n", given_name);
                         return FAILURE;
                     }
 
                     // Ensure polymorphic prerequisite met
-                    length_t dummy_field_index;
-                    for(length_t f = 0; f != similar->field_count; f++){
-                        // NOTE: Assuming 'ast_polymorphic_struct_t' overlaps with 'ast_struct_t'
-                        if(!ast_struct_find_field((ast_struct_t*) given, similar->field_names[f], &dummy_field_index)) return FAILURE;
+                    ast_layout_endpoint_t ignore_endpoint;
+                    for(length_t f = 0; f != field_count; f++){
+                        weak_cstr_t field_name = ast_simple_field_map_get_name_at_index(&similar->layout.field_map, f);
+
+                        // Ensure an endpoint with the same name exists
+                        if(!ast_field_map_find(&given->layout.field_map, field_name, &ignore_endpoint)) return FAILURE;
                     }
 
                     // All fields of struct 'similar' exist in struct 'given'

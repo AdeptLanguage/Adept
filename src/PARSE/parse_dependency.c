@@ -9,7 +9,7 @@ errorcode_t parse_import(parse_ctx_t *ctx){
     //   ^
 
     // Don't allow importing while inside struct domains
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot import dependencies within struct domain");
         return FAILURE;
     }
@@ -86,7 +86,7 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
     // foreign 'libmycustomlibrary.a'
     //    ^
 
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot declare foreign dependencies within struct domain");
         return FAILURE;
     }

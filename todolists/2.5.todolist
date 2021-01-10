@@ -5,6 +5,7 @@ HIGH-PRIORITY:
 MEDIUM-PRIORITY:
 * typenameof expression
 * alignof expression
+* anonymous fields (with structures and unions)
 
 LOW-PRIORITY:
 * Finish 'Any'

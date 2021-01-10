@@ -62,10 +62,10 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_func(ctx)) return FAILURE;
             break;
         case TOKEN_STRUCT: case TOKEN_PACKED:
-            if(parse_struct(ctx, false)) return FAILURE;
+            if(parse_composite(ctx, false)) return FAILURE;
             break;
         case TOKEN_UNION:
-            if(parse_struct(ctx, true)) return FAILURE;
+            if(parse_composite(ctx, true)) return FAILURE;
             break;
         case TOKEN_DEFINE:
             if(parse_global_constant_definition(ctx)) return FAILURE;
@@ -107,8 +107,8 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
                 ctx->has_namespace_scope = false;
                 ctx->object->current_namespace = NULL;
                 ctx->object->current_namespace_length = 0;
-            } else if(ctx->struct_association != NULL){
-                ctx->struct_association = NULL;
+            } else if(ctx->composite_association != NULL){
+                ctx->composite_association = NULL;
             } else {
                 compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Unexpected trailing closing brace '}'");
                 return FAILURE;
@@ -126,7 +126,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
         }
     }
 
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected closing brace '}' for struct domain");
         return FAILURE;
     }

@@ -6,11 +6,11 @@
 #include "PARSE/parse_util.h"
 #include "PARSE/parse_struct.h"
 
-errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union){
+errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_t *ast = ctx->ast;
     source_t source = ctx->tokenlist->sources[*ctx->i];
 
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare %s within another struct's domain", is_union ? "union" : "struct");
         return FAILURE;
     }
@@ -19,7 +19,7 @@ errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union){
     bool is_packed;
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    if(parse_struct_head(ctx, is_union, &name, &is_packed, &generics, &generics_length)) return FAILURE;
+    if(parse_composite_head(ctx, is_union, &name, &is_packed, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -36,22 +36,25 @@ errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union){
         return FAILURE;
     }
 
-    strong_cstr_t *field_names = NULL;
-    ast_type_t *field_types = NULL;
-    length_t field_count = 0;
+    ast_field_map_t field_map;
+    ast_layout_skeleton_t skeleton;
 
-    if(parse_struct_body(ctx, &field_names, &field_types, &field_count)){
+    if(parse_composite_body(ctx, &field_map, &skeleton)){
         free(name);
         return FAILURE;
     }
 
-    ast_struct_t *domain = NULL;
-    trait_t traits = is_packed ? AST_STRUCT_PACKED : (is_union ? AST_STRUCT_IS_UNION : TRAIT_NONE);
+    ast_composite_t *domain = NULL;
+    trait_t traits = is_packed ? AST_LAYOUT_PACKED : TRAIT_NONE;
+    ast_layout_kind_t layout_kind = is_union ? AST_LAYOUT_UNION : AST_LAYOUT_STRUCT;
+
+    ast_layout_t layout;
+    ast_layout_init(&layout, layout_kind, field_map, skeleton, traits);
     
     if(generics){
-        domain = (ast_struct_t*) ast_add_polymorphic_struct(ast, name, field_names, field_types, field_count, traits, source, generics, generics_length);
+        domain = (ast_composite_t*) ast_add_polymorphic_composite(ast, name, layout, source, generics, generics_length);
     } else {
-        domain = ast_add_struct(ast, name, field_names, field_types, field_count, traits, source);
+        domain = ast_add_composite(ast, name, layout, source);
     }
 
     // Only allow struct domains for structs, not unions
@@ -63,8 +66,7 @@ errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union){
             scan_i++;
         
         if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
-            ctx->struct_association = (ast_polymorphic_struct_t*) domain;
-            ctx->struct_association_is_polymorphic = generics != NULL;
+            ctx->composite_association = (ast_polymorphic_composite_t*) domain;
             *ctx->i = scan_i;
         }
     }
@@ -72,7 +74,7 @@ errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union){
     return SUCCESS;
 }
 
-errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length){
+errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
@@ -148,121 +150,126 @@ errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *ou
     return SUCCESS;
 }
 
-errorcode_t parse_struct_body(parse_ctx_t *ctx, strong_cstr_t **names, ast_type_t **types, length_t *length){
+errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton){
+    // Parses root-level composite fields
+
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
-    if(parse_ignore_newlines(ctx, "Expected '(' after struct name")
-    || parse_eat(ctx, TOKEN_OPEN, "Expected '(' after struct name")){
+    if(parse_ignore_newlines(ctx, "Expected '(' after composite name")
+    || parse_eat(ctx, TOKEN_OPEN, "Expected '(' after composite name")){
         return FAILURE;
     }
 
-    length_t capacity = 0;
+    ast_field_map_init(out_field_map);
+    ast_layout_skeleton_init(out_skeleton);
+
     length_t backfill = 0;
+    ast_layout_endpoint_t next_endpoint;
+    ast_layout_endpoint_init_with(&next_endpoint, (uint16_t[]){0}, 1);
 
     while(tokens[*i].id != TOKEN_CLOSE || backfill != 0){
-        if(parse_ignore_newlines(ctx, "Expected name of field")){
-            parse_struct_free_fields(*names, *types, *length, backfill);
-            return FAILURE;
-        }
-
-        if(tokens[*i].id == TOKEN_STRUCT){
-            if(backfill != 0){
-                compiler_panic(ctx->compiler, sources[*i], "Expected field type for previous fields before struct integration");
-                parse_struct_free_fields(*names, *types, *length, backfill);
-                return FAILURE;
-            }
-
-            maybe_null_weak_cstr_t inner_struct_name = parse_grab_word(ctx, "Expected struct name for integration");
-            if(inner_struct_name == NULL){
-                parse_struct_free_fields(*names, *types, *length, backfill);
-                return FAILURE;
-            }
-
-            ast_struct_t *inner_struct = object_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, inner_struct_name, NULL);
-            if(inner_struct == NULL){
-                compiler_panicf(ctx->compiler, sources[*i], "Struct '%s' must already be declared", inner_struct_name);
-                parse_struct_free_fields(*names, *types, *length, backfill);
-                return FAILURE;
-            }
-
-            for(length_t f = 0; f != inner_struct->field_count; f++){
-                parse_struct_grow_fields(names, types, *length, &capacity, backfill);
-                (*types)[*length] = ast_type_clone(&inner_struct->field_types[f]);
-                (*names)[(*length)++] = strclone(inner_struct->field_names[f]);
-            }
-
-            (*i)++;
-        } else {
-            parse_struct_grow_fields(names, types, *length, &capacity, backfill);
-
-            strong_cstr_t field_name = parse_take_word(ctx, "Expected name of field");
-            if(field_name == NULL){
-                parse_struct_free_fields(*names, *types, *length, backfill);
-                return FAILURE;
-            }
-
-            (*names)[(*length)++] = field_name;
-
-            if(tokens[*i].id == TOKEN_NEXT){
-                backfill++; (*i)++;
-                continue;
-            }
-
-            ast_type_t *end_type_ptr = &((*types)[*length - 1]);
-
-            if(parse_type(ctx, end_type_ptr)){
-                parse_struct_free_fields(*names, *types, *length, backfill + 1);
-                return FAILURE;
-            }
-
-            while(backfill != 0){
-                (*types)[*length - backfill - 1] = ast_type_clone(end_type_ptr);
-                backfill -= 1;
-            }
-        }
-
-        if(parse_ignore_newlines(ctx, "Expected ')' or ',' after struct field")){
-            parse_struct_free_fields(*names, *types, *length, backfill);
-            return FAILURE;
+        if(parse_ignore_newlines(ctx, "Expected name of field")
+        || parse_composite_field(ctx, out_field_map, out_skeleton, &backfill, &next_endpoint)
+        || parse_ignore_newlines(ctx, "Expected ')' or ',' after field")){
+            goto failure;
         }
 
         if(tokens[*i].id == TOKEN_NEXT){
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, sources[*i], "Expected field name and type after ',' in field list");
-                parse_struct_free_fields(*names, *types, *length, backfill);
-                return FAILURE;
+                goto failure;
             }
         } else if(tokens[*i].id != TOKEN_CLOSE){
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' after field name and type");
-            parse_struct_free_fields(*names, *types, *length, backfill);
-            return FAILURE;
+            goto failure;
         }
     }
 
     return SUCCESS;
+
+failure:
+    ast_field_map_free(out_field_map);
+    ast_layout_skeleton_free(out_skeleton);
+    return FAILURE;
 }
 
-void parse_struct_grow_fields(char ***names, ast_type_t **types, length_t length, length_t *capacity, length_t backfill){
-    if(length == *capacity){
-        if(*capacity == 0){
-            *capacity = 4;
-            *names = malloc(sizeof(char*) * 4);
-            *types = malloc(sizeof(ast_type_t) * 4);
-            return;
+errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, length_t *inout_backfill, ast_layout_endpoint_t *inout_next_endpoint){
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist->tokens;
+    source_t *sources = ctx->tokenlist->sources;
+
+    if(tokens[*i].id == TOKEN_STRUCT && tokens[*i + 1].id == TOKEN_WORD){
+        // Struct Integration Field
+
+        if(*inout_backfill != 0){
+            compiler_panicf(ctx->compiler, sources[*i], "Expected field type for previous fields before integrated struct");
+            return FAILURE;
         }
 
-        // Ignore unused variable if backfill isn't used in implementation of 'grow'
-        (void) backfill;
-
-        *capacity *= 2;
-        grow((void**) names, sizeof(char*), length, *capacity);
-        grow((void**) types, sizeof(ast_type_t), length - backfill, *capacity);
+        return parse_struct_integration_field(ctx, inout_field_map, inout_skeleton, inout_next_endpoint);
     }
+
+    // Otherwise it's just a regular field
+
+    strong_cstr_t field_name = parse_take_word(ctx, "Expected name of field");
+    if(field_name == NULL) return FAILURE;
+
+    ast_field_map_add(inout_field_map, field_name, *inout_next_endpoint);
+    ast_layout_endpoint_increment(inout_next_endpoint);
+
+    if(tokens[*i].id == TOKEN_NEXT){
+        (*inout_backfill)++;
+        return SUCCESS;
+    }
+
+    ast_type_t field_type;
+    if(parse_type(ctx, &field_type)) return FAILURE;
+
+    while(*inout_backfill != 0){
+        ast_layout_skeleton_add_type(inout_skeleton, ast_type_clone(&field_type));
+        *inout_backfill -= 1;
+    }
+
+    ast_layout_skeleton_add_type(inout_skeleton, ast_type_clone(&field_type));
+    return SUCCESS;
 }
 
-void parse_struct_free_fields(strong_cstr_t *names, ast_type_t *types, length_t length, length_t backfill){
-    if(names) freestrs(names, length);
-    if(types) ast_types_free_fully(types, length - backfill);
+errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint){
+    // (Inside of composite definition)
+    // struct SomeStructure
+    //   ^
+
+    length_t *i = ctx->i;
+    source_t *sources = ctx->tokenlist->sources;
+
+    maybe_null_weak_cstr_t inner_struct_name = parse_grab_word(ctx, "Expected struct name for integration");
+    if(inner_struct_name == NULL) return FAILURE;
+
+    ast_composite_t *inner_composite = object_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, inner_struct_name, NULL);
+    if(inner_composite == NULL){
+        compiler_panicf(ctx->compiler, sources[*i], "Struct '%s' must already be declared", inner_struct_name);
+        return FAILURE;
+    }
+
+    // Don't support complex composites for now
+    if(!ast_layout_is_simple_struct(&inner_composite->layout)){
+        compiler_panicf(ctx->compiler, sources[*i], "Cannot integrate complex composite '%s', only simple structs are allowed", inner_struct_name);
+        return FAILURE;
+    }
+
+    length_t field_count = ast_simple_field_map_get_count(&inner_composite->layout.field_map);
+
+    for(length_t f = 0; f != field_count; f++){
+        weak_cstr_t field_name = ast_simple_field_map_get_name_at_index(&inner_composite->layout.field_map, f);
+        ast_type_t *field_type = ast_layout_skeleton_get_type_at_index(&inner_composite->layout.skeleton, f);
+
+        ast_field_map_add(inout_field_map, strclone(field_name), *inout_next_endpoint);
+        ast_layout_skeleton_add_type(inout_skeleton, ast_type_clone(field_type));
+        ast_layout_endpoint_increment(inout_next_endpoint);
+    }
+
+    (*i)++;
+    return SUCCESS;
 }

@@ -115,7 +115,7 @@ ifeq ($(DEBUG_ADDRESS_SANITIZE),true)
 	LDFLAGS+= -fsanitize=address,undefined
 endif
 
-SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c \
+SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c \
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c \
 	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
 	src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c \
@@ -161,6 +161,7 @@ insight: $(SOURCES)
 #   Insight - Required Header Files
 	@cp include/AST/ast_constant.h $(INSIGHT_OUT_DIR)/include/AST/ast_constant.h
 	@cp include/AST/ast_expr.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr.h
+	@cp include/AST/ast_layout.h $(INSIGHT_OUT_DIR)/include/AST/ast_layout.h
 	@cp include/AST/ast_type.h $(INSIGHT_OUT_DIR)/include/AST/ast_type.h
 	@cp include/AST/ast.h $(INSIGHT_OUT_DIR)/include/AST/ast.h
 	@cp include/AST/meta_directives.h $(INSIGHT_OUT_DIR)/include/AST/meta_directives.h
@@ -210,6 +211,7 @@ insight: $(SOURCES)
 #   Insight - Required Source Code Files
 	@cp src/AST/ast_constant.c $(INSIGHT_OUT_DIR)/src/AST/ast_constant.c
 	@cp src/AST/ast_expr.c $(INSIGHT_OUT_DIR)/src/AST/ast_expr.c
+	@cp src/AST/ast_layout.c $(INSIGHT_OUT_DIR)/src/AST/ast_layout.c
 	@cp src/AST/ast_type.c $(INSIGHT_OUT_DIR)/src/AST/ast_type.c
 	@cp src/AST/ast.c $(INSIGHT_OUT_DIR)/src/AST/ast.c
 	@cp src/AST/meta_directives.c $(INSIGHT_OUT_DIR)/src/AST/meta_directives.c

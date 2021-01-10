@@ -66,19 +66,19 @@ typedef struct object {
 // Initializes the AST portion of an object_t
 void object_init_ast(object_t *object, unsigned int cross_compile_for);
 
-// ------------------ object_struct_find ------------------
-// Finds a struct with the given name from the accessible namespaces
+// ------------------ object_composite_find ------------------
+// Finds a composite with the given name from the accessible namespaces
 // NOTE: If 'override_main_ast' is NULL, then 'object->ast' is used as the main AST
 // NOTE: If 'out_requires_namespace' isn't NULL, then it will be set to whether the
-// struct found requires a namespace to be accessed
-ast_struct_t *object_struct_find(ast_t *override_main_ast, object_t *object, tmpbuf_t *tmpbuf, const char *name, bool *out_requires_namespace);
+// composite found requires a namespace to be accessed
+ast_composite_t *object_composite_find(ast_t *override_main_ast, object_t *object, tmpbuf_t *tmpbuf, const char *name, bool *out_requires_namespace);
 
-// ------------------ object_polymorphic_struct_find ------------------
-// Finds a polymorphic struct with the given name from the accessible namespaces
+// ------------------ object_polymorphic_composite_find ------------------
+// Finds a polymorphic composite with the given name from the accessible namespaces
 // NOTE: If 'override_main_ast' is NULL, then 'object->ast' is used as the main AST
 // NOTE: If 'out_requires_namespace' isn't NULL, then it will be set to whether the
-// struct found requires a namespace to be accessed
-ast_polymorphic_struct_t *object_polymorphic_struct_find(ast_t *override_main_ast, object_t *object, tmpbuf_t *tmpbuf, const char *name, bool *out_requires_namespace);
+// composite found requires a namespace to be accessed
+ast_polymorphic_composite_t *object_polymorphic_composite_find(ast_t *override_main_ast, object_t *object, tmpbuf_t *tmpbuf, const char *name, bool *out_requires_namespace);
 
 #ifdef __cplusplus
 }

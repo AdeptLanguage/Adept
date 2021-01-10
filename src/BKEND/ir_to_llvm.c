@@ -49,10 +49,7 @@ LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
                 if(fields[i] == NULL) return NULL;
             }
 
-            LLVMTypeRef type_ref_tmp = LLVMStructType(fields, composite->subtypes_length,
-                composite->traits & TYPE_KIND_COMPOSITE_PACKED);
-
-            return type_ref_tmp;
+            return LLVMStructType(fields, composite->subtypes_length, composite->traits & TYPE_KIND_COMPOSITE_PACKED);
         }
     case TYPE_KIND_UNION: {
             // TODO: Should probably cache union types so they don't have to be

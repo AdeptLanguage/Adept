@@ -14,7 +14,7 @@ errorcode_t parse_alias(parse_ctx_t *ctx){
     ast_type_t type;
     source_t source = ctx->tokenlist->sources[(*ctx->i)++];
 
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare type alias within struct domain");
         return FAILURE;
     }

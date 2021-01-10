@@ -77,9 +77,18 @@ errorcode_t ir_gen_expr_math_uvsvf(ir_builder_t *builder, ast_expr_math_t *expr,
 errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_expr, ir_value_t **a, ir_value_t **b,
         length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
 
+// ---------------- ir_field_info_t ----------------
+// In-depth information about a field of a composite
+// NOTE: This structure has ownership over 'ast_type' must be freed
+typedef struct {
+    ast_type_t ast_type; // (owned)
+    ast_layout_endpoint_t endpoint;
+    ast_layout_endpoint_path_t path;
+    ir_type_t *ir_type;
+} ir_field_info_t;
+
 // Gets info about a field in order to help complete a 'MEMBER' expression
-errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *struct_value_ast_type,
-        length_t *field_index, ir_type_t **field_type, bool *is_via_union, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info);
 
 // Finds the appropriate method for a 'CALL METHOD' expression to call
 errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values,
@@ -143,15 +152,15 @@ errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int int_in
 // 'float_instr' if it operates on floating point values.
 errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr);
 
-// Primitive catagory indicators returned by 'ir_type_get_catagory'
+// Primitive category indicators returned by 'ir_type_get_category'
 #define PRIMITIVE_NA 0x00 // N/A
 #define PRIMITIVE_SI 0x01 // Signed Integer
 #define PRIMITIVE_UI 0x02 // Unsigned Integer
 #define PRIMITIVE_FP 0x03 // FLoating Point Value
 
-// ---------------- ir_type_get_catagory ----------------
-// Returns a general catagory for an IR type.
+// ---------------- ir_type_get_category ----------------
+// Returns a general category for an IR type.
 // (either signed, unsigned, or float)
-char ir_type_get_catagory(ir_type_t *type);
+char ir_type_get_category(ir_type_t *type);
 
 #endif // _ISAAC_IR_GEN_EXPR_H

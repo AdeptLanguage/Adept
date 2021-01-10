@@ -13,7 +13,7 @@ void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object){
     ctx->meta_ends_expected = 0;
     memset(ctx->meta_else_allowed_flag, 0, sizeof(ctx->meta_else_allowed_flag));
     ctx->angle_bracket_repeat = 0;
-    ctx->struct_association = NULL;
+    ctx->composite_association = NULL;
     ctx->has_namespace_scope = false;
     ctx->ignore_newlines_in_expr_depth = 0;
     ctx->allow_polymorphic_prereqs = false;
@@ -30,7 +30,7 @@ void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx
     out_ctx_fork->meta_ends_expected = 0;
     memset(out_ctx_fork->meta_else_allowed_flag, 0, sizeof(out_ctx_fork->meta_else_allowed_flag));
     out_ctx_fork->angle_bracket_repeat = 0;
-    out_ctx_fork->struct_association = NULL;
+    out_ctx_fork->composite_association = NULL;
     out_ctx_fork->has_namespace_scope = false;
     out_ctx_fork->ignore_newlines_in_expr_depth = 0;
     out_ctx_fork->allow_polymorphic_prereqs = false;

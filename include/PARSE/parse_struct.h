@@ -7,28 +7,29 @@ extern "C" {
 #endif
 
 #include "UTIL/ground.h"
+#include "AST/ast_layout.h"
 #include "PARSE/parse_ctx.h"
 
-// ------------------ parse_struct ------------------
-// Parses a struct
-errorcode_t parse_struct(parse_ctx_t *ctx, bool is_union);
+// ------------------ parse_composite ------------------
+// Parses a composite
+errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union);
 
-// ------------------ parse_struct_head ------------------
-// Parses the head of a struct
+// ------------------ parse_composite_head ------------------
+// Parses the head of a composite
 // NOTE: All arguments must be valid pointers
-errorcode_t parse_struct_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length);
+errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length);
 
-// ------------------ parse_struct_body ------------------
-// Parses the body of a struct
-errorcode_t parse_struct_body(parse_ctx_t *ctx, char ***names, ast_type_t **types, length_t *length);
+// ------------------ parse_composite_body ------------------
+// Parses the body of a composite
+errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton);
 
-// ------------------ parse_struct_grow_fields ------------------
-// Grows struct fields so that another field can be appended
-void parse_struct_grow_fields(strong_cstr_t **names, ast_type_t **types, length_t length, length_t *capacity, length_t backfill);
+// ------------------ parse_composite_field ------------------
+// Parses a single field of a composite
+errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, length_t *inout_backfill, ast_layout_endpoint_t *inout_next_endpoint);
 
-// ------------------ parse_struct_free_fields ------------------
-// Frees struct fields (used for when errors occur)
-void parse_struct_free_fields(strong_cstr_t *names, ast_type_t *types, length_t length, length_t backfill);
+// ------------------ parse_struct_integration_field ------------------
+// Parses a single struct integration field of a composite
+errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint);
 
 #ifdef __cplusplus
 }

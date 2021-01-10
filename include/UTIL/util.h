@@ -92,6 +92,10 @@ bool file_text_contents(weak_cstr_t filename, strong_cstr_t *out_contents, lengt
 // Returns whether successful
 bool file_binary_contents(weak_cstr_t filename, strong_cstr_t *out_contents, length_t *out_length);
 
+// ---------------- indent ----------------
+// Writes 4-spaces 'indentation_level' times to a stream
+void indent(FILE *file, length_t indentation_level);
+
 #ifdef __cplusplus
 }
 #endif

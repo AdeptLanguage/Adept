@@ -66,6 +66,10 @@ typedef struct {
 // Entry point to inference module
 errorcode_t infer(compiler_t *compiler, object_t *object);
 
+// ---------------- infer_layout_skeleton ----------------
+// Infers types inside of a layout skeleton
+errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skeleton);
+
 // ---------------- infer_in_funcs ----------------
 // Infers aliases and generics in a list of functions
 errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length);

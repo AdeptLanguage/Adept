@@ -315,3 +315,9 @@ bool file_binary_contents(weak_cstr_t filename, strong_cstr_t *out_contents, len
     *out_length = buffer_size;
     return true;
 }
+
+void indent(FILE *file, length_t indentation_level){
+    for(length_t i = 0; i < indentation_level; i++){
+        fprintf(file, "    ");
+    }
+}

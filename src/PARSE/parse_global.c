@@ -12,7 +12,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
     trait_t traits = TRAIT_NONE;
 
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare global variable within struct domain");
         return FAILURE;
     }

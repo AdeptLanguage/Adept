@@ -881,106 +881,153 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
 }
 
 errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
-    ir_value_t *struct_value;
-    ast_type_t struct_value_ast_type;
+    ir_value_t *value_of_composite;
+    ast_type_t ast_type_of_composite;
 
     // This expression should be able to be mutable (Checked during parsing)
-    if(ir_gen_expr(builder, expr->value, &struct_value, true, &struct_value_ast_type)) return FAILURE;
+    if(ir_gen_expr(builder, expr->value, &value_of_composite, true, &ast_type_of_composite)) return FAILURE;
 
     // Ensure that IR value we get back is a pointer, cause if it isn't, then it isn't mutable
-    if(struct_value->type->kind != TYPE_KIND_POINTER){
-        char *given_type = ast_type_str(&struct_value_ast_type);
+    if(value_of_composite->type->kind != TYPE_KIND_POINTER){
+        char *given_type = ast_type_str(&ast_type_of_composite);
         compiler_panicf(builder->compiler, expr->source, "Can't use member operator '.' on temporary value of type '%s'", given_type);
         free(given_type);
-        ast_type_free(&struct_value_ast_type);
+        ast_type_free(&ast_type_of_composite);
         return FAILURE;
     }
 
-    // Auto-derefernce non-ptr pointer types that don't point to other pointers
-    if(ast_type_is_pointer(&struct_value_ast_type) && struct_value_ast_type.elements[1]->id != AST_ELEM_POINTER){
-        ast_type_dereference(&struct_value_ast_type);
+    // Auto-deference non-ptr pointer types that don't point to other pointers
+    if(ast_type_is_pointer(&ast_type_of_composite) && ast_type_of_composite.elements[1]->id != AST_ELEM_POINTER){
+        ast_type_dereference(&ast_type_of_composite);
         
         // Defererence one layer if struct value is **StructType
-        if(expr_is_mutable(expr->value)) struct_value = build_load(builder, struct_value, expr->source);
+        if(expr_is_mutable(expr->value)) value_of_composite = build_load(builder, value_of_composite, expr->source);
     }
 
+    /*
     // Get member field information
     length_t field_index;
     ir_type_t *field_type;
-    ast_elem_t *elem = struct_value_ast_type.elements[0];
+    ast_elem_t *elem = ast_type_of_composite.elements[0];
     bool is_via_union;
 
-    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &struct_value_ast_type, &field_index, &field_type, &is_via_union, out_expr_type)){
-        ast_type_free(&struct_value_ast_type);
+    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &ast_type_of_composite, &field_index, &field_type, &is_via_union, out_expr_type)){
+        ast_type_free(&ast_type_of_composite);
         return FAILURE;
     }
 
     // Build the member access
     if(is_via_union){
-        *ir_value = build_bitcast(builder, struct_value, ir_type_pointer_to(builder->pool, field_type));
+        *ir_value = build_bitcast(builder, value_of_composite, ir_type_pointer_to(builder->pool, field_type));
     } else {
-        *ir_value = build_member(builder, struct_value, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
+        *ir_value = build_member(builder, value_of_composite, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
     }
+    */
     
+    ir_type_t *type;
+    ir_field_info_t field_info;
+    ast_elem_t *elem = ast_type_of_composite.elements[0];
+
+    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &ast_type_of_composite, &field_info)
+    || ir_gen_resolve_type(builder->compiler, builder->object, &ast_type_of_composite, &type)){
+        ast_type_free(&ast_type_of_composite);
+        return FAILURE;
+    }
+
+    *ir_value = value_of_composite;
+
+    for(length_t i = 0; i < AST_LAYOUT_MAX_DEPTH && field_info.endpoint.indices[i] != AST_LAYOUT_ENDPOINT_END_INDEX; i++){
+        // Get IR type for waypoint
+        // Assumes IR type is a composite IR type
+        ir_type_extra_composite_t *composite_extra = (ir_type_extra_composite_t*) type->extra;
+        ir_type_t *field_type = composite_extra->subtypes[field_info.endpoint.indices[i]];
+
+        ast_layout_waypoint_t waypoint = field_info.path.waypoints[i];
+
+        switch(waypoint.kind){
+        case AST_LAYOUT_WAYPOINT_BITCAST:
+            *ir_value = build_bitcast(builder, *ir_value, ir_type_pointer_to(builder->pool, field_type));
+            break;
+        case AST_LAYOUT_WAYPOINT_OFFSET:
+            *ir_value = build_member(builder, *ir_value, waypoint.index, ir_type_pointer_to(builder->pool, field_type), expr->source);
+            break;
+        default:
+            internalerrorprintf("ir_gen_expr_member() got unknown waypoint kind\n");
+            ast_type_free(&field_info.ast_type);
+            ast_type_free(&ast_type_of_composite);
+            return FAILURE;
+        }
+
+        type = field_type;
+    }
+
+    if(out_expr_type){
+        *out_expr_type = field_info.ast_type;
+    } else {
+        ast_type_free(&field_info.ast_type);
+    }
+
     // If not requested to leave the expression mutable, dereference it
     if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
 
-    ast_type_free(&struct_value_ast_type);
+    ast_type_free(&ast_type_of_composite);
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *struct_value_ast_type,
-        length_t *field_index, ir_type_t **field_type, bool *is_via_union, ast_type_t *out_expr_type){
-    
+errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info){
     if(elem->id == AST_ELEM_BASE){
-        // Basic 'Struct' structure type
-        weak_cstr_t struct_name = ((ast_elem_base_t*) elem)->base;
-        ast_struct_t *target = object_struct_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
+        // Non-polymorphic composite type
+        weak_cstr_t composite_name = ((ast_elem_base_t*) elem)->base;
+        ast_composite_t *target = object_composite_find(NULL, builder->object, builder->tmpbuf, composite_name, NULL);
 
-        // If we didn't find the structure, show an error message and return failure
+        // If we didn't find the composite, show an error message and return failure
         if(target == NULL){
-            weak_cstr_t message_format = typename_is_entended_builtin_type(struct_name) ? "Can't use member operator on built-in type '%s'" : "INTERNAL ERROR: Failed to find struct '%s' that should exist";
-            compiler_panicf(builder->compiler, expr->source, message_format, struct_name);
+            weak_cstr_t message_format = typename_is_entended_builtin_type(composite_name) ? "Can't use member operator on built-in type '%s'" : "INTERNAL ERROR: Failed to find composite '%s' that should exist";
+            compiler_panicf(builder->compiler, expr->source, message_format, composite_name);
             return FAILURE;
         }
 
         // Find the field of the structure by name
-        if(!ast_struct_find_field(target, expr->member, field_index)){
-            char *struct_typename = ast_type_str(struct_value_ast_type);
-            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in struct '%s'", expr->member, struct_typename);
-            free(struct_typename);
+        if(!ast_composite_find_field(target, expr->member, &out_field_info->endpoint, &out_field_info->path)){
+            char *s = ast_type_str(ast_type_of_composite);
+            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in %s '%s'", expr->member, ast_layout_kind_name(target->layout.kind), s);
+            free(s);
             return FAILURE;
         }
 
-        // Resolve AST field type to IR field type
-        if(ir_gen_resolve_type(builder->compiler, builder->object, &target->field_types[*field_index], field_type)) return FAILURE;
+        ast_type_t *field_type = ast_layout_skeleton_get_type(&target->layout.skeleton, out_field_info->endpoint);
+        if(field_type == NULL) return FAILURE;
 
-        // Result type is the type of that member
-        if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&target->field_types[*field_index]);
-        *is_via_union = target->traits & AST_STRUCT_IS_UNION;
+        // Resolve AST field type to IR field type
+        if(ir_gen_resolve_type(builder->compiler, builder->object, field_type, &out_field_info->ir_type)) return FAILURE;
+
+        out_field_info->ast_type = ast_type_clone(field_type);
         return SUCCESS;
     }
 
     if(elem->id == AST_ELEM_GENERIC_BASE){
-        // Complex '<$T> Struct' structure type
+        // Polymorphic composite type
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
 
-        weak_cstr_t struct_name = generic_base->name;
-        ast_polymorphic_struct_t *template = object_polymorphic_struct_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
+        weak_cstr_t composite_name = generic_base->name;
+        ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, builder->object, builder->tmpbuf, composite_name, NULL);
 
         // Find the polymorphic structure
         if(template == NULL){
-            compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find polymorphic struct '%s' that should exist", struct_name);
+            compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find polymorphic composite '%s' that should exist", composite_name);
             return FAILURE;
         }
 
         // Find the field of the polymorphic structure by name
-        if(!ast_struct_find_field((ast_struct_t*) template, expr->member, field_index)){
-            char *struct_typename = ast_type_str(struct_value_ast_type);
-            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in struct '%s'", expr->member, struct_typename);
-            free(struct_typename);
+        if(!ast_composite_find_field((ast_composite_t*) template, expr->member, &out_field_info->endpoint, &out_field_info->path)){
+            char *s = ast_type_str(ast_type_of_composite);
+            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in %s '%s'", expr->member, ast_layout_kind_name(template->layout.kind), s);
+            free(s);
             return FAILURE;
         }
+
+        ast_type_t *maybe_polymorphic_field_type = ast_layout_skeleton_get_type(&template->layout.skeleton, out_field_info->endpoint);
+        if(maybe_polymorphic_field_type == NULL) return FAILURE;
 
         // Create a catalog of all the known polymorphic type substitutions
         ast_poly_catalog_t catalog;
@@ -988,7 +1035,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
 
         // Ensure that the number of parameters given for the generic base is the same as expected for the polymorphic structure
         if(template->generics_length != generic_base->generics_length){
-            compiler_panicf(builder->compiler, expr->source, "Polymorphic struct '%s' type parameter length mismatch!", generic_base->name);
+            compiler_panicf(builder->compiler, expr->source, "Polymorphic %s '%s' type parameter length mismatch!", ast_layout_kind_name(template->layout.kind), generic_base->name);
             ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
@@ -999,24 +1046,16 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         }
 
         // Get the AST field type of the target field by index and resolve any polymorphs
-        ast_type_t ast_field_type;
-        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &template->field_types[*field_index], &ast_field_type)){
+        ast_type_t field_type;
+        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, maybe_polymorphic_field_type, &field_type)){
             ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
 
-        // Get the IR type of the target field
-        if(ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, field_type)){
-            ast_poly_catalog_free(&catalog);
-            return FAILURE;
-        }
+        // Resolve AST field type to IR field type
+        if(ir_gen_resolve_type(builder->compiler, builder->object, &field_type, &out_field_info->ir_type)) return FAILURE;
 
-        // Result type is the AST type of that member
-        if(out_expr_type != NULL) *out_expr_type = ast_field_type;
-        else                      ast_type_free(&ast_field_type);
-
-        // Write whether member access should take place via union access
-        *is_via_union = template->traits & AST_STRUCT_IS_UNION;
+        out_field_info->ast_type = field_type;
 
         // Dispose of the polymorphic substitutions catalog
         ast_poly_catalog_free(&catalog);
@@ -1024,9 +1063,9 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
     }
 
     // Otherwise, we got a value that isn't a structure type
-    char *typename = ast_type_str(struct_value_ast_type);
-    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-struct type '%s'", typename);
-    free(typename);
+    char *s = ast_type_str(ast_type_of_composite);
+    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-composite type '%s'", s);
+    free(s);
     return FAILURE;
 }
 
@@ -1304,7 +1343,7 @@ errorcode_t ir_gen_expr_dereference(ir_builder_t *builder, ast_expr_dereference_
         *ir_value = expr_value;
     }
 
-    // Result type is the deferenced type, if not requested, we'll dispose of it
+    // Result type is the dereferenced type, if not requested, we'll dispose of it
     if(out_expr_type != NULL) *out_expr_type = expr_type;
     else ast_type_free(&expr_type);
     return SUCCESS;
@@ -1683,7 +1722,7 @@ errorcode_t ir_gen_expr_unary(ir_builder_t *builder, ast_expr_unary_t *expr, ir_
 
     if(ir_gen_expr(builder, expr->value, &expr_value, false, &expr_type)) return FAILURE;
 
-    unsigned int catagory = ir_type_get_catagory(expr_value->type);
+    unsigned int category = ir_type_get_category(expr_value->type);
     
     ir_instr_unary_t *instruction = (ir_instr_unary_t*) build_instruction(builder, sizeof(ir_instr_unary_t));
     instruction->value = expr_value;
@@ -1692,7 +1731,7 @@ errorcode_t ir_gen_expr_unary(ir_builder_t *builder, ast_expr_unary_t *expr, ir_
         // Build '!'
 
         // Must be either integer or float like
-        if(catagory == PRIMITIVE_NA) goto cant_use_operator_on_that_type;
+        if(category == PRIMITIVE_NA) goto cant_use_operator_on_that_type;
 
         instruction->id = INSTRUCTION_ISZERO;
         instruction->result_type = ir_builder_bool(builder);
@@ -1704,7 +1743,7 @@ errorcode_t ir_gen_expr_unary(ir_builder_t *builder, ast_expr_unary_t *expr, ir_
         instruction->result_type = expr_value->type;
 
         // Determine instruction
-        switch(catagory){
+        switch(category){
         case PRIMITIVE_UI:
         case PRIMITIVE_SI:
             instruction->id = expr->id == EXPR_NEGATE ? INSTRUCTION_NEGATE : INSTRUCTION_BIT_COMPLEMENT;
@@ -1792,7 +1831,7 @@ errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_
     // Get length of C-string
     length_t value_length = strlen(expr->value);
 
-    // Get IR value for bytes necesssary
+    // Get IR value for bytes necessary
     ir_value_t *bytes_value = build_literal_usize(builder->pool, value_length + 1);
 
     // Build heap allocation instruction
@@ -1834,11 +1873,11 @@ errorcode_t ir_gen_expr_enum_value(ir_builder_t *builder, ast_expr_enum_value_t 
         return FAILURE;
     }
 
-    // Get enum informatino
-    ast_enum_t *inum = &builder->object->ast.enums[enum_index];
+    // Get enum information
+    ast_enum_t *enum_definition = &builder->object->ast.enums[enum_index];
 
     // Find the ID of the field of the enum
-    if(!ast_enum_find_kind(inum, expr->kind_name, &enum_kind_id)){
+    if(!ast_enum_find_kind(enum_definition, expr->kind_name, &enum_kind_id)){
         compiler_panicf(builder->compiler, expr->source, "Failed to find member '%s' of enum '%s'", expr->kind_name, expr->enum_name);
         return FAILURE;
     }
@@ -1910,11 +1949,18 @@ errorcode_t ir_gen_expr_static_struct(ir_builder_t *builder, ast_expr_static_dat
 
     // Find the AST structure
     const char *base = ((ast_elem_base_t*) expr->type.elements[0])->base;
-    ast_struct_t *structure = object_struct_find(NULL, builder->object, builder->tmpbuf, base, NULL);
+    ast_composite_t *structure = object_composite_find(NULL, builder->object, builder->tmpbuf, base, NULL);
     if(structure == NULL) return FAILURE;
 
+    if(!ast_layout_is_simple_struct(&structure->layout)){
+        compiler_panicf(builder->compiler, expr->source, "Cannot create struct literal for complex composite type '%s'", base);
+        return FAILURE;
+    }
+
+    length_t field_count = ast_simple_field_map_get_count(&structure->layout.field_map);
+
     // Ensure the number of fields given is correct
-    if(structure->field_count != expr->length){
+    if(field_count != expr->length){
         compiler_panicf(builder->compiler, expr->source, "Incorrect number of fields given in struct literal for struct '%s'", base);
         return FAILURE;
     }
@@ -1932,8 +1978,10 @@ errorcode_t ir_gen_expr_static_struct(ir_builder_t *builder, ast_expr_static_dat
             return FAILURE;
         }
 
+        ast_type_t *field_type = ast_layout_skeleton_get_type_at_index(&structure->layout.skeleton, i);
+
         // Conform the field IR value to the expected AST type
-        if(!ast_types_conform(builder, &values[i], &member_type, &structure->field_types[i], CONFORM_MODE_STANDARD)){
+        if(!ast_types_conform(builder, &values[i], &member_type, field_type, CONFORM_MODE_STANDARD)){
             char *a_type_str = ast_type_str(&member_type);
             char *b_type_str = ast_type_str(&expr->type);
             compiler_panicf(builder->compiler, expr->values[i]->source, "Can't cast type '%s' to type '%s'", a_type_str, b_type_str);
@@ -2021,7 +2069,7 @@ errorcode_t ir_gen_expr_ternary(ir_builder_t *builder, ast_expr_ternary_t *expr,
         return FAILURE;
     }
 
-    // Rembmer where false branch landed
+    // Remember where false branch landed
     length_t when_false_landing = builder->current_block_id;
     
     // Ensure the resulting types of the two branches is the same
@@ -2583,7 +2631,7 @@ errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_inst
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
     // NOTE: Returns 1 if unsupported type
 
-    switch(ir_type_get_catagory(instruction->a->type)){
+    switch(ir_type_get_category(instruction->a->type)){
     case PRIMITIVE_UI:
     case PRIMITIVE_SI:
         instruction->id = i_instr;
@@ -2605,7 +2653,7 @@ errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned i
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
     // NOTE: Returns 1 if unsupported type
 
-    switch(ir_type_get_catagory(instruction->a->type)){
+    switch(ir_type_get_category(instruction->a->type)){
     case PRIMITIVE_UI:
         instruction->id = u_instr;
         break;
@@ -2622,7 +2670,7 @@ errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned i
     return instruction->id != INSTRUCTION_NONE ? SUCCESS : FAILURE;
 }
 
-char ir_type_get_catagory(ir_type_t *type){
+char ir_type_get_category(ir_type_t *type){
     switch(type->kind){
     case TYPE_KIND_POINTER:
     case TYPE_KIND_BOOLEAN:
@@ -2646,6 +2694,6 @@ char ir_type_get_catagory(ir_type_t *type){
         return PRIMITIVE_FP;
     }
 
-    // Otherwise, no catagory
+    // Otherwise, no category
     return PRIMITIVE_NA;
 }

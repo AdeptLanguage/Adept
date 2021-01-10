@@ -59,6 +59,12 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 // if successfully merged them to a common AST type.
 successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b);
 
+// ---------------- ast_layout_bone_to_ir_type ----------------
+// Converts an ast_layout_bone_t to an ir_type_t
+// 'optional_catalog' and 'optional_type_table', may be NULL
+// Returns NULL when something goes wrong
+ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, ast_layout_bone_t *bone, ast_poly_catalog_t *optional_catalog);
+
 // ---------------- ir_type_mapping_cmp ----------------
 // Compares two 'ir_type_mapping_t' structures.
 // Used to sort IR type mappings with qsort()

@@ -24,7 +24,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     
     if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign, &is_verbatim, &is_implicit, &export_name)) return FAILURE;
 
-    if(is_foreign && ctx->struct_association != NULL){
+    if(is_foreign && ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
         return FAILURE;
     }
@@ -250,7 +250,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out
         }
 
         // If not in struct association, then prepend current namespace
-        if(ctx->struct_association == NULL) parse_prepend_namespace(ctx, out_name);
+        if(ctx->composite_association == NULL) parse_prepend_namespace(ctx, out_name);
         return SUCCESS;
     }
 
@@ -330,7 +330,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
 
     if(parse_ignore_newlines(ctx, "Expected '(' after function name")) return FAILURE;
 
-    if(ctx->struct_association){
+    if(ctx->composite_association){
         if(func->traits & AST_FUNC_FOREIGN){
             compiler_panic(ctx->compiler, func->source, "Cannot declare foreign function inside of struct domain");
             return FAILURE;
@@ -338,7 +338,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
 
         parse_func_grow_arguments(func, backfill, &capacity);
 
-        if(ctx->struct_association_is_polymorphic){
+        if(ctx->composite_association->is_polymorphic){
             // Insert 'this *<$A, $B, $C, ...> AssociatedStruct' as first argument to function
 
             ast_elem_pointer_t *pointer = malloc(sizeof(ast_elem_pointer_t));
@@ -348,14 +348,14 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
             ast_elem_generic_base_t *generic_base = malloc(sizeof(ast_elem_generic_base_t));
             generic_base->id = AST_ELEM_GENERIC_BASE;
             generic_base->source = NULL_SOURCE;
-            generic_base->name = strclone(ctx->struct_association->name);
-            generic_base->generics = malloc(sizeof(ast_type_t) * ctx->struct_association->generics_length);
+            generic_base->name = strclone(ctx->composite_association->name);
+            generic_base->generics = malloc(sizeof(ast_type_t) * ctx->composite_association->generics_length);
 
-            for(length_t i = 0; i != ctx->struct_association->generics_length; i++){
-                ast_type_make_polymorph(&generic_base->generics[i], strclone(ctx->struct_association->generics[i]), false);
+            for(length_t i = 0; i != ctx->composite_association->generics_length; i++){
+                ast_type_make_polymorph(&generic_base->generics[i], strclone(ctx->composite_association->generics[i]), false);
             }
 
-            generic_base->generics_length = ctx->struct_association->generics_length;
+            generic_base->generics_length = ctx->composite_association->generics_length;
             generic_base->name_is_polymorphic = false;
     
             func->arg_types[0].elements = malloc(sizeof(ast_elem_t*) * 2);
@@ -365,11 +365,11 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
             func->arg_types[0].source = NULL_SOURCE;
         } else {
             // Insert 'this *AssociatedStruct' as first argument to function
-            ast_type_make_base_ptr(&func->arg_types[0], strclone(ctx->struct_association->name));
+            ast_type_make_base_ptr(&func->arg_types[0], strclone(ctx->composite_association->name));
         }
 
         func->arg_names[0] = strclone("this");
-        func->arg_sources[0] = ctx->struct_association->source;
+        func->arg_sources[0] = ctx->composite_association->source;
         func->arg_flows[0] = FLOW_IN;
         func->arg_type_traits[0] = TRAIT_NONE;
         func->arity++;

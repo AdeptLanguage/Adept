@@ -33,13 +33,12 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
         type_table_give(ctx.type_table, &ast->aliases[a].type, strclone(ast->aliases[a].name));
     }
 
-    for(length_t s = 0; s != ast->structs_length; s++){
-        ast_struct_t *st = &ast->structs[s];
-        for(length_t f = 0; f != st->field_count; f++){
-            if(infer_type(&ctx, &st->field_types[f])) return FAILURE;
-        }
+    for(length_t c = 0; c != ast->composites_length; c++){
+        ast_composite_t *composite = &ast->composites[c];
 
-        type_table_give_base(ctx.type_table, st->name);
+        if(infer_layout_skeleton(&ctx, &composite->layout.skeleton)) return FAILURE;
+
+        type_table_give_base(ctx.type_table, composite->name);
     }
 
     for(length_t g = 0; g != ast->globals_length; g++){
@@ -58,6 +57,26 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     // We had unused variables and have been told to treat them as errors, so exit
     if(compiler->traits & COMPILER_WARN_AS_ERROR && compiler->show_unused_variables_how_to_disable){
         return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skeleton){
+    for(length_t i = 0; i < skeleton->bones_length; i++){
+        ast_layout_bone_t *bone = &skeleton->bones[i];
+
+        switch(bone->kind){
+        case AST_LAYOUT_BONE_KIND_UNION:
+        case AST_LAYOUT_BONE_KIND_STRUCT:
+            if(infer_layout_skeleton(ctx, &bone->children)) return FAILURE;
+            break;
+        case AST_LAYOUT_BONE_KIND_TYPE:
+            if(infer_type(ctx, &bone->type)) return FAILURE;
+            break;
+        default:
+            internalerrorprintf("infer_layout_skeleton() got unknown bone kind\n");
+        }
     }
 
     return SUCCESS;
@@ -596,33 +615,38 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             }
 
             const char *base = ((ast_elem_base_t*) static_data->type.elements[0])->base;
-            ast_struct_t *structure = object_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, NULL);
+            ast_composite_t *composite = object_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, NULL);
 
-            if(structure == NULL){
+            if(composite == NULL){
                 if(typename_is_entended_builtin_type(base)){
                     compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for built-in type '%s'", base);
                 } else {
-                    compiler_panicf(ctx->compiler, static_data->type.source, "INTERNAL ERROR: Failed to find struct '%s' that should exist", base);
+                    compiler_panicf(ctx->compiler, static_data->type.source, "Struct '%s' does not exist", base);
                 }
                 return FAILURE;
             }
 
-            if(structure->traits & AST_STRUCT_IS_UNION){
-                compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for union type '%s'", base);
+            if(composite->layout.kind != AST_LAYOUT_STRUCT || !composite->layout.field_map.is_simple){
+                compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for complex composite type '%s'", base);
                 return FAILURE;
             }
 
-            if(static_data->length != structure->field_count){
-                if(static_data->length > structure->field_count){
-                    compiler_panicf(ctx->compiler, static_data->type.source, "Too many fields specified for struct '%s' (expected %d, got %d)", base, structure->field_count, static_data->length);
+            length_t field_count = ast_simple_field_map_get_count(&composite->layout.field_map);
+
+            if(static_data->length != field_count){
+                if(static_data->length > field_count){
+                    compiler_panicf(ctx->compiler, static_data->type.source, "Too many fields specified for struct '%s' (expected %d, got %d)", base, field_count, static_data->length);
                 } else {
-                    compiler_panicf(ctx->compiler, static_data->type.source, "Not enough fields specified for struct '%s' (expected %d, got %d)", base, structure->field_count, static_data->length);
+                    compiler_panicf(ctx->compiler, static_data->type.source, "Not enough fields specified for struct '%s' (expected %d, got %d)", base, field_count, static_data->length);
                 }
                 return FAILURE;
             }
 
             for(length_t i = 0; i != ((ast_expr_static_data_t*) *expr)->length; i++){
-                unsigned int default_primitive = ast_primitive_from_ast_type(&structure->field_types[i]);
+                ast_type_t *field_type = ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, i);
+
+                unsigned int default_primitive = ast_primitive_from_ast_type(field_type);
+
                 if(infer_expr(ctx, ast_func, &((ast_expr_static_data_t*) *expr)->values[i], default_primitive, scope, false)) return FAILURE;
             }
         }
@@ -1044,7 +1068,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
         switch(elem->id){
         case AST_ELEM_BASE: {
                 weak_cstr_t base = ((ast_elem_base_t*) elem)->base;
-                ast_struct_t *impl_struct;
+                ast_composite_t *composite;
 
                 if(strcmp(base, "void") == 0 && type->elements_length > 1 && e != 0 && type->elements[e - 1]->id == AST_ELEM_POINTER){
                     // Substitute '*void' with 'ptr'
@@ -1088,13 +1112,13 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                 }
 
                 bool requires_namespace;
-                impl_struct = object_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
+                composite = object_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
 
-                if(impl_struct && requires_namespace){
+                if(composite && requires_namespace){
                     // If we can find the definite implementation of this type, than change the name
                     // to the full namespaced version
                     free(base);
-                    base = strclone(impl_struct->name);
+                    base = strclone(composite->name);
                     ((ast_elem_base_t*) elem)->base = base;
                 }
             }
@@ -1107,16 +1131,16 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
             break;
         case AST_ELEM_GENERIC_BASE: {
                 weak_cstr_t base = ((ast_elem_generic_base_t*) elem)->name;
-                ast_polymorphic_struct_t *impl_struct;
+                ast_polymorphic_composite_t *poly_composite;
 
                 bool requires_namespace;
-                impl_struct = object_polymorphic_struct_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
+                poly_composite = object_polymorphic_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
 
-                if(impl_struct && requires_namespace){
+                if(poly_composite && requires_namespace){
                     // If we can find the definite implementation of this type, than change the name
                     // to the full namespaced version
                     free(base);
-                    base = strclone(impl_struct->name);
+                    base = strclone(poly_composite->name);
                     ((ast_elem_generic_base_t*) elem)->name = base;
                 }
 

@@ -34,6 +34,7 @@ extern "C" {
 #define AST_ELEM_POLYCOUNT        0x09
 #define AST_ELEM_POLYMORPH_PREREQ 0x0A
 #define AST_ELEM_GENERIC_BASE     0x0B
+#define AST_ELEM_LAYOUT           0x0C
 
 // Possible data flow patterns
 #define FLOW_NONE  0x00

@@ -10,7 +10,7 @@ errorcode_t parse_namespace(parse_ctx_t *ctx){
     token_t *tokens = ctx->tokenlist->tokens;
     length_t *i = ctx->i;
 
-    if(ctx->struct_association != NULL){
+    if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Cannot change namespaces within struct domain");
         return FAILURE;
     }
