@@ -1741,7 +1741,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
         if(composite == NULL) return FAILURE;
 
         // Don't handle children for complex composite types
-        if(!ast_layout_is_simple_struct(&composite->layout)) return SUCCESS;
+        if(!ast_layout_is_simple_struct(&composite->layout)) return FAILURE;
 
     } else if(is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
@@ -1755,7 +1755,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
         if(template->generics_length != generic_base->generics_length) return FAILURE;
 
         // Don't handle children for complex composite types
-        if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
+        if(!ast_layout_is_simple_struct(&template->layout)) return FAILURE;
     }
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);

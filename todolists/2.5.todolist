@@ -5,7 +5,8 @@ HIGH-PRIORITY:
 MEDIUM-PRIORITY:
 * typenameof expression
 * alignof expression
-* anonymous fields (with structures and unions)
+* fill in runtime type information for complex composite types
+* anonymous structures and unions
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -32,3 +33,4 @@ v2.4 COMPLETED:
 + Allow for '*void' as an alternative to 'ptr'
 
 v2.5 COMPLETED:
++ anonymous fields (with structures and unions)

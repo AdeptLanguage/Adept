@@ -57,18 +57,14 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
         domain = ast_add_composite(ast, name, layout, source);
     }
 
-    // Only allow struct domains for structs, not unions
-    if(!is_union){
-        // Look for start of struct domain and set it up if it exists
-
-        length_t scan_i = *ctx->i + 1;
-        while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
-            scan_i++;
-        
-        if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
-            ctx->composite_association = (ast_polymorphic_composite_t*) domain;
-            *ctx->i = scan_i;
-        }
+    // Look for start of struct domain and set it up if it exists
+    length_t scan_i = *ctx->i + 1;
+    while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
+        scan_i++;
+    
+    if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
+        ctx->composite_association = (ast_polymorphic_composite_t*) domain;
+        *ctx->i = scan_i;
     }
 
     return SUCCESS;
@@ -200,7 +196,9 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
-    if(tokens[*i].id == TOKEN_STRUCT && tokens[*i + 1].id == TOKEN_WORD){
+    const tokenid_t leading_token = tokens[*i].id;
+
+    if(leading_token == TOKEN_STRUCT && tokens[*i + 1].id == TOKEN_WORD){
         // Struct Integration Field
 
         if(*inout_backfill != 0){
@@ -209,6 +207,18 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
         }
 
         return parse_struct_integration_field(ctx, inout_field_map, inout_skeleton, inout_next_endpoint);
+    }
+
+    if(leading_token == TOKEN_PACKED || leading_token == TOKEN_STRUCT || leading_token == TOKEN_UNION){
+        // Anonymous struct/union
+
+        if(*inout_backfill != 0){
+            const char *kind_name = leading_token == TOKEN_UNION ? "union" : "struct";
+            compiler_panicf(ctx->compiler, sources[*i], "Expected field type for previous fields before anonymous %s", kind_name);
+            return FAILURE;
+        }
+
+        return parse_anonymous_composite(ctx, inout_field_map, inout_skeleton, inout_next_endpoint);
     }
 
     // Otherwise it's just a regular field
@@ -270,6 +280,61 @@ errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *in
         ast_layout_endpoint_increment(inout_next_endpoint);
     }
 
+    (*i)++;
+    return SUCCESS;
+}
+
+errorcode_t parse_anonymous_composite(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint){
+    // (Inside of composite definition)
+    // struct (x, y, z float)
+    //   ^
+
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist->tokens;
+    source_t *sources = ctx->tokenlist->sources;
+
+    bool is_packed = tokens[*i].id == TOKEN_PACKED;
+    if(is_packed) (*i)++;
+
+    // Assumes either TOKEN_STRUCT or TOKEN_UNION
+    ast_layout_bone_kind_t bone_kind = tokens[*i].id == TOKEN_STRUCT ? AST_LAYOUT_BONE_KIND_STRUCT : AST_LAYOUT_BONE_KIND_UNION;
+    (*i)++;
+
+    trait_t bone_traits = is_packed ? AST_LAYOUT_BONE_PACKED : TRAIT_NONE;
+    ast_layout_skeleton_t *child_skeleton = ast_layout_skeleton_add_child_skeleton(inout_skeleton, bone_kind, bone_traits);
+    ast_layout_endpoint_t child_next_endpoint = *inout_next_endpoint;
+
+    if(!ast_layout_endpoint_add_index(&child_next_endpoint, 0)){
+        compiler_panicf(ctx->compiler, sources[*i], "Maximum depth of anonymous composites exceeded - No more than %d are allowed", AST_LAYOUT_MAX_DEPTH);
+        return FAILURE;
+    }
+
+    length_t backfill = 0;
+
+    if(parse_ignore_newlines(ctx, "Expected '(' for anonymous composite")
+    || parse_eat(ctx, TOKEN_OPEN, "Expected '(' for anonymous composite")){
+        return FAILURE;
+    }
+
+    while(tokens[*i].id != TOKEN_CLOSE || backfill != 0){
+        if(parse_ignore_newlines(ctx, "Expected name of field")
+        || parse_composite_field(ctx, inout_field_map, child_skeleton, &backfill, &child_next_endpoint)
+        || parse_ignore_newlines(ctx, "Expected ')' or ',' after field")){
+            return FAILURE;
+        }
+
+        if(tokens[*i].id == TOKEN_NEXT){
+            if(tokens[++(*i)].id == TOKEN_CLOSE){
+                compiler_panic(ctx->compiler, sources[*i], "Expected field name and type after ',' in field list");
+                return FAILURE;
+            }
+        } else if(tokens[*i].id != TOKEN_CLOSE){
+            compiler_panic(ctx->compiler, sources[*i], "Expected ',' after field name and type");
+            return FAILURE;
+        }
+    }
+
+    ast_layout_endpoint_increment(inout_next_endpoint);
     (*i)++;
     return SUCCESS;
 }

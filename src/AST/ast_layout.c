@@ -85,7 +85,7 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
 
             skeleton = &bone->children;
             out_path->waypoints[i + 1].kind = AST_LAYOUT_WAYPOINT_OFFSET;
-            out_path->waypoints[i + 1].index = bone_index;
+            out_path->waypoints[i + 1].index = endpoint.indices[i + 1];
             break;
         }
     }
@@ -222,29 +222,37 @@ void ast_layout_endpoint_increment(ast_layout_endpoint_t *inout_endpoint){
     }
 }
 
+void ast_layout_endpoint_print(ast_layout_endpoint_t endpoint){
+    for(length_t i = 0; i != AST_LAYOUT_MAX_DEPTH; i++)
+        printf("%04X ", (int) endpoint.indices[i]);
+    printf("\n");
+}
+
 void ast_layout_skeleton_add_type(ast_layout_skeleton_t *skeleton, ast_type_t strong_type){
     expand((void**) &skeleton->bones, sizeof(ast_layout_bone_t), skeleton->bones_length, &skeleton->bones_capacity, 1, 4);    
 
     ast_layout_bone_t bone;
     bone.kind = AST_LAYOUT_BONE_KIND_TYPE;
     bone.type = strong_type;
+    bone.traits = TRAIT_NONE;
 
     skeleton->bones[skeleton->bones_length++] = bone;
 }
 
-ast_layout_skeleton_t *ast_layout_skeleton_add_union(ast_layout_skeleton_t *skeleton){
-    return ast_layout_skeleton_add_child_skeleton(skeleton, AST_LAYOUT_BONE_KIND_UNION);
+ast_layout_skeleton_t *ast_layout_skeleton_add_union(ast_layout_skeleton_t *skeleton, trait_t bone_traits){
+    return ast_layout_skeleton_add_child_skeleton(skeleton, AST_LAYOUT_BONE_KIND_UNION, bone_traits);
 }
 
-ast_layout_skeleton_t *ast_layout_skeleton_add_struct(ast_layout_skeleton_t *skeleton){
-    return ast_layout_skeleton_add_child_skeleton(skeleton, AST_LAYOUT_BONE_KIND_STRUCT);
+ast_layout_skeleton_t *ast_layout_skeleton_add_struct(ast_layout_skeleton_t *skeleton, trait_t bone_traits){
+    return ast_layout_skeleton_add_child_skeleton(skeleton, AST_LAYOUT_BONE_KIND_STRUCT, bone_traits);
 }
 
-ast_layout_skeleton_t *ast_layout_skeleton_add_child_skeleton(ast_layout_skeleton_t *skeleton, ast_layout_bone_kind_t bone_kind){
+ast_layout_skeleton_t *ast_layout_skeleton_add_child_skeleton(ast_layout_skeleton_t *skeleton, ast_layout_bone_kind_t bone_kind, trait_t bone_traits){
     expand((void**) &skeleton->bones, sizeof(ast_layout_bone_t), skeleton->bones_length, &skeleton->bones_capacity, 1, 4);
 
     ast_layout_bone_t *bone = &skeleton->bones[skeleton->bones_length++];
     bone->kind = bone_kind;
+    bone->traits = bone_traits;
     ast_layout_skeleton_init(&bone->children);
     
     return &bone->children;
@@ -350,6 +358,7 @@ maybe_null_weak_cstr_t ast_field_map_get_name_of_endpoint(ast_field_map_t *field
 }
 
 void ast_field_map_print(ast_field_map_t *field_map, ast_layout_skeleton_t *maybe_skeleton){
+    printf("ast_field_map_t with %d arrows:\n", (int) field_map->arrows_length);
     for(length_t i = 0; i != field_map->arrows_length; i++){
         ast_field_arrow_t *arrow = &field_map->arrows[i];
         char *s = NULL;

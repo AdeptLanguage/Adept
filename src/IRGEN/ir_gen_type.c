@@ -736,7 +736,7 @@ ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, as
     ir_type_extra_composite_t *extra = ir_pool_alloc(pool, sizeof(ir_type_extra_composite_t));
     extra->subtypes = ir_pool_alloc(pool, sizeof(ir_type_t*) * bone->children.bones_length);
     extra->subtypes_length = bone->children.bones_length;
-    extra->traits = TRAIT_NONE;
+    extra->traits = bone->traits & AST_LAYOUT_BONE_PACKED;
 
     for(length_t i = 0; i != bone->children.bones_length; i++){
         ir_type_t *subtype = ast_layout_bone_to_ir_type(compiler, object, &bone->children.bones[i], optional_catalog);

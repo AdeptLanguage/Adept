@@ -259,7 +259,9 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
         ir_func_mapping_t *job = &job_list->jobs[--job_list->length];
         if((*ast_funcs)[job->ast_func_id].traits & AST_FUNC_FOREIGN) continue;
 
-        if(ir_gen_func_statements(compiler, object, job->ast_func_id, job->ir_func_id, job_list)) return FAILURE;
+        if(ir_gen_func_statements(compiler, object, job->ast_func_id, job->ir_func_id, job_list)){
+            return FAILURE;
+        }
     }
     
     return SUCCESS;
@@ -498,7 +500,34 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                         // TODO: UNIMPLEMENTED: Complex composites are not supported in RTTI yet
                         if(!(ast_layout_is_simple_struct(&template->layout) || ast_layout_is_simple_union(&template->layout))){
-                            internalwarningprintf("RTTI for complex composite %s will be left blank proper serialization is implementation\n", template->name);
+                            warningprintf("Runtime type information for complex composite '%s' will not be meaningful (unimplemented)\n", template->name);
+                            
+                            initializer_members[0] = build_literal_usize(pool, 0); // kind
+                            initializer_members[1] = build_literal_cstr_ex(pool, &ir_module->type_map, type_table->entries[i].name); // name
+                            initializer_members[2] = build_bool(pool, type_table->entries[i].is_alias); // is_alias
+                            initializer_members[3] = build_const_sizeof(pool, usize_type, type_table->entries[i].ir_type); // size
+
+                            if(type_type_kind == TYPE_KIND_STRUCTURE){
+                                initializer_members[4] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, any_type_ptr_type));
+                                initializer_members[5] = build_literal_usize(pool, 0); // length
+                                initializer_members[6] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, usize_type));
+                                initializer_members[7] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, ubyte_ptr_type));
+                                initializer_members[8] = build_bool(pool, extra->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
+                                initializer_type = any_struct_type_type;
+                            } else {
+                                initializer_members[4] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, any_type_ptr_type));
+                                initializer_members[5] = build_literal_usize(pool, 0); // length
+                                initializer_members[6] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, ubyte_ptr_type));
+                                initializer_type = any_union_type_type;
+                            }
+
+                            ir_value_t *initializer = build_static_struct(ir_module, initializer_type, initializer_members, initializer_members_length, false);
+                            build_anon_global_initializer(ir_module, array_values[i], initializer);
+
+                            if(initializer_type != any_type_ptr_type){
+                                array_values[i] = build_const_bitcast(pool, array_values[i], any_type_ptr_type);
+                            }
+                            
                             continue;
                         }
                         
@@ -576,7 +605,34 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
                         // TODO: UNIMPLEMENTED: Complex composites are not supported in RTTI yet
                         if(!(ast_layout_is_simple_struct(&composite->layout) || ast_layout_is_simple_union(&composite->layout))){
-                            internalwarningprintf("RTTI for complex composite %s will be left blank proper serialization is implementation\n", composite->name);
+                            warningprintf("Runtime type information for complex composite %s will not be meaningful (unimplemented)\n", composite->name);
+
+                            initializer_members[0] = build_literal_usize(pool, 0); // kind
+                            initializer_members[1] = build_literal_cstr_ex(pool, &ir_module->type_map, type_table->entries[i].name); // name
+                            initializer_members[2] = build_bool(pool, type_table->entries[i].is_alias); // is_alias
+                            initializer_members[3] = build_const_sizeof(pool, usize_type, type_table->entries[i].ir_type); // size
+
+                            if(type_type_kind == TYPE_KIND_STRUCTURE){
+                                initializer_members[4] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, any_type_ptr_type));
+                                initializer_members[5] = build_literal_usize(pool, 0); // length
+                                initializer_members[6] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, usize_type));
+                                initializer_members[7] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, ubyte_ptr_type));
+                                initializer_members[8] = build_bool(pool, extra->traits & TYPE_KIND_COMPOSITE_PACKED); // is_packed
+                                initializer_type = any_struct_type_type;
+                            } else {
+                                initializer_members[4] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, any_type_ptr_type));
+                                initializer_members[5] = build_literal_usize(pool, 0); // length
+                                initializer_members[6] = build_null_pointer_of_type(pool, ir_type_pointer_to(pool, ubyte_ptr_type));
+                                initializer_type = any_union_type_type;
+                            }
+
+                            ir_value_t *initializer = build_static_struct(ir_module, initializer_type, initializer_members, initializer_members_length, false);
+                            build_anon_global_initializer(ir_module, array_values[i], initializer);
+
+                            if(initializer_type != any_type_ptr_type){
+                                array_values[i] = build_const_bitcast(pool, array_values[i], any_type_ptr_type);
+                            }
+                            
                             continue;
                         }
 

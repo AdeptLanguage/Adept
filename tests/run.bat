@@ -9,6 +9,8 @@ call :compile andor
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile andor_circuit
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile anonymous_fields
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile any_fixed_array
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile any_function_pointer

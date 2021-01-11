@@ -1,0 +1,77 @@
+
+pragma compiler_version '2.5'
+
+import basics
+
+struct FloatOrInt (is_float bool, union (f float, i long)) {
+    func print {
+        if this.is_float, print(this.f)
+        else              print(this.i)
+    }
+}
+
+struct FloatOrIntVec3 (
+    is_floats bool,
+    packed union (
+        struct (xf, yf, zf float),
+        struct (xi, yi, zi int)
+    )
+) {
+    func print {
+        if this.is_floats {
+            printf("%hf %hf %hf\n", this.xf, this.yf, this.zf)
+        } else {
+            printf("%d %d %d\n", this.xi, this.yi, this.zi)
+        }
+    }
+}
+
+union Vec3d (
+    struct (
+        x double,
+        y double,
+        z double
+    ),
+    raw 3 double
+) {
+    func print {
+        printf("%f %f %f\n", this.x, this.y, this.z)
+        printf("%f %f %f\n", this.raw[0], this.raw[1], this.raw[2])
+    }
+}
+
+func main {
+    x FloatOrInt
+
+    printf("sizeof(x) = %zu\n", sizeof(x))
+
+    x.is_float = true
+    x.f = 3.14159265f
+    x.print()
+
+    x.is_float = false
+    x.i = 42
+    x.print()
+
+
+    vec FloatOrIntVec3
+    printf("sizeof(vec) = %zu\n", sizeof(vec))
+
+    vec.is_floats = true
+    vec.xf = 1.01f
+    vec.yf = 2.02f
+    vec.zf = 3.03f
+    vec.print()
+
+    vec.is_floats = false
+    vec.xi = 4
+    vec.yi = 5
+    vec.zi = 6
+    vec.print()
+
+    three Vec3d
+    three.x = 8.0f
+    three.raw[1] = 13.0
+    three.z = 42.0f
+    three.print()
+}

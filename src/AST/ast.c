@@ -732,6 +732,12 @@ void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, a
     bool has_printed_first_field = false;
 
     for(length_t i = 0; i != skeleton->bones_length; i++){
+        if(has_printed_first_field){
+            fprintf(file, ",\n");
+        } else {
+            has_printed_first_field = true;
+        }
+
         ast_layout_bone_t *bone = &skeleton->bones[i];
 
         ast_layout_endpoint_t endpoint = parent_endpoint;
@@ -755,6 +761,7 @@ void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, a
             ast_dump_composite_subfields(file, &bone->children, field_map, endpoint, indentation + 1);
             indent(file, indentation);
             fprintf(file, ")\n");
+            break;
         case AST_LAYOUT_BONE_KIND_STRUCT:
             fprintf(file, "struct (\n");
             ast_dump_composite_subfields(file, &bone->children, field_map, endpoint, indentation + 1);
@@ -765,13 +772,9 @@ void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, a
             internalerrorprintf("ast_dump_composite() got unknown bone kind\n");
             return;
         }
-
-        if(has_printed_first_field){
-            fprintf(file, ",\n");
-        } else {
-            has_printed_first_field = true;
-        }
     }
+
+    fprintf(file, "\n");
 }
 
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length){
@@ -902,8 +905,8 @@ ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name){
 }
 
 successful_t ast_composite_find_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path){
-    if(!ast_field_map_find(&composite->layout.field_map, name, out_endpoint)) return FAILURE;
-    if(!ast_layout_get_path(&composite->layout, *out_endpoint, out_path)) return FAILURE;
+    if(!ast_field_map_find(&composite->layout.field_map, name, out_endpoint)) return false;
+    if(!ast_layout_get_path(&composite->layout, *out_endpoint, out_path)) return false;
     return true;
 }
 

@@ -87,6 +87,10 @@ bool ast_layout_endpoint_equals(ast_layout_endpoint_t *a, ast_layout_endpoint_t 
 // Increments the last index of an endpoint
 void ast_layout_endpoint_increment(ast_layout_endpoint_t *inout_endpoint);
 
+// ---------------- ast_layout_endpoint_increment ----------------
+// Prints an 'ast_layout_endpoint_t' to stdout for debugging
+void ast_layout_endpoint_print(ast_layout_endpoint_t endpoint);
+
 // ---------------- ast_field_arrow_t ----------------
 // A single arrow from a field name to a location
 typedef struct {
@@ -269,17 +273,17 @@ void ast_layout_skeleton_add_type(ast_layout_skeleton_t *skeleton, ast_type_t st
 // ---------------- ast_layout_skeleton_add_struct ----------------
 // Returns a weak pointer to newly added child struct
 // The returned pointer is ONLY valid until the next bone is added to the skeleton
-ast_layout_skeleton_t *ast_layout_skeleton_add_struct(ast_layout_skeleton_t *skeleton);
+ast_layout_skeleton_t *ast_layout_skeleton_add_struct(ast_layout_skeleton_t *skeleton, trait_t bone_traits);
 
 // ---------------- ast_layout_skeleton_add_union ----------------
 // Returns a weak pointer to newly added child union
 // The returned pointer is ONLY valid until the next bone is added to the skeleton
-ast_layout_skeleton_t *ast_layout_skeleton_add_union(ast_layout_skeleton_t *skeleton);
+ast_layout_skeleton_t *ast_layout_skeleton_add_union(ast_layout_skeleton_t *skeleton, trait_t bone_traits);
 
 // ---------------- ast_layout_skeleton_add_child_skeleton ----------------
 // Returns a weak pointer to newly added child skeleton
 // The returned pointer is ONLY valid until the next bone is added to the skeleton
-ast_layout_skeleton_t *ast_layout_skeleton_add_child_skeleton(ast_layout_skeleton_t *skeleton, ast_layout_bone_kind_t bone_kind);
+ast_layout_skeleton_t *ast_layout_skeleton_add_child_skeleton(ast_layout_skeleton_t *skeleton, ast_layout_bone_kind_t bone_kind, trait_t bone_traits);
 
 // ---------------- ast_layout_skeleton_get_type ----------------
 // Returns the AST type of the value at an endpoint

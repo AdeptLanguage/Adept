@@ -67,7 +67,19 @@ LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
                 if(largest_size < type_size) largest_size = type_size;
             }
 
-            return LLVMArrayType(LLVMInt8Type(), largest_size);
+            if(composite->traits & TYPE_KIND_COMPOSITE_PACKED){
+                // Packed Unions
+                return LLVMArrayType(LLVMInt8Type(), largest_size);
+            } else {
+                // Unpacked Unions
+
+                // Do some black magic to get good alignment
+                length_t chosen_element_size = largest_size >= 8 ? 8 : largest_size;
+                LLVMTypeRef chosen_element_type = LLVMIntType(chosen_element_size * 8);
+                length_t extra_one = largest_size % chosen_element_size != 0 ? 1 : 0;
+                
+                return LLVMArrayType(chosen_element_type, largest_size / chosen_element_size + extra_one);
+            }
         }
         break;
     case TYPE_KIND_VOID: return LLVMVoidType();

@@ -904,26 +904,6 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
         if(expr_is_mutable(expr->value)) value_of_composite = build_load(builder, value_of_composite, expr->source);
     }
 
-    /*
-    // Get member field information
-    length_t field_index;
-    ir_type_t *field_type;
-    ast_elem_t *elem = ast_type_of_composite.elements[0];
-    bool is_via_union;
-
-    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &ast_type_of_composite, &field_index, &field_type, &is_via_union, out_expr_type)){
-        ast_type_free(&ast_type_of_composite);
-        return FAILURE;
-    }
-
-    // Build the member access
-    if(is_via_union){
-        *ir_value = build_bitcast(builder, value_of_composite, ir_type_pointer_to(builder->pool, field_type));
-    } else {
-        *ir_value = build_member(builder, value_of_composite, field_index, ir_type_pointer_to(builder->pool, field_type), expr->source);
-    }
-    */
-    
     ir_type_t *type;
     ir_field_info_t field_info;
     ast_elem_t *elem = ast_type_of_composite.elements[0];
@@ -935,7 +915,7 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
     }
 
     *ir_value = value_of_composite;
-
+    
     for(length_t i = 0; i < AST_LAYOUT_MAX_DEPTH && field_info.endpoint.indices[i] != AST_LAYOUT_ENDPOINT_END_INDEX; i++){
         // Get IR type for waypoint
         // Assumes IR type is a composite IR type
@@ -996,7 +976,11 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         }
 
         ast_type_t *field_type = ast_layout_skeleton_get_type(&target->layout.skeleton, out_field_info->endpoint);
-        if(field_type == NULL) return FAILURE;
+
+        if(field_type == NULL){
+            internalerrorprintf("ir_gen_expr_member_get_field_info() couldn't get type for invalid endpoint\n");
+            return FAILURE;
+        }
 
         // Resolve AST field type to IR field type
         if(ir_gen_resolve_type(builder->compiler, builder->object, field_type, &out_field_info->ir_type)) return FAILURE;

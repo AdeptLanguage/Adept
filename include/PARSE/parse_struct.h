@@ -31,6 +31,10 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
 // Parses a single struct integration field of a composite
 errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint);
 
+// ------------------ parse_anonymous_composite ------------------
+// Parses a single anonymous composite field of a composite
+errorcode_t parse_anonymous_composite(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint);
+
 #ifdef __cplusplus
 }
 #endif
