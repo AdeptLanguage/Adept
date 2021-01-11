@@ -15,7 +15,7 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(include)
 
 add_executable(adept
-	src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_type.c src/AST/ast.c
+	src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c
 	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c
 	src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c
