@@ -17,6 +17,7 @@
 #include "LEX/pkg.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
+#include "AST/ast_type.h"
 #include "UTIL/filename.h"
 #include "DRVR/compiler.h"
 #include "PARSE/parse.h"

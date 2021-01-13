@@ -13,6 +13,7 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
+#include "UTIL/trait.h"
 #include "AST/ast_type_lean.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
