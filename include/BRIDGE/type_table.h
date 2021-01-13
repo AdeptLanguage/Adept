@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 #include "UTIL/ground.h"
-#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "IR/ir_type.h"

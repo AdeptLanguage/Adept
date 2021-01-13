@@ -1,5 +1,6 @@
 
 #include "UTIL/util.h"
+#include "AST/ast_type.h"
 #include "BRIDGE/type_table.h"
 
 void type_table_init(type_table_t *table){

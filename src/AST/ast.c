@@ -1,5 +1,6 @@
 
 #include "AST/ast.h"
+#include "AST/ast_type.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "DRVR/compiler.h"

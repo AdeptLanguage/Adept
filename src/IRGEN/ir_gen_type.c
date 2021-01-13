@@ -243,6 +243,14 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             return FAILURE;
         }
         break;
+    case AST_ELEM_LAYOUT: {
+            ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) unresolved_type->elements[non_concrete_layers];
+            ast_layout_bone_t as_bone = ast_layout_as_bone(&layout_elem->layout);
+            
+            *resolved_type = ast_layout_bone_to_ir_type(compiler, object, &as_bone, NULL);
+            if(*resolved_type == NULL) return FAILURE;
+        }
+        break;
     default: {
             char *unresolved_str_rep = ast_type_str(unresolved_type);
             compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown type element id in type '%s'", unresolved_str_rep);

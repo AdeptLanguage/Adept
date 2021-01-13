@@ -144,6 +144,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 case TOKEN_LESSTHAN: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_LGC_LSHIFT: /*generics*/
                 case TOKEN_POLYMORPH: /*polymorphic type*/ case TOKEN_COLON: /*experimental : type syntax*/
                 case TOKEN_POLYCOUNT: /*polymorphic count*/
+                case TOKEN_STRUCT: case TOKEN_PACKED: case TOKEN_UNION: /* anonymous composites */
                     (*i)--; if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
                     break;
                 default:

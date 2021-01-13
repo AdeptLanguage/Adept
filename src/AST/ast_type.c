@@ -4,6 +4,7 @@
 #include "UTIL/util.h"
 #include "UTIL/hash.h"
 #include "UTIL/color.h"
+#include "UTIL/string_builder.h"
 
 ast_elem_t *ast_elem_clone(const ast_elem_t *element){
     ast_elem_t *new_element = NULL;
@@ -95,6 +96,13 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
             ((ast_elem_generic_base_t*) new_element)->name_is_polymorphic = ((ast_elem_generic_base_t*) element)->name_is_polymorphic;
             break;
         }
+    case AST_ELEM_LAYOUT: {
+            new_element = malloc(sizeof(ast_elem_layout_t));
+            ((ast_elem_layout_t*) new_element)->id = AST_ELEM_LAYOUT;
+            ((ast_elem_layout_t*) new_element)->source = element->source;
+            ((ast_elem_layout_t*) new_element)->layout = ast_layout_clone(&((ast_elem_layout_t*) element)->layout);
+            break;
+        }
     default:
         internalerrorprintf("Encountered unexpected type element id when cloning ast_elem_t, a crash will probably follow...\n");
     }
@@ -117,50 +125,50 @@ ast_type_t ast_type_clone(const ast_type_t *original){
 
 void ast_type_free(ast_type_t *type){
     for(length_t i = 0; i != type->elements_length; i++){
-        switch(type->elements[i]->id){
+        ast_elem_t *elem = type->elements[i];
+
+        switch(elem->id){
         case AST_ELEM_BASE:
-            free(((ast_elem_base_t*) type->elements[i])->base);
-            free(type->elements[i]);
+            free(((ast_elem_base_t*) elem)->base);
             break;
         case AST_ELEM_POINTER:
         case AST_ELEM_ARRAY:
         case AST_ELEM_FIXED_ARRAY:
         case AST_ELEM_GENERIC_INT:
         case AST_ELEM_GENERIC_FLOAT:
-            free(type->elements[i]);
             break;
         case AST_ELEM_FUNC:
-            if(((ast_elem_func_t*) type->elements[i])->ownership){
-                ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];
+            if(((ast_elem_func_t*) elem)->ownership){
+                ast_elem_func_t *func_elem = (ast_elem_func_t*) elem;
                 ast_types_free(func_elem->arg_types, func_elem->arity);
                 free(func_elem->arg_types);
                 ast_type_free_fully(func_elem->return_type);
             }
-            free(type->elements[i]);
             break;
         case AST_ELEM_POLYCOUNT:
-            free(((ast_elem_polymorph_t*) type->elements[i])->name);
-            free(type->elements[i]);
+            free(((ast_elem_polycount_t*) elem)->name);
             break;
         case AST_ELEM_POLYMORPH:
-            free(((ast_elem_polymorph_t*) type->elements[i])->name);
-            free(type->elements[i]);
+            free(((ast_elem_polymorph_t*) elem)->name);
             break;
         case AST_ELEM_POLYMORPH_PREREQ:
-            free(((ast_elem_polymorph_prereq_t*) type->elements[i])->name);
-            free(((ast_elem_polymorph_prereq_t*) type->elements[i])->similarity_prerequisite);
-            free(type->elements[i]);
+            free(((ast_elem_polymorph_prereq_t*) elem)->name);
+            free(((ast_elem_polymorph_prereq_t*) elem)->similarity_prerequisite);
             break;
         case AST_ELEM_GENERIC_BASE: {
-                ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) type->elements[i];
+                ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) elem;
                 ast_types_free_fully(generic_base_elem->generics, generic_base_elem->generics_length);
                 free(generic_base_elem->name);
-                free(type->elements[i]);
             }
+            break;
+        case AST_ELEM_LAYOUT:
+            ast_layout_free(&(((ast_elem_layout_t*) elem)->layout));
             break;
         default:
             internalerrorprintf("Encountered unexpected type element id when freeing ast_type_t\n");
         }
+
+        free(elem);
     }
 
     free(type->elements);
@@ -303,200 +311,133 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
     // NOTE: Returns allocated string containing string representation of type
     // NOTE: Returns NULL on error
 
-    char *name = malloc(256);
-    length_t name_length = 0;
-    length_t name_capacity = 256;
-
-    name[0] = '\0'; // Probably unnecessary but good for safety
-
-    #define EXTEND_NAME_MACRO(extend_name_amount) { \
-        if(name_length + extend_name_amount >= name_capacity){ \
-            char *new_name = malloc(name_capacity * 2); \
-            memcpy(new_name, name, name_length + 1); \
-            free(name); \
-            name = new_name; \
-            name_capacity *= 2; \
-        } \
-    }
+    string_builder_t builder;
+    string_builder_init(&builder);
 
     for(length_t i = 0; i != type->elements_length; i++){
         switch(type->elements[i]->id){
-        case AST_ELEM_BASE: {
-                const char *base = ((ast_elem_base_t*) type->elements[i])->base;
-                length_t base_length = strlen(base);
-                EXTEND_NAME_MACRO(base_length);
-                memcpy(&name[name_length], base, base_length + 1);
-                name_length += base_length;
-            }
+        case AST_ELEM_BASE:
+            string_builder_append(&builder, ((ast_elem_base_t*) type->elements[i])->base);
             break;
         case AST_ELEM_POINTER:
-            EXTEND_NAME_MACRO(1);
-            memcpy(&name[name_length], "*", 2);
-            name_length += 1;
+            string_builder_append_view(&builder, "*", 1);
             break;
         case AST_ELEM_ARRAY:
             break;
         case AST_ELEM_FIXED_ARRAY: {
-                char fixed_array_length_buffer[32];
-                length_t fixed_array_length = ((ast_elem_fixed_array_t*) type->elements[i])->length;
-                sprintf(fixed_array_length_buffer, "%d ", (int) fixed_array_length);
-                length_t fixed_array_length_buffer_length = strlen(fixed_array_length_buffer);
-                EXTEND_NAME_MACRO(fixed_array_length_buffer_length);
-                memcpy(&name[name_length], fixed_array_length_buffer, fixed_array_length_buffer_length + 1);
-                name_length += fixed_array_length_buffer_length;
+                char length_buffer[32];
+                sprintf(length_buffer, "%d ", (int) ((ast_elem_fixed_array_t*) type->elements[i])->length);
+                string_builder_append(&builder, length_buffer);
             }
             break;
         case AST_ELEM_GENERIC_INT:
-            EXTEND_NAME_MACRO(3);
-            memcpy(&name[name_length], "int", 4); // Collapse to 'int'
-            name_length += 3;
+            string_builder_append(&builder, "long");
             break;
         case AST_ELEM_GENERIC_FLOAT:
-            EXTEND_NAME_MACRO(6);
-            memcpy(&name[name_length], "double", 7); // Collapse to 'double'
-            name_length += 6;
+            string_builder_append(&builder, "double");
             break;
         case AST_ELEM_FUNC: {
                 ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];
-                length_t type_str_length;
                 char *type_str;
 
                 if(func_elem->traits & AST_FUNC_STDCALL){
-                    EXTEND_NAME_MACRO(8);
-                    memcpy(&name[name_length], "stdcall ", 8);
-                    name_length += 8;
+                    string_builder_append(&builder, "stdcall ");
                 }
 
-                EXTEND_NAME_MACRO(5);
-                memcpy(&name[name_length], "func(", 5);
-                name_length += 5;
+                string_builder_append(&builder, "func(");
 
-                // do args
+                // Stringify argument types
                 for(length_t a = 0; a != func_elem->arity; a++){
                     type_str = ast_type_str(&func_elem->arg_types[a]);
-                    type_str_length = strlen(type_str);
-
-                    EXTEND_NAME_MACRO(type_str_length);
-                    memcpy(&name[name_length], type_str, type_str_length);
-                    name_length += type_str_length;
+                    
+                    string_builder_append(&builder, type_str);
                     free(type_str);
 
                     if(a != func_elem->arity - 1){
-                        memcpy(&name[name_length], ", ", 3);
-                        name_length += 2;
+                        string_builder_append(&builder, ", ");
                     } else if(func_elem->traits & AST_FUNC_VARARG){
-                        EXTEND_NAME_MACRO(5);
-                        memcpy(&name[name_length], ", ...", 5);
-
-                        name_length += 5;
+                        string_builder_append(&builder, ", ...");
                     } else if(func_elem->traits & AST_FUNC_VARIADIC){
-                        EXTEND_NAME_MACRO(4);
-                        memcpy(&name[name_length], ", ..", 4);
-                        name_length += 4;
+                        string_builder_append(&builder, ", ..");
                     }
                 }
 
-                EXTEND_NAME_MACRO(3);
-                memcpy(&name[name_length], ") ", 3);
-                name_length += 2;
+                string_builder_append(&builder, ") ");
 
                 type_str = ast_type_str(func_elem->return_type);
-                type_str_length = strlen(type_str);
-
-                EXTEND_NAME_MACRO(type_str_length);
-                memcpy(&name[name_length], type_str, type_str_length + 1);
-                name_length += type_str_length;
+                string_builder_append(&builder, type_str);
                 free(type_str);
             }
             break;
         case AST_ELEM_POLYMORPH: {
                 const char *polyname = ((ast_elem_polymorph_t*) type->elements[i])->name;
-                length_t polyname_length = strlen(polyname);
-                EXTEND_NAME_MACRO(polyname_length + 1);
-                name[name_length++] = '$';
+
+                string_builder_append_view(&builder, "$", 1);
 
                 if(((ast_elem_polymorph_t*) type->elements[i])->allow_auto_conversion){
-                    name[name_length++] = '~';
+                    string_builder_append_view(&builder, "~", 1);
                 }
 
-                memcpy(&name[name_length], polyname, polyname_length + 1);
-                name_length += polyname_length;
+                string_builder_append(&builder, polyname);
             }
             break;
         case AST_ELEM_POLYMORPH_PREREQ: {
                 const char *polyname = ((ast_elem_polymorph_prereq_t*) type->elements[i])->name;
                 const char *prereqname = ((ast_elem_polymorph_prereq_t*) type->elements[i])->similarity_prerequisite;
 
-                length_t polyname_length = strlen(polyname);
-                length_t prereqname_length = strlen(prereqname);
-
-                EXTEND_NAME_MACRO(polyname_length + prereqname_length + 2);
-
-                name[name_length] = '$';
-                memcpy(&name[name_length + 1], polyname, polyname_length);
-                name[name_length + 1 + polyname_length] = '~';
-                memcpy(&name[name_length + 2 + polyname_length], prereqname, prereqname_length + 1);
-                name_length += polyname_length + prereqname_length + 2;
+                string_builder_append_view(&builder, "$", 1);
+                string_builder_append(&builder, polyname);
+                string_builder_append_view(&builder, "~", 1);
+                string_builder_append(&builder, prereqname);
             }
             break;
         case AST_ELEM_POLYCOUNT: {
                 const char *polyname = ((ast_elem_polycount_t*) type->elements[i])->name;
-                length_t polyname_length = strlen(polyname);
-                EXTEND_NAME_MACRO(polyname_length + 3);
-                name[name_length++] = '$';
-                name[name_length++] = '#';
-
-                memcpy(&name[name_length], polyname, polyname_length + 1);
-                name_length += polyname_length;
-                name[name_length++] = ' ';
+                string_builder_append_view(&builder, "$#", 2);
+                string_builder_append(&builder, polyname);
             }
             break;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) type->elements[i];
 
-                EXTEND_NAME_MACRO(1);
-                memcpy(&name[name_length], "<", 1);
-                name_length += 1;
+                string_builder_append_view(&builder, "<", 1);
 
                 for(length_t i = 0; i != generic_base->generics_length; i++){
                     strong_cstr_t type_str = ast_type_str(&generic_base->generics[i]);
-                    length_t type_str_length = strlen(type_str);
-
-                    EXTEND_NAME_MACRO(type_str_length);
-                    memcpy(&name[name_length], type_str, type_str_length);
-                    name_length += type_str_length;
+                    
+                    string_builder_append(&builder, type_str);
                     free(type_str);
 
                     if(i != generic_base->generics_length - 1){
-                        memcpy(&name[name_length], ", ", 2);
-                        name_length += 2;
+                        string_builder_append(&builder, ", ");
                     }
                 }
 
-                EXTEND_NAME_MACRO(2);
-                memcpy(&name[name_length], "> ", 2);
-                name_length += 2;
+                string_builder_append_view(&builder, "> ", 2);
 
                 if(generic_base->name_is_polymorphic){
-                    EXTEND_NAME_MACRO(1);
-                    memcpy(&name[name_length], "$", 1);
-                    name_length += 1;
+                    string_builder_append_view(&builder, "$", 1);
                 }
 
-                length_t base_length = strlen(generic_base->name);
-                EXTEND_NAME_MACRO(base_length + 1);
-                memcpy(&name[name_length], generic_base->name, base_length + 1);
-                name_length += base_length;
+                string_builder_append(&builder, generic_base->name);
+            }
+            break;
+        case AST_ELEM_LAYOUT: {
+                ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) type->elements[i];
+                strong_cstr_t layout_str = ast_layout_str(&layout_elem->layout, &layout_elem->layout.field_map);
+
+                string_builder_append(&builder, layout_str);
+                free(layout_str);
             }
             break;
         default:
             internalerrorprintf("Encountered unexpected element type 0x%08X when converting ast_type_t to a string\n", type->elements[i]->id);
+            string_builder_abandon(&builder);
             return NULL;
         }
     }
 
-    #undef EXTEND_NAME_MACRO
-    return name;
+    return string_builder_finalize(&builder);
 }
 
 bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
@@ -584,6 +525,13 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 if(strcmp(polymorph_a->name, polymorph_b->name) != 0) return false;
                 if(strcmp(polymorph_a->similarity_prerequisite, polymorph_b->similarity_prerequisite) != 0) return false;
                 if(polymorph_a->allow_auto_conversion != polymorph_b->allow_auto_conversion) return false;
+            }
+            break;
+        case AST_ELEM_LAYOUT: {
+                ast_elem_layout_t *layout_elem_a = (ast_elem_layout_t*) a->elements[i];
+                ast_elem_layout_t *layout_elem_b = (ast_elem_layout_t*) b->elements[i];
+
+                if(!ast_layouts_identical(&layout_elem_a->layout, &layout_elem_b->layout)) return false;
             }
             break;
         default:
@@ -737,6 +685,11 @@ bool ast_type_has_polymorph(const ast_type_t *type){
                 for(length_t i = 0; i != generic_base->generics_length; i++){
                     if(ast_type_has_polymorph(&generic_base->generics[i])) return true;
                 }
+            }
+            break;
+        case AST_ELEM_LAYOUT: {
+                ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) type->elements[i];
+                return ast_layout_skeleton_has_polymorph(&layout_elem->layout.skeleton);
             }
             break;
         default:

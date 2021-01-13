@@ -14,7 +14,7 @@ extern "C" {
 
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
-#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
 #include "AST/meta_directives.h"

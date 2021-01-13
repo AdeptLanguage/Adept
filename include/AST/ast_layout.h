@@ -10,7 +10,7 @@
 
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
-#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 
 // ---------------- AST_LAYOUT_ENDPOINT_END_INDEX ----------------
 // Special number used to indicate that no more indices
@@ -158,7 +158,7 @@ typedef enum {AST_LAYOUT_STRUCT, AST_LAYOUT_UNION} ast_layout_kind_t;
 
 // ---------------- ast_layout_t ----------------
 // Contains attached names to a layout skeleton
-typedef struct {
+typedef struct ast_layout {
     ast_layout_kind_t kind;
     ast_field_map_t field_map;
     ast_layout_skeleton_t skeleton;
@@ -180,6 +180,18 @@ void ast_layout_init_with_struct_fields(ast_layout_t *layout, strong_cstr_t name
 // ---------------- ast_layout_free ----------------
 // Frees an 'ast_layout_t'
 void ast_layout_free(ast_layout_t *layout);
+
+// ---------------- ast_layout_clone ----------------
+// Clones an 'ast_layout_t'
+ast_layout_t ast_layout_clone(ast_layout_t *layout);
+
+// ---------------- ast_layout_str ----------------
+// Converts an 'ast_layout_t' to a string
+strong_cstr_t ast_layout_str(ast_layout_t *layout, ast_field_map_t *field_map);
+
+// ---------------- ast_layouts_identical ----------------
+// Returns whether two layouts are equivalent
+bool ast_layouts_identical(ast_layout_t *layout_a, ast_layout_t *layout_b);
 
 // ---------------- ast_layout_as_bone ----------------
 // Returns an 'ast_layout_bone_t' which is equivalent to an 'ast_layout_t'
@@ -210,14 +222,47 @@ void ast_layout_skeleton_init(ast_layout_skeleton_t *skeleton);
 // Frees an 'ast_layout_skeleton_t'
 void ast_layout_skeleton_free(ast_layout_skeleton_t *skeleton);
 
+// ---------------- ast_layout_skeleton_clone ----------------
+// Clones an 'ast_layout_skeleton_t'
+ast_layout_skeleton_t ast_layout_skeleton_clone(ast_layout_skeleton_t *skeleton);
+
+// ---------------- ast_layout_skeleton_str ----------------
+// Converts an 'ast_layout_skeleton_t' to a string
+strong_cstr_t ast_layout_skeleton_str(ast_layout_skeleton_t *skeleton, ast_field_map_t *field_map, ast_layout_endpoint_t root_endpoint);
+
+// ---------------- ast_layout_skeletons_identical ----------------
+// Returns whether two 'ast_layout_skeleton_t' values are identical
+bool ast_layout_skeletons_identical(ast_layout_skeleton_t *skeleton_a, ast_layout_skeleton_t *skeleton_b);
+
 // ---------------- ast_layout_skeleton_print ----------------
 // Prints an 'ast_layout_skeleton_t' to stdout for debugging
 // One 'indentation' = Four Spaces
 void ast_layout_skeleton_print(ast_layout_skeleton_t *skeleton, int indentation);
 
+// ---------------- ast_layout_skeleton_has_polymorph ----------------
+// Returns whether an 'ast_layout_skeleton_t' contains a polymorph
+bool ast_layout_skeleton_has_polymorph(ast_layout_skeleton_t *skeleton);
+
 // ---------------- ast_layout_bone_free ----------------
 // Frees an 'ast_layout_bone_t'
 void ast_layout_bone_free(ast_layout_bone_t *bone);
+
+// ---------------- ast_layout_bone_clone ----------------
+// Clones an 'ast_layout_bone_t'
+ast_layout_bone_t ast_layout_bone_clone(ast_layout_bone_t *bone);
+
+// ---------------- ast_layout_bone_has_polymorph ----------------
+// Returns whether an 'ast_layout_bone_t' contains a polymorph
+bool ast_layout_bone_has_polymorph(ast_layout_bone_t *bone);
+
+// ---------------- ast_layout_bone_str ----------------
+// Converts an 'ast_layout_bone_t' to a string
+// Returns NULL on internal error
+strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *field_map, ast_layout_endpoint_t endpoint);
+
+// ---------------- ast_layout_bones_identical ----------------
+// Returns whether two 'ast_layout_bone_t' values are identical
+bool ast_layout_bones_identical(ast_layout_bone_t *bone_a, ast_layout_bone_t *bone_b);
 
 // ---------------- ast_layout_bone_print ----------------
 // Prints an 'ast_layout_bone_print' to stdout for debugging
@@ -231,6 +276,14 @@ void ast_field_map_init(ast_field_map_t *field_map);
 // ---------------- ast_field_map_free ----------------
 // Frees an 'ast_field_map_t'
 void ast_field_map_free(ast_field_map_t *field_map);
+
+// ---------------- ast_field_map_clone ----------------
+// Clones an 'ast_field_map_t'
+ast_field_map_t ast_field_map_clone(ast_field_map_t *field_map);
+
+// ---------------- ast_field_maps_identical ----------------
+// Returns whether two AST field maps are identical
+bool ast_field_maps_identical(ast_field_map_t *field_map_a, ast_field_map_t *field_map_b);
 
 // ---------------- ast_field_map_add ----------------
 // Adds an arrow from individual components to an 'ast_field_map_t'

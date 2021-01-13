@@ -41,13 +41,17 @@ typedef struct {
     ast_poly_catalog_t poly_catalog;
     ast_type_t *maybe_weak_generics;
     length_t maybe_weak_generics_length;
+
+    // The following only exist as buffers and should not be accessed directly
+    // (After the creation of the ir_gen_composite_rtti_info_t)
+    ast_composite_t anonymous_composite_info_collection;
 } ir_gen_composite_rtti_info_t;
 
-// ---------------- ir_gen_composite_rtti_info_t ----------------
+// ---------------- ir_gen__types__ ----------------
 // Initializes the '__types__' global variable
 errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t *ir_global);
 
-// ---------------- ir_gen_composite_rtti_info_t ----------------
+// ---------------- ir_gen_rtti_fetch_rtti_types ----------------
 // Collects IR types necessary for generating RTTI
 errorcode_t ir_gen_rtti_fetch_rtti_types(ir_module_t *ir_module, ir_rtti_types_t *out_rtti_types);
 

@@ -97,7 +97,13 @@ errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_va
     type_table_entry_t *entry = &type_table->entries[array_value_index];
 
     ast_type_t subtype_view = ast_type_unwrapped_view(&entry->ast_type);
-    ir_value_t *subtype_rtti = ir_gen__types__get_rtti_pointer_for(object, &subtype_view, array_values, rtti_types);
+    ir_value_t *subtype_rtti;
+    
+    if(entry->ast_type.elements_length > 1){
+        subtype_rtti = ir_gen__types__get_rtti_pointer_for(object, &subtype_view, array_values, rtti_types);
+    } else {
+        subtype_rtti = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
+    }
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 5);
     fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_PTR);                     // kind
@@ -353,10 +359,6 @@ failure:
 errorcode_t ir_gen__types__composite_entry_get_info(compiler_t *compiler, object_t *object, ir_rtti_types_t *rtti_types, type_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info){
     ast_elem_t *first_ast_elem = entry->ast_type.elements[0];
 
-    if(!(first_ast_elem->id == AST_ELEM_BASE || first_ast_elem->id == AST_ELEM_GENERIC_BASE)){
-        internalerrorprintf("ir_gen__types__composite_entry_get_info() found 'first_ast_elem' to not be a base-like elem");
-        return FAILURE;
-    }
 
     weak_cstr_t name = NULL;
     bool is_polymorphic = first_ast_elem->id == AST_ELEM_GENERIC_BASE;
@@ -366,20 +368,34 @@ errorcode_t ir_gen__types__composite_entry_get_info(compiler_t *compiler, object
     ast_poly_catalog_t poly_catalog;
     ast_type_t *maybe_weak_generics = NULL;
     length_t maybe_weak_generics_length = 0;
-    
+
     if(is_polymorphic){
-        ast_elem_generic_base_t *generic_base_elem = ((ast_elem_generic_base_t*) first_ast_elem);
+        ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) first_ast_elem;
         name = generic_base_elem->name;
         maybe_weak_generics = generic_base_elem->generics;
         maybe_weak_generics_length = generic_base_elem->generics_length;
 
         // Find polymorphic composite
         core_composite_info = (ast_composite_t*) object_polymorphic_composite_find(NULL, object, &compiler->tmp, name, NULL);
-    } else {
+    } else if(first_ast_elem->id == AST_ELEM_BASE){
         name = ((ast_elem_base_t*) first_ast_elem)->base;
-
+        
         // Find regular composite
         core_composite_info = object_composite_find(NULL, object, &compiler->tmp, name, NULL);
+    } else if(first_ast_elem->id == AST_ELEM_LAYOUT){
+        ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) first_ast_elem;
+        name = "(anonymous composite)";
+
+        // Collect together info of anonymous composite
+        core_composite_info = &out_info->anonymous_composite_info_collection;
+
+        out_info->anonymous_composite_info_collection.is_polymorphic = false;
+        out_info->anonymous_composite_info_collection.layout = layout_elem->layout;
+        out_info->anonymous_composite_info_collection.name = name;
+        out_info->anonymous_composite_info_collection.source = layout_elem->source;
+    } else {
+        internalerrorprintf("ir_gen__types__composite_entry_get_info() found 'first_ast_elem' to not be a base-like elem");
+        return FAILURE;
     }
 
     if(core_composite_info == NULL){

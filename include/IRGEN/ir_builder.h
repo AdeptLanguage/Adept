@@ -9,6 +9,7 @@
 */
 
 #include "IR/ir.h"
+#include "AST/ast_type.h"
 #include "UTIL/ground.h"
 #include "DRVR/object.h"
 #include "DRVR/compiler.h"

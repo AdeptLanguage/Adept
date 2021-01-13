@@ -3,8 +3,8 @@
 #define _ISAAC_RTTI_H
 
 #include "UTIL/ground.h"
-#include "AST/ast_type.h"
 #include "IRGEN/ir_builder.h"
+#include "AST/ast_type_lean.h"
 
 // ---------------- rtti_for ----------------
 // NOTE: Returns NULL on failure

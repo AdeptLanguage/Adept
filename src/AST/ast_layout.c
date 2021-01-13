@@ -1,6 +1,7 @@
 
 #include "UTIL/util.h"
 #include "UTIL/color.h"
+#include "UTIL/string_builder.h"
 #include "AST/ast_type.h"
 #include "AST/ast_layout.h"
 
@@ -34,6 +35,32 @@ void ast_layout_init_with_struct_fields(ast_layout_t *layout, strong_cstr_t name
 void ast_layout_free(ast_layout_t *layout){
     ast_layout_skeleton_free(&layout->skeleton);
     ast_field_map_free(&layout->field_map);
+}
+
+ast_layout_t ast_layout_clone(ast_layout_t *layout){
+    ast_layout_t clone;
+
+    clone.kind = layout->kind;
+    clone.field_map = ast_field_map_clone(&layout->field_map);
+    clone.skeleton = ast_layout_skeleton_clone(&layout->skeleton);
+    clone.traits = layout->traits;
+    return clone;
+}
+
+strong_cstr_t ast_layout_str(ast_layout_t *layout, ast_field_map_t *field_map){
+    ast_layout_bone_t as_bone = ast_layout_as_bone(layout);
+    ast_layout_endpoint_t endpoint;
+    ast_layout_endpoint_init(&endpoint);
+
+    return ast_layout_bone_str(&as_bone, field_map, endpoint);
+}
+
+bool ast_layouts_identical(ast_layout_t *layout_a, ast_layout_t *layout_b){
+    if(layout_a->kind != layout_b->kind) return false;
+    if(layout_a->traits != layout_b->traits) return false;
+    if(!ast_field_maps_identical(&layout_a->field_map, &layout_b->field_map)) return false;
+    if(!ast_layout_skeletons_identical(&layout_a->skeleton, &layout_b->skeleton)) return false;
+    return true;
 }
 
 ast_layout_bone_t ast_layout_as_bone(ast_layout_t *layout){
@@ -139,6 +166,61 @@ void ast_layout_skeleton_free(ast_layout_skeleton_t *skeleton){
     free(skeleton->bones);
 }
 
+ast_layout_skeleton_t ast_layout_skeleton_clone(ast_layout_skeleton_t *skeleton){
+    ast_layout_skeleton_t clone;
+    clone.bones = malloc(sizeof(ast_layout_bone_t) * skeleton->bones_length);
+    clone.bones_length = skeleton->bones_length;
+    clone.bones_capacity = skeleton->bones_length; // (on purpose)
+
+    for(length_t i = 0; i != skeleton->bones_length; i++){
+        clone.bones[i] = ast_layout_bone_clone(&skeleton->bones[i]);
+    }
+
+    return clone;
+}
+
+bool ast_layout_skeleton_has_polymorph(ast_layout_skeleton_t *skeleton){
+    for(length_t i = 0; i != skeleton->bones_length; i++){
+        if(ast_layout_bone_has_polymorph(&skeleton->bones[i])) return true;
+    }
+    return false;
+}
+
+strong_cstr_t ast_layout_skeleton_str(ast_layout_skeleton_t *skeleton, ast_field_map_t *field_map, ast_layout_endpoint_t root_endpoint){
+    string_builder_t builder;
+    string_builder_init(&builder);
+
+    string_builder_append_view(&builder, "(", 1);
+
+    for(length_t i = 0; i != skeleton->bones_length; i++){
+        ast_layout_bone_t *bone = &skeleton->bones[i];
+
+        ast_layout_endpoint_t bone_endpoint = root_endpoint;
+        ast_layout_endpoint_add_index(&bone_endpoint, i);
+
+        strong_cstr_t bone_str = ast_layout_bone_str(bone, field_map, bone_endpoint);
+        string_builder_append(&builder, bone_str);
+        free(bone_str);
+
+        if(i + 1 != skeleton->bones_length){
+            string_builder_append(&builder, ", ");
+        }
+    }
+
+    string_builder_append_view(&builder, ")", 1);
+    return string_builder_finalize(&builder);
+}
+
+bool ast_layout_skeletons_identical(ast_layout_skeleton_t *skeleton_a, ast_layout_skeleton_t *skeleton_b){
+    if(skeleton_a->bones_length != skeleton_b->bones_length) return false;
+
+    for(length_t i = 0; i != skeleton_a->bones_length; i++){
+        if(!ast_layout_bones_identical(&skeleton_a->bones[i], &skeleton_b->bones[i])) return false;
+    }
+
+    return true;
+}
+
 void ast_layout_skeleton_print(ast_layout_skeleton_t *skeleton, int indentation){
     for(length_t i = 0; i != skeleton->bones_length; i++){
         ast_layout_bone_print(&skeleton->bones[i], indentation);
@@ -172,6 +254,104 @@ void ast_layout_bone_free(ast_layout_bone_t *bone){
     } else {
         ast_layout_skeleton_free(&bone->children);
     }
+}
+
+ast_layout_bone_t ast_layout_bone_clone(ast_layout_bone_t *bone){
+    ast_layout_bone_t clone;
+    clone.kind = bone->kind;
+    clone.traits = bone->traits;
+
+    switch(bone->kind){
+    case AST_LAYOUT_BONE_KIND_TYPE:
+        clone.type = ast_type_clone(&bone->type);
+        break;
+    case AST_LAYOUT_BONE_KIND_UNION:
+    case AST_LAYOUT_BONE_KIND_STRUCT:
+        clone.children = ast_layout_skeleton_clone(&bone->children);
+        break;
+    default:
+        internalerrorprintf("ast_layout_bone_clone() got unknown bone kind\n");
+    }
+
+    return clone;
+}
+
+bool ast_layout_bone_has_polymorph(ast_layout_bone_t *bone){
+    switch(bone->kind){
+    case AST_LAYOUT_BONE_KIND_TYPE:
+        return ast_type_has_polymorph(&bone->type);
+    case AST_LAYOUT_BONE_KIND_UNION:
+    case AST_LAYOUT_BONE_KIND_STRUCT:
+        return ast_layout_skeleton_has_polymorph(&bone->children);
+    default:
+        internalerrorprintf("ast_layout_bone_has_polymorph() got unknown bone kind\n");
+    }
+}
+
+strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *field_map, ast_layout_endpoint_t endpoint){
+    string_builder_t builder;
+    string_builder_init(&builder);
+
+    switch(bone->kind){
+    case AST_LAYOUT_BONE_KIND_TYPE: {
+            maybe_null_weak_cstr_t name = ast_field_map_get_name_of_endpoint(field_map, endpoint);
+
+            if(name){
+                string_builder_append(&builder, name);
+                string_builder_append(&builder, " ");
+
+                strong_cstr_t type_str = ast_type_str(&bone->type);
+                string_builder_append(&builder, type_str);
+                free(type_str);
+            } else {
+                internalerrorprintf("ast_layout_bone_str() failed to find name given to endpoint\n");
+                goto failure;
+            }
+        }
+        break;
+    case AST_LAYOUT_BONE_KIND_UNION: {
+            string_builder_append(&builder, "union ");
+
+            strong_cstr_t skeleton_str = ast_layout_skeleton_str(&bone->children, field_map, endpoint);
+            string_builder_append(&builder, skeleton_str);
+            free(skeleton_str);
+        }
+        break;
+    case AST_LAYOUT_BONE_KIND_STRUCT: {
+            string_builder_append(&builder, "struct ");
+
+            strong_cstr_t skeleton_str = ast_layout_skeleton_str(&bone->children, field_map, endpoint);
+            string_builder_append(&builder, skeleton_str);
+            free(skeleton_str);
+        }
+        break;
+    default:
+        internalerrorprintf("ast_layout_str() got unknown layout kind\n");
+        goto failure;
+    }
+
+    return string_builder_finalize(&builder);
+
+failure:
+    string_builder_abandon(&builder);
+    return NULL;
+}
+
+bool ast_layout_bones_identical(ast_layout_bone_t *bone_a, ast_layout_bone_t *bone_b){
+    if(bone_a->kind != bone_b->kind) return false;
+
+    switch(bone_a->kind){
+    case AST_LAYOUT_BONE_KIND_TYPE:
+        return ast_types_identical(&bone_a->type, &bone_b->type);
+    case AST_LAYOUT_BONE_KIND_UNION:
+    case AST_LAYOUT_BONE_KIND_STRUCT:
+        return ast_layout_skeletons_identical(&bone_a->children, &bone_b->children);
+    default:
+        internalerrorprintf("ast_layout_bones_identical() got unknown bone kind\n");
+        return false;
+    }
+
+    return true;
 }
 
 void ast_layout_endpoint_init(ast_layout_endpoint_t *endpoint){
@@ -311,6 +491,39 @@ void ast_field_map_free(ast_field_map_t *field_map){
         free(field_map->arrows[i].name);
     }
     free(field_map->arrows);
+}
+
+ast_field_map_t ast_field_map_clone(ast_field_map_t *field_map){
+    ast_field_map_t clone;
+    clone.arrows = malloc(sizeof(ast_field_arrow_t) * field_map->arrows_length);
+    clone.arrows_length = field_map->arrows_length;
+    clone.arrows_capacity = field_map->arrows_length; // (on purpose)
+    clone.is_simple = field_map->is_simple;
+
+    for(length_t i = 0; i != field_map->arrows_length; i++){
+        ast_field_arrow_t *clone_arrow = &clone.arrows[i];
+        ast_field_arrow_t *original_arrow = &field_map->arrows[i];
+
+        clone_arrow->name = strclone(original_arrow->name);
+        clone_arrow->endpoint = original_arrow->endpoint;
+    }
+
+    return clone;
+}
+
+bool ast_field_maps_identical(ast_field_map_t *field_map_a, ast_field_map_t *field_map_b){
+    if(field_map_a->is_simple != field_map_b->is_simple) return false;
+    if(field_map_a->arrows_length != field_map_b->arrows_length) return false;
+
+    for(length_t i = 0; i != field_map_a->arrows_length; i++){
+        ast_field_arrow_t *arrow_a = &field_map_a->arrows[i];
+        ast_field_arrow_t *arrow_b = &field_map_b->arrows[i];
+
+        if(!ast_layout_endpoint_equals(&arrow_a->endpoint, &arrow_b->endpoint)) return false;
+        if(strcmp(arrow_a->name, arrow_b->name) != 0) return false;
+    }
+
+    return true;
 }
 
 void ast_field_map_add(ast_field_map_t *field_map, strong_cstr_t name, ast_layout_endpoint_t endpoint){

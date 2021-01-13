@@ -1,5 +1,6 @@
 
 #include "UTIL/hash.h"
+#include "AST/ast_type.h"
 #include "IRGEN/ir_cache.h"
 
 void ir_gen_sf_cache_init(ir_gen_sf_cache_t *cache){

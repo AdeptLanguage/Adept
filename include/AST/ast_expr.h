@@ -12,9 +12,10 @@
 extern "C" {
 #endif
 
+#include "UTIL/trait.h"
 #include "UTIL/ground.h"
 #include "UTIL/datatypes.h"
-#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 
 // =============================================================
 // ---------------- Possible AST Expression IDs ----------------

@@ -2,6 +2,7 @@
 #include "PARSE/parse.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
+#include "PARSE/parse_struct.h"
 #include "UTIL/util.h"
 
 errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
@@ -27,7 +28,6 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         start = ++(*i);
         id = tokens[start].id;
     }
-    
 
     while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT || id == TOKEN_POLYCOUNT || id == TOKEN_BRACKET_OPEN){
         expand((void**) &out_type->elements, sizeof(ast_elem_t*), out_type->elements_length, &elements_capacity, 1, 2);
@@ -112,6 +112,37 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             }
 
             out_type->elements[out_type->elements_length] = (ast_elem_t*) func_elem;
+        }
+        break;
+    case TOKEN_PACKED: case TOKEN_STRUCT: case TOKEN_UNION: {
+            ast_field_map_t field_map;
+            ast_layout_skeleton_t skeleton;
+            trait_t traits = TRAIT_NONE;
+            ast_layout_kind_t layout_kind;
+
+            if(id == TOKEN_PACKED){
+                traits |= AST_LAYOUT_PACKED;
+                id = tokens[++(*i)].id;
+            }
+
+            // Assumes token is either TOKEN_UNION or TOKEN_STRUCT
+            layout_kind = id == TOKEN_UNION ? AST_LAYOUT_UNION : AST_LAYOUT_STRUCT;
+            (*i)++;
+
+            if(parse_composite_body(ctx, &field_map, &skeleton)){
+                ast_type_free(out_type);
+                return FAILURE;
+            }
+
+            // Pass over closing ')'
+            (*i)++;
+            
+            ast_elem_layout_t *layout_elem = malloc(sizeof(ast_elem_layout_t));
+            layout_elem->id = AST_ELEM_LAYOUT;
+            layout_elem->source = sources[*i];
+            ast_layout_init(&layout_elem->layout, layout_kind, field_map, skeleton, traits);
+
+            out_type->elements[out_type->elements_length] = (ast_elem_t*) layout_elem;
         }
         break;
     case TOKEN_POLYMORPH: {

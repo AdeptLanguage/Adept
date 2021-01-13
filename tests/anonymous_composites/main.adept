@@ -1,0 +1,29 @@
+
+pragma compiler_version '2.5'
+
+import basics
+import math
+
+func main {
+    point struct (x, y, z float)
+
+    point.x = 1.0f
+    point.y = 2.0f
+    point.z = 3.0f
+    printf("(1.0f, 2.0f, 3.0f) distance to origin is %hf\n", distanceToOrigin(point))
+
+    maybe_float struct (is_float bool, union (f float, i int))
+    maybe_float.is_float = true
+    maybe_float.f = 2.0f * PI
+
+    printf("Tau = %S\n", toString(maybe_float))
+}
+
+func distanceToOrigin(p struct (x, y, z float)) float {
+    return sqrt(p.x * p.x + p.y * p.y + p.z * p.z)
+}
+
+func toString(maybe_float struct (is_float bool, union (f float, i int))) String {
+    if maybe_float.is_float, return toString(maybe_float.f)
+    return toString(maybe_float.i)
+}

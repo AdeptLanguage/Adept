@@ -1,6 +1,7 @@
 
 #include "INFER/infer.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_type.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/search.h"

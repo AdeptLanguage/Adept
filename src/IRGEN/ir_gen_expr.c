@@ -955,6 +955,8 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
 }
 
 errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info){
+    // TODO: CLEANUP: Clean up the code in this function
+
     if(elem->id == AST_ELEM_BASE){
         // Non-polymorphic composite type
         weak_cstr_t composite_name = ((ast_elem_base_t*) elem)->base;
@@ -1043,6 +1045,34 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
 
         // Dispose of the polymorphic substitutions catalog
         ast_poly_catalog_free(&catalog);
+        return SUCCESS;
+    }
+
+    if(elem->id == AST_ELEM_LAYOUT){
+        // Anonymous composite type
+
+        ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) elem;
+        ast_layout_t *layout = &layout_elem->layout;
+
+        if(!ast_field_map_find(&layout->field_map, expr->member, &out_field_info->endpoint)
+        || !ast_layout_get_path(layout, out_field_info->endpoint, &out_field_info->path)){
+            char *s = ast_type_str(ast_type_of_composite);
+            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in %s '%s'", expr->member, ast_layout_kind_name(layout->kind), s);
+            free(s);
+            return FAILURE;
+        }
+
+        ast_type_t *field_type = ast_layout_skeleton_get_type(&layout->skeleton, out_field_info->endpoint);
+
+        if(field_type == NULL){
+            internalerrorprintf("ir_gen_expr_member_get_field_info() couldn't get type for invalid endpoint (of anonymous composite)\n");
+            return FAILURE;
+        }
+
+        // Resolve AST field type to IR field type
+        if(ir_gen_resolve_type(builder->compiler, builder->object, field_type, &out_field_info->ir_type)) return FAILURE;
+
+        out_field_info->ast_type = ast_type_clone(field_type);
         return SUCCESS;
     }
 

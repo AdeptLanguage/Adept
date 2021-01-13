@@ -128,7 +128,7 @@ SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c \
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c \
 	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c \
-	src/UTIL/memory.c src/UTIL/search.c src/UTIL/tmpbuf.c src/UTIL/util.c
+	src/UTIL/memory.c src/UTIL/search.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj
@@ -163,6 +163,7 @@ insight: $(SOURCES)
 	@cp include/AST/ast_expr.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr.h
 	@cp include/AST/ast_layout.h $(INSIGHT_OUT_DIR)/include/AST/ast_layout.h
 	@cp include/AST/ast_type.h $(INSIGHT_OUT_DIR)/include/AST/ast_type.h
+	@cp include/AST/ast_type_lean.h $(INSIGHT_OUT_DIR)/include/AST/ast_type_lean.h
 	@cp include/AST/ast.h $(INSIGHT_OUT_DIR)/include/AST/ast.h
 	@cp include/AST/meta_directives.h $(INSIGHT_OUT_DIR)/include/AST/meta_directives.h
 	@cp include/BRIDGE/any.h $(INSIGHT_OUT_DIR)/include/BRIDGE/any.h
@@ -205,6 +206,7 @@ insight: $(SOURCES)
 	@cp include/UTIL/memory.h $(INSIGHT_OUT_DIR)/include/UTIL/memory.h
 	@cp include/UTIL/search.h $(INSIGHT_OUT_DIR)/include/UTIL/search.h
 	@cp include/UTIL/trait.h $(INSIGHT_OUT_DIR)/include/UTIL/trait.h
+	@cp include/UTIL/string_builder.h $(INSIGHT_OUT_DIR)/include/UTIL/string_builder.h
 	@cp include/UTIL/tmpbuf.h $(INSIGHT_OUT_DIR)/include/UTIL/tmpbuf.h
 	@cp include/UTIL/util.h $(INSIGHT_OUT_DIR)/include/UTIL/util.h
 	
@@ -249,6 +251,7 @@ insight: $(SOURCES)
 	@cp src/UTIL/jsmn_helper.c $(INSIGHT_OUT_DIR)/src/UTIL/jsmn_helper.c
 	@cp src/UTIL/levenshtein.c $(INSIGHT_OUT_DIR)/src/UTIL/levenshtein.c
 	@cp src/UTIL/search.c $(INSIGHT_OUT_DIR)/src/UTIL/search.c
+	@cp src/UTIL/string_builder.c $(INSIGHT_OUT_DIR)/src/UTIL/string_builder.c
 	@cp src/UTIL/tmpbuf.c $(INSIGHT_OUT_DIR)/src/UTIL/tmpbuf.c
 	@cp src/UTIL/util.c $(INSIGHT_OUT_DIR)/src/UTIL/util.c
 
