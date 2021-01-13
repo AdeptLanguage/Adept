@@ -759,6 +759,30 @@ ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, as
     return result;
 }
 
+ir_value_t *ast_layout_path_get_offset(ir_module_t *ir_module, ast_layout_endpoint_t *endpoint, ast_layout_endpoint_path_t *path, ir_type_t *root_ir_type){
+    // NOTE: Returns NULL on failure
+
+    ir_pool_t *pool = &ir_module->pool;
+    ir_type_t *usize_type = ir_module->common.ir_usize;
+
+    ir_value_t *offset = build_literal_usize(pool, 0);
+    ir_type_t *working_root_ir_type = root_ir_type;
+
+    for(length_t i = 0; i != AST_LAYOUT_MAX_DEPTH && path->waypoints[i].kind != AST_LAYOUT_WAYPOINT_END; i++){
+        ast_layout_waypoint_t waypoint = path->waypoints[i];
+
+        if(waypoint.kind == AST_LAYOUT_WAYPOINT_OFFSET){
+            ir_value_t *relative_offset = build_offsetof_ex(pool, usize_type, working_root_ir_type, waypoint.index);
+            offset = build_const_add(pool, offset, relative_offset);
+        }
+
+        ir_type_extra_composite_t *extra_info = (ir_type_extra_composite_t*) working_root_ir_type->extra;
+        working_root_ir_type = extra_info->subtypes[endpoint->indices[i]];
+    }
+
+    return offset;
+}
+
 int ir_type_mapping_cmp(const void *a, const void *b){
     return strcmp(((ir_type_mapping_t*) a)->name, ((ir_type_mapping_t*) b)->name);
 }

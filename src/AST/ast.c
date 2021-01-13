@@ -136,11 +136,6 @@ void ast_free(ast_t *ast){
     ast_free_constants(ast->constants, ast->constants_length);
     ast_free_aliases(ast->aliases, ast->aliases_length);
 
-    for(i = 0; i != ast->aliases_length; i++){
-        // Delete stuff within alias
-        ast_type_free(&ast->aliases[i].type);
-    }
-
     for(length_t l = 0; l != ast->libraries_length; l++){
         free(ast->libraries[l]);
     }
@@ -252,6 +247,7 @@ void ast_free_constants(ast_constant_t *constants, length_t constants_length){
 void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length){
     for(length_t i = 0; i != aliases_length; i++){
         free(aliases[i].name);
+        ast_type_free(&aliases[i].type);
     }
 }
 
@@ -1005,6 +1001,13 @@ maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, we
     }
 
     return -1;
+}
+
+void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait_t traits, source_t source){
+    expand((void**) &ast->aliases, sizeof(ast_alias_t), ast->aliases_length, &ast->aliases_capacity, 1, 8);
+
+    ast_alias_t *alias = &ast->aliases[ast->aliases_length++];
+    ast_alias_init(alias, name, strong_type, traits, source);
 }
 
 void ast_add_enum(ast_t *ast, strong_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){

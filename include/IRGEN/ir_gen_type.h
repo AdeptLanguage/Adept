@@ -65,6 +65,12 @@ successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_
 // Returns NULL when something goes wrong
 ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, ast_layout_bone_t *bone, ast_poly_catalog_t *optional_catalog);
 
+// ---------------- ast_layout_path_get_offset ----------------
+// Returns an IR value that represented the offset in bytes
+// of an endpoint of an IR type by using an ast_layout_endpoint_path_t
+// NOTE: Returns NULL on failure
+ir_value_t *ast_layout_path_get_offset(ir_module_t *ir_module, ast_layout_endpoint_t *endpoint, ast_layout_endpoint_path_t *path, ir_type_t *root_ir_type);
+
 // ---------------- ir_type_mapping_cmp ----------------
 // Compares two 'ir_type_mapping_t' structures.
 // Used to sort IR type mappings with qsort()

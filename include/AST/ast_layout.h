@@ -50,8 +50,8 @@ typedef struct {
 // ---------------- ast_layout_waypoint_t ----------------
 // Specifies how to get from one index in an endpoint to the next
 typedef struct {
-    uint16_t kind;
-    length_t index; // Member index used for OFFSET waypoints
+    uint16_t kind;  // Whether AST_LAYOUT_WAYPOINT_OFFSET or AST_LAYOUT_WAYPOINT_BITCASTs
+    length_t index; // Member index (only for AST_LAYOUT_WAYPOINT_OFFSET)
 } ast_layout_waypoint_t;
 
 // ---------------- ast_layout_endpoint_path_t ----------------

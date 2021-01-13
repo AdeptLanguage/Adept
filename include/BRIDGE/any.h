@@ -69,6 +69,10 @@ void any_inject_ast_AnyTypeKind(ast_t *ast);
 // Injects AST struct 'AnyPtrType'
 void any_inject_ast_AnyPtrType(ast_t *ast);
 
+// ---------------- any_inject_ast_AnyCompositeType ----------------
+// Injects AST struct 'AnyCompositeType'
+void any_inject_ast_AnyCompositeType(ast_t *ast);
+
 // ---------------- any_inject_ast_AnyStructType ----------------
 // Injects AST struct 'AnyStructType'
 void any_inject_ast_AnyStructType(ast_t *ast);

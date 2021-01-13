@@ -305,6 +305,10 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
 // NOTE: Requires that 'globals' is sorted
 maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, weak_cstr_t name);
 
+// ---------------- ast_add_alias ----------------
+// Adds a type alias to the global scope of an AST
+void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait_t traits, source_t source);
+
 // ---------------- ast_add_enum ----------------
 // Adds an enum to the global scope of an AST
 void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);

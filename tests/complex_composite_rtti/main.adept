@@ -1,0 +1,29 @@
+
+pragma compiler_version '2.5'
+
+import basics
+
+struct IntOrFloat (
+    is_float bool,
+    union (f float, i int)
+)
+
+func main {
+    ty *AnyStructType = typeinfo IntOrFloat as *AnyStructType
+
+    // Complex Composite Types will just be
+    // AnyCompositeType with overlapping fields
+    // NOTE: The 'kind' will still either be 'AnyTypeKind::STRUCT' or 'AnyTypeKind::UNION'
+    // based on the root node of the type. Also 'AnyStructType' and 'AnyUnionType' have
+    // been removed and are now aliases to 'AnyCompositeType'.
+
+    composite_kind String = ty.kind == AnyTypeKind::STRUCT ? "struct" : "union"
+    printf("Mappings of '%S IntOrFloat' complex composite:\n", composite_kind)
+    repeat ty.length {
+        field_name String = stringConstant(ty.member_names[idx])
+        field_type String = stringConstant(ty.members[idx].name)
+        offset usize = ty.offsets[idx]
+
+        printf("    %S %S @+%zu\n", field_name, field_type, offset)
+    }
+}

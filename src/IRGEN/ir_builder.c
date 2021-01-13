@@ -255,7 +255,7 @@ ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t 
     value->type = usize_type;
 
     if(type->kind != TYPE_KIND_STRUCTURE){
-        redprintf("INTENRAL ERROR: build_offsetof got non-struct type as type\n");
+        internalerrorprintf("build_offsetof() got non-struct type as type\n");
     }
 
     ir_value_offsetof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_offsetof_t));

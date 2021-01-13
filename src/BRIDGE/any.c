@@ -13,9 +13,10 @@ void any_inject_ast(ast_t *ast){
     any_inject_ast_AnyTypeKind(ast);
 
     any_inject_ast_AnyPtrType(ast);
-    any_inject_ast_AnyStructType(ast);
     any_inject_ast_AnyUnionType(ast);
+    any_inject_ast_AnyStructType(ast);
     any_inject_ast_AnyFuncPtrType(ast);
+    any_inject_ast_AnyCompositeType(ast);
     any_inject_ast_AnyFixedArrayType(ast);
 
     any_inject_ast___types__(ast);
@@ -108,9 +109,9 @@ void any_inject_ast_AnyPtrType(ast_t *ast){
     ast_add_composite(ast, strclone("AnyPtrType"), layout, NULL_SOURCE);
 }
 
-void any_inject_ast_AnyStructType(ast_t *ast){
+void any_inject_ast_AnyCompositeType(ast_t *ast){
 
-    /* struct AnyStructType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
+    /* struct AnyCompositeType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
 
     strong_cstr_t names[9];
     names[0] = strclone("kind");
@@ -136,34 +137,29 @@ void any_inject_ast_AnyStructType(ast_t *ast){
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 9);
-    ast_add_composite(ast, strclone("AnyStructType"), layout, NULL_SOURCE);
+    ast_add_composite(ast, strclone("AnyCompositeType"), layout, NULL_SOURCE);
+}
+
+void any_inject_ast_AnyStructType(ast_t *ast){
+    // For backwards-compatibility, redirect AnyStructType to be the new AnyCompositeType
+    // The 'kind' will still be ANY_KIND_STRUCT to signify that it is a struct (or now maybe complex struct)
+
+    // alias AnyStructType = AnyCompositeType
+
+    ast_type_t strong_type;
+    ast_type_make_base(&strong_type, strclone("AnyCompositeType"));
+    ast_add_alias(ast, strclone("AnyStructType"), strong_type, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyUnionType(ast_t *ast){
+    // For backwards-compatibility, redirect AnyUnionType to be the new AnyCompositeType
+    // The 'kind' will still be ANY_KIND_UNION to signify that it is a union (or now maybe complex union)
 
-    /* struct AnyUnionType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, member_names **ubyte) */
+    // alias AnyUnionType = AnyCompositeType
 
-    strong_cstr_t names[7];
-    names[0] = strclone("kind");
-    names[1] = strclone("name");
-    names[2] = strclone("is_alias");
-    names[3] = strclone("size");
-    names[4] = strclone("members");
-    names[5] = strclone("length");
-    names[6] = strclone("member_names");
-
-    ast_type_t types[7];
-    ast_type_make_base(&types[0], strclone("AnyTypeKind"));
-    ast_type_make_base_ptr(&types[1], strclone("ubyte"));
-    ast_type_make_base(&types[2], strclone("bool"));
-    ast_type_make_base(&types[3], strclone("usize"));
-    ast_type_make_base_ptr_ptr(&types[4], strclone("AnyType"));
-    ast_type_make_base(&types[5], strclone("usize"));
-    ast_type_make_base_ptr_ptr(&types[6], strclone("ubyte"));
-
-    ast_layout_t layout;
-    ast_layout_init_with_struct_fields(&layout, names, types, 7);
-    ast_add_composite(ast, strclone("AnyUnionType"), layout, NULL_SOURCE);
+    ast_type_t strong_type;
+    ast_type_make_base(&strong_type, strclone("AnyCompositeType"));
+    ast_add_alias(ast, strclone("AnyUnionType"), strong_type, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyFuncPtrType(ast_t *ast){

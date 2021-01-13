@@ -48,15 +48,12 @@ errorcode_t parse_alias(parse_ctx_t *ctx){
     }
 
     if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after alias name")
-    || parse_ignore_newlines(ctx, "Expcted type after '=' in alias")
+    || parse_ignore_newlines(ctx, "Expected type after '=' in alias")
     || parse_type(ctx, &type)){
         free(name);
         return FAILURE;
     }
 
-    expand((void**) &ast->aliases, sizeof(ast_alias_t), ast->aliases_length, &ast->aliases_capacity, 1, 8);
-
-    ast_alias_t *alias = &ast->aliases[ast->aliases_length++];
-    ast_alias_init(alias, name, type, TRAIT_NONE, source);
+    ast_add_alias(ast, name, type, TRAIT_NONE, source);
     return SUCCESS;
 }

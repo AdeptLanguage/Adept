@@ -60,7 +60,7 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
         return false;
     }
 
-    for(length_t i = 0; i < AST_LAYOUT_MAX_DEPTH && endpoint.indices[i] != AST_LAYOUT_WAYPOINT_END; i++){
+    for(length_t i = 0; i < AST_LAYOUT_MAX_DEPTH && endpoint.indices[i] != AST_LAYOUT_ENDPOINT_END_INDEX; i++){
         length_t bone_index = endpoint.indices[i];
 
         if(bone_index >= skeleton->bones_length){
@@ -73,6 +73,9 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
         switch(bone->kind){
         case AST_LAYOUT_BONE_KIND_TYPE:
             // Assumes the end of the endpoint has been reached
+            if(i + 1 < AST_LAYOUT_MAX_DEPTH){
+                out_path->waypoints[i + 1].kind = AST_LAYOUT_WAYPOINT_END;
+            }
             return true;
         case AST_LAYOUT_BONE_KIND_UNION:
             if(i + 1 >= AST_LAYOUT_MAX_DEPTH) break;
@@ -85,7 +88,7 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
 
             skeleton = &bone->children;
             out_path->waypoints[i + 1].kind = AST_LAYOUT_WAYPOINT_OFFSET;
-            out_path->waypoints[i + 1].index = endpoint.indices[i + 1];
+            out_path->waypoints[i + 1].index = endpoint.indices[i + 1]; 
             break;
         }
     }
