@@ -67,8 +67,8 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
     // HACK: Add extra entry for pointer to given type
     // since we cannot know whether or not '&' is even used on that type
     // (with the current system)
-    // Also, this may turn out to be benificial for formulating types that
-    // may not have been directly refered to at compile time
+    // Also, this may turn out to be beneficial for formulating types that
+    // may not have been directly referred to at compile time
     if(strcmp(weak_ast_type_entry.name, "void") != 0){
         ast_type_t with_additional_ptr = ast_type_clone(type);
         ast_type_prepend_ptr(&with_additional_ptr);
@@ -98,16 +98,12 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
         
         switch(type->elements[0]->id){
         case AST_ELEM_POINTER:
-            subtype = ast_type_clone(type);
-            ast_type_dereference(&subtype);
+            subtype = ast_type_unwrapped_view(type);
             type_table_give(table, &subtype, NULL); // TODO: Maybe determine whether or not subtype is alias??
-            ast_type_free(&subtype);
             break;
         case AST_ELEM_FIXED_ARRAY:
-            subtype = ast_type_clone(type);
-            ast_type_unwrap_fixed_array(&subtype);
+            subtype = ast_type_unwrapped_view(type);
             type_table_give(table, &subtype, NULL); // TODO: Maybe determine whether or not subtype is alias??
-            ast_type_free(&subtype);
             break;
         }
     }

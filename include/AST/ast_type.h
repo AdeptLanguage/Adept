@@ -316,6 +316,13 @@ bool ast_type_has_polymorph(const ast_type_t *type);
 // NOTE: Frees memory allocated for the pointer element
 void ast_type_dereference(ast_type_t *inout_type);
 
+// ---------------- ast_type_unwrapped_view ----------------
+// Returns a AST type that references the internal data of another
+// with the first element removed.
+// NOTE: The returned type is only valid until the supplied 'type' is
+// modified, moved or destroyed
+ast_type_t ast_type_unwrapped_view(ast_type_t *type);
+
 // ---------------- ast_type_unwrap_fixed_array ----------------
 // Removes the first fixed-array element of a fixed-array type
 // NOTE: Assumes inout_type has ownership of AST type elements

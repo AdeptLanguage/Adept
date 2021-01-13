@@ -96,26 +96,8 @@ errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_va
     ir_value_t **result = &array_values[array_value_index];
     type_table_entry_t *entry = &type_table->entries[array_value_index];
 
-    // Find subtype index
-    maybe_index_t subtype_index = -1;
-    ir_value_t *subtype_rtti;
-
-    // Find subtype by human-readable name
-    if(entry->ast_type.elements_length > 1){
-        ast_type_t dereferenced = ast_type_clone(&entry->ast_type);
-        ast_type_dereference(&dereferenced);
-
-        char *dereferenced_name = ast_type_str(&dereferenced);
-        subtype_index = type_table_find(type_table, dereferenced_name);
-        ast_type_free(&dereferenced);
-        free(dereferenced_name);
-    }
-
-    if(subtype_index == -1){
-        subtype_rtti = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
-    } else {
-        subtype_rtti = build_const_bitcast(pool, array_values[subtype_index], rtti_types->any_type_ptr_type);
-    }
+    ast_type_t subtype_view = ast_type_unwrapped_view(&entry->ast_type);
+    ir_value_t *subtype_rtti = ir_gen__types__get_rtti_pointer_for(object, &subtype_view, array_values, rtti_types);
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 5);
     fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_PTR);                     // kind
@@ -130,6 +112,166 @@ errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_va
 
     // Bitcast '*AnyPtrType' to '*AnyType'
     *result = build_const_bitcast(pool, *result, rtti_types->any_type_ptr_type);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen__types__fixed_array_entry(object_t *object, ir_value_t **array_values, length_t array_value_index, ir_rtti_types_t *rtti_types){
+    // ---------------------------------------------------------------------------------------------
+    // struct AnyFixedArrayType (
+    //     kind AnyTypeKind,
+    //     name *ubyte,
+    //     is_alias bool,
+    //     size usize,
+    //     subtype *AnyType,
+    //     length usize
+    // )
+    // ---------------------------------------------------------------------------------------------
+
+    type_table_t *type_table = object->ast.type_table;
+    ir_module_t *ir_module = &object->ir_module;
+    ir_pool_t *pool = &ir_module->pool;
+
+    ir_value_t **result = &array_values[array_value_index];
+    type_table_entry_t *entry = &type_table->entries[array_value_index];
+
+    // Ensure we're working with a fixed array AST type
+    if(entry->ast_type.elements[0]->id != AST_ELEM_FIXED_ARRAY){
+        internalerrorprintf("ir_gen__types__fixed_array_entry() got non-fixed-array AST type in entry\n");
+        return FAILURE;
+    }
+
+    ast_type_t subtype_view = ast_type_unwrapped_view(&entry->ast_type);
+    ir_value_t *subtype_rtti = ir_gen__types__get_rtti_pointer_for(object, &subtype_view, array_values, rtti_types);
+    ir_value_t *length = build_literal_usize(pool, ((ast_elem_fixed_array_t*) entry->ast_type.elements[0])->length);
+
+    ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
+    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FIXED_ARRAY);             // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
+    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
+    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
+    fields[4] = subtype_rtti;                                                     // subtype
+    fields[5] = length;                                                           // length
+
+    // Create struct literal and set as initializer
+    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_fixed_array_type_type, fields, 6, false);
+    build_anon_global_initializer(ir_module, *result, initializer);
+
+    // Bitcast '*AnyFixedArrayType' to '*AnyType'
+    *result = build_const_bitcast(pool, *result, rtti_types->any_type_ptr_type);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_values, length_t array_value_index, ir_rtti_types_t *rtti_types){
+    // ---------------------------------------------------------------------------------------------
+    // struct AnyFuncPtrType (
+    //     kind AnyTypeKind,
+    //     name *ubyte,
+    //     is_alias bool,
+    //     size usize,
+    //     args **AnyType,
+    //     length usize,
+    //     return_type *AnyType,
+    //     is_vararg bool,
+    //     is_stdcall bool
+    // )
+    // ---------------------------------------------------------------------------------------------
+
+    type_table_t *type_table = object->ast.type_table;
+    ir_module_t *ir_module = &object->ir_module;
+    ir_pool_t *pool = &ir_module->pool;
+
+    ir_value_t **result = &array_values[array_value_index];
+    type_table_entry_t *entry = &type_table->entries[array_value_index];
+
+    // Ensure we're working with a function pointer AST type
+    if(entry->ast_type.elements[0]->id != AST_ELEM_FUNC){
+        internalerrorprintf("ir_gen__types__func_ptr_entry() got non-function-pointer AST type in entry\n");
+        return FAILURE;
+    }
+
+    // Function pointer information source
+    ast_elem_func_t *fp = (ast_elem_func_t*) entry->ast_type.elements[0];
+
+    // Construct list of RTTI for arguments
+    ir_value_t **arg_rtti_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * fp->arity);
+    
+    for(length_t i = 0; i != fp->arity; i++){
+        arg_rtti_values[i] = ir_gen__types__get_rtti_pointer_for(object, &fp->arg_types[i], array_values, rtti_types);
+    }
+
+    ir_value_t *args = build_static_array(pool, rtti_types->any_type_ptr_type, arg_rtti_values, fp->arity);
+
+    // Construct value for length (number of arguments)
+    ir_value_t *length = build_literal_usize(pool, fp->arity);
+
+    // Get RTTI for return type
+    ir_value_t *return_type = ir_gen__types__get_rtti_pointer_for(object, fp->return_type, array_values, rtti_types);
+
+    ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
+    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FUNC_PTR);                // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
+    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
+    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
+    fields[4] = args;                                                             // args
+    fields[5] = length;                                                           // length
+    fields[6] = return_type;                                                      // return_type
+    fields[7] = build_bool(pool, fp->traits & AST_FUNC_VARARG);                   // is_vararg
+    fields[8] = build_bool(pool, fp->traits & AST_FUNC_STDCALL);                  // is_stdcall
+
+    // Create struct literal and set as initializer
+    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_funcptr_type_type, fields, 9, false);
+    build_anon_global_initializer(ir_module, *result, initializer);
+
+    // Bitcast '*AnyFuncPtrType' to '*AnyType'
+    *result = build_const_bitcast(pool, *result, rtti_types->any_type_ptr_type);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_values, length_t array_value_index, ir_rtti_types_t *rtti_types){
+    // ---------------------------------------------------------------------------------------------
+    // struct AnyType (
+    //     kind AnyTypeKind,
+    //     name *ubyte,
+    //     is_alias bool,
+    //     size usize
+    // )
+    // ---------------------------------------------------------------------------------------------
+
+    type_table_t *type_table = object->ast.type_table;
+    ir_module_t *ir_module = &object->ir_module;
+    ir_pool_t *pool = &ir_module->pool;
+
+    ir_value_t **result = &array_values[array_value_index];
+    type_table_entry_t *entry = &type_table->entries[array_value_index];
+
+    unsigned int kind_id;
+
+    switch(entry->ir_type->kind){
+    case TYPE_KIND_S8:          kind_id = ANY_TYPE_KIND_BYTE;        break;
+    case TYPE_KIND_S16:         kind_id = ANY_TYPE_KIND_SHORT;       break;
+    case TYPE_KIND_S32:         kind_id = ANY_TYPE_KIND_INT;         break;
+    case TYPE_KIND_S64:         kind_id = ANY_TYPE_KIND_LONG;        break;
+    case TYPE_KIND_U8:          kind_id = ANY_TYPE_KIND_UBYTE;       break;
+    case TYPE_KIND_U16:         kind_id = ANY_TYPE_KIND_USHORT;      break;
+    case TYPE_KIND_U32:         kind_id = ANY_TYPE_KIND_UINT;        break;
+    case TYPE_KIND_U64:         kind_id = ANY_TYPE_KIND_ULONG;       break;
+    case TYPE_KIND_FLOAT:       kind_id = ANY_TYPE_KIND_FLOAT;       break;
+    case TYPE_KIND_DOUBLE:      kind_id = ANY_TYPE_KIND_DOUBLE;      break;
+    case TYPE_KIND_BOOLEAN:     kind_id = ANY_TYPE_KIND_BOOL;        break;
+    default:                    kind_id = ANY_TYPE_KIND_VOID;
+    }
+
+    ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 4);
+    fields[0] = build_literal_usize(pool, kind_id);                               // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
+    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
+    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
+
+    // Create struct literal and set as initializer
+    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_type_type, fields, 4, false);
+    build_anon_global_initializer(ir_module, *result, initializer);
+    
+    // We don't have to bitcast '*AnyType' to '*AnyType', since it already is a '*AnyType'
     return SUCCESS;
 }
 
@@ -306,19 +448,7 @@ ir_value_t *ir_gen__types__composite_entry_members_array(compiler_t *compiler, o
             field_type = *unprocessed_field_type;
         }
 
-        // Get RTTI of subtype by name
-        strong_cstr_t subtype_name = ast_type_str(&field_type);
-        maybe_index_t subtype_index = type_table_find(type_table, subtype_name);
-        free(subtype_name);
-
-        // Fill in RTTI for member subtype index
-        if(subtype_index == -1){
-            // Use null pointer if subtype wasn't found
-            members[i] = build_null_pointer_of_type(pool, info->rtti_types->any_type_ptr_type);
-        } else {
-            // Use '*AnyType' to RTTI of subtype that was successfully found
-            members[i] = build_const_bitcast(pool, info->array_values[subtype_index], info->rtti_types->any_type_ptr_type);
-        }
+        members[i] = ir_gen__types__get_rtti_pointer_for(object, &field_type, info->array_values, info->rtti_types);
 
         // WARNING: 'field_type' only has ownership if 'info->core_composite_info->is_polymorphic'
         if(info->core_composite_info->is_polymorphic){
@@ -382,140 +512,29 @@ ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rt
     // Preparation for each array value
     if(ir_gen__types__prepare_each_value(compiler, object, rtti_types, array_values)) return NULL;
 
-    // TODO: CLEANUP: Cleanup this messy code
+    // Fill in each RTTI value
     for(length_t i = 0; i != type_table->length; i++){
-        ir_type_t *initializer_type;
-        ir_value_t **initializer_members;
-        length_t initializer_members_length;
-        unsigned int any_type_kind_id = ANY_TYPE_KIND_VOID;
-        unsigned int type_type_kind = type_table->entries[i].ir_type->kind;
-
-        switch(type_type_kind){
+        switch(type_table->entries[i].ir_type->kind){
         case TYPE_KIND_POINTER:
+            // Pointer Types
             if(ir_gen__types__pointer_entry(object, array_values, i, rtti_types)) return NULL;
             continue;
         case TYPE_KIND_STRUCTURE: case TYPE_KIND_UNION:
+            // Composite Types
             if(ir_gen__types__composite_entry(compiler, object, array_values, i, rtti_types)) return NULL;
             continue;
-        case TYPE_KIND_FIXED_ARRAY: {
-                /* struct AnyFixedArrayType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, subtype *AnyType, length usize) */
-
-                initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
-                initializer_members_length = 6;
-
-                // DANGEROUS: NOTE: Assumes elements after AST_ELEM_FIXED_ARRAY
-                ast_elem_fixed_array_t *elem = (ast_elem_fixed_array_t*) type_table->entries[i].ast_type.elements[0];
-
-                maybe_index_t subtype_index = -1;
-
-                // HACK: We really shouldn't be doing this
-                if(type_table->entries[i].ast_type.elements_length > 1){
-                    ast_type_t unwrapped = ast_type_clone(&type_table->entries[i].ast_type);
-
-                    ast_type_unwrap_fixed_array(&unwrapped);
-
-                    char *unwrapped_name = ast_type_str(&unwrapped);
-                    subtype_index = type_table_find(type_table, unwrapped_name);
-                    ast_type_free(&unwrapped);
-                    free(unwrapped_name);
-                }
-
-                if(subtype_index == -1){
-                    ir_value_t *null_pointer = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
-                    initializer_members[4] = null_pointer; // subtype
-                } else {
-                    initializer_members[4] = build_const_bitcast(pool, array_values[subtype_index], rtti_types->any_type_ptr_type); // subtype
-                }
-
-                initializer_members[5] = build_literal_usize(pool, elem->length);
-                initializer_type = rtti_types->any_fixed_array_type_type;
-            }
-            break;
-        case TYPE_KIND_FUNCPTR: {
-                /* struct AnyFuncPtrType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, args **AnyType, length usize, return_type *AnyType, is_vararg bool, is_stdcall bool) */
-
-                initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
-                initializer_members_length = 9;
-
-                // DANGEROUS: NOTE: Assumes element is AST_ELEM_FUNC
-                ast_elem_func_t *elem = (ast_elem_func_t*) type_table->entries[i].ast_type.elements[0];
-
-                maybe_index_t subtype_index = -1;
-
-                // TODO: CLEANUP: Clean up this messy code
-                char *type_string;
-                ir_value_t **args = ir_pool_alloc(pool, sizeof(ir_value_t*) * elem->arity);
-
-                for(length_t i = 0; i != elem->arity; i++){
-                    type_string = ast_type_str(&elem->arg_types[i]);
-                    subtype_index = type_table_find(type_table, type_string);
-                    free(type_string);
-
-                    if(subtype_index == -1){
-                        args[i] = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
-                    } else {
-                        args[i] = build_const_bitcast(pool, array_values[subtype_index], rtti_types->any_type_ptr_type);
-                    }
-                }
-
-                type_string = ast_type_str(elem->return_type);
-                subtype_index = type_table_find(type_table, type_string);
-                free(type_string);
-                
-                ir_value_t *return_type;
-                if(subtype_index == -1){
-                    return_type = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
-                } else {
-                    return_type = build_const_bitcast(pool, array_values[subtype_index], rtti_types->any_type_ptr_type);
-                }
-
-                initializer_members[4] = build_static_array(pool, rtti_types->any_type_ptr_type, args, elem->arity);
-                initializer_members[5] = build_literal_usize(pool, elem->arity);
-                initializer_members[6] = return_type;
-                initializer_members[7] = build_bool(pool, elem->traits & AST_FUNC_VARARG);
-                initializer_members[8] = build_bool(pool, elem->traits & AST_FUNC_STDCALL);
-                initializer_type = rtti_types->any_funcptr_type_type;
-            }
-            break;
+        case TYPE_KIND_FIXED_ARRAY:
+            // Fixed Array Types
+            if(ir_gen__types__fixed_array_entry(object, array_values, i, rtti_types)) return NULL;
+            continue;
+        case TYPE_KIND_FUNCPTR:
+            // Function Pointer Types
+            if(ir_gen__types__func_ptr_entry(object, array_values, i, rtti_types)) return NULL;
+            continue;
         default:
-            initializer_members = ir_pool_alloc(pool, sizeof(ir_value_t*) * 4);
-            initializer_members_length = 4;
-            initializer_type = rtti_types->any_type_type;
-        }
-
-        switch(type_type_kind){
-        case TYPE_KIND_NONE:        any_type_kind_id = ANY_TYPE_KIND_VOID; break;
-        case TYPE_KIND_POINTER:     any_type_kind_id = ANY_TYPE_KIND_PTR; break;
-        case TYPE_KIND_S8:          any_type_kind_id = ANY_TYPE_KIND_BYTE; break;
-        case TYPE_KIND_S16:         any_type_kind_id = ANY_TYPE_KIND_SHORT; break;
-        case TYPE_KIND_S32:         any_type_kind_id = ANY_TYPE_KIND_INT; break;
-        case TYPE_KIND_S64:         any_type_kind_id = ANY_TYPE_KIND_LONG; break;
-        case TYPE_KIND_U8:          any_type_kind_id = ANY_TYPE_KIND_UBYTE; break;
-        case TYPE_KIND_U16:         any_type_kind_id = ANY_TYPE_KIND_USHORT; break;
-        case TYPE_KIND_U32:         any_type_kind_id = ANY_TYPE_KIND_UINT; break;
-        case TYPE_KIND_U64:         any_type_kind_id = ANY_TYPE_KIND_ULONG; break;
-        case TYPE_KIND_FLOAT:       any_type_kind_id = ANY_TYPE_KIND_FLOAT; break;
-        case TYPE_KIND_DOUBLE:      any_type_kind_id = ANY_TYPE_KIND_DOUBLE; break;
-        case TYPE_KIND_BOOLEAN:     any_type_kind_id = ANY_TYPE_KIND_BOOL; break;
-        case TYPE_KIND_STRUCTURE:   any_type_kind_id = ANY_TYPE_KIND_STRUCT; break;
-        case TYPE_KIND_UNION:       any_type_kind_id = ANY_TYPE_KIND_UNION; break;
-        case TYPE_KIND_FUNCPTR:     any_type_kind_id = ANY_TYPE_KIND_FUNC_PTR; break;
-        case TYPE_KIND_FIXED_ARRAY: any_type_kind_id = ANY_TYPE_KIND_FIXED_ARRAY; break;
-
-        // Unsupported Type Kinds
-        case TYPE_KIND_HALF:        any_type_kind_id = ANY_TYPE_KIND_USHORT; break;
-        }
-
-        initializer_members[0] = build_literal_usize(pool, any_type_kind_id); // kind
-        initializer_members[1] = build_literal_cstr_ex(pool, &ir_module->type_map, type_table->entries[i].name); // name
-        initializer_members[2] = build_bool(pool, type_table->entries[i].is_alias); // is_alias
-        initializer_members[3] = build_const_sizeof(pool, rtti_types->usize_type, type_table->entries[i].ir_type); // size
-
-        ir_value_t *initializer = build_static_struct(ir_module, initializer_type, initializer_members, initializer_members_length, false);
-        build_anon_global_initializer(ir_module, array_values[i], initializer);
-
-        if(initializer_type != rtti_types->any_type_ptr_type){
-            array_values[i] = build_const_bitcast(pool, array_values[i], rtti_types->any_type_ptr_type);
+            // Primitive Types
+            if(ir_gen__types__primitive_entry(object, array_values, i, rtti_types)) return NULL;
+            continue;
         }
     }
 
@@ -560,4 +579,27 @@ errorcode_t ir_gen__types__prepare_each_value(compiler_t *compiler, object_t *ob
     }
 
     return SUCCESS;
+}
+
+ir_value_t *ir_gen__types__get_rtti_pointer_for(object_t *object, ast_type_t *ast_type, ir_value_t **array_values, ir_rtti_types_t *rtti_types){
+    type_table_t *type_table = object->ast.type_table;
+    ir_module_t *ir_module = &object->ir_module;
+    ir_pool_t *pool = &ir_module->pool;
+
+    // Find subtype index
+    maybe_index_t subtype_index = -1;
+    ir_value_t *subtype_rtti;
+
+    // Find subtype by human-readable name
+    char *human_readable = ast_type_str(ast_type);
+    subtype_index = type_table_find(type_table, human_readable);
+    free(human_readable);
+
+    if(subtype_index == -1){
+        subtype_rtti = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
+    } else {
+        subtype_rtti = build_const_bitcast(pool, array_values[subtype_index], rtti_types->any_type_ptr_type);
+    }
+
+    return subtype_rtti;
 }

@@ -740,7 +740,7 @@ bool ast_type_has_polymorph(const ast_type_t *type){
             }
             break;
         default:
-            internalerrorprintf("ast_type_has_polymorph encountered unknown element id 0x%08X\n", type->elements[i]->id);
+            internalerrorprintf("ast_type_has_polymorph() encountered unknown element id 0x%08X\n", type->elements[i]->id);
         }
     }
     return false;
@@ -748,7 +748,7 @@ bool ast_type_has_polymorph(const ast_type_t *type){
 
 void ast_type_dereference(ast_type_t *inout_type){
     if(inout_type->elements_length < 2 || inout_type->elements[0]->id != AST_ELEM_POINTER){
-        internalerrorprintf("ast_type_dereference received non pointer type\n");
+        internalerrorprintf("ast_type_dereference() received non pointer type\n");
         return;
     }
 
@@ -759,9 +759,17 @@ void ast_type_dereference(ast_type_t *inout_type){
     inout_type->elements_length--; // Reduce length accordingly
 }
 
+ast_type_t ast_type_unwrapped_view(ast_type_t *type){
+    ast_type_t unwrapped_view;
+    unwrapped_view.elements = &type->elements[1];
+    unwrapped_view.elements_length = type->elements_length - 1;
+    unwrapped_view.source = type->source;
+    return unwrapped_view;
+}
+
 void ast_type_unwrap_fixed_array(ast_type_t *inout_type){
     if(inout_type->elements_length < 2 || inout_type->elements[0]->id != AST_ELEM_FIXED_ARRAY){
-        internalerrorprintf("ast_type_unwrap_fixed_array received non fixed-array type\n");
+        internalerrorprintf("ast_type_unwrap_fixed_array() received non fixed-array type\n");
         return;
     }
 
