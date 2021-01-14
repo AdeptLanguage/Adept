@@ -1,0 +1,39 @@
+
+pragma compiler_version '2.5'
+
+import basics
+
+struct Person (father *Person)
+
+struct A (b *B)
+struct B (a *A)
+
+func main {
+    selfContainingTypes()
+    crossContainingTypes()
+}
+
+func selfContainingTypes {
+    print("selfContainingTypes:")
+    person Person
+
+    p *Person = &person
+    p.father = &person
+
+    repeat 10 {
+        printf("p.father = %p ; p = p.father\n", p.father)
+        p = p.father
+    }
+}
+
+func crossContainingTypes {
+    print("crossContainingTypes:")
+    a A
+    b B
+
+    a.b = &b
+    b.a = &a
+
+    printf("a.b = %p\n", a.b)
+    printf("b.a = %p\n", b.a)
+}

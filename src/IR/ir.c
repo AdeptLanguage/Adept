@@ -835,10 +835,14 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->static_variables_capacity = 0;
 
     // Initialize common data
+    ir_type_t *tmp_s8_ir_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t*));
+    tmp_s8_ir_type->kind = TYPE_KIND_S8;
+
     ir_shared_common_t *common = &ir_module->common;
     common->ir_usize = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
     common->ir_usize->kind = TYPE_KIND_U64;
     common->ir_usize_ptr = ir_type_pointer_to(&ir_module->pool, common->ir_usize);
+    common->ir_ptr = ir_type_pointer_to(&ir_module->pool, tmp_s8_ir_type);
     common->ir_bool = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
     common->ir_bool->kind = TYPE_KIND_BOOLEAN;
     common->rtti_array_index = 0;

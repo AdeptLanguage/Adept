@@ -17,13 +17,11 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
 
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
-    ir_pool_t *pool = &module->pool;
 
     // Base types:
     // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize, successful, void
     #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 16
 
-    ir_type_t *tmp_type;
     ir_type_map_t *type_map = &module->type_map;
     type_map->mappings_length = ast->composites_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
     ir_type_mapping_t *mappings = malloc(sizeof(ir_type_mapping_t) * type_map->mappings_length);
@@ -54,10 +52,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     mappings[11].name = "bool";
     mappings[11].type.kind = TYPE_KIND_BOOLEAN;
     mappings[12].name = "ptr";
-    mappings[12].type.kind = TYPE_KIND_POINTER;
-    tmp_type = ir_pool_alloc(pool, sizeof(ir_type_t*));
-    tmp_type->kind = TYPE_KIND_S8;
-    mappings[12].type.extra = tmp_type; 
+    mappings[12].type = *module->common.ir_ptr;
     mappings[13].name = "usize";
     mappings[13].type.kind = TYPE_KIND_U64;
     mappings[14].name = "successful";
@@ -615,6 +610,9 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             internalerrorprintf("Failed to find 'Any' type used by the runtime type table that should've been injected\n");
             return false;
         }
+
+        // Convert RTTI pointer to be s8* since that's how pointers inside of composite are stored
+        values[0] = build_bitcast(builder, values[0], builder->object->ir_module.common.ir_ptr);
         
         *ir_value = build_struct_construction(builder->pool, any_type, values, 2);
         return true;
@@ -722,6 +720,14 @@ ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, as
     // Handle AST Type bones
     if(bone->kind == AST_LAYOUT_BONE_KIND_TYPE){
         ir_type_t *result;
+
+        if(ast_type_is_pointer(&bone->type)){
+            // Use 'ptr' instead of any other pointer types inside of structs,
+            // in order to allow for circular pointer references.
+            // When fields are accessed, they will casted to the proper type
+
+            return object->ir_module.common.ir_ptr;
+        }
 
         if(optional_catalog){
             ast_type_t resolved_ast_type;

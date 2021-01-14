@@ -529,6 +529,7 @@ typedef struct {
 typedef struct {
     ir_type_t *ir_usize;
     ir_type_t *ir_usize_ptr;
+    ir_type_t *ir_ptr;
     ir_type_t *ir_bool;
     ir_type_t *ir_string_struct;
     length_t rtti_array_index;

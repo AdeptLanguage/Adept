@@ -35,6 +35,7 @@ compile break || exit $?
 compile break_to || exit $?
 compile cast || exit $?
 compile character_literals || exit $?
+compile circular_pointers || exit $?
 compile colons_alternative_syntax || exit $?
 compile complement || exit $?
 compile complex_composite_rtti || exit $?

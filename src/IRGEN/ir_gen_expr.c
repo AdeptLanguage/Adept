@@ -954,6 +954,15 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
         type = field_type;
     }
 
+    if(type->kind == TYPE_KIND_POINTER){
+        // Bitcast the pointer that we got from inside the composite,
+        // since we store them as 'ptr' inside of composites.
+        // Because of this, we have to bitcast it to the proper type
+        // when we access ir via member access
+
+        *ir_value = build_bitcast(builder, *ir_value, ir_type_pointer_to(builder->pool, field_info.ir_type));
+    }
+
     if(out_expr_type){
         *out_expr_type = field_info.ast_type;
     } else {

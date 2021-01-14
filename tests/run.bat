@@ -53,6 +53,8 @@ call :compile cast
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile character_literals
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile circular_pointers
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile colons_alternative_syntax
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile complement

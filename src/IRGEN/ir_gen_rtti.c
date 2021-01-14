@@ -112,6 +112,10 @@ errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_va
     fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
     fields[4] = subtype_rtti;                                                     // subtype
 
+    // Cast pointer fields to s8* since that's we store them
+    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
+    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
+
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_ptr_type_type, fields, 5, false);
     build_anon_global_initializer(ir_module, *result, initializer);
@@ -157,6 +161,10 @@ errorcode_t ir_gen__types__fixed_array_entry(object_t *object, ir_value_t **arra
     fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
     fields[4] = subtype_rtti;                                                     // subtype
     fields[5] = length;                                                           // length
+
+    // Cast pointer fields to s8* since that's we store them
+    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
+    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_fixed_array_type_type, fields, 6, false);
@@ -224,6 +232,11 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
     fields[7] = build_bool(pool, fp->traits & AST_FUNC_VARARG);                   // is_vararg
     fields[8] = build_bool(pool, fp->traits & AST_FUNC_STDCALL);                  // is_stdcall
 
+    // Cast pointer fields to s8* since that's we store them
+    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
+    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
+    fields[6] = build_const_bitcast(pool, fields[6], ir_module->common.ir_ptr);
+
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_funcptr_type_type, fields, 9, false);
     build_anon_global_initializer(ir_module, *result, initializer);
@@ -272,6 +285,9 @@ errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_
     fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
     fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
     fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
+
+    // Cast pointer fields to s8* since that's we store them
+    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_type_type, fields, 4, false);
@@ -342,6 +358,12 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
     fields[6] = offsets_array;                                                    // offsets
     fields[7] = member_names_array;                                               // member_names
     fields[8] = is_packed;                                                        // is_packed
+
+    // Cast pointer fields to s8* since that's we store them
+    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
+    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
+    fields[6] = build_const_bitcast(pool, fields[6], ir_module->common.ir_ptr);
+    fields[7] = build_const_bitcast(pool, fields[7], ir_module->common.ir_ptr);
     
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_composite_type_type, fields, 9, false);
