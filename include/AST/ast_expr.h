@@ -479,6 +479,7 @@ typedef struct {
     ast_expr_t **args;
     length_t arity;
     bool is_tentative;
+    bool allow_drop; // Whether __defer__ should not be called on dropped temporary values
 
     // Optional return type matching, only
     // exists if 'gives.elements_length' isn't zero
@@ -756,14 +757,14 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
 // Creates a call method expression
 // NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
 //       to indicate no return matching
-void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
+void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source);
 
 // ---------------- ast_expr_create_call_method_in_place ----------------
 // Creates a call method expression without allocating memory on the heap
 // NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
 //       to indicate no return matching
 void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, strong_cstr_t name, ast_expr_t *value,
-        length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
+        length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source);
 
 // ---------------- ast_expr_create_variable ----------------
 // Creates a variable expression

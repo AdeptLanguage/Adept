@@ -1469,13 +1469,13 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
     out_expr->no_user_casts = false;
 }
 
-void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source){
+void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source){
     *out_expr = malloc(sizeof(ast_expr_call_method_t));
-    ast_expr_create_call_method_in_place((ast_expr_call_method_t*) *out_expr, name, value, arity, args, is_tentative, gives, source);
+    ast_expr_create_call_method_in_place((ast_expr_call_method_t*) *out_expr, name, value, arity, args, is_tentative, allow_drop, gives, source);
 }
 
 void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, strong_cstr_t name, ast_expr_t *value,
-        length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source){
+        length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source){
     
     out_expr->id = EXPR_CALL_METHOD;
     out_expr->name = name;
@@ -1483,6 +1483,7 @@ void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, stro
     out_expr->args = args;
     out_expr->value = value;
     out_expr->is_tentative = is_tentative;
+    out_expr->allow_drop = allow_drop;
     out_expr->source = source;
 
     if(gives && gives->elements_length != 0)

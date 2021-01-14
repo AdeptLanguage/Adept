@@ -1704,7 +1704,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     // Don't even bother with result unless we care about the it
     if(ir_value) *ir_value = build_value_from_prev_instruction(builder);
 
-    if(used_temporary_subject){
+    if(used_temporary_subject && !expr->allow_drop){
         // Dereference pointer to subject AST type to get just the subject AST type
         ast_type_dereference(&arg_types[0]);
         

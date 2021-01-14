@@ -977,6 +977,8 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
             }
             return SUCCESS;
         case EXPR_EACH_IN: {
+                // TODO: Clean up this really messy code
+
                 ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) stmt;
 
                 length_t initial_basicblock_id = builder->current_block_id;
@@ -1082,8 +1084,11 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                     } else {
                         // STRUCTURE
                         // Get array length by calling the __length__() method
+
+                        // TODO: CLEANUP: Clean up his very very dirty code
+
                         ast_expr_call_method_t length_call;
-                        ast_expr_create_call_method_in_place(&length_call, "__length__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, NULL, phantom_list_value.source);
+                        ast_expr_create_call_method_in_place(&length_call, "__length__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, true, NULL, phantom_list_value.source);
 
                         if(ir_gen_expr(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
                             ast_type_free(&phantom_list_value.type);
@@ -1160,17 +1165,17 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 } else if(list_precomputed){
                     // STRUCTURE
                     // Call the '__array__()' method to get the value for the array
+
+                    // TODO: CLEANUP: Clean up his very very dirty code
+
                     ast_expr_call_method_t array_call;
-                    ast_expr_create_call_method_in_place(&array_call, "__array__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, NULL, phantom_list_value.source);
+                    ast_expr_create_call_method_in_place(&array_call, "__array__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, true, NULL, phantom_list_value.source);
 
                     if(ir_gen_expr(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
                         ast_type_free(&phantom_list_value.type);
                         close_scope(builder);
                         return FAILURE;
                     }
-
-                    // We don't need 'phantom_list_value' anymore, so free its type
-                    ast_type_free(&phantom_list_value.type);
                 } else if(ir_gen_expr(builder, each_in->low_array, &array, false, &temporary_type)){
                     close_scope(builder);
                     return FAILURE;
@@ -1243,6 +1248,30 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
                 // Generate jump inc_block
                 build_using_basicblock(builder, inc_basicblock_id);
 
+                if(!each_in->is_static && each_in->list){
+                    // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
+
+                    // HACK: TODO: Do something better than this
+                    ir_value_t *stack_pointer = NULL;
+                    ir_value_t *mutable = NULL;
+                    
+                    if(!phantom_list_value.is_mutable){
+                        stack_pointer = build_stack_save(builder);
+                        mutable = build_alloc(builder, list_precomputed->type);
+                        build_store(builder, list_precomputed, mutable, each_in->list->source);
+                    } else {
+                        mutable = list_precomputed;
+                    }
+
+                    if(handle_single_deference(builder, &phantom_list_value.type, mutable) == ALT_FAILURE){
+                        if(stack_pointer) build_stack_restore(builder, stack_pointer);
+                        close_scope(builder);
+                        return FAILURE;
+                    }
+
+                    if(stack_pointer) build_stack_restore(builder, stack_pointer);
+                }
+
                 ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
                 ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
                 ir_one_value->value_type = VALUE_TYPE_LITERAL;
@@ -1261,6 +1290,35 @@ errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, le
 
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
+
+                if(each_in->list){
+                    // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
+
+                    // HACK: TODO: Do something better than this
+                    ir_value_t *stack_pointer = NULL;
+                    ir_value_t *mutable = NULL;
+                    
+                    if(!phantom_list_value.is_mutable){
+                        stack_pointer = build_stack_save(builder);
+                        mutable = build_alloc(builder, list_precomputed->type);
+                        build_store(builder, list_precomputed, mutable, each_in->list->source);
+                    } else {
+                        mutable = list_precomputed;
+                    }
+
+                    if(handle_single_deference(builder, &phantom_list_value.type, mutable) == ALT_FAILURE){
+                        if(stack_pointer) build_stack_restore(builder, stack_pointer);
+                        close_scope(builder);
+                        return FAILURE;
+                    }
+
+                    if(stack_pointer) build_stack_restore(builder, stack_pointer);
+                }
+
+                if(each_in->list){
+                    // We don't need 'phantom_list_value' anymore, so free its type
+                    ast_type_free(&phantom_list_value.type);
+                }
 
                 if(each_in->label != NULL) pop_loop_label(builder);
 
