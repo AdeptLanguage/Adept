@@ -352,6 +352,11 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         }
     }
 
+    if(ast_type_is_base_of(ast_from_type, "void") || ast_type_is_base_of(ast_to_type, "void")){
+        // Don't try to conform types if one or both of them is 'void'
+        return false;
+    }
+    
     // Integer or pointer to boolean
     if(to_type_kind == TYPE_KIND_BOOLEAN && (
         (mode & CONFORM_MODE_INT_TO_BOOL && from_traits & TYPE_TRAIT_INTEGER) ||

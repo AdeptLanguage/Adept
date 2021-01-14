@@ -332,7 +332,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     call_expr->value = *inout_expr;
                     call_expr->name = (char*) tokens[*i].data;
                     tokens[*i].data = NULL;
-                    call_expr->source = sources[*i - 2];
+                    call_expr->source = sources[*i];
                     call_expr->arity = 0;
                     call_expr->args = NULL;
                     call_expr->is_tentative = is_tentative;

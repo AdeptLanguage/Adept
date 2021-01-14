@@ -468,6 +468,12 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
             ast_types_free_fully(arg_types, a);
             return FAILURE;
         }
+
+        if(ast_type_is_void(&arg_types[a])){
+            compiler_panicf(builder->compiler, expr->args[a]->source, "Cannot pass 'void' to function");
+            ast_types_free_fully(arg_types, a);
+            return FAILURE;
+        }
     }
 
     // Check for variable of name in nearby scope
@@ -795,7 +801,14 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
     }
 
     for(length_t i = 1; i < variadic_count; i++){
-        ir_value_t *more_bytes = build_const_sizeof(builder->pool, usize_type, (*arg_values)[pair->ast_func->arity + i]->type);
+        ir_type_t *ir_type = (*arg_values)[pair->ast_func->arity + i]->type;
+        
+        if(ir_type->kind == TYPE_KIND_VOID){
+            compiler_panicf(builder->compiler, source_on_failure, "Cannot pass 'void' in variadic arguments");
+            return FAILURE;
+        }
+
+        ir_value_t *more_bytes = build_const_sizeof(builder->pool, usize_type, ir_type);
         bytes = build_const_add(builder->pool, bytes, more_bytes);
     }
 
@@ -1613,6 +1626,12 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     // Generate non-subject argument values
     for(length_t a = 0; a != expr->arity; a++){
         if(ir_gen_expr(builder, expr->args[a], &arg_values[a + 1], false, &arg_types[a + 1])){
+            ast_types_free_fully(arg_types, a + 1);
+            return FAILURE;
+        }
+
+        if(ast_type_is_void(&arg_types[a + 1])){
+            compiler_panicf(builder->compiler, expr->args[a]->source, "Cannot pass 'void' to method");
             ast_types_free_fully(arg_types, a + 1);
             return FAILURE;
         }
