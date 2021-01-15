@@ -57,6 +57,10 @@ typedef struct ir_builder {
     tmpbuf_t *tmpbuf;
 } ir_builder_t;
 
+// ---------------- ir_builder_init ----------------
+// Initializes an IR builder
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list, bool static_builder);
+
 // ---------------- build_basicblock ----------------
 // Builds a new basic block in the current function
 // NOTE: All basic block pointers should be recalculated
@@ -419,7 +423,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
 errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
 
 // ---------------- resolve_expr_polymorphics ----------------
-// Resovles any polymorphic type variables within an AST expression
+// Resolves any polymorphic type variables within an AST expression
 errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t *expr);
 
 // ---------------- is_allowed_auto_conversion ----------------

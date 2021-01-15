@@ -7,6 +7,75 @@
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
 
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list, bool static_builder){
+    builder->basicblocks = malloc(sizeof(ir_basicblock_t) * 4);
+    builder->basicblocks_length = 1;
+    builder->basicblocks_capacity = 4;
+    builder->pool = &object->ir_module.pool;
+    builder->type_map = &object->ir_module.type_map;
+    builder->compiler = compiler;
+    builder->object = object;
+    builder->ast_func_id = ast_func_id;
+    builder->ir_func_id = ir_func_id;
+    builder->next_var_id = 0;
+    builder->has_string_struct = TROOLEAN_UNKNOWN;
+
+    ir_basicblock_t *entry_block = &builder->basicblocks[0];
+    entry_block->instructions = malloc(sizeof(ir_instr_t*) * 16);
+    entry_block->instructions_length = 0;
+    entry_block->instructions_capacity = 16;
+    entry_block->traits = TRAIT_NONE;
+
+    // Set current block
+    builder->current_block = entry_block;
+    builder->current_block_id = 0;
+
+    // Zero indicates no block to continue/break to since block 0 would make no sense
+    builder->break_block_id = 0;
+    builder->continue_block_id = 0;
+    builder->fallthrough_block_id = 0;
+
+    // Block stack, used for breaking and continuing by label
+    // NOTE: Unlabeled blocks won't go in this array
+    builder->block_stack_labels = NULL;
+    builder->block_stack_break_ids = NULL;
+    builder->block_stack_continue_ids = NULL;
+    builder->block_stack_scopes = NULL;
+    builder->block_stack_length = 0;
+    builder->block_stack_capacity = 0;
+
+    if(!static_builder){
+        ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
+        module_func->scope = malloc(sizeof(bridge_scope_t));
+        bridge_scope_init(module_func->scope, NULL);
+        module_func->scope->first_var_id = 0;
+        builder->scope = module_func->scope;
+    } else {
+        builder->scope = NULL;
+    }
+
+    builder->job_list = job_list;
+
+    builder->static_bool_base.id = AST_ELEM_BASE;
+    builder->static_bool_base.source = NULL_SOURCE;
+    builder->static_bool_base.source.object_index = builder->object->index;
+    builder->static_bool_base.base = "bool";
+    builder->static_bool_elems = (ast_elem_t*) &builder->static_bool_base;
+    builder->static_bool.elements = &builder->static_bool_elems;
+    builder->static_bool.elements_length = 1;
+    builder->static_bool.source = NULL_SOURCE;
+    builder->static_bool.source.object_index = builder->object->index;
+
+    builder->s8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    builder->s8_type->kind = TYPE_KIND_S8;
+    // neglect builder.s8_type->extra
+
+    builder->stack_pointer_type = NULL;
+    builder->ptr_type = ir_type_pointer_to(builder->pool, builder->s8_type);
+    builder->type_table = object->ast.type_table;
+    builder->tmpbuf = &compiler->tmp;
+}
+
 length_t build_basicblock(ir_builder_t *builder){
     // NOTE: Returns new id
     // NOTE: All basicblock pointers should be recalculated after calling this function

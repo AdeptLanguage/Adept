@@ -83,6 +83,10 @@ typedef struct {
 #define TROOLEAN_FALSE 0
 #define TROOLEAN_UNKNOWN 2
 
+// ---------------- SOURCE_IS_NULL ----------------
+// Whether or not a 'source_t' is NULL_SOURCE
+#define SOURCE_IS_NULL(_src) (_src.index == 0 && _src.object_index == 0 && _src.stride == 0)
+
 // ---------------- special characters ----------------
 #ifdef __APPLE__
 #define USE_UTF8_INSTEAD_OF_EXTENDED_ASCII_FOR_SPECIAL_CHARACTERS

@@ -32,6 +32,12 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 // Assumes IR function skeletons were already generated.
 errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job_list_t *job_list);
 
+// ---------------- ir_gen_functions_body_statements ----------------
+// Generates the required intermediate representation for
+// statements inside an AST function. Internally it
+// creates an 'ir_builder_t' and calls 'ir_gen_stmts'
+errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list);
+
 // ---------------- ir_gen_job_list ----------------
 // Generates initial IR job list to kickstart the main
 // IR function bodies generation

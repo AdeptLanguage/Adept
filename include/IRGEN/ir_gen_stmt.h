@@ -16,20 +16,22 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_builder.h"
 
-// ---------------- ir_builder_init ----------------
-// Initializes an IR builder
-void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list, bool static_builder);
-
-// ---------------- ir_gen_func_statements ----------------
-// Generates the required intermediate representation for
-// statements inside an AST function. Internally it
-// creates an 'ir_builder_t' and calls 'ir_gen_statements'
-errorcode_t ir_gen_func_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list);
-
-// ---------------- ir_gen_statements ----------------
+// ---------------- ir_gen_stmts ----------------
 // Generates intermediate representation for
 // statements given an existing 'ir_builder_t'
-errorcode_t ir_gen_statements(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated);
+errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated);
+
+// ---------------- ir_gen_stmt_return ----------------
+// Generates IR instructions for a return statement
+errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, bool *out_is_terminated);
+
+// ---------------- ir_gen_stmt_call_like ----------------
+// Generates IR instructions for a call-like statement
+errorcode_t ir_gen_stmt_call_like(ir_builder_t *builder, ast_expr_t *call_like_stmt);
+
+// ---------------- ir_gen_stmt_declare ----------------
+// Generates IR instructions for a variable declaration statement
+errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt);
 
 // ---------------- exhaustive_switch_check ----------------
 // Performs exhaustive switch checking for switch values
