@@ -28,10 +28,8 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
             if(ir_gen_stmt_return(builder, (ast_expr_return_t*) stmt, out_is_terminated)) return FAILURE;
 
             // Warn if there are statements following
-            if(s + 1 != statements_length){
-                bool should_show_early_return_warning = builder->compiler->traits & COMPILER_FUSSY && !(builder->compiler->ignore & COMPILER_IGNORE_EARLY_RETURN);
-
-                if(should_show_early_return_warning){
+            if(builder->compiler->traits & COMPILER_FUSSY && !(builder->compiler->ignore & COMPILER_IGNORE_EARLY_RETURN)){
+                if(s + 1 != statements_length){
                     const char *f_name = builder->object->ast.funcs[builder->ast_func_id].name;
 
                     if(compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", f_name))
@@ -53,329 +51,36 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
             // Expression-statements will be processed elsewhere
             if(ir_gen_expr(builder, stmt, NULL, true, NULL)) return FAILURE;
             break;
-        case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
+        case EXPR_DECLARE:
+        case EXPR_DECLAREUNDEF:
             if(ir_gen_stmt_declare(builder, (ast_expr_declare_t*) stmt)) return FAILURE;
             break;
-        case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
-        case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
-        case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
-        case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
-        case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
-                unsigned int assignment_type = stmt->id;
-                ast_expr_assign_t *assign_stmt = ((ast_expr_assign_t*) stmt);
-                ir_value_t *destination;
-                ast_type_t destination_type, expression_value_type;
-                if(ir_gen_expr(builder, assign_stmt->value, &expression_value, false, &expression_value_type)) return FAILURE;
-                if(ir_gen_expr(builder, assign_stmt->destination, &destination, true, &destination_type)){
-                    ast_type_free(&expression_value_type);
-                    return FAILURE;
-                }
-
-                if(!ast_types_conform(builder, &expression_value, &expression_value_type, &destination_type, CONFORM_MODE_CALCULATION)){
-                    char *a_type_str = ast_type_str(&expression_value_type);
-                    char *b_type_str = ast_type_str(&destination_type);
-                    compiler_panicf(builder->compiler, assign_stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
-                    ast_type_free(&destination_type);
-                    ast_type_free(&expression_value_type);
-                    return FAILURE;
-                }
-
-                ir_value_t *instr_value;
-
-                if(assignment_type == EXPR_ASSIGN){
-                    if(assign_stmt->is_pod || !handle_assign_management(builder, expression_value, &expression_value_type, destination, &destination_type, false)){
-                        build_store(builder, expression_value, destination, stmt->source);
-                    }
-
-                    ast_type_free(&destination_type);
-                    ast_type_free(&expression_value_type);
-                } else {
-                    ast_type_free(&destination_type);
-                    ast_type_free(&expression_value_type);
-
-                    instr_value = build_load(builder, destination, stmt->source);
-
-                    ir_value_result_t *value_result;
-                    value_result = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
-                    value_result->block_id = builder->current_block_id;
-                    value_result->instruction_id = builder->current_block->instructions_length;
-
-                    built_instr = build_instruction(builder, sizeof(ir_instr_math_t));
-                    ((ir_instr_math_t*) built_instr)->result_type = expression_value->type;
-                    ((ir_instr_math_t*) built_instr)->a = instr_value;
-                    ((ir_instr_math_t*) built_instr)->b = expression_value;
-
-                    switch(assignment_type){
-                    case EXPR_ADD_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_ADD, INSTRUCTION_FADD)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't add those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_SUBTRACT_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't subtract those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_MULTIPLY_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't multiply those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_DIVIDE_ASSIGN:
-                        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't divide those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_MODULUS_ASSIGN:
-                        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't take the modulus of those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_AND_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_AND, INSTRUCTION_NONE)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'and' on those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_OR_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_OR, INSTRUCTION_NONE)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'or' on those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_XOR_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'xor' on those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_LS_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'left shift' on those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_RS_ASSIGN:
-                        if(u_vs_s_vs_float_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'right shift' on those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_LGC_LS_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'logical left shift' on those types");
-                            return FAILURE;
-                        }
-                        break;
-                    case EXPR_LGC_RS_ASSIGN:
-                        if(i_vs_f_instruction((ir_instr_math_t*) built_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE)){
-                            compiler_panic(builder->compiler, assign_stmt->source, "Can't perform bitwise 'logical right shift' on those types");
-                            return FAILURE;
-                        }
-                        break;
-                    default:
-                        compiler_panic(builder->compiler, assign_stmt->source, "INTERNAL ERROR: ir_gen_stmts() got unknown assignment operator id");
-                        return FAILURE;
-                    }
-
-                    build_store(builder, build_value_from_prev_instruction(builder), destination, stmt->source);
-                }
-            }
+        case EXPR_ASSIGN:
+        case EXPR_ADD_ASSIGN:
+        case EXPR_SUBTRACT_ASSIGN:
+        case EXPR_MULTIPLY_ASSIGN:
+        case EXPR_DIVIDE_ASSIGN:
+        case EXPR_MODULUS_ASSIGN:
+        case EXPR_AND_ASSIGN:
+        case EXPR_OR_ASSIGN:
+        case EXPR_XOR_ASSIGN:
+        case EXPR_LS_ASSIGN:
+        case EXPR_RS_ASSIGN:
+        case EXPR_LGC_LS_ASSIGN:
+        case EXPR_LGC_RS_ASSIGN:
+            if(ir_gen_stmt_assignment_like(builder, (ast_expr_assign_t*) stmt)) return FAILURE;
             break;
-        case EXPR_IF: case EXPR_UNLESS: {
-                unsigned int conditional_type = stmt->id;
-                if(ir_gen_expr(builder, ((ast_expr_if_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
-
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
-                    char *a_type_str = ast_type_str(&temporary_type);
-                    char *b_type_str = ast_type_str(&builder->static_bool);
-                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
-                    ast_type_free(&temporary_type);
-                    return FAILURE;
-                }
-
-                ast_type_free(&temporary_type);
-
-                length_t new_basicblock_id = build_basicblock(builder);
-                length_t end_basicblock_id = build_basicblock(builder);
-
-                if(conditional_type == EXPR_IF){
-                    build_cond_break(builder, expression_value, new_basicblock_id, end_basicblock_id);
-                } else {
-                    build_cond_break(builder, expression_value, end_basicblock_id, new_basicblock_id);
-                }
-
-                ast_expr_t **if_stmts = ((ast_expr_if_t*) stmt)->statements;
-                length_t if_stmts_length = ((ast_expr_if_t*) stmt)->statements_length;
-                bool terminated;
-
-                open_scope(builder);
-                build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_stmts(builder, if_stmts, if_stmts_length, &terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
-                    build_break(builder, end_basicblock_id);
-                }
-
-                close_scope(builder);
-                build_using_basicblock(builder, end_basicblock_id);
-            }
+        case EXPR_IF:
+        case EXPR_UNLESS:
+            if(ir_gen_stmt_simple_conditional(builder, (ast_expr_if_t*) stmt)) return FAILURE;
             break;
-        case EXPR_IFELSE: case EXPR_UNLESSELSE: {
-                unsigned int conditional_type = stmt->id;
-                if(ir_gen_expr(builder, ((ast_expr_ifelse_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
-
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &builder->static_bool, CONFORM_MODE_CALCULATION)){
-                    char *a_type_str = ast_type_str(&temporary_type);
-                    char *b_type_str = ast_type_str(&builder->static_bool);
-                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
-                    ast_type_free(&temporary_type);
-                    return FAILURE;
-                }
-
-                ast_type_free(&temporary_type);
-
-                length_t new_basicblock_id = build_basicblock(builder);
-                length_t else_basicblock_id = build_basicblock(builder);
-                length_t end_basicblock_id = build_basicblock(builder);
-
-                if(conditional_type == EXPR_IFELSE){
-                    build_cond_break(builder, expression_value, new_basicblock_id, else_basicblock_id);
-                } else {
-                    build_cond_break(builder, expression_value, else_basicblock_id, new_basicblock_id);
-                }
-
-                ast_expr_t **if_stmts = ((ast_expr_ifelse_t*) stmt)->statements;
-                length_t if_stmts_length = ((ast_expr_ifelse_t*) stmt)->statements_length;
-                bool terminated;
-
-                open_scope(builder);
-                build_using_basicblock(builder, new_basicblock_id);
-
-                if(ir_gen_stmts(builder, if_stmts, if_stmts_length, &terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
-                    build_break(builder, end_basicblock_id);
-                }
-
-                close_scope(builder);
-
-                ast_expr_t **else_stmts = ((ast_expr_ifelse_t*) stmt)->else_statements;
-                length_t else_stmts_length = ((ast_expr_ifelse_t*) stmt)->else_statements_length;
-
-                open_scope(builder);
-                build_using_basicblock(builder, else_basicblock_id);
-                if(ir_gen_stmts(builder, else_stmts, else_stmts_length, &terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
-                    build_break(builder, end_basicblock_id);
-                }
-
-                close_scope(builder);
-                build_using_basicblock(builder, end_basicblock_id);
-            }
+        case EXPR_IFELSE:
+        case EXPR_UNLESSELSE:
+            if(ir_gen_stmt_dual_conditional(builder, (ast_expr_ifelse_t*) stmt)) return FAILURE;
             break;
-        case EXPR_WHILE: case EXPR_UNTIL: {
-                length_t test_basicblock_id = build_basicblock(builder);
-                length_t new_basicblock_id = build_basicblock(builder);
-                length_t end_basicblock_id = build_basicblock(builder);
-
-                if(((ast_expr_while_t*) stmt)->label != NULL){
-                    push_loop_label(builder, ((ast_expr_while_t*) stmt)->label, end_basicblock_id, test_basicblock_id);
-                }
-
-                length_t prev_break_block_id = builder->break_block_id;
-                length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
-
-                builder->break_block_id = end_basicblock_id;
-                builder->continue_block_id = test_basicblock_id;
-                builder->break_continue_scope = builder->scope;
-
-                build_break(builder, test_basicblock_id);
-                build_using_basicblock(builder, test_basicblock_id);
-
-                unsigned int conditional_type = stmt->id;
-                if(ir_gen_expr(builder, ((ast_expr_while_t*) stmt)->value, &expression_value, false, &temporary_type)) return FAILURE;
-
-                // Create static bool type for comparison with
-                ast_elem_base_t bool_base;
-                bool_base.id = AST_ELEM_BASE;
-                bool_base.source = NULL_SOURCE;
-                bool_base.source.object_index = builder->object->index;
-                bool_base.base = "bool";
-                ast_elem_t *bool_type_elem = (ast_elem_t*) &bool_base;
-                ast_type_t bool_type;
-                bool_type.elements = &bool_type_elem;
-                bool_type.elements_length = 1;
-                bool_type.source = NULL_SOURCE;
-                bool_type.source.object_index = builder->object->index;
-
-                if(!ast_types_conform(builder, &expression_value, &temporary_type, &bool_type, CONFORM_MODE_CALCULATION)){
-                    char *a_type_str = ast_type_str(&temporary_type);
-                    char *b_type_str = ast_type_str(&bool_type);
-                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when conditional expects type '%s'", a_type_str, b_type_str);
-                    free(a_type_str);
-                    free(b_type_str);
-                    ast_type_free(&temporary_type);
-                    return FAILURE;
-                }
-
-                ast_type_free(&temporary_type);
-
-                if(conditional_type == EXPR_WHILE){
-                    build_cond_break(builder, expression_value, new_basicblock_id, end_basicblock_id);
-                } else {
-                    build_cond_break(builder, expression_value, end_basicblock_id, new_basicblock_id);
-                }
-
-                ast_expr_t **while_stmts = ((ast_expr_while_t*) stmt)->statements;
-                length_t while_stmts_length = ((ast_expr_while_t*) stmt)->statements_length;
-                bool terminated;
-
-                open_scope(builder);
-                build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_stmts(builder, while_stmts, while_stmts_length, &terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
-                    build_break(builder, test_basicblock_id);
-                }
-
-                if(((ast_expr_while_t*) stmt)->label != NULL) pop_loop_label(builder);
-                close_scope(builder);
-                build_using_basicblock(builder, end_basicblock_id);
-
-                builder->break_block_id = prev_break_block_id;
-                builder->continue_block_id = prev_continue_block_id;
-                builder->break_continue_scope = prev_break_continue_scope;
-            }
+        case EXPR_WHILE:
+        case EXPR_UNTIL:
+            if(ir_gen_stmt_simple_loop(builder, (ast_expr_while_t*) stmt)) return FAILURE;
             break;
         case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK: {
                 length_t new_basicblock_id = build_basicblock(builder);
@@ -817,28 +522,13 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 // Generate jump inc_block
                 build_using_basicblock(builder, inc_basicblock_id);
 
-                if(!each_in->is_static && each_in->list){
+                if(!each_in->is_static && each_in->list && !phantom_list_value.is_mutable){
                     // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
 
-                    // HACK: TODO: Do something better than this
-                    ir_value_t *stack_pointer = NULL;
-                    ir_value_t *mutable = NULL;
-                    
-                    if(!phantom_list_value.is_mutable){
-                        stack_pointer = build_stack_save(builder);
-                        mutable = build_alloc(builder, list_precomputed->type);
-                        build_store(builder, list_precomputed, mutable, each_in->list->source);
-                    } else {
-                        mutable = list_precomputed;
-                    }
-
-                    if(handle_single_deference(builder, &phantom_list_value.type, mutable) == ALT_FAILURE){
-                        if(stack_pointer) build_stack_restore(builder, stack_pointer);
+                    if(handle_single_deference(builder, &phantom_list_value.type, list_precomputed) == ALT_FAILURE){
                         close_scope(builder);
                         return FAILURE;
                     }
-
-                    if(stack_pointer) build_stack_restore(builder, stack_pointer);
                 }
 
                 ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
@@ -860,28 +550,13 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);
 
-                if(each_in->list){
+                if(each_in->list && !phantom_list_value.is_mutable){
                     // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
 
-                    // HACK: TODO: Do something better than this
-                    ir_value_t *stack_pointer = NULL;
-                    ir_value_t *mutable = NULL;
-                    
-                    if(!phantom_list_value.is_mutable){
-                        stack_pointer = build_stack_save(builder);
-                        mutable = build_alloc(builder, list_precomputed->type);
-                        build_store(builder, list_precomputed, mutable, each_in->list->source);
-                    } else {
-                        mutable = list_precomputed;
-                    }
-
-                    if(handle_single_deference(builder, &phantom_list_value.type, mutable) == ALT_FAILURE){
-                        if(stack_pointer) build_stack_restore(builder, stack_pointer);
+                    if(handle_single_deference(builder, &phantom_list_value.type, list_precomputed) == ALT_FAILURE){
                         close_scope(builder);
                         return FAILURE;
                     }
-
-                    if(stack_pointer) build_stack_restore(builder, stack_pointer);
                 }
 
                 if(each_in->list){
@@ -1542,98 +1217,400 @@ errorcode_t ir_gen_stmt_call_like(ir_builder_t *builder, ast_expr_t *call_like_s
 }
 
 errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt){
-    ast_type_t initial_value_type;
-
-    // Search for existing variable with the same name
+    // Don't allow multiple variables with the same name in the same scope
     if(bridge_scope_var_already_in_list(builder->scope, stmt->name)){
         compiler_panicf(builder->compiler, stmt->source, "Variable '%s' already declared", stmt->name);
         return FAILURE;
     }
 
-    ir_type_t *ir_decl_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    if(ir_gen_resolve_type(builder->compiler, builder->object, &stmt->type, &ir_decl_type)) return FAILURE;
+    ir_type_t *ir_type;
+    trait_t traits = TRAIT_NONE;
+    bool is_undef = stmt->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF);
 
-    // Create variable traits
-    trait_t variable_traits = stmt->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE;
+    if(stmt->is_pod)    traits |= BRIDGE_VAR_POD;
+    if(stmt->is_static) traits |= BRIDGE_VAR_STATIC;
+    if(is_undef)        traits |= BRIDGE_VAR_UNDEF;
 
-    ir_builder_t *init_builder;
-    ir_builder_t *initialization_builder = builder->object->ir_module.init_builder;
+    // Resolve AST type to IR type
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &stmt->type, &ir_type)) return FAILURE;
+
+    // Add the variable
+    add_variable(builder, stmt->name, &stmt->type, ir_type, traits);
+
+    // Initialize variable if applicable
+    if(!is_undef && ir_gen_stmt_declare_try_init(builder, stmt, ir_type)) return FAILURE;
+
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr_declare_t *stmt, ir_type_t *ir_type){
+    // Determine which builder to use to build initialization instructions
+    ir_builder_t *working_builder = stmt->is_static ? primary_builder->object->ir_module.init_builder : primary_builder;
+
+    // If we'll instructions in a different location, allocate
+    // a scope for the secondary builder.
+    if(working_builder != primary_builder){
+        // Using a different location will require that our program has an entry point
+        if(!primary_builder->object->ir_module.common.has_main){
+            compiler_panicf(primary_builder->compiler, stmt->source, "Cannot use static variables without a main function");
+            return FAILURE;
+        }
+
+        working_builder->scope = malloc(sizeof(bridge_scope_t));
+        bridge_scope_init(working_builder->scope, NULL);
+    }
+
+    ir_type_t *ir_type_ptr = ir_type_pointer_to(primary_builder->pool, ir_type);
+
+    // Get pointer to where the variable is on the stack
+    ir_value_t *destination;
 
     if(stmt->is_static){
-        variable_traits |= BRIDGE_VAR_STATIC;
-
-        if(!builder->object->ir_module.common.has_main){
-            errorprintf("Cannot use static variables without a main function\n");
-            return FAILURE;
-        }
-
-        init_builder = initialization_builder;
-        initialization_builder->scope = malloc(sizeof(bridge_scope_t));
-        bridge_scope_init(initialization_builder->scope, NULL);
+        destination = build_svarptr(working_builder, ir_type_ptr, primary_builder->object->ir_module.common.next_static_variable_id - 1);
     } else {
-        init_builder = builder;
+        destination = build_lvarptr(working_builder, ir_type_ptr, primary_builder->next_var_id - 1);
     }
 
-    // TODO: Clean up this messy code
-    if(stmt->value != NULL){
-        // Regular declare statement initial assign value
+    // Perform initialization
+
+    if(stmt->value == NULL){
+        // No initial value - Zero Initialize
+        build_zeroinit(working_builder, destination);
+    } else {
+        // Initial value - Assign Accordingly
+
         ir_value_t *initial;
-        ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
+        ast_type_t initial_ast_type;
 
-        if(ir_gen_expr(init_builder, stmt->value, &initial, false, &initial_value_type)) return FAILURE;
+        // Generate instructions to get initial value
+        if(ir_gen_expr(working_builder, stmt->value, &initial, false, &initial_ast_type)) goto failure;
 
-        if(!ast_types_conform(init_builder, &initial, &initial_value_type, &stmt->type, CONFORM_MODE_ASSIGNING)){
-            char *a_type_str = ast_type_str(&initial_value_type);
+        // Conform initial value to the type of the variable
+        if(!ast_types_conform(working_builder, &initial, &initial_ast_type, &stmt->type, CONFORM_MODE_ASSIGNING)){
+            char *a_type_str = ast_type_str(&initial_ast_type);
             char *b_type_str = ast_type_str(&stmt->type);
-            compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+            compiler_panicf(primary_builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
             free(a_type_str);
             free(b_type_str);
-            ast_type_free(&initial_value_type);
+            ast_type_free(&initial_ast_type);
+            goto failure;
+        }
+
+        // Assign the initial value to the variable, using Plain-Old-Data assignment if enabled
+        if(stmt->is_assign_pod || !handle_assign_management(working_builder, initial, &initial_ast_type, destination, &stmt->type, true)){
+            build_store(working_builder, initial, destination, stmt->source);
+        }
+
+        ast_type_free(&initial_ast_type);
+    }
+
+    // Destroy allocated scope if we used a secondary builder
+    if(working_builder != primary_builder){
+        bridge_scope_free(working_builder->scope);
+        free(working_builder->scope);
+    }
+
+    return SUCCESS;
+
+failure:
+    if(working_builder != primary_builder){
+        bridge_scope_free(working_builder->scope);
+        free(working_builder->scope);
+    }
+
+    return FAILURE;
+}
+
+errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t *stmt){
+    unsigned int assignment_kind = stmt->id;
+
+    // Generate instructions to get "other value"
+    ir_value_t *other_value;
+    ast_type_t other_value_type;
+    if(ir_gen_expr(builder, stmt->value, &other_value, false, &other_value_type)) return FAILURE;
+    
+    // Generate instructions to get "destination value"
+    ir_value_t *destination;
+    ast_type_t destination_type;
+    if(ir_gen_expr(builder, stmt->destination, &destination, true, &destination_type)){
+        ast_type_free(&other_value_type);
+        return FAILURE;
+    }
+
+    // Conform "other value" to the type of the declared variable
+    if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, CONFORM_MODE_CALCULATION)){
+        char *a_type_str = ast_type_str(&other_value_type);
+        char *b_type_str = ast_type_str(&destination_type);
+        compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+        free(a_type_str);
+        free(b_type_str);
+        ast_type_free(&destination_type);
+        ast_type_free(&other_value_type);
+        return FAILURE;
+    }
+
+    // Regular Assignment
+    if(assignment_kind == EXPR_ASSIGN){
+        if(stmt->is_pod || !handle_assign_management(builder, other_value, &other_value_type, destination, &destination_type, false)){
+            build_store(builder, other_value, destination, stmt->source);
+        }
+
+        ast_type_free(&destination_type);
+        ast_type_free(&other_value_type);
+        return SUCCESS;
+    }
+
+    // Otherwise, Handle Non-Regular Assignment
+    ast_type_free(&destination_type);
+    ast_type_free(&other_value_type);
+
+    ir_value_t *previous_value = build_load(builder, destination, stmt->source);
+
+    ir_value_result_t *value_result;
+    value_result = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
+    value_result->block_id = builder->current_block_id;
+    value_result->instruction_id = builder->current_block->instructions_length;
+
+    ir_instr_math_t *math_instr = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
+    math_instr->result_type = other_value->type;
+    math_instr->a = previous_value;
+    math_instr->b = other_value;
+
+    switch(assignment_kind){
+    case EXPR_ADD_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_ADD, INSTRUCTION_FADD)){
+            compiler_panic(builder->compiler, stmt->source, "Can't add those types");
             return FAILURE;
         }
-
-        ir_value_t *destination;
-
-        if(stmt->is_static){
-            destination = build_svarptr(init_builder, var_pointer_type, builder->object->ir_module.common.next_static_variable_id);
-        } else {
-            destination = build_lvarptr(init_builder, var_pointer_type, builder->next_var_id);
+        break;
+    case EXPR_SUBTRACT_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
+            compiler_panic(builder->compiler, stmt->source, "Can't subtract those types");
+            return FAILURE;
         }
-
-        add_variable(builder, stmt->name, &stmt->type, ir_decl_type, variable_traits);
-
-        if(stmt->is_assign_pod || !handle_assign_management(init_builder, initial, &initial_value_type, destination, &stmt->type, true)){
-            build_store(init_builder, initial, destination, stmt->source);
+        break;
+    case EXPR_MULTIPLY_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY)){
+            compiler_panic(builder->compiler, stmt->source, "Can't multiply those types");
+            return FAILURE;
         }
-
-        ast_type_free(&initial_value_type);
-    } else if(stmt->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
-        // Mark the variable as undefined memory so it isn't auto-initialized later on
-
-        add_variable(builder, stmt->name, &stmt->type, ir_decl_type, variable_traits | BRIDGE_VAR_UNDEF);
-    } else /* plain DECLARE or --no-undef DECLAREUNDEF */ {
-        // Variable declaration without default value
-        add_variable(builder, stmt->name, &stmt->type, ir_decl_type, variable_traits);
-
-        ir_basicblock_new_instructions(init_builder->current_block, 1);
-
-        ir_value_t *destination;
-        ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
-
-        if(stmt->is_static){
-            destination = build_svarptr(init_builder, var_pointer_type, builder->object->ir_module.common.next_static_variable_id - 1);
-        } else {
-            destination = build_lvarptr(init_builder, var_pointer_type, builder->next_var_id - 1);
+        break;
+    case EXPR_DIVIDE_ASSIGN:
+        if(u_vs_s_vs_float_instruction(math_instr, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE)){
+            compiler_panic(builder->compiler, stmt->source, "Can't divide those types");
+            return FAILURE;
         }
-
-        build_zeroinit(init_builder, destination);
+        break;
+    case EXPR_MODULUS_ASSIGN:
+        if(u_vs_s_vs_float_instruction(math_instr, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS)){
+            compiler_panic(builder->compiler, stmt->source, "Can't take the modulus of those types");
+            return FAILURE;
+        }
+        break;
+    case EXPR_AND_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_AND, INSTRUCTION_NONE)){
+            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'and' on those types");
+            return FAILURE;
+        }
+        break;
+    case EXPR_OR_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_OR, INSTRUCTION_NONE)){
+            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'or' on those types");
+            return FAILURE;
+        }
+        break;
+    case EXPR_XOR_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE)){
+            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'xor' on those types");
+            return FAILURE;
+        }
+        break;
+    case EXPR_LS_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
+            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'left shift' on those types");
+            return FAILURE;
+        }
+        break;
+    case EXPR_RS_ASSIGN:
+        if(u_vs_s_vs_float_instruction(math_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS)){
+            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'right shift' on those types");
+            return FAILURE;
+        }
+        break;
+    case EXPR_LGC_LS_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
+            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'logical left shift' on those types");
+            return FAILURE;
+        }
+        break;
+    case EXPR_LGC_RS_ASSIGN:
+        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE)){
+            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'logical right shift' on those types");
+            return FAILURE;
+        }
+        break;
+    default:
+        compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: ir_gen_stmts() got unknown assignment operator id");
+        return FAILURE;
     }
 
-    if(init_builder == initialization_builder){
-        bridge_scope_free(initialization_builder->scope);
-        free(initialization_builder->scope);
+    // Store result of math instruction into variable
+    build_store(builder, build_value_from_prev_instruction(builder), destination, stmt->source);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t *stmt){
+    unsigned int conditional_kind = stmt->id;
+    const char *bad_condition_format = "Received type '%s' when conditional expects type '%s'";
+
+    // Generate instructions to get condition value
+    ir_value_t *condition = ir_gen_conforming_expr(builder, stmt->value, &builder->static_bool, CONFORM_MODE_CALCULATION, stmt->source, bad_condition_format);
+    if(condition == NULL) return FAILURE;
+
+    length_t new_basicblock_id = build_basicblock(builder); // Create block for when the condition is true
+    length_t end_basicblock_id = build_basicblock(builder); // Create block for when the condition is false
+
+    if(conditional_kind == EXPR_IF){
+        build_cond_break(builder, condition, new_basicblock_id, end_basicblock_id);
+    } else {
+        build_cond_break(builder, condition, end_basicblock_id, new_basicblock_id);
     }
 
+    // Open block scope and prepare for block statements
+    open_scope(builder);
+    build_using_basicblock(builder, new_basicblock_id);
+
+    // Generate IR instructions for the statements within the conditional block
+    bool terminated;
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+        close_scope(builder);
+        return FAILURE;
+    }
+
+    // Terminate the conditional block if it wasn't already terminated
+    ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id);
+
+    // Close block scope and continue building at the continuation point
+    close_scope(builder);
+    build_using_basicblock(builder, end_basicblock_id);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_t *stmt){
+    unsigned int conditional_kind = stmt->id;
+    const char *bad_condition_error_format = "Received type '%s' when conditional expects type '%s'";
+
+    // Generate instructions to get condition value
+    ir_value_t *condition = ir_gen_conforming_expr(builder, stmt->value, &builder->static_bool, CONFORM_MODE_CALCULATION, stmt->source, bad_condition_error_format);
+    if(condition == NULL) return FAILURE;
+
+    length_t new_basicblock_id  = build_basicblock(builder); // Create block for when the condition is true
+    length_t else_basicblock_id = build_basicblock(builder); // Create block for when the condition is false
+    length_t end_basicblock_id  = build_basicblock(builder); // Create block for the continuation point
+
+    if(conditional_kind == EXPR_IFELSE){
+        build_cond_break(builder, condition, new_basicblock_id, else_basicblock_id);
+    } else {
+        build_cond_break(builder, condition, else_basicblock_id, new_basicblock_id);
+    }
+
+    // Open primary block scope and prepare for block statements
+    open_scope(builder);
+    build_using_basicblock(builder, new_basicblock_id);
+
+    // Generate IR instructions for the statements within the primary conditional block
+    bool terminated;
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+        close_scope(builder);
+        return FAILURE;
+    }
+
+    // Terminate the primary conditional block if it wasn't already terminated
+    ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id);
+
+    // Close primary block scope
+    close_scope(builder);
+
+    // Open secondary block scope and prepare for block statements
+    open_scope(builder);
+    build_using_basicblock(builder, else_basicblock_id);
+
+    // Generate IR instructions for the statements within the secondary conditional block
+    if(ir_gen_stmts(builder, stmt->else_statements, stmt->else_statements_length, &terminated)){
+        close_scope(builder);
+        return FAILURE;
+    }
+
+    // Terminate the secondary conditional block if it wasn't already terminated
+    ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id);
+
+    // Close secondary block scope and continue building at the continuation point
+    close_scope(builder);
+    build_using_basicblock(builder, end_basicblock_id);
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stmt){
+    unsigned int conditional_kind = stmt->id;
+    const char *bad_condition_error_format = "Received type '%s' when conditional expects type '%s'";
+
+    length_t test_basicblock_id = build_basicblock(builder);
+    length_t new_basicblock_id = build_basicblock(builder);
+    length_t end_basicblock_id = build_basicblock(builder);
+
+    // Add loop label
+    if(stmt->label != NULL) push_loop_label(builder, stmt->label, end_basicblock_id, test_basicblock_id);
+
+    // Remember previous jump points and scope level
+    length_t prev_break_block_id              = builder->break_block_id;
+    length_t prev_continue_block_id           = builder->continue_block_id;
+    bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+
+    // Set the working jump points and scope level
+    builder->break_block_id = end_basicblock_id;
+    builder->continue_block_id = test_basicblock_id;
+    builder->break_continue_scope = builder->scope;
+
+    // Prepare to generate the condition value
+    build_break(builder, test_basicblock_id);
+    build_using_basicblock(builder, test_basicblock_id);
+
+    // Generate IR instructions to get the condition value
+    ir_value_t *condition = ir_gen_conforming_expr(builder, stmt->value, &builder->static_bool, CONFORM_MODE_CALCULATION, stmt->source, bad_condition_error_format);
+    if(condition == NULL) return FAILURE;
+
+    // Continue/exit depending on condition and conditional kind
+    if(conditional_kind == EXPR_WHILE){
+        build_cond_break(builder, condition, new_basicblock_id, end_basicblock_id);
+    } else {
+        build_cond_break(builder, condition, end_basicblock_id, new_basicblock_id);
+    }
+
+    // Open block scope and prepare for block statements
+    open_scope(builder);
+    build_using_basicblock(builder, new_basicblock_id);
+
+    // Generate IR instructions for the statements within the conditional block
+    bool terminated;
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+        close_scope(builder);
+        return FAILURE;
+    }
+
+    // Terminate the conditional block if it wasn't already terminated
+    ir_gen_stmts_auto_terminate(builder, terminated, test_basicblock_id);
+
+    // Remove loop label
+    if(stmt->label != NULL) pop_loop_label(builder);
+
+    // Close block scope and continue building at the continuation point
+    close_scope(builder);
+    build_using_basicblock(builder, end_basicblock_id);
+
+    // Restore previous jump points and scope level
+    builder->break_block_id = prev_break_block_id;
+    builder->continue_block_id = prev_continue_block_id;
+    builder->break_continue_scope = prev_break_continue_scope;
     return SUCCESS;
 }
 
@@ -1686,4 +1663,12 @@ errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name
     }
 
     return is_missing_case ? FAILURE : SUCCESS;
+}
+
+
+void ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated, length_t continuation_block_id){
+    if(already_terminated) return;
+
+    handle_deference_for_variables(builder, &builder->scope->list);
+    build_break(builder, continuation_block_id);
 }

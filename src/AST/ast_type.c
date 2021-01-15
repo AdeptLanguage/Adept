@@ -657,6 +657,12 @@ bool ast_type_is_fixed_array(const ast_type_t *type){
     return true;
 }
 
+bool ast_type_is_func(const ast_type_t *type){
+    if(type->elements_length != 1) return false;
+    if(type->elements[0]->id != AST_ELEM_FUNC) return false;
+    return true;
+}
+
 bool ast_type_has_polymorph(const ast_type_t *type){
     for(length_t i = 0; i != type->elements_length; i++){
         switch(type->elements[i]->id){

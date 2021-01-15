@@ -24,6 +24,13 @@
 // is mutable, the result won't automatically be dereferenced.
 errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
 
+// ---------------- ir_gen_conforming_expr ----------------
+// Generates instructions for an AST expression to produce an IR value.
+// The resulting value will then try to be conformed to the expected AST type given.
+// NOTE: 'error_format' expects two '%s' format specifiers
+// NOTE: Returns NULL on failure
+ir_value_t *ir_gen_conforming_expr(ir_builder_t *builder, ast_expr_t *ast_value, ast_type_t *to_type, unsigned int conform_mode, source_t source, const char *error_format);
+
 // ---------------- ir_gen_expr_* ----------------
 // Genarates an IR value for a specific kind of AST expression
 errorcode_t ir_gen_expr_and(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);

@@ -267,6 +267,26 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     return SUCCESS;
 }
 
+ir_value_t *ir_gen_conforming_expr(ir_builder_t *builder, ast_expr_t *ast_value, ast_type_t *to_type, unsigned int conform_mode, source_t source, const char *error_format){
+    ir_value_t *ir_value;
+    ast_type_t ast_type;
+
+    if(ir_gen_expr(builder, ast_value, &ir_value, false, &ast_type)) return NULL;
+
+    if(!ast_types_conform(builder, &ir_value, &ast_type, to_type, conform_mode)){
+        char *a_type_str = ast_type_str(&ast_type);
+        char *b_type_str = ast_type_str(&builder->static_bool);
+        compiler_panicf(builder->compiler, source, error_format, a_type_str, b_type_str);
+        free(a_type_str);
+        free(b_type_str);
+        ast_type_free(&ast_type);
+        return NULL;
+    }
+
+    ast_type_free(&ast_type);
+    return ir_value;
+}
+
 errorcode_t ir_gen_expr_math_ivf(ir_builder_t *builder, ast_expr_math_t *expr, unsigned int ints_instr, unsigned int floats_instr,
         ir_value_t **ir_value, ast_type_t *out_expr_type){
     
@@ -478,25 +498,12 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
     // Check for variable of name in nearby scope
     bridge_var_t *var = bridge_scope_find_var(builder->scope, expr->name);
+    bool is_var_function_like = var && ast_type_is_func(var->ast_type);
 
     // Found variable of name in nearby scope
-    if(var){
-        // Get AST and IR type of function from variable
-        tmp_ast_variable_type = var->ast_type;
+    if(is_var_function_like){
+        // Get IR type of function from variable
         tmp_ir_variable_type = ir_type_pointer_to(builder->pool, var->ir_type);
-
-        // Fail if AST type isn't a function pointer type
-        if(tmp_ast_variable_type->elements_length != 1 || tmp_ast_variable_type->elements[0]->id != AST_ELEM_FUNC){
-            // If call is tentative, then don't complain and just continue as if nothing happened
-            if(expr->is_tentative) return SUCCESS;
-            
-            // Otherwise print error message
-            char *s = ast_type_str(tmp_ast_variable_type);
-            compiler_panicf(builder->compiler, expr->source, "Can't call value of non function type '%s'", s);
-            ast_types_free_fully(arg_types, arity);
-            free(s);
-            return FAILURE;
-        }
 
         if(expr->gives.elements_length != 0){
             compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function variable");
@@ -509,7 +516,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         *ir_value = build_load(builder, *ir_value, expr->source);
 
         // Call function pointer value
-        errorcode_t error = ir_gen_call_function_value(builder, tmp_ast_variable_type, expr, arg_values, arg_types, ir_value, out_expr_type);
+        errorcode_t error = ir_gen_call_function_value(builder, var->ast_type, expr, arg_values, arg_types, ir_value, out_expr_type);
         ast_types_free_fully(arg_types, arity);
 
         // Propagate failure if failed to call function pointer value
