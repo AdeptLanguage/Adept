@@ -782,6 +782,11 @@ void ast_expr_create_ternary(ast_expr_t **out_expr, ast_expr_t *condition, ast_e
 // Creates a cast expression
 void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from, source_t source);
 
+// ---------------- ast_expr_create_phantom ----------------
+// Creates a phantom expression
+// NOTE: Ownership of 'ast_type' will be taken
+void ast_expr_create_phantom(ast_expr_t **out_expr, ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable);
+
 // ---------------- ast_expr_list_init ----------------
 // Initializes an ast_expr_list_t with a given capacity
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity);

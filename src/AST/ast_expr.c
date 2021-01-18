@@ -1517,6 +1517,15 @@ void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from
     ((ast_expr_cast_t*) *out_expr)->source = source;
 }
 
+void ast_expr_create_phantom(ast_expr_t **out_expr, ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable){
+    *out_expr = malloc(sizeof(ast_expr_phantom_t));
+    ((ast_expr_phantom_t*) *out_expr)->id = EXPR_PHANTOM;
+    ((ast_expr_phantom_t*) *out_expr)->source = source;
+    ((ast_expr_phantom_t*) *out_expr)->type = ast_type;
+    ((ast_expr_phantom_t*) *out_expr)->ir_value = ir_value;
+    ((ast_expr_phantom_t*) *out_expr)->is_mutable = is_mutable;
+}
+
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
     if(capacity == 0){
         list->statements = NULL;

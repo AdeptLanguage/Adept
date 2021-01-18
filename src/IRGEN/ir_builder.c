@@ -2347,3 +2347,17 @@ bool is_allowed_auto_conversion(ir_builder_t *builder, const ast_type_t *a_type,
     ir_pool_snapshot_restore(builder->pool, &snapshot);
     return allowed;
 }
+
+successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id){
+    // Find loop label by name and return requested information
+    for(length_t i = builder->block_stack_length; i != 0; i--){
+        if(strcmp(label, builder->block_stack_labels[i - 1]) == 0){
+            if(out_scope)             *out_scope = builder->block_stack_scopes[i - 1];
+            if(out_break_block_id)    *out_break_block_id = builder->block_stack_break_ids[i - 1];
+            if(out_continue_block_id) *out_continue_block_id = builder->block_stack_continue_ids[i - 1];
+            return true;
+        }
+    }
+
+    return false;
+}

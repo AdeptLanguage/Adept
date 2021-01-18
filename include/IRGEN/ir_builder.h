@@ -431,4 +431,8 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
 // (For integers / floats)
 bool is_allowed_auto_conversion(ir_builder_t *builder, const ast_type_t *a_type, const ast_type_t *b_type);
 
+// ---------------- ir_builder_get_loop_label_info ----------------
+// Gets information associated with a loop label
+successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id);
+
 #endif // _ISAAC_IR_BUILDER_H

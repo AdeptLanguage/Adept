@@ -37,8 +37,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 }
             }
 
-            // Return since no other statements can be after this one
-            return SUCCESS;
+            return SUCCESS; // Return since no other statements can be after this one
         case EXPR_CALL:
         case EXPR_CALL_METHOD:
             if(ir_gen_stmt_call_like(builder, stmt)) return FAILURE;
@@ -82,494 +81,35 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
         case EXPR_UNTIL:
             if(ir_gen_stmt_simple_loop(builder, (ast_expr_while_t*) stmt)) return FAILURE;
             break;
-        case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK: {
-                length_t new_basicblock_id = build_basicblock(builder);
-                length_t end_basicblock_id = build_basicblock(builder);
-
-                if(((ast_expr_whilecontinue_t*) stmt)->label != NULL){
-                    push_loop_label(builder, ((ast_expr_whilecontinue_t*) stmt)->label, end_basicblock_id, new_basicblock_id);
-                }
-
-                length_t prev_break_block_id = builder->break_block_id;
-                length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
-
-                builder->break_block_id = end_basicblock_id;
-                builder->continue_block_id = new_basicblock_id;
-                builder->break_continue_scope = builder->scope;
-
-                build_break(builder, new_basicblock_id);
-                build_using_basicblock(builder, new_basicblock_id);
-
-                ast_expr_t **loop_stmts = ((ast_expr_whilecontinue_t*) stmt)->statements;
-                length_t loop_stmts_length = ((ast_expr_whilecontinue_t*) stmt)->statements_length;
-                bool terminated;
-
-                open_scope(builder);
-                build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_stmts(builder, loop_stmts, loop_stmts_length, &terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
-
-                    if(stmt->id == EXPR_WHILECONTINUE){
-                        // 'while continue'
-                        build_break(builder, end_basicblock_id);
-                    } else {
-                        // 'until break'
-                        build_break(builder, new_basicblock_id);
-                    }
-                }
-
-                if(((ast_expr_whilecontinue_t*) stmt)->label != NULL) pop_loop_label(builder);
-                close_scope(builder);
-                build_using_basicblock(builder, end_basicblock_id);
-
-                builder->break_block_id = prev_break_block_id;
-                builder->continue_block_id = prev_continue_block_id;
-                builder->break_continue_scope = prev_break_continue_scope;
-            }
+        case EXPR_WHILECONTINUE:
+        case EXPR_UNTILBREAK:
+            if(ir_gen_stmt_recurrent_loop(builder, (ast_expr_whilecontinue_t*) stmt)) return FAILURE;
             break;
-        case EXPR_DELETE: {
-                ast_expr_unary_t *delete_expr = (ast_expr_unary_t*) stmt;
-                if(ir_gen_expr(builder, delete_expr->value, &expression_value, false, &temporary_type)) return FAILURE;
-
-                if(temporary_type.elements_length == 0 || ( temporary_type.elements[0]->id != AST_ELEM_POINTER &&
-                    !(temporary_type.elements[0]->id == AST_ELEM_BASE && strcmp(((ast_elem_base_t*) temporary_type.elements[0])->base, "ptr") == 0)
-                )){
-                    char *t = ast_type_str(&temporary_type);
-                    compiler_panicf(builder->compiler, delete_expr->source, "Can't pass non-pointer type '%s' to delete", t);
-                    ast_type_free(&temporary_type);
-                    free(t);
-                    return FAILURE;
-                }
-
-                built_instr = build_instruction(builder, sizeof(ir_instr_free_t));
-                ((ir_instr_free_t*) built_instr)->id = INSTRUCTION_FREE;
-                ((ir_instr_free_t*) built_instr)->result_type = NULL;
-                ((ir_instr_free_t*) built_instr)->value = expression_value;
-                ast_type_free(&temporary_type);
-            }
+        case EXPR_DELETE:
+            if(ir_gen_stmt_delete(builder, (ast_expr_delete_t*) stmt)) return FAILURE;
             break;
-        case EXPR_BREAK: {
-                if(builder->break_block_id == 0){
-                    compiler_panicf(builder->compiler, stmt->source, "Nowhere to break to");
-                    return FAILURE;
-                }
-
-                bridge_scope_t *visit_scope;
-                for(visit_scope = builder->scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
-                    handle_deference_for_variables(builder, &visit_scope->list);
-                }
-                handle_deference_for_variables(builder, &visit_scope->list);
-                build_break(builder, builder->break_block_id);
-                if(out_is_terminated) *out_is_terminated = true;
-            }
-            return SUCCESS;
-        case EXPR_CONTINUE: {
-                if(builder->continue_block_id == 0){
-                    compiler_panicf(builder->compiler, stmt->source, "Nowhere to continue to");
-                    return FAILURE;
-                }
-
-                bridge_scope_t *visit_scope;
-                for(visit_scope = builder->scope; visit_scope->parent != builder->break_continue_scope; visit_scope = visit_scope->parent){
-                    handle_deference_for_variables(builder, &visit_scope->list);
-                }
-                handle_deference_for_variables(builder, &visit_scope->list);
-                build_break(builder, builder->continue_block_id);
-                if(out_is_terminated) *out_is_terminated = true;
-            }
-            return SUCCESS;
-        case EXPR_FALLTHROUGH: {
-                if(builder->fallthrough_block_id == 0){
-                    compiler_panicf(builder->compiler, stmt->source, "Nowhere to fall through to");
-                    return FAILURE;
-                }
-
-                bridge_scope_t *visit_scope;
-                for(visit_scope = builder->scope; visit_scope->parent != builder->fallthrough_scope; visit_scope = visit_scope->parent){
-                    handle_deference_for_variables(builder, &visit_scope->list);
-                }
-                handle_deference_for_variables(builder, &visit_scope->list);
-                build_break(builder, builder->fallthrough_block_id);
-                if(out_is_terminated) *out_is_terminated = true;
-            }
-            return SUCCESS;
-        case EXPR_BREAK_TO: {
-                char *target_label = ((ast_expr_break_to_t*) stmt)->label;
-                length_t target_block_id = 0;
-                bridge_scope_t *block_scope;
-
-                for(length_t i = builder->block_stack_length; i != 0; i--){
-                    if(strcmp(target_label, builder->block_stack_labels[i - 1]) == 0){
-                        target_block_id = builder->block_stack_break_ids[i - 1];
-                        block_scope = builder->block_stack_scopes[i - 1];
-                        break;
-                    }
-                }
-
-                if(target_block_id == 0){
-                    compiler_panicf(builder->compiler, ((ast_expr_break_to_t*) stmt)->label_source, "Undeclared label '%s'", target_label);
-                    return FAILURE;
-                }
-
-                bridge_scope_t *visit_scope;
-                for(visit_scope = builder->scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
-                    handle_deference_for_variables(builder, &visit_scope->list);
-                }
-                handle_deference_for_variables(builder, &visit_scope->list);
-                build_break(builder, target_block_id);
-                if(out_is_terminated) *out_is_terminated = true;
-            }
-            return SUCCESS;
-        case EXPR_CONTINUE_TO: {
-                char *target_label = ((ast_expr_continue_to_t*) stmt)->label;
-                length_t target_block_id = 0;
-                bridge_scope_t *block_scope;
-
-                for(length_t i = builder->block_stack_length; i != 0; i--){
-                    if(strcmp(target_label, builder->block_stack_labels[i - 1]) == 0){
-                        target_block_id = builder->block_stack_continue_ids[i - 1];
-                        block_scope = builder->block_stack_scopes[i - 1];
-                        break;
-                    }
-                }
-
-                if(target_block_id == 0){
-                    compiler_panicf(builder->compiler, ((ast_expr_continue_to_t*) stmt)->label_source, "Undeclared label '%s'", target_label);
-                    return FAILURE;
-                }
-
-                bridge_scope_t *visit_scope;
-                for(visit_scope = builder->scope; visit_scope->parent != block_scope; visit_scope = visit_scope->parent){
-                    handle_deference_for_variables(builder, &visit_scope->list);
-                }
-                handle_deference_for_variables(builder, &visit_scope->list);
-                build_break(builder, target_block_id);
-                if(out_is_terminated) *out_is_terminated = true;
-            }
-            return SUCCESS;
-        case EXPR_EACH_IN: {
-                // TODO: Clean up this really messy code
-
-                ast_expr_each_in_t *each_in = (ast_expr_each_in_t*) stmt;
-
-                length_t initial_basicblock_id = builder->current_block_id;
-                length_t prep_basicblock_id = -1;
-
-                ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
-
-                ir_type_t *idx_ir_type = ir_builder_usize(builder);
-                ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
-
-                open_scope(builder);
-
-                // Create 'idx' variable
-                length_t idx_var_id = builder->next_var_id;
-                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
-                ir_value_t *idx_ptr = build_lvarptr(builder, idx_ir_type_ptr, idx_var_id);
-
-                // Set 'idx' to initial value of zero
-                ir_value_t *initial_idx = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-                initial_idx->value_type = VALUE_TYPE_LITERAL;
-                initial_idx->type = idx_ir_type;
-                initial_idx->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-                *((unsigned long long*) initial_idx->extra) = 0;
-
-                build_store(builder, initial_idx, idx_ptr, stmt->source);
-
-                if(!each_in->is_static){
-                    prep_basicblock_id = build_basicblock(builder);
-                    build_using_basicblock(builder, prep_basicblock_id);
-                }
-                
-                // DANGEROUS: The following chunks of code assume that either 'each_in->list' isn't null or
-                //        'each_in->array' and 'each_in->length' aren't null
-                ir_value_t *list_precomputed = NULL;
-
-                // NOTE: 'phantom_list_value.type' must be passed to ast_type_free if list_precomputed isn't NULL
-                ast_expr_phantom_t phantom_list_value;
-
-                if(each_in->list){
-                    if(ir_gen_expr(builder, each_in->list, &list_precomputed, true, &phantom_list_value.type)){
-                        return FAILURE;
-                    }
-                    phantom_list_value.id = EXPR_PHANTOM;
-                    phantom_list_value.ir_value = list_precomputed;
-                    phantom_list_value.source = each_in->list->source;
-                    phantom_list_value.is_mutable = expr_is_mutable(each_in->list);
-                }
-                
-                ir_value_t *fixed_array_value = NULL;
-
-                // Generate length
-                ir_value_t *array_length;
-                if(list_precomputed){
-                    if(ast_type_is_fixed_array(&phantom_list_value.type)){
-                        // FIXED ARRAY
-                        // Get array length from the type signature of the fixed array
-                        // NOTE: Assumes element->id == AST_ELEM_FIXED_ARRAY because of earlier 'ast_type_is_fixed_array' call should've verified
-                        ast_elem_fixed_array_t *fixed_array_element = (ast_elem_fixed_array_t*) phantom_list_value.type.elements[0];
-
-                        // Verify that the fixed array type we got is good (just in case)
-                        if(phantom_list_value.type.elements_length < 2){
-                            compiler_panicf(builder->compiler, phantom_list_value.type.source, "INTERNAL ERROR: EXPR_EACH_IN got bad fixed array type in ir_gen_stmts");
-                            ast_type_free(&phantom_list_value.type);
-                            return FAILURE;
-                        }
-
-                        // DANGEROUS: Creating AST type that is a reference to parts of another
-                        ast_type_t remaining_type;
-                        remaining_type.elements = &phantom_list_value.type.elements[1];
-                        remaining_type.elements_length = phantom_list_value.type.elements_length - 1;
-                        remaining_type.source = phantom_list_value.type.elements[1]->source;
-
-                        // Verify that the item type matches the item type provided
-                        if(!ast_types_identical(&remaining_type, each_in->it_type)){
-                            compiler_panic(builder->compiler, each_in->it_type->source,
-                                "Element type doesn't match given array's element type");
-        
-                            char *s1 = ast_type_str(each_in->it_type);
-                            char *s2 = ast_type_str(&remaining_type);
-                            printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
-                            free(s1);
-                            free(s2);
-        
-                            ast_type_free(&temporary_type);
-                            return FAILURE;
-                        }
-
-                        // Verify that the value that was given is mutable
-                        if(!phantom_list_value.is_mutable){
-                            compiler_panicf(builder->compiler, phantom_list_value.type.source, "Fixed array given to 'each in' statement must be mutable");
-                            ast_type_free(&phantom_list_value.type);
-                            return FAILURE;
-                        }
-
-                        ir_type_t *item_ir_type;
-                        if(ir_gen_resolve_type(builder->compiler, builder->object, &remaining_type, &item_ir_type)){
-                            ast_type_free(&phantom_list_value.type);
-                            return FAILURE;
-                        }
-
-                        fixed_array_value = build_bitcast(builder, list_precomputed, ir_type_pointer_to(builder->pool, item_ir_type));
-                        array_length = build_literal_usize(builder->pool, fixed_array_element->length);
-                    } else {
-                        // STRUCTURE
-                        // Get array length by calling the __length__() method
-
-                        // TODO: CLEANUP: Clean up his very very dirty code
-
-                        ast_expr_call_method_t length_call;
-                        ast_expr_create_call_method_in_place(&length_call, "__length__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, true, NULL, phantom_list_value.source);
-
-                        if(ir_gen_expr(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type)){
-                            ast_type_free(&phantom_list_value.type);
-                            return FAILURE;
-                        }
-                    }
-                } else if(ir_gen_expr(builder, each_in->length, &array_length, false, &temporary_type)){
-                    return FAILURE;
-                }
-
-                if(!fixed_array_value){
-                    // Ensure the given value for the array length is of type 'usize'
-                    if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
-                        char *a_type_str = ast_type_str(&temporary_type);
-                        compiler_panicf(builder->compiler, each_in->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
-                        free(a_type_str);
-
-                        if(list_precomputed) ast_type_free(&phantom_list_value.type);
-                        ast_type_free(&temporary_type);
-                        return FAILURE;
-                    }
-
-                    ast_type_free(&temporary_type);
-                }
-
-                if(each_in->is_static){
-                    // Finally move ahead to prep basicblock for static each-in
-                    prep_basicblock_id = build_basicblock(builder);
-                    build_using_basicblock(builder, prep_basicblock_id);
-                }
-
-                // Generate (idx < length)
-                ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
-                ir_value_t *whether_keep_going_value = build_math(builder, INSTRUCTION_ULESSER, idx_value, array_length, ir_builder_bool(builder));
-
-                // Generate body blocks
-                length_t new_basicblock_id  = build_basicblock(builder);
-                length_t inc_basicblock_id  = build_basicblock(builder);
-                length_t end_basicblock_id  = build_basicblock(builder);
-
-                // Hook up labels
-                if(each_in->label != NULL){
-                    push_loop_label(builder, each_in->label, end_basicblock_id, inc_basicblock_id);
-                }
-                
-                length_t prev_break_block_id = builder->break_block_id;
-                length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
-
-                builder->break_block_id = end_basicblock_id;
-                builder->continue_block_id = inc_basicblock_id;
-                builder->break_continue_scope = builder->scope;
-
-                // Generate conditional break
-                build_cond_break(builder, whether_keep_going_value, new_basicblock_id, end_basicblock_id);
-
-                if(each_in->is_static){
-                    // Calculate array inside initial basicblock if static
-                    build_using_basicblock(builder, initial_basicblock_id);
-                } else {
-                    // Calculate array inside new basicblock otherwise
-                    build_using_basicblock(builder, new_basicblock_id);
-                }
-
-                // Generate array value
-                ir_value_t *array;
-                if(fixed_array_value){
-                    // FIXED ARRAY
-                    // We already have the value for the array (since we calculated it when doing fixed-array stuff)
-                    array = fixed_array_value;
-                } else if(list_precomputed){
-                    // STRUCTURE
-                    // Call the '__array__()' method to get the value for the array
-
-                    // TODO: CLEANUP: Clean up his very very dirty code
-
-                    ast_expr_call_method_t array_call;
-                    ast_expr_create_call_method_in_place(&array_call, "__array__", (ast_expr_t*) &phantom_list_value, 0, NULL, false, true, NULL, phantom_list_value.source);
-
-                    if(ir_gen_expr(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
-                        ast_type_free(&phantom_list_value.type);
-                        close_scope(builder);
-                        return FAILURE;
-                    }
-                } else if(ir_gen_expr(builder, each_in->low_array, &array, false, &temporary_type)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!fixed_array_value){
-                    // Ensure the given value for the array is of a pointer type
-                    if(temporary_type.elements_length == 0 || temporary_type.elements[0]->id != AST_ELEM_POINTER){
-                        compiler_panic(builder->compiler, each_in->low_array->source,
-                            "Low-level array type for 'each in' statement must be a pointer");
-                        ast_type_free(&temporary_type);
-                        close_scope(builder);
-                        return FAILURE;
-                    }
-
-                    // Get the item type
-                    ast_type_dereference(&temporary_type);
-
-                    // Ensure the item type matches the item type provided
-                    if(!ast_types_identical(&temporary_type, each_in->it_type)){
-                        compiler_panic(builder->compiler, each_in->it_type->source,
-                            "Element type doesn't match given array's element type");
-
-                        char *s1 = ast_type_str(each_in->it_type);
-                        char *s2 = ast_type_str(&temporary_type);
-                        printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
-                        free(s1);
-                        free(s2);
-
-                        ast_type_free(&temporary_type);
-                        close_scope(builder);
-                        return FAILURE;
-                    }
-
-                    ast_type_free(&temporary_type);
-                }
-
-                // Update 'it' inside new basicblock
-                build_using_basicblock(builder, new_basicblock_id);
-
-                length_t it_var_id = builder->next_var_id;
-                char *it_name = each_in->it_name ? each_in->it_name : "it";
-
-                // Generate new block statements to update 'it' variable
-                add_variable(builder, it_name, each_in->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE);
-                
-                ir_value_t *it_ptr = build_lvarptr(builder, array->type, it_var_id);
-                ir_value_t *it_idx = build_load(builder, idx_ptr, stmt->source);
-
-                // Update 'it' value
-                build_store(builder, build_array_access(builder, array, it_idx, stmt->source), it_ptr, stmt->source);
-
-                // Generate new_block user-defined statements
-                bool terminated;
-                build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_stmts(builder, each_in->statements, each_in->statements_length, &terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
-                    build_break(builder, inc_basicblock_id);
-                }
-
-                // Finish off initial basic block
-                build_using_basicblock(builder, initial_basicblock_id);
-                build_break(builder, prep_basicblock_id);
-
-                // Generate jump inc_block
-                build_using_basicblock(builder, inc_basicblock_id);
-
-                if(!each_in->is_static && each_in->list && !phantom_list_value.is_mutable){
-                    // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
-
-                    if(handle_single_deference(builder, &phantom_list_value.type, list_precomputed) == ALT_FAILURE){
-                        close_scope(builder);
-                        return FAILURE;
-                    }
-                }
-
-                ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
-                ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-                ir_one_value->value_type = VALUE_TYPE_LITERAL;
-                ir_type_map_find(builder->type_map, "usize", &(ir_one_value->type));
-                ir_one_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-                *((unsigned long long*) ir_one_value->extra) = 1;
-
-                // Increment
-                ir_value_t *incremented = build_math(builder, INSTRUCTION_ADD, current_idx, ir_one_value, current_idx->type);
-                
-                // Store
-                build_store(builder, incremented, idx_ptr, stmt->source);
-
-                // Jump Prep
-                build_break(builder, prep_basicblock_id);
-
-                close_scope(builder);
-                build_using_basicblock(builder, end_basicblock_id);
-
-                if(each_in->list && !phantom_list_value.is_mutable){
-                    // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
-
-                    if(handle_single_deference(builder, &phantom_list_value.type, list_precomputed) == ALT_FAILURE){
-                        close_scope(builder);
-                        return FAILURE;
-                    }
-                }
-
-                if(each_in->list){
-                    // We don't need 'phantom_list_value' anymore, so free its type
-                    ast_type_free(&phantom_list_value.type);
-                }
-
-                if(each_in->label != NULL) pop_loop_label(builder);
-
-                builder->break_block_id = prev_break_block_id;
-                builder->continue_block_id = prev_continue_block_id;
-                builder->break_continue_scope = prev_break_continue_scope;
-            }
+        case EXPR_BREAK:
+            if(ir_gen_stmt_break(builder, stmt, out_is_terminated)) return FAILURE;
+
+            return SUCCESS; // Return since no other statements can be after this one
+        case EXPR_CONTINUE:
+            if(ir_gen_stmt_continue(builder, stmt, out_is_terminated)) return FAILURE;
+
+            return SUCCESS; // Return since no other statements can be after this one
+        case EXPR_FALLTHROUGH:
+            if(ir_gen_stmt_fallthrough(builder, stmt, out_is_terminated)) return FAILURE;
+
+            return SUCCESS; // Return since no other statements can be after this one
+        case EXPR_BREAK_TO:
+            if(ir_gen_stmt_break_to(builder, (ast_expr_break_to_t*) stmt, out_is_terminated)) return FAILURE;
+
+            return SUCCESS; // Return since no other statements can be after this one
+        case EXPR_CONTINUE_TO: 
+            if(ir_gen_stmt_continue_to(builder, (ast_expr_continue_to_t*) stmt, out_is_terminated)) return FAILURE;
+            
+            return SUCCESS; // Return since no other statements can be after this one
+        case EXPR_EACH_IN:
+            if(ir_gen_stmt_each(builder, (ast_expr_each_in_t*) stmt)) return FAILURE;
             break;
         case EXPR_REPEAT: {
                 ast_expr_repeat_t *repeat = (ast_expr_repeat_t*) stmt;
@@ -1148,14 +688,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
     }
 
     // Make '__defer__()' calls for variables running out of scope
-    {
-        bridge_scope_t *visit_scope = builder->scope;
-
-        do {
-            handle_deference_for_variables(builder, &visit_scope->list);
-            visit_scope = visit_scope->parent;
-        } while(visit_scope != NULL);
-    }
+    ir_gen_variable_deference(builder, NULL);
 
     // Make '__defer__()' calls for global variables and (anonymous) static variables running out of scope
     if(is_in_main_function){
@@ -1460,7 +993,6 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
 }
 
 errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t *stmt){
-    unsigned int conditional_kind = stmt->id;
     const char *bad_condition_format = "Received type '%s' when conditional expects type '%s'";
 
     // Generate instructions to get condition value
@@ -1470,7 +1002,7 @@ errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t 
     length_t new_basicblock_id = build_basicblock(builder); // Create block for when the condition is true
     length_t end_basicblock_id = build_basicblock(builder); // Create block for when the condition is false
 
-    if(conditional_kind == EXPR_IF){
+    if(stmt->id == EXPR_IF){
         build_cond_break(builder, condition, new_basicblock_id, end_basicblock_id);
     } else {
         build_cond_break(builder, condition, end_basicblock_id, new_basicblock_id);
@@ -1497,7 +1029,6 @@ errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t 
 }
 
 errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_t *stmt){
-    unsigned int conditional_kind = stmt->id;
     const char *bad_condition_error_format = "Received type '%s' when conditional expects type '%s'";
 
     // Generate instructions to get condition value
@@ -1508,7 +1039,7 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
     length_t else_basicblock_id = build_basicblock(builder); // Create block for when the condition is false
     length_t end_basicblock_id  = build_basicblock(builder); // Create block for the continuation point
 
-    if(conditional_kind == EXPR_IFELSE){
+    if(stmt->id == EXPR_IFELSE){
         build_cond_break(builder, condition, new_basicblock_id, else_basicblock_id);
     } else {
         build_cond_break(builder, condition, else_basicblock_id, new_basicblock_id);
@@ -1551,7 +1082,6 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
 }
 
 errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stmt){
-    unsigned int conditional_kind = stmt->id;
     const char *bad_condition_error_format = "Received type '%s' when conditional expects type '%s'";
 
     length_t test_basicblock_id = build_basicblock(builder);
@@ -1580,7 +1110,7 @@ errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stm
     if(condition == NULL) return FAILURE;
 
     // Continue/exit depending on condition and conditional kind
-    if(conditional_kind == EXPR_WHILE){
+    if(stmt->id == EXPR_WHILE){
         build_cond_break(builder, condition, new_basicblock_id, end_basicblock_id);
     } else {
         build_cond_break(builder, condition, end_basicblock_id, new_basicblock_id);
@@ -1612,6 +1142,459 @@ errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stm
     builder->continue_block_id = prev_continue_block_id;
     builder->break_continue_scope = prev_break_continue_scope;
     return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_recurrent_loop(ir_builder_t *builder, ast_expr_whilecontinue_t *stmt){
+    length_t new_basicblock_id = build_basicblock(builder);
+    length_t end_basicblock_id = build_basicblock(builder);
+
+    // Add loop label
+    if(stmt->label != NULL) push_loop_label(builder, stmt->label, end_basicblock_id, new_basicblock_id);
+
+    // Remember previous jump points and scope level
+    length_t prev_break_block_id = builder->break_block_id;
+    length_t prev_continue_block_id = builder->continue_block_id;
+    bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+
+    // Set the working jump points and scope level
+    builder->break_block_id = end_basicblock_id;
+    builder->continue_block_id = new_basicblock_id;
+    builder->break_continue_scope = builder->scope;
+
+    // Enter block unconditionally
+    build_break(builder, new_basicblock_id);
+    build_using_basicblock(builder, new_basicblock_id);
+
+    // Open block scope and prepare for block statements
+    open_scope(builder);
+    build_using_basicblock(builder, new_basicblock_id);
+    // Generate IR instructions for the statements within the block
+    bool terminated;
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+        close_scope(builder);
+        return FAILURE;
+    }
+
+    // Terminate the block if it wasn't already terminated
+    ir_gen_stmts_auto_terminate(builder, terminated, stmt->id == EXPR_WHILECONTINUE ? end_basicblock_id : new_basicblock_id);
+
+    // Remove loop label
+    if(stmt->label != NULL) pop_loop_label(builder);
+
+    // Close block scope and continue building at the continuation point
+    close_scope(builder);
+    build_using_basicblock(builder, end_basicblock_id);
+
+    // Restore previous jump points and scope level
+    builder->break_block_id = prev_break_block_id;
+    builder->continue_block_id = prev_continue_block_id;
+    builder->break_continue_scope = prev_break_continue_scope;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_delete(ir_builder_t *builder, ast_expr_unary_t *stmt){
+    ir_value_t *pointer_value;
+    ast_type_t pointer_type;
+
+    // Generate IR instructions to get the pointer value
+    if(ir_gen_expr(builder, stmt->value, &pointer_value, false, &pointer_type)) return FAILURE;
+
+    // Ensure that the value we got is a pointer type
+    if(!ast_type_is_pointer(&pointer_type) && !ast_type_is_base_of(&pointer_type, "ptr")){
+        char *human_readable_type = ast_type_str(&pointer_type);
+        compiler_panicf(builder->compiler, stmt->source, "Can't pass non-pointer type '%s' to delete", human_readable_type);
+        ast_type_free(&pointer_type);
+        free(human_readable_type);
+        return FAILURE;
+    }
+
+    ast_type_free(&pointer_type);
+
+    // Build 'free' instruction
+    ir_instr_free_t *built_instr = (ir_instr_free_t*) build_instruction(builder, sizeof(ir_instr_free_t));
+    built_instr->id = INSTRUCTION_FREE;
+    built_instr->result_type = NULL;
+    built_instr->value = pointer_value;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_break(ir_builder_t *builder, ast_expr_t *stmt, bool *out_is_terminated){
+    // Ensure we have a valid point to break to
+    if(builder->break_block_id == 0){
+        compiler_panicf(builder->compiler, stmt->source, "Nowhere to break to");
+        return FAILURE;
+    }
+
+    // Make '__defer__()' calls for variables whose scope will end
+    ir_gen_variable_deference(builder, builder->break_continue_scope);
+
+    // Break to the targeted block
+    build_break(builder, builder->break_block_id);
+
+    // This statement is always a terminating statement
+    if(out_is_terminated) *out_is_terminated = true;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_continue(ir_builder_t *builder, ast_expr_t *stmt, bool *out_is_terminated){
+    // Ensure we have a valid point to continue to
+    if(builder->continue_block_id == 0){
+        compiler_panicf(builder->compiler, stmt->source, "Nowhere to continue to");
+        return FAILURE;
+    }
+
+    // Make '__defer__()' calls for variables whose scope will end
+    ir_gen_variable_deference(builder, builder->break_continue_scope);
+
+    // Continue to the targeted block
+    build_break(builder, builder->continue_block_id);
+
+    // This statement is always a terminating statement
+    if(out_is_terminated) *out_is_terminated = true;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_fallthrough(ir_builder_t *builder, ast_expr_t *stmt, bool *out_is_terminated){
+    // Ensure we have a valid point to fallthrough to
+    if(builder->fallthrough_block_id == 0){
+        compiler_panicf(builder->compiler, stmt->source, "Nowhere to fall through to");
+        return FAILURE;
+    }
+
+    // Make '__defer__()' calls for variables whose scope will end
+    ir_gen_variable_deference(builder, builder->fallthrough_scope);
+
+    // Fallthrough to the targeted block
+    build_break(builder, builder->fallthrough_block_id);
+
+    // This statement is always a terminating statement
+    if(out_is_terminated) *out_is_terminated = true;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_break_to(ir_builder_t *builder, ast_expr_break_to_t *stmt, bool *out_is_terminated){
+    length_t target_block_id;
+    bridge_scope_t *block_scope;
+
+    // Get info about where this loop label is a reference to
+    if(!ir_builder_get_loop_label_info(builder, stmt->label, &block_scope, &target_block_id, NULL)){
+        compiler_panicf(builder->compiler, stmt->label_source, "Undeclared label '%s'", stmt->label);
+        return FAILURE;
+    }
+
+    // Make '__defer__()' calls for variables whose scope will end
+    ir_gen_variable_deference(builder, block_scope);
+
+    // Break to the targeted block
+    build_break(builder, target_block_id);
+
+    // This statement is always a terminating statement
+    if(out_is_terminated) *out_is_terminated = true;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_continue_to(ir_builder_t *builder, ast_expr_break_to_t *stmt, bool *out_is_terminated){
+    length_t target_block_id;
+    bridge_scope_t *block_scope;
+
+    // Get info about where this loop label is a reference to
+    if(!ir_builder_get_loop_label_info(builder, stmt->label, &block_scope, NULL, &target_block_id)){
+        compiler_panicf(builder->compiler, stmt->label_source, "Undeclared label '%s'", stmt->label);
+        return FAILURE;
+    }
+
+    // Make '__defer__()' calls for variables whose scope will end
+    ir_gen_variable_deference(builder, block_scope);
+
+    // Break to the targeted block
+    build_break(builder, target_block_id);
+
+    // This statement is always a terminating statement
+    if(out_is_terminated) *out_is_terminated = true;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
+    // TODO: Clean up this really messy code
+
+    length_t initial_basicblock_id = builder->current_block_id;
+    length_t prep_basicblock_id = -1;
+    ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
+    ir_type_t *idx_ir_type = ir_builder_usize(builder);
+    ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
+
+    open_scope(builder);
+
+    // Create 'idx' variable
+    add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+    ir_value_t *idx_ptr = build_lvarptr(builder, idx_ir_type_ptr, builder->next_var_id - 1);
+
+    // Set 'idx' to initial value of zero
+    build_store(builder, build_literal_usize(builder->pool, 0), idx_ptr, stmt->source);
+
+    if(!stmt->is_static){
+        prep_basicblock_id = build_basicblock(builder);
+        build_using_basicblock(builder, prep_basicblock_id);
+    }
+
+    ast_expr_phantom_t *single_expr = NULL;
+
+    // NOTE: The follow values only exist if 'single_expr' isn't null
+    ir_value_t *single_value = NULL; // (alias for 'single_expr->type')
+    ast_type_t single_type;
+
+    if(stmt->list){
+        if(ir_gen_expr(builder, stmt->list, &single_value, true, &single_type)) return FAILURE;
+
+        ast_expr_create_phantom((ast_expr_t**) &single_expr, single_type, single_value, stmt->list->source, expr_is_mutable(stmt->list));
+    }
+    
+    ir_value_t *fixed_array_value = NULL;
+    ast_type_t temporary_type;
+
+    // Generate length
+    ir_value_t *array_length;
+    if(single_expr){
+        if(ast_type_is_fixed_array(&single_type)){
+            // FIXED ARRAY
+
+            ast_type_t remaining_type = ast_type_unwrapped_view(&single_type);
+            
+            // Verify that the item type matches the item type provided
+            if(!ast_types_identical(&remaining_type, stmt->it_type)){
+                compiler_panic(builder->compiler, stmt->it_type->source,
+                    "Element type doesn't match given array's element type");
+
+                char *s1 = ast_type_str(stmt->it_type);
+                char *s2 = ast_type_str(&remaining_type);
+                printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
+                free(s1);
+                free(s2);
+
+                ast_type_free(&temporary_type);
+                goto failure;
+            }
+
+            // Verify that the value that was given is mutable
+            if(!single_expr->is_mutable){
+                compiler_panicf(builder->compiler, single_type.source, "Fixed array given to 'each in' statement must be mutable");
+                goto failure;
+            }
+
+            ir_type_t *item_ir_type;
+            if(ir_gen_resolve_type(builder->compiler, builder->object, &remaining_type, &item_ir_type))
+                goto failure;
+
+            fixed_array_value = build_bitcast(builder, single_value, ir_type_pointer_to(builder->pool, item_ir_type));
+
+            // Get array length from the type signature of the fixed array
+            // NOTE: Assumes element->id == AST_ELEM_FIXED_ARRAY because of earlier 'ast_type_is_fixed_array' call should've verified
+            ast_elem_fixed_array_t *fixed_array_element = (ast_elem_fixed_array_t*) single_type.elements[0];
+            array_length = build_literal_usize(builder->pool, fixed_array_element->length);
+        } else {
+            // STRUCTURE
+            // Get array length by calling the __length__() method
+
+            // TODO: CLEANUP: Clean up his very very dirty code
+
+            ast_expr_call_method_t length_call;
+            ast_expr_create_call_method_in_place(&length_call, "__length__", (ast_expr_t*) single_expr, 0, NULL, false, true, NULL, single_expr->source);
+
+            if(ir_gen_expr(builder, (ast_expr_t*) &length_call, &array_length, false, &temporary_type))
+                goto failure;
+        }
+    } else if(ir_gen_expr(builder, stmt->length, &array_length, false, &temporary_type)){
+        goto failure;
+    }
+
+    if(!fixed_array_value){
+        // Ensure the given value for the array length is of type 'usize'
+        if(!ast_types_conform(builder, &array_length, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
+            char *a_type_str = ast_type_str(&temporary_type);
+            compiler_panicf(builder->compiler, stmt->length->source, "Received type '%s' when array length should be 'usize'", a_type_str);
+            free(a_type_str);
+
+            ast_type_free(&temporary_type);
+            goto failure;
+        }
+
+        ast_type_free(&temporary_type);
+    }
+
+    if(stmt->is_static){
+        // Finally move ahead to prep basicblock for static each-in
+        prep_basicblock_id = build_basicblock(builder);
+        build_using_basicblock(builder, prep_basicblock_id);
+    }
+
+    // Generate (idx < length)
+    ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
+    ir_value_t *whether_keep_going_value = build_math(builder, INSTRUCTION_ULESSER, idx_value, array_length, ir_builder_bool(builder));
+
+    // Generate body blocks
+    length_t new_basicblock_id  = build_basicblock(builder);
+    length_t inc_basicblock_id  = build_basicblock(builder);
+    length_t end_basicblock_id  = build_basicblock(builder);
+
+    // Hook up labels
+    if(stmt->label != NULL) push_loop_label(builder, stmt->label, end_basicblock_id, inc_basicblock_id);
+    
+    length_t prev_break_block_id = builder->break_block_id;
+    length_t prev_continue_block_id = builder->continue_block_id;
+    bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+
+    builder->break_block_id = end_basicblock_id;
+    builder->continue_block_id = inc_basicblock_id;
+    builder->break_continue_scope = builder->scope;
+
+    // Generate conditional break
+    build_cond_break(builder, whether_keep_going_value, new_basicblock_id, end_basicblock_id);
+
+    if(stmt->is_static){
+        // Calculate array inside initial basicblock if static
+        build_using_basicblock(builder, initial_basicblock_id);
+    } else {
+        // Calculate array inside new basicblock otherwise
+        build_using_basicblock(builder, new_basicblock_id);
+    }
+
+    // Generate array value
+    ir_value_t *array;
+    if(fixed_array_value){
+        // FIXED ARRAY
+        // We already have the value for the array (since we calculated it when doing fixed-array stuff)
+        array = fixed_array_value;
+    } else if(single_value){
+        // STRUCTURE
+        // Call the '__array__()' method to get the value for the array
+
+        // TODO: CLEANUP: Clean up his very very dirty code
+
+        ast_expr_call_method_t array_call;
+        ast_expr_create_call_method_in_place(&array_call, "__array__", (ast_expr_t*) single_expr, 0, NULL, false, true, NULL, single_expr->source);
+
+        if(ir_gen_expr(builder, (ast_expr_t*) &array_call, &array, false, &temporary_type)){
+            close_scope(builder);
+            goto failure;
+        }
+    } else if(ir_gen_expr(builder, stmt->low_array, &array, false, &temporary_type)){
+        close_scope(builder);
+        goto failure;
+    }
+
+    if(!fixed_array_value){
+        // Ensure the given value for the array is of a pointer type
+        if(!ast_type_is_pointer(&temporary_type)){
+            compiler_panic(builder->compiler, stmt->low_array->source,
+                "Low-level array type for 'each in' statement must be a pointer");
+            ast_type_free(&temporary_type);
+            close_scope(builder);
+            goto failure;
+        }
+
+        // Get the item type
+        ast_type_dereference(&temporary_type);
+
+        // Ensure the item type matches the item type provided
+        if(!ast_types_identical(&temporary_type, stmt->it_type)){
+            compiler_panic(builder->compiler, stmt->it_type->source,
+                "Element type doesn't match given array's element type");
+
+            char *s1 = ast_type_str(stmt->it_type);
+            char *s2 = ast_type_str(&temporary_type);
+            printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
+            free(s1);
+            free(s2);
+
+            ast_type_free(&temporary_type);
+            close_scope(builder);
+            goto failure;
+        }
+
+        ast_type_free(&temporary_type);
+    }
+    
+    // Finish off initial basic block
+    build_using_basicblock(builder, initial_basicblock_id);
+    build_break(builder, prep_basicblock_id);
+
+    // Update 'it' inside new basicblock
+    build_using_basicblock(builder, new_basicblock_id);
+
+    // Generate new block statements to update 'it' variable
+    add_variable(builder, stmt->it_name ? stmt->it_name : "it", stmt->it_type, array->type, BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE);
+    
+    ir_value_t *it_ptr = build_lvarptr(builder, array->type, builder->next_var_id - 1);
+    ir_value_t *it_idx = build_load(builder, idx_ptr, stmt->source);
+
+    // Update 'it' value
+    build_store(builder, build_array_access(builder, array, it_idx, stmt->source), it_ptr, stmt->source);
+
+    // Generate new_block user-defined statements
+    bool terminated;
+    build_using_basicblock(builder, new_basicblock_id);
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+        close_scope(builder);
+        goto failure;
+    }
+
+    if(!terminated){
+        handle_deference_for_variables(builder, &builder->scope->list);
+        build_break(builder, inc_basicblock_id);
+    }
+
+    // Generate jump inc_block
+    build_using_basicblock(builder, inc_basicblock_id);
+
+    if(!stmt->is_static && stmt->list && !single_expr->is_mutable){
+        // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
+
+        if(handle_single_deference(builder, &single_type, single_value) == ALT_FAILURE){
+            close_scope(builder);
+            goto failure;
+        }
+    }
+
+    // Increment
+    ir_value_t *incremented = build_math(builder, INSTRUCTION_ADD, build_load(builder, idx_ptr, stmt->source), build_literal_usize(builder->pool, 1), idx_ir_type);
+    
+    // Store
+    build_store(builder, incremented, idx_ptr, stmt->source);
+
+    // Jump Prep
+    build_break(builder, prep_basicblock_id);
+
+    close_scope(builder);
+    build_using_basicblock(builder, end_basicblock_id);
+
+    if(stmt->list && !single_expr->is_mutable){
+        // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
+
+        if(handle_single_deference(builder, &single_type, single_value) == ALT_FAILURE){
+            close_scope(builder);
+            goto failure;
+        }
+    }
+
+    if(single_expr){
+        ast_type_free(&single_expr->type);
+        free(single_expr);
+    }
+
+    if(stmt->label != NULL) pop_loop_label(builder);
+
+    builder->break_block_id = prev_break_block_id;
+    builder->continue_block_id = prev_continue_block_id;
+    builder->break_continue_scope = prev_break_continue_scope;
+    return SUCCESS;
+
+failure:
+    if(single_expr){
+        ast_type_free(&single_expr->type);
+        free(single_expr);
+    }
+
+    return FAILURE;
 }
 
 errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length){
@@ -1671,4 +1654,15 @@ void ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated,
 
     handle_deference_for_variables(builder, &builder->scope->list);
     build_break(builder, continuation_block_id);
+}
+
+void ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope){
+    // Make '__defer__()' calls for variables running out of scope
+
+    bridge_scope_t *visit_scope = builder->scope;
+
+    do {
+        handle_deference_for_variables(builder, &visit_scope->list);
+        visit_scope = visit_scope->parent;
+    } while(visit_scope != up_until_scope);
 }

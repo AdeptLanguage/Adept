@@ -55,6 +55,38 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
 // Generates IR instructions for an 'while'/'until' conditional statement
 errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stmt);
 
+// ---------------- ir_gen_stmt_recurrent_loop ----------------
+// Generates IR instructions for an 'while-continue'/'until-break' conditional statement
+errorcode_t ir_gen_stmt_recurrent_loop(ir_builder_t *builder, ast_expr_whilecontinue_t *expr);
+
+// ---------------- ir_gen_stmt_delete ----------------
+// Generates IR instructions for a 'delete' statement
+errorcode_t ir_gen_stmt_delete(ir_builder_t *builder, ast_expr_delete_t *stmt);
+
+// ---------------- ir_gen_stmt_break ----------------
+// Generates IR instructions for a 'break' statement
+errorcode_t ir_gen_stmt_break(ir_builder_t *builder, ast_expr_t *stmt, bool *out_is_terminated);
+
+// ---------------- ir_gen_stmt_continue ----------------
+// Generates IR instructions for a 'continue' statement
+errorcode_t ir_gen_stmt_continue(ir_builder_t *builder, ast_expr_t *stmt, bool *out_is_terminated);
+
+// ---------------- ir_gen_stmt_fallthrough ----------------
+// Generates IR instructions for a 'fallthrough' statement
+errorcode_t ir_gen_stmt_fallthrough(ir_builder_t *builder, ast_expr_t *stmt, bool *out_is_terminated);
+
+// ---------------- ir_gen_stmt_break_to ----------------
+// Generates IR instructions for a 'break-to' statement
+errorcode_t ir_gen_stmt_break_to(ir_builder_t *builder, ast_expr_break_to_t *stmt, bool *out_is_terminated);
+
+// ---------------- ir_gen_stmt_continue_to ----------------
+// Generates IR instructions for a 'continue-to' statement
+errorcode_t ir_gen_stmt_continue_to(ir_builder_t *builder, ast_expr_continue_to_t *stmt, bool *out_is_terminated);
+
+// ---------------- ir_gen_stmt_each ----------------
+// Generates IR instructions for an 'each-in' loop
+errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt);
+
 // ---------------- exhaustive_switch_check ----------------
 // Performs exhaustive switch checking for switch values
 errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length);
@@ -63,5 +95,10 @@ errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name
 // If not 'already_terminated', then this function will handle
 // variable deference calls and breaking to the continuation block
 void ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated, length_t continuation_block_id);
+
+// ---------------- ir_gen_variable_deference ----------------
+// Generate IR instructions to make variable deference calls up until a scope.
+// NOTE: If 'up_until_scope' is NULL, then all parent scopes will be visited.
+void ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope);
 
 #endif // _ISAAC_IR_GEN_STMT_H
