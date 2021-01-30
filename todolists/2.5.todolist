@@ -5,8 +5,8 @@ HIGH-PRIORITY:
 MEDIUM-PRIORITY:
 * typenameof expression
 * alignof expression
-* fill in runtime type information for complex composite types
 * anonymous structures and unions
+* allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -34,3 +34,4 @@ v2.4 COMPLETED:
 
 v2.5 COMPLETED:
 + anonymous fields (with structures and unions)
++ fill in runtime type information for complex composite types

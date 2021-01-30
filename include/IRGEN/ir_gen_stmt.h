@@ -87,6 +87,10 @@ errorcode_t ir_gen_stmt_continue_to(ir_builder_t *builder, ast_expr_continue_to_
 // Generates IR instructions for an 'each-in' loop
 errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt);
 
+// ---------------- ir_gen_stmt_repeat ----------------
+// Generates IR instructions for an 'repeat' loop
+errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt);
+
 // ---------------- exhaustive_switch_check ----------------
 // Performs exhaustive switch checking for switch values
 errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length);

@@ -111,129 +111,8 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
         case EXPR_EACH_IN:
             if(ir_gen_stmt_each(builder, (ast_expr_each_in_t*) stmt)) return FAILURE;
             break;
-        case EXPR_REPEAT: {
-                ast_expr_repeat_t *repeat = (ast_expr_repeat_t*) stmt;
-
-                length_t prep_basicblock_id = -1;
-                length_t new_basicblock_id  = build_basicblock(builder);
-                length_t inc_basicblock_id  = build_basicblock(builder);
-                length_t end_basicblock_id  = build_basicblock(builder);
-                
-                if(repeat->label != NULL){
-                    push_loop_label(builder, repeat->label, end_basicblock_id, inc_basicblock_id);
-                }
-
-                length_t prev_break_block_id = builder->break_block_id;
-                length_t prev_continue_block_id = builder->continue_block_id;
-                bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
-
-                builder->break_block_id = end_basicblock_id;
-                builder->continue_block_id = inc_basicblock_id;
-                builder->break_continue_scope = builder->scope;
-
-                ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
-
-                ir_type_t *idx_ir_type = ir_builder_usize(builder);
-                ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
-                
-                open_scope(builder);
-
-                // Create 'idx' variable
-                length_t idx_var_id = builder->next_var_id;
-                add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
-                ir_value_t *idx_ptr = build_lvarptr(builder, idx_ir_type_ptr, idx_var_id);
-
-                // Set 'idx' to initial value of zero
-                ir_value_t *initial_idx = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-                initial_idx->value_type = VALUE_TYPE_LITERAL;
-                initial_idx->type = idx_ir_type;
-                initial_idx->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-                *((unsigned long long*) initial_idx->extra) = 0;
-
-                build_store(builder, initial_idx, idx_ptr, stmt->source);
-
-                if(!repeat->is_static){
-                    // Use prep block to calculate limit
-                    prep_basicblock_id = build_basicblock(builder);
-                    build_break(builder, prep_basicblock_id);
-                    build_using_basicblock(builder, prep_basicblock_id);
-                }
-
-                // Generate length
-                ir_value_t *limit;
-
-                if(ir_gen_expr(builder, repeat->limit, &limit, false, &temporary_type)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!ast_types_conform(builder, &limit, &temporary_type, idx_ast_type, CONFORM_MODE_CALCULATION)){
-                    char *a_type_str = ast_type_str(&temporary_type);
-                    compiler_panicf(builder->compiler, stmt->source, "Received type '%s' when array length should be 'usize'", a_type_str);
-                    free(a_type_str);
-                    ast_type_free(&temporary_type);
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                ast_type_free(&temporary_type);
-
-                if(repeat->is_static){
-                    // Use prep block after calculating limit
-                    prep_basicblock_id = build_basicblock(builder);
-                    build_break(builder, prep_basicblock_id);
-                    build_using_basicblock(builder, prep_basicblock_id);
-                }
-
-                // Generate (idx < length)
-                ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
-                ir_value_t *whether_keep_going_value = build_math(builder, INSTRUCTION_ULESSER, idx_value, limit, ir_builder_bool(builder));
-
-                // Generate conditional break
-                build_cond_break(builder, whether_keep_going_value, new_basicblock_id, end_basicblock_id);
-                build_using_basicblock(builder, new_basicblock_id);
-
-                // Generate new_block user-defined statements
-                bool terminated;
-                build_using_basicblock(builder, new_basicblock_id);
-                if(ir_gen_stmts(builder, repeat->statements, repeat->statements_length, &terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
-
-                if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
-                    build_break(builder, inc_basicblock_id);
-                }
-
-                // Generate jump inc_block
-                build_using_basicblock(builder, inc_basicblock_id);
-
-                ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
-                ir_value_t *ir_one_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-                ir_one_value->value_type = VALUE_TYPE_LITERAL;
-                ir_type_map_find(builder->type_map, "usize", &(ir_one_value->type));
-                ir_one_value->extra = ir_pool_alloc(builder->pool, sizeof(unsigned long long));
-                *((unsigned long long*) ir_one_value->extra) = 1;
-
-                // Increment
-                ir_value_t *incremented = build_math(builder, INSTRUCTION_ADD, current_idx, ir_one_value, current_idx->type);
-
-                // Store
-                build_store(builder, incremented, idx_ptr, stmt->source);
-
-                // Jump Prep
-                build_break(builder, prep_basicblock_id);
-
-                close_scope(builder);
-                build_using_basicblock(builder, end_basicblock_id);
-
-                if(repeat->label != NULL) pop_loop_label(builder);
-
-                builder->break_block_id = prev_break_block_id;
-                builder->continue_block_id = prev_continue_block_id;
-                builder->break_continue_scope = prev_break_continue_scope;
-            }
+        case EXPR_REPEAT:
+            if(ir_gen_stmt_repeat(builder, (ast_expr_repeat_t*) stmt)) return FAILURE;
             break;
         case EXPR_SWITCH: {
                 ast_expr_switch_t *switch_expr = (ast_expr_switch_t*) stmt;
@@ -1315,10 +1194,13 @@ errorcode_t ir_gen_stmt_continue_to(ir_builder_t *builder, ast_expr_break_to_t *
 }
 
 errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
-    // TODO: Clean up this really messy code
+    // CLEANUP: This function is complicated and complex, but doesn't seem
+    // to want to be refactored easily. For the sake of performance and
+    // avoiding repetitious code with slight differences, it will have
+    // to remain like this for now. - Isaac Shelton, Jan 18 2021
 
     length_t initial_basicblock_id = builder->current_block_id;
-    length_t prep_basicblock_id = -1;
+
     ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
     ir_type_t *idx_ir_type = ir_builder_usize(builder);
     ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
@@ -1331,6 +1213,8 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
 
     // Set 'idx' to initial value of zero
     build_store(builder, build_literal_usize(builder->pool, 0), idx_ptr, stmt->source);
+
+    length_t prep_basicblock_id = -1;
 
     if(!stmt->is_static){
         prep_basicblock_id = build_basicblock(builder);
@@ -1394,8 +1278,6 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
         } else {
             // STRUCTURE
             // Get array length by calling the __length__() method
-
-            // TODO: CLEANUP: Clean up his very very dirty code
 
             ast_expr_call_method_t length_call;
             ast_expr_create_call_method_in_place(&length_call, "__length__", (ast_expr_t*) single_expr, 0, NULL, false, true, NULL, single_expr->source);
@@ -1467,8 +1349,6 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     } else if(single_value){
         // STRUCTURE
         // Call the '__array__()' method to get the value for the array
-
-        // TODO: CLEANUP: Clean up his very very dirty code
 
         ast_expr_call_method_t array_call;
         ast_expr_create_call_method_in_place(&array_call, "__array__", (ast_expr_t*) single_expr, 0, NULL, false, true, NULL, single_expr->source);
@@ -1597,6 +1477,104 @@ failure:
     return FAILURE;
 }
 
+errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
+    length_t prep_basicblock_id = -1;
+    length_t new_basicblock_id  = build_basicblock(builder);
+    length_t inc_basicblock_id  = build_basicblock(builder);
+    length_t end_basicblock_id  = build_basicblock(builder);
+    
+    if(stmt->label != NULL){
+        push_loop_label(builder, stmt->label, end_basicblock_id, inc_basicblock_id);
+    }
+
+    length_t prev_break_block_id = builder->break_block_id;
+    length_t prev_continue_block_id = builder->continue_block_id;
+    bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
+
+    builder->break_block_id = end_basicblock_id;
+    builder->continue_block_id = inc_basicblock_id;
+    builder->break_continue_scope = builder->scope;
+
+    ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
+    ir_type_t *idx_ir_type = ir_builder_usize(builder);
+    ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
+    
+    open_scope(builder);
+
+    // Create 'idx' variable
+    add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+    ir_value_t *idx_ptr = build_lvarptr(builder, idx_ir_type_ptr, builder->next_var_id - 1);
+
+    // Set 'idx' to initial value of zero
+    ir_value_t *initial_idx = build_literal_usize(builder->pool, 0);
+
+    build_store(builder, initial_idx, idx_ptr, stmt->source);
+
+    if(!stmt->is_static){
+        // Use prep block to calculate limit
+        prep_basicblock_id = build_basicblock(builder);
+        build_break(builder, prep_basicblock_id);
+        build_using_basicblock(builder, prep_basicblock_id);
+    }
+
+    // Generate length
+    const char *error_format = "Received type '%s' when array length should be '%s'";
+    ir_value_t *limit = ir_gen_conforming_expr(builder, stmt->limit, idx_ast_type, CONFORM_MODE_CALCULATION, stmt->source, error_format);
+    if(limit == NULL) return FAILURE;
+
+    if(stmt->is_static){
+        // Use prep block after calculating limit
+        prep_basicblock_id = build_basicblock(builder);
+        build_break(builder, prep_basicblock_id);
+        build_using_basicblock(builder, prep_basicblock_id);
+    }
+
+    // Generate (idx < length)
+    ir_value_t *idx_value = build_load(builder, idx_ptr, stmt->source);
+    ir_value_t *whether_keep_going_value = build_math(builder, INSTRUCTION_ULESSER, idx_value, limit, ir_builder_bool(builder));
+
+    // Generate conditional break
+    build_cond_break(builder, whether_keep_going_value, new_basicblock_id, end_basicblock_id);
+    build_using_basicblock(builder, new_basicblock_id);
+
+    // Generate new_block user-defined statements
+    bool terminated;
+    build_using_basicblock(builder, new_basicblock_id);
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+        close_scope(builder);
+        return FAILURE;
+    }
+
+    if(!terminated){
+        handle_deference_for_variables(builder, &builder->scope->list);
+        build_break(builder, inc_basicblock_id);
+    }
+
+    // Generate jump inc_block
+    build_using_basicblock(builder, inc_basicblock_id);
+
+    // Increment
+    ir_value_t *current_idx = build_load(builder, idx_ptr, stmt->source);
+    ir_value_t *ir_one_value = build_literal_usize(builder->pool, 1);
+    ir_value_t *incremented = build_math(builder, INSTRUCTION_ADD, current_idx, ir_one_value, current_idx->type);
+
+    // Store
+    build_store(builder, incremented, idx_ptr, stmt->source);
+
+    // Jump Prep
+    build_break(builder, prep_basicblock_id);
+
+    close_scope(builder);
+    build_using_basicblock(builder, end_basicblock_id);
+
+    if(stmt->label != NULL) pop_loop_label(builder);
+
+    builder->break_block_id = prev_break_block_id;
+    builder->continue_block_id = prev_continue_block_id;
+    builder->break_continue_scope = prev_break_continue_scope;
+    return SUCCESS;
+}
+
 errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length){
     ast_t *ast = &builder->object->ast;
     maybe_index_t enum_index = ast_find_enum(ast->enums, ast->enums_length, enum_name);
@@ -1664,5 +1642,5 @@ void ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_s
     do {
         handle_deference_for_variables(builder, &visit_scope->list);
         visit_scope = visit_scope->parent;
-    } while(visit_scope != up_until_scope);
+    } while(visit_scope && visit_scope != up_until_scope);
 }
