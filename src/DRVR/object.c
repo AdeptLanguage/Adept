@@ -69,3 +69,23 @@ ast_polymorphic_composite_t *object_polymorphic_composite_find(ast_t *override_m
     if(out_requires_namespace) *out_requires_namespace = false;
     return ast_polymorphic_composite_find_exact(override_main_ast, name);
 }
+
+successful_t ir_type_map_loose_find(object_t *namespace_object, ir_type_map_t *type_map, weak_cstr_t base, ir_type_t **resolved_type){
+    if(ir_type_map_find(type_map, base, resolved_type)) return true;
+    
+    tmpbuf_t tmpbuf;
+    tmpbuf_init(&tmpbuf);
+
+    for(length_t i = 0; i != namespace_object->using_namespaces_length; i++){
+        weak_cstr_t namespace = namespace_object->using_namespaces[i].cstr;
+        weak_cstr_t namespaced = tmpbuf_quick_concat3(&tmpbuf, namespace, "\\", base);
+
+        if(ir_type_map_find(type_map, namespaced, resolved_type)){
+            tmpbuf_free(&tmpbuf);
+            return true;
+        }
+    }
+
+    tmpbuf_free(&tmpbuf);
+    return false;
+}

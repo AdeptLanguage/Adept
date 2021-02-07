@@ -80,6 +80,12 @@ ast_composite_t *object_composite_find(ast_t *override_main_ast, object_t *objec
 // composite found requires a namespace to be accessed
 ast_polymorphic_composite_t *object_polymorphic_composite_find(ast_t *override_main_ast, object_t *object, tmpbuf_t *tmpbuf, const char *name, bool *out_requires_namespace);
 
+// ------------------ ir_type_map_loose_find ------------------
+// Finds the resolved IR type for a given base name that is from the accessible namespaces
+// NOTE: Returns FAILURE when no accessible type with that base exists
+// TODO: Maybe move to a more suitable source file
+successful_t ir_type_map_loose_find(object_t *namespace_object, ir_type_map_t *type_map, weak_cstr_t base, ir_type_t **resolved_type);
+
 #ifdef __cplusplus
 }
 #endif
