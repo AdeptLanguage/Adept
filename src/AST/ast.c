@@ -212,6 +212,7 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
 void ast_free_function_aliases(ast_func_alias_t *faliases, length_t length){
     for(length_t i = 0; i != length; i++){
         ast_func_alias_t *falias = &faliases[i];
+        free(falias->from);
         ast_types_free_fully(falias->arg_types, falias->arity);
     }
 }

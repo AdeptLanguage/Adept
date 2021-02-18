@@ -1,48 +1,40 @@
 
+pragma ignore_unused
 import basics
 
-func main {
-    explicit\test()
-    implicit\test()
-    implicit\testLocal()
-    backInGlobalNamespace()
-
-    test data\Test
-    test.print()
-    test.data\print2()
+// Some defintions inside of "things" namespace
+namespace things {
+    struct XThing ()
+    union YThing ()
+    enum ZThing ()
+    alias AThing = things\XThing
 }
 
-func explicit\test {
-    print("Hello from 'explicit\\test'")
-}
+// Some more stuff inside "things" namespace
+namespace things {
+    func alias testCallingWithin => things\helloWrapper
 
-namespace implicit
+    func helloWrapper {
+        things\hello()
+    }
 
-func test {
-    print("Hello from 'implicit\\test'")
-}
-
-func testLocal {
-    print("Hello from 'implicit\\testLocal', calling 'local\\test'")
-    test()
-}
-
-namespace
-
-func backInGlobalNamespace {
-    print("Hello from 'backInGlobalNamespace'")
-}
-
-namespace data
-
-struct Test (a, b, c int) {
-    // NOTE: Namespaces do NOT implicitly apply to methods within struct domains
-    func print {
-        printf("%d %d %d\n", this.a, this.b, this.c)
+    func hello {
+        print("Hello World")
     }
 }
 
-// NOTE: Namespaces apply to methods that are not in struct domains
-func print2(this *local\Test){
-    printf("%d %d %d\n", this.a, this.b, this.c)
+// An additional function inside "things" namespace
+func things\testAdditionalThing(){
+    print("Bye World")
+}
+
+func main {
+    things\testCallingWithin()
+
+    x things\XThing
+    y things\YThing
+    z things\ZThing
+    a things\AThing
+
+    things\testAdditionalThing()
 }

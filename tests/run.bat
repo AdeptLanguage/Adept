@@ -206,6 +206,8 @@ REM call :compile native_linking
 REM if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile namespace_alternative_syntax
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile namespaces
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile negate
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile new_cstring

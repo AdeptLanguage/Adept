@@ -30,7 +30,7 @@ errorcode_t parse_alias(parse_ctx_t *ctx){
     
     // Ensure we have a name for the alias
     if(name == NULL) return FAILURE;
-
+    
     // Prepend namespace name
     parse_prepend_namespace(ctx, &name);
 

@@ -67,6 +67,9 @@ LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
                 if(largest_size < type_size) largest_size = type_size;
             }
 
+            // Force non-zero size (since LLVM doesn't like zero sized arrays)
+            if(largest_size == 0) largest_size = 1;
+
             if(composite->traits & TYPE_KIND_COMPOSITE_PACKED){
                 // Packed Unions
                 return LLVMArrayType(LLVMInt8Type(), largest_size);

@@ -688,9 +688,12 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
         from = ctx->prename;
         ctx->prename = NULL;
     } else {
-        from = parse_eat_word(ctx, "Expected function alias name");
+        from = parse_take_word(ctx, "Expected function alias name");
         if(from == NULL) return FAILURE;
     }
+
+    // Prepend namespace if applicable
+    parse_prepend_namespace(ctx, &from);
 
     ast_type_t *arg_types;
     length_t arity;

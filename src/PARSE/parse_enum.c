@@ -26,6 +26,9 @@ errorcode_t parse_enum(parse_ctx_t *ctx){
 
     if(name == NULL) return FAILURE;
 
+    // Prepend namespace if applicable
+    parse_prepend_namespace(ctx, &name);
+
     if(parse_enum_body(ctx, &kinds, &length)) return FAILURE;
 
     ast_add_enum(ctx->ast, name, kinds, length, source);

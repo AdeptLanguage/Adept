@@ -45,7 +45,7 @@ typedef struct {
 // ---------------- ast_func_alias_t ----------------
 // A function redirection within the root AST
 typedef struct {
-    weak_cstr_t from;
+    strong_cstr_t from;
     weak_cstr_t to;
     ast_type_t *arg_types;
     length_t arity;
@@ -272,12 +272,10 @@ void ast_enum_init(ast_enum_t *enum_definition, weak_cstr_t name, weak_cstr_t *k
 
 // ---------------- ast_composite_find_exact ----------------
 // Finds a composite by its exact name
-// For more flexible composite finding, use 'ast_composite_find_exact()'
 ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name);
 
 // ---------------- ast_polymorphic_composite_find_exact ----------------
 // Finds a polymorphic composite by its exact name
-// For more flexible composite finding, use 'ast_polymorphic_composite_find_exact()'
 ast_polymorphic_composite_t *ast_polymorphic_composite_find_exact(ast_t *ast, const char *name);
 
 // ---------------- ast_composite_find_exact_field ----------------
