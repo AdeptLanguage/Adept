@@ -272,17 +272,17 @@ void ast_enum_init(ast_enum_t *enum_definition, weak_cstr_t name, weak_cstr_t *k
 
 // ---------------- ast_composite_find_exact ----------------
 // Finds a composite by its exact name
-// For more flexible composite finding, use 'object_composite_find()'
+// For more flexible composite finding, use 'ast_composite_find_exact()'
 ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name);
 
 // ---------------- ast_polymorphic_composite_find_exact ----------------
 // Finds a polymorphic composite by its exact name
-// For more flexible composite finding, use 'object_polymorphic_composite_find()'
+// For more flexible composite finding, use 'ast_polymorphic_composite_find_exact()'
 ast_polymorphic_composite_t *ast_polymorphic_composite_find_exact(ast_t *ast, const char *name);
 
-// ---------------- ast_composite_find_field ----------------
+// ---------------- ast_composite_find_exact_field ----------------
 // Finds a field by name within a composite
-successful_t ast_composite_find_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path);
+successful_t ast_composite_find_exact_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path);
 
 // ---------------- ast_enum_find_kind ----------------
 // Finds a kind by name within an enum

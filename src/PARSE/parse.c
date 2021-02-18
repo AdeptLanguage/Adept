@@ -105,6 +105,8 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
         case TOKEN_END:
             if(ctx->has_namespace_scope){
                 ctx->has_namespace_scope = false;
+
+                free(ctx->object->current_namespace);
                 ctx->object->current_namespace = NULL;
                 ctx->object->current_namespace_length = 0;
             } else if(ctx->composite_association != NULL){
@@ -116,9 +118,6 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             break;
         case TOKEN_NAMESPACE:
             if(parse_namespace(ctx)) return FAILURE;
-            break;
-        case TOKEN_USING:
-            if(parse_using_namespace(ctx)) return FAILURE;
             break;
         default:
             parse_panic_token(ctx, ctx->tokenlist->sources[i], tokens[i].id, "Encountered unexpected token '%s' in global scope");

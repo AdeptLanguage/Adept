@@ -616,7 +616,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             }
 
             const char *base = ((ast_elem_base_t*) static_data->type.elements[0])->base;
-            ast_composite_t *composite = object_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, NULL);
+            ast_composite_t *composite = ast_composite_find_exact(ctx->ast, base);
 
             if(composite == NULL){
                 if(typename_is_entended_builtin_type(base)){
@@ -1112,16 +1112,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                     continue; // Don't do normal stuff that follows
                 }
 
-                bool requires_namespace;
-                composite = object_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
-
-                if(composite && requires_namespace){
-                    // If we can find the definite implementation of this type, than change the name
-                    // to the full namespaced version
-                    free(base);
-                    base = strclone(composite->name);
-                    ((ast_elem_base_t*) elem)->base = base;
-                }
+                composite = ast_composite_find_exact(ctx->ast, base);
             }
             break;
         case AST_ELEM_FUNC:
@@ -1134,16 +1125,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                 weak_cstr_t base = ((ast_elem_generic_base_t*) elem)->name;
                 ast_polymorphic_composite_t *poly_composite;
 
-                bool requires_namespace;
-                poly_composite = object_polymorphic_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, base, &requires_namespace);
-
-                if(poly_composite && requires_namespace){
-                    // If we can find the definite implementation of this type, than change the name
-                    // to the full namespaced version
-                    free(base);
-                    base = strclone(poly_composite->name);
-                    ((ast_elem_generic_base_t*) elem)->name = base;
-                }
+                poly_composite = ast_polymorphic_composite_find_exact(ctx->ast, base);
 
                 for(length_t a = 0; a != ((ast_elem_generic_base_t*) elem)->generics_length; a++){
                     if(infer_type(ctx, &((ast_elem_generic_base_t*) elem)->generics[a])) return FAILURE;

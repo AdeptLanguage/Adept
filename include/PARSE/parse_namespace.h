@@ -19,10 +19,6 @@ extern "C" {
 // Parses 'namespace' directive
 errorcode_t parse_namespace(parse_ctx_t *ctx);
 
-// ------------------ parse_using_namespace ------------------
-// Parses 'using namespace' directive
-errorcode_t parse_using_namespace(parse_ctx_t *ctx);
-
 #ifdef __cplusplus
 }
 #endif

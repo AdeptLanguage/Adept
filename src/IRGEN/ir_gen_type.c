@@ -164,10 +164,9 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
     case AST_ELEM_BASE: {
             // Apply pointers to resolved base
             char *base_name = ((ast_elem_base_t*) unresolved_type->elements[non_concrete_layers])->base;
-            object_t *namespace_object = compiler->objects[unresolved_type->source.object_index];
 
-            // Resolve type from type map (taking into account used namespaces)
-            if(!ir_type_map_loose_find(namespace_object, type_map, base_name, resolved_type)){
+            // Resolve type from type map
+            if(!ir_type_map_find(type_map, base_name, resolved_type)){
                 compiler_panicf(compiler, unresolved_type->source, "Undeclared type '%s'", base_name);
                 return FAILURE;
             }
@@ -199,7 +198,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
 
             // Find polymorphic structure
-            ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
+            ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, generic_base->name);
 
             if(template == NULL){
                 compiler_panicf(compiler, generic_base->source, "Undeclared polymorphic type '%s'", generic_base->name);

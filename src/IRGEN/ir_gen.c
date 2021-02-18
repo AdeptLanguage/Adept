@@ -77,7 +77,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
         bool is_unique = true;
 
         if(falias->match_first_of_name){
-            error = ir_gen_find_func_named(compiler, object, falias->to, &is_unique, &pair);
+            error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
         } else {
             error = ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, &pair);
         }
@@ -180,7 +180,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     }
 
                     // Find the target structure
-                    ast_composite_t *target = object_composite_find(NULL, object, &compiler->tmp, ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
+                    ast_composite_t *target = ast_composite_find_exact(&object->ast, ((ast_elem_base_t*) this_type->elements[1])->base);
 
                     if(target == NULL){
                         compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
@@ -194,7 +194,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                 break;
             case AST_ELEM_GENERIC_BASE: {
                     ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
-                    ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, generic_base->name, NULL);
+                    ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, generic_base->name);
                     
                     if(template == NULL){
                         compiler_panicf(compiler, this_type->source, "Undeclared polymorphic struct '%s'", generic_base->name);

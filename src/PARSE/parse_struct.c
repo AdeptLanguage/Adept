@@ -257,7 +257,7 @@ errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *in
     maybe_null_weak_cstr_t inner_struct_name = parse_grab_word(ctx, "Expected struct name for integration");
     if(inner_struct_name == NULL) return FAILURE;
 
-    ast_composite_t *inner_composite = object_composite_find(ctx->ast, ctx->object, &ctx->compiler->tmp, inner_struct_name, NULL);
+    ast_composite_t *inner_composite = ast_composite_find_exact(ctx->ast, inner_struct_name);
     if(inner_composite == NULL){
         compiler_panicf(ctx->compiler, sources[*i], "Struct '%s' must already be declared", inner_struct_name);
         return FAILURE;

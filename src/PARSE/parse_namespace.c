@@ -61,22 +61,3 @@ errorcode_t parse_namespace(parse_ctx_t *ctx){
     ctx->object->current_namespace_length = strlen(new_namespace);
     return SUCCESS;
 }
-
-errorcode_t parse_using_namespace(parse_ctx_t *ctx){
-    // using namespace my_namespace
-    //   ^
-    
-    if(parse_eat(ctx, TOKEN_USING, "Expected 'using' keyword for 'using namespace' directive")) return FAILURE;
-    if(parse_eat(ctx, TOKEN_NAMESPACE, "Expected 'namespace' keyword after 'using' keyword")) return FAILURE;
-
-    weak_cstr_t namespace = parse_eat_word(ctx, "Expected name of namespace after 'using namespace'");
-    if(namespace == NULL) return FAILURE;
-
-    object_t *object = ctx->object;
-    expand((void**) &object->using_namespaces, sizeof(weak_lenstr_t), object->using_namespaces_length, &object->using_namespaces_capacity, 1, 4);
-
-    weak_lenstr_t *now_using = &object->using_namespaces[object->using_namespaces_length++];
-    now_using->cstr = namespace;
-    now_using->length = strlen(namespace);
-    return SUCCESS;
-}

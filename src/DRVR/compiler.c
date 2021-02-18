@@ -238,7 +238,6 @@ void compiler_free_objects(compiler_t *compiler){
         case COMPILATION_STAGE_AST:
             ast_free(&object->ast);
             free(object->current_namespace);
-            free(object->using_namespaces);
             // fallthrough
         case COMPILATION_STAGE_TOKENLIST:
             free(object->buffer);
@@ -302,9 +301,6 @@ object_t* compiler_new_object(compiler_t *compiler){
     (*object_reference)->default_stdlib = NULL;
     (*object_reference)->current_namespace = NULL;
     (*object_reference)->current_namespace_length = 0;
-    (*object_reference)->using_namespaces = NULL;
-    (*object_reference)->using_namespaces_length = 0;
-    (*object_reference)->using_namespaces_capacity = 0;
     return *object_reference;
 }
 
@@ -1073,7 +1069,7 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
         const char *name, ast_type_t *types, length_t arity, ast_type_t *gives){
     
-    bool has_potential_candidates = compiler_undeclared_function_possibilities(object, &compiler->tmp, name, false);
+    bool has_potential_candidates = compiler_undeclared_function_possibilities(object, name, false);
 
     // Allow for '.elements_length' to be zero
     // to indicate no return matching
@@ -1094,26 +1090,10 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         printf("\nPotential Candidates:\n");
     }
 
-    compiler_undeclared_function_possibilities(object, &compiler->tmp, name, true);
+    compiler_undeclared_function_possibilities(object, name, true);
 }
 
-bool compiler_undeclared_function_possibilities(object_t *object, tmpbuf_t *tmpbuf, const char *name, bool should_print){
-    weak_cstr_t try_name;
-
-    if(object->current_namespace){
-        try_name = tmpbuf_quick_concat3(tmpbuf, object->current_namespace, "\\", name);
-        if(compiler_undeclared_function_possible_name(object, try_name, should_print) && !should_print) return true;
-    }
-
-    for(length_t i = 0; i != object->using_namespaces_length; i++){
-        try_name = tmpbuf_quick_concat3(tmpbuf, object->using_namespaces[i].cstr, "\\", name);
-        if(compiler_undeclared_function_possible_name(object, try_name, should_print) && !should_print) return true;
-    }
-
-    return compiler_undeclared_function_possible_name(object, name, should_print);
-}
-
-bool compiler_undeclared_function_possible_name(object_t *object, const char *name, bool should_print){
+bool compiler_undeclared_function_possibilities(object_t *object, const char *name, bool should_print){
     #ifdef ADEPT_INSIGHT_BUILD
     return false;
     #else

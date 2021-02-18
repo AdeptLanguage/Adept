@@ -90,7 +90,7 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
 
 // ---------------- ir_gen__types__composite_entry_get_info ----------------
 // Collects common information used to generate RTTI info for a composite type
-errorcode_t ir_gen__types__composite_entry_get_info(compiler_t *compiler, object_t *object, ir_rtti_types_t *rtti_types, type_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info);
+errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_types_t *rtti_types, type_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info);
 
 // ---------------- ir_gen__types__composite_entry_free_info ----------------
 // Frees common information used to generate RTTI info for a composite type

@@ -52,10 +52,6 @@ typedef struct object {
     maybe_null_weak_cstr_t default_stdlib;
     maybe_null_strong_cstr_t current_namespace;
     length_t current_namespace_length;
-
-    weak_lenstr_t *using_namespaces;
-    length_t using_namespaces_length;
-    length_t using_namespaces_capacity;
 } object_t;
 
 // Possible traits for object_t
@@ -65,26 +61,6 @@ typedef struct object {
 // ------------------ object_init_ast ------------------
 // Initializes the AST portion of an object_t
 void object_init_ast(object_t *object, unsigned int cross_compile_for);
-
-// ------------------ object_composite_find ------------------
-// Finds a composite with the given name from the accessible namespaces
-// NOTE: If 'override_main_ast' is NULL, then 'object->ast' is used as the main AST
-// NOTE: If 'out_requires_namespace' isn't NULL, then it will be set to whether the
-// composite found requires a namespace to be accessed
-ast_composite_t *object_composite_find(ast_t *override_main_ast, object_t *object, tmpbuf_t *tmpbuf, const char *name, bool *out_requires_namespace);
-
-// ------------------ object_polymorphic_composite_find ------------------
-// Finds a polymorphic composite with the given name from the accessible namespaces
-// NOTE: If 'override_main_ast' is NULL, then 'object->ast' is used as the main AST
-// NOTE: If 'out_requires_namespace' isn't NULL, then it will be set to whether the
-// composite found requires a namespace to be accessed
-ast_polymorphic_composite_t *object_polymorphic_composite_find(ast_t *override_main_ast, object_t *object, tmpbuf_t *tmpbuf, const char *name, bool *out_requires_namespace);
-
-// ------------------ ir_type_map_loose_find ------------------
-// Finds the resolved IR type for a given base name that is from the accessible namespaces
-// NOTE: Returns FAILURE when no accessible type with that base exists
-// TODO: Maybe move to a more suitable source file
-successful_t ir_type_map_loose_find(object_t *namespace_object, ir_type_map_t *type_map, weak_cstr_t base, ir_type_t **resolved_type);
 
 #ifdef __cplusplus
 }

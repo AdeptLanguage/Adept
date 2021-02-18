@@ -323,7 +323,7 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
     ir_type_extra_composite_t *extra_info = (ir_type_extra_composite_t*) entry->ir_type->extra;
 
     ir_gen_composite_rtti_info_t info;
-    if(ir_gen__types__composite_entry_get_info(compiler, object, rtti_types, entry, array_values, &info)){
+    if(ir_gen__types__composite_entry_get_info(object, rtti_types, entry, array_values, &info)){
         return FAILURE;
     }
 
@@ -378,7 +378,7 @@ failure:
     return FAILURE;
 }
 
-errorcode_t ir_gen__types__composite_entry_get_info(compiler_t *compiler, object_t *object, ir_rtti_types_t *rtti_types, type_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info){
+errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_types_t *rtti_types, type_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info){
     ast_elem_t *first_ast_elem = entry->ast_type.elements[0];
 
 
@@ -398,12 +398,12 @@ errorcode_t ir_gen__types__composite_entry_get_info(compiler_t *compiler, object
         maybe_weak_generics_length = generic_base_elem->generics_length;
 
         // Find polymorphic composite
-        core_composite_info = (ast_composite_t*) object_polymorphic_composite_find(NULL, object, &compiler->tmp, name, NULL);
+        core_composite_info = (ast_composite_t*) ast_polymorphic_composite_find_exact(&object->ast, name);
     } else if(first_ast_elem->id == AST_ELEM_BASE){
         name = ((ast_elem_base_t*) first_ast_elem)->base;
         
         // Find regular composite
-        core_composite_info = object_composite_find(NULL, object, &compiler->tmp, name, NULL);
+        core_composite_info = ast_composite_find_exact(&object->ast, name);
     } else if(first_ast_elem->id == AST_ELEM_LAYOUT){
         ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) first_ast_elem;
         name = "(anonymous composite)";

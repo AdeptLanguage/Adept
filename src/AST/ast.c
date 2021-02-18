@@ -901,7 +901,7 @@ ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name){
     return NULL;
 }
 
-successful_t ast_composite_find_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path){
+successful_t ast_composite_find_exact_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path){
     if(!ast_field_map_find(&composite->layout.field_map, name, out_endpoint)) return false;
     if(!ast_layout_get_path(&composite->layout, *out_endpoint, out_path)) return false;
     return true;

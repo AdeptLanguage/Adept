@@ -333,8 +333,6 @@ call :compile until
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile until_break
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
-call :compile using_namespace
-if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile va_args
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile varargs

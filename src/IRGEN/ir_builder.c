@@ -964,7 +964,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             weak_cstr_t struct_name = ((ast_elem_base_t*) concrete_elem)->base;
 
             // Attempt to call __defer__ on members
-            ast_composite_t *composite = object_composite_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
+            ast_composite_t *composite = ast_composite_find_exact(&builder->object->ast, struct_name);
 
             // Don't bother with structs that don't exist
             if(composite == NULL) return FAILURE;
@@ -1012,7 +1012,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             weak_cstr_t template_name = generic_base->name;
 
             // Attempt to call __defer__ on members
-            ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, builder->object, builder->tmpbuf, template_name, NULL);
+            ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&builder->object->ast, template_name);
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
@@ -1286,7 +1286,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             weak_cstr_t struct_name = ((ast_elem_base_t*) first_elem)->base;
 
             // Attempt to call __pass__ on members
-            ast_composite_t *composite = object_composite_find(NULL, builder->object, builder->tmpbuf, struct_name, NULL);
+            ast_composite_t *composite = ast_composite_find_exact(&builder->object->ast, struct_name);
 
             // Don't bother with structs that don't exist
             if(composite == NULL) return FAILURE;
@@ -1339,7 +1339,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             weak_cstr_t template_name = generic_base->name;
 
             // Attempt to call __pass__ on members
-            ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, builder->object, builder->tmpbuf, template_name, NULL);
+            ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&builder->object->ast, template_name);
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
@@ -1784,7 +1784,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
     if(is_base_ptr){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
 
-        ast_composite_t *composite = object_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        ast_composite_t *composite = ast_composite_find_exact(&object->ast, struct_name);
 
         // Require structure to exist
         if(composite == NULL) return FAILURE;
@@ -1795,7 +1795,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
     } else if(is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
         weak_cstr_t struct_name = generic_base->name;
-        ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, struct_name);
 
         // Require generic structure to exist
         if(template == NULL) return FAILURE;
@@ -1872,7 +1872,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
     if(is_base){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[0])->base;
 
-        ast_composite_t *composite = object_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        ast_composite_t *composite = ast_composite_find_exact(&object->ast, struct_name);
 
         // Require structure to exist
         if(composite == NULL) return FAILURE;
@@ -1884,7 +1884,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[0];
         weak_cstr_t struct_name = generic_base->name;
         
-        ast_polymorphic_composite_t *template = object_polymorphic_composite_find(NULL, object, &compiler->tmp, struct_name, NULL);
+        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, struct_name);
 
         // Require generic structure to exist
         if(template == NULL) return FAILURE;

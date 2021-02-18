@@ -24,17 +24,12 @@
 errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
     ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, funcpair_t *result);
 
-errorcode_t ir_gen_find_func_inner(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
-    ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, funcpair_t *result);
-
 // ---------------- ir_gen_find_func_named ----------------
 // Finds a function that exactly matches the given name.
 // Result info stored 'result'
 // Optionally, whether the function has a unique name is
 // stored into 'out_is_unique'
-errorcode_t ir_gen_find_func_named(compiler_t *compiler, object_t *object, const char *name, bool *out_is_unique, funcpair_t *result);
-
-errorcode_t ir_gen_find_func_named_inner(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result);
+errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result);
 
 // ---------------- ir_gen_find_func_conforming ----------------
 // Finds a function that has the given name and conforms
@@ -45,9 +40,6 @@ errorcode_t ir_gen_find_func_named_inner(object_t *object, const char *name, boo
 // NOTE: 'gives' may be NULL or have '.elements_length' be zero
 //       to indicate no return matching
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, funcpair_t *result);
-
-errorcode_t ir_gen_find_func_conforming_inner(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, funcpair_t *result);
 
 errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
