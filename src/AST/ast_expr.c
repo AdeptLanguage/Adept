@@ -1003,6 +1003,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_call_method->arity = expr_as_call_method->arity;
         clone_as_call_method->value = ast_expr_clone(expr_as_call_method->value);
         clone_as_call_method->is_tentative = expr_as_call_method->is_tentative;
+        clone_as_call_method->allow_drop = expr_as_call_method->allow_drop;
         for(length_t i = 0; i != expr_as_call_method->arity; i++){
             clone_as_call_method->args[i] = ast_expr_clone(expr_as_call_method->args[i]);
         }
@@ -1024,6 +1025,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone = malloc(sizeof(ast_expr_new_t));
         clone_as_new->type = ast_type_clone(&expr_as_new->type);
         clone_as_new->amount = expr_as_new->amount ? ast_expr_clone(expr_as_new->amount) : NULL;
+        clone_as_new->is_undef = expr_as_new->is_undef;
         break;
 
         #undef expr_as_new

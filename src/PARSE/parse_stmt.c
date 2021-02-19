@@ -753,12 +753,9 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
     // DANGEROUS: Using is_tentative to determine location of word
     length_t name_index = *i - 2 - (int) is_tentative;
 
-    stmt->source = sources[name_index];
-    stmt->name = (char*) tokens[name_index].data;
+    // DANGEROUS: Partially initialize ast_expr_call_t
+    ast_expr_create_call_in_place(stmt, (char*) tokens[name_index].data, 0, NULL, is_tentative, NULL, sources[name_index]);
     tokens[name_index].data = NULL;
-    stmt->arity = 0;
-    stmt->args = NULL;
-    stmt->is_tentative = is_tentative;
 
     // Ignore newline termination within children expressions
     ctx->ignore_newlines_in_expr_depth++;

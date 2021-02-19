@@ -532,6 +532,7 @@ typedef struct {
     ir_type_t *ir_ptr;
     ir_type_t *ir_bool;
     ir_type_t *ir_string_struct;
+    ir_type_t *ir_ubyte;
     length_t rtti_array_index;
     troolean has_rtti_array;
     ir_type_t *ir_variadic_array;         // NOTE: Can be NULL

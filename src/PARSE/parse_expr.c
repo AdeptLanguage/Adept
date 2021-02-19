@@ -328,14 +328,10 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                 if(tokens[*i + 1].id == TOKEN_OPEN){
                     // Method call expression
                     ast_expr_call_method_t *call_expr = malloc(sizeof(ast_expr_call_method_t));
-                    call_expr->id = EXPR_CALL_METHOD;
-                    call_expr->value = *inout_expr;
-                    call_expr->name = (char*) tokens[*i].data;
+
+                    // DANGEROUS: Partially initialize ast_expr_call_method_t
+                    ast_expr_create_call_method_in_place(call_expr, (char*) tokens[*i].data, *inout_expr, 0, NULL, is_tentative, true, NULL, sources[*i]);
                     tokens[*i].data = NULL;
-                    call_expr->source = sources[*i];
-                    call_expr->arity = 0;
-                    call_expr->args = NULL;
-                    call_expr->is_tentative = is_tentative;
                     *i += 2;
 
                     // value.method(arg1, arg2, ...)

@@ -1854,13 +1854,7 @@ errorcode_t ir_gen_expr_new(ir_builder_t *builder, ast_expr_new_t *expr, ir_valu
     if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &ir_type)) return FAILURE;
 
     // Build heap allocation instruction
-    ir_instr_malloc_t *instruction = (ir_instr_malloc_t*) build_instruction(builder, sizeof(ir_instr_malloc_t));
-    instruction->id = INSTRUCTION_MALLOC;
-    instruction->result_type = ir_type_pointer_to(builder->pool, ir_type);
-    instruction->type = ir_type;
-    instruction->amount = amount;
-    instruction->is_undef = expr->is_undef;
-    *ir_value = build_value_from_prev_instruction(builder);
+    *ir_value = build_malloc(builder, ir_type, amount, expr->is_undef, NULL);
 
     // Result type is pointer to requested type
     if(out_expr_type != NULL){
@@ -1872,10 +1866,7 @@ errorcode_t ir_gen_expr_new(ir_builder_t *builder, ast_expr_new_t *expr, ir_valu
 }
 
 errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    // Create IR u8 and *u8 types
-    ir_type_t *ubyte = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    ubyte->kind = TYPE_KIND_U8;
-    ir_type_t *ubyte_ptr = ir_type_pointer_to(builder->pool, ubyte);
+    ir_shared_common_t *common = &builder->object->ir_module.common;
 
     // Get length of C-string
     length_t value_length = strlen(expr->value);
@@ -1884,14 +1875,7 @@ errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_
     ir_value_t *bytes_value = build_literal_usize(builder->pool, value_length + 1);
 
     // Build heap allocation instruction
-    ir_instr_malloc_t *malloc_instruction = (ir_instr_malloc_t*) build_instruction(builder, sizeof(ir_instr_malloc_t));
-    malloc_instruction->id = INSTRUCTION_MALLOC;
-    malloc_instruction->result_type = ubyte_ptr;
-    malloc_instruction->type = ubyte;
-    malloc_instruction->amount = bytes_value;
-
-    // Remember IR value for pointer to allocated heap memory
-    *ir_value = build_value_from_prev_instruction(builder);
+    *ir_value = build_malloc(builder, common->ir_ubyte, bytes_value, true, common->ir_ptr);
 
     // Generate a C-string constant
     ir_value_t *cstring_value = build_literal_cstr(builder, expr->value);

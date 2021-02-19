@@ -14,6 +14,9 @@ void* ir_pool_alloc(ir_pool_t *pool, length_t bytes){
     // NOTE: Allocates memory in an ir_pool_t
     ir_pool_fragment_t *recent_fragment = &pool->fragments[pool->fragments_length - 1];
 
+    // Force alignment of every allocation to be POOL_ALLOCATION_ALIGNMENT
+    if(bytes % POOL_ALLOCATION_ALIGNMENT != 0) bytes += POOL_ALLOCATION_ALIGNMENT - bytes % POOL_ALLOCATION_ALIGNMENT;
+    
     while(recent_fragment->used + bytes >= recent_fragment->capacity){
         if(pool->fragments_length == pool->fragments_capacity){
             pool->fragments_capacity *= 2;

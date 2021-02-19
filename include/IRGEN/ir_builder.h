@@ -96,6 +96,10 @@ ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
 // Builds a staticvarptr instruction
 ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
+// ---------------- build_malloc ----------------
+// Builds a malloc instruction
+ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef, ir_type_t *optional_result_ptr_type);
+
 // ---------------- build_zeroinit ----------------
 // Builds a zero initialization instruction
 void build_zeroinit(ir_builder_t *builder, ir_value_t *destination);

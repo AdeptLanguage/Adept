@@ -3,6 +3,7 @@
 #define _ISAAC_IR_POOL_H
 
 #include "UTIL/ground.h"
+#define POOL_ALLOCATION_ALIGNMENT sizeof(void*)
 
 // ---------------- ir_pool_fragment_t ----------------
 // A memory fragment within an 'ir_pool_t'

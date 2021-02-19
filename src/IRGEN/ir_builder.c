@@ -166,6 +166,16 @@ ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
     return build_value_from_prev_instruction(builder);
 }
 
+ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef, ir_type_t *optional_result_ptr_type){
+    ir_instr_malloc_t *instruction = (ir_instr_malloc_t*) build_instruction(builder, sizeof(ir_instr_malloc_t));
+    instruction->id = INSTRUCTION_MALLOC;
+    instruction->result_type = optional_result_ptr_type ? optional_result_ptr_type : ir_type_pointer_to(builder->pool, type);
+    instruction->type = type;
+    instruction->amount = amount;
+    instruction->is_undef = is_undef;
+    return build_value_from_prev_instruction(builder);
+}
+
 void build_zeroinit(ir_builder_t *builder, ir_value_t *destination){
     ir_instr_zeroinit_t *instruction = (ir_instr_zeroinit_t*) build_instruction(builder, sizeof(ir_instr_zeroinit_t));
     instruction->id = INSTRUCTION_ZEROINIT;
