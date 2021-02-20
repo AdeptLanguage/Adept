@@ -35,7 +35,8 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->library_kinds = NULL;
     ast->libraries_length = 0;
     ast->libraries_capacity = 0;
-    ast->common.ast_usize_type = NULL;
+    ast_type_make_base(&ast->common.ast_int_type, strclone("int"));
+    ast_type_make_base(&ast->common.ast_usize_type, strclone("usize"));
     ast->common.ast_variadic_array = NULL;
 
     ast->type_table = NULL;
@@ -151,9 +152,8 @@ void ast_free(ast_t *ast){
     free(ast->libraries);
     free(ast->library_kinds);
 
-    if(ast->common.ast_usize_type != NULL){
-        ast_type_free_fully(ast->common.ast_usize_type);
-    }
+    ast_type_free(&ast->common.ast_int_type);
+    ast_type_free(&ast->common.ast_usize_type);
 
     if(ast->common.ast_variadic_array != NULL){
         ast_type_free_fully(ast->common.ast_variadic_array);
@@ -1049,24 +1049,6 @@ void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, char kind){
     coexpand((void**) &ast->libraries, sizeof(char*), (void**) &ast->library_kinds, sizeof(char), ast->libraries_length, &ast->libraries_capacity, 1, 4);
     ast->libraries[ast->libraries_length] = library;
     ast->library_kinds[ast->libraries_length++] = kind;
-}
-
-ast_type_t* ast_get_usize(ast_t *ast){
-    ast_type_t *usize_type = ast->common.ast_usize_type;
-
-    if(usize_type == NULL){
-        usize_type = malloc(sizeof(ast_type_t));
-        usize_type->elements = malloc(sizeof(ast_elem_t*));
-        usize_type->elements[0] = malloc(sizeof(ast_elem_base_t));
-        ((ast_elem_base_t*) usize_type->elements[0])->id = AST_ELEM_BASE;
-        ((ast_elem_base_t*) usize_type->elements[0])->base = strclone("usize");
-        ((ast_elem_base_t*) usize_type->elements[0])->source = NULL_SOURCE;
-        usize_type->elements_length = 1;
-        usize_type->source = NULL_SOURCE;
-        ast->common.ast_usize_type = usize_type;
-    }
-
-    return usize_type;
 }
 
 void va_args_inject_ast(compiler_t *compiler, ast_t *ast){

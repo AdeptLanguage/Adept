@@ -62,6 +62,7 @@ errorcode_t ir_gen_expr_ternary(ir_builder_t *builder, ast_expr_ternary_t *expr,
 errorcode_t ir_gen_expr_crement(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_toggle(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_declare_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
+errorcode_t ir_gen_expr_typenameof(ir_builder_t *builder, ast_expr_typenameof_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 
 // ---------------- ir_gen_expr_* helper functions ----------------
 // Functions that assist the ir_gen_expr_* functions

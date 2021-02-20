@@ -173,6 +173,7 @@ compile ternary || exit $?
 compile ternary_circuit || exit $?
 compile toggle || exit $?
 compile truefalse || exit $?
+compile typenameof || exit $?
 compile undef || exit $?
 compile union || exit $?
 compile unless || exit $?

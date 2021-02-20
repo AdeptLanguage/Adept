@@ -1152,7 +1152,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
     return SUCCESS;
 }
 
-errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value){
+errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value, source_t from_source){
     // Calls pass__ method on a mutable value and it's children if the method exists
     // NOTE: Assumes (ast_type->elements_length >= 1)
     // NOTE: Returns SUCCESS if mutable_value was utilized in deference
@@ -1174,7 +1174,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
             arguments[0] = build_load(builder, mutable_value, ast_type->source);
 
-            if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, NULL, false, &pass_func)){
+            if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, NULL, false, from_source, &pass_func)){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
 
                 return FAILURE;
@@ -1213,7 +1213,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
                 ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
                 
                 // Handle passing for that single item
-                errorcode_t res = handle_single_pass(builder, &temporary_rest_of_type, mutable_item_value);
+                errorcode_t res = handle_single_pass(builder, &temporary_rest_of_type, mutable_item_value, from_source);
 
                 if(res){
                     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
@@ -1329,7 +1329,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
                 ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type->source);
-                errorcode_t failed = handle_single_pass(builder, ast_field_type, ir_field_reference);
+                errorcode_t failed = handle_single_pass(builder, ast_field_type, ir_field_reference, NULL_SOURCE);
 
                 if(failed){
                     // Remove VARPTR and MEMBER instruction
@@ -1405,7 +1405,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
 
                 ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type.source);
-                errorcode_t failed = handle_single_pass(builder, &ast_field_type, ir_field_reference);
+                errorcode_t failed = handle_single_pass(builder, &ast_field_type, ir_field_reference, NULL_SOURCE);
                 ast_type_free(&ast_field_type);
 
                 if(failed){
@@ -1469,7 +1469,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ir_value_t *ir_element_reference = build_array_access(builder, mutable_passed_ir_value, build_literal_usize(builder->pool, e), ast_element_type.source);
 
                 // Handle passing for that element
-                errorcode_t failed = handle_single_pass(builder, &ast_element_type, ir_element_reference);
+                errorcode_t failed = handle_single_pass(builder, &ast_element_type, ir_element_reference, NULL_SOURCE);
 
                 if(failed){
                     // Remove VARPTR and BITCAST and ARRAY_ACCESS instructions
@@ -1525,7 +1525,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     case AST_ELEM_BASE:
         struct_name = ((ast_elem_base_t*) ast_destination_type->elements[0])->base;
 
-        if(ir_gen_find_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, &result) == FAILURE){
+        if(ir_gen_find_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, NULL_SOURCE, &result) == FAILURE){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             ast_type_free(&arg_types[0]);
             // NOTE: Don't free arg_types[1] because we don't have ownership
@@ -1535,7 +1535,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     case AST_ELEM_GENERIC_BASE:
         struct_name = ((ast_elem_generic_base_t*) ast_destination_type->elements[0])->name;
 
-        if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, &result) == FAILURE){
+        if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, NULL_SOURCE, &result) == FAILURE){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             ast_type_free(&arg_types[0]);
             // NOTE: Don't free arg_types[1] because we don't have ownership
@@ -1573,7 +1573,7 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     return SUCCESSFUL;
 }
 
-ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name){
+ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, const char *overload_name){
     if(lhs->type->kind != TYPE_KIND_STRUCTURE) return NULL;
 
     if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
@@ -1588,7 +1588,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
         ast_type_t types[2] = {*lhs_type, *rhs_type};
 
-        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, NULL, false, &result)
+        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, NULL, false, from_source, &result)
         || handle_pass_management(builder, arguments, types, result.ast_func->arg_type_traits, 2)){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             return NULL;
@@ -1636,10 +1636,10 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 
     if(array_type->elements[0]->id == AST_ELEM_BASE){
         struct_name = ((ast_elem_base_t*) array_type->elements[0])->base;
-        search_error = ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, &result);
+        search_error = ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
     } else {
         struct_name = ((ast_elem_generic_base_t*) array_type->elements[0])->name;
-        search_error = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, &result);
+        search_error = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
     }
     
     if(search_error || handle_pass_management(builder, arguments, argument_ast_types, result.ast_func->arg_type_traits, 2)){
@@ -1663,7 +1663,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     return build_value_from_prev_instruction(builder);
 }
 
-errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_poly_func_id, ast_type_t *types,
+errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, source_t instantiation_source, length_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping){
 
     ast_func_t *poly_func = &builder->object->ast.funcs[ast_poly_func_id];
@@ -1736,7 +1736,21 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_pol
     for(length_t i = 0; i != poly_func->arity; i++){
         ast_type_t *template_ast_type = &poly_func->arg_types[i];
         func->arg_names[i] = strclone(poly_func->arg_names[i]);
-        func->arg_types[i] = ast_type_has_polymorph(template_ast_type) ? ast_type_clone(&types[i]) : ast_type_clone(template_ast_type);
+        bool use_provided_type = ast_type_has_polymorph(template_ast_type);
+
+        if(use_provided_type && i >= types_list_length){
+            source_t source = func->arg_defaults && func->arg_defaults[i] ? func->arg_defaults[i]->source : poly_func->source;
+            compiler_panicf(builder->compiler, source, "Cannot instantiate polymorphic function without specifying a non-default value for parameter");
+
+            // Provide information of where the instantiation was triggered
+            if(!SOURCE_IS_NULL(instantiation_source)){
+                compiler_panicf(builder->compiler, instantiation_source, "Requires non-default arguments here");
+            }
+
+            return FAILURE;
+        }
+
+        func->arg_types[i] = use_provided_type ? ast_type_clone(&types[i]) : ast_type_clone(template_ast_type);
     }
 
     memcpy(func->arg_sources, poly_func->arg_sources, sizeof(source_t) * poly_func->arity);
@@ -2322,6 +2336,11 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
             ast_expr_free(expr);
             expr->id = EXPR_USIZE;
             ((ast_expr_usize_t*) expr)->value = count_var->binding;
+        }
+        break;
+    case EXPR_TYPENAMEOF: {
+            ast_expr_typenameof_t *typenameof = (ast_expr_typenameof_t*) expr;
+            if(resolve_type_polymorphics(compiler, type_table, catalog, &typenameof->type, NULL)) return FAILURE;
         }
         break;
     default: break;

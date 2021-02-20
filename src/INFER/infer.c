@@ -256,7 +256,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 if(loop->list      && infer_expr(ctx, func, &loop->list, EXPR_USIZE, scope, true))     return FAILURE;
  
                 infer_var_scope_push(&scope);
-                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast), loop->source, true, false);
+                infer_var_scope_add_variable(scope, "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
                 infer_var_scope_add_variable(scope, loop->it_name ? loop->it_name : "it", loop->it_type, loop->source, true, false);
 
                 if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
@@ -271,7 +271,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 if(infer_expr(ctx, func, &loop->limit, EXPR_USIZE, scope, false)) return FAILURE;
  
                 infer_var_scope_push(&scope);
-                infer_var_scope_add_variable(scope, "idx", ast_get_usize(ctx->ast), loop->source, true, false);
+                infer_var_scope_add_variable(scope, "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
 
                 if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
                     infer_var_scope_pop(ctx->compiler, &scope);
@@ -704,6 +704,11 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
 
             if(infer_expr(ctx, ast_func, &va->va_list, EXPR_NONE, scope, true)) return FAILURE;
             if(infer_type(ctx, &va->arg_type)) return FAILURE;
+        }
+        break;
+    case EXPR_TYPENAMEOF: {
+            ast_expr_typenameof_t *typenameof = (ast_expr_typenameof_t*) *expr;
+            if(infer_type(ctx, &typenameof->type)) return FAILURE;
         }
         break;
     case EXPR_INITLIST: {

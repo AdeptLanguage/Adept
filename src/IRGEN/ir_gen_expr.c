@@ -259,6 +259,9 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_POLYCOUNT:
         compiler_panic(builder->compiler, expr->source, "Unresolved polymorphic count variable in expression");
         return FAILURE;
+    case EXPR_TYPENAMEOF:
+        if(ir_gen_expr_typenameof(builder, (ast_expr_typenameof_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        break;
     default:
         compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Unknown expression type id in expression");
         return FAILURE;
@@ -534,7 +537,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
     // If there doesn't exist a nearby scoped variable with the same name, look for function
     funcpair_t pair;
-    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, expr->no_user_casts, &pair);
+    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, expr->no_user_casts, expr->source, &pair);
 
     // Propagate failure if something went wrong during the search
     if(error == ALT_FAILURE){
@@ -1316,8 +1319,17 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     ir_type_extra_function_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
     extra->arg_types = pair.ir_func->argument_types;
     extra->arity = pair.ast_func->arity;
-    extra->return_type = pair.ir_func->return_type;
     extra->traits = expr->traits;
+
+    // Force return type of entry point function to be s32
+    if(pair.ast_func->traits & AST_FUNC_MAIN){
+        ir_type_t *i32_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        i32_type->kind = TYPE_KIND_S32;
+        // (neglect i32_type->extra)
+        extra->return_type = i32_type;
+    } else {
+        extra->return_type = pair.ir_func->return_type;
+    }
 
     ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
     ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
@@ -1337,7 +1349,14 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     // Write resulting type if requested
     if(out_expr_type != NULL){
         ast_func_t *ast_func = pair.ast_func;
-        ast_type_make_func_ptr(out_expr_type, expr->source, ast_func->arg_types, ast_func->arity, &ast_func->return_type, ast_func->traits, false);
+
+        // Force return type of result type of be 'int' if target function is entry point function
+        // (e.g. func &main will give back either 'func() int' or 'func(int, **ubyte) int', but never func() void)
+        if(ast_func->traits & AST_FUNC_MAIN){
+            ast_type_make_func_ptr(out_expr_type, expr->source, ast_func->arg_types, ast_func->arity, &builder->object->ast.common.ast_int_type, ast_func->traits, false);
+        } else {
+            ast_type_make_func_ptr(out_expr_type, expr->source, ast_func->arg_types, ast_func->arity, &ast_func->return_type, ast_func->traits, false);
+        }
     }
     
     // We successfully got the function address of the function
@@ -1743,11 +1762,11 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
     // Obtain the name of the subject and find the appropriate method
     if(ast_type_is_pointer_to_base(subject_type)){
         subject = ((ast_elem_base_t*) subject_type->elements[1])->base;
-        error = ir_gen_find_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, result);
+        error = ir_gen_find_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, expr->source, result);
     }
     else if(ast_type_is_pointer_to_generic_base(subject_type)){
         subject = ((ast_elem_generic_base_t*) subject_type->elements[1])->name;
-        error = ir_gen_find_generic_base_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, result);
+        error = ir_gen_find_generic_base_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, expr->source, result);
     }
     else {
         internalerrorprintf("ir_gen_expr_call_method_find_appropriate_method() received bad subject AST type\n");
@@ -2421,6 +2440,19 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
     return SUCCESS;
 }
 
+errorcode_t ir_gen_expr_typenameof(ir_builder_t *builder, ast_expr_typenameof_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    strong_cstr_t on_heap = ast_type_str(&expr->type);
+    length_t size = strlen(on_heap) + 1;
+
+    weak_cstr_t name = ir_pool_alloc(builder->pool, size);
+    memcpy(name, on_heap, size);
+    
+    *ir_value = build_literal_cstr_of_length(builder, name, size);
+
+    if(out_expr_type) ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
+    return SUCCESS;
+}
+
 errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
         unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean){
 
@@ -2444,7 +2476,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
         // Failed to conform the values, if we have an overload function, we can use the argument
         // types for that and continue on our way
         if(overload){
-            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload);
+            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, math_expr->source, out_expr_type, overload);
 
             // We successfully used the overload function
             if(*ir_value != NULL){
@@ -2483,7 +2515,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
         builder->current_block->instructions_length--;
 
         // Try to use the overload function if it exists
-        *ir_value = overload ? handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, out_expr_type, overload) : NULL;
+        *ir_value = overload ? handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, math_expr->source, out_expr_type, overload) : NULL;
         ast_type_free(&ast_type_a);
         ast_type_free(&ast_type_b);
 

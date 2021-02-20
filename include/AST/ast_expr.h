@@ -92,7 +92,8 @@ extern "C" {
 #define EXPR_VA_ARG           0x00000042
 #define EXPR_INITLIST         0x00000043
 #define EXPR_POLYCOUNT        0x00000044
-#define EXPR_LLVM_ASM         0x00000045
+#define EXPR_TYPENAMEOF       0x00000045
+#define EXPR_LLVM_ASM         0x00000046
 // Exclusive statements ---------------
 #define EXPR_DECLARE          0x00000050
 #define EXPR_DECLAREUNDEF     0x00000051
@@ -516,6 +517,12 @@ typedef struct {
 typedef struct {
     unsigned int id;
     source_t source;
+    ast_type_t type;
+} ast_expr_typenameof_t;
+
+typedef struct {
+    unsigned int id;
+    source_t source;
     strong_cstr_t assembly;
     weak_cstr_t constraints;
     ast_expr_t **args;
@@ -786,6 +793,11 @@ void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from
 // Creates a phantom expression
 // NOTE: Ownership of 'ast_type' will be taken
 void ast_expr_create_phantom(ast_expr_t **out_expr, ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable);
+
+// ---------------- ast_expr_create_typenameof ----------------
+// Creates a typenameof expression
+// NOTE: Ownership of 'strong_type' will be taken
+void ast_expr_create_typenameof(ast_expr_t **out_expr, ast_type_t strong_type, source_t source);
 
 // ---------------- ast_expr_list_init ----------------
 // Initializes an ast_expr_list_t with a given capacity

@@ -1201,7 +1201,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
 
     length_t initial_basicblock_id = builder->current_block_id;
 
-    ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
+    ast_type_t *idx_ast_type = &builder->object->ast.common.ast_usize_type;
     ir_type_t *idx_ir_type = ir_builder_usize(builder);
     ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
 
@@ -1495,7 +1495,7 @@ errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
     builder->continue_block_id = inc_basicblock_id;
     builder->break_continue_scope = builder->scope;
 
-    ast_type_t *idx_ast_type = ast_get_usize(&builder->object->ast);
+    ast_type_t *idx_ast_type = &builder->object->ast.common.ast_usize_type;
     ir_type_t *idx_ir_type = ir_builder_usize(builder);
     ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
     

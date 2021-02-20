@@ -180,6 +180,7 @@ tokens = [
     Token("thread_local"      , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "thread_local keyword"              ),
     Token("true"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "true keyword"                      ),
     Token("typeinfo"          , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "typeinfo keyword"                  ),
+    Token("typenameof"        , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "typenameof keyword"                ),
     Token("undef"             , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "undef keyword"                     ),
     Token("union"             , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "union keyword"                     ),
     Token("unless"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "unless keyword"                    ),

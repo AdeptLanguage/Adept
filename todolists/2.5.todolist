@@ -3,9 +3,7 @@
 HIGH-PRIORITY:
 
 MEDIUM-PRIORITY:
-* typenameof expression
 * alignof expression
-* anonymous structures and unions
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
 * way to allow using defined expressions and/or meta expressions for fixed array counts
     ```
@@ -28,6 +26,10 @@ LOW-PRIORITY:
 * Add full linux cross-compilation support
 * Make 'typeinfo' work better with aliases and '*void'
 * Add way to manually invoke DEINIT_SVARS
+
+v2.5 COMPLETED:
++ anonymous structures and unions
++ typenameof expression
 
 v2.4 COMPLETED:
 + Standard Library Imports

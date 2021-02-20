@@ -23,6 +23,7 @@ bool expr_is_mutable(ast_expr_t *expr){
 
 strong_cstr_t ast_expr_str(ast_expr_t *expr){
     // NOTE: Returns an allocated string representation of the expression
+    // TODO: CLEANUP: Cleanup this messy code
 
     char *representation, *a, *b;
 
@@ -524,6 +525,12 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         }
     case EXPR_POLYCOUNT:
         return mallocandsprintf("$#%s", ((ast_expr_polycount_t*) expr)->name);
+    case EXPR_TYPENAMEOF: {
+            strong_cstr_t typename = ast_type_str( &(((ast_expr_typenameof_t*) expr)->type) );
+            strong_cstr_t result = mallocandsprintf("typenameof %s", typename);
+            free(typename);
+            return result;
+        }
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -631,6 +638,9 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_POLYCOUNT:
         free(((ast_expr_polycount_t*) expr)->name);
+        break;
+    case EXPR_TYPENAMEOF:
+        ast_type_free( &(((ast_expr_typenameof_t*) expr)->type) );
         break;
     case EXPR_LLVM_ASM:
         free(((ast_expr_llvm_asm_t*) expr)->assembly);
@@ -1126,6 +1136,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_polycount
         #undef clone_as_polycount
+    case EXPR_TYPENAMEOF:
+        #define expr_as_typenameof ((ast_expr_typenameof_t*) expr)
+        #define clone_as_typenameof ((ast_expr_typenameof_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_va_arg_t));
+        clone_as_typenameof->type = ast_type_clone(&expr_as_typenameof->type);
+        break;
+
+        #undef expr_as_typenameof
+        #undef clone_as_typenameof
     case EXPR_LLVM_ASM:
         #define expr_as_llvm_asm ((ast_expr_llvm_asm_t*) expr)
         #define clone_as_llvm_asm ((ast_expr_llvm_asm_t*) clone)
@@ -1528,6 +1548,13 @@ void ast_expr_create_phantom(ast_expr_t **out_expr, ast_type_t ast_type, void *i
     ((ast_expr_phantom_t*) *out_expr)->is_mutable = is_mutable;
 }
 
+void ast_expr_create_typenameof(ast_expr_t **out_expr, ast_type_t strong_type, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_typenameof_t));
+    ((ast_expr_typenameof_t*) *out_expr)->id = EXPR_TYPENAMEOF;
+    ((ast_expr_typenameof_t*) *out_expr)->source = source;
+    ((ast_expr_phantom_t*) *out_expr)->type = strong_type;
+}
+
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
     if(capacity == 0){
         list->statements = NULL;
@@ -1608,8 +1635,8 @@ const char *global_expression_rep_table[] = {
     "<va_arg>",                   // 0x00000042
     "<initlist>",                 // 0x00000043
     "<polycount>",                // 0x00000044
-    "<reserved>",                 // 0x00000045
-    "<reserved>",                 // 0x00000046
+    "<typenameof>",               // 0x00000045
+    "<llvm_asm>",                 // 0x00000046
     "<reserved>",                 // 0x00000047
     "<reserved>",                 // 0x00000048
     "<reserved>",                 // 0x00000049

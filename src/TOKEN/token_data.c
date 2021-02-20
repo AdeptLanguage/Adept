@@ -129,20 +129,21 @@ const char *global_token_name_table[] = {
     "thread_local keyword",               // 0x0000007C
     "true keyword",                       // 0x0000007D
     "typeinfo keyword",                   // 0x0000007E
-    "undef keyword",                      // 0x0000007F
-    "union keyword",                      // 0x00000080
-    "unless keyword",                     // 0x00000081
-    "until keyword",                      // 0x00000082
-    "using keyword",                      // 0x00000083
-    "va_arg keyword",                     // 0x00000084
-    "va_copy keyword",                    // 0x00000085
-    "va_end keyword",                     // 0x00000086
-    "va_start keyword",                   // 0x00000087
-    "verbatim keyword",                   // 0x00000088
-    "while keyword",                      // 0x00000089
+    "typenameof keyword",                 // 0x0000007F
+    "undef keyword",                      // 0x00000080
+    "union keyword",                      // 0x00000081
+    "unless keyword",                     // 0x00000082
+    "until keyword",                      // 0x00000083
+    "using keyword",                      // 0x00000084
+    "va_arg keyword",                     // 0x00000085
+    "va_copy keyword",                    // 0x00000086
+    "va_end keyword",                     // 0x00000087
+    "va_start keyword",                   // 0x00000088
+    "verbatim keyword",                   // 0x00000089
+    "while keyword",                      // 0x0000008A
 };
 
-const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 const char *global_token_keywords_list[] = {
     "POD",
@@ -197,6 +198,7 @@ const char *global_token_keywords_list[] = {
     "thread_local",
     "true",
     "typeinfo",
+    "typenameof",
     "undef",
     "union",
     "unless",
@@ -210,4 +212,4 @@ const char *global_token_keywords_list[] = {
     "while",
 };
 
-unsigned long long global_token_keywords_list_length = 63;
+unsigned long long global_token_keywords_list_length = 64;

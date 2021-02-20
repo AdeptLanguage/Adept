@@ -1,0 +1,19 @@
+
+pragma compiler_version '2.5'
+pragma ignore_unused
+pragma no_typeinfo
+
+import basics
+
+func main() {
+    printTypenameof("Hello World")
+    printTypenameof(3 + 4)
+    printTypenameof(3.0f * 3.14159265f)
+    printTypenameof(stdout)
+    printTypenameof('Bye World')
+    printTypenameof(func &main)
+}
+
+func printTypenameof(_x $T) {
+    printf("%s\n", typenameof $T)
+}

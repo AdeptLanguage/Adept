@@ -372,7 +372,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
 // NOTE: Returns SUCCESS if value was utilized in passing
 //       Returns FAILURE if value was not utilized in passing
 //       Returns ALT_FAILURE if a compiler time error occurred
-errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value);
+errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value, source_t from_source);
 
 errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_return);
 errorcode_t handle_children_pass(ir_builder_t *builder);
@@ -389,8 +389,9 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
 
 // ---------------- handle_math_management ----------------
 // Handles basic math management function calls
+// NOTE: 'from_source' is used for error messages, and may be NULL_SOURCE
 ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
-    ast_type_t *lhs_type, ast_type_t *rhs_type, ast_type_t *out_type, const char *overload_name);
+    ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, const char *overload_name);
 
 // ---------------- handle_access_management ----------------
 // Handles '__access__' management function calls for [] operator
@@ -401,7 +402,8 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function
-errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, length_t ast_poly_func_id, ast_type_t *types,
+// NOTE: 'instantiation_source' may be NULL_SOURCE
+errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, source_t instantiation_source, length_t ast_poly_func_id, ast_type_t *types,
     length_t types_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping);
 
 // ---------------- attempt_autogen___defer__ ----------------

@@ -138,7 +138,8 @@ typedef struct {
 } ast_enum_t;
 
 typedef struct {
-    ast_type_t *ast_usize_type;
+    ast_type_t ast_int_type;
+    ast_type_t ast_usize_type;
     ast_type_t *ast_variadic_array;
     source_t ast_variadic_source; // Only exists if 'ast_variadic_array' isn't NULL
     ast_type_t *ast_initializer_list;
@@ -328,10 +329,6 @@ void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *i
 // Adds a library to the list of foreign libraries
 // NOTE: Takes ownership of library string
 void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, char kind);
-
-// ---------------- ast_get_usize ----------------
-// Gets constant AST type for type 'usize'
-ast_type_t* ast_get_usize(ast_t *ast);
 
 // ---------------- va_args_inject_ast ----------------
 // Injects va_* definitions into AST

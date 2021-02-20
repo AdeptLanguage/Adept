@@ -320,6 +320,8 @@ call :compile toggle
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile truefalse
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile typenameof
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile undef
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile union

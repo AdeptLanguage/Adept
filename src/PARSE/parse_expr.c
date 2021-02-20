@@ -27,6 +27,7 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
         ((expr_type *)*out_expr)->source = sources[(*i)++];                   \
     }
     
+    // TODO: CLEANUP: This code should be cleaned up
     switch (tokens[*i].id){
     case TOKEN_BYTE:
         LITERAL_TO_EXPR(ast_expr_byte_t, EXPR_BYTE, adept_byte);
@@ -261,6 +262,15 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             tokens[*i].data = NULL;
             polycount_expr->source = sources[(*i)++];
             *out_expr = (ast_expr_t*) polycount_expr;
+        }
+        break;
+    case TOKEN_TYPENAMEOF: {
+            source_t source = sources[(*i)++];
+            
+            ast_type_t type;
+            if(parse_type(ctx, &type)) return FAILURE;
+
+            ast_expr_create_typenameof(out_expr, type, source);
         }
         break;
     default:
