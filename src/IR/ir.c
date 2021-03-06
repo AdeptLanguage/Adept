@@ -828,8 +828,8 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->rtti_relocations = NULL;
     ir_module->rtti_relocations_length = 0;
     ir_module->rtti_relocations_capacity = 0;
-    ir_module->init_builder = malloc(sizeof(ir_builder_t));
-    ir_module->deinit_builder = malloc(sizeof(ir_builder_t));
+    ir_module->init_builder = NULL;
+    ir_module->deinit_builder = NULL;
     ir_module->static_variables = NULL;
     ir_module->static_variables_length = 0;
     ir_module->static_variables_capacity = 0;
@@ -866,16 +866,20 @@ void ir_module_free(ir_module_t *ir_module){
 
     // Free init_builder
     // TODO: Maybe refactor this code
-    for(length_t i = 0; i < ir_module->init_builder->basicblocks_length; i++){
-        ir_basicblock_free(&ir_module->init_builder->basicblocks[i]);
+    if(ir_module->init_builder){
+        for(length_t i = 0; i < ir_module->init_builder->basicblocks_length; i++){
+            ir_basicblock_free(&ir_module->init_builder->basicblocks[i]);
+        }
+        free(ir_module->init_builder);
     }
-    free(ir_module->init_builder);
 
     // Free deinit_builder
-    for(length_t i = 0; i < ir_module->deinit_builder->basicblocks_length; i++){
-        ir_basicblock_free(&ir_module->deinit_builder->basicblocks[i]);
+    if(ir_module->deinit_builder){
+        for(length_t i = 0; i < ir_module->deinit_builder->basicblocks_length; i++){
+            ir_basicblock_free(&ir_module->deinit_builder->basicblocks[i]);
+        }
+        free(ir_module->deinit_builder);
     }
-    free(ir_module->deinit_builder);
 
 
     free(ir_module->static_variables);
@@ -889,6 +893,7 @@ void ir_module_free(ir_module_t *ir_module){
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
     for(length_t f = 0; f != funcs_length; f++){
         for(length_t b = 0; b != funcs[f].basicblocks_length; b++){
+            printf("3\n");
             ir_basicblock_free(&funcs[f].basicblocks[b]);
         }
         free(funcs[f].basicblocks);

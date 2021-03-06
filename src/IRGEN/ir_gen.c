@@ -253,6 +253,8 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
 
     ast_func_t **ast_funcs = &object->ast.funcs;
     
+    object->ir_module.init_builder = malloc(sizeof(ir_builder_t));
+    object->ir_module.deinit_builder = malloc(sizeof(ir_builder_t));
     ir_builder_init(object->ir_module.init_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, job_list, true);
     ir_builder_init(object->ir_module.deinit_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, job_list, true);
 

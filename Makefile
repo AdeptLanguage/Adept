@@ -101,7 +101,7 @@ LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__ST
 # -lgtest_main -lgtest -lLLVMTestingSupport
 
 # -static-libgcc -static-libstdc++ -static
-CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=gnu99 -Wall -O0 -DNDEBUG -ferror-limit=1 # -fmax-errors=5 -Werror
+CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=gnu99 -Wall -O0 -DNDEBUG # -fmax-errors=5 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 
 ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
