@@ -893,7 +893,6 @@ void ir_module_free(ir_module_t *ir_module){
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
     for(length_t f = 0; f != funcs_length; f++){
         for(length_t b = 0; b != funcs[f].basicblocks_length; b++){
-            printf("3\n");
             ir_basicblock_free(&funcs[f].basicblocks[b]);
         }
         free(funcs[f].basicblocks);
