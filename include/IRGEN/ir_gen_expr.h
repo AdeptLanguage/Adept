@@ -103,7 +103,7 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
         ast_type_t *arg_types, ast_type_t *gives, funcpair_t *result);
 
 // Fills in any missing arguments for a 'CALL'/'CALL METHOD' expression
-errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types,
+errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types, ast_type_t *all_expected_arg_types,
         length_t provided_arity, ast_expr_t **target_defaults, length_t target_arity, source_t source_on_failure);
 
 // Calls the pass management function on arguments for 'CALL'/'CALL METHOD' expression

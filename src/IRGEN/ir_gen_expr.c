@@ -555,7 +555,8 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         }
 
         // Fill in default arguments
-        if(ir_gen_expr_call_procedure_fill_in_default_arguments(builder, &arg_values, &arg_types, arity, pair.ast_func->arg_defaults, pair.ast_func->arity, expr->source)){
+        ast_type_t *all_expected_arg_types = pair.ast_func->arg_types;
+        if(ir_gen_expr_call_procedure_fill_in_default_arguments(builder, &arg_values, &arg_types, all_expected_arg_types, arity, pair.ast_func->arg_defaults, pair.ast_func->arity, expr->source)){
             ast_types_free_fully(arg_types, arity);
             return FAILURE;
         }
@@ -685,7 +686,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     return FAILURE;
 }
 
-errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types,
+errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types, ast_type_t *all_expected_arg_types,
         length_t provided_arity, ast_expr_t **target_defaults, length_t target_arity, source_t source_on_failure){
     
     // No need to fill in missing arguments if we already have them
@@ -715,12 +716,16 @@ errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *b
             ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
             return FAILURE;
         }
-
+        
         // Generate IR value for given default expression
-        if(ir_gen_expr(builder, target_defaults[i], &new_args[i], false, &new_arg_types[i])){
+        const char *bad_condition_format = "Received type '%s' when conditional expects type '%s'";
+        new_args[i] = ir_gen_conforming_expr(builder, target_defaults[i], &all_expected_arg_types[i], CONFORM_MODE_CALL_ARGUMENTS_LOOSE, source_on_failure, bad_condition_format);
+        if(new_args[i] == NULL){
             ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
             return FAILURE;
         }
+        
+        new_arg_types[i] = ast_type_clone(&all_expected_arg_types[i]);
     }
 
     // Swap out partial argument list for full argument list.
@@ -1687,7 +1692,8 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     }
 
     // Fill in default arguments
-    if(ir_gen_expr_call_procedure_fill_in_default_arguments(builder, &arg_values, &arg_types, arity, pair.ast_func->arg_defaults, pair.ast_func->arity, expr->source)){
+    ast_type_t *all_expected_arg_types = pair.ast_func->arg_types;
+    if(ir_gen_expr_call_procedure_fill_in_default_arguments(builder, &arg_values, &arg_types, all_expected_arg_types, arity, pair.ast_func->arg_defaults, pair.ast_func->arity, expr->source)){
         ast_types_free_fully(arg_types, arity);
         return FAILURE;
     }

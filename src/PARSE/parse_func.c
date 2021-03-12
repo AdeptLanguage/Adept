@@ -400,6 +400,12 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
 
         bool takes_variable_arity = func->traits & AST_FUNC_VARARG || func->traits & AST_FUNC_VARIADIC;
 
+        if(parse_ignore_newlines(ctx, "Expected type after ',' in argument list")){
+            parse_free_unbackfilled_arguments(func, backfill);
+            ctx->allow_polymorphic_prereqs = false;
+            return FAILURE;
+        }
+        
         if(tokens[*i].id == TOKEN_NEXT && !takes_variable_arity){
             if(tokens[++(*i)].id == TOKEN_CLOSE){
                 compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
