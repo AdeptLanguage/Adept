@@ -41,7 +41,7 @@ char *uint_to_string_impl(uint64 value, char *out_buffer, int base, weak_cstr_t 
     }
 
     // Reverse output
-    for(length_t i = 0; i + 1 < size; i++){
+    for(length_t i = 0; i < size / 2; i++){
         char tmp = out_buffer[size - i - 1];
         out_buffer[size - i - 1] = out_buffer[i];
         out_buffer[i] = tmp;
