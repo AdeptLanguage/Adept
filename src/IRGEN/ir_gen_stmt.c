@@ -1204,7 +1204,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     ast_type_t *idx_ast_type = &builder->object->ast.common.ast_usize_type;
     ir_type_t *idx_ir_type = ir_builder_usize(builder);
     ir_type_t *idx_ir_type_ptr = ir_builder_usize_ptr(builder);
-
+    
     open_scope(builder);
 
     // Create 'idx' variable
@@ -1230,14 +1230,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     if(stmt->list){
         if(ir_gen_expr(builder, stmt->list, &single_value, true, &single_type)) return FAILURE;
 
-        if(!expr_is_mutable(stmt->list)) {
-            // Single expression isn't mutable, we must copy it to the stack
-            ir_value_t *mutable_copy = build_alloc(builder, single_value->type);
-            build_store(builder, single_value, mutable_copy, stmt->list->source);
-            single_value = mutable_copy;
-        }
-        
-        ast_expr_create_phantom((ast_expr_t**) &single_expr, single_type, single_value, stmt->list->source, true);
+        ast_expr_create_phantom((ast_expr_t**) &single_expr, single_type, single_value, stmt->list->source, expr_is_mutable(stmt->list));
     }
     
     ir_value_t *fixed_array_value = NULL;

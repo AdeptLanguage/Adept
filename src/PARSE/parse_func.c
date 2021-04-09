@@ -114,6 +114,30 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return FAILURE;
     }
 
+    if(strcmp(func->name, "__array__") == 0 && (
+        func->traits != TRAIT_NONE
+        || func->arity != 1
+        || !ast_type_is_pointer(&func->arg_types[0])
+        || !ast_type_is_pointer(&func->return_type)
+        || strcmp(func->arg_names[0], "this") != 0
+        || func->arg_type_traits[0] != TRAIT_NONE
+    )){
+        compiler_panic(ctx->compiler, source, "Management method __array__ must be declared like '__array__(this *T) *$ArrayElementType'");
+        return FAILURE;
+    }
+
+    if(strcmp(func->name, "__length__") == 0 && (
+        func->traits != TRAIT_NONE
+        || func->arity != 1
+        || !ast_type_is_pointer(&func->arg_types[0])
+        || !ast_type_is_base_of(&func->return_type, "usize")
+        || strcmp(func->arg_names[0], "this") != 0
+        || func->arg_type_traits[0] != TRAIT_NONE
+    )){
+        compiler_panic(ctx->compiler, source, "Management method __length__ must be declared like '__length__(this *T) usize'");
+        return FAILURE;
+    }
+
     if(strcmp(func->name, "__variadic_array__") == 0){
         if(ctx->ast->common.ast_variadic_array != NULL){
             compiler_panic(ctx->compiler, source, "The function __variadic_array__ can only be defined once");
