@@ -1230,7 +1230,14 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     if(stmt->list){
         if(ir_gen_expr(builder, stmt->list, &single_value, true, &single_type)) return FAILURE;
 
-        ast_expr_create_phantom((ast_expr_t**) &single_expr, single_type, single_value, stmt->list->source, expr_is_mutable(stmt->list));
+        if(!expr_is_mutable(stmt->list)) {
+            // Single expression isn't mutable, we must copy it to the stack
+            ir_value_t *mutable_copy = build_alloc(builder, single_value->type);
+            build_store(builder, single_value, mutable_copy, stmt->list->source);
+            single_value = mutable_copy;
+        }
+        
+        ast_expr_create_phantom((ast_expr_t**) &single_expr, single_type, single_value, stmt->list->source, true);
     }
     
     ir_value_t *fixed_array_value = NULL;
