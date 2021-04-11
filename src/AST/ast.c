@@ -256,6 +256,7 @@ void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length){
 void ast_free_globals(ast_global_t *globals, length_t globals_length){
     for(length_t i = 0; i != globals_length; i++){
         ast_global_t *global = &globals[i];
+        free(global->name);
         ast_type_free(&global->type);
         if(global->initial != NULL){
             ast_expr_free_fully(global->initial);
@@ -1033,7 +1034,7 @@ ast_polymorphic_composite_t *ast_add_polymorphic_composite(ast_t *ast, strong_cs
     return poly_composite;
 }
 
-void ast_add_global(ast_t *ast, weak_cstr_t name, ast_type_t type, ast_expr_t *initial_value, trait_t traits, source_t source){
+void ast_add_global(ast_t *ast, strong_cstr_t name, ast_type_t type, ast_expr_t *initial_value, trait_t traits, source_t source){
     expand((void**) &ast->globals, sizeof(ast_global_t), ast->globals_length, &ast->globals_capacity, 1, 8);
 
     ast_global_t *global = &ast->globals[ast->globals_length++];

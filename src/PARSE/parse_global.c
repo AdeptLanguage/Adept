@@ -33,15 +33,13 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         break;
     }
     
-    weak_cstr_t name = parse_eat_word(ctx, "INTERNAL ERROR: Expected word");
+    strong_cstr_t name = parse_take_word(ctx, "INTERNAL ERROR: Expected word");
     if(name == NULL) return FAILURE;
+
+    parse_prepend_namespace(ctx, &name);
 
     if(tokens[*i].id == TOKEN_EQUALS){
         // Handle old style constant '==' syntax
-
-        // Convert 'name' to a strong_cstr_t, by
-        // taking ownership away from its token
-        tokens[*i - 1].data = NULL;
 
         if(parse_old_style_constant_global(ctx, name, source)){
             free(name);

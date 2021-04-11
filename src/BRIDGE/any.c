@@ -226,7 +226,7 @@ void any_inject_ast___types__(ast_t *ast){
     ast_type_t type;
     ast_type_make_base_ptr_ptr(&type, strclone("AnyType"));
 
-    ast_add_global(ast, "__types__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES__, NULL_SOURCE);
+    ast_add_global(ast, strclone("__types__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES__, NULL_SOURCE);
 }
 
 void any_inject_ast___types_length__(ast_t *ast){
@@ -236,7 +236,7 @@ void any_inject_ast___types_length__(ast_t *ast){
     ast_type_t type;
     ast_type_make_base(&type, strclone("usize"));
 
-    ast_add_global(ast, "__types_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES_LENGTH__, NULL_SOURCE);
+    ast_add_global(ast, strclone("__types_length__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES_LENGTH__, NULL_SOURCE);
 }
 
 void any_inject_ast___type_kinds__(ast_t *ast){
@@ -246,7 +246,7 @@ void any_inject_ast___type_kinds__(ast_t *ast){
     ast_type_t type;
     ast_type_make_base_ptr_ptr(&type, strclone("ubyte"));
 
-    ast_add_global(ast, "__type_kinds__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS__, NULL_SOURCE);
+    ast_add_global(ast, strclone("__type_kinds__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS__, NULL_SOURCE);
 }
 
 void any_inject_ast___type_kinds_length__(ast_t *ast){
@@ -256,6 +256,6 @@ void any_inject_ast___type_kinds_length__(ast_t *ast){
     ast_type_t type;
     ast_type_make_base(&type, strclone("usize"));
 
-    ast_add_global(ast, "__type_kinds_length__", type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS_LENGTH__, NULL_SOURCE);
+    ast_add_global(ast, strclone("__type_kinds_length__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS_LENGTH__, NULL_SOURCE);
 
 }
