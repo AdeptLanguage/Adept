@@ -1,0 +1,13 @@
+
+import basics
+
+// This program demonstrates how the compiler will automatically flip the arguments
+// to __multiply__ and other math overloads
+func __multiply__(_ String, b float) String {
+    return toString(b)
+}
+
+func main {
+    print("Hello World" * PI)
+    print(PI * "Hello World")
+}

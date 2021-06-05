@@ -2492,6 +2492,18 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
             }
         }
 
+        // Failed to conform the values if we had an overload function, we'll try to use the arguments in reverse order now
+        if(overload){
+            *ir_value = handle_math_management(builder, rhs, lhs, &ast_type_b, &ast_type_a, math_expr->source, out_expr_type, overload);
+
+            // We successfully used the overload function
+            if(*ir_value != NULL){
+                ast_type_free(&ast_type_a);
+                ast_type_free(&ast_type_b);
+                return SUCCESS;
+            }
+        }
+
         // Otherwise, we couldn't do anything the the types given to us
         char *a_type_str = ast_type_str(&ast_type_a);
         char *b_type_str = ast_type_str(&ast_type_b);
