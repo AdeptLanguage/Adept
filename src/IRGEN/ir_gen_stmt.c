@@ -366,7 +366,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
             break;
         case EXPR_FOR: {
                 ast_expr_for_t *for_loop = (ast_expr_for_t*) stmt;
-                length_t prep_basicblock_id = -1;
+                length_t prep_basicblock_id = build_basicblock(builder);
                 length_t new_basicblock_id  = build_basicblock(builder);
                 length_t end_basicblock_id  = build_basicblock(builder);
 
@@ -377,7 +377,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 length_t prev_break_block_id = builder->break_block_id;
                 length_t prev_continue_block_id = builder->continue_block_id;
                 bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
-
+                
                 builder->break_block_id = end_basicblock_id;
                 builder->continue_block_id = prep_basicblock_id;
                 builder->break_continue_scope = builder->scope;
@@ -399,7 +399,6 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 }
 
                 // Use prep block to calculate condition
-                prep_basicblock_id = build_basicblock(builder);
                 build_break(builder, prep_basicblock_id);
                 build_using_basicblock(builder, prep_basicblock_id);
 
