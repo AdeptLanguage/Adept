@@ -262,6 +262,9 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_TYPENAMEOF:
         if(ir_gen_expr_typenameof(builder, (ast_expr_typenameof_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
+    case EXPR_EMBED:
+        if(ir_gen_expr_embed(builder, (ast_expr_embed_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        break;
     default:
         compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Unknown expression type id in expression");
         return FAILURE;
@@ -2456,6 +2459,21 @@ errorcode_t ir_gen_expr_typenameof(ir_builder_t *builder, ast_expr_typenameof_t 
     *ir_value = build_literal_cstr_of_length(builder, name, size);
 
     if(out_expr_type) ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_embed(ir_builder_t *builder, ast_expr_embed_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    char *array;
+    length_t length;
+
+    if(file_binary_contents(expr->filename, &array, &length) == false){
+        compiler_panicf(builder->compiler, expr->source, "Failed to read file '%s'", expr->filename);
+        return FAILURE;
+    }
+    
+    *ir_value = build_literal_str(builder, array, length);
+
+    if(out_expr_type) ast_type_make_base(out_expr_type, strclone("String"));
     return SUCCESS;
 }
 

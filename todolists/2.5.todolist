@@ -29,6 +29,8 @@ LOW-PRIORITY:
 * Maybe add support for methods on non-struct types, e.g. toString(this *$#N $T) String,  toString(this *int),  toUnique(this *ubyte) <ubyte> Unique,  etc.
 * Unconditional blocks (like: if true {}, except with 'if true' part)
 * Specify default value arguments by name (e.g - captLoadTexturesByFieldName(this, assetsFolder: where(), approximateByDefault: true) )
+* embed
+* 'adept install https://github.com/IsaacShelton/Box2D'
 
 v2.5 COMPLETED:
 + anonymous structures and unions

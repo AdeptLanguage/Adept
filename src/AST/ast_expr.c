@@ -531,6 +531,17 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(typename);
             return result;
         }
+    case EXPR_LLVM_ASM: {
+            return strclone("llvm_asm <...> { ... }");
+        }
+    case EXPR_EMBED: {
+            ast_expr_embed_t *embed = (ast_expr_embed_t*) expr;
+            strong_cstr_t filename_string_escaped = string_to_escaped_string(embed->filename, strlen(embed->filename), '"');
+            strong_cstr_t result = mallocandsprintf("embed %s", filename_string_escaped);
+
+            free(filename_string_escaped);
+            return result;
+        }
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -646,6 +657,9 @@ void ast_expr_free(ast_expr_t *expr){
         free(((ast_expr_llvm_asm_t*) expr)->assembly);
         ast_exprs_free_fully(((ast_expr_llvm_asm_t*) expr)->args, ((ast_expr_llvm_asm_t*) expr)->arity);
         break;
+    case EXPR_EMBED:
+        free(((ast_expr_embed_t*) expr)->filename);
+        break;
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
     case EXPR_BIT_COMPLEMENT:
@@ -751,6 +765,7 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_FOR: {
             ast_expr_for_t *for_loop = (ast_expr_for_t*) expr;
             ast_free_statements_fully(for_loop->before.statements, for_loop->before.length);
+            ast_free_statements_fully(for_loop->after.statements, for_loop->after.length);
             if(for_loop->condition) ast_expr_free_fully(for_loop->condition);
             ast_free_statements_fully(for_loop->statements.statements, for_loop->statements.length);
         }
@@ -1140,7 +1155,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         #define expr_as_typenameof ((ast_expr_typenameof_t*) expr)
         #define clone_as_typenameof ((ast_expr_typenameof_t*) clone)
 
-        clone = malloc(sizeof(ast_expr_va_arg_t));
+        clone = malloc(sizeof(ast_expr_typenameof_t));
         clone_as_typenameof->type = ast_type_clone(&expr_as_typenameof->type);
         break;
 
@@ -1166,6 +1181,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_llvm_asm
         #undef clone_as_llvm_asm
+    case EXPR_EMBED:
+        #define expr_as_embed ((ast_expr_embed_t*) expr)
+        #define clone_as_embed ((ast_expr_embed_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_va_arg_t));
+        clone_as_embed->filename = strclone(expr_as_embed->filename);
+        break;
+
+        #undef expr_as_embed
+        #undef clone_as_embed
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         #define expr_as_declare ((ast_expr_declare_t*) expr)
@@ -1388,6 +1413,14 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
             clone_as_for->before.statements[i] = ast_expr_clone(expr_as_for->before.statements[i]);
         }
         
+        clone_as_for->after.statements = malloc(sizeof(ast_expr_t*) * expr_as_for->after.length);
+        clone_as_for->after.length = expr_as_for->after.length;
+        clone_as_for->after.capacity = expr_as_for->after.length; // (on purpose)
+
+        for(length_t i = 0; i != expr_as_for->after.length; i++){
+            clone_as_for->after.statements[i] = ast_expr_clone(expr_as_for->after.statements[i]);
+        }
+        
         clone_as_for->statements.statements = malloc(sizeof(ast_expr_t*) * expr_as_for->statements.length);
         clone_as_for->statements.length = expr_as_for->statements.length;
         clone_as_for->statements.capacity = expr_as_for->statements.length; // (on purpose)
@@ -1552,7 +1585,14 @@ void ast_expr_create_typenameof(ast_expr_t **out_expr, ast_type_t strong_type, s
     *out_expr = malloc(sizeof(ast_expr_typenameof_t));
     ((ast_expr_typenameof_t*) *out_expr)->id = EXPR_TYPENAMEOF;
     ((ast_expr_typenameof_t*) *out_expr)->source = source;
-    ((ast_expr_phantom_t*) *out_expr)->type = strong_type;
+    ((ast_expr_typenameof_t*) *out_expr)->type = strong_type;
+}
+
+void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_embed_t));
+    ((ast_expr_embed_t*) *out_expr)->id = EXPR_EMBED;
+    ((ast_expr_embed_t*) *out_expr)->source = source;
+    ((ast_expr_embed_t*) *out_expr)->filename = filename;
 }
 
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
@@ -1637,7 +1677,7 @@ const char *global_expression_rep_table[] = {
     "<polycount>",                // 0x00000044
     "<typenameof>",               // 0x00000045
     "<llvm_asm>",                 // 0x00000046
-    "<reserved>",                 // 0x00000047
+    "<embed>",                    // 0x00000047
     "<reserved>",                 // 0x00000048
     "<reserved>",                 // 0x00000049
     "<reserved>",                 // 0x0000004A

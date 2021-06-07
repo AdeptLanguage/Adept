@@ -145,6 +145,7 @@ tokens = [
     Token("delete"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "delete keyword"                    ),
     Token("each"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "each keyword"                      ),
     Token("else"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "else keyword"                      ),
+    Token("embed"             , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "embed keyword"                     ),
     Token("enum"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "enum keyword"                      ),
     Token("exhaustive"        , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "exhaustive keyword"                ),
     Token("external"          , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "external keyword"                  ),

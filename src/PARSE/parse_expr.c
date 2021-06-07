@@ -1,6 +1,7 @@
 
 #include "UTIL/util.h"
 #include "UTIL/search.h"
+#include "UTIL/filename.h"
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_util.h"
 #include "PARSE/parse_type.h"
@@ -271,6 +272,16 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             if(parse_type(ctx, &type)) return FAILURE;
 
             ast_expr_create_typenameof(out_expr, type, source);
+        }
+        break;
+    case TOKEN_EMBED: {
+            source_t source = sources[(*i)++];
+
+            maybe_null_weak_cstr_t filename = parse_eat_string(ctx, "Expected filename after 'embed' keyword");
+            if(filename == NULL) return FAILURE;
+
+            strong_cstr_t local_filename = filename_local(ctx->object->filename, filename);
+            ast_expr_create_embed(out_expr, /*pass ownership*/ local_filename, source);
         }
         break;
     default:

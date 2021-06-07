@@ -1,0 +1,8 @@
+
+import basics
+
+func main {
+    newline()
+    print(embed 'test.txt')
+    newline()
+}

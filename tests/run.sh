@@ -58,6 +58,7 @@ compile each_in_list || exit $?
 compile each_in_static || exit $?
 compile either_way_multiply || exit $?
 compile elif || exit $?
+compile embed || exit $?
 compile entry_point || exit $?
 compile enums || exit $?
 compile equals_func || exit $?

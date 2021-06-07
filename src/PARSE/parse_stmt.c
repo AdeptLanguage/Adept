@@ -594,11 +594,12 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 //  ^                                   ^
 
                 ast_expr_t *condition = NULL;
-                ast_expr_list_t before, statements;
+                ast_expr_list_t before, after, statements;
                 weak_cstr_t label = NULL;
                 source = sources[*i];
                 
                 memset(&before, 0, sizeof(ast_expr_list_t));
+                memset(&after, 0, sizeof(ast_expr_list_t));
                 memset(&statements, 0, sizeof(ast_expr_list_t));
 
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
@@ -640,15 +641,12 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
                 if(tokens[*i].id != TOKEN_NEXT && tokens[*i].id != TOKEN_BEGIN && tokens[*i].id != TOKEN_NEWLINE && tokens[*i].id != TOKEN_CLOSE){
                     // Put the 'after' statement directly in the defer statements of the 'for' loop
-                    if(parse_stmts(ctx, &for_defer_scope.list, &for_defer_scope, PARSE_STMTS_SINGLE | PARSE_STMTS_NO_JOINING | PARSE_STMTS_PARENT_DEFER_SCOPE)){
+                    if(parse_stmts(ctx, &after, &for_defer_scope, PARSE_STMTS_SINGLE | PARSE_STMTS_NO_JOINING | PARSE_STMTS_PARENT_DEFER_SCOPE)){
                         if(condition) ast_expr_free(condition);
                         ast_exprs_free_fully(before.statements, before.length);
                         defer_scope_free(&for_defer_scope);
                         return FAILURE;
                     }
-
-                    // TODO: Reverse statements given in 'after' statements for 'defer'
-                    // NOTE: This isn't a problem right now, since there can only be one statements anyway
                 }
 
                 // Eat ')' if it exists
@@ -657,6 +655,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
                     if(condition) ast_expr_free(condition);
                     ast_exprs_free_fully(before.statements, before.length);
+                    ast_exprs_free_fully(after.statements, after.length);
                     defer_scope_free(&for_defer_scope);
                     return FAILURE;
                 }
@@ -670,6 +669,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     compiler_panic(ctx->compiler, sources[*i - 1], "Expected '{' or ',' after beginning parts of 'for' loop");
                     if(condition) ast_expr_free(condition);
                     ast_exprs_free_fully(before.statements, before.length);
+                    ast_exprs_free_fully(after.statements, after.length);
                     defer_scope_free(&for_defer_scope);
                     return FAILURE;
                 }
@@ -678,6 +678,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 if(parse_stmts(ctx, &statements, &for_defer_scope, stmts_mode)){
                     if(condition) ast_expr_free(condition);
                     ast_exprs_free_fully(before.statements, before.length);
+                    ast_exprs_free_fully(after.statements, after.length);
                     defer_scope_free(&for_defer_scope);
                     return FAILURE;
                 }
@@ -691,6 +692,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt->source = source;
                 stmt->label = label;
                 stmt->before = before;
+                stmt->after = after;
                 stmt->condition = condition;
                 stmt->statements = statements;
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;

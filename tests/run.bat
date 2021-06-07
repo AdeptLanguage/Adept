@@ -99,6 +99,8 @@ call :compile either_way_multiply
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile elif
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile embed
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile entry_point
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile enums

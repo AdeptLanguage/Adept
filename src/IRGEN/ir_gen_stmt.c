@@ -367,11 +367,12 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
         case EXPR_FOR: {
                 ast_expr_for_t *for_loop = (ast_expr_for_t*) stmt;
                 length_t prep_basicblock_id = build_basicblock(builder);
+                length_t adv_basicblock_id = build_basicblock(builder);
                 length_t new_basicblock_id  = build_basicblock(builder);
                 length_t end_basicblock_id  = build_basicblock(builder);
 
                 if(for_loop->label != NULL){
-                    push_loop_label(builder, for_loop->label, end_basicblock_id, prep_basicblock_id);
+                    push_loop_label(builder, for_loop->label, end_basicblock_id, adv_basicblock_id);
                 }
 
                 length_t prev_break_block_id = builder->break_block_id;
@@ -379,7 +380,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 bridge_scope_t *prev_break_continue_scope = builder->break_continue_scope;
                 
                 builder->break_block_id = end_basicblock_id;
-                builder->continue_block_id = prep_basicblock_id;
+                builder->continue_block_id = adv_basicblock_id;
                 builder->break_continue_scope = builder->scope;
 
                 open_scope(builder);
@@ -450,8 +451,25 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
 
                 if(!terminated){
                     handle_deference_for_variables(builder, &builder->scope->list);
-                    build_break(builder, prep_basicblock_id);
+                    build_break(builder, adv_basicblock_id);
                 }
+
+                build_using_basicblock(builder, adv_basicblock_id);
+
+                // Do 'after' statements
+                if(ir_gen_stmts(builder, for_loop->after.statements, for_loop->after.length, &terminated)){
+                    close_scope(builder);
+                    return FAILURE;
+                }
+
+                // Don't allow 'return'/'continue'/'break' in 'after' statements
+                if(terminated){
+                    compiler_panic(builder->compiler, for_loop->after.statements[0]->source, "The 'after' statements of a 'for' loop cannot contain a terminator");
+                    close_scope(builder);
+                    return FAILURE;
+                }
+
+                build_break(builder, prep_basicblock_id);
 
                 close_scope(builder);
                 build_using_basicblock(builder, end_basicblock_id);

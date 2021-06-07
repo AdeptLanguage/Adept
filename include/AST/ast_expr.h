@@ -94,6 +94,7 @@ extern "C" {
 #define EXPR_POLYCOUNT        0x00000044
 #define EXPR_TYPENAMEOF       0x00000045
 #define EXPR_LLVM_ASM         0x00000046
+#define EXPR_EMBED            0x00000047
 // Exclusive statements ---------------
 #define EXPR_DECLARE          0x00000050
 #define EXPR_DECLAREUNDEF     0x00000051
@@ -532,6 +533,12 @@ typedef struct {
     bool is_intel;
 } ast_expr_llvm_asm_t;
 
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_t filename;
+} ast_expr_embed_t;
+
 // ---------------- ast_expr_declare_t ----------------
 // Expression for declaring a variable
 typedef struct {
@@ -689,6 +696,7 @@ typedef struct {
     source_t source;
     weak_cstr_t label;
     ast_expr_list_t before;
+    ast_expr_list_t after;
     ast_expr_t *condition;
     ast_expr_list_t statements;
 } ast_expr_for_t;
@@ -798,6 +806,11 @@ void ast_expr_create_phantom(ast_expr_t **out_expr, ast_type_t ast_type, void *i
 // Creates a typenameof expression
 // NOTE: Ownership of 'strong_type' will be taken
 void ast_expr_create_typenameof(ast_expr_t **out_expr, ast_type_t strong_type, source_t source);
+
+// ---------------- ast_expr_create_embed ----------------
+// Creates an embed expression
+// NOTE: Ownership of 'filename' will be taken
+void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source_t source);
 
 // ---------------- ast_expr_list_init ----------------
 // Initializes an ast_expr_list_t with a given capacity
