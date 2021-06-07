@@ -563,6 +563,9 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 - [(2.3) Creature Gathering Game](https://github.com/IsaacShelton/Tadpole)
 - [(2.4) Card Game](https://github.com/IsaacShelton/GenericCardGame)
 
+# Popular Library Ports
+- [(2.5) Box2D](https://github.com/IsaacShelton/Box2D)
+
 # Syntax Examples
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
 
