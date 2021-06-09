@@ -18,7 +18,7 @@ void config_free(config_t *config){
     free(config->stash);
 }
 
-successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *out_warning){
+successful_t config_read(config_t *config, weak_cstr_t filename, bool force_check_update, weak_cstr_t *out_warning){
     strong_cstr_t buffer = NULL;
     length_t length;
 
@@ -92,7 +92,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
                 redprintf("Failed to handle value in configuration file\n");
                 return false;
             }
-        } else if(strcmp(key, "imports") == 0){
+        } else if(strcmp(key, "installs") == 0){
             // Local imports
         } else {
             yellowprintf("Invalid section key '%s' in configuration file, %s\n", key, filename_name_const(filename));
@@ -105,6 +105,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
 
     #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
     bool should_update = false;
+    
     switch(config->update){
     case UPDATE_SCHEDULE_NEVER:
         break;
@@ -128,8 +129,12 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
         break;
     }
 
+    should_update = should_update || force_check_update;
+
     if(should_update){
-        blueprintf("NOTE: Automatically checking for updates as scheduled\n");
+        if(config->show_checking_for_updates_message){
+            blueprintf("NOTE: Automatically checking for updates as scheduled\n");
+        }
 
         // Ignore failure to update last updated
         if(maybe_last_update.type == JSMN_PRIMITIVE)
@@ -140,10 +145,13 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
             update_installation(config, dlbuffer);
             free(dlbuffer.bytes);
         } else {
-            printf("(failed to download stash)\n");
+            blueprintf("NOTE: Failed to check for updates as scheduled, internet address unreachable\n");
         }
     }
     #endif // ADEPT_ENABLE_PACKAGE_MANAGER
+
+    // Ignore unused
+    (void) force_check_update;
 
     free(tokens);
     free(buffer);
@@ -230,6 +238,14 @@ successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer
 
             config->show_new_compiler_available = boolean;
             index++;
+        } else if(strcmp(content, "showCheckingForUpdatesMessage") == 0){
+            if(!jsmn_helper_get_boolean(buffer, tokens, num_tokens, ++index, &boolean)){
+                warningprintf("Failed to parse boolean value for label '%s'\n", content);
+                return false;
+            }
+
+            config->show_checking_for_updates_message = boolean;
+            index++;
         } else {
             warningprintf("Ignoring unrecognized option '%s' in adept configuration file\n", content);
             index += jsmn_helper_subtoken_count(tokens, index + 1) + 1;
@@ -287,7 +303,7 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
                 return false;
             }
 
-            if(strcmp(stash_header.latest_compiler_version, "2.5-indev") != 0 && config->show_new_compiler_available){
+            if(strcmp(stash_header.latest_compiler_version, ADEPT_VERSION_STRING) != 0 && config->show_new_compiler_available){
                 blueprintf("\nNEWS: A newer version of Adept is available!\n");
                 printf("    (Visit https://github.com/AdeptLanguage/Adept for more information)\n\n");
                 return true;

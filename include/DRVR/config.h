@@ -27,6 +27,7 @@ typedef struct {
     long long last_updated;
     strong_cstr_t stash;
     bool show_new_compiler_available;
+    bool show_checking_for_updates_message;
 } config_t;
 
 typedef struct {
@@ -37,7 +38,7 @@ typedef struct {
 
 void config_prepare(config_t *config);
 void config_free(config_t *config);
-successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *out_warning);
+successful_t config_read(config_t *config, weak_cstr_t filename, bool force_check_update, weak_cstr_t *out_warning);
 successful_t config_update_last_updated(weak_cstr_t filename, weak_cstr_t buffer, length_t buffer_length, jsmntok_t last_update);
 successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, jsmntok_t *out_maybe_last_update);
 

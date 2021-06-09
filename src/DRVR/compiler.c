@@ -32,6 +32,10 @@
 #include "BKEND/backend.h"
 #endif
 
+#ifdef ADEPT_ENABLE_PACKAGE_MANAGER
+#include "UTIL/stash.h"
+#endif
+
 errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv){
     // A wrapper function around 'compiler_invoke'
     compiler_invoke(compiler, argc, argv);
@@ -99,15 +103,19 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
         // Read persistent config file
         strong_cstr_t config_filename = mallocandsprintf("%sadept.config", compiler->root);
         weak_cstr_t config_warning = NULL;
+        bool force_check_update = argc > 1 && strcmp(argv[1], "update") == 0;
 
-        if(!config_read(&compiler->config, config_filename, &config_warning) && config_warning){
+        if(!config_read(&compiler->config, config_filename, force_check_update, &config_warning) && config_warning){
             yellowprintf("%s\n", config_warning);
         }
 
         free(config_filename);
+
+        if(force_check_update) return;
     }
     #endif
 
+    if(handle_package_management(compiler, argc, argv)) return;
     if(parse_arguments(compiler, object, argc, argv)) return;
 
     #ifndef ADEPT_INSIGHT_BUILD
@@ -160,6 +168,32 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     #endif
 
     compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+}
+
+bool handle_package_management(compiler_t *compiler, int argc, char **argv){
+    if(argc > 1 && strcmp(argv[1], "install") == 0){
+        #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
+            if(argc < 3){
+                redprintf("Usage: ");
+                printf("adept install <package name>\n");
+                return true;
+            }
+
+            weak_cstr_t package_name = argv[2];
+            adept_install(&compiler->config, "./", package_name);
+        #else
+            // Ignore unused
+            (void) compiler;
+            (void) argc;
+            (void) argv;
+
+            redprintf("Error:  Cannot perform package management\n");
+            redprintf("Reason: Package manager was disabled when this compiler was built\n");
+        #endif
+        return true;
+    }
+
+    return false;
 }
 
 void compiler_init(compiler_t *compiler){

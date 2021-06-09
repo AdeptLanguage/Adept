@@ -143,6 +143,11 @@ errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv);
 // NOTE: This is for internal use!  Use compiler_run() instead!
 void compiler_invoke(compiler_t *compiler, int argc, char **argv);
 
+// ---------------- handle_package_management ----------------
+// Handles package management part of the compiler
+// Returns true if package management was invoked by user
+bool handle_package_management(compiler_t *compiler, int argc, char **argv);
+
 // ---------------- compiler_init ----------------
 // Initializes a compiler
 void compiler_init(compiler_t *compiler);

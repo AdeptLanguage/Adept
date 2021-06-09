@@ -66,7 +66,7 @@ successful_t jsmn_helper_get_array(weak_cstr_t buffer, jsmntok_t *tokens, length
         return false;
     }
 
-    if(tokens[index].type != JSMN_OBJECT){
+    if(tokens[index].type != JSMN_ARRAY){
         #ifdef JSMN_HELPER_LOG_ERRORS
         internalwarningprintf("jsmn_helper_get_array() expected array, got something else\n");
         printf("   Got: ");

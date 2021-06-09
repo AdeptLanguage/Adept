@@ -3,7 +3,7 @@
 # Whether to include support for built-in adept package manager
 # NOTE: Requires libcurl fields to be filled out
 # NOTE: Default is 'true'
-ENABLE_ADEPT_PACKAGE_MANAGER=false
+ENABLE_ADEPT_PACKAGE_MANAGER=true
 
 # --------------------------- Change These Values ---------------------------
 # NOTE: For Windows, ensure mingw32-make.exe uses cmd.exe for shell
@@ -128,7 +128,7 @@ SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c \
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c \
 	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c \
-	src/UTIL/memory.c src/UTIL/search.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
+	src/UTIL/memory.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj

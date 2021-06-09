@@ -14,6 +14,9 @@
 extern "C" {
 #endif
 
+// Don't include package manager for insight builds
+#undef ADEPT_ENABLE_PACKAGE_MANAGER
+
 #ifndef __EMSCRIPTEN__
 extern char insight_buffer[2560];
 extern char insight_tmp_buffer[1280];

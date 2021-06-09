@@ -35,6 +35,11 @@ void jsmn_helper_print_tokens(jsmntok_t *tokens, length_t length);
 // NOTE: When successful, the number of entries is equal to "tokens[index].size"
 successful_t jsmn_helper_get_object(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index);
 
+// ---------------- jsmn_helper_get_array ----------------
+// Returns whether the token at 'index' is a JSMN_ARRAY token
+// NOTE: When successful, the number of entries is equal to "tokens[index].size"
+successful_t jsmn_helper_get_array(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index);
+
 // ---------------- jsmn_helper_get_string ----------------
 // Returns whether the token at 'index' is a JSMN_STRING token
 // NOTE: Writes raw contents of string to 'out_content' if successful
@@ -42,7 +47,7 @@ successful_t jsmn_helper_get_object(weak_cstr_t buffer, jsmntok_t *tokens, lengt
 // NOTE: max_output_size includes NULL terminating byte
 successful_t jsmn_helper_get_string(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, char *out_content, length_t max_output_size);
 
-// ---------------- jsmn_helper_get_string ----------------
+// ---------------- jsmn_helper_get_vstring ----------------
 // Returns whether the token at 'index' is a JSMN_STRING token
 // Allocates and copies raw contents of string to 'out_content' if successful'
 successful_t jsmn_helper_get_vstring(weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, strong_cstr_t *out_content);
