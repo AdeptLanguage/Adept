@@ -10,6 +10,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 include_directories(/usr/local/opt/curl/include)
 link_directories(/usr/local/opt/curl/lib)
+add_definitions( -DADEPT_ENABLE_PACKAGE_MANAGER )
 
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
