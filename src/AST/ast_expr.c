@@ -1185,7 +1185,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         #define expr_as_embed ((ast_expr_embed_t*) expr)
         #define clone_as_embed ((ast_expr_embed_t*) clone)
 
-        clone = malloc(sizeof(ast_expr_va_arg_t));
+        clone = malloc(sizeof(ast_expr_embed_t));
         clone_as_embed->filename = strclone(expr_as_embed->filename);
         break;
 
