@@ -271,7 +271,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 if(infer_expr(ctx, func, &loop->limit, EXPR_USIZE, scope, false)) return FAILURE;
  
                 infer_var_scope_push(&scope);
-                infer_var_scope_add_variable(scope, "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
+                infer_var_scope_add_variable(scope, loop->idx_overload_name ? loop->idx_overload_name : "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
 
                 if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length, scope)){
                     infer_var_scope_pop(ctx->compiler, &scope);

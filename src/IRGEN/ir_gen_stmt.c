@@ -1518,8 +1518,10 @@ errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
     
     open_scope(builder);
 
+    weak_cstr_t idx_var_name = stmt->idx_overload_name ? stmt->idx_overload_name : "idx";
+
     // Create 'idx' variable
-    add_variable(builder, "idx", idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+    add_variable(builder, idx_var_name, idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
     ir_value_t *idx_ptr = build_lvarptr(builder, idx_ir_type_ptr, builder->next_var_id - 1);
 
     // Set 'idx' to initial value of zero

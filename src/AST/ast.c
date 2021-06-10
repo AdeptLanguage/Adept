@@ -542,7 +542,13 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
 
                 ast_expr_t *value = repeat->limit;
                 strong_cstr_t value_str = ast_expr_str(value);
-                fprintf(file, "repeat %s%s {\n", repeat->is_static ? "static " : "", value_str);
+                fprintf(file, "repeat %s%s ", repeat->is_static ? "static " : "", value_str);
+
+                if(repeat->idx_overload_name){
+                    fprintf(file, "using %s ", repeat->idx_overload_name);
+                }
+
+                fprintf(file, "{\n");
                 ast_dump_statements(file, repeat->statements, repeat->statements_length, indentation + 1);
                 indent(file, indentation);
                 fprintf(file, "}\n");

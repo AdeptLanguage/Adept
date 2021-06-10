@@ -392,6 +392,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 ast_expr_t *limit = NULL;
                 trait_t stmts_mode;
                 maybe_null_weak_cstr_t label = NULL;
+                maybe_null_weak_cstr_t idx_overload_name = NULL;
 
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
                     label = tokens[*i].data; *i += 2;
@@ -405,6 +406,23 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
                     ast_expr_free_fully(limit);
                     return FAILURE;
+                }
+
+                if(tokens[*i].id == TOKEN_USING){
+                    idx_overload_name = parse_grab_word(ctx, "Expected name for 'idx' variable after 'using' keyword");
+
+                    if(idx_overload_name == NULL){
+                        ast_expr_free_fully(limit);
+                        return FAILURE;
+                    }
+
+                    // Move past idx variable name
+                    (*i)++;
+
+                    if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
+                        ast_expr_free_fully(limit);
+                        return FAILURE;
+                    }
                 }
 
                 if(parse_block_beginning(ctx, "'repeat'", &stmts_mode)){
@@ -440,6 +458,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt->statements_length = repeat_stmt_list.length;
                 stmt->statements_capacity = repeat_stmt_list.capacity;
                 stmt->is_static = is_static;
+                stmt->idx_overload_name = idx_overload_name;
                 stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
             }
             break;

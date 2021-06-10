@@ -633,6 +633,7 @@ typedef struct {
     length_t statements_length;
     length_t statements_capacity;
     bool is_static;
+    maybe_null_weak_cstr_t idx_overload_name;
 } ast_expr_repeat_t;
 
 // ---------------- ast_expr_break_t ----------------

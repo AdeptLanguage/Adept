@@ -531,6 +531,7 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
                 TOKEN_CONTINUE,           // 0x00000059
                 TOKEN_DEFER,              // 0x0000005C
                 TOKEN_DELETE,             // 0x0000005D
+                TOKEN_EACH,               // 0x0000005A
                 TOKEN_ELSE,               // 0x0000005E
                 TOKEN_EXHAUSTIVE,         // 0x00000061
                 TOKEN_FOR,                // 0x00000065
@@ -540,6 +541,7 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
                 TOKEN_SWITCH,             // 0x0000007D
                 TOKEN_UNLESS,             // 0x00000083
                 TOKEN_UNTIL,              // 0x00000084
+                TOKEN_USING,              // 0x00000085
                 TOKEN_VA_ARG,             // 0x00000086
                 TOKEN_VA_END,             // 0x00000087
                 TOKEN_VA_START,           // 0x00000089

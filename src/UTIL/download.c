@@ -13,6 +13,8 @@ successful_t download(weak_cstr_t url, weak_cstr_t destination){
     CURL *curl = curl_easy_init();
     if (curl) {
         FILE *f = fopen(destination, "wb");
+        if(f == NULL) return false;
+        
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, download_write_data_to_file);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
