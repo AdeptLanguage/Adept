@@ -1083,7 +1083,7 @@ void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, char kind){
 void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
     ast_layout_t layout;
 
-    if(sizeof(va_list) <= 8){
+    if(compiler->cross_compile_for == CROSS_COMPILE_NONE && sizeof(va_list) <= 8){
         // Small va_list
         strong_cstr_t names[1];
         names[0] = strclone("_opaque");
@@ -1095,8 +1095,11 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
         ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE);
     } else {
         // Larger Intel x86_64 va_list
-        
-        if(sizeof(va_list) != 24){
+
+        // Don't show va_list size warning if we are cross compiling.
+        // When cross compiling, we'll make the conservative guess that 'va_list' will
+        // be 24 bytes or smaller
+        if(compiler->cross_compile_for == CROSS_COMPILE_NONE && sizeof(va_list) != 24){
             // Neglect whether to terminate, since this is not a fixable warning
             compiler_warnf(compiler, NULL_SOURCE, "Assuming Intel x86_64 va_list\n");
         }
