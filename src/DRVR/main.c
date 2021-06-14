@@ -6,7 +6,7 @@ int main(int argc, char **argv){
     #ifdef TRACK_MEMORY_USAGE
     memory_init();
     #endif // TRACK_MEMORY_USAGE
-
+    
     compiler_t compiler;
     compiler_init(&compiler);
     int exitcode = compiler_run(&compiler, argc, argv);

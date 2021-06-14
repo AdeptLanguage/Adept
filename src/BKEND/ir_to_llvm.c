@@ -212,7 +212,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             LLVMValueRef indices[2];
             indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
             indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-            return LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+            return LLVMConstGEP(global_data, indices, 2);
         }
     case VALUE_TYPE_CONST_BITCAST:
             return LLVMConstBitCast(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
@@ -525,7 +525,7 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     LLVMValueRef indices[2];
     indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
     indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-    LLVMValueRef arg = LLVMBuildGEP(llvm->builder, llvm->null_check_failure_message_bytes, indices, 2, "");
+    LLVMValueRef arg = LLVMConstGEP(llvm->null_check_failure_message_bytes, indices, 2);
 
     // Decide on filename to use for error message
     const char *filename = module_func->maybe_filename;
@@ -543,7 +543,7 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     LLVMSetInitializer(global_data, LLVMConstString(filename, filename_len, true));
     indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
     indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-    LLVMValueRef filename_str = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+    LLVMValueRef filename_str = LLVMConstGEP(global_data, indices, 2);
 
     // Define function definition string
     length_t func_name_len = strlen(func_name) + 1;
@@ -553,7 +553,7 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     LLVMSetInitializer(global_data, LLVMConstString(func_name, func_name_len, true));
     indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
     indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-    LLVMValueRef func_name_str = LLVMBuildGEP(llvm->builder, global_data, indices, 2, "");
+    LLVMValueRef func_name_str = LLVMConstGEP(global_data, indices, 2);
 
     llvm->line_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
     llvm->column_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
@@ -841,7 +841,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 LLVMValueRef gep_indices[2];
                 gep_indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
                 gep_indices[1] = LLVMConstInt(LLVMInt32Type(), ((ir_instr_member_t*) instr)->member, true);
-                catalog->blocks[b].value_references[i] = LLVMBuildGEP(builder, foundation, gep_indices, 2, "");
+
+                // For some reason, LLVM has problems with using a regular GEP for a constant value/indicies
+                if(LLVMIsConstant(foundation)){
+                    catalog->blocks[b].value_references[i] = LLVMConstGEP(foundation, gep_indices, 2);
+                } else {
+                    catalog->blocks[b].value_references[i] = LLVMBuildGEP(builder, foundation, gep_indices, 2, "");
+                }
             }
             break;
         case INSTRUCTION_ARRAY_ACCESS: {
@@ -852,8 +858,15 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
 
                 ir_to_llvm_null_check(llvm, f, foundation, array_access_instr->maybe_line_number, array_access_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
-                LLVMValueRef gep_index = ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->index);
-                llvm_result = LLVMBuildGEP(builder, ir_to_llvm_value(llvm, ((ir_instr_array_access_t*) instr)->value), &gep_index, 1, "");
+                LLVMValueRef gep_index = ir_to_llvm_value(llvm, array_access_instr->index);
+
+                // For some reason, LLVM has problems with using a regular GEP for a constant value/indicies
+                if(LLVMIsConstant(foundation) && LLVMIsConstant(gep_index)){
+                    llvm_result = LLVMConstGEP(foundation, &gep_index, 1);
+                } else {
+                    llvm_result = LLVMBuildGEP(builder, foundation, &gep_index, 1, "");
+                }
+
                 catalog->blocks[b].value_references[i] = llvm_result;
             }
             break;
@@ -1397,6 +1410,9 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     case CROSS_COMPILE_MACOS:
         triple = "x86_64-apple-darwin19.6.0";
         break;
+    case CROSS_COMPILE_WASM32:
+        triple = "wasm32-unknown-unknown";
+        break;
     default:
         triple = LLVMGetDefaultTargetTriple();
         disposeTriple = true;
@@ -1405,9 +1421,16 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     LLVMSetTarget(llvm.module, triple);
 
-    char *error_message; LLVMTargetRef target;
+    char *error_message;
+    LLVMTargetRef target;
+
     if(LLVMGetTargetFromTriple(triple, &target, &error_message)){
         internalerrorprintf("LLVMGetTargetFromTriple failed: %s\n", error_message);
+
+        if(compiler->cross_compile_for == CROSS_COMPILE_WASM32){
+            blueprintf("NOTICE: If you built this compiler yourself, make sure that the build of LLVM you linked against includes support for the 'wasm64' target!\n");
+        }
+
         LLVMDisposeMessage(error_message);
         return FAILURE;
     }
@@ -1591,6 +1614,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
             printf("    https://github.com/IsaacShelton/AdeptCrossCompilation/releases\n");
             free(cross_linker);
             free(linker_additional);
+            if(disposeTriple) LLVMDisposeMessage(triple);
             return FAILURE;
         }
 

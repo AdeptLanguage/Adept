@@ -89,6 +89,28 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     #endif
     );
 
+    // __arm64__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__arm64__",
+    #if defined(__arm64__) || defined(__aarch64__)
+        true
+    #elif defined(__EMSCRIPTEN__)
+        EM_ASM_INT({return process.arch == 'arm64' ? 1 : 0}) == 1
+    #else
+        false
+    #endif
+    );
+
+    // __x86_64__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__x86_64__",
+    #if defined(__x86_64__) || defined(_M_AMD64)
+        true
+    #elif defined(__EMSCRIPTEN__)
+        EM_ASM_INT({return process.arch == 'x64' ? 1 : 0}) == 1
+    #else
+        false
+    #endif
+    );
+
     // __unix__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__unix__",
     #if defined(__unix__) || defined(__unix) || defined(unix)

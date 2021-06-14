@@ -133,6 +133,7 @@ typedef struct compiler {
 #define CROSS_COMPILE_NONE    0x00
 #define CROSS_COMPILE_WINDOWS 0x01
 #define CROSS_COMPILE_MACOS   0x02
+#define CROSS_COMPILE_WASM32  0x03
 
 // ---------------- compiler_run ----------------
 // Runs a compiler with the given arguments.

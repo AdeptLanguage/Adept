@@ -509,6 +509,10 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 printf("[-] Cross compiling for MacOS x86_64\n");
                 compiler->cross_compile_for = CROSS_COMPILE_MACOS;
                 #endif
+            } else if(strcmp(argv[arg_index], "--wasm32") == 0){
+                printf("[-] Cross compiling for WebAssembly\n");
+                printf("    (Adept is intended for 64-bit architectures, some things may break in 32-bit!)\n");
+                compiler->cross_compile_for = CROSS_COMPILE_WASM32;
             } else if(argv[arg_index][0] == '-' && (argv[arg_index][1] == 'L' || argv[arg_index][1] == 'l')){
                 // Forward argument to linker
                 compiler_add_user_linker_option(compiler, argv[arg_index]);
