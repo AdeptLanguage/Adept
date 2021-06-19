@@ -28,14 +28,14 @@ LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
     case TYPE_KIND_S8:      return LLVMInt8Type();
     case TYPE_KIND_S16:     return LLVMInt16Type();
     case TYPE_KIND_S32:     return LLVMInt32Type();
-    case TYPE_KIND_S64:     return LLVMInt64Type();
+    case TYPE_KIND_S64:     return llvm->i64_type;
     case TYPE_KIND_U8:      return LLVMInt8Type();
     case TYPE_KIND_U16:     return LLVMInt16Type();
     case TYPE_KIND_U32:     return LLVMInt32Type();
-    case TYPE_KIND_U64:     return LLVMInt64Type();
+    case TYPE_KIND_U64:     return llvm->i64_type;
     case TYPE_KIND_HALF:    return LLVMHalfType();
     case TYPE_KIND_FLOAT:   return LLVMFloatType();
-    case TYPE_KIND_DOUBLE:  return LLVMDoubleType();
+    case TYPE_KIND_DOUBLE:  return llvm->f64_type;
     case TYPE_KIND_BOOLEAN: return LLVMInt1Type();
     case TYPE_KIND_STRUCTURE: {
             // TODO: Should probably cache struct types so they don't have to be
@@ -130,10 +130,10 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             case TYPE_KIND_U16: return LLVMConstInt(LLVMInt16Type(), *((adept_ushort*) value->extra), false);
             case TYPE_KIND_S32: return LLVMConstInt(LLVMInt32Type(), *((adept_int*) value->extra), true);
             case TYPE_KIND_U32: return LLVMConstInt(LLVMInt32Type(), *((adept_uint*) value->extra), false);
-            case TYPE_KIND_S64: return LLVMConstInt(LLVMInt64Type(), *((adept_long*) value->extra), true);
-            case TYPE_KIND_U64: return LLVMConstInt(LLVMInt64Type(), *((adept_ulong*) value->extra), false);
+            case TYPE_KIND_S64: return LLVMConstInt(llvm->i64_type, *((adept_long *)value->extra), true);
+            case TYPE_KIND_U64: return LLVMConstInt(llvm->i64_type, *((adept_ulong *)value->extra), false);
             case TYPE_KIND_FLOAT: return LLVMConstReal(LLVMFloatType(), *((adept_float*) value->extra));
-            case TYPE_KIND_DOUBLE: return LLVMConstReal(LLVMDoubleType(), *((adept_double*) value->extra));
+            case TYPE_KIND_DOUBLE: return LLVMConstReal(llvm->f64_type, *((adept_double*) value->extra));
             case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((adept_bool*) value->extra), false);
             default:
                 internalerrorprintf("Unknown type kind literal in ir_to_llvm_value\n");
@@ -254,12 +254,12 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
     case VALUE_TYPE_OFFSETOF: {
             ir_value_offsetof_t *offsetof = (ir_value_offsetof_t*) value->extra;
             unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(llvm, offsetof->type), offsetof->index);
-            return LLVMConstInt(LLVMInt64Type(), offset, false);
+            return LLVMConstInt(llvm->i64_type, offset, false);
         }
     case VALUE_TYPE_CONST_SIZEOF: {
             ir_value_const_sizeof_t *const_sizeof = (ir_value_const_sizeof_t*) value->extra;
             length_t type_size = const_sizeof->type->kind == TYPE_KIND_VOID ? 0 : LLVMABISizeOfType(llvm->data_layout, ir_to_llvm_type(llvm, const_sizeof->type));
-            return LLVMConstInt(LLVMInt64Type(), type_size, false);
+            return LLVMConstInt(llvm->i64_type, type_size, false);
         }
     case VALUE_TYPE_CONST_ADD: {
             ir_value_const_math_t *const_add = (ir_value_const_math_t*) value->extra;
@@ -591,8 +591,8 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             if(((ir_instr_math_t*) instr)->a->type->kind == TYPE_KIND_POINTER){
                 LLVMValueRef val_a = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
                 LLVMValueRef val_b = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b);
-                val_a = LLVMBuildPtrToInt(builder, val_a, LLVMInt64Type(), "");
-                val_b = LLVMBuildPtrToInt(builder, val_b, LLVMInt64Type(), "");
+                val_a = LLVMBuildPtrToInt(builder, val_a, llvm->i64_type, "");
+                val_b = LLVMBuildPtrToInt(builder, val_b, llvm->i64_type, "");
                 llvm_result = LLVMBuildAdd(builder, val_a, val_b, "");
                 llvm_result = LLVMBuildIntToPtr(builder, llvm_result, ir_to_llvm_type(llvm, ((ir_instr_math_t*) instr)->a->type), "");
                 catalog->blocks[b].value_references[i] = llvm_result;
@@ -613,8 +613,8 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             if(((ir_instr_math_t*) instr)->a->type->kind == TYPE_KIND_POINTER){
                 LLVMValueRef val_a = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
                 LLVMValueRef val_b = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b);
-                val_a = LLVMBuildPtrToInt(builder, val_a, LLVMInt64Type(), "");
-                val_b = LLVMBuildPtrToInt(builder, val_b, LLVMInt64Type(), "");
+                val_a = LLVMBuildPtrToInt(builder, val_a, llvm->i64_type, "");
+                val_b = LLVMBuildPtrToInt(builder, val_b, llvm->i64_type, "");
                 llvm_result = LLVMBuildSub(builder, val_a, val_b, "");
                 llvm_result = LLVMBuildIntToPtr(builder, llvm_result, ir_to_llvm_type(llvm, ((ir_instr_math_t*) instr)->a->type), "");
                 catalog->blocks[b].value_references[i] = llvm_result;
@@ -963,10 +963,10 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 case TYPE_KIND_U16: zero = LLVMConstInt(LLVMInt16Type(), 0, false); break;
                 case TYPE_KIND_S32: zero = LLVMConstInt(LLVMInt32Type(), 0, true); break;
                 case TYPE_KIND_U32: zero = LLVMConstInt(LLVMInt32Type(), 0, false); break;
-                case TYPE_KIND_S64: zero = LLVMConstInt(LLVMInt64Type(), 0, true); break;
-                case TYPE_KIND_U64: zero = LLVMConstInt(LLVMInt64Type(), 0, false); break;
+                case TYPE_KIND_S64: zero = LLVMConstInt(llvm->i64_type, 0, true); break;
+                case TYPE_KIND_U64: zero = LLVMConstInt(llvm->i64_type, 0, false); break;
                 case TYPE_KIND_FLOAT: zero = LLVMConstReal(LLVMFloatType(), 0); break;
-                case TYPE_KIND_DOUBLE: zero = LLVMConstReal(LLVMDoubleType(), 0); break;
+                case TYPE_KIND_DOUBLE: zero = LLVMConstReal(llvm->f64_type, 0); break;
                 case TYPE_KIND_BOOLEAN: zero = LLVMConstInt(LLVMInt1Type(), 0, false); break;
                 case TYPE_KIND_FUNCPTR:
                 case TYPE_KIND_POINTER: zero = LLVMConstNull(ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->value->type)); break;
@@ -1006,13 +1006,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
         case INSTRUCTION_SIZEOF: {
                 instr = instructions[i];
                 length_t type_size = LLVMABISizeOfType(llvm->data_layout, ir_to_llvm_type(llvm, ((ir_instr_sizeof_t*) instr)->type));
-                catalog->blocks[b].value_references[i] = LLVMConstInt(LLVMInt64Type(), type_size, false);
+                catalog->blocks[b].value_references[i] = LLVMConstInt(llvm->i64_type, type_size, false);
             }
             break;
         case INSTRUCTION_OFFSETOF: {
                 instr = instructions[i];
                 unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(llvm, ((ir_instr_offsetof_t*) instr)->type), ((ir_instr_offsetof_t*) instr)->index);
-                catalog->blocks[b].value_references[i] = LLVMConstInt(LLVMInt64Type(), offset, false);
+                catalog->blocks[b].value_references[i] = LLVMConstInt(llvm->i64_type, offset, false);
             }
             break;
         case INSTRUCTION_ZEROINIT: {
@@ -1046,15 +1046,15 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                             LLVMTypeRef arg_types[4];
                             arg_types[0] = LLVMPointerType(LLVMInt8Type(), 0);
                             arg_types[1] = LLVMInt8Type();
-                            arg_types[2] = LLVMInt64Type();
+                            arg_types[2] = llvm->i64_type;
                             arg_types[3] = LLVMInt1Type();
 
                             LLVMTypeRef memset_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
                             *memset_intrinsic = LLVMAddFunction(llvm->module, "llvm.memset.p0i8.i64", memset_intrinsic_type);
                         }
 
-                        LLVMValueRef per_item_size = LLVMConstInt(LLVMInt64Type(), LLVMABISizeOfType(llvm->data_layout, ty), false);
-                        count = LLVMBuildZExt(llvm->builder, count, LLVMInt64Type(), "");
+                        LLVMValueRef per_item_size = LLVMConstInt(llvm->i64_type, LLVMABISizeOfType(llvm->data_layout, ty), false);
+                        count = LLVMBuildZExt(llvm->builder, count, llvm->i64_type, "");
 
                         LLVMValueRef args[4];
                         args[0] = LLVMBuildBitCast(llvm->builder, allocated, LLVMPointerType(LLVMInt8Type(), 0), "");
@@ -1081,7 +1081,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                     LLVMTypeRef arg_types[4];
                     arg_types[0] = LLVMPointerType(LLVMInt8Type(), 0);
                     arg_types[1] = LLVMPointerType(LLVMInt8Type(), 0);
-                    arg_types[2] = LLVMInt64Type();
+                    arg_types[2] = llvm->i64_type;
                     arg_types[3] = LLVMInt1Type();
 
                     LLVMTypeRef memcpy_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
@@ -1472,6 +1472,15 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.relocation_list.unrelocated = NULL;
     llvm.relocation_list.length = 0;
     llvm.relocation_list.capacity = 0;
+
+    if(llvm.compiler->cross_compile_for == CROSS_COMPILE_WASM32){
+        // Use 32-bit types in place of 64-bit types for WASM32
+        llvm.i64_type = LLVMInt32Type();
+        llvm.f64_type = LLVMDoubleType(); 
+    } else {
+        llvm.i64_type = LLVMInt64Type();
+        llvm.f64_type = LLVMFloatType();
+    }
 
     expand((void**) &llvm.static_globals, sizeof(llvm_static_global_t), llvm.static_globals_length, &llvm.static_globals_capacity, object->ir_module.static_variables_length, 4);
 

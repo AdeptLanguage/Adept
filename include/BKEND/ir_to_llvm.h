@@ -92,6 +92,9 @@ typedef struct {
     LLVMBasicBlockRef static_globals_initialization_post;
     LLVMValueRef static_globals_deinitialization_function;
     LLVMBasicBlockRef boot;
+
+    LLVMTypeRef i64_type;
+    LLVMTypeRef f64_type;
 } llvm_context_t;
 
 // ---------------- ir_to_llvm_type ----------------
