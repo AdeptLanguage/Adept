@@ -1473,14 +1473,8 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     llvm.relocation_list.length = 0;
     llvm.relocation_list.capacity = 0;
 
-    if(llvm.compiler->cross_compile_for == CROSS_COMPILE_WASM32){
-        // Use 32-bit types in place of 64-bit types for WASM32
-        llvm.i64_type = LLVMInt32Type();
-        llvm.f64_type = LLVMDoubleType(); 
-    } else {
-        llvm.i64_type = LLVMInt64Type();
-        llvm.f64_type = LLVMFloatType();
-    }
+    llvm.i64_type = LLVMInt64Type();
+    llvm.f64_type = LLVMDoubleType();
 
     expand((void**) &llvm.static_globals, sizeof(llvm_static_global_t), llvm.static_globals_length, &llvm.static_globals_capacity, object->ir_module.static_variables_length, 4);
 

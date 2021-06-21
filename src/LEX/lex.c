@@ -469,6 +469,9 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 } else if(tmp == '-' && !lex_state.can_exp && lex_state.can_exp_neg){
                     exp_exception = true;
                     lex_state.can_exp_neg = false;
+                } else if (tmp == '+' && !lex_state.can_exp && lex_state.can_exp_neg){
+                    exp_exception = true;
+                    lex_state.can_exp_neg = false;
                 }
             }
             

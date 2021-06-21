@@ -320,6 +320,11 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                     return FAILURE;
                 }
 
+                if(infer_in_stmts(ctx, func, loop->after.statements, loop->after.length, scope)){
+                    infer_var_scope_pop(ctx->compiler, &scope);
+                    return FAILURE;
+                }
+
                 if(loop->condition && infer_expr(ctx, func, &loop->condition, EXPR_NONE, scope, false)) return FAILURE;
 
                 if(infer_in_stmts(ctx, func, loop->statements.statements, loop->statements.length, scope)){
@@ -796,7 +801,7 @@ found_constant:
     // Clone expression of named constant expression
     *expr = ast_expr_clone(constant->expression);
     if(infer_expr_inner(ctx, ast_func, (ast_expr_t**) expr, undetermined, scope, false)) return FAILURE;
-    
+
     return SUCCESS;
 
 found_variable:

@@ -16,6 +16,7 @@ MEDIUM-PRIORITY:
     ```
 * negate '-' operator
 * 'repeat' loops with custom 'idx' name
+* 'break default' to break to default condition of switch statement
 
 LOW-PRIORITY:
 * Finish 'Any'
