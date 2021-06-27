@@ -199,6 +199,10 @@ void show_help(bool show_advanced_options);
 // Displays program version information
 void show_version(compiler_t *compiler);
 
+// ---------------- show_root ----------------
+// Displays root folder information
+void show_root(compiler_t *compiler);
+
 // ---------------- compiler_get_string ----------------
 // Gets the string identifier of the compiler
 strong_cstr_t compiler_get_string();

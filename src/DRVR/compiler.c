@@ -440,6 +440,9 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(strcmp(argv[arg_index], "-v") == 0 || strcmp(argv[arg_index], "--version") == 0){
                 show_version(compiler);
                 return FAILURE;
+            } else if (strcmp(argv[arg_index], "--root") == 0){
+                show_root(compiler);
+                return FAILURE;
             } else if(strcmp(argv[arg_index], "--no-undef") == 0){
                 compiler->traits |= COMPILER_NO_UNDEF;
             } else if(strcmp(argv[arg_index], "--no-type-info") == 0 || strcmp(argv[arg_index], "--no-typeinfo") == 0){
@@ -722,6 +725,7 @@ void show_help(bool show_advanced_options){
         printf("    --fussy           Show insignificant warnings\n");
 
     printf("    --version         Display compiler version\n");
+    printf("    --root            Display root folder\n");
     printf("    --help-advanced   Show lesser used compiler flags\n");
 
     if(show_advanced_options){
@@ -811,6 +815,10 @@ void show_version(compiler_t *compiler){
     free(compiler_string);
     free(import_location);
     free(stdlib_location);
+}
+
+void show_root(compiler_t *compiler){
+    printf("%s\n", compiler->root);
 }
 
 strong_cstr_t compiler_get_string(){
