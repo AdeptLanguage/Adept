@@ -35,6 +35,11 @@ errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *in
 // Parses a single anonymous composite field of a composite
 errorcode_t parse_anonymous_composite(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint);
 
+// ------------------ parse_struct_is_function_like_beginning ------------------
+// Returns whether a token is used as the beginning of a function-like declaration
+// (Used for automatic transition from struct fields to struct domain)
+bool parse_struct_is_function_like_beginning(tokenid_t token);
+
 #ifdef __cplusplus
 }
 #endif

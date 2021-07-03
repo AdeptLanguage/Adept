@@ -15,8 +15,9 @@ MEDIUM-PRIORITY:
     )
     ```
 * negate '-' operator
-* 'repeat' loops with custom 'idx' name
+* 'each-in' loops with custom 'idx' name
 * 'break default' to break to default condition of switch statement
+* nodiscard
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -36,6 +37,7 @@ v2.5 COMPLETED:
 + anonymous structures and unions
 + typenameof expression
 + embed
++ 'repeat' loops with custom 'idx' name
 
 v2.4 COMPLETED:
 + Standard Library Imports

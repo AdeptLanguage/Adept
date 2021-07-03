@@ -19,6 +19,8 @@ void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object){
     ctx->allow_polymorphic_prereqs = false;
     ctx->next_builtin_traits = TRAIT_NONE;
     ctx->prename = NULL;
+    ctx->struct_closer = TOKEN_CLOSE;
+    ctx->struct_closer_char = ')';
 }
 
 void parse_ctx_fork(parse_ctx_t *ctx, object_t *new_object, parse_ctx_t *out_ctx_fork){

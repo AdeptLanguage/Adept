@@ -46,6 +46,10 @@ typedef struct {
 
     // Experimental pre-naming syntax
     maybe_null_strong_cstr_t prename;
+
+    // Token ID required to close struct definition
+    tokenid_t struct_closer;
+    char struct_closer_char;
 } parse_ctx_t;
 
 // ------------------ parse_ctx_init ------------------

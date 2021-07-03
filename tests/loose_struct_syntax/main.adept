@@ -1,0 +1,61 @@
+
+import basics
+import Vector2f
+
+struct Parent (q, w, e usize)
+
+// Demonstrating previous syntax "errors" that
+// for struct declarations that are now acceptable
+struct Thing (
+    struct Parent
+    i int // Missing comma at end of line allowed
+    d double
+    , f float // Unnecessary preceeding comma allowed
+    x, y, z float
+    a
+    b
+    c byte // Combining fields of same type using implicit-commas allowed
+    d ubyte
+    message String, // Trailing comma allowed
+)
+
+struct Person {
+    firstname, lastname String
+    age int
+
+    // Also guess what, automatically transitioning from struct fields
+    // to struct domain is allowed, even when 'verbatim' is used as the trigger
+
+    verbatim func __defer__ {
+        this.firstname.__defer__()
+        this.lastname.__defer__()
+    }
+
+    func set(firstname, lastname String, age int) {
+        this.firstname = firstname
+        this.lastname = lastname
+        this.age = age
+    }
+
+    func print {
+        printf("%S %S is %d years old!\n", this.firstname, this.lastname, this.age)
+    }
+}
+
+struct NoCommasExample (
+    display_name String
+    health int
+    powerups <String> List
+    position
+    velocity Vector2f
+)
+
+func main {
+    print(sizeof Thing)
+    print(sizeof NoCommasExample)
+    print(sizeof Person)
+
+    person Person
+    person.set("Isaac", "Shelton", 19)
+    person.print()
+}

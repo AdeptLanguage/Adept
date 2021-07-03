@@ -58,16 +58,25 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     }
 
     // Look for start of struct domain and set it up if it exists
-    length_t scan_i = *ctx->i + 1;
-    while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
-        scan_i++;
-    
-    if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
-        ctx->composite_association = (ast_polymorphic_composite_t*) domain;
-        *ctx->i = scan_i;
+    if(parse_struct_is_function_like_beginning(ctx->tokenlist->tokens[*ctx->i].id)){
+        ctx->composite_association = (ast_polymorphic_composite_t *)domain;
+        *ctx->i -= 1;
+    } else {
+        length_t scan_i = *ctx->i + 1;
+        while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
+            scan_i++;
+
+        if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
+            ctx->composite_association = (ast_polymorphic_composite_t*) domain;
+            *ctx->i = scan_i;
+        }
     }
 
     return SUCCESS;
+}
+
+bool parse_struct_is_function_like_beginning(tokenid_t token){
+    return token == TOKEN_FUNC || token == TOKEN_VERBATIM;
 }
 
 errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length){
@@ -153,10 +162,15 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
-    if(parse_ignore_newlines(ctx, "Expected '(' after composite name")
-    || parse_eat(ctx, TOKEN_OPEN, "Expected '(' after composite name")){
+    if(parse_ignore_newlines(ctx, "Expected '(' or '{' after composite name")) return FAILURE;
+
+    if(tokens[*i].id != TOKEN_OPEN && tokens[*i].id != TOKEN_BEGIN){
+        compiler_panic(ctx->compiler, sources[*i], "Expected '(' or '{' after composite name");
         return FAILURE;
     }
+
+    ctx->struct_closer = tokens[(*i)++].id == TOKEN_OPEN ? TOKEN_CLOSE : TOKEN_END;
+    ctx->struct_closer_char = ctx->struct_closer == TOKEN_CLOSE ? ')' : '}';
 
     ast_field_map_init(out_field_map);
     ast_layout_skeleton_init(out_skeleton);
@@ -165,19 +179,39 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
     ast_layout_endpoint_t next_endpoint;
     ast_layout_endpoint_init_with(&next_endpoint, (uint16_t[]){0}, 1);
 
-    while(tokens[*i].id != TOKEN_CLOSE || backfill != 0){
+    while((tokens[*i].id != ctx->struct_closer && !parse_struct_is_function_like_beginning(tokens[*i].id)) || backfill != 0){
+        // Be lenient with unnecessary preceeding commas
+        if(tokens[*i].id == TOKEN_NEXT){
+            (*i)++;
+        }
+
+        // Parse field
         if(parse_ignore_newlines(ctx, "Expected name of field")
-        || parse_composite_field(ctx, out_field_map, out_skeleton, &backfill, &next_endpoint)
-        || parse_ignore_newlines(ctx, "Expected ')' or ',' after field")){
+        || parse_composite_field(ctx, out_field_map, out_skeleton, &backfill, &next_endpoint)){
+            goto failure;
+        }
+
+        // Handle whitespace
+        bool auto_comma = tokens[*i].id == TOKEN_NEWLINE;
+        if(parse_ignore_newlines(ctx, ctx->struct_closer_char == ')' ? "Expected ')' or ',' after field" : "Expected '}' or ',' after field")){
             goto failure;
         }
 
         if(tokens[*i].id == TOKEN_NEXT){
-            if(tokens[++(*i)].id == TOKEN_CLOSE){
-                compiler_panic(ctx->compiler, sources[*i], "Expected field name and type after ',' in field list");
+            // Handle ',' token 
+            (*i)++;
+
+            if(parse_ignore_newlines(ctx, ctx->struct_closer_char == ')' ? "Expected ')' before end-of-file" : "Expected '}' before end-of-file")){
                 goto failure;
             }
-        } else if(tokens[*i].id != TOKEN_CLOSE){
+
+            // Allow for unnecessary tailing comma when closing
+            tokenid_t ending = tokens[*i].id;
+            if(ending == ctx->struct_closer || parse_struct_is_function_like_beginning(ending)){
+                break;
+            }
+        } else if(tokens[*i].id != ctx->struct_closer && !parse_struct_is_function_like_beginning(tokens[*i].id) && !auto_comma){
+            // Expect closing ')' unless auto comma activated
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' after field name and type");
             goto failure;
         }
@@ -229,7 +263,9 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
     ast_field_map_add(inout_field_map, field_name, *inout_next_endpoint);
     ast_layout_endpoint_increment(inout_next_endpoint);
 
-    if(tokens[*i].id == TOKEN_NEXT){
+    if(tokens[*i].id == TOKEN_NEXT || tokens[*i].id == TOKEN_NEWLINE){
+        // This field is part of a field list where all the fields have the same type,
+        // and the type is specified at the end
         (*inout_backfill)++;
         return SUCCESS;
     }
