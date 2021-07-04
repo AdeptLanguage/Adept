@@ -102,6 +102,7 @@ typedef struct compiler {
     trait_t ignore;
     troolean use_pic;          // Generate using PIC relocation model
     bool use_libm;             // Link to libm using '-lm'
+    bool extract_import_order;   // Parse file to extract order of all imported files
     
     #ifdef ENABLE_DEBUG_FEATURES
     trait_t debug_traits;      // COMPILER_DEBUG_* options
@@ -128,6 +129,8 @@ typedef struct compiler {
     strong_cstr_t *user_search_paths;
     length_t user_search_paths_length;
     length_t user_search_paths_capacity;
+
+    strong_cstr_t testcookie_solution;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00

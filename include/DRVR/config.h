@@ -28,6 +28,9 @@ typedef struct {
     strong_cstr_t stash;
     bool show_new_compiler_available;
     bool show_checking_for_updates_message;
+
+    // Hidden
+    strong_cstr_t testcookie_solution;
 } config_t;
 
 typedef struct {

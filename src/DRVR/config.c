@@ -5,6 +5,7 @@
 #include "UTIL/color.h"
 #include "UTIL/filename.h"
 #include "DRVR/config.h"
+#include "DRVR/compiler.h"
 #include <time.h>
 #include <inttypes.h>
 
@@ -141,7 +142,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
             config_update_last_updated(filename, buffer, length, maybe_last_update);
 
         download_buffer_t dlbuffer;
-        if(download_to_memory(config->stash, &dlbuffer)){
+        if(download_to_memory(config->stash, &dlbuffer, &config->testcookie_solution)){
             update_installation(config, dlbuffer);
             free(dlbuffer.bytes);
         } else {

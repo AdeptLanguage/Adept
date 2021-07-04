@@ -215,6 +215,7 @@ void compiler_init(compiler_t *compiler){
     #endif
 
     compiler->use_libm = TROOLEAN_FALSE;
+    compiler->extract_import_order = false;
 
     #ifdef ENABLE_DEBUG_FEATURES
     compiler->debug_traits = TRAIT_NONE;
@@ -234,6 +235,8 @@ void compiler_init(compiler_t *compiler){
     compiler->user_search_paths = NULL;
     compiler->user_search_paths_length = 0;
     compiler->user_search_paths_capacity = 0;
+
+    compiler->testcookie_solution = NULL;
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
@@ -488,6 +491,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->use_libm = true;
             } else if(strcmp(argv[arg_index], "--libm") == 0){
                 compiler->use_libm = true;
+            } else if(strcmp(argv[arg_index], "--extract-import-order") == 0){
+                compiler->extract_import_order = true; 
             } else if(strncmp(argv[arg_index], "-std=", 5) == 0){
                 compiler->default_stdlib = &argv[arg_index][5];
                 compiler->traits |= COMPILER_FORCE_STDLIB;

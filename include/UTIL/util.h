@@ -96,6 +96,10 @@ bool file_binary_contents(weak_cstr_t filename, strong_cstr_t *out_contents, len
 // Writes 4-spaces 'indentation_level' times to a stream
 void indent(FILE *file, length_t indentation_level);
 
+// ---------------- string_starts_with ----------------
+// Returns whether a string starts with another string
+bool string_starts_with(weak_cstr_t original, weak_cstr_t stub);
+
 #ifdef __cplusplus
 }
 #endif

@@ -321,3 +321,11 @@ void indent(FILE *file, length_t indentation_level){
         fprintf(file, "    ");
     }
 }
+
+bool string_starts_with(weak_cstr_t original, weak_cstr_t stub){
+    length_t original_length = strlen(original);
+    length_t stub_length = strlen(stub);
+
+    if(stub_length > original_length) return false;
+    return strncmp(original, stub, stub_length) == 0;
+}

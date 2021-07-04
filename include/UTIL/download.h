@@ -27,12 +27,17 @@ typedef struct {
 
 // ---------------- download ----------------
 // Downloads a file, returns whether successful
-successful_t download(weak_cstr_t url, weak_cstr_t destination);
+successful_t download(weak_cstr_t url, weak_cstr_t destination, weak_cstr_t testcookie_solution);
 
 // ---------------- download_to_memory ----------------
 // Downloads a file into memory, returns whether successful
 // NOTE: If successful, out_memory->buffer must be freed by the caller
-successful_t download_to_memory(weak_cstr_t url, download_buffer_t *out_memory);
+// NOTE: 'testcookie_solution' can be NULL
+successful_t download_to_memory(weak_cstr_t url, download_buffer_t *out_memory, strong_cstr_t *testcookie_solution);
+
+// ---------------- testcookie_extract_precursors ----------------
+// Extracts testcookie solution precursors from testcookie challenge
+successful_t testcookie_extract_precursors(download_buffer_t *memory, uint8_t problem[], uint8_t key[], uint8_t iv[]);
 
 #endif // ADEPT_ENABLE_PACKAGE_MANAGER
 

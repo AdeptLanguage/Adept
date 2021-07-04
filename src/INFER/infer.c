@@ -12,6 +12,14 @@
 errorcode_t infer(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
 
+    if(compiler->extract_import_order){
+        for(length_t i = 0; i < compiler->objects_length; i++){
+            printf("%s\n", compiler->objects[i]->full_filename);
+        }
+        compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+        return ALT_FAILURE;
+    }
+
     infer_ctx_t ctx;
     ctx.compiler = compiler;
     ctx.object = object;
