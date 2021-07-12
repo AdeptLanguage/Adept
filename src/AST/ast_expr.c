@@ -508,11 +508,11 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
 
                 if(i != 0){
                     expand((void**) &compound, sizeof(char), compound_length, &compound_capacity, 3, 256);
-                    memcpy(&compound[compound_length], " ,", 3);
-                    compound_length += 3;
+                    memcpy(&compound[compound_length], ", ", 3);
+                    compound_length += 2;
                 }
 
-                expand((void**) &compound, sizeof(char), compound_length, &compound_capacity, 1, 256);
+                expand((void**) &compound, sizeof(char), compound_length, &compound_capacity, s_length + 1, 256);
                 memcpy(&compound[compound_length], s, s_length + 1);
                 compound_length += s_length;
 

@@ -17,7 +17,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list
     ast_func_t *ast_func = &object->ast.funcs[mapping->ast_func_id];
 
     if((ast_func->traits & mask) == req_traits && func_args_match(ast_func, arg_types, arg_types_length)){
-        result->ast_func = ast_func;
+        result->ast_func = ast_func; // DANGEROUS: Relying on 'ast_func' not having been changed
         result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
         result->ast_func_id = mapping->ast_func_id;
         result->ir_func_id = mapping->ir_func_id;
@@ -34,7 +34,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list
         if(mapping->is_beginning_of_group == 1) goto couldnt_find_suitable_function;
 
         if((ast_func->traits & mask) == req_traits && func_args_match(ast_func, arg_types, arg_types_length)){
-            result->ast_func = ast_func;
+            result->ast_func = ast_func; // DANGEROUS: Relying on 'ast_func' not having been changed
             result->ir_func = &object->ir_module.funcs[mapping->ir_func_id];
             result->ast_func_id = mapping->ast_func_id;
             result->ir_func_id = mapping->ir_func_id;
@@ -106,31 +106,36 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
     if(gives && gives->elements_length == 0) gives = NULL;
 
     if(index != -1){
-        ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
-        ast_func_t *ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
+        // DANGEROUS: We must not store a pointer to 'ir_module->func_mappings', since the mappings may be relocated/adjusted
+        // by 'funcs_arg_conform'
+        // By copying it onto the stack, we avoid having to constantly refresh the pointer to the mapping (or forgetting to do so)
+        ir_func_mapping_t mapping = ir_module->func_mappings[index];
+        ast_func_t *ast_func = &builder->object->ast.funcs[mapping.ast_func_id];
 
         if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-            result->ast_func = ast_func;
-            result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
-            result->ast_func_id = mapping->ast_func_id;
-            result->ir_func_id = mapping->ir_func_id;
+            // DANGEROUS: Since 'ast_func' may have been moved, we must recalculate where it is based on its 'ast_func_id'
+            result->ast_func = &builder->object->ast.funcs[mapping.ast_func_id];
+            result->ir_func = &builder->object->ir_module.funcs[mapping.ir_func_id];
+            result->ast_func_id = mapping.ast_func_id;
+            result->ir_func_id = mapping.ir_func_id;
             return SUCCESS;
         }
 
         while((length_t) ++index != ir_module->func_mappings_length){
-            mapping = &ir_module->func_mappings[index];
-            ast_func = &builder->object->ast.funcs[mapping->ast_func_id];
+            mapping = ir_module->func_mappings[index];
+            ast_func = &builder->object->ast.funcs[mapping.ast_func_id];
 
-            if(mapping->is_beginning_of_group == -1){
-                mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
+            if(mapping.is_beginning_of_group == -1){
+                mapping.is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping.name, ir_module->func_mappings[index - 1].name) != 0);
             }
-            if(mapping->is_beginning_of_group == 1) break;
+            if(mapping.is_beginning_of_group == 1) break;
 
             if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-                result->ast_func = ast_func;
-                result->ir_func = &builder->object->ir_module.funcs[mapping->ir_func_id];
-                result->ast_func_id = mapping->ast_func_id;
-                result->ir_func_id = mapping->ir_func_id;
+                // DANGEROUS: Since 'ast_func' may have been moved, we must recalculate where it is based on its 'ast_func_id'
+                result->ast_func = &builder->object->ast.funcs[mapping.ast_func_id];
+                result->ir_func = &builder->object->ir_module.funcs[mapping.ir_func_id];
+                result->ast_func_id = mapping.ast_func_id;
+                result->ir_func_id = mapping.ir_func_id;
                 return SUCCESS;
             }
         }
@@ -350,7 +355,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
             if(method->is_beginning_of_group == 1) break;
 
             if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-                result->ast_func = ast_func;
+                result->ast_func = &builder->object->ast.funcs[method->ast_func_id];
                 result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
                 result->ast_func_id = method->ast_func_id;
                 result->ir_func_id = method->ir_func_id;
@@ -445,7 +450,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
         ast_func_t *ast_func = &builder->object->ast.funcs[method->ast_func_id];
 
         if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-            result->ast_func = ast_func;
+            result->ast_func = &builder->object->ast.funcs[method->ast_func_id];
             result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
             result->ast_func_id = method->ast_func_id;
             result->ir_func_id = method->ir_func_id;
@@ -462,7 +467,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
             if(method->is_beginning_of_group == 1) break;
 
             if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-                result->ast_func = ast_func;
+                result->ast_func = &builder->object->ast.funcs[method->ast_func_id];
                 result->ir_func = &builder->object->ir_module.funcs[method->ir_func_id];
                 result->ast_func_id = method->ast_func_id;
                 result->ir_func_id = method->ir_func_id;

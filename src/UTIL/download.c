@@ -17,7 +17,7 @@ successful_t download(weak_cstr_t url, weak_cstr_t destination, weak_cstr_t test
         FILE *f = fopen(destination, "wb");
         if(f == NULL) return false;
 
-        struct curl_slist_t *list = NULL;
+        struct curl_slist *list = NULL;
 
         // DANGEROUS: TODO: REMOVE THIS / FIND SOLUTION
         if(testcookie_solution){
