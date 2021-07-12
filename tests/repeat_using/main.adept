@@ -1,0 +1,11 @@
+
+import basics
+
+func main {
+    repeat 10 using x_idx {
+        repeat 10 using y_idx {
+            place(x_idx == y_idx ? " x " : " - ")
+        }
+        newline()
+    }
+}
