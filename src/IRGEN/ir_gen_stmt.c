@@ -1271,8 +1271,6 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
                 printf("(given element type : '%s', array element type : '%s')\n", s1, s2);
                 free(s1);
                 free(s2);
-
-                ast_type_free(&temporary_type);
                 goto failure;
             }
 
