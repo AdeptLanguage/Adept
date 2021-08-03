@@ -25,17 +25,13 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     // NOTE: Returns an allocated string representation of the expression
     // TODO: CLEANUP: Cleanup this messy code
 
-    char *representation, *a, *b;
+    char *representation;
 
     switch(expr->id){
     case EXPR_BYTE:
         return int8_to_string(((ast_expr_byte_t*) expr)->value, "sb");
     case EXPR_UBYTE:
-        // Do special serialization for ubytes, since most of the time it
-        // makes more sense to print them as hexadecimal instead of base 10
-        representation = malloc(7);
-        sprintf(representation, "0x%02Xub", (unsigned int) ((ast_expr_ubyte_t*) expr)->value);
-        return representation;
+        return ast_expr_ubyte_to_str((ast_expr_ubyte_t*) expr);
     case EXPR_SHORT:
         return int16_to_string(((ast_expr_short_t*) expr)->value, "ss");
     case EXPR_USHORT:
@@ -64,63 +60,8 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         return strclone("null");
     case EXPR_STR:
         return string_to_escaped_string(((ast_expr_str_t*) expr)->array, ((ast_expr_str_t*) expr)->length, '"');
-    case EXPR_CSTR: {
-            char *string_data = ((ast_expr_cstr_t*) expr)->value;
-            length_t string_data_length = strlen(string_data);
-            length_t put_index = 1;
-            length_t special_characters = 0;
-
-            for(length_t s = 0; s != string_data_length; s++){
-                if(string_data[s] <= 0x1F || string_data[s] == '\\') special_characters++;
-            }
-
-            representation = malloc(string_data_length + special_characters + 3);
-            representation[0] = '\'';
-
-            for(length_t c = 0; c != string_data_length; c++){
-                if(string_data[c] > 0x1F && string_data[c] != '\\') representation[put_index++] = string_data[c];
-                else {
-                    switch(string_data[c]){
-                    case '\n':
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = 'n';
-                        break;
-                    case '\r':
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = 'r';
-                        break;
-                    case '\t':
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = 't';
-                        break;
-                    case '\b':
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = 'b';
-                        break;
-                    case '\e':
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = 'e';
-                        break;
-                    case '\'':
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = '\'';
-                        break;
-                    case '\\':
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = '\\';
-                        break;
-                    default:
-                        representation[put_index++] = '\\';
-                        representation[put_index++] = '?';
-                        break;
-                    }
-                }
-            }
-
-            representation[put_index++] = '\'';
-            representation[put_index++] = '\0';
-            return representation;
-        }
+    case EXPR_CSTR:
+        return ast_expr_cstr_to_str((ast_expr_cstr_t*) expr);
     case EXPR_ADD:
     case EXPR_SUBTRACT:
     case EXPR_MULTIPLY:
@@ -141,78 +82,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_BIT_RSHIFT:
     case EXPR_BIT_LGC_LSHIFT:
     case EXPR_BIT_LGC_RSHIFT:
-        a = ast_expr_str(((ast_expr_math_t*) expr)->a);
-        b = ast_expr_str(((ast_expr_math_t*) expr)->b);
-
-        // No optimal for speed, but reduces code redundancy
-        switch(expr->id){
-        case EXPR_ADD:
-            representation = mallocandsprintf("(%s + %s)", a, b);
-            break;
-        case EXPR_SUBTRACT:
-            representation = mallocandsprintf("(%s - %s)", a, b);
-            break;
-        case EXPR_MULTIPLY:
-            representation = mallocandsprintf("(%s * %s)", a, b);
-            break;
-        case EXPR_DIVIDE:
-            representation = mallocandsprintf("(%s / %s)", a, b);
-            break;
-        case EXPR_MODULUS:
-            representation = mallocandsprintf("(%s %% %s)", a, b);
-            break;
-        case EXPR_EQUALS:
-            representation = mallocandsprintf("(%s == %s)", a, b);
-            break;
-        case EXPR_NOTEQUALS:
-            representation = mallocandsprintf("(%s != %s)", a, b);
-            break;
-        case EXPR_GREATER:
-            representation = mallocandsprintf("(%s > %s)", a, b);
-            break;
-        case EXPR_LESSER:
-            representation = mallocandsprintf("(%s < %s)", a, b);
-            break;
-        case EXPR_GREATEREQ:
-            representation = mallocandsprintf("(%s >= %s)", a, b);
-            break;
-        case EXPR_LESSEREQ:
-            representation = mallocandsprintf("(%s <= %s)", a, b);
-            break;
-        case EXPR_AND:
-            representation = mallocandsprintf("(%s && %s)", a, b);
-            break;
-        case EXPR_OR:
-            representation = mallocandsprintf("(%s || %s)", a, b);
-            break;
-        case EXPR_BIT_AND:
-            representation = mallocandsprintf("(%s & %s)", a, b);
-            break;
-        case EXPR_BIT_OR:
-            representation = mallocandsprintf("(%s | %s)", a, b);
-            break;
-        case EXPR_BIT_XOR:
-            representation = mallocandsprintf("(%s ^ %s)", a, b);
-            break;
-        case EXPR_BIT_LSHIFT:
-            representation = mallocandsprintf("(%s << %s)", a, b);
-            break;
-        case EXPR_BIT_RSHIFT:
-            representation = mallocandsprintf("(%s >> %s)", a, b);
-            break;
-        case EXPR_BIT_LGC_LSHIFT:
-            representation = mallocandsprintf("(%s <<< %s)", a, b);
-            break;
-        case EXPR_BIT_LGC_RSHIFT:
-            representation = mallocandsprintf("(%s >>> %s)", a, b);
-            break;
-        default:
-            representation = mallocandsprintf("(%s ¿ %s)", a, b);
-        }
-
-        free(a);
-        free(b);
-        return representation;
+        return ast_expr_math_to_str((ast_expr_math_t*) expr);
     case EXPR_CALL: {
             // CLEANUP: This code is kinda scrappy, but hey it works
 
@@ -568,6 +438,113 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     }
 
     return NULL; // Should never be reached
+}
+
+strong_cstr_t ast_expr_ubyte_to_str(ast_expr_ubyte_t *ubyte_expr){
+    // Converts a literal ubyte expression into a human-readable string
+    // ast_expr_ubyte_t   --->   "0x0Aub"
+
+    strong_cstr_t result = malloc(7);
+    sprintf(result, "0x%02Xub", (unsigned int) ubyte_expr->value);
+    return result;
+}
+
+strong_cstr_t ast_expr_cstr_to_str(ast_expr_cstr_t *cstr_expr){
+    // Converts a literal c-string expression into a human-readable string
+    // ast_expr_cstr_t   --->   "'Hello World'"
+
+    // Raw contents and length of contents of c-string
+    char *contents = cstr_expr->value;
+    length_t contents_length = strlen(contents);
+
+    // Next index into local buffer to write characters into
+    length_t put_index = 1;
+
+    // Number of characters in raw string that will need to be escaped
+    length_t special_characters = 0;
+
+    // Count number of characters in c-string that will need
+    // to be escaped
+    for(length_t i = 0; i != contents_length; i++)
+        if(contents[i] <= 0x1F || contents[i] == '\\')
+            special_characters++;
+
+    // Allocate space for stringified result
+    strong_cstr_t result = malloc(contents_length + special_characters + 3);
+
+    // First character in result is always '\''
+    result[0] = '\'';
+
+    for(length_t c = 0; c != contents_length; c++){
+        // If the it's a normal character, just copy it into the result buffer
+        if(contents[c] > 0x1F && contents[c] != '\\'){
+            result[put_index++] = contents[c];
+            continue;
+        }
+        
+        // Otherwise, write the corresponding escape sequence
+        result[put_index++] = '\\';
+
+        switch(contents[c]){
+        case '\n': result[put_index++] = 'n';  break;
+        case '\r': result[put_index++] = 'r';  break;
+        case '\t': result[put_index++] = 't';  break;
+        case '\b': result[put_index++] = 'b';  break;
+        case '\e': result[put_index++] = 'e';  break;
+        case '\'': result[put_index++] = '\''; break;
+        case '\\': result[put_index++] = '\\'; break;
+        default:   result[put_index++] = '?';  break;
+        }
+    }
+
+    // Last character in result is always '\''
+    result[put_index++] = '\'';
+
+    // And we must terminate it, since we plan on using it as a null-terminated string
+    result[put_index++] = '\0';
+
+    // Return ownership of allocated result buffer
+    return result;
+}
+
+strong_cstr_t ast_expr_math_to_str(ast_expr_math_t *expr){
+    strong_cstr_t a = ast_expr_str(expr->a);
+    strong_cstr_t b = ast_expr_str(expr->b);
+    strong_cstr_t operator = NULL;
+
+    switch(expr->id){
+    case EXPR_ADD:            operator = "+";  break;
+    case EXPR_SUBTRACT:       operator = "-";  break;
+    case EXPR_MULTIPLY:       operator = "*";  break;
+    case EXPR_DIVIDE:         operator = "/";  break;
+    case EXPR_MODULUS:        operator = "%%"; break;
+    case EXPR_EQUALS:         operator = "=="; break;
+    case EXPR_NOTEQUALS:      operator = "!="; break;
+    case EXPR_GREATER:        operator = ">";  break;
+    case EXPR_LESSER:         operator = "<";  break;
+    case EXPR_GREATEREQ:      operator = ">="; break;
+    case EXPR_LESSEREQ:       operator = "<="; break;
+    case EXPR_AND:            operator = "&&"; break;
+    case EXPR_OR:             operator = "||"; break;
+    case EXPR_BIT_AND:        operator = "&";  break;
+    case EXPR_BIT_OR:         operator = "|";  break;
+    case EXPR_BIT_XOR:        operator = "^";  break;
+    case EXPR_BIT_LSHIFT:     operator = "<<"; break;
+    case EXPR_BIT_RSHIFT:     operator = ">>"; break;
+    case EXPR_BIT_LGC_LSHIFT: operator = "<<<"; break;
+    case EXPR_BIT_LGC_RSHIFT: operator = ">>>"; break;
+    default:                  operator = "¿";
+    }
+
+    // Create string representation for math expression
+    strong_cstr_t result = mallocandsprintf("(%s %s %s)", a, operator, b);
+
+    // Free temporary heap-allocated string representations of operands
+    free(a);
+    free(b);
+
+    // Return ownership of allocated result C-string
+    return result;
 }
 
 void ast_expr_free(ast_expr_t *expr){

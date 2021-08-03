@@ -713,6 +713,11 @@ bool expr_is_mutable(ast_expr_t *expr);
 // Generates a c-string given an AST expression
 strong_cstr_t ast_expr_str(ast_expr_t *expr);
 
+// (specific implementations)
+strong_cstr_t ast_expr_ubyte_to_str(ast_expr_ubyte_t *ubyte_expr);
+strong_cstr_t ast_expr_cstr_to_str(ast_expr_cstr_t *cstr_expr);
+strong_cstr_t ast_expr_math_to_str(ast_expr_math_t *expr);
+
 // ---------------- ast_expr_free ----------------
 // Frees data within an AST expression
 void ast_expr_free(ast_expr_t *expr);

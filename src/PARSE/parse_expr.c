@@ -565,7 +565,7 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
             break;
         }
 
-        int operator_precedence =  parse_get_precedence(operator);
+        int operator_precedence = parse_get_precedence(operator);
         if(operator_precedence < precedence || keep_mutable) return SUCCESS;
 
         #define BUILD_MATH_EXPR_MACRO(new_built_expr_id) { \

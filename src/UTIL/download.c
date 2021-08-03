@@ -116,7 +116,7 @@ successful_t download_to_memory(weak_cstr_t url, download_buffer_t *out_memory, 
                 hex_solution[i * 2] = hexcode[solution[i] / 16];
                 hex_solution[i * 2 + 1]  = hexcode[solution[i] % 16];
             }
-            hex_solution[33] = '\0';
+            hex_solution[32] = '\0';
 
             *testcookie_solution = mallocandsprintf("Cookie: __test=%s", hex_solution);
             free(out_memory->bytes);
