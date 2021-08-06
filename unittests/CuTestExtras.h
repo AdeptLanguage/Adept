@@ -3,7 +3,7 @@
 #define _ISAAC_CUTEST_EXTRAS_H_INCLUDED
 
 #include "CuTest.h"
-
+#include "UTIL/ground.h"
 
 #define CuAssertIntEquals_Msgf(tc,ms,ex,ac, ...) { \
     strong_cstr_t message_tmp = mallocandsprintf((ms), __VA_ARGS__); \

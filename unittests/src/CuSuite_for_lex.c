@@ -1,6 +1,7 @@
 
-#include "CuTest.h"
-#include "CuTestExtras.h"
+#include "../CuTest.h"
+#include "../CuTestExtras.h"
+
 #include "UTIL/ground.h"
 #include "UTIL/util.h"
 #include "DRVR/compiler.h"

@@ -295,13 +295,13 @@ else
 endif
 	$(CC) $(CFLAGS) $< -o $@
 
-unittests/obj/all.o: unittests/all.c unittests/all.h
-	$(CC) -c unittests/all.c -Iinclude -o unittests/obj/all.o
+unittests/obj/all.o: unittests/src/all.c unittests/src/all.h
+	$(CC) -c unittests/src/all.c -Iinclude -o unittests/obj/all.o
 
 unittests/obj/CuTest.o: unittests/CuTest.c unittests/CuTest.h
 	$(CC) -c unittests/CuTest.c -Iinclude -o unittests/obj/CuTest.o
 
-$(SUITE_OBJECTS): unittests/obj/%.o : unittests/src/%.c
+$(SUITE_OBJECTS): unittests/obj/%.o : unittests/src/%.c unittests/CuTestExtras.h
 ifeq ($(OS), Windows_NT)
 	@if not exist unittests\obj mkdir unittests\obj
 endif

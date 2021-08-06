@@ -1,6 +1,7 @@
 
+#include "../CuTest.h"
+
 #include <stdio.h>
-#include "CuTest.h"
 #include "all.h"
 
 int main(){

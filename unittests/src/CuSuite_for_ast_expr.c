@@ -1,5 +1,6 @@
 
-#include "CuTest.h"
+#include "../CuTest.h"
+
 #include "UTIL/ground.h"
 #include "UTIL/util.h"
 #include "AST/ast_expr.h"
