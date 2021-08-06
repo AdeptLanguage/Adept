@@ -252,9 +252,8 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             *out_expr = (ast_expr_t*) va_arg_expr;
         }
         break;
-    case TOKEN_BEGIN: {
-            if(parse_expr_initlist(ctx, out_expr)) return FAILURE;
-        }
+    case TOKEN_BEGIN:
+        if(parse_expr_initlist(ctx, out_expr)) return FAILURE;
         break;
     case TOKEN_POLYCOUNT: {
             ast_expr_polycount_t *polycount_expr = malloc(sizeof(ast_expr_polycount_t));
@@ -305,6 +304,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
+    // TODO: CLEANUP: Clean up this messy code
     while(true){
         switch(tokens[*i].id){
         case TOKEN_BRACKET_OPEN: {
@@ -487,11 +487,136 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
     return SUCCESS;
 }
 
+static errorcode_t parse_rhs_expr_into_math(parse_ctx_t *ctx, ast_expr_t **inout_left,
+        unsigned int expr_kind, int op_prec, source_t source){
+    
+    // (lhs expression) + (rhs expression)
+    //                  ^
+    
+    // Parse right hand side of math operation (operator will be skipped over in procedure)
+    ast_expr_t *right;
+    if(parse_rhs_expr(ctx, inout_left, &right, op_prec)) return FAILURE;
+
+    // Build math expression
+    ast_expr_math_t *expr = malloc(sizeof(ast_expr_math_t));
+    expr->id = expr_kind;
+    expr->a = *inout_left;
+    expr->b = right;
+    expr->source = source;
+
+    // Overwrite "left hand side" of expression to be the newly
+    // constructed math expression
+    *inout_left = (ast_expr_t*) expr;
+    return SUCCESS;
+}
+
+static tokenid_t parse_expr_has_terminating_token(tokenid_t id){
+    // If the given token is an expression terminating token, it will be returned,
+    // Otherwise TOKEN_NONE (value of 0) will be returned
+
+    // NOTE: DANGEROUS: Must be sorted, modify with caution
+    static const int terminators[] = {
+        TOKEN_WORD,               // 0x00000001
+        TOKEN_ASSIGN,             // 0x00000008
+        TOKEN_CLOSE,              // 0x00000011
+        TOKEN_BEGIN,              // 0x00000012
+        TOKEN_END,                // 0x00000013
+        TOKEN_NEWLINE,            // 0x00000014
+        TOKEN_NEXT,               // 0x00000022
+        TOKEN_BRACKET_CLOSE,      // 0x00000024
+        TOKEN_ADD_ASSIGN,         // 0x00000028
+        TOKEN_SUBTRACT_ASSIGN,    // 0x00000029
+        TOKEN_MULTIPLY_ASSIGN,    // 0x0000002A
+        TOKEN_DIVIDE_ASSIGN,      // 0x0000002B
+        TOKEN_MODULUS_ASSIGN,     // 0x0000002C
+        TOKEN_BIT_AND_ASSIGN,     // 0x0000002D
+        TOKEN_BIT_OR_ASSIGN,      // 0x0000002E
+        TOKEN_BIT_XOR_ASSIGN,     // 0x0000002F
+        TOKEN_BIT_LS_ASSIGN,      // 0x00000030
+        TOKEN_BIT_RS_ASSIGN,      // 0x00000031
+        TOKEN_BIT_LGC_LS_ASSIGN,  // 0x00000032 
+        TOKEN_BIT_LGC_RS_ASSIGN,  // 0x00000033
+        TOKEN_TERMINATE_JOIN,     // 0x00000037
+        TOKEN_COLON,              // 0x00000038
+
+        TOKEN_BREAK,              // 0x00000055
+        TOKEN_CONTINUE,           // 0x00000059
+        TOKEN_DEFER,              // 0x0000005C
+        TOKEN_DELETE,             // 0x0000005D
+        TOKEN_EACH,               // 0x0000005A
+        TOKEN_ELSE,               // 0x0000005E
+        TOKEN_EXHAUSTIVE,         // 0x00000061
+        TOKEN_FOR,                // 0x00000065
+        TOKEN_IF,                 // 0x0000006A
+        TOKEN_REPEAT,             // 0x00000077
+        TOKEN_RETURN,             // 0x00000078
+        TOKEN_SWITCH,             // 0x0000007D
+        TOKEN_UNLESS,             // 0x00000083
+        TOKEN_UNTIL,              // 0x00000084
+        TOKEN_USING,              // 0x00000085
+        TOKEN_VA_ARG,             // 0x00000086
+        TOKEN_VA_END,             // 0x00000087
+        TOKEN_VA_START,           // 0x00000089
+        TOKEN_WHILE,              // 0x0000008B
+    };
+
+    // Terminate operator expression portion if termination operator encountered
+    if(-1 == binary_int_search(terminators, sizeof(terminators) / sizeof(int), id)){
+        return TOKEN_NONE;
+    } else {
+        return id;
+    }
+}
+
+static errorcode_t parse_expr_ternary(parse_ctx_t *ctx, ast_expr_t **inout_condition, source_t source){
+    // DANGEROUS:
+    // NOTE: When first invoked, 'inout_expr' shall be a pointer to the "condition" expression.
+    // If this function returns SUCCESS, 'inout_expr' will be overwritten to be a ternary expression
+    // that has ownership of the condition.
+    // When this function returns FAILURE, the condition, (*inout_condition), will be disposed of before
+    // control resumes to the calling function.
+
+    // Skip over '?'
+    (*ctx->i)++;
+
+    // Allow newlines between '?' and when true expression
+    if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
+    
+    // Parse the "when true" expression
+    ast_expr_t *expr_a;
+    if(parse_expr(ctx, &expr_a)) return FAILURE;
+
+    // Allow newlines between when true expression and ':'
+    if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
+
+    // Expect ':'
+    if(ctx->tokenlist->tokens[(*ctx->i)++].id != TOKEN_COLON){
+        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Ternary operator expected ':' after expression");
+        ast_expr_free_fully(*inout_condition);
+        ast_expr_free_fully(expr_a);
+        return FAILURE;
+    }
+
+    // Allow newlines between ':' and when false expression
+    if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
+
+    // Parse the "when false" expression
+    ast_expr_t *expr_b;
+    if(parse_expr(ctx, &expr_b)){
+        ast_expr_free_fully(*inout_condition);
+        ast_expr_free_fully(expr_a);
+        return FAILURE;
+    }
+
+    // Construct and yield ternary expression
+    ast_expr_create_ternary(inout_condition, *inout_condition, expr_a, expr_b, source);
+    return SUCCESS;
+}
+
 errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_left, bool keep_mutable){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
-    ast_expr_t *right, *expr;
 
     while(*i != ctx->tokenlist->length) {
         int operator;
@@ -501,146 +626,100 @@ errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_l
         while(true){
             operator = tokens[*i].id;
             source = sources[*i];
-            
-            // NOTE: Must be sorted
-            static const int op_termination_tokens[] = {
-                TOKEN_WORD,               // 0x00000001
-                TOKEN_ASSIGN,             // 0x00000008
-                TOKEN_CLOSE,              // 0x00000011
-                TOKEN_BEGIN,              // 0x00000012
-                TOKEN_END,                // 0x00000013
-                TOKEN_NEWLINE,            // 0x00000014
-                TOKEN_NEXT,               // 0x00000022
-                TOKEN_BRACKET_CLOSE,      // 0x00000024
-                TOKEN_ADD_ASSIGN,         // 0x00000028
-                TOKEN_SUBTRACT_ASSIGN,    // 0x00000029
-                TOKEN_MULTIPLY_ASSIGN,    // 0x0000002A
-                TOKEN_DIVIDE_ASSIGN,      // 0x0000002B
-                TOKEN_MODULUS_ASSIGN,     // 0x0000002C
-                TOKEN_BIT_AND_ASSIGN,     // 0x0000002D
-                TOKEN_BIT_OR_ASSIGN,      // 0x0000002E
-                TOKEN_BIT_XOR_ASSIGN,     // 0x0000002F
-                TOKEN_BIT_LS_ASSIGN,      // 0x00000030
-                TOKEN_BIT_RS_ASSIGN,      // 0x00000031
-                TOKEN_BIT_LGC_LS_ASSIGN,  // 0x00000032 
-                TOKEN_BIT_LGC_RS_ASSIGN,  // 0x00000033
-                TOKEN_TERMINATE_JOIN,     // 0x00000037
-                TOKEN_COLON,              // 0x00000038
 
-                TOKEN_BREAK,              // 0x00000055
-                TOKEN_CONTINUE,           // 0x00000059
-                TOKEN_DEFER,              // 0x0000005C
-                TOKEN_DELETE,             // 0x0000005D
-                TOKEN_EACH,               // 0x0000005A
-                TOKEN_ELSE,               // 0x0000005E
-                TOKEN_EXHAUSTIVE,         // 0x00000061
-                TOKEN_FOR,                // 0x00000065
-                TOKEN_IF,                 // 0x0000006A
-                TOKEN_REPEAT,             // 0x00000077
-                TOKEN_RETURN,             // 0x00000078
-                TOKEN_SWITCH,             // 0x0000007D
-                TOKEN_UNLESS,             // 0x00000083
-                TOKEN_UNTIL,              // 0x00000084
-                TOKEN_USING,              // 0x00000085
-                TOKEN_VA_ARG,             // 0x00000086
-                TOKEN_VA_END,             // 0x00000087
-                TOKEN_VA_START,           // 0x00000089
-                TOKEN_WHILE,              // 0x0000008B
-            };
+            // If there is still more to the expression, keep going
+            if(!parse_expr_has_terminating_token(operator)) break;
 
-            // Terminate operator expression portion if termination operator encountered
-            maybe_index_t op_termination = binary_int_search(op_termination_tokens, sizeof(op_termination_tokens) / sizeof(int), operator);
-            if(op_termination != -1){
-                // Always terminate if not newline
-                if(op_termination_tokens[op_termination] != TOKEN_NEWLINE) return SUCCESS;
-                
-                // Terminate for newlines if not ignoring them
-                if(ctx->ignore_newlines_in_expr_depth == 0) return SUCCESS;
+            // Otherwise...
+            // Terminate unless the termination token is a newline and
+            // we are allowing newlines within an existing expression
+            if(operator != TOKEN_NEWLINE) return SUCCESS;
+            if(ctx->ignore_newlines_in_expr_depth == 0) return SUCCESS;
 
-                // Otherwise skip over newlines
-                if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
-                continue;
-            }
-
-            break;
+            // We are allowing this newline since it is within an existing
+            // expression. Ignore it and and any immediately following newlines
+            if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
+            continue;
         }
 
-        int operator_precedence = parse_get_precedence(operator);
-        if(operator_precedence < precedence || keep_mutable) return SUCCESS;
-
-        #define BUILD_MATH_EXPR_MACRO(new_built_expr_id) { \
-            if(parse_rhs_expr(ctx, inout_left, &right, operator_precedence)) return FAILURE; \
-            expr = malloc(sizeof(ast_expr_math_t)); \
-            ((ast_expr_math_t*) expr)->id = new_built_expr_id; \
-            ((ast_expr_math_t*) expr)->a = *inout_left; \
-            ((ast_expr_math_t*) expr)->b = right; \
-            ((ast_expr_math_t*) expr)->source = source; \
-            *inout_left = expr; \
-        }
+        int op_prec = parse_get_precedence(operator);
+        if(op_prec < precedence || keep_mutable) return SUCCESS;
 
         switch(operator){
-        case TOKEN_ADD:            BUILD_MATH_EXPR_MACRO(EXPR_ADD);            break;
-        case TOKEN_SUBTRACT:       BUILD_MATH_EXPR_MACRO(EXPR_SUBTRACT);       break;
-        case TOKEN_MULTIPLY:       BUILD_MATH_EXPR_MACRO(EXPR_MULTIPLY);       break;
-        case TOKEN_DIVIDE:         BUILD_MATH_EXPR_MACRO(EXPR_DIVIDE);         break;
-        case TOKEN_MODULUS:        BUILD_MATH_EXPR_MACRO(EXPR_MODULUS);        break;
-        case TOKEN_EQUALS:         BUILD_MATH_EXPR_MACRO(EXPR_EQUALS);         break;
-        case TOKEN_NOTEQUALS:      BUILD_MATH_EXPR_MACRO(EXPR_NOTEQUALS);      break;
-        case TOKEN_GREATERTHAN:    BUILD_MATH_EXPR_MACRO(EXPR_GREATER);        break;
-        case TOKEN_LESSTHAN:       BUILD_MATH_EXPR_MACRO(EXPR_LESSER);         break;
-        case TOKEN_GREATERTHANEQ:  BUILD_MATH_EXPR_MACRO(EXPR_GREATEREQ);      break;
-        case TOKEN_LESSTHANEQ:     BUILD_MATH_EXPR_MACRO(EXPR_LESSEREQ);       break;
-        case TOKEN_BIT_AND:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_AND);        break;
-        case TOKEN_BIT_OR:         BUILD_MATH_EXPR_MACRO(EXPR_BIT_OR);         break;
-        case TOKEN_BIT_XOR:        BUILD_MATH_EXPR_MACRO(EXPR_BIT_XOR);        break;
-        case TOKEN_BIT_LSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_LSHIFT);     break;
-        case TOKEN_BIT_RSHIFT:     BUILD_MATH_EXPR_MACRO(EXPR_BIT_RSHIFT);     break;
-        case TOKEN_BIT_LGC_LSHIFT: BUILD_MATH_EXPR_MACRO(EXPR_BIT_LGC_LSHIFT); break;
-        case TOKEN_BIT_LGC_RSHIFT: BUILD_MATH_EXPR_MACRO(EXPR_BIT_LGC_RSHIFT); break;
-        case TOKEN_AND:
-        case TOKEN_UBERAND:        BUILD_MATH_EXPR_MACRO(EXPR_AND);            break;
-        case TOKEN_OR:
-        case TOKEN_UBEROR:         BUILD_MATH_EXPR_MACRO(EXPR_OR);             break;
+        case TOKEN_ADD:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_ADD, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_SUBTRACT:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_SUBTRACT, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_MULTIPLY:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_MULTIPLY, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_DIVIDE:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_DIVIDE, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_MODULUS:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_MODULUS, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_EQUALS:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_EQUALS, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_NOTEQUALS:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_NOTEQUALS, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_GREATERTHAN:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_GREATER, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_LESSTHAN:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_LESSER, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_GREATERTHANEQ:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_GREATEREQ, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_LESSTHANEQ:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_LESSEREQ, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_BIT_AND:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_BIT_AND, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_BIT_OR:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_BIT_OR, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_BIT_XOR:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_BIT_XOR, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_BIT_LSHIFT:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_BIT_LSHIFT, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_BIT_RSHIFT:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_BIT_RSHIFT, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_BIT_LGC_LSHIFT:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_BIT_LGC_LSHIFT, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_BIT_LGC_RSHIFT:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_BIT_LGC_RSHIFT, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_AND: case TOKEN_UBERAND:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_AND, op_prec, source)) return FAILURE;
+            break;
+        case TOKEN_OR: case TOKEN_UBEROR:
+            if(parse_rhs_expr_into_math(ctx, inout_left, EXPR_OR, op_prec, source)) return FAILURE;
+            break;
         case TOKEN_AS:
             if(parse_expr_as(ctx, inout_left) || parse_expr_post(ctx, inout_left)) return FAILURE;
             break;
         case TOKEN_AT:
             if(parse_expr_at(ctx, inout_left) || parse_expr_post(ctx, inout_left)) return FAILURE;
             break;
-        case TOKEN_MAYBE: {
-                (*i)++;
-                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
-                
-                ast_expr_t *expr_a, *expr_b;
-                if(parse_expr(ctx, &expr_a)) return FAILURE;
-
-                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
-
-                if(tokens[(*i)++].id != TOKEN_COLON){
-                    compiler_panic(ctx->compiler, sources[*i - 1], "Ternary operator expected ':' after expression");
-                    ast_expr_free_fully(*inout_left);
-                    ast_expr_free_fully(expr_a);
-                    return FAILURE;
-                }
-
-                if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
-
-                if(parse_expr(ctx, &expr_b)){
-                    ast_expr_free_fully(*inout_left);
-                    ast_expr_free_fully(expr_a);
-                    return FAILURE;
-                }
-
-                ast_expr_create_ternary(inout_left, *inout_left, expr_a, expr_b, source);
-            }
+        case TOKEN_MAYBE:
+            if(parse_expr_ternary(ctx, inout_left, source)) return FAILURE;
             break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unrecognized operator '%s' in expression");
             ast_expr_free_fully(*inout_left);
             return FAILURE;
         }
-
-        #undef BUILD_MATH_EXPR_MACRO
     }
 
     return SUCCESS;

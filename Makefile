@@ -54,6 +54,7 @@ ifeq ($(OS), Windows_NT)
 	WIN_ICON_SRC=resource/icon.rc
 	EXECUTABLE=bin/adept.exe
 	DEBUG_EXECUTABLE=bin/adept_debug.exe
+	UNITTEST_EXECUTABLE=bin/adept_unittest.exe
 
 	# Libraries that will satisfy mingw64 on Windows
 	LLVM_LIBS=-lLLVMLTO -lLLVMPasses -lLLVMObjCARCOpts -lLLVMSymbolize -lLLVMDebugInfoPDB -lLLVMDebugInfoDWARF -lLLVMMIRParser -lLLVMFuzzMutate -lLLVMCoverage -lLLVMTableGen -lLLVMDlltoolDriver -lLLVMOrcJIT -lLLVMTestingSupport -lLLVMXCoreDisassembler -lLLVMXCoreCodeGen -lLLVMXCoreDesc -lLLVMXCoreInfo -lLLVMXCoreAsmPrinter -lLLVMSystemZDisassembler -lLLVMSystemZCodeGen -lLLVMSystemZAsmParser -lLLVMSystemZDesc -lLLVMSystemZInfo -lLLVMSystemZAsmPrinter -lLLVMSparcDisassembler -lLLVMSparcCodeGen -lLLVMSparcAsmParser -lLLVMSparcDesc -lLLVMSparcInfo -lLLVMSparcAsmPrinter -lLLVMPowerPCDisassembler -lLLVMPowerPCCodeGen -lLLVMPowerPCAsmParser -lLLVMPowerPCDesc -lLLVMPowerPCInfo -lLLVMPowerPCAsmPrinter -lLLVMNVPTXCodeGen -lLLVMNVPTXDesc -lLLVMNVPTXInfo -lLLVMNVPTXAsmPrinter -lLLVMMSP430CodeGen -lLLVMMSP430Desc -lLLVMMSP430Info -lLLVMMSP430AsmPrinter -lLLVMMipsDisassembler -lLLVMMipsCodeGen -lLLVMMipsAsmParser -lLLVMMipsDesc -lLLVMMipsInfo -lLLVMMipsAsmPrinter -lLLVMLanaiDisassembler -lLLVMLanaiCodeGen -lLLVMLanaiAsmParser -lLLVMLanaiDesc -lLLVMLanaiAsmPrinter -lLLVMLanaiInfo -lLLVMHexagonDisassembler -lLLVMHexagonCodeGen -lLLVMHexagonAsmParser -lLLVMHexagonDesc -lLLVMHexagonInfo -lLLVMBPFDisassembler -lLLVMBPFCodeGen -lLLVMBPFAsmParser -lLLVMBPFDesc -lLLVMBPFInfo -lLLVMBPFAsmPrinter -lLLVMARMDisassembler -lLLVMARMCodeGen -lLLVMARMAsmParser -lLLVMARMDesc -lLLVMARMInfo -lLLVMARMAsmPrinter -lLLVMARMUtils -lLLVMAMDGPUDisassembler -lLLVMAMDGPUCodeGen -lLLVMAMDGPUAsmParser -lLLVMAMDGPUDesc -lLLVMAMDGPUInfo -lLLVMAMDGPUAsmPrinter -lLLVMAMDGPUUtils -lLLVMAArch64Disassembler -lLLVMAArch64CodeGen -lLLVMAArch64AsmParser -lLLVMAArch64Desc -lLLVMAArch64Info -lLLVMAArch64AsmPrinter -lLLVMAArch64Utils -lLLVMObjectYAML -lLLVMLibDriver -lLLVMOption -lgtest_main -lgtest -lLLVMWindowsManifest -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMGlobalISel -lLLVMSelectionDAG -lLLVMAsmPrinter -lLLVMX86Desc -lLLVMMCDisassembler -lLLVMX86Info -lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCJIT -lLLVMLineEditor -lLLVMInterpreter -lLLVMExecutionEngine -lLLVMRuntimeDyld -lLLVMCodeGen -lLLVMTarget -lLLVMCoroutines -lLLVMipo -lLLVMInstrumentation -lLLVMVectorize -lLLVMScalarOpts -lLLVMLinker -lLLVMIRReader -lLLVMAsmParser -lLLVMInstCombine -lLLVMBitWriter -lLLVMAggressiveInstCombine -lLLVMTransformUtils -lLLVMAnalysis -lLLVMProfileData -lLLVMObject -lLLVMMCParser -lLLVMMC -lLLVMDebugInfoCodeView -lLLVMDebugInfoMSF -lLLVMBitReader -lLLVMCore -lLLVMBinaryFormat -lLLVMSupport -lLLVMDemangle -lz -lpsapi -lshell32 -lole32 -luuid -ladvapi32
@@ -66,6 +67,7 @@ else
 	LINKER=$(UNIX_CXX)
 	EXECUTABLE=bin/adept
 	DEBUG_EXECUTABLE=bin/adept_debug
+	UNITTEST_EXECUTABLE=bin/adept_unittest
 	UNAME_S := $(shell uname -s)
 
 	ifeq ($(UNAME_S),Darwin)
@@ -115,10 +117,10 @@ ifeq ($(DEBUG_ADDRESS_SANITIZE),true)
 	LDFLAGS+= -fsanitize=address,undefined
 endif
 
-SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c \
+ESSENTIAL_SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c \
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c \
 	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
-	src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c \
+	src/DRVR/config.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c \
 	src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir.c src/IR/ir_lowering.c \
 	src/IRGEN/ir_builder.c src/IRGEN/ir_cache.c src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c \
 	src/IRGEN/ir_gen_rtti.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
@@ -129,13 +131,19 @@ SOURCES= src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c \
 	src/UTIL/aes.c src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c \
 	src/UTIL/memory.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
+SOURCES= $(ESSENTIAL_SOURCES) src/DRVR/main.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
 OBJDIR=obj
 OBJECTS=$(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
+ESSENTIAL_OBJECTS=$(ESSENTIAL_SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/debug/%.o)
 DEBUG_OBJECTS=$(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/debug/%.o) $(ADDITIONAL_DEBUG_SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/debug/%.o)
+SUITE_NAMES=CuSuite_for_ast_expr.c CuSuite_for_lex.c
+SUITE_SOURCES=$(SUITE_NAMES:%.c=unittests/src/%.c)
+SUITE_OBJECTS=$(SUITE_SOURCES:unittests/src/%.c=unittests/obj/%.o)
 
 release: $(SOURCES) $(EXECUTABLE)
+test: $(ESSENTIAL_SOURCES) $(UNITTEST_EXECUTABLE) unittest
 
 debug: $(SOURCES) $(ADDITIONAL_DEBUG_SOURCES) $(DEBUG_EXECUTABLE)
 
@@ -263,10 +271,18 @@ ifeq ($(OS), Windows_NT)
 $(EXECUTABLE): $(OBJECTS) $(WIN_ICON)
 	@if not exist bin mkdir bin
 	$(LINKER) $(LDFLAGS) $(OBJECTS) $(WIN_ICON) $(LIBCURL_LIBS) $(LLVM_LIBS) -o $@
+
+$(UNITTEST_EXECUTABLE): $(ESSENTIAL_OBJECTS) obj/debug/DRVR/debug.o $(SUITE_OBJECTS) unittests/obj/all.o unittests/obj/CuTest.o
+	@if not exist bin mkdir bin
+	$(LINKER) $(LDFLAGS) $(ESSENTIAL_OBJECTS) obj/debug/DRVR/debug.o $(SUITE_OBJECTS) unittests/obj/all.o unittests/obj/CuTest.o $(LIBCURL_LIBS) $(LLVM_LIBS) -o $@
 else
 $(EXECUTABLE): $(OBJECTS)
 	@mkdir -p bin
 	$(LINKER) $(LDFLAGS) $(OBJECTS) $(LIBCURL_LIBS) $(LLVM_LIBS) -o $@
+
+$(UNITTEST_EXECUTABLE): $(ESSENTIAL_OBJECTS) obj/debug/DRVR/debug.o $(SUITE_OBJECTS) unittests/obj/all.o unittests/obj/CuTest.o
+	@mkdir -p bin
+	$(LINKER) $(LDFLAGS) $(ESSENTIAL_OBJECTS) obj/debug/DRVR/debug.o $(SUITE_OBJECTS) unittests/obj/all.o unittests/obj/CuTest.o $(LIBCURL_LIBS) $(LLVM_LIBS) -o $@
 endif
 
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
@@ -278,6 +294,18 @@ else
 	@mkdir -p "$(@D)"
 endif
 	$(CC) $(CFLAGS) $< -o $@
+
+unittests/obj/all.o: unittests/all.c unittests/all.h
+	$(CC) -c unittests/all.c -Iinclude -o unittests/obj/all.o
+
+unittests/obj/CuTest.o: unittests/CuTest.c unittests/CuTest.h
+	$(CC) -c unittests/CuTest.c -Iinclude -o unittests/obj/CuTest.o
+
+$(SUITE_OBJECTS): unittests/obj/%.o : unittests/src/%.c
+ifeq ($(OS), Windows_NT)
+	@if not exist unittests\obj mkdir unittests\obj
+endif
+	$(CC) $(CFLAGS) $< -I"unittests" -o $@
 
 ifeq ($(OS), Windows_NT)
 $(DEBUG_EXECUTABLE): $(DEBUG_OBJECTS) $(WIN_ICON)
@@ -308,6 +336,7 @@ ifeq ($(OS), Windows_NT)
 	@del obj\*.* /S /Q 1> nul 2>&1
 	@del bin\adept.exe /S /Q 1> nul 2>&1
 	@del bin\adept_debug.exe /S /Q 1> nul 2>&1
+	@del unittests\obj\*.* /S /Q 1> nul 2>&1
 else
 	@find . -name "*.o" -type f -delete 2> /dev/null
 	@rm -rf 2> /dev/null bin/adept
@@ -320,6 +349,9 @@ ifeq ($(OS), Windows_NT)
 else
 	@rm -rf $(INSIGHT_OUT_DIR)
 endif
+
+unittest:
+	$(UNITTEST_EXECUTABLE)
 
 generate:
 	python3 include/TOKEN/generate_c.py

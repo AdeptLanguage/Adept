@@ -86,7 +86,7 @@ void freestrs(strong_cstr_t *array, length_t length){
 }
 
 char *mallocandsprintf(const char *format, ...){
-    // TODO: Add support for things other then '%s' and '%%'
+    // TODO: Add support for things other then '%s', '%d', and '%%'
     char *destination = NULL;
     va_list args;
     va_list transverse;
@@ -102,6 +102,9 @@ char *mallocandsprintf(const char *format, ...){
                 break;
             case 's':
                 size += strlen(va_arg(transverse, char*));
+                break;
+            case 'd':
+                size += 16; // 16 characters should be enough to hold int under all circumstances
                 break;
             default:
                 internalwarningprintf("mallocandsprintf() received non %%s in format\n");
@@ -162,15 +165,17 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length, char escape
     return string;
 }
 
+#ifdef ADEPT_INSIGHT
+// (insight only)
 bool string_needs_escaping(weak_cstr_t string, char escaped_quote){
-    // Count number of special characters (\n, \t, \b, etc.)
+    // Look though string to see if there are any special characters (\n, \t, \b, etc.) that need escaping
     for(; *string; string++){
         if(*string <= 0x1F || *string == '\\' || (*string == escaped_quote && escaped_quote)) return true;
     }
 
     return false;
 }
-
+#endif // ADEPT_INSIGHT
 
 length_t string_count_character(weak_cstr_t string, length_t length, char character){
     length_t count = 0;

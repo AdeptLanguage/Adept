@@ -1,8 +1,10 @@
 adept
 adept_debug
+adept_unittest
 adept.exe
 adept_debug.exe
 obj/*
+obj
 bin/*
 MyMakefile
 OriginalMakefile

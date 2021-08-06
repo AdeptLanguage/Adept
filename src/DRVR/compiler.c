@@ -198,6 +198,7 @@ bool handle_package_management(compiler_t *compiler, int argc, char **argv){
 
 void compiler_init(compiler_t *compiler){
     compiler->location = NULL;
+    compiler->root = NULL;
     compiler->objects = malloc(sizeof(object_t*) * 4);
     compiler->objects_length = 0;
     compiler->objects_capacity = 4;
@@ -537,10 +538,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             }
             
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
-            else if(strcmp(argv[arg_index], "--run-tests") == 0){
-                run_debug_tests();
-                return 1;
-            } else if(strcmp(argv[arg_index], "--stages") == 0){
+            else if(strcmp(argv[arg_index], "--stages") == 0){
                 compiler->debug_traits |= COMPILER_DEBUG_STAGES;
             } else if(strcmp(argv[arg_index], "--dump") == 0){
                 compiler->debug_traits |= COMPILER_DEBUG_DUMP;
@@ -766,7 +764,6 @@ void show_help(bool show_advanced_options){
     #ifdef ENABLE_DEBUG_FEATURES
     printf("--------------------------------------------------\n");
     printf("Debug Exclusive Options:\n");
-    printf("    --run-tests       Test compiler infrastructure\n");
     printf("    --stages          Announce major compilation stages\n");
     printf("    --dump            Dump AST, IAST, & IR to files\n");
     printf("    --llvmir          Show generated LLVM representation\n");

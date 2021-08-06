@@ -50,10 +50,10 @@ strong_cstr_t strclone(const char *src);
 void freestrs(strong_cstr_t *array, length_t length);
 
 // ---------------- mallocandsprintf ----------------
-// NOTE: Only supports using '%s' and '%%'
-// Allocates an array capable of holding the result
+// NOTE: Only supports using '%s', '%d', and '%%'
+// Allocates enough memory to hold the result
 // of a sprintf() and then runs sprintf() and
-// returns the byte array
+// returns the newly-allocated null-termianted string
 strong_cstr_t mallocandsprintf(const char *format, ...);
 
 // ---------------- string_to_escaped_string ----------------
@@ -62,10 +62,16 @@ strong_cstr_t mallocandsprintf(const char *format, ...);
 // and surrounds the string with double quotes
 // NOTE: 'escaped_quote' may be 0x00 to signify no surrounding quote character
 strong_cstr_t string_to_escaped_string(char *array, length_t length, char escaped_quote);
+
+// ---------------- string_needs_escaping ----------------
+// (insight API only)
+// Returns whether a string contains characters that need escaping
+#ifdef ADEPT_INSIGHT
 bool string_needs_escaping(weak_cstr_t string, char escaped_quote);
+#endif // ADEPT_INSIGHT
 
 // ---------------- string_count_character ----------------
-// Returns the number of occurances of 'character' in modern
+// Returns the number of occurrences of 'character' in modern
 // string 'string' of 'length'
 length_t string_count_character(weak_cstr_t string, length_t length, char character);
 

@@ -139,9 +139,6 @@ extern "C" {
 
 #define MAX_AST_EXPR EXPR_DECLARE_CONSTANT
 
-// Static data that stores general expression syntax representations
-extern const char *global_expression_rep_table[];
-
 // ---------------- ast_expr_t ----------------
 // General purpose struct for an expression
 typedef struct {
@@ -312,7 +309,7 @@ typedef struct {
     source_t source;
     ast_expr_t *value;
 } ast_expr_unary_t, ast_expr_address_t, ast_expr_dereference_t, ast_expr_bitwise_complement_t, ast_expr_not_t,
-    ast_expr_negate_t, ast_expr_delete_t, ast_expr_toggle_t, ast_expr_va_start_t, ast_expr_va_end_t;
+    ast_expr_negate_t, ast_expr_delete_t, ast_expr_toggle_t, ast_expr_va_start_t, ast_expr_va_end_t, ast_expr_sizeof_value_t;
 
 // ---------------- ast_expr_new_t ----------------
 // Expression for 'new' keyword, used to dynamically
@@ -423,7 +420,7 @@ typedef struct {
     length_t match_args_length;
     trait_t traits;
     bool tentative;
-    bool has_match_args; // Indicates whether name-only
+    bool has_match_args; // Indicates whether name-only or not (since just because match_args == NULL doesn't name-only)
 } ast_expr_func_addr_t;
 
 // ---------------- ast_expr_array_access_t ----------------
@@ -452,14 +449,6 @@ typedef struct {
     source_t source;
     ast_type_t type;
 } ast_expr_sizeof_t;
-
-// ---------------- ast_expr_sizeof_value_t ----------------
-// Expression for getting the size of a type
-typedef struct {
-    unsigned int id;
-    source_t source;
-    ast_expr_t *value;
-} ast_expr_sizeof_value_t;
 
 // ---------------- ast_expr_phantom_t ----------------
 // Expression for passing precomputed ir_value_t values into AST expressions
@@ -712,11 +701,6 @@ bool expr_is_mutable(ast_expr_t *expr);
 // ---------------- ast_expr_str ----------------
 // Generates a c-string given an AST expression
 strong_cstr_t ast_expr_str(ast_expr_t *expr);
-
-// (specific implementations)
-strong_cstr_t ast_expr_ubyte_to_str(ast_expr_ubyte_t *ubyte_expr);
-strong_cstr_t ast_expr_cstr_to_str(ast_expr_cstr_t *cstr_expr);
-strong_cstr_t ast_expr_math_to_str(ast_expr_math_t *expr);
 
 // ---------------- ast_expr_free ----------------
 // Frees data within an AST expression

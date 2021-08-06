@@ -21,35 +21,17 @@
 #define DEBUG_SIGNAL_AT_LINKING            0x0A // data = NULL
 
 #ifdef ENABLE_DEBUG_FEATURES
+    #include "DRVR/compiler.h"
 
-#include "DRVR/compiler.h"
+    // ---------------- debug_signal(compiler, signal, data) ----------------
+    // Sends a signal to this debugging module
+    #define debug_signal(a, b, c) handle_debug_signal(a, b, c);
 
-// ---------------- debug_signal(compiler, signal, data) ----------------
-// Sends a signal to this debugging module
-#define debug_signal(a, b, c) handle_debug_signal(a, b, c);
-
-// ---------------- run_debug_tests ----------------
-// Runs debug tests
-void run_debug_tests();
-
-// ---------------- handle_debug_signal ----------------
-// Implementation of 'debug_signal'
-void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data);
-
-// ---------------- ast_expr_tests ----------------
-// Runs the AST expression debug tests
-bool ast_expr_tests();
-
-// ---------------- rep_table_tests ----------------
-// Tests the token and AST expression representation tables
-bool rep_table_tests();
-
-// ---------------- rep_table_tests ----------------
-// Tests the IR lowering utilities
-bool ir_lowering_tests();
-
+    // ---------------- handle_debug_signal ----------------
+    // Implementation of 'debug_signal'
+    void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data);
 #else
-#define debug_signal(a, b, c) ((void) 0)
+    #define debug_signal(a, b, c) ((void) 0)
 #endif // ENABLE_DEBUG_FEATURES
 
 #endif // _ISAAC_DEBUG_H
