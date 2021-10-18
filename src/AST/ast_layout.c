@@ -286,6 +286,7 @@ bool ast_layout_bone_has_polymorph(ast_layout_bone_t *bone){
     default:
         internalerrorprintf("ast_layout_bone_has_polymorph() got unknown bone kind\n");
     }
+    return false;
 }
 
 strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *field_map, ast_layout_endpoint_t endpoint){

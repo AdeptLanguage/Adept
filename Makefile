@@ -3,7 +3,7 @@
 # Whether to include support for built-in adept package manager
 # NOTE: Requires libcurl fields to be filled out
 # NOTE: Default is 'true'
-ENABLE_ADEPT_PACKAGE_MANAGER=true
+ENABLE_ADEPT_PACKAGE_MANAGER=false
 
 # --------------------------- Change These Values ---------------------------
 # NOTE: For Windows, ensure mingw32-make.exe uses cmd.exe for shell
@@ -336,7 +336,7 @@ ifeq ($(OS), Windows_NT)
 	@del obj\*.* /S /Q 1> nul 2>&1
 	@del bin\adept.exe /S /Q 1> nul 2>&1
 	@del bin\adept_debug.exe /S /Q 1> nul 2>&1
-	@del unittests\obj\*.* /S /Q 1> nul 2>&1
+	@if exist unittests\obj @del unittests\obj\*.* /S /Q 1> nul 2>&1
 else
 	@find . -name "*.o" -type f -delete 2> /dev/null
 	@rm -rf 2> /dev/null bin/adept

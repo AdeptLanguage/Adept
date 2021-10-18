@@ -1090,7 +1090,6 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
         switch(elem->id){
         case AST_ELEM_BASE: {
                 weak_cstr_t base = ((ast_elem_base_t*) elem)->base;
-                ast_composite_t *composite;
 
                 if(strcmp(base, "void") == 0 && type->elements_length > 1 && e != 0 && type->elements[e - 1]->id == AST_ELEM_POINTER){
                     // Substitute '*void' with 'ptr'
@@ -1132,8 +1131,6 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                     free(cloned.elements);
                     continue; // Don't do normal stuff that follows
                 }
-
-                composite = ast_composite_find_exact(ctx->ast, base);
             }
             break;
         case AST_ELEM_FUNC:
@@ -1143,11 +1140,6 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
             if(infer_type(ctx, ((ast_elem_func_t*) elem)->return_type)) return FAILURE;
             break;
         case AST_ELEM_GENERIC_BASE: {
-                weak_cstr_t base = ((ast_elem_generic_base_t*) elem)->name;
-                ast_polymorphic_composite_t *poly_composite;
-
-                poly_composite = ast_polymorphic_composite_find_exact(ctx->ast, base);
-
                 for(length_t a = 0; a != ((ast_elem_generic_base_t*) elem)->generics_length; a++){
                     if(infer_type(ctx, &((ast_elem_generic_base_t*) elem)->generics[a])) return FAILURE;
                 }
