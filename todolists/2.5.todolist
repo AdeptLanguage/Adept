@@ -13,11 +13,27 @@ MEDIUM-PRIORITY:
         normals /* b2_maxPolygonVertices */ 8 b2Vec2,
         count int
     )
+
+
+    struct Whatever (
+        vertices #(b2_maxPolygonVertices) b2Vec2,
+        normals #(b2_maxPolygonVertices) b2Vec2,
+        count int,
+        max_capacity #get max_capacity b2Vec2
+    )
     ```
 * negate '-' operator
 * 'each-in' loops with custom 'idx' name
+    ```
+    each object Object in objects using object_idx {
+        
+    }
+    ```
 * 'break default' to break to default condition of switch statement
 * nodiscard
+* __return__ and return POD
+* records
+* easy and consistent constructors
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -32,6 +48,8 @@ LOW-PRIORITY:
 * Unconditional blocks (like: if true {}, except with 'if true' part)
 * Specify default value arguments by name (e.g - captLoadTexturesByFieldName(this, assetsFolder: where(), approximateByDefault: true) )
 * 'adept install https://github.com/IsaacShelton/Box2D'
+* conditionless blocks
+* match/when statement or something like that
 
 v2.5 COMPLETED:
 + anonymous structures and unions

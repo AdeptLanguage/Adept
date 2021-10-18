@@ -151,7 +151,7 @@ static strong_cstr_t ast_expr_values_to_str(ast_expr_t **arg_values, length_t ar
     }
 
     // We also need one character for '\0', and also max(0, arity - 1) ','s
-    result_buffer_size += 1 + (arity <= 1 ? 0 : arity - 1);
+    result_buffer_size += 1 + (arity <= 1 ? 0 : 2 * (arity - 1));
 
     // Now that we now the required capacity,
     // Allocate buffer to store resulting string representation of value list

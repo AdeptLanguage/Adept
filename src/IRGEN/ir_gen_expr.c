@@ -745,7 +745,7 @@ errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *b
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *arg_types,
+errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *final_arg_types,
         trait_t target_traits, trait_t *target_arg_type_traits, length_t arity_without_variadic_arguments){
     
     // Handle __pass__ calls for argument values being passed
@@ -762,10 +762,10 @@ errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *buil
         memset(&padded_type_traits[arity_without_variadic_arguments], TRAIT_NONE, sizeof(trait_t) * extra_argument_count);
         
         // Use padded argument traits for functions with variable arity
-        if(handle_pass_management(builder, arg_values, arg_types, padded_type_traits, arity)) return FAILURE;
+        if(handle_pass_management(builder, arg_values, final_arg_types, padded_type_traits, arity)) return FAILURE;
     } else {
         // Otherwise no padding is required,
-        if(handle_pass_management(builder, arg_values, arg_types, target_arg_type_traits, arity)) return FAILURE;
+        if(handle_pass_management(builder, arg_values, final_arg_types, target_arg_type_traits, arity)) return FAILURE;
     }
 
     // Successfully called __pass__ for the arguments that needed it
