@@ -1,24 +1,26 @@
 cmake_minimum_required(VERSION 3.0)
 project(Adept)
 
-option(ADEPT_LINK_LLVM_STATIC "Link against LLVM using static libs" OFF)
+option(ADEPT_LINK_LLVM_STATIC "Link against LLVM using static libs" ON)
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM REQUIRED)
+find_package(CURL REQUIRED)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-include_directories(/usr/local/opt/curl/include)
-link_directories(/usr/local/opt/curl/lib)
+include_directories(${CURL_INCLUDE_DIR})
+link_directories(${CURL_LIBRARY_DIRS})
 add_definitions( -DADEPT_ENABLE_PACKAGE_MANAGER )
+
+message(STATUS "Found Curl ${CURL_LIBRARIES}")
 
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
 
 include_directories(include)
 
-add_executable(adept
+set(app_source_files
 	src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c
 	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c
@@ -35,11 +37,24 @@ add_executable(adept
 	src/UTIL/memory.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
 )
 
-if(ADEPT_LINK_LLVM_STATIC)
-	execute_process(COMMAND llvm-config --link-static --libs OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE llvm_static_libs)
-	target_link_libraries(adept ${llvm_static_libs})
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	message(STATUS "Including debug files")
+	list(APPEND app_source_files src/DRVR/debug.c)
+	add_definitions( -DENABLE_DEBUG_FEATURES )
 else()
-	target_link_libraries(adept LLVM)
+	message(STATUS "Excluding debug files")
 endif()
 
-target_link_libraries(adept curl m)
+add_executable(adept ${app_source_files})
+
+if(ADEPT_LINK_LLVM_STATIC)
+	message(STATUS "Linking against LLVM statically")
+	message(STATUS "${LLVM_LIBRARY_DIRS}/../bin/llvm-config")
+	execute_process(COMMAND ${LLVM_LIBRARY_DIRS}/../bin/llvm-config --link-static --libs OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE llvm_static_libs)
+	target_link_libraries(adept ${CURL_LIBRARIES} ${llvm_static_libs} -lldap -lpthread -lz -lcurses)
+else()
+	message(STATUS "Linking against LLVM dynamically")
+	target_link_libraries(adept ${CURL_LIBRARIES} -lLLVM)
+endif()
+
+set_target_properties(adept PROPERTIES LINKER_LANGUAGE CXX)

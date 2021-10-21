@@ -1,0 +1,29 @@
+{
+    "version": 2,
+    "configurePresets": [
+        {
+            "name": "macOS-Debug",
+            "displayName": "macOS-Debug",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm",
+                "ADEPT_LINK_LLVM_STATIC": false
+            }
+        },
+        {
+            "name": "macOS-Release",
+            "displayName": "macOS-Release",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm",
+                "ADEPT_LINK_LLVM_STATIC": false
+            }
+        }
+    ]
+}
