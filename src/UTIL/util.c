@@ -165,7 +165,7 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length, char escape
     return string;
 }
 
-#ifdef ADEPT_INSIGHT
+#ifdef ADEPT_INSIGHT_BUILD
 // (insight only)
 bool string_needs_escaping(weak_cstr_t string, char escaped_quote){
     // Look though string to see if there are any special characters (\n, \t, \b, etc.) that need escaping
@@ -175,7 +175,7 @@ bool string_needs_escaping(weak_cstr_t string, char escaped_quote){
 
     return false;
 }
-#endif // ADEPT_INSIGHT
+#endif // ADEPT_INSIGHT_BUILD
 
 length_t string_count_character(weak_cstr_t string, length_t length, char character){
     length_t count = 0;

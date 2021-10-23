@@ -66,9 +66,9 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length, char escape
 // ---------------- string_needs_escaping ----------------
 // (insight API only)
 // Returns whether a string contains characters that need escaping
-#ifdef ADEPT_INSIGHT
+#ifdef ADEPT_INSIGHT_BUILD
 bool string_needs_escaping(weak_cstr_t string, char escaped_quote);
-#endif // ADEPT_INSIGHT
+#endif // ADEPT_INSIGHT_BUILD
 
 // ---------------- string_count_character ----------------
 // Returns the number of occurrences of 'character' in modern
