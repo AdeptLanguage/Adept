@@ -764,6 +764,21 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
     // Parse the head tokens as a call expression with tentativeness allowed
     ast_expr_t *out_expr;
     errorcode_t errorcode = parse_expr_call(ctx, &out_expr, true);
+    
+    // Allow modifiers after initial call expression
+    if(errorcode == SUCCESS){
+        errorcode = parse_expr_post(ctx, &out_expr);
+
+        if(errorcode != SUCCESS){
+            ast_expr_free_fully(out_expr);
+        }
+    }
+
+    if(out_expr->id != EXPR_CALL && out_expr->id != EXPR_CALL_METHOD){
+        compiler_panicf(ctx->compiler, out_expr->source, "Expression is not a statement");
+        ast_expr_free_fully(out_expr);
+        errorcode = FAILURE;
+    }
 
     // If successful, add the expression as a statement
     if(errorcode == SUCCESS){
