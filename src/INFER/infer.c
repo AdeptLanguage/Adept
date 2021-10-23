@@ -24,6 +24,7 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     ctx.compiler = compiler;
     ctx.object = object;
     ctx.ast = ast;
+    ctx.constants_recursion_depth = 0;
 
     ast->type_table = malloc(sizeof(type_table_t));
     type_table_init(ast->type_table);
@@ -384,10 +385,16 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
     undetermined.expressions_capacity = 4;
     undetermined.solution = EXPR_NONE;
 
+    length_t previous_constants_recursion_depth = ctx->constants_recursion_depth;
+    ctx->constants_recursion_depth = 0;
+
     if(infer_expr_inner(ctx, ast_func, root, &undetermined, scope, must_be_mutable)){
+        ctx->constants_recursion_depth = previous_constants_recursion_depth;
         free(undetermined.expressions);
         return FAILURE;
     }
+
+    ctx->constants_recursion_depth = previous_constants_recursion_depth;
 
     if(undetermined.solution == EXPR_NONE){
         if(default_assigned_type == EXPR_NONE){
@@ -802,6 +809,11 @@ errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, as
 
 found_constant:
     // Constant does exist, substitute it's value
+
+    if(ctx->constants_recursion_depth++ >= 100){
+        compiler_panicf(ctx->compiler, (*expr)->source, "Recursion depth of 100 exceeded, most likely a circular definition");
+        return FAILURE;
+    }
 
     // DANGEROUS: Manually freeing variable expression
     free(*expr);

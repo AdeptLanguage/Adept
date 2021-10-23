@@ -20,6 +20,7 @@ typedef struct {
     object_t *object;
     ast_t *ast;
     type_table_t *type_table;
+    length_t constants_recursion_depth;
 } infer_ctx_t;
 
 // ---------------- infer_var_t ----------------
