@@ -51,10 +51,24 @@ if(ADEPT_LINK_LLVM_STATIC)
 	message(STATUS "Linking against LLVM statically")
 	message(STATUS "${LLVM_LIBRARY_DIRS}/../bin/llvm-config")
 	execute_process(COMMAND ${LLVM_LIBRARY_DIRS}/../bin/llvm-config --link-static --libs OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE llvm_static_libs)
-	target_link_libraries(adept ${CURL_LIBRARIES} ${llvm_static_libs} -lldap -lpthread -lz -lcurses)
+	target_link_libraries(adept ${CURL_LIBRARIES} ${llvm_static_libs} ${EXTRA_REQUIRED_LIBS})
 else()
 	message(STATUS "Linking against LLVM dynamically")
 	target_link_libraries(adept ${CURL_LIBRARIES} -lLLVM)
 endif()
 
 set_target_properties(adept PROPERTIES LINKER_LANGUAGE CXX)
+
+# Post compilation steps
+
+if(WIN32)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/windows/crt2.o DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/windows/crtbegin.o DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/windows/ld.exe DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/windows/libcurl-x64.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/windows/libgcc_s_seh-1.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/windows/libstdc++-6.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/windows/libwinpthread-1.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/necessities/adept.config DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

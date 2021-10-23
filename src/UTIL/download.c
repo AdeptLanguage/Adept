@@ -9,7 +9,7 @@
 #include "UTIL/aes.h"
 
 static size_t download_write_data_to_file(void *ptr, size_t size, size_t items, FILE *f);
-static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items, download_buffer_t *buffer);
+static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items, void *buffer_voidptr);
 
 successful_t download(weak_cstr_t url, weak_cstr_t destination, weak_cstr_t testcookie_solution){
     CURL *curl = curl_easy_init();
@@ -170,7 +170,8 @@ static size_t download_write_data_to_file(void *ptr, size_t size, size_t items, 
     return fwrite(ptr, size, items, f);
 }
 
-static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items, download_buffer_t *buffer){
+static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items, void *buffer_voidptr){
+    download_buffer_t *buffer = (download_buffer_t*) buffer_voidptr;
     length_t total_append_size = size * items;
 
     #ifdef TRACK_MEMORY_USAGE
@@ -190,7 +191,7 @@ static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items
     #endif
 
     // Append received data
-    memcpy(&(buffer->bytes[buffer->length]), ptr, total_append_size);
+    memcpy(&(((char*) buffer->bytes)[buffer->length]), ptr, total_append_size);
     buffer->length += total_append_size;
 
     // Zero terminate the buffer for good measure

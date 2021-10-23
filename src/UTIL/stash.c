@@ -4,7 +4,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#define makedir(a) _mkdir(a)
+#define makedir(a) mkdir(a)
 #else
 #include <sys/stat.h>
 #include <sys/types.h>
