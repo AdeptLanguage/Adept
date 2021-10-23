@@ -753,7 +753,7 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr){
     token_t *tokens = ctx->tokenlist->tokens;
 
     switch(tokens[*i + 1].id){
-    case TOKEN_OPEN:      return parse_expr_call(ctx, out_expr);
+    case TOKEN_OPEN:      return parse_expr_call(ctx, out_expr, false);
     case TOKEN_ASSOCIATE: return parse_expr_enum_value(ctx, out_expr);
     }
 
@@ -762,7 +762,7 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr){
     return SUCCESS;
 }
 
-errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
+errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr, bool allow_tentative){
     // NOTE: Assumes name and open token
 
     length_t *i = ctx->i;
@@ -829,7 +829,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr){
         }
     }
 
-    if(is_tentative){
+    if(is_tentative && !allow_tentative){
         compiler_panic(ctx->compiler, source, "Tentative calls cannot be used in expressions");
         ctx->ignore_newlines_in_expr_depth--;
         ast_exprs_free_fully(args, arity);

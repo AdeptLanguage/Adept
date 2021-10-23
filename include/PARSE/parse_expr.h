@@ -43,7 +43,8 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr);
 
 // ------------------ parse_expr_call ------------------
 // Parses a call expression
-errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr);
+// If 'allow_tentative' is true, then the call expression is allowed to be tentative (used for statements)
+errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr, bool allow_tentative);
 
 // ------------------ parse_expr_enum_value ------------------
 // Parses an enum value

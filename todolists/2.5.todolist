@@ -1,6 +1,7 @@
 # Overall Things for Adept 2.5
 
 HIGH-PRIORITY:
+* add '\0'ub and make sure other '\0' forms exist
 
 MEDIUM-PRIORITY:
 * alignof expression
