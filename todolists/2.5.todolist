@@ -34,6 +34,11 @@ MEDIUM-PRIORITY:
 * __return__ and return POD
 * records
 * easy and consistent constructors
+* switch over enums without enums name for each entry: idea: exhaustive switch kind using CardKind { ... }
+* @must
+* @disallow
+* @incognito
+* traits/interfaces and 'derive Thingable1, Thingable2, Thingable3 for Thing'
 
 LOW-PRIORITY:
 * Finish 'Any'
