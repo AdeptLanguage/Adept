@@ -231,6 +231,13 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     }
 
     if(ast_func->traits & AST_FUNC_MAIN){
+        if(module->common.has_main){
+            source_t source = object->ast.funcs[module->common.ast_main_id].source;
+            compiler_panic(compiler, ast_func->source, "Cannot define main function when one already exists");
+            compiler_panic(compiler, source, "Original main function defined here");
+            return FAILURE;
+        }
+        
         module->common.has_main = true;
         module->common.ast_main_id = ast_func_id;
         module->common.ir_main_id = ir_func_id;

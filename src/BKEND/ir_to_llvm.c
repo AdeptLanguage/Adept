@@ -5,6 +5,7 @@
 #include <llvm-c/Analysis.h>
 #include <llvm-c/BitWriter.h>
 #include <llvm-c/Transforms/IPO.h>
+#include <llvm/Config/llvm-config.h>
 #include <ctype.h>
 
 #include "IR/ir.h"
@@ -1299,7 +1300,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
 
                 LLVMValueRef inline_asm = LLVMGetInlineAsm(fty, asm_instr->assembly, 
                     strlen(asm_instr->assembly), asm_instr->constraints,
-                    strlen(asm_instr->constraints), asm_instr->has_side_effects, asm_instr->is_stack_align, dialect);
+                    strlen(asm_instr->constraints), asm_instr->has_side_effects, asm_instr->is_stack_align, dialect
+
+                    // TODO: Upgrade fully to LLVM 13+
+                    #if LLVM_VERSION_MAJOR >= 12
+                    , false
+                    #endif
+                );
                 
                 LLVMBuildCall(builder, inline_asm, args, asm_instr->arity, "");
                 free(args);

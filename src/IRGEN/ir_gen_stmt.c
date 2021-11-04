@@ -714,19 +714,21 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
         // Generate instructions to get initial value
         if(ir_gen_expr(working_builder, stmt->value, &initial, false, &initial_ast_type)) goto failure;
 
-        // Conform initial value to the type of the variable
-        if(!ast_types_conform(working_builder, &initial, &initial_ast_type, &stmt->type, CONFORM_MODE_ASSIGNING)){
-            char *a_type_str = ast_type_str(&initial_ast_type);
-            char *b_type_str = ast_type_str(&stmt->type);
-            compiler_panicf(primary_builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-            free(a_type_str);
-            free(b_type_str);
-            ast_type_free(&initial_ast_type);
-            goto failure;
-        }
-
         // Assign the initial value to the variable, using Plain-Old-Data assignment if enabled
         if(stmt->is_assign_pod || !handle_assign_management(working_builder, initial, &initial_ast_type, destination, &stmt->type, true)){
+            // When doing normal assignment (which is POD), ensure the new value is of the same type
+
+            // Conform initial value to the type of the variable
+            if(!ast_types_conform(working_builder, &initial, &initial_ast_type, &stmt->type, CONFORM_MODE_ASSIGNING)){
+                char *a_type_str = ast_type_str(&initial_ast_type);
+                char *b_type_str = ast_type_str(&stmt->type);
+                compiler_panicf(primary_builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+                free(a_type_str);
+                free(b_type_str);
+                ast_type_free(&initial_ast_type);
+                goto failure;
+            }
+
             build_store(working_builder, initial, destination, stmt->source);
         }
 
@@ -767,26 +769,46 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
     }
 
     // Conform "other value" to the type of the declared variable
-    if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, CONFORM_MODE_CALCULATION)){
-        char *a_type_str = ast_type_str(&other_value_type);
-        char *b_type_str = ast_type_str(&destination_type);
-        compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-        free(a_type_str);
-        free(b_type_str);
-        ast_type_free(&destination_type);
-        ast_type_free(&other_value_type);
-        return FAILURE;
-    }
+    trait_t conform_mode = assignment_kind == EXPR_ASSIGN ? CONFORM_MODE_ASSIGNING : CONFORM_MODE_CALCULATION;
 
     // Regular Assignment
     if(assignment_kind == EXPR_ASSIGN){
         if(stmt->is_pod || !handle_assign_management(builder, other_value, &other_value_type, destination, &destination_type, false)){
+            // Regular assignment (which is POD)
+
+            // Only manually conform other type if doing POD assignment
+            if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, conform_mode)){
+                char *a_type_str = ast_type_str(&other_value_type);
+                char *b_type_str = ast_type_str(&destination_type);
+                compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+                free(a_type_str);
+                free(b_type_str);
+                ast_type_free(&destination_type);
+                ast_type_free(&other_value_type);
+                return FAILURE;
+            }
+
             build_store(builder, other_value, destination, stmt->source);
         }
 
         ast_type_free(&destination_type);
         ast_type_free(&other_value_type);
         return SUCCESS;
+    } else {
+        // We only have to manually conform other type if doing POD operations,
+        // and since as of now, non-POD assignment arithmetic isn't supported,
+        // all non-regular assignments will be POD
+
+        if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, conform_mode)){
+            char *a_type_str = ast_type_str(&other_value_type);
+            char *b_type_str = ast_type_str(&destination_type);
+            compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+            free(a_type_str);
+            free(b_type_str);
+            ast_type_free(&destination_type);
+            ast_type_free(&other_value_type);
+            return FAILURE;
+        }
     }
 
     // Otherwise, Handle Non-Regular Assignment
