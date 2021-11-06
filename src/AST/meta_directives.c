@@ -610,6 +610,20 @@ void meta_definition_add_str(meta_definition_t **definitions, length_t *length, 
     meta_definition_add(definitions, length, capacity, name, (meta_expr_t*) value);
 }
 
+void meta_definition_add_float(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, double content){
+    meta_expr_float_t *value = (meta_expr_float_t*) malloc(sizeof(meta_expr_float_t));
+    value->id = META_EXPR_FLOAT;
+    value->value = content;
+    meta_definition_add(definitions, length, capacity, name, (meta_expr_t*) value);
+}
+
+void meta_definition_add_int(meta_definition_t **definitions, length_t *length, length_t *capacity, weak_cstr_t name, long long content){
+    meta_expr_int_t *value = (meta_expr_int_t*) malloc(sizeof(meta_expr_int_t));
+    value->id = META_EXPR_INT;
+    value->value = content;
+    meta_definition_add(definitions, length, capacity, name, (meta_expr_t*) value);
+}
+
 meta_definition_t *meta_definition_find(meta_definition_t *definitions, length_t length, weak_cstr_t name){
     for(length_t i = 0; i != length; i++){
         if(strcmp(definitions[i].name, name) == 0) return &definitions[i];

@@ -184,6 +184,8 @@ call :compile llvm_asm
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile loose_struct_syntax
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile major_minor_release
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_access
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile management_as

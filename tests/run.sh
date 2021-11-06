@@ -99,6 +99,7 @@ compile internal_deference_generic || exit $?
 compile list_map || exit $?
 compile llvm_asm || exit $?
 compile loose_struct_syntax || exit $?
+compile major_minor_release || exit $?
 compile management_access || exit $?
 compile management_as || exit $?
 compile management_assign || exit $?

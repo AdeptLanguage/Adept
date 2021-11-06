@@ -1,0 +1,32 @@
+
+// -----------------------------------------------------------------------
+
+#print "Compiler major version: " + __compiler_major__
+#print "Compiler minor version: " + __compiler_minor__
+#print "Compiler release version: " + __compiler_release__
+#print "Compiler qualifier: " + __compiler_qualifier__
+#print "Compiler version (now a number): " + __compiler_version__
+#print "Compiler version name: " + __compiler_version_name__
+#halt
+
+// -----------------------------------------------------------------------
+
+/*
+
+// Example of a backwards compatible way of getting specific compiler version info
+// (Only Adept 2.3 and 2.4 supported the necessary components for this to work though)
+
+// Test to see if __compiler_major__ already exists
+#default __compiler_major__ 0
+
+#if __compiler_major__ != 0
+    // Compiler version specifics are available (Adept 2.5+)
+#else
+    #set version 0 + __compiler__version__
+    #set __compiler_major__ 2
+    #set __compiler_minor__ (version - 2.0)
+    #set __compiler_release__ 0
+    #set __compiler_qualifier__ ""
+#end
+
+*/

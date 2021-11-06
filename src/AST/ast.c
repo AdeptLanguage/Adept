@@ -60,8 +60,15 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     // because meta_definition_add_str takes ownership of strong_cstr_t
     meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler__", compiler_get_string());
 
-    // __compiler_version__
-    meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_version__", strclone(ADEPT_VERSION_STRING));
+    // __compiler_version__, __compiler_version_name__
+    meta_definition_add_float(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_version__", ADEPT_VERSION_NUMBER);
+    meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_version_name__", strclone(ADEPT_VERSION_STRING));
+
+    // __compiler_major__, __compiler_minor__, __compiler_release__, __compiler_qualifier__
+    meta_definition_add_int(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_major__", ADEPT_VERSION_MAJOR);
+    meta_definition_add_int(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_minor__", ADEPT_VERSION_MINOR);
+    meta_definition_add_int(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_release__", ADEPT_VERSION_RELEASE);
+    meta_definition_add_str(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__compiler_qualifier__", strclone(ADEPT_VERSION_QUALIFIER));
 
     // __windows__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__windows__",
