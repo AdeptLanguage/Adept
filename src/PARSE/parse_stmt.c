@@ -772,17 +772,17 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
         if(errorcode != SUCCESS){
             ast_expr_free_fully(out_expr);
         }
-    }
 
-    if(out_expr->id != EXPR_CALL && out_expr->id != EXPR_CALL_METHOD){
-        compiler_panicf(ctx->compiler, out_expr->source, "Expression is not a statement");
-        ast_expr_free_fully(out_expr);
-        errorcode = FAILURE;
-    }
+        if(out_expr->id != EXPR_CALL && out_expr->id != EXPR_CALL_METHOD){
+            compiler_panicf(ctx->compiler, out_expr->source, "Expression is not a statement");
+            ast_expr_free_fully(out_expr);
+            errorcode = FAILURE;
+        }
 
-    // If successful, add the expression as a statement
-    if(errorcode == SUCCESS){
-        stmt_list->statements[stmt_list->length++] = out_expr;
+        // If everything is successful, add the expression as a statement
+        if(errorcode == SUCCESS){
+            stmt_list->statements[stmt_list->length++] = out_expr;
+        }
     }
 
     return errorcode;
