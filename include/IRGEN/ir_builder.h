@@ -154,6 +154,10 @@ ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t 
 // Builds constant 'sizeof' value
 ir_value_t *build_const_sizeof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type);
 
+// ---------------- build_const_alignof ----------------
+// Builds constant 'alignof' value
+ir_value_t *build_const_alignof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type);
+
 // ---------------- build_const_add ----------------
 // Builds constant 'add' value
 // NOTE: Does NOT check whether 'a' and 'b' are of the same type

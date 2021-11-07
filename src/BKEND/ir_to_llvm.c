@@ -262,6 +262,11 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             length_t type_size = const_sizeof->type->kind == TYPE_KIND_VOID ? 0 : LLVMABISizeOfType(llvm->data_layout, ir_to_llvm_type(llvm, const_sizeof->type));
             return LLVMConstInt(llvm->i64_type, type_size, false);
         }
+    case VALUE_TYPE_CONST_ALIGNOF: {
+            ir_value_const_alignof_t *const_alignof = (ir_value_const_alignof_t*) value->extra;
+            length_t type_size = const_alignof->type->kind == TYPE_KIND_VOID ? 0 : LLVMABIAlignmentOfType(llvm->data_layout, ir_to_llvm_type(llvm, const_alignof->type));
+            return LLVMConstInt(llvm->i64_type, type_size, false);
+        }
     case VALUE_TYPE_CONST_ADD: {
             ir_value_const_math_t *const_add = (ir_value_const_math_t*) value->extra;
             return LLVMConstAdd(ir_to_llvm_value(llvm, const_add->a), ir_to_llvm_value(llvm, const_add->b));

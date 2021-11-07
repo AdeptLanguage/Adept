@@ -734,6 +734,9 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_EMBED:
         // Nothing to infer
         break;
+    case EXPR_ALIGNOF:
+        if(infer_type(ctx, &((ast_expr_alignof_t*) *expr)->type)) return FAILURE;
+        break;
     case EXPR_INITLIST: {
             ast_expr_initlist_t *initlist = (ast_expr_initlist_t*) *expr;
             

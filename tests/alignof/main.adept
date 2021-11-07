@@ -1,0 +1,18 @@
+
+import basics
+
+func main {
+    printAlignof(null as *bool)
+    printAlignof(null as *ubyte)
+    printAlignof(null as *ushort)
+    printAlignof(null as *uint)
+    printAlignof(null as *ulong)
+    printAlignof(null as *usize)
+    printAlignof(null as *ptr)
+    printAlignof(null as **int)
+    printAlignof(null as *String)
+}
+
+func printAlignof(_type *$T) {
+    printf("alignof %s = %zu\n", typenameof $T, alignof $T)
+}

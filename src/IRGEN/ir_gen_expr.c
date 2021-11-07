@@ -265,6 +265,9 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_EMBED:
         if(ir_gen_expr_embed(builder, (ast_expr_embed_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
+    case EXPR_ALIGNOF:
+        if(ir_gen_expr_alignof(builder, (ast_expr_alignof_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        break;
     default:
         compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Unknown expression type id in expression");
         return FAILURE;
@@ -2474,6 +2477,20 @@ errorcode_t ir_gen_expr_embed(ir_builder_t *builder, ast_expr_embed_t *expr, ir_
     *ir_value = build_literal_str(builder, array, length);
 
     if(out_expr_type) ast_type_make_base(out_expr_type, strclone("String"));
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_alignof(ir_builder_t *builder, ast_expr_alignof_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_type_t *of_type;
+
+    // Resolve AST type to IR type
+    if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &of_type)) return FAILURE;
+
+    // Get size of IR type
+    *ir_value = build_const_alignof(builder->pool, ir_builder_usize(builder), of_type);
+
+    // Return type is always usize
+    if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("usize"));
     return SUCCESS;
 }
 

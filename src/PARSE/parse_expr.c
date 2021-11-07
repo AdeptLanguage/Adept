@@ -121,6 +121,9 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_SIZEOF:
         if(parse_expr_sizeof(ctx, out_expr)) return FAILURE;
         break;
+    case TOKEN_ALIGNOF:
+        if(parse_expr_alignof(ctx, out_expr)) return FAILURE;
+        break;
     case TOKEN_NOT:
         if(parse_expr_unary(ctx, EXPR_NOT, out_expr)) return FAILURE;
         break;
@@ -1100,6 +1103,22 @@ errorcode_t parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr){
         *out_expr = (ast_expr_t*) sizeof_expr;
     }
 
+    return SUCCESS;
+}
+
+errorcode_t parse_expr_alignof(parse_ctx_t *ctx, ast_expr_t **out_expr){
+    // alignof Type
+
+    ast_expr_alignof_t *alignof_expr = malloc(sizeof(ast_expr_alignof_t));
+    alignof_expr->id = EXPR_ALIGNOF;
+    alignof_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    if(parse_type(ctx, &alignof_expr->type)){
+        free(alignof_expr);
+        return FAILURE;
+    }
+
+    *out_expr = (ast_expr_t*) alignof_expr;
     return SUCCESS;
 }
 

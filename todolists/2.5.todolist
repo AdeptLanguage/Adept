@@ -3,7 +3,6 @@
 HIGH-PRIORITY:
 
 MEDIUM-PRIORITY:
-* alignof expression
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
 * way to allow using defined expressions and/or meta expressions for fixed array counts
     ```
@@ -22,7 +21,6 @@ MEDIUM-PRIORITY:
         max_capacity #get max_capacity b2Vec2
     )
     ```
-* negate '-' operator
 * 'each-in' loops with custom 'idx' name
     ```
     each object Object in objects using object_idx {
@@ -82,3 +80,4 @@ v2.5 COMPLETED:
 + fill in runtime type information for complex composite types
 + __compiler_major__, __compiler_minor__, __compiler_release__, __compiler_qualifier__
 + make __compiler_version__ a number, and add __compiler_version_name__
++ alignof expression

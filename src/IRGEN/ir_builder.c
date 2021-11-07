@@ -355,6 +355,17 @@ ir_value_t *build_const_sizeof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t
     return value;
 }
 
+ir_value_t *build_const_alignof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_CONST_ALIGNOF;
+    value->type = usize_type;
+
+    ir_value_const_alignof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_const_alignof_t));
+    extra->type = type;
+    value->extra = extra;
+    return value;
+}
+
 ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_CONST_ADD;
@@ -2281,6 +2292,9 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
         break;
     case EXPR_SIZEOF:
         if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_sizeof_t*) expr)->type, NULL)) return FAILURE;
+        break;
+    case EXPR_ALIGNOF:
+        if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_alignof_t*) expr)->type, NULL)) return FAILURE;
         break;
     case EXPR_NEW:
         if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_new_t*) expr)->type, NULL)) return FAILURE;

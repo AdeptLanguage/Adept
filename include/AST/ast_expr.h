@@ -95,6 +95,7 @@ extern "C" {
 #define EXPR_TYPENAMEOF       0x00000045
 #define EXPR_LLVM_ASM         0x00000046
 #define EXPR_EMBED            0x00000047
+#define EXPR_ALIGNOF          0x00000048
 // Exclusive statements ---------------
 #define EXPR_DECLARE          0x00000050
 #define EXPR_DECLAREUNDEF     0x00000051
@@ -442,13 +443,13 @@ typedef struct {
     ast_expr_t *from;
 } ast_expr_cast_t;
 
-// ---------------- ast_expr_sizeof_t ----------------
-// Expression for getting the size of a type
+// ---------------- ast_expr_sizeof_t, ast_expr_alignof_t ----------------
+// Expression for getting the size/alignment of a type
 typedef struct {
     unsigned int id;
     source_t source;
     ast_type_t type;
-} ast_expr_sizeof_t;
+} ast_expr_sizeof_t, ast_expr_alignof_t;
 
 // ---------------- ast_expr_phantom_t ----------------
 // Expression for passing precomputed ir_value_t values into AST expressions

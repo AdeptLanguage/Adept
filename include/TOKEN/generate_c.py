@@ -130,6 +130,7 @@ tokens = [
     Token("polycount"         , TokenType.LITERAL      , ExtraDataFormat.C_STRING   , None                                ),
     Token("POD"               , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "POD keyword"                       ),
     Token("alias"             , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "alias keyword"                     ),
+    Token("alignof"           , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "alignof keyword"                   ),
     Token("and"               , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "and keyword"                       ),
     Token("as"                , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "as keyword"                        ),
     Token("at"                , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "at keyword"                        ),

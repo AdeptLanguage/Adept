@@ -11,6 +11,7 @@ function compile() {
 
 compile address || exit $?
 compile aliases || exit $?
+compile alignof || exit $?
 compile andor || exit $?
 compile andor_circuit || exit $?
 compile anonymous_composites || exit $?

@@ -5,6 +5,8 @@ call :compile address
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile aliases
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile alignof
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile andor
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile andor_circuit

@@ -78,6 +78,11 @@ errorcode_t parse_expr_at(parse_ctx_t *ctx, ast_expr_t **inout_expr);
 // Parses a 'sizeof' expression
 errorcode_t parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr);
 
+// ------------------ parse_expr_alignof ------------------
+// Parses a 'alignof' expression
+errorcode_t parse_expr_alignof(parse_ctx_t *ctx, ast_expr_t **out_expr);
+
+
 // ------------------ parse_expr_unary ------------------
 // Parses an unary expression
 errorcode_t parse_expr_unary(parse_ctx_t *ctx, unsigned int expr_id, ast_expr_t **out_expr);

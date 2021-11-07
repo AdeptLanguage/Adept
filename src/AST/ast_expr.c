@@ -248,10 +248,10 @@ static strong_cstr_t ast_expr_cast_to_str(ast_expr_cast_t *cast_expr){
     return result;
 }
 
-static strong_cstr_t ast_expr_sizeof_to_str(ast_expr_sizeof_t *sizeof_expr){
-    strong_cstr_t type = ast_type_str(&sizeof_expr->type);
-    strong_cstr_t result = mallocandsprintf("sizeof %s", type);
-    free(type);
+static strong_cstr_t ast_expr_sizeof_like_to_str(ast_type_t *type, const char *kind_name){
+    strong_cstr_t typename = ast_type_str(type);
+    strong_cstr_t result = mallocandsprintf("%s %s", kind_name, typename);
+    free(typename);
     return result;
 }
 
@@ -389,7 +389,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_CAST:
         return ast_expr_cast_to_str((ast_expr_cast_t*) expr);
     case EXPR_SIZEOF:
-        return ast_expr_sizeof_to_str((ast_expr_sizeof_t*) expr);
+        return ast_expr_sizeof_like_to_str(&((ast_expr_sizeof_t*) expr)->type, "sizeof");
     case EXPR_SIZEOF_VALUE:
         return ast_expr_unary_to_str((ast_expr_unary_t*) expr, "sizeof(%s)");
     case EXPR_PHANTOM:
@@ -514,6 +514,8 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             free(filename_string_escaped);
             return result;
         }
+    case EXPR_ALIGNOF:
+        return ast_expr_sizeof_like_to_str(&((ast_expr_alignof_t*) expr)->type, "alignof");
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             bool is_undef = (expr->id == EXPR_ILDECLAREUNDEF);
 
@@ -631,6 +633,9 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_EMBED:
         free(((ast_expr_embed_t*) expr)->filename);
+        break;
+    case EXPR_ALIGNOF:
+        ast_type_free( &((ast_expr_alignof_t*) expr)->type );
         break;
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
@@ -1163,6 +1168,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_embed
         #undef clone_as_embed
+    case EXPR_ALIGNOF:
+        #define expr_as_alignof ((ast_expr_alignof_t*) expr)
+        #define clone_as_alignof ((ast_expr_alignof_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_alignof_t));
+        clone_as_alignof->type = ast_type_clone(&expr_as_alignof->type);
+        break;
+
+        #undef expr_as_alignof
+        #undef clone_as_alignof
     case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
         #define expr_as_declare ((ast_expr_declare_t*) expr)
