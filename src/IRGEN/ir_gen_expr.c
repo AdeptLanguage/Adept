@@ -2486,7 +2486,7 @@ errorcode_t ir_gen_expr_alignof(ir_builder_t *builder, ast_expr_alignof_t *expr,
     // Resolve AST type to IR type
     if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &of_type)) return FAILURE;
 
-    // Get size of IR type
+    // Get alignment of IR type
     *ir_value = build_const_alignof(builder->pool, ir_builder_usize(builder), of_type);
 
     // Return type is always usize
