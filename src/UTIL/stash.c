@@ -97,20 +97,51 @@ maybe_null_strong_cstr_t adept_locate_package(weak_cstr_t identifier, char *buff
     length_t num_tokens = required_tokens;
     length_t total_sections = master_object_token.size;
 
+    // TODO: CLEANUP: Clean up this dirty code
     for(length_t section = 0; section != total_sections; section++){
         if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index++, key, sizeof(key))){
             goto failure;
         }
 
-        if(strcmp(key, "children") == 0){
+        char content[1024];
+        length_t max_content = 1024;
+
+        if(strcmp(key, "adept.stash") == 0){
+            // Metadata
+
+            if(!jsmn_helper_get_object(buffer, tokens, num_tokens, token_index)){
+                goto failure;
+            }
+
+            jsmntok_t children_object_token = tokens[token_index++];
+            
+            for(int i = 0; i != children_object_token.size; i++){
+                if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index++, content, max_content)){
+                    goto failure;
+                }
+
+                if(strcmp(content, "minSpecVersion") == 0){
+                    long long min_spec_version;
+                    if(!jsmn_helper_get_integer(buffer, tokens, num_tokens, token_index, &min_spec_version)){
+                        goto failure;
+                    }
+
+                    if (min_spec_version > ADEPT_PACKAGE_MANAGER_SPEC_VERSION){
+                        redprintf("Remote stash has minimum spec version of '%d', but compiler has spec version '%d'\n", (int) min_spec_version, ADEPT_PACKAGE_MANAGER_SPEC_VERSION);
+                        redprintf("   (The remote stash no longer supports this compiler version)\n");
+                        goto silent_failure;
+                    }
+                }
+
+                token_index += jsmn_helper_subtoken_count(tokens, token_index);
+            }
+        } else if(strcmp(key, "children") == 0){
             // Locations
 
             if(!jsmn_helper_get_object(buffer, tokens, num_tokens, token_index)){
                 goto failure;
             }
 
-            char content[1024];
-            length_t max_content = 1024;
             jsmntok_t children_object_token = tokens[token_index++];
 
             for(int i = 0; i != children_object_token.size; i++){

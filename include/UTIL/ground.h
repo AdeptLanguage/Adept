@@ -19,6 +19,8 @@ extern "C" {
 #define ADEPT_VERSION_RELEASE   0
 #define ADEPT_VERSION_QUALIFIER ""
 
+#define ADEPT_PACKAGE_MANAGER_SPEC_VERSION 1
+
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>

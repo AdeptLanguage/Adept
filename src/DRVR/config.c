@@ -134,7 +134,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
 
     if(should_update){
         if(config->show_checking_for_updates_message){
-            blueprintf("NOTE: Automatically checking for updates as scheduled\n");
+            blueprintf("NOTE: Checking for updates as scheduled in 'adept.config'\n");
         }
 
         // Ignore failure to update last updated
@@ -146,7 +146,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
             update_installation(config, dlbuffer);
             free(dlbuffer.bytes);
         } else {
-            blueprintf("NOTE: Failed to check for updates as scheduled, internet address unreachable\n");
+            blueprintf("NOTE: Failed to check for updates as scheduled in 'adept.config', internet address unreachable\n");
         }
     }
     #endif // ADEPT_ENABLE_PACKAGE_MANAGER
@@ -308,6 +308,8 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
                 blueprintf("\nNEWS: A newer version of Adept is available!\n");
                 printf("    (Visit https://github.com/AdeptLanguage/Adept for more information)\n\n");
                 return true;
+            } else if(config->show_checking_for_updates_message){
+                blueprintf(" -> Already up to date!\n");
             }
 
             // Free potentially allocated values
