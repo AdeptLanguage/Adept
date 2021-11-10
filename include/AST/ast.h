@@ -40,6 +40,10 @@ typedef struct {
     length_t statements_capacity;
     source_t source;
     maybe_null_strong_cstr_t export_as;
+
+    #ifdef ADEPT_INSIGHT_BUILD
+    source_t end_source;
+    #endif
 } ast_func_t;
 
 // ---------------- ast_func_alias_t ----------------

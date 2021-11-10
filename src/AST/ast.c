@@ -885,6 +885,10 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     func->source = source;
     func->export_as = export_as;
 
+    #if ADEPT_INSIGHT_BUILD
+    func->end_source = source;
+    #endif
+
     if(is_entry)                       func->traits |= AST_FUNC_MAIN;
     if(strcmp(name, "__defer__") == 0) func->traits |= AST_FUNC_DEFER | (is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
     if(strcmp(name, "__pass__") == 0)  func->traits |= AST_FUNC_PASS  | (is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);

@@ -283,7 +283,14 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out
 }
 
 errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
-    if(func->traits & AST_FUNC_FOREIGN) return SUCCESS;
+    if(func->traits & AST_FUNC_FOREIGN) {
+        #ifdef ADEPT_INSIGHT_BUILD
+        func->end_source = ctx->tokenlist->sources[*ctx->i];
+        #endif
+
+        return SUCCESS;
+    }
+
     if(parse_ignore_newlines(ctx, "Expected function body")) return FAILURE;
 
     ast_expr_list_t stmts;
@@ -307,6 +314,10 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
             ast_free_statements_fully(stmts.statements, stmts.length);
             return FAILURE;
         }
+
+        #ifdef ADEPT_INSIGHT_BUILD
+        func->end_source = ctx->tokenlist->sources[*ctx->i];
+        #endif
 
         ast_expr_return_t *stmt = malloc(sizeof(ast_expr_return_t));
         stmt->id = EXPR_RETURN;
@@ -335,7 +346,11 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     }
 
     defer_scope_free(&defer_scope);
-    
+
+    #ifdef ADEPT_INSIGHT_BUILD
+    func->end_source = ctx->tokenlist->sources[*ctx->i];
+    #endif
+
     func->statements = stmts.statements;
     func->statements_length = stmts.length;
     func->statements_capacity = stmts.capacity;
