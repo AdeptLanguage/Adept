@@ -1,6 +1,6 @@
 
-#ifndef _ISAAC_BULITIN_TYPE_H
-#define _ISAAC_BULITIN_TYPE_H
+#ifndef _ISAAC_BUILTIN_TYPE_H
+#define _ISAAC_BUILTIN_TYPE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,8 +24,8 @@ extern "C" {
 #define BUILTIN_TYPE_USHORT     11
 #define BUILTIN_TYPE_USIZE      12
 
-const char * const global_primitives[13];
-const char * const global_primitives_extended[15];
+extern const char * const global_primitives[13];
+extern const char * const global_primitives_extended[15];
 
 #define typename_builtin_type(base) binary_string_search(global_primitives, 13, base)
 
@@ -35,4 +35,4 @@ const char * const global_primitives_extended[15];
 }
 #endif
 
-#endif // _ISAAC_BULITIN_TYPE_H
+#endif // _ISAAC_BUILTIN_TYPE_H
