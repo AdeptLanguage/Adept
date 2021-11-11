@@ -2,28 +2,26 @@
 
 A blazing fast language for general purpose programming.
 
-[Download Adept v2.4 for Windows](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.5 for Windows](https://github.com/IsaacShelton/Adept/releases)
 
-[Download Adept v2.4 for MacOS](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.5 for MacOS](https://github.com/IsaacShelton/Adept/releases)
 
-[Download Adept v2.4 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
+[Download Adept v2.5 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
 
 ## Resources
-[Adept v2.4 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
+[Adept v2.5 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
 
-[Adept v2.4 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
+[Adept v2.5 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
 
-[Adept v2.4 VS-Code Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
+[Adept v2.5 VS-Code Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
 
-[Adept v2.4 VS-Code Basic Syntax Checking](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
+[Adept v2.5 VS-Code Basic Syntax Checking](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
 
-[Adept v2.4 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
+[Adept v2.5 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
 
-[Adept v2.4 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
+[Adept v2.5 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
 
-[Adept v2.4 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
-
-[Adept v2.4 IDE (deprecated)](https://github.com/IsaacShelton/AdeptIDE)
+[Adept v2.5 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
 
 ## Command-Line Usage
 
@@ -32,7 +30,7 @@ A blazing fast language for general purpose programming.
 - filename - default is 'main.adept'
 - options - secondary compiler options
 
-You can optionally use `adept2-4` instead of `adept` if you have multiple versions installed.
+You can optionally use `adept2-5` instead of `adept` if you have multiple versions installed.
 
 ## Basic Functionality
 
@@ -330,7 +328,7 @@ func main(in argc int, in argv **ubyte) int {
 ### Pragma Directives
 
 ```
-pragma compiler_version '2.4'
+pragma compiler_version '2.5'
 pragma project_name 'pragma_directives_example'
 pragma optimization aggressive
 
