@@ -14,8 +14,8 @@ WINDOWS_WINRES=C:/Users/isaac/Projects/mingw64/bin/windres
 WINDOWS_LLVM_LIB=C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release/lib
 WINDOWS_LLVM_INCLUDE=C:/Users/isaac/Projects/llvm-7.0.0.src/include
 WINDOWS_LLVM_BUILD_INCLUDE=C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release/include
-WINDOWS_LIBCURL_LIB=
-WINDOWS_LIBCURL_INCLUDE=
+WINDOWS_LIBCURL_LIB=C:/Users/isaac/Projects/curl-7.79.1_4-win64-mingw/curl-7.79.1-win64-mingw/lib
+WINDOWS_LIBCURL_INCLUDE=C:/Users/isaac/Projects/curl-7.79.1_4-win64-mingw/curl-7.79.1-win64-mingw/include
 WINDOWS_LIBCURL_BUILD_INCLUDE=
 UNIX_CC=gcc
 UNIX_CXX=g++
@@ -61,6 +61,9 @@ ifeq ($(OS), Windows_NT)
 
 	# Libcurl info
 	ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
+		LIBCURL_INCLUDE_FLAGS=-I$(WINDOWS_LIBCURL_INCLUDE) -I$(WINDOWS_LIBCURL_BULID_INCLUDE)
+		LIBCURL_LINKER_FLAGS=-L$(WINDOWS_LIBCURL_LIB)
+		LIBCURL_LIBS=-lcurl # -lz
 	endif
 else
 	CC=$(UNIX_CC)
