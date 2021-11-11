@@ -1,4 +1,4 @@
-# Overall Things for Adept 2.5
+# Overall Things for Adept 2.6
 
 HIGH-PRIORITY:
 
@@ -81,3 +81,5 @@ v2.5 COMPLETED:
 + __compiler_major__, __compiler_minor__, __compiler_release__, __compiler_qualifier__
 + make __compiler_version__ a number, and add __compiler_version_name__
 + alignof expression
+
+v2.6 COMPLETED:

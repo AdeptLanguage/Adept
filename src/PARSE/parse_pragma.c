@@ -95,9 +95,13 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
                 if(compiler_warnf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler only partially supports version '%s'", read))
                     return FAILURE;
             }
-        } else if(strcmp(read, "2.2") != 0 && strcmp(read, "2.3") != 0 && strcmp(read, "2.4") != 0 && strcmp(read, "2.5") != 0){
+        } else if(strcmp(read, "2.2") != 0
+               && strcmp(read, "2.3") != 0
+               && strcmp(read, "2.4") != 0
+               && strcmp(read, "2.5") != 0
+               && strcmp(read, "2.6") != 0){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "This compiler doesn't support version '%s'", read);
-            puts("\nSupported Versions: '2.5', '2.4', '2.3', '2.2', '2.1', '2.0'");
+            puts("\nSupported Versions: '2.6', '2.5', '2.4', '2.3', '2.2', '2.1', '2.0'");
             return FAILURE;
         }
 
