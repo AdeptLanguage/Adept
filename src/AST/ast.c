@@ -3,6 +3,7 @@
 #include "AST/ast_type.h"
 #include "UTIL/util.h"
 #include "UTIL/color.h"
+#include "UTIL/string_builder.h"
 #include "DRVR/compiler.h"
 
 #ifdef __EMSCRIPTEN__
@@ -335,76 +336,10 @@ void ast_dump(ast_t *ast, const char *filename){
 
 void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_length){
     for(length_t i = 0; i != functions_length; i++){
-        char *arguments_string = malloc(256);
-        length_t arguments_string_length = 0;
-        length_t arguments_string_capacity = 256;
         ast_func_t *func = &functions[i];
-        arguments_string[0] = '\0';
 
-        for(length_t a = 0; a != func->arity; a++){
-            char *type_string = ast_type_str(&func->arg_types[a]);
-            length_t name_length = (func->arg_names == NULL) ? 0 : strlen(func->arg_names[a]);
-            length_t type_length = strlen(type_string);
-
-            while(arguments_string_length + name_length + type_length + 3 >= arguments_string_capacity){
-                char *new_arguments_string = malloc(arguments_string_capacity * 2);
-                memcpy(new_arguments_string, arguments_string, arguments_string_length + 1);
-                free(arguments_string);
-                arguments_string = new_arguments_string;
-                arguments_string_capacity *= 2;
-            }
-
-            if(func->traits & AST_FUNC_FOREIGN){
-                if(a + 1 == func->arity){
-                    memcpy(&arguments_string[arguments_string_length], type_string, type_length + 1);
-                    arguments_string_length += type_length;
-                } else {
-                    memcpy(&arguments_string[arguments_string_length], type_string, type_length);
-                    memcpy(&arguments_string[arguments_string_length + type_length], ", ", 3);
-                    arguments_string_length += type_length + 2;
-                }
-            } else {
-                memcpy(&arguments_string[arguments_string_length], func->arg_names[a], name_length);
-                memcpy(&arguments_string[arguments_string_length + name_length], " ", 1);
-
-                if(a + 1 == func->arity){
-                    memcpy(&arguments_string[arguments_string_length + name_length + 1], type_string, type_length + 1);
-                    arguments_string_length += name_length + type_length + 1;
-                } else {
-                    memcpy(&arguments_string[arguments_string_length + name_length + 1], type_string, type_length);
-                    memcpy(&arguments_string[arguments_string_length + name_length + 1 + type_length], ", ", 3);
-                    arguments_string_length += name_length + type_length + 3;
-                }
-            }
-
-            free(type_string);
-        }
-
-        if(func->traits & AST_FUNC_VARARG){
-            if(arguments_string_length + 6 >= arguments_string_capacity){
-                arguments_string_capacity += 6;
-                char *new_arguments_string = malloc(arguments_string_capacity);
-                memcpy(new_arguments_string, arguments_string, arguments_string_length + 1);
-                free(arguments_string);
-                arguments_string = new_arguments_string;
-            }
-
-            memcpy(&arguments_string[arguments_string_length], ", ...", 6);
-        }
-
-        if(func->traits & AST_FUNC_VARIADIC){
-            if(arguments_string_length + 5 >= arguments_string_capacity){
-                arguments_string_capacity += 5;
-                char *new_arguments_string = malloc(arguments_string_capacity);
-                memcpy(new_arguments_string, arguments_string, arguments_string_length + 1);
-                free(arguments_string);
-                arguments_string = new_arguments_string;
-            }
-
-            memcpy(&arguments_string[arguments_string_length], ", ..", 5);
-        }
-
-        char *return_type_string = ast_type_str(&func->return_type);
+        strong_cstr_t arguments_string = ast_func_args_str(func);
+        strong_cstr_t return_type_string = ast_type_str(&func->return_type);
 
         if(func->traits & AST_FUNC_FOREIGN){
             fprintf(file, "foreign %s(%s) %s\n", func->name, arguments_string, return_type_string);
@@ -417,6 +352,50 @@ void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_le
         free(arguments_string);
         free(return_type_string);
     }
+}
+
+strong_cstr_t ast_func_args_str(ast_func_t *func){
+    string_builder_t builder;
+    string_builder_init(&builder);
+
+    for(length_t i = 0; i != func->arity; i++){
+        if(func->arg_names){
+            string_builder_append(&builder, func->arg_names[i]);
+            string_builder_append(&builder, " ");
+        }
+
+        if(func->arg_type_traits && func->arg_type_traits[i] & AST_FUNC_ARG_TYPE_TRAIT_POD){
+            string_builder_append(&builder, "POD ");
+        }
+
+        strong_cstr_t typename = ast_type_str(&func->arg_types[i]);
+        string_builder_append(&builder, typename);
+        free(typename);
+
+        if(func->arg_defaults && func->arg_defaults[i]){
+            strong_cstr_t default_value = ast_expr_str(func->arg_defaults[i]);
+            string_builder_append(&builder, " = ");
+            string_builder_append(&builder, default_value);
+            free(default_value);
+        }
+
+        if(i + 1 != func->arity){
+            string_builder_append(&builder, ", ");
+        }
+    }
+
+    if(func->traits & AST_FUNC_VARIADIC){
+        if(func->arity != 0){
+            string_builder_append(&builder, ", ");
+        }
+
+        string_builder_append(&builder, func->variadic_arg_name);
+        string_builder_append(&builder, " ...");
+    } else if(func->traits & AST_FUNC_VARARG){
+        string_builder_append(&builder, ", ...");
+    }
+
+    return string_builder_finalize(&builder);
 }
 
 void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, length_t indentation){
@@ -467,7 +446,8 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 if(declare_stmt->is_static) fprintf(file, "static ");
 
                 char *variable_type_str = ast_type_str(&declare_stmt->type);
-                fprintf(file, (declare_stmt->value == NULL && !is_undef) ? "%s %s\n" : "%s %s = ", declare_stmt->name, variable_type_str);
+                char *pod = declare_stmt->is_pod ? "POD " : "";
+                fprintf(file, (declare_stmt->value == NULL && !is_undef) ? "%s %s%s\n" : "%s %s%s = ", declare_stmt->name, pod, variable_type_str);
                 free(variable_type_str);
 
                 if(is_undef){

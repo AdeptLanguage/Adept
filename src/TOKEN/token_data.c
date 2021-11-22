@@ -121,31 +121,32 @@ const char *global_token_name_table[] = {
     "pragma keyword",                     // 0x00000074
     "private keyword",                    // 0x00000075
     "public keyword",                     // 0x00000076
-    "repeat keyword",                     // 0x00000077
-    "return keyword",                     // 0x00000078
-    "sizeof keyword",                     // 0x00000079
-    "static keyword",                     // 0x0000007A
-    "stdcall keyword",                    // 0x0000007B
-    "struct keyword",                     // 0x0000007C
-    "switch keyword",                     // 0x0000007D
-    "thread_local keyword",               // 0x0000007E
-    "true keyword",                       // 0x0000007F
-    "typeinfo keyword",                   // 0x00000080
-    "typenameof keyword",                 // 0x00000081
-    "undef keyword",                      // 0x00000082
-    "union keyword",                      // 0x00000083
-    "unless keyword",                     // 0x00000084
-    "until keyword",                      // 0x00000085
-    "using keyword",                      // 0x00000086
-    "va_arg keyword",                     // 0x00000087
-    "va_copy keyword",                    // 0x00000088
-    "va_end keyword",                     // 0x00000089
-    "va_start keyword",                   // 0x0000008A
-    "verbatim keyword",                   // 0x0000008B
-    "while keyword",                      // 0x0000008C
+    "record keyword",                     // 0x00000077
+    "repeat keyword",                     // 0x00000078
+    "return keyword",                     // 0x00000079
+    "sizeof keyword",                     // 0x0000007A
+    "static keyword",                     // 0x0000007B
+    "stdcall keyword",                    // 0x0000007C
+    "struct keyword",                     // 0x0000007D
+    "switch keyword",                     // 0x0000007E
+    "thread_local keyword",               // 0x0000007F
+    "true keyword",                       // 0x00000080
+    "typeinfo keyword",                   // 0x00000081
+    "typenameof keyword",                 // 0x00000082
+    "undef keyword",                      // 0x00000083
+    "union keyword",                      // 0x00000084
+    "unless keyword",                     // 0x00000085
+    "until keyword",                      // 0x00000086
+    "using keyword",                      // 0x00000087
+    "va_arg keyword",                     // 0x00000088
+    "va_copy keyword",                    // 0x00000089
+    "va_end keyword",                     // 0x0000008A
+    "va_start keyword",                   // 0x0000008B
+    "verbatim keyword",                   // 0x0000008C
+    "while keyword",                      // 0x0000008D
 };
 
-const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 const char *global_token_keywords_list[] = {
     "POD",
@@ -192,6 +193,7 @@ const char *global_token_keywords_list[] = {
     "pragma",
     "private",
     "public",
+    "record",
     "repeat",
     "return",
     "sizeof",
@@ -216,4 +218,4 @@ const char *global_token_keywords_list[] = {
     "while",
 };
 
-unsigned long long global_token_keywords_list_length = 66;
+unsigned long long global_token_keywords_list_length = 67;

@@ -1,0 +1,33 @@
+
+import basics
+
+record Position (x, y float)
+record Person (firstname, lastname String)
+
+func main {
+    // A constructor function is automatically generated for "record" types
+    position Position = Position(1.0, 2.0)
+    printf("%f %f\n", position.x, position.y)
+
+    // They work with non-trival types as well
+    isaac Person = Person("Isaac", "Shelton")
+    printf("%S %S\n", isaac.firstname, isaac.lastname)
+
+    // And memory is taken care of appropriately
+    smith Person = Person("John".clone(), "Smith".clone())
+    printf("%S %S\n", smith.firstname, smith.lastname)
+}
+
+// Example of a function automatically generated
+// - The variable '$' is a specially named variable that is impossible to have conflicts with
+// - The value '$' is always treated as plain-old-data (POD) and is zero initialized during creation
+// - The arguments are always passed as plain-old-data (POD)
+// - The arguments are always assigned to fields NOT as plain-old-data (POD)
+/*
+func Person(firstname POD String, lastname POD String) Person {
+    $ POD Person
+    $.firstname = firstname
+    $.lastname = lastname
+    return $
+}
+*/

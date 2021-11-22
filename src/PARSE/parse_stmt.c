@@ -83,27 +83,24 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 if(tokens[*i].id == TOKEN_NEWLINE) return_expression = NULL;
                 else if(parse_expr(ctx, &return_expression)) return FAILURE;
 
-                ast_expr_return_t *stmt = malloc(sizeof(ast_expr_return_t));
-                stmt->id = EXPR_RETURN;
-                stmt->source = source;
-                stmt->value = return_expression;
-                stmt->last_minute.capacity = defer_scope_total(defer_scope);
-                stmt->last_minute.statements = malloc(stmt->last_minute.capacity * sizeof(ast_expr_t*));
-                stmt->last_minute.length = 0;
+                ast_expr_list_t last_minute;
+                last_minute.capacity = defer_scope_total(defer_scope);
+                last_minute.statements = malloc(last_minute.capacity * sizeof(ast_expr_t*));
+                last_minute.length = 0;
 
-                defer_scope_fulfill(defer_scope, &stmt->last_minute);
+                defer_scope_fulfill(defer_scope, &last_minute);
 
                 // Duplicate defer statements of ancestors
                 defer_scope_t *traverse = defer_scope->parent;
 
                 while(traverse){
                     for(size_t r = traverse->list.length; r != 0; r--){
-                        stmt->last_minute.statements[stmt->last_minute.length++] = ast_expr_clone(traverse->list.statements[r - 1]);
+                        last_minute.statements[last_minute.length++] = ast_expr_clone(traverse->list.statements[r - 1]);
                     }
                     traverse = traverse->parent;
                 }
 
-                stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+                ast_expr_create_return(&stmt_list->statements[stmt_list->length++], source, return_expression, last_minute);
             }
             break;
         case TOKEN_STRING: {
@@ -877,29 +874,23 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     // Add each variable to the necessary data sets
     for(length_t v = 0; v != length; v++){
-        ast_expr_declare_t *stmt = malloc(sizeof(ast_expr_declare_t));
-        stmt->id = declare_stmt_type;
-        stmt->source = decl_sources[v];
-        stmt->name = decl_names[v];
-        stmt->is_pod = is_pod;
-        stmt->is_assign_pod = is_assign_pod;
-        stmt->is_static = is_static;
-        stmt->is_const = is_const;
+        ast_type_t type;
+        ast_expr_t *value;
 
         if(v + 1 == length){
-            stmt->type = decl_type;
-            stmt->value = decl_value;
+            type = decl_type;
+            value = decl_value;
         } else {
-            stmt->type = ast_type_clone(&decl_type);
-            stmt->value = decl_value == NULL ? NULL : ast_expr_clone(decl_value);
+            type = ast_type_clone(&decl_type);
+            value = decl_value == NULL ? NULL : ast_expr_clone(decl_value);
         }
 
         if(v != 0){
             expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, 1, 8);
         }
 
-        // Append the created declare statement
-        stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+        // Create the declare statement
+        ast_expr_create_declaration(&stmt_list->statements[stmt_list->length++], declare_stmt_type, decl_sources[v], decl_names[v], type, is_pod, is_assign_pod, is_static, is_const, value);
     }
 
     free(decl_names);
@@ -1230,13 +1221,7 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         return FAILURE;
     }
 
-    ast_expr_assign_t *stmt = malloc(sizeof(ast_expr_assign_t));
-    stmt->id = stmt_id;
-    stmt->source = source;
-    stmt->destination = mutable_expression;
-    stmt->value = value_expression;
-    stmt->is_pod = is_pod;
-    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+    ast_expr_create_assignment(&stmt_list->statements[stmt_list->length++], stmt_id, source, mutable_expression, value_expression, is_pod);
     return SUCCESS;
 }
 

@@ -803,6 +803,26 @@ void ast_expr_create_typenameof(ast_expr_t **out_expr, ast_type_t strong_type, s
 // NOTE: Ownership of 'filename' will be taken
 void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source_t source);
 
+// ---------------- ast_expr_create_declaration ----------------
+// Creates a declare expression
+// NOTE: Ownership of 'type' and 'value' will be taken
+void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, bool is_pod, bool is_assign_pod, bool is_static, bool is_const, ast_expr_t *value);
+
+// ---------------- ast_expr_create_assignment ----------------
+// Creates an assign expression
+// NOTE: Ownership of 'mutable_expression' and 'value' will be taken
+void ast_expr_create_assignment(ast_expr_t **out_expr, unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod);
+
+// ---------------- ast_expr_create_return ----------------
+// Creates a return statement
+// NOTE: Ownership of 'value' and 'last_minute' will be taken
+void ast_expr_create_return(ast_expr_t **out_expr, source_t source, ast_expr_t *value, ast_expr_list_t last_minute);
+
+// ---------------- ast_expr_create_member ----------------
+// Creates a member expression
+// NOTE: Ownership of 'value' and 'member_name' will be taken
+void ast_expr_create_member(ast_expr_t **out_expr, ast_expr_t *value, strong_cstr_t member_name, source_t source);
+
 // ---------------- ast_expr_list_init ----------------
 // Initializes an ast_expr_list_t with a given capacity
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity);

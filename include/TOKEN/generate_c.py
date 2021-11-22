@@ -172,6 +172,7 @@ tokens = [
     Token("pragma"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "pragma keyword"                    ),
     Token("private"           , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "private keyword"                   ),
     Token("public"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "public keyword"                    ),
+    Token("record"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "record keyword"                    ),
     Token("repeat"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "repeat keyword"                    ),
     Token("return"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "return keyword"                    ),
     Token("sizeof"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "sizeof keyword"                    ),

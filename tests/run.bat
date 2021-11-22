@@ -264,6 +264,8 @@ call :compile pragma
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile primitives
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile records
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile repeat
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile repeat_args

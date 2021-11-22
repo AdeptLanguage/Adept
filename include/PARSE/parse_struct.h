@@ -17,7 +17,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union);
 // ------------------ parse_composite_head ------------------
 // Parses the head of a composite
 // NOTE: All arguments must be valid pointers
-errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length);
+errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, strong_cstr_t **out_generics, length_t *out_generics_length);
 
 // ------------------ parse_composite_body ------------------
 // Parses the body of a composite
@@ -39,6 +39,10 @@ errorcode_t parse_anonymous_composite(parse_ctx_t *ctx, ast_field_map_t *inout_f
 // Returns whether a token is used as the beginning of a function-like declaration
 // (Used for automatic transition from struct fields to struct domain)
 bool parse_struct_is_function_like_beginning(tokenid_t token);
+
+// ------------------ parse_create_record_constructor ------------------
+// Generate a constructor for a record type
+errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, ast_layout_t *layout, source_t source);
 
 #ifdef __cplusplus
 }

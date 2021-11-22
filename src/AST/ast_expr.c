@@ -1583,6 +1583,44 @@ void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source
     ((ast_expr_embed_t*) *out_expr)->filename = filename;
 }
 
+void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, bool is_pod, bool is_assign_pod, bool is_static, bool is_const, ast_expr_t *value){
+    *out_expr = malloc(sizeof(ast_expr_declare_t));
+    ((ast_expr_declare_t*) *out_expr)->id = expr_id;
+    ((ast_expr_declare_t*) *out_expr)->source = source;
+    ((ast_expr_declare_t*) *out_expr)->name = name;
+    ((ast_expr_declare_t*) *out_expr)->is_pod = is_pod;
+    ((ast_expr_declare_t*) *out_expr)->is_assign_pod = is_assign_pod;
+    ((ast_expr_declare_t*) *out_expr)->is_static = is_static;
+    ((ast_expr_declare_t*) *out_expr)->is_const = is_const;
+    ((ast_expr_declare_t*) *out_expr)->type = type;
+    ((ast_expr_declare_t*) *out_expr)->value = value;
+}
+
+void ast_expr_create_assignment(ast_expr_t **out_expr, unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod){
+    *out_expr = malloc(sizeof(ast_expr_assign_t));
+    ((ast_expr_assign_t*) *out_expr)->id = stmt_id;
+    ((ast_expr_assign_t*) *out_expr)->source = source;
+    ((ast_expr_assign_t*) *out_expr)->destination = mutable_expression;
+    ((ast_expr_assign_t*) *out_expr)->value = value;
+    ((ast_expr_assign_t*) *out_expr)->is_pod = is_pod;
+}
+
+void ast_expr_create_return(ast_expr_t **out_expr, source_t source, ast_expr_t *value, ast_expr_list_t last_minute){
+    *out_expr = malloc(sizeof(ast_expr_return_t));
+    ((ast_expr_return_t*) *out_expr)->id = EXPR_RETURN;
+    ((ast_expr_return_t*) *out_expr)->source = source;
+    ((ast_expr_return_t*) *out_expr)->value = value;
+    ((ast_expr_return_t*) *out_expr)->last_minute = last_minute;
+}
+
+void ast_expr_create_member(ast_expr_t **out_expr, ast_expr_t *value, strong_cstr_t member_name, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_member_t));
+    ((ast_expr_member_t*) *out_expr)->id = EXPR_MEMBER;
+    ((ast_expr_member_t*) *out_expr)->value = value;
+    ((ast_expr_member_t*) *out_expr)->member = member_name;
+    ((ast_expr_member_t*) *out_expr)->source = source;
+}
+
 void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
     if(capacity == 0){
         list->statements = NULL;

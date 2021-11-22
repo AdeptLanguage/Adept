@@ -28,9 +28,8 @@ MEDIUM-PRIORITY:
     }
     ```
 * 'break default' to break to default condition of switch statement
-* nodiscard
+* nodiscard / must_use
 * __return__ and return POD
-* records
 * easy and consistent constructors
 * switch over enums without enums name for each entry: idea: exhaustive switch kind using CardKind { ... }
 * @must
@@ -83,3 +82,4 @@ v2.5 COMPLETED:
 + alignof expression
 
 v2.6 COMPLETED:
++ records

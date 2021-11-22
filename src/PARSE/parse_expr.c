@@ -442,13 +442,8 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     }
 
                     // Member access expression
-                    ast_expr_member_t *memb_expr = malloc(sizeof(ast_expr_member_t));
-                    memb_expr->id = EXPR_MEMBER;
-                    memb_expr->value = *inout_expr;
-                    memb_expr->member = (char*) tokens[*i].data;
-                    memb_expr->source = sources[*i - 1];
+                    ast_expr_create_member(inout_expr, *inout_expr, (char*) tokens[*i].data, sources[*i - 1]);
                     tokens[(*i)++].data = NULL; // Take ownership
-                    *inout_expr = (ast_expr_t*) memb_expr;
                 }
             }
             break;
@@ -1266,52 +1261,49 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
-    ast_expr_inline_declare_t *def = malloc(sizeof(ast_expr_inline_declare_t));
-    def->id = (tokens[*i].id == TOKEN_UNDEF ? EXPR_ILDECLAREUNDEF : EXPR_ILDECLARE);
-    def->source = sources[(*i)++];
-    def->is_pod = false;
-    def->is_assign_pod = false;
+    unsigned int expr_id = (tokens[*i].id == TOKEN_UNDEF ? EXPR_ILDECLAREUNDEF : EXPR_ILDECLARE);
+    source_t source = sources[(*i)++];;
 
-    def->name = parse_eat_word(ctx, "Expected variable name for inline declaration");
-    if(def->name == NULL){
-        free(def);
+    maybe_null_weak_cstr_t name = parse_eat_word(ctx, "Expected variable name for inline declaration");
+    if(name == NULL){
         return FAILURE;
     }
 
+    bool is_pod = false;
     if(tokens[*i].id == TOKEN_POD){
-        def->is_pod = true;
+        is_pod = true;
         (*i)++;
     }
 
-    if(parse_type(ctx, &def->type)){
-        free(def);
+    ast_type_t type;
+    if(parse_type(ctx, &type)){
         return FAILURE;
     }
 
+    ast_expr_t *value;
+    bool is_assign_pod = false;
     if(tokens[*i].id == TOKEN_ASSIGN){
-        if(def->id == EXPR_ILDECLAREUNDEF){
+        if(expr_id == EXPR_ILDECLAREUNDEF){
             compiler_panic(ctx->compiler, sources[*i], "Can't initialize undefined inline variable");
             printf("\nDid you mean to use 'def' instead of 'undef'?\n");
-            ast_type_free(&def->type);
-            free(def);
+            ast_type_free(&type);
             return FAILURE;
         }
 
         if(tokens[++(*i)].id == TOKEN_POD){
-            def->is_assign_pod = true;
+            is_assign_pod = true;
             (*i)++;
         }
 
-        if(parse_expr(ctx, &def->value)){
-            ast_type_free(&def->type);
-            free(def);
+        if(parse_expr(ctx, &value)){
+            ast_type_free(&type);
             return FAILURE;
         }
     } else {
-        def->value = NULL;
+        value = NULL;
     }
 
-    *out_expr = (ast_expr_t*) def;
+    ast_expr_create_declaration(out_expr, expr_id, source, name, type, is_pod, is_assign_pod, false, false, value);
     return SUCCESS;
 }
 

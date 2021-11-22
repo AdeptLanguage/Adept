@@ -1,6 +1,7 @@
 
 #include "UTIL/util.h"
 #include "UTIL/search.h"
+#include "UTIL/builtin_type.h"
 #include "PARSE/parse.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
@@ -16,10 +17,10 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     }
 
     strong_cstr_t name;
-    bool is_packed;
+    bool is_packed, is_record;
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    if(parse_composite_head(ctx, is_union, &name, &is_packed, &generics, &generics_length)) return FAILURE;
+    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -57,6 +58,10 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
         domain = ast_add_composite(ast, name, layout, source);
     }
 
+    if(is_record){
+        if(parse_create_record_constructor(ctx, name, &layout, source)) return FAILURE;
+    }
+
     // Look for start of struct domain and set it up if it exists
     if(parse_struct_is_function_like_beginning(ctx->tokenlist->tokens[*ctx->i].id)){
         ctx->composite_association = (ast_polymorphic_composite_t *)domain;
@@ -79,16 +84,22 @@ bool parse_struct_is_function_like_beginning(tokenid_t token){
     return token == TOKEN_FUNC || token == TOKEN_VERBATIM;
 }
 
-errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, strong_cstr_t **out_generics, length_t *out_generics_length){
+errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, strong_cstr_t **out_generics, length_t *out_generics_length){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
-    if(!is_union){
+    if(is_union){
+        if(parse_eat(ctx, TOKEN_UNION, "Expected 'union' keyword for union definition")) return FAILURE;
+    } else {
         *out_is_packed = (tokens[*i].id == TOKEN_PACKED);
         if(*out_is_packed) *i += 1;
-        if(parse_eat(ctx, TOKEN_STRUCT, "Expected 'struct' keyword after 'packed' keyword")) return FAILURE;
-    } else {
-        if(parse_eat(ctx, TOKEN_UNION, "Expected 'union' keyword for union definition")) return FAILURE;
+
+        if(tokens[*i].id == TOKEN_RECORD){
+            *out_is_record = true;
+            *i += 1;
+        } else {
+            if(parse_eat(ctx, TOKEN_STRUCT, "Expected 'struct' keyword after 'packed' keyword")) return FAILURE;
+        } 
     }
 
     strong_cstr_t *generics = NULL;
@@ -372,5 +383,121 @@ errorcode_t parse_anonymous_composite(parse_ctx_t *ctx, ast_field_map_t *inout_f
 
     ast_layout_endpoint_increment(inout_next_endpoint);
     (*i)++;
+    return SUCCESS;
+}
+
+errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, ast_layout_t *layout, source_t source){
+    if(!ast_layout_is_simple_struct(layout)) {
+        compiler_panicf(ctx->compiler, source, "Record type '%s' cannot be defined to have a complicated structure", name);
+        return FAILURE;
+    }
+
+    if(name[0] == '_' && name[1] == '_'){
+        compiler_panicf(ctx->compiler, source, "Name of record type '%s' cannot start with double underscores", name);
+        return FAILURE;
+    }
+
+    bool would_collide_with_entry = strcmp(name, ctx->compiler->entry_point) == 0;
+    if(would_collide_with_entry){
+        compiler_panicf(ctx->compiler, source, "Name of record type '%s' conflicts with name of entry point", name);
+        return FAILURE;
+    }
+
+    ast_t *ast = ctx->ast;
+    ast_layout_skeleton_t *skeleton = &layout->skeleton;
+    ast_field_map_t *field_map = &layout->field_map;
+    bool is_polymorphic = ast_layout_skeleton_has_polymorph(skeleton);
+
+    // Variable name of value being made in the constructor,
+    // this name should not be able to be used in normal contexts
+    weak_cstr_t master_variable_name = "$";
+
+    // Add function
+    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+
+    length_t ast_func_id = ast->funcs_length;
+    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    ast_func_create_template(func, strclone(name), false, false, false, false, source, false, strclone(name));
+
+    if(func->traits != TRAIT_NONE){
+        compiler_panicf(ctx->compiler, source, "Name of record type '%s' conflicts with special symbol", name);
+        return FAILURE;
+    }
+
+    // Set return type
+    ast_type_make_base(&func->return_type, strclone(name));
+
+    // Track whether or not all fields are primitive builtin types,
+    // if so, we can skip out on zero initializing the '$' value
+    bool all_primitive = true;
+
+    // Set arguments
+    func->arity = field_map->arrows_length;
+    func->arg_names = malloc(sizeof(strong_cstr_t) * func->arity);
+    func->arg_types = malloc(sizeof(ast_type_t) * func->arity);
+    func->arg_flows = malloc(sizeof(char) * func->arity);
+    func->arg_defaults = NULL;
+    func->arg_sources = malloc(sizeof(source_t) * func->arity);
+    func->arg_type_traits = malloc(sizeof(trait_t) * func->arity);
+
+    for(length_t i = 0; i != field_map->arrows_length; i++){
+        ast_field_arrow_t *arrow = &field_map->arrows[i];
+        func->arg_names[i] = strclone(arrow->name);
+        func->arg_types[i] = ast_type_clone(ast_layout_skeleton_get_type(skeleton, arrow->endpoint));
+        func->arg_flows[i] = FLOW_IN;
+        func->arg_sources[i] = NULL_SOURCE;
+        func->arg_type_traits[i] = AST_FUNC_ARG_TYPE_TRAIT_POD;
+
+        if(all_primitive) {
+            if(ast_type_is_base(&func->arg_types[i])){
+                weak_cstr_t typename = ((ast_elem_base_t*) func->arg_types[i].elements[0])->base;
+                all_primitive = typename_builtin_type(typename) != -1;
+            } else {
+                all_primitive = false;
+            }
+        }
+    }
+
+    // Set statements
+    func->statements_capacity = func->arity + 2;
+    func->statements_length = func->statements_capacity;
+    func->statements = malloc(sizeof(ast_expr_t*) * func->statements_capacity);
+    ast_expr_create_declaration(&func->statements[0], all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE, source, master_variable_name, ast_type_clone(&func->return_type), true, true, false, false, NULL);
+
+    for(length_t i = 0; i != func->arity; i++){
+        weak_cstr_t field_name = field_map->arrows[i].name;
+
+        ast_expr_t *master;
+        ast_expr_create_variable(&master, master_variable_name, source);
+
+        // Member value
+        ast_expr_t *mutable_expression;
+        ast_expr_create_member(&mutable_expression, master, strclone(field_name), source);
+
+        // Argument variable
+        ast_expr_t *variable;
+        ast_expr_create_variable(&variable, field_name, source);
+
+        ast_expr_create_assignment(&func->statements[i + 1], EXPR_ASSIGN, source, mutable_expression, variable, false);
+    }
+
+    ast_expr_t *variable;
+    ast_expr_create_variable(&variable, master_variable_name, source);
+
+    ast_expr_list_t last_minute;
+    memset(&last_minute, 0, sizeof(ast_expr_list_t));
+
+    ast_expr_create_return(&func->statements[func->arity + 1], source, variable, last_minute);
+
+    // Add function to polymorphic function registry if it's polymorphic
+    if(is_polymorphic){
+        expand((void**) &ast->polymorphic_funcs, sizeof(ast_polymorphic_func_t), ast->polymorphic_funcs_length, &ast->polymorphic_funcs_capacity, 1, 4);
+
+        ast_polymorphic_func_t *poly_func = &ast->polymorphic_funcs[ast->polymorphic_funcs_length++];
+        poly_func->name = func->name;
+        poly_func->ast_func_id = ast_func_id;
+        poly_func->is_beginning_of_group = -1; // Uncalculated
+    }
+
     return SUCCESS;
 }

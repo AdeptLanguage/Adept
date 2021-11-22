@@ -249,6 +249,11 @@ void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, a
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length);
 void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
 
+// ---------------- ast_func_args_str ----------------
+// Create a string of the inside of the parentheses for the
+// arguments of a function declaration
+strong_cstr_t ast_func_args_str(ast_func_t *func);
+
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function
 void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim,
