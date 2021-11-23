@@ -58,6 +58,10 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx);
 // Parses argument types for function alias
 errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, length_t *out_arity, trait_t *out_required_traits, bool *out_match_first_of_name);
 
+// ------------------ parse_func_argument ------------------
+// Will collapse all [$#N] type elements to $#N
+void parse_collapse_polycount_var_fixed_arrays(ast_type_t *types, length_t length);
+
 #ifdef __cplusplus
 }
 #endif

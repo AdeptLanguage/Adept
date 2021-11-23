@@ -370,9 +370,9 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
             bool failed = false;
 
             if(ast_func->traits & AST_FUNC_DEFER){
-                failed = handle_children_deference(&builder);
+                failed = handle_children_deference(&builder) != SUCCESS;
             } else if(ast_func->traits & AST_FUNC_PASS){
-                failed = handle_children_pass_root(&builder, false);
+                failed = handle_children_pass_root(&builder, false) != SUCCESS;
                 if(!failed) terminated = true;
             }
 

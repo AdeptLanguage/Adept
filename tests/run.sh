@@ -71,6 +71,7 @@ compile fixed_array_assign || exit $?
 compile fixed_array_deference || exit $?
 compile fixed_array_pass || exit $?
 compile fixed_array_var_size || exit $?
+compile fixed_array_var_size_field || exit $?
 compile for || exit $?
 compile foreign_in_namespace || exit $?
 compile func_aliases || exit $?

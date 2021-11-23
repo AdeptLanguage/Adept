@@ -34,7 +34,7 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
         break;
     case AST_ELEM_VAR_FIXED_ARRAY:
         new_element = malloc(sizeof(ast_elem_var_fixed_array_t));
-        ((ast_elem_var_fixed_array_t*) new_element)->id = AST_ELEM_FIXED_ARRAY;
+        ((ast_elem_var_fixed_array_t*) new_element)->id = AST_ELEM_VAR_FIXED_ARRAY;
         ((ast_elem_var_fixed_array_t*) new_element)->source = element->source;
         ((ast_elem_var_fixed_array_t*) new_element)->length = ast_expr_clone(((ast_elem_var_fixed_array_t*) element)->length);
         break;
@@ -130,8 +130,27 @@ ast_type_t ast_type_clone(const ast_type_t *original){
 }
 
 void ast_type_free(ast_type_t *type){
-    for(length_t i = 0; i != type->elements_length; i++){
-        ast_elem_t *elem = type->elements[i];
+    ast_elems_free(type->elements, type->elements_length);
+    free(type->elements);
+}
+
+void ast_type_free_fully(ast_type_t *type){
+    ast_type_free(type);
+    free(type);
+}
+
+void ast_types_free(ast_type_t *types, length_t length){
+    for(length_t t = 0; t != length; t++) ast_type_free(&types[t]);
+}
+
+void ast_types_free_fully(ast_type_t *types, length_t length){
+    for(length_t t = 0; t != length; t++) ast_type_free(&types[t]);
+    free(types);
+}
+
+void ast_elems_free(ast_elem_t **elements, length_t elements_length){
+    for(length_t i = 0; i != elements_length; i++){
+        ast_elem_t *elem = elements[i];
 
         switch(elem->id){
         case AST_ELEM_BASE:
@@ -179,22 +198,10 @@ void ast_type_free(ast_type_t *type){
 
         free(elem);
     }
-
-    free(type->elements);
 }
 
-void ast_type_free_fully(ast_type_t *type){
-    ast_type_free(type);
-    free(type);
-}
-
-void ast_types_free(ast_type_t *types, length_t length){
-    for(length_t t = 0; t != length; t++) ast_type_free(&types[t]);
-}
-
-void ast_types_free_fully(ast_type_t *types, length_t length){
-    for(length_t t = 0; t != length; t++) ast_type_free(&types[t]);
-    free(types);
+void ast_elem_free(ast_elem_t *elem){
+    ast_elems_free(&elem, 1);
 }
 
 void ast_type_make_base(ast_type_t *type, strong_cstr_t base){

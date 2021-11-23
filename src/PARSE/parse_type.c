@@ -2,6 +2,7 @@
 #include "PARSE/parse.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
+#include "PARSE/parse_expr.h"
 #include "PARSE/parse_struct.h"
 #include "UTIL/util.h"
 
@@ -32,17 +33,8 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
     while(id == TOKEN_MULTIPLY || id == TOKEN_GENERIC_INT || id == TOKEN_POLYCOUNT || id == TOKEN_BRACKET_OPEN){
         expand((void**) &out_type->elements, sizeof(ast_elem_t*), out_type->elements_length, &elements_capacity, 1, 2);
 
-        bool no_match = false;
-        bool expect_count = id == TOKEN_BRACKET_OPEN;
-        if(expect_count) id = tokens[++(*i)].id;
-
         switch(id){
         case TOKEN_MULTIPLY: {
-                if(expect_count){
-                    compiler_panicf(ctx->compiler, sources[*i], "Expected size of fixed array after '[' in type");
-                    return FAILURE;
-                }
-
                 out_type->elements[out_type->elements_length] = malloc(sizeof(ast_elem_pointer_t));
                 out_type->elements[out_type->elements_length]->id = AST_ELEM_POINTER;
                 out_type->elements[out_type->elements_length]->source = sources[*i];
@@ -63,6 +55,26 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 id = tokens[++(*i)].id;
             }
             break;
+        case TOKEN_BRACKET_OPEN: {
+                if(parse_eat(ctx, TOKEN_BRACKET_OPEN, "Expected ']' after size of fixed array in type")) goto failure;
+
+                ast_expr_t *length;
+                if(parse_expr(ctx, &length)) goto failure;
+
+                ast_elem_var_fixed_array_t *var_fixed_array = malloc(sizeof(ast_elem_var_fixed_array_t));
+                source_t var_fixed_array_source = sources[*i];
+
+                var_fixed_array->length = length;
+
+                out_type->elements[out_type->elements_length] = (ast_elem_t*) var_fixed_array;
+                out_type->elements[out_type->elements_length]->id = AST_ELEM_VAR_FIXED_ARRAY;
+                out_type->elements[out_type->elements_length]->source = var_fixed_array_source;
+                out_type->elements_length++;
+
+                if(parse_eat(ctx, TOKEN_BRACKET_CLOSE, "Expected ']' after size of fixed array in type")) goto failure;
+                id = tokens[*i].id;
+            }
+            break;
         case TOKEN_POLYCOUNT: {
                 ast_elem_polycount_t *polycount = malloc(sizeof(ast_elem_polycount_t));
                 polycount->id = AST_ELEM_POLYCOUNT;
@@ -75,15 +87,6 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 id = tokens[++(*i)].id;
             }
             break;
-        default:
-            no_match = true;
-        }
-
-        // Eat ']' if expecting one
-        if(expect_count){
-            weak_cstr_t message_on_error = no_match ? "Expected size of fixed array after '[' in type" : "Expected ']' after size of fixed array in type";
-            if(parse_eat(ctx, TOKEN_BRACKET_CLOSE, message_on_error)) return FAILURE;
-            id = tokens[*i].id;
         }
     }
 
@@ -106,9 +109,8 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             func_elem->source = sources[*i];
 
             if(parse_type_func(ctx, func_elem)){
-                ast_type_free(out_type);
                 free(func_elem);
-                return FAILURE;
+                goto failure;
             }
 
             out_type->elements[out_type->elements_length] = (ast_elem_t*) func_elem;
@@ -129,10 +131,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             layout_kind = id == TOKEN_UNION ? AST_LAYOUT_UNION : AST_LAYOUT_STRUCT;
             (*i)++;
 
-            if(parse_composite_body(ctx, &field_map, &skeleton)){
-                ast_type_free(out_type);
-                return FAILURE;
-            }
+            if(parse_composite_body(ctx, &field_map, &skeleton)) goto failure;
 
             // Pass over closing ')'
             (*i)++;
@@ -161,8 +160,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 if(!ctx->allow_polymorphic_prereqs){
                     free(name);
                     compiler_panicf(ctx->compiler, sources[*i], "Polymorphic prerequisites are not allowed here");
-                    ast_type_free(out_type);
-                    return FAILURE;
+                    goto failure;
                 }
 
                 // Skip over '~'
@@ -171,8 +169,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 maybe_null_strong_cstr_t similar = parse_take_word(ctx, "Expected struct name after '~' in polymorphic prerequisite");
                 if(!similar){
                     free(name);
-                    ast_type_free(out_type);
-                    return FAILURE;
+                    goto failure;
                 }
 
                 ast_elem_polymorph_prereq_t *polymorph_elem = malloc(sizeof(ast_elem_polymorph_prereq_t));
@@ -210,21 +207,19 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
 
                 if(parse_ignore_newlines(ctx, "Expected type in polymorphic generics")){
                     ast_types_free_fully(generics, generics_length);
-                    ast_type_free(out_type);
-                    return FAILURE;
+                    goto failure;
                 }
 
                 if(parse_type(ctx, &generics[generics_length])){
                     ast_types_free_fully(generics, generics_length);
-                    ast_type_free(out_type);
-                    return FAILURE;
+                    goto failure;
                 }
 
                 generics_length++;
 
                 if(parse_ignore_newlines(ctx, "Expected '>' or ',' after type in polymorphic generics")){
                     ast_types_free_fully(generics, generics_length);
-                    ast_type_free(out_type);
+                    goto failure;
                     return FAILURE;
                 }
 
@@ -232,14 +227,12 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                     if(tokens[++(*i)].id == TOKEN_GREATERTHAN){
                         compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected type after ',' in polymorphic generics");
                         ast_types_free_fully(generics, generics_length);
-                        ast_type_free(out_type);
-                        return FAILURE;
+                        goto failure;
                     }
                 } else if(tokens[*i].id != TOKEN_GREATERTHAN){
                     compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after type in polymorphic generics");
                     ast_types_free_fully(generics, generics_length);
-                    ast_type_free(out_type);
-                    return FAILURE;
+                    goto failure;
                 }
             }
 
@@ -247,8 +240,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             if(parse_eat(ctx, TOKEN_GREATERTHAN, "Expected '>' after polymorphic generics")
             || (base_name = parse_take_word(ctx, "Expected type name")) == NULL){
                 ast_types_free_fully(generics, generics_length);
-                ast_type_free(out_type);
-                return FAILURE;
+                goto failure;
             }
 
             ast_elem_generic_base_t *generic_base_elem = malloc(sizeof(ast_elem_generic_base_t));
@@ -262,19 +254,16 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         }
         break;
     default:
-        compiler_panic(ctx->compiler, sources[*i], "Expected type");
-        ast_type_free(out_type);
-        out_type->elements = NULL;
-        out_type->elements_length = 0;
-        out_type->source.index = 0;
-        out_type->source.object_index = ctx->object->index;
-        out_type->source.stride = 0;
-        return FAILURE;
+        goto failure;
     }
 
     out_type->source = sources[start];
     out_type->elements_length++;
     return SUCCESS;
+
+failure:
+    ast_type_free(out_type);
+    return FAILURE;
 }
 
 errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){

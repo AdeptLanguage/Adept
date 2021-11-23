@@ -472,6 +472,9 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
         return FAILURE;
     }
 
+    parse_collapse_polycount_var_fixed_arrays(func->arg_types, func->arity);
+    parse_collapse_polycount_var_fixed_arrays(&func->return_type, 1);
+
     (*i)++; // skip over ')'
     return SUCCESS;
 }
@@ -585,7 +588,6 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
     parse_func_backfill_arguments(func, backfill);
     func->arity++;
     *out_is_solid = true;
-
     return SUCCESS;
 }
 
@@ -842,4 +844,40 @@ errorcode_t parse_func_alias_args(parse_ctx_t *ctx, ast_type_t **out_arg_types, 
 failure:
     ast_types_free_fully(*out_arg_types, *out_arity);
     return FAILURE;
+}
+
+void parse_collapse_polycount_var_fixed_arrays(ast_type_t *types, length_t length){
+    // Will collapse all [$#N] type elements to $#N
+
+    // TODO: Cleanup?
+    for(length_t type_index = 0; type_index != length; type_index++){
+        ast_type_t *type = &types[type_index];
+
+        for(length_t i = 0; i != type->elements_length; i++){
+            ast_elem_t *elem = type->elements[i];
+
+            if(elem->id == AST_ELEM_VAR_FIXED_ARRAY){
+                ast_elem_var_fixed_array_t *var_fixed_array = (ast_elem_var_fixed_array_t*) elem;
+
+                if(var_fixed_array->length->id == EXPR_POLYCOUNT){
+                    ast_expr_polycount_t *old_polycount_expr = (ast_expr_polycount_t*) var_fixed_array->length;
+                    source_t source = old_polycount_expr->source;
+
+                    // Take name
+                    strong_cstr_t name = old_polycount_expr->name;
+                    old_polycount_expr->name = NULL;
+
+                    // Delete old element
+                    ast_elem_free(type->elements[i]);
+
+                    // Replace with unwrapped version
+                    ast_elem_polycount_t *new_elem = (ast_elem_polycount_t*) malloc(sizeof(ast_elem_polycount_t));
+                    new_elem->id = AST_ELEM_POLYCOUNT;
+                    new_elem->source = source;
+                    new_elem->name = name;
+                    type->elements[i] = (ast_elem_t*) new_elem;
+                }
+            }
+        }
+    }
 }

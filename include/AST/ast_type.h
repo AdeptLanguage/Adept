@@ -208,6 +208,14 @@ void ast_types_free(ast_type_t *types, length_t length);
 // Calls 'ast_type_free_fully' on each type in the list
 void ast_types_free_fully(ast_type_t *types, length_t length);
 
+// ---------------- ast_elem_free ----------------
+// Free a collection of AST type elements
+void ast_elems_free(ast_elem_t **elements, length_t elements_length);
+
+// ---------------- ast_elem_free ----------------
+// Frees an individual AST type element
+void ast_elem_free(ast_elem_t *elem);
+
 // ---------------- ast_type_make_base ----------------
 // Takes ownership of 'base' and creates a type from it
 void ast_type_make_base(ast_type_t *type, strong_cstr_t base);

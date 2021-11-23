@@ -1190,14 +1190,16 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
             break;
         case AST_ELEM_VAR_FIXED_ARRAY: {
                 // Take out expression from variable fixed array and perform inference on it
-                ast_expr_t *length = ((ast_elem_var_fixed_array_t*) elem)->length;
-                if(infer_expr(ctx, NULL, &length, EXPR_NONE, false)) return FAILURE;
+                ast_expr_t **length = &(((ast_elem_var_fixed_array_t*) elem)->length);
+                if(infer_expr(ctx, NULL, length, EXPR_NONE, false)) return FAILURE;
 
                 length_t value;
-                if(ast_expr_deduce_to_size(length, &value)){
-                    compiler_panic(ctx->compiler, length->source, "Could not deduce fixed array size at compile time");
+                if(ast_expr_deduce_to_size(*length, &value)){
+                    compiler_panic(ctx->compiler, (*length)->source, "Could not deduce fixed array size at compile time");
                     return FAILURE;
                 }
+
+                ast_expr_free(*length);
 
                 // Boil it down to a regular fixed array
                 // DANGEROUS: Relying on memory layout

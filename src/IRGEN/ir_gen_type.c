@@ -271,6 +271,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             char *unresolved_str_rep = ast_type_str(unresolved_type);
             compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown non-concrete type element id in type '%s'", unresolved_str_rep);
             free(unresolved_str_rep);
+            return FAILURE;
         }
 
         *resolved_type = wrapped_type;

@@ -1183,6 +1183,8 @@ errorcode_t parse_ambiguous_open_bracket(parse_ctx_t *ctx, ast_expr_list_t *stmt
     // Parse ahead
     while(tokens[*i].id == TOKEN_BRACKET_OPEN){
         expand((void**) &expr_source_list, sizeof(source_t), expr_source_list_length, &expr_source_list_capacity, 1, 4);
+
+        expr_source_list[expr_source_list_length++] = sources[*i];
         (*i)++;
 
         ast_expr_t *sub_expr;

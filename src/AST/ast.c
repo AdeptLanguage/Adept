@@ -716,17 +716,14 @@ void ast_dump_composite(FILE *file, ast_composite_t *composite, length_t additio
     // Dump generics "<$K, $V>" if the composite is polymorphic
     if(composite->is_polymorphic){
         ast_polymorphic_composite_t *poly_composite = (ast_polymorphic_composite_t*) composite;
-        bool printed_first_generic = false;
 
         fprintf(file, "<");
 
         for(length_t i = 0; i != poly_composite->generics_length; i++){
             fprintf(file, "$%s", poly_composite->generics[i]);
 
-            if(printed_first_generic){
+            if(i + 1 != poly_composite->generics_length){
                 fprintf(file, ", ");
-            } else {
-                printed_first_generic = true;
             }
         }
 
