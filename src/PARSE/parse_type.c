@@ -56,7 +56,8 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             }
             break;
         case TOKEN_BRACKET_OPEN: {
-                if(parse_eat(ctx, TOKEN_BRACKET_OPEN, "Expected ']' after size of fixed array in type")) goto failure;
+                // Eat '['
+                (*i)++;
 
                 ast_expr_t *length;
                 if(parse_expr(ctx, &length)) goto failure;
@@ -220,7 +221,6 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 if(parse_ignore_newlines(ctx, "Expected '>' or ',' after type in polymorphic generics")){
                     ast_types_free_fully(generics, generics_length);
                     goto failure;
-                    return FAILURE;
                 }
 
                 if(tokens[*i].id == TOKEN_NEXT){
