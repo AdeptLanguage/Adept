@@ -218,6 +218,16 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
     return;
 }
 
+ir_value_t *build_call(ir_builder_t *builder, length_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value){
+    ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
+    instruction->id = INSTRUCTION_CALL;
+    instruction->result_type = result_type;
+    instruction->values = arguments;
+    instruction->values_length = arguments_length;
+    instruction->ir_func_id = ir_func_id;
+    return return_result_value ? build_value_from_prev_instruction(builder) : NULL;
+}
+
 void build_break(ir_builder_t *builder, length_t basicblock_id){
     ir_instr_break_t *built_instr = (ir_instr_break_t*) build_instruction(builder, sizeof(ir_instr_break_t));
     built_instr->id = INSTRUCTION_BREAK;
@@ -947,14 +957,8 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     }
 
     // Call __defer__()
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = builder->object->ir_module.funcs[defer_func.ir_func_id].return_type;
-    instruction->values = arguments;
-    instruction->values_length = 1;
-    instruction->ir_func_id = defer_func.ir_func_id;
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction; 
+    ir_type_t *result_type = builder->object->ir_module.funcs[defer_func.ir_func_id].return_type;
+    build_call(builder, defer_func.ir_func_id, result_type, arguments, 1, false);
     return SUCCESS;
 }
 
@@ -1147,15 +1151,8 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                     continue;
                 }
 
-                ir_basicblock_new_instructions(builder->current_block, 1);
-                ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-                instruction->id = INSTRUCTION_CALL;
-                instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
-                instruction->values = arguments;
-                instruction->values_length = 1;
-                instruction->ir_func_id = result.ir_func_id;
-                builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
-                values[i] = build_value_from_prev_instruction(builder);
+                ir_type_t *result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;                
+                values[i] = build_call(builder, result.ir_func_id, result_type, arguments, 1, true);
             }
         }
     }
@@ -1242,21 +1239,13 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     }
 
     // Call __pass__()
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = builder->object->ir_module.funcs[pass_func.ir_func_id].return_type;
-    instruction->values = arguments;
-    instruction->values_length = 1;
-    instruction->ir_func_id = pass_func.ir_func_id;
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction; 
-    ir_value_t *passed = build_value_from_prev_instruction(builder);
+    ir_type_t *result_type = builder->object->ir_module.funcs[pass_func.ir_func_id].return_type;
+    ir_value_t *passed = build_call(builder, pass_func.ir_func_id, result_type, arguments, 1, true);
 
     // Store result back into mutable value
     build_store(builder, passed, mutable_value, ast_type->source);
     return SUCCESS;
 }
-
 
 errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_return){
     // DANGEROUS: 'func' could be invalidated by generation of new functions
@@ -1573,14 +1562,8 @@ successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, 
     ast_type_free(&arg_types[0]);
     // NOTE: Don't free arg_types[1] because we don't have ownership
 
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
-    instruction->values = arguments;
-    instruction->values_length = 2;
-    instruction->ir_func_id = result.ir_func_id;
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+    ir_type_t *result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
+    build_call(builder, result.ir_func_id, result_type, arguments, 2, false);
     return SUCCESSFUL;
 }
 
@@ -1605,17 +1588,11 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
             return NULL;
         }
 
-        ir_basicblock_new_instructions(builder->current_block, 1);
-        ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-        instruction->id = INSTRUCTION_CALL;
-        instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
-        instruction->values = arguments;
-        instruction->values_length = 2;
-        instruction->ir_func_id = result.ir_func_id;
-        builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+        ir_type_t *result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
+        ir_value_t *returned_value = build_call(builder, result.ir_func_id, result_type, arguments, 2, true);
 
         if(out_type != NULL) *out_type = ast_type_clone(&result.ast_func->return_type);
-        return build_value_from_prev_instruction(builder);
+        return returned_value;
     }
 
     return NULL;
@@ -1661,17 +1638,11 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 
     ast_type_free(&argument_ast_types[0]);
 
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    ir_instr_call_t *instruction = ir_pool_alloc(builder->pool, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
-    instruction->values = arguments;
-    instruction->values_length = 2;
-    instruction->ir_func_id = result.ir_func_id;
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+    ir_type_t *result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;
+    ir_value_t *result_value = build_call(builder, result.ir_func_id, result_type, arguments, 2, true);
 
     if(out_ptr_to_element_type != NULL) *out_ptr_to_element_type = ast_type_clone(&result.ast_func->return_type);
-    return build_value_from_prev_instruction(builder);
+    return result_value;
 }
 
 errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, source_t instantiation_source, length_t ast_poly_func_id, ast_type_t *types,

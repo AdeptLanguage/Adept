@@ -4,23 +4,7 @@ HIGH-PRIORITY:
 
 MEDIUM-PRIORITY:
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
-* way to allow using defined expressions and/or meta expressions for fixed array counts
-    ```
-    // This holds polygon B expressed in frame A.
-    struct Whatever (
-        vertices /* b2_maxPolygonVertices */ 8 b2Vec2,
-        normals /* b2_maxPolygonVertices */ 8 b2Vec2,
-        count int
-    )
-
-
-    struct Whatever (
-        vertices #(b2_maxPolygonVertices) b2Vec2,
-        normals #(b2_maxPolygonVertices) b2Vec2,
-        count int,
-        max_capacity #get max_capacity b2Vec2
-    )
-    ```
+* add support for variable sized fixed arrays inside of data structures
 * 'each-in' loops with custom 'idx' name
     ```
     each object Object in objects using object_idx {
@@ -37,6 +21,7 @@ MEDIUM-PRIORITY:
 * @incognito
 * traits/interfaces and 'derive Thingable1, Thingable2, Thingable3 for Thing'
 * built-in meta functions like supports()
+* constructor and @undef constructor
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -83,3 +68,4 @@ v2.5 COMPLETED:
 
 v2.6 COMPLETED:
 + records
++ fixed arrays of size determined at compile time

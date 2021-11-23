@@ -598,16 +598,14 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         // Free AST types of the expressions given for the arguments
         ast_types_free_fully(arg_types, unpacked_arity);
         
-        // Call the actual function
-        ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
-        instruction->id = INSTRUCTION_CALL;
-        instruction->result_type = pair.ir_func->return_type;
-        instruction->values = arg_values;
-        instruction->values_length = arity;
-        instruction->ir_func_id = pair.ir_func_id;
+        // Call the actual function and store resulting value from call expression if requested
+        ir_type_t *result_type = pair.ir_func->return_type;
 
-        // Store resulting value from call expression if requested
-        if(ir_value) *ir_value = build_value_from_prev_instruction(builder);
+        if(ir_value){
+            *ir_value = build_call(builder, pair.ir_func_id, result_type, arg_values, arity, true);
+        } else {
+            build_call(builder, pair.ir_func_id, result_type, arg_values, arity, false);
+        }
 
         // Restore the stack if we allocated memory on it
         if(stack_pointer) build_stack_restore(builder, stack_pointer);
@@ -891,12 +889,9 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
     variadic_array_function_arguments[3] = build_bitcast(builder, raw_types_array, builder->ptr_type);
     
     // Create variadic array value using the special function '__variadic_array__'
-    ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = builder->object->ir_module.common.ir_variadic_array;
-    instruction->values = variadic_array_function_arguments;
-    instruction->values_length = 4;
-    instruction->ir_func_id = builder->object->ir_module.common.variadic_ir_func_id;
+    length_t ir_func_id = builder->object->ir_module.common.variadic_ir_func_id;
+    ir_type_t *result_type = builder->object->ir_module.common.ir_variadic_array;
+    ir_value_t *returned_value = build_call(builder, ir_func_id, result_type, variadic_array_function_arguments, 4, true);
 
     // Make space for variadic array argument
     if(variadic_count == 0){
@@ -909,7 +904,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
     }
 
     // Replace argument values after regular arguments with single variadic array argument value
-    (*arg_values)[pair->ast_func->arity] = build_value_from_prev_instruction(builder);
+    (*arg_values)[pair->ast_func->arity] = returned_value;
     *arity = pair->ast_func->arity + 1;
     return SUCCESS;
 }
@@ -1731,17 +1726,14 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     // Remember the AST return type of the function
     ast_type_t *return_type = &pair.ast_func->return_type;
-    
-    ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = pair.ir_func->return_type;
-    instruction->values = arg_values;
-    instruction->values_length = arity;
-    instruction->ir_func_id = pair.ir_func_id;
 
     // Don't even bother with result unless we care about the it
-    if(ir_value) *ir_value = build_value_from_prev_instruction(builder);
-
+    if(ir_value){
+        *ir_value = build_call(builder, pair.ir_func_id, pair.ir_func->return_type, arg_values, arity, true);
+    } else {
+        build_call(builder, pair.ir_func_id, pair.ir_func->return_type, arg_values, arity, false);
+    }
+    
     if(used_temporary_subject && !expr->allow_drop){
         // Dereference pointer to subject AST type to get just the subject AST type
         ast_type_dereference(&arg_types[0]);
@@ -2375,6 +2367,9 @@ errorcode_t ir_gen_expr_toggle(ir_builder_t *builder, ast_expr_unary_t *expr, ir
 errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_declare_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
     ast_expr_inline_declare_t *def = ((ast_expr_inline_declare_t*) expr);
 
+    bool is_pod = def->traits & AST_EXPR_DECLARATION_POD;
+    bool is_assign_pod = def->traits & AST_EXPR_DECLARATION_ASSIGN_POD;
+
     // Ensure no variable with the same name already exists in this scope
     if(bridge_scope_var_already_in_list(builder->scope, def->name)){
         compiler_panicf(builder->compiler, def->source, "Variable '%s' already declared", def->name);
@@ -2412,10 +2407,10 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
 
         // Add the variable
         ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id);
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+        add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
         // Assign the initial value to the newly created variable
-        if(def->is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
+        if(is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
             build_store(builder, initial, destination, expr->source);
         }
 
@@ -2426,14 +2421,14 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         *ir_value = destination;
     } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
         // Mark the variable as undefined memory so it isn't auto-initialized later on
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
+        add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
 
         // Result is pointer to variable on stack
         *ir_value = build_lvarptr(builder, var_pointer_type, builder->next_var_id - 1);
     } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
         // Variable declaration without initial value
         
-        add_variable(builder, def->name, &def->type, ir_decl_type, def->is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+        add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
         // Zero initialize the variable
         ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id - 1);

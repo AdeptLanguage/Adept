@@ -312,24 +312,16 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
         switch(tokens[*i].id){
         case TOKEN_BRACKET_OPEN: {
                 ast_expr_t *index_expr;
-                ast_expr_array_access_t *array_access_expr = malloc(sizeof(ast_expr_array_access_t));
-                array_access_expr->source = sources[(*i)++];
-
-                if(parse_expr(ctx, &index_expr)){
-                    free(array_access_expr);
-                    return FAILURE;
-                }
+                source_t source = sources[(*i)++];
+                
+                if(parse_expr(ctx, &index_expr)) return FAILURE;
 
                 if(parse_eat(ctx, TOKEN_BRACKET_CLOSE, "Expected ']' after array index expression")){
                     ast_expr_free_fully(index_expr);
-                    free(array_access_expr);
                     return FAILURE;
                 }
 
-                array_access_expr->id = EXPR_ARRAY_ACCESS;
-                array_access_expr->value = *inout_expr;
-                array_access_expr->index = index_expr;
-                *inout_expr = (ast_expr_t*) array_access_expr;
+                ast_expr_create_access(inout_expr, *inout_expr, index_expr, source);
             }
             break;
         case TOKEN_MEMBER: {
@@ -1260,28 +1252,23 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
+    trait_t traits = TRAIT_NONE;
 
     unsigned int expr_id = (tokens[*i].id == TOKEN_UNDEF ? EXPR_ILDECLAREUNDEF : EXPR_ILDECLARE);
     source_t source = sources[(*i)++];;
 
     maybe_null_weak_cstr_t name = parse_eat_word(ctx, "Expected variable name for inline declaration");
-    if(name == NULL){
-        return FAILURE;
-    }
+    if(name == NULL) return FAILURE;
 
-    bool is_pod = false;
     if(tokens[*i].id == TOKEN_POD){
-        is_pod = true;
+        traits |= AST_EXPR_DECLARATION_POD;
         (*i)++;
     }
 
     ast_type_t type;
-    if(parse_type(ctx, &type)){
-        return FAILURE;
-    }
+    if(parse_type(ctx, &type)) return FAILURE;
 
     ast_expr_t *value;
-    bool is_assign_pod = false;
     if(tokens[*i].id == TOKEN_ASSIGN){
         if(expr_id == EXPR_ILDECLAREUNDEF){
             compiler_panic(ctx->compiler, sources[*i], "Can't initialize undefined inline variable");
@@ -1291,7 +1278,7 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
         }
 
         if(tokens[++(*i)].id == TOKEN_POD){
-            is_assign_pod = true;
+            traits |= AST_EXPR_DECLARATION_ASSIGN_POD;
             (*i)++;
         }
 
@@ -1303,7 +1290,7 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
         value = NULL;
     }
 
-    ast_expr_create_declaration(out_expr, expr_id, source, name, type, is_pod, is_assign_pod, false, false, value);
+    ast_expr_create_declaration(out_expr, expr_id, source, name, type, traits, value);
     return SUCCESS;
 }
 

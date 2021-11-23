@@ -656,9 +656,9 @@ errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt)
     trait_t traits = TRAIT_NONE;
     bool is_undef = stmt->id == EXPR_DECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF);
 
-    if(stmt->is_pod)    traits |= BRIDGE_VAR_POD;
-    if(stmt->is_static) traits |= BRIDGE_VAR_STATIC;
-    if(is_undef)        traits |= BRIDGE_VAR_UNDEF;
+    if(stmt->traits & AST_EXPR_DECLARATION_POD)    traits |= BRIDGE_VAR_POD;
+    if(stmt->traits & AST_EXPR_DECLARATION_STATIC) traits |= BRIDGE_VAR_STATIC;
+    if(is_undef)                                   traits |= BRIDGE_VAR_UNDEF;
 
     // Resolve AST type to IR type
     if(ir_gen_resolve_type(builder->compiler, builder->object, &stmt->type, &ir_type)) return FAILURE;
@@ -673,8 +673,10 @@ errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt)
 }
 
 errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr_declare_t *stmt, ir_type_t *ir_type){
+    bool is_static = stmt->traits & AST_EXPR_DECLARATION_STATIC;
+
     // Determine which builder to use to build initialization instructions
-    ir_builder_t *working_builder = stmt->is_static ? primary_builder->object->ir_module.init_builder : primary_builder;
+    ir_builder_t *working_builder = is_static ? primary_builder->object->ir_module.init_builder : primary_builder;
 
     // If we'll instructions in a different location, allocate
     // a scope for the secondary builder.
@@ -694,7 +696,7 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
     // Get pointer to where the variable is on the stack
     ir_value_t *destination;
 
-    if(stmt->is_static){
+    if(is_static){
         destination = build_svarptr(working_builder, ir_type_ptr, primary_builder->object->ir_module.common.next_static_variable_id - 1);
     } else {
         destination = build_lvarptr(working_builder, ir_type_ptr, primary_builder->next_var_id - 1);
@@ -710,12 +712,13 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
 
         ir_value_t *initial;
         ast_type_t initial_ast_type;
+        bool is_assign_pod = stmt->traits & AST_EXPR_DECLARATION_ASSIGN_POD;
 
         // Generate instructions to get initial value
         if(ir_gen_expr(working_builder, stmt->value, &initial, false, &initial_ast_type)) goto failure;
 
         // Assign the initial value to the variable, using Plain-Old-Data assignment if enabled
-        if(stmt->is_assign_pod || !handle_assign_management(working_builder, initial, &initial_ast_type, destination, &stmt->type, true)){
+        if(is_assign_pod || !handle_assign_management(working_builder, initial, &initial_ast_type, destination, &stmt->type, true)){
             // When doing normal assignment (which is POD), ensure the new value is of the same type
 
             // Conform initial value to the type of the variable

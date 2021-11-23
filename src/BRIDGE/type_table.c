@@ -1,5 +1,6 @@
 
 #include "UTIL/util.h"
+#include "UTIL/color.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/type_table.h"
 
@@ -105,6 +106,9 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
         case AST_ELEM_FIXED_ARRAY:
             subtype = ast_type_unwrapped_view(type);
             type_table_give(table, &subtype, NULL); // TODO: Maybe determine whether or not subtype is alias??
+            break;
+        case AST_ELEM_VAR_FIXED_ARRAY:
+            internalwarningprintf("type_table_give() got type with AST_ELEM_VAR_FIXED_ARRAY element\n");
             break;
         }
     }

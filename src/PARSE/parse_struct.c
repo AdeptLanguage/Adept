@@ -462,7 +462,9 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     func->statements_capacity = func->arity + 2;
     func->statements_length = func->statements_capacity;
     func->statements = malloc(sizeof(ast_expr_t*) * func->statements_capacity);
-    ast_expr_create_declaration(&func->statements[0], all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE, source, master_variable_name, ast_type_clone(&func->return_type), true, true, false, false, NULL);
+
+    trait_t traits = AST_EXPR_DECLARATION_POD | AST_EXPR_DECLARATION_ASSIGN_POD;
+    ast_expr_create_declaration(&func->statements[0], all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE, source, master_variable_name, ast_type_clone(&func->return_type), traits, NULL);
 
     for(length_t i = 0; i != func->arity; i++){
         weak_cstr_t field_name = field_map->arrows[i].name;

@@ -358,3 +358,22 @@ errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem){
 
     return SUCCESS;
 }
+
+bool parse_can_type_start_with(tokenid_t id, bool allow_open_bracket){
+    switch(id){
+        case TOKEN_WORD:
+        case TOKEN_MULTIPLY:
+        case TOKEN_GENERIC_INT:
+        case TOKEN_POLYMORPH:
+        case TOKEN_POLYCOUNT:
+        case TOKEN_LESSTHAN:
+        case TOKEN_FUNC:
+        case TOKEN_STDCALL:
+        case TOKEN_PACKED:
+        case TOKEN_STRUCT:
+        case TOKEN_UNION:
+            return true;
+    }
+
+    return allow_open_bracket && id == TOKEN_BRACKET_OPEN;
+}

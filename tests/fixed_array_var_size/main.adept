@@ -1,0 +1,35 @@
+
+// Examples of syntax disambiguation
+// pointers[10] * int
+// pointers[10] string
+// pointers[10] * string
+// pointers[10] 10 string
+// pointers [10] [10] string = getValue()
+// pointers [10] $T
+// pointers [10] $#T int
+// pointers [10] <$T> string
+// pointers [$#N] $T
+// pointers [10] func() void
+// pointers [10] stdcall func() void
+// pointers [10] packed struct()
+// pointers [10] struct()
+// pointers [10] union()
+// strings [10] String
+
+import basics
+
+func main {
+    define num_integers = 2 * half_size
+    define half_size = 10
+
+    integers [num_integers] int
+
+    // Set each element to its index plus one, squared
+    each int in integers, it = sq(idx + 1)
+
+    // Print out result
+    header String = sprintf("---------- %d..%d squared ----------", 1, num_integers)
+    print(header, toString(integers), "-" * header.length)
+}
+
+func sq(value $T~__number__) $T = value * value

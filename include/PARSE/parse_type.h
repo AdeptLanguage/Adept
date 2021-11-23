@@ -18,6 +18,11 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type);
 // type-element form. Primary called from 'parse_type'.
 errorcode_t parse_type_func(parse_ctx_t *ctx, ast_elem_func_t *out_func_elem);
 
+// ------------------ parse_can_type_start_with ------------------
+// Returns whether an AST type can start with a token
+// Won't consider '[' token unless 'allow_open_bracket' is specified as true
+bool parse_can_type_start_with(tokenid_t id, bool allow_open_bracket);
+
 #ifdef __cplusplus
 }
 #endif

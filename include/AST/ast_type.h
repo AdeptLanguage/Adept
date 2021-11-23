@@ -20,6 +20,7 @@ extern "C" {
 #include "UTIL/hash.h"
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
+#include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
 
 // Possible AST type elements
@@ -28,14 +29,15 @@ extern "C" {
 #define AST_ELEM_POINTER          0x02
 #define AST_ELEM_ARRAY            0x03
 #define AST_ELEM_FIXED_ARRAY      0x04
-#define AST_ELEM_GENERIC_INT      0x05
-#define AST_ELEM_GENERIC_FLOAT    0x06
-#define AST_ELEM_FUNC             0x07
-#define AST_ELEM_POLYMORPH        0x08
-#define AST_ELEM_POLYCOUNT        0x09
-#define AST_ELEM_POLYMORPH_PREREQ 0x0A
-#define AST_ELEM_GENERIC_BASE     0x0B
-#define AST_ELEM_LAYOUT           0x0C
+#define AST_ELEM_VAR_FIXED_ARRAY  0x05
+#define AST_ELEM_GENERIC_INT      0x06
+#define AST_ELEM_GENERIC_FLOAT    0x07
+#define AST_ELEM_FUNC             0x08
+#define AST_ELEM_POLYMORPH        0x09
+#define AST_ELEM_POLYCOUNT        0x0A
+#define AST_ELEM_POLYMORPH_PREREQ 0x0B
+#define AST_ELEM_GENERIC_BASE     0x0C
+#define AST_ELEM_LAYOUT           0x0D
 
 // Possible data flow patterns
 #define FLOW_NONE  0x00
@@ -75,6 +77,18 @@ typedef struct {
     source_t source;
     length_t length;
 } ast_elem_fixed_array_t;
+
+// ---------------- ast_elem_var_fixed_array_t ----------------
+// Type element for a variable fixed array
+// This type element should be collapsed into a regular ast_elem_fixed_array_t
+// during the inference stage.
+// We will assume that
+// sizeof(ast_elem_var_fixed_array_t) <= sizeof(ast_elem_fixed_array_t)
+typedef struct {
+    unsigned int id;
+    source_t source;
+    ast_expr_t *length;
+} ast_elem_var_fixed_array_t;
 
 // ---------------- ast_elem_func_t ----------------
 // Type element for a function pointer

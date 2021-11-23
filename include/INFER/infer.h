@@ -14,15 +14,6 @@
 #include "DRVR/compiler.h"
 #include "BRIDGE/type_table.h"
 
-// ---------------- infer_ctx_t ----------------
-typedef struct {
-    compiler_t *compiler;
-    object_t *object;
-    ast_t *ast;
-    type_table_t *type_table;
-    length_t constants_recursion_depth;
-} infer_ctx_t;
-
 // ---------------- infer_var_t ----------------
 // Variable mapping used for inference stage
 typedef struct {
@@ -52,6 +43,16 @@ typedef struct infer_var_scope_t {
     length_t constants_capacity;
 } infer_var_scope_t;
 
+// ---------------- infer_ctx_t ----------------
+typedef struct {
+    compiler_t *compiler;
+    object_t *object;
+    ast_t *ast;
+    type_table_t *type_table;
+    length_t constants_recursion_depth;
+    infer_var_scope_t *scope;
+} infer_ctx_t;
+
 // ---------------- undetermined_expr_list_t ----------------
 // A data structure for containing generic expressions that
 // haven't been assigned a type yet.
@@ -77,19 +78,19 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
 
 // ---------------- infer_in_stmts ----------------
 // Infers aliases and generics in a list of statements
-errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length, infer_var_scope_t *scope);
+errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length);
 
 // ---------------- infer_expr ----------------
 // Infers an expression from the root of it
-errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, infer_var_scope_t *scope, bool must_be_mutable);
+errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root, unsigned int default_assigned_type, bool must_be_mutable);
 
 // ---------------- infer_expr_inner ----------------
 // Infers an inner expression within the root
-errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope, bool must_be_mutable);
+errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, bool must_be_mutable);
 
 // ---------------- infer_expr_inner_variable ----------------
 // Infers an inner expression that is variable-like
-errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, infer_var_scope_t *scope, bool must_be_mutable);
+errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, bool must_be_mutable);
 
 // ---------------- undetermined_expr_list_give ----------------
 // Gives a potential solution for an undetermined list

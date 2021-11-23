@@ -144,11 +144,16 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 case TOKEN_STRUCT: case TOKEN_PACKED: case TOKEN_UNION: /* anonymous composites */
                     (*i)--; if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
                     break;
-                default:
-                    // Assume assign statement if not one of the above
+                case TOKEN_BRACKET_OPEN: /* ambiguous case between declaration and usage */
                     (*i)--;
-                    if(parse_assign(ctx, stmt_list)) return FAILURE;
+                    if(parse_ambiguous_open_bracket(ctx, stmt_list)) return FAILURE;
                     break;
+                default: {
+                        // Assume mutable expression operation statement if not one of the above
+                        (*i)--;
+                        if(parse_mutable_expr_operation(ctx, stmt_list)) return FAILURE;
+                        break;
+                    }
                 }
             }
             break;
@@ -158,7 +163,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_MULTIPLY: case TOKEN_OPEN: case TOKEN_INCREMENT: case TOKEN_DECREMENT:
         case TOKEN_BIT_AND: case TOKEN_BIT_OR: case TOKEN_BIT_XOR: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_RSHIFT:
         case TOKEN_BIT_LGC_LSHIFT: case TOKEN_BIT_LGC_RSHIFT: /* DUPLICATE: case TOKEN_ADDRESS: */
-            if(parse_assign(ctx, stmt_list)) return FAILURE;
+            if(parse_mutable_expr_operation(ctx, stmt_list)) return FAILURE;
             break;
         case TOKEN_IF: case TOKEN_UNLESS:
             if(parse_onetime_conditional(ctx, stmt_list, defer_scope)) return FAILURE;
@@ -793,44 +798,39 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
-    source_t *sources = ctx->tokenlist->sources;
+    source_t *token_sources = ctx->tokenlist->sources;
 
-    weak_cstr_t *decl_names = NULL;
-    source_t *decl_sources = NULL;
+    weak_cstr_t *names = NULL;
+    source_t *source_list = NULL;
     length_t length = 0;
     length_t capacity = 0;
+    trait_t traits = TRAIT_NONE;
 
-    bool is_pod = false;
-    bool is_assign_pod = false;
-    ast_expr_t *decl_value = NULL;
-    ast_type_t decl_type;
-    bool is_const = false;
-    bool is_static = false;
-
-    if(tokens[*i].id == TOKEN_CONST){
-        is_const = true;
+    switch(tokens[*i].id){
+    case TOKEN_CONST:
+        traits |= AST_EXPR_DECLARATION_CONST;
         (*i)++;
-    } else if(tokens[*i].id == TOKEN_STATIC){
-        is_static = true;
+        break;
+    case TOKEN_STATIC:
+        traits |= AST_EXPR_DECLARATION_STATIC;
         (*i)++;
+        break;
     }
-
-    unsigned int declare_stmt_type = EXPR_DECLARE;
 
     // Collect all variable names & sources into arrays
     while(true){
-        coexpand((void**) &decl_names, sizeof(const char*), (void**) &decl_sources,
+        coexpand((void**) &names, sizeof(const char*), (void**) &source_list,
             sizeof(source_t), length, &capacity, 1, 4);
 
         if(tokens[*i].id != TOKEN_WORD){
-            compiler_panic(ctx->compiler, sources[*i], "Expected variable name");
-            free(decl_names);
-            free(decl_sources);
+            compiler_panic(ctx->compiler, token_sources[*i], "Expected variable name");
+            free(names);
+            free(source_list);
             return FAILURE;
         }
 
-        decl_names[length] = tokens[*i].data;
-        decl_sources[length++] = sources[(*i)++];
+        names[length] = tokens[*i].data;
+        source_list[length++] = token_sources[(*i)++];
 
         if(tokens[*i].id == TOKEN_NEXT){
             (*i)++; continue;
@@ -838,16 +838,37 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     }
 
     if(tokens[*i].id == TOKEN_POD){
-        is_pod = true;
+        traits |= AST_EXPR_DECLARATION_POD;
         (*i)++;
     }
 
     // Parse the type for the variable(s)
-    if(parse_type(ctx, &decl_type)){
-        free(decl_names);
-        free(decl_sources);
+    ast_type_t type;
+    if(parse_type(ctx, &type)){
+        free(names);
+        free(source_list);
         return FAILURE;
     }
+
+    if(parse_stmt_mid_declare(ctx, stmt_list, type, names, source_list, length, traits)){
+        ast_type_free(&type);
+        free(names);
+        free(source_list);
+        return FAILURE;
+    }
+
+    free(names);
+    free(source_list);
+    return SUCCESS;
+}
+
+errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_type_t master_type, weak_cstr_t *names, source_t *source_list, length_t length, trait_t traits){
+    // NOTE: 'length' is used for the length of both 'names' and 'sources'
+
+    length_t *i = ctx->i;
+    token_t *tokens = ctx->tokenlist->tokens;
+    unsigned int declare_stmt_type = EXPR_DECLARE;
+    ast_expr_t *initial_value = NULL;
 
     // Parse the initial value for the variable(s) (if an initial value is given)
     if(tokens[*i].id == TOKEN_ASSIGN){
@@ -859,16 +880,11 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
             (*i)++;
         } else {
             if(tokens[*i].id == TOKEN_POD){
-                is_assign_pod = true;
+                traits |= AST_EXPR_DECLARATION_ASSIGN_POD;
                 (*i)++;
             }
 
-            if(parse_expr(ctx, &decl_value)){
-                ast_type_free(&decl_type);
-                free(decl_names);
-                free(decl_sources);
-                return FAILURE;
-            }
+            if(parse_expr(ctx, &initial_value)) return FAILURE;
         }
     }    
 
@@ -878,11 +894,11 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         ast_expr_t *value;
 
         if(v + 1 == length){
-            type = decl_type;
-            value = decl_value;
+            type = master_type;
+            value = initial_value;
         } else {
-            type = ast_type_clone(&decl_type);
-            value = decl_value == NULL ? NULL : ast_expr_clone(decl_value);
+            type = ast_type_clone(&master_type);
+            value = initial_value == NULL ? NULL : ast_expr_clone(initial_value);
         }
 
         if(v != 0){
@@ -890,11 +906,9 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         }
 
         // Create the declare statement
-        ast_expr_create_declaration(&stmt_list->statements[stmt_list->length++], declare_stmt_type, decl_sources[v], decl_names[v], type, is_pod, is_assign_pod, is_static, is_const, value);
+        ast_expr_create_declaration(&stmt_list->statements[stmt_list->length++], declare_stmt_type, source_list[v], names[v], type, traits, value);
     }
 
-    free(decl_names);
-    free(decl_sources);
     return SUCCESS;
 }
 
@@ -1057,9 +1071,7 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
     }
 
     ast_expr_list_t if_stmt_list;
-    if_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
-    if_stmt_list.length = 0;
-    if_stmt_list.capacity = 4;
+    ast_expr_list_init(&if_stmt_list, 4);
 
     defer_scope_t if_defer_scope;
     defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
@@ -1094,9 +1106,7 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
         }
 
         ast_expr_list_t else_stmt_list;
-        else_stmt_list.statements = malloc(sizeof(ast_expr_t*) * 4);
-        else_stmt_list.length = 0;
-        else_stmt_list.capacity = 4;
+        ast_expr_list_init(&else_stmt_list, 4);
 
         // Reuse 'if_defer_scope' for else defer scope
         defer_scope_init(&if_defer_scope, defer_scope, NULL, TRAIT_NONE);
@@ -1140,33 +1150,162 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
     return SUCCESS;
 }
 
-errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
-    // NOTE: Assumes 'stmt_list' has enough space for another statement
-    // NOTE: expand() should've already been used on stmt_list to make room
+errorcode_t parse_ambiguous_open_bracket(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
+    // This function is used to disambiguate between the two following syntaxes:
+    // variable[value] ... 
+    // vairable [value] Type
+
+    // And then injects the values along the way into the proper context
+    // Must also handle cases like:
+    // variable[value][value] ...
+    // variable [value] [value] Type
 
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
-
     length_t *i = ctx->i;
     source_t source = sources[*i];
 
-    ast_expr_t *mutable_expression;
-    if(parse_expr(ctx, &mutable_expression)) return FAILURE;
+    // word [
+    //   ^
+
+    // Get starting word
+    maybe_null_weak_cstr_t word = parse_eat_word(ctx, "INTERNAL ERROR: parse_ambiguous_open_bracket() expected word");
+    if(word == NULL) return FAILURE;
+
+    // Setup temporary heap arrays
+    source_t *expr_source_list = malloc(sizeof(source_t) * 4);
+    length_t expr_source_list_length = 0;
+    length_t expr_source_list_capacity = 4;
+
+    ast_expr_list_t expr_list;
+    ast_expr_list_init(&expr_list, 4);
+
+    // Parse ahead
+    while(tokens[*i].id == TOKEN_BRACKET_OPEN){
+        expand((void**) &expr_source_list, sizeof(source_t), expr_source_list_length, &expr_source_list_capacity, 1, 4);
+        (*i)++;
+
+        ast_expr_t *sub_expr;
+        if(parse_expr(ctx, &sub_expr)) {
+            ast_expr_list_free(&expr_list);
+            free(expr_source_list);
+            free(word);
+            return FAILURE;
+        }
+
+        ast_expr_list_append(&expr_list, sub_expr);
+
+        // Eat ']'
+        if(parse_eat(ctx, TOKEN_BRACKET_CLOSE, "Expected ']'")){
+            ast_expr_list_free(&expr_list);
+            free(expr_source_list);
+            free(word);
+            return FAILURE;
+        }
+    }
+
+    // Determine if this statement should be treated as a declaration,
+    // or as a mutable value operation
+    tokenid_t id = tokens[*i].id;
+    bool is_declaration = parse_can_type_start_with(id, false) || id == TOKEN_NEXT;
+
+    if(is_declaration){
+        // If there were any already known traits for the declaration,
+        // we would not be going down this execution path
+        trait_t traits = TRAIT_NONE;
+
+        // Parse rest of type
+        ast_type_t type;
+        if(parse_type(ctx, &type)){
+            ast_expr_list_free(&expr_list);
+            free(expr_source_list);
+            free(word);
+            return FAILURE;
+        }
+
+        // Manually prepend fixed array elements that we had already encountered
+        // DANGEROUS: Manually setting AST type elements
+        ast_elem_t **new_elements = malloc(sizeof(ast_elem_t*) * (type.elements_length + expr_list.length));
+        memcpy(&new_elements[expr_list.length], type.elements, sizeof(ast_elem_t*) * type.elements_length);
+
+        for(length_t i = 0; i != expr_list.length; i++){
+            ast_elem_var_fixed_array_t **element = (ast_elem_var_fixed_array_t**) &new_elements[i];
+            *element = malloc(sizeof(ast_elem_var_fixed_array_t));
+            (*element)->id = AST_ELEM_VAR_FIXED_ARRAY;
+            (*element)->source = expr_source_list[i];
+            (*element)->length = expr_list.statements[i];
+        }
+
+        free(type.elements);
+        type.elements = new_elements;
+        type.elements_length += expr_list.length;
+
+        // Source list no longer needed
+        free(expr_source_list);        
+
+        // Free temporary array after we're done holding the expressions
+        free(expr_list.statements);
+
+        return parse_stmt_mid_declare(ctx, stmt_list, type, &word, &source, 1, traits);
+    } else {
+        // Turn encountered values into AST expression
+        ast_expr_t *mutable_expr;
+        ast_expr_create_variable(&mutable_expr, word, source);
+
+        for(length_t i = 0; i != expr_list.length; i++){
+            ast_expr_t *index_expr = expr_list.statements[i];
+            ast_expr_create_access(&mutable_expr, mutable_expr, index_expr, expr_source_list[i]);
+        }
+
+        // Source list no longer needed
+        free(expr_source_list);        
+
+        // Free temporary array after we're done holding the expressions
+        free(expr_list.statements);
+
+        if(parse_expr_post(ctx, &mutable_expr) || parse_op_expr(ctx, 0, &mutable_expr, true)){
+            ast_expr_free_fully(mutable_expr);
+            return FAILURE;
+        }
+        if(parse_mid_mutable_expr_operation(ctx, stmt_list, mutable_expr, source)) return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t parse_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
+    ast_expr_t *mutable_expr;
+    source_t source = ctx->tokenlist->sources[*ctx->i];
+    if(parse_expr(ctx, &mutable_expr)) return FAILURE;
+    return parse_mid_mutable_expr_operation(ctx, stmt_list, mutable_expr, source);
+}
+
+errorcode_t parse_mid_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_t *mutable_expr, source_t source){
+    // Parses a statement that begins with a mutable expression
+    // e.g.  variable = value     or    my_array[index].doSomething()
+    // NOTE: Assumes 'stmt_list' has enough space for another statement
+    // NOTE: expand() should've already been used on stmt_list to make room
+    // NOTE: Takes ownership of 'mutable_expr' and will free it in the case of failure
+
+    token_t *tokens = ctx->tokenlist->tokens;
+    source_t *sources = ctx->tokenlist->sources;
+    length_t *i = ctx->i;
     
     // For some expressions, bypass and treat as statement
-    if(mutable_expression->id == EXPR_CALL_METHOD
-            || mutable_expression->id == EXPR_POSTINCREMENT
-            || mutable_expression->id == EXPR_POSTDECREMENT
-            || mutable_expression->id == EXPR_PREINCREMENT
-            || mutable_expression->id == EXPR_PREDECREMENT
-            || mutable_expression->id == EXPR_TOGGLE){
-        stmt_list->statements[stmt_list->length++] = (ast_expr_t*) mutable_expression;
+    if(mutable_expr->id == EXPR_CALL_METHOD
+            || mutable_expr->id == EXPR_POSTINCREMENT
+            || mutable_expr->id == EXPR_POSTDECREMENT
+            || mutable_expr->id == EXPR_PREINCREMENT
+            || mutable_expr->id == EXPR_PREDECREMENT
+            || mutable_expr->id == EXPR_TOGGLE){
+        stmt_list->statements[stmt_list->length++] = (ast_expr_t*) mutable_expr;
         return SUCCESS;
     }
 
     // NOTE: This is not the only place which assignment operators are handled
     unsigned int id = tokens[(*i)++].id;
 
+    // Otherwise, it must be some type of assignment
     switch(id){
     case TOKEN_ASSIGN: case TOKEN_ADD_ASSIGN:
     case TOKEN_SUBTRACT_ASSIGN: case TOKEN_MULTIPLY_ASSIGN:
@@ -1177,7 +1316,7 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         break;
     default:
         compiler_panic(ctx->compiler, sources[(*i) - 1], "Expected assignment operator after expression");
-        ast_expr_free_fully(mutable_expression);
+        ast_expr_free_fully(mutable_expr);
         return FAILURE;
     }
 
@@ -1187,15 +1326,15 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         (*i)++;
     }
 
-    if(!expr_is_mutable(mutable_expression)){
+    if(!expr_is_mutable(mutable_expr)){
         compiler_panic(ctx->compiler, sources[*i], "Can't modify expression because it is immutable");
-        ast_expr_free_fully(mutable_expression);
+        ast_expr_free_fully(mutable_expr);
         return FAILURE;
     }
 
     ast_expr_t *value_expression;
     if(parse_expr(ctx, &value_expression)){
-        ast_expr_free_fully(mutable_expression);
+        ast_expr_free_fully(mutable_expr);
         return FAILURE;
     }
 
@@ -1216,12 +1355,12 @@ errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     case TOKEN_BIT_LGC_RS_ASSIGN: stmt_id = EXPR_LGC_RS_ASSIGN;   break;
     default:
         compiler_panic(ctx->compiler, sources[*i], "INTERNAL ERROR: parse_stmts() came across unknown assignment operator");
-        ast_expr_free_fully(mutable_expression);
+        ast_expr_free_fully(mutable_expr);
         ast_expr_free_fully(value_expression);
         return FAILURE;
     }
 
-    ast_expr_create_assignment(&stmt_list->statements[stmt_list->length++], stmt_id, source, mutable_expression, value_expression, is_pod);
+    ast_expr_create_assignment(&stmt_list->statements[stmt_list->length++], stmt_id, source, mutable_expr, value_expression, is_pod);
     return SUCCESS;
 }
 

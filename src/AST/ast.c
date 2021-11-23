@@ -442,12 +442,13 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 bool is_undef = statements[s]->id == EXPR_DECLAREUNDEF;
                 ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) statements[s];
 
-                if(declare_stmt->is_const)  fprintf(file, "const ");
-                if(declare_stmt->is_static) fprintf(file, "static ");
+                if(declare_stmt->traits & AST_EXPR_DECLARATION_CONST)  fprintf(file, "const ");
+                if(declare_stmt->traits & AST_EXPR_DECLARATION_STATIC) fprintf(file, "static ");
 
                 char *variable_type_str = ast_type_str(&declare_stmt->type);
-                char *pod = declare_stmt->is_pod ? "POD " : "";
-                fprintf(file, (declare_stmt->value == NULL && !is_undef) ? "%s %s%s\n" : "%s %s%s = ", declare_stmt->name, pod, variable_type_str);
+                char *pod = declare_stmt->traits & AST_EXPR_DECLARATION_POD ? "POD " : "";
+                char *assign_pod = declare_stmt->traits & AST_EXPR_DECLARATION_ASSIGN_POD ? "POD " : "";
+                fprintf(file, (declare_stmt->value == NULL && !is_undef) ? "%s %s%s\n" : "%s %s%s = %s", declare_stmt->name, pod, assign_pod, variable_type_str);
                 free(variable_type_str);
 
                 if(is_undef){

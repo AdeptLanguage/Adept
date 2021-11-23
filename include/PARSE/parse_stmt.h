@@ -53,7 +53,7 @@ void defer_scope_rewind(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list, 
 // NOTE: On failure, stmt_list and defer_scope->list.statements may need to be freed
 #define PARSE_STMTS_STANDARD           TRAIT_NONE // Standard mode (will parse multiple statements)
 #define PARSE_STMTS_SINGLE             TRAIT_1    // Single statement mode (will parse a single statement)
-#define PARSE_STMTS_PARENT_DEFER_SCOPE TRAIT_2    // Parent defer scope mode (won't create a seperate defer scope for the statements)
+#define PARSE_STMTS_PARENT_DEFER_SCOPE TRAIT_2    // Parent defer scope mode (won't create a separate defer scope for the statements)
 #define PARSE_STMTS_NO_JOINING         TRAIT_3    // Disable statement join operator ';'
 errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope, trait_t mode);
 
@@ -64,6 +64,7 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *expr_list, bool i
 // ------------------ parse_stmt_declare ------------------
 // Parses a variable declaration statement
 errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
+errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_type_t master_type, weak_cstr_t *names, source_t *source_list, length_t length, trait_t traits);
 
 // ------------------ parse_switch ------------------
 // Parses a switch statement
@@ -74,11 +75,24 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
 // such as 'if' or 'unless'
 errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope);
 
-// ------------------ parse_assign ------------------
-// Parses an assignment statement
+// ------------------ parse_mutable_expr_operation ------------------
+// Parses a statement that begins with a mutable expression
+// e.g.  variable = value     or    my_array[index].doSomething()
 // NOTE: Assumes 'stmt_list' has enough space for another statement
 // NOTE: expand() should be used on stmt_list to make room sometime before calling
-errorcode_t parse_assign(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
+// NOTE: Takes ownership of 'mutable_expr' and will free it in the case of failure
+errorcode_t parse_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
+errorcode_t parse_mid_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_t *mutable_expr, source_t source);
+
+// ------------------ parse_ambiguous_open_bracket ------------------
+// This function is used to disambiguate between the two following syntaxes:
+// variable[value] ... 
+// vairable [value] Type
+// And then injects the values along the way into the proper context
+// Must also handle cases like:
+// variable[value][value] ...
+// variable [value] [value] Type
+errorcode_t parse_ambiguous_open_bracket(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
 
 // ------------------ parse_llvm_asm ------------------
 // Parses an inline LLVM assembly statement

@@ -1187,10 +1187,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_declare->name = expr_as_declare->name;
         clone_as_declare->type = ast_type_clone(&expr_as_declare->type);
         clone_as_declare->value = expr_as_declare->value ? ast_expr_clone(expr_as_declare->value) : NULL;
-        clone_as_declare->is_pod = expr_as_declare->is_pod;
-        clone_as_declare->is_assign_pod = expr_as_declare->is_assign_pod;
-        clone_as_declare->is_static = expr_as_declare->is_static;
-        clone_as_declare->is_const = expr_as_declare->is_const;
+        clone_as_declare->traits = expr_as_declare->traits;
         break;
 
         #undef expr_as_declare
@@ -1583,15 +1580,12 @@ void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source
     ((ast_expr_embed_t*) *out_expr)->filename = filename;
 }
 
-void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, bool is_pod, bool is_assign_pod, bool is_static, bool is_const, ast_expr_t *value){
+void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, trait_t traits, ast_expr_t *value){
     *out_expr = malloc(sizeof(ast_expr_declare_t));
     ((ast_expr_declare_t*) *out_expr)->id = expr_id;
     ((ast_expr_declare_t*) *out_expr)->source = source;
     ((ast_expr_declare_t*) *out_expr)->name = name;
-    ((ast_expr_declare_t*) *out_expr)->is_pod = is_pod;
-    ((ast_expr_declare_t*) *out_expr)->is_assign_pod = is_assign_pod;
-    ((ast_expr_declare_t*) *out_expr)->is_static = is_static;
-    ((ast_expr_declare_t*) *out_expr)->is_const = is_const;
+    ((ast_expr_declare_t*) *out_expr)->traits = traits;
     ((ast_expr_declare_t*) *out_expr)->type = type;
     ((ast_expr_declare_t*) *out_expr)->value = value;
 }
@@ -1620,13 +1614,111 @@ void ast_expr_create_member(ast_expr_t **out_expr, ast_expr_t *value, strong_cst
     ((ast_expr_member_t*) *out_expr)->member = member_name;
     ((ast_expr_member_t*) *out_expr)->source = source;
 }
+                
+void ast_expr_create_access(ast_expr_t **out_expr, ast_expr_t *value, ast_expr_t *index, source_t source){
+    *out_expr = malloc(sizeof(ast_expr_array_access_t));
+    ((ast_expr_array_access_t*) *out_expr)->id = EXPR_ARRAY_ACCESS;
+    ((ast_expr_array_access_t*) *out_expr)->source = source;
+    ((ast_expr_array_access_t*) *out_expr)->value = value;
+    ((ast_expr_array_access_t*) *out_expr)->index = index;
+}
 
-void ast_expr_list_init(ast_expr_list_t *list, length_t capacity){
-    if(capacity == 0){
+void ast_expr_list_init(ast_expr_list_t *list, length_t initial_capacity){
+    if(initial_capacity == 0){
         list->statements = NULL;
     } else {
-        list->statements = malloc(sizeof(ast_expr_t*) * capacity);
+        list->statements = malloc(sizeof(ast_expr_t*) * initial_capacity);
     }
     list->length = 0;
-    list->capacity = capacity;
+    list->capacity = initial_capacity;
+}
+
+void ast_expr_list_free(ast_expr_list_t *list){
+    ast_exprs_free_fully(list->statements, list->length);
+}
+
+void ast_expr_list_append(ast_expr_list_t *list, ast_expr_t *value){
+    expand((void**) &list->statements, sizeof(ast_expr_t*), list->length, &list->capacity, 1, 4);
+    list->statements[list->length++] = value;
+}
+
+errorcode_t ast_expr_deduce_to_size(ast_expr_t *expr, length_t *out_value){
+    switch(expr->id){
+    case EXPR_GENERIC_INT: {
+            adept_generic_int value = ((ast_expr_generic_int_t*) expr)->value;
+            *out_value = value < 0 ? 0 : value;
+            return SUCCESS;
+        }
+    case EXPR_BYTE: {
+            adept_byte value = ((ast_expr_byte_t*) expr)->value;
+            *out_value = value < 0 ? 0 : value;
+            return SUCCESS;
+        }
+    case EXPR_SHORT: {
+            adept_short value = ((ast_expr_short_t*) expr)->value;
+            *out_value = value < 0 ? 0 : value;
+            return SUCCESS;
+        }
+    case EXPR_INT: {
+            adept_int value = ((ast_expr_int_t*) expr)->value;
+            *out_value = value < 0 ? 0 : value;
+            return SUCCESS;
+        }
+    case EXPR_LONG: {
+            adept_long value = ((ast_expr_long_t*) expr)->value;
+            *out_value = value < 0 ? 0 : value;
+            return SUCCESS;
+        }
+    case EXPR_UBYTE:
+        *out_value = ((ast_expr_ubyte_t*) expr)->value;
+        return SUCCESS;
+    case EXPR_USHORT:
+        *out_value = ((ast_expr_ushort_t*) expr)->value;
+        return SUCCESS;
+    case EXPR_UINT:
+        *out_value = ((ast_expr_uint_t*) expr)->value;
+        return SUCCESS;
+    case EXPR_ULONG:
+        *out_value = ((ast_expr_ulong_t*) expr)->value;
+        return SUCCESS;
+    case EXPR_USIZE:
+        *out_value = ((ast_expr_usize_t*) expr)->value;
+        return SUCCESS;
+    case EXPR_ADD: {
+            length_t a, b;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->a, &a)) return FAILURE;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->b, &b)) return FAILURE;
+            *out_value = a + b;
+            return SUCCESS;
+        }
+    case EXPR_SUBTRACT: {
+            length_t a, b;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->a, &a)) return FAILURE;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->b, &b)) return FAILURE;
+            *out_value = a - b;
+            return SUCCESS;
+        }
+    case EXPR_MULTIPLY: {
+            length_t a, b;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->a, &a)) return FAILURE;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->b, &b)) return FAILURE;
+            *out_value = a * b;
+            return SUCCESS;
+        }
+    case EXPR_DIVIDE: {
+            length_t a, b;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->a, &a)) return FAILURE;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->b, &b)) return FAILURE;
+            *out_value = a / b;
+            return SUCCESS;
+        }
+    case EXPR_MODULUS: {
+            length_t a, b;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->a, &a)) return FAILURE;
+            if(ast_expr_deduce_to_size(((ast_expr_math_t*) expr)->b, &b)) return FAILURE;
+            *out_value = a % b;
+            return SUCCESS;
+        }
+    }
+    return FAILURE;
 }

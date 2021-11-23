@@ -112,6 +112,11 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_s
 // Builds a store instruction
 void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source);
 
+// ---------------- build_call ----------------
+// Builds a call instruction
+// NOTE: If 'return_result_value' is false, then NULL will be returned (in an effort to avoid unnecessary allocations)
+ir_value_t *build_call(ir_builder_t *builder, length_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value);
+
 // ---------------- build_break ----------------
 // Builds a break instruction
 void build_break(ir_builder_t *builder, length_t basicblock_id);

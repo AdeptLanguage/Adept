@@ -531,16 +531,17 @@ typedef struct {
 
 // ---------------- ast_expr_declare_t ----------------
 // Expression for declaring a variable
+#define AST_EXPR_DECLARATION_POD        TRAIT_1
+#define AST_EXPR_DECLARATION_ASSIGN_POD TRAIT_2
+#define AST_EXPR_DECLARATION_STATIC     TRAIT_3
+#define AST_EXPR_DECLARATION_CONST      TRAIT_4
 typedef struct {
     unsigned int id;
     source_t source;
     weak_cstr_t name;
     ast_type_t type;
     ast_expr_t *value;
-    bool is_pod;
-    bool is_assign_pod;
-    bool is_static;
-    bool is_const;
+    trait_t traits;
 } ast_expr_declare_t;
 
 // ---------------- ast_expr_inline_declare_t ----------------
@@ -806,7 +807,7 @@ void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source
 // ---------------- ast_expr_create_declaration ----------------
 // Creates a declare expression
 // NOTE: Ownership of 'type' and 'value' will be taken
-void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, bool is_pod, bool is_assign_pod, bool is_static, bool is_const, ast_expr_t *value);
+void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, trait_t traits, ast_expr_t *value);
 
 // ---------------- ast_expr_create_assignment ----------------
 // Creates an assign expression
@@ -823,9 +824,27 @@ void ast_expr_create_return(ast_expr_t **out_expr, source_t source, ast_expr_t *
 // NOTE: Ownership of 'value' and 'member_name' will be taken
 void ast_expr_create_member(ast_expr_t **out_expr, ast_expr_t *value, strong_cstr_t member_name, source_t source);
 
+// ---------------- ast_expr_create_access ----------------
+// Creates an array access expression
+// NOTE: Ownership of 'value' and 'index' will be taken
+void ast_expr_create_access(ast_expr_t **out_expr, ast_expr_t *value, ast_expr_t *index, source_t source);
+
 // ---------------- ast_expr_list_init ----------------
 // Initializes an ast_expr_list_t with a given capacity
-void ast_expr_list_init(ast_expr_list_t *list, length_t capacity);
+void ast_expr_list_init(ast_expr_list_t *list, length_t initial_capacity);
+
+// ---------------- ast_expr_list_init ----------------
+// Frees an ast_expr_list_t
+// All contained expression will be fully freed
+void ast_expr_list_free(ast_expr_list_t *list);
+
+// ---------------- ast_expr_list_append ----------------
+// Appends an expression to an ast_expr_list_t
+void ast_expr_list_append(ast_expr_list_t *list, ast_expr_t *value);
+
+// ---------------- ast_expr_deduce_to_size ----------------
+// Attempts to collapse an ast_expr_t into an unsigned integer value
+errorcode_t ast_expr_deduce_to_size(ast_expr_t *expr, length_t *out_value);
 
 #ifdef __cplusplus
 }

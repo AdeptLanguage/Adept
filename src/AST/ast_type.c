@@ -32,6 +32,12 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *element){
         ((ast_elem_fixed_array_t*) new_element)->source = element->source;
         ((ast_elem_fixed_array_t*) new_element)->length = ((ast_elem_fixed_array_t*) element)->length;
         break;
+    case AST_ELEM_VAR_FIXED_ARRAY:
+        new_element = malloc(sizeof(ast_elem_var_fixed_array_t));
+        ((ast_elem_var_fixed_array_t*) new_element)->id = AST_ELEM_FIXED_ARRAY;
+        ((ast_elem_var_fixed_array_t*) new_element)->source = element->source;
+        ((ast_elem_var_fixed_array_t*) new_element)->length = ast_expr_clone(((ast_elem_var_fixed_array_t*) element)->length);
+        break;
     case AST_ELEM_POLYCOUNT:
         new_element = malloc(sizeof(ast_elem_polycount_t));
         ((ast_elem_polycount_t*) new_element)->id = AST_ELEM_POLYCOUNT;
@@ -136,6 +142,9 @@ void ast_type_free(ast_type_t *type){
         case AST_ELEM_FIXED_ARRAY:
         case AST_ELEM_GENERIC_INT:
         case AST_ELEM_GENERIC_FLOAT:
+            break;
+        case AST_ELEM_VAR_FIXED_ARRAY: 
+            ast_expr_free_fully(((ast_elem_var_fixed_array_t*) elem)->length);
             break;
         case AST_ELEM_FUNC:
             if(((ast_elem_func_t*) elem)->ownership){
@@ -330,6 +339,14 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 string_builder_append(&builder, length_buffer);
             }
             break;
+        case AST_ELEM_VAR_FIXED_ARRAY: {
+                strong_cstr_t length_string = ast_expr_str(((ast_elem_var_fixed_array_t*) type->elements[i])->length);
+                string_builder_append(&builder, "[");
+                string_builder_append(&builder, length_string);
+                string_builder_append(&builder, "] ");
+                free(length_string);
+            }
+            break;
         case AST_ELEM_GENERIC_INT:
             string_builder_append(&builder, "long");
             break;
@@ -474,6 +491,10 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
         case AST_ELEM_FIXED_ARRAY:
             if(((ast_elem_fixed_array_t*) a->elements[i])->length != ((ast_elem_fixed_array_t*) b->elements[i])->length) return false;
             break;
+        case AST_ELEM_VAR_FIXED_ARRAY:
+            // We cannot know
+            internalwarningprintf("ast_types_identical() unexpectedly comparing two AST_ELEM_VAR_FIXED_ARRAY elements. Assuming they are different\n");
+            return false;
         case AST_ELEM_FUNC: {
                 ast_elem_func_t *func_elem_a = (ast_elem_func_t*) a->elements[i];
                 ast_elem_func_t *func_elem_b = (ast_elem_func_t*) b->elements[i];
@@ -671,6 +692,7 @@ bool ast_type_has_polymorph(const ast_type_t *type){
         case AST_ELEM_GENERIC_INT:
         case AST_ELEM_GENERIC_FLOAT:
         case AST_ELEM_FIXED_ARRAY:
+        case AST_ELEM_VAR_FIXED_ARRAY:
             break;
         case AST_ELEM_FUNC: {
                 ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];
@@ -818,6 +840,9 @@ hash_t ast_elem_hash(ast_elem_t *element){
             ast_elem_fixed_array_t *fixed_array_elem = (ast_elem_fixed_array_t*) element;
             element_hash = hash_combine(element_hash, hash_data(&fixed_array_elem->length, sizeof(fixed_array_elem->length)));
         }
+        break;
+    case AST_ELEM_VAR_FIXED_ARRAY:
+        internalwarningprintf("ast_elem_hash() unexpectedly got AST_ELEM_VAR_FIXED_ARRAY element. Returning faux hash\n");
         break;
     case AST_ELEM_FUNC: {
             ast_elem_func_t *func_elem = (ast_elem_func_t*) element;
