@@ -209,7 +209,7 @@ void ast_types_free(ast_type_t *types, length_t length);
 void ast_types_free_fully(ast_type_t *types, length_t length);
 
 // ---------------- ast_elem_free ----------------
-// Free a collection of AST type elements
+// Frees a collection of AST type elements
 void ast_elems_free(ast_elem_t **elements, length_t elements_length);
 
 // ---------------- ast_elem_free ----------------

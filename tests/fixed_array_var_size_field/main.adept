@@ -1,0 +1,29 @@
+
+import basics
+
+define NUM_ITEMS = 10
+
+struct ItemHolder (
+    items [NUM_ITEMS] int
+) {
+    func fibonacci {
+        items *int = this.items at 0
+
+        items[0] = 1
+        items[1] = 1
+
+        repeat static NUM_ITEMS < 2 ? 0 : NUM_ITEMS - 2 {
+            items[idx + 2] = items[idx] + items[idx + 1]
+        }
+    }
+}
+
+func toString(item_holder POD ItemHolder) String {
+    return toString(item_holder.items)
+}
+
+func main {
+    item_holder ItemHolder
+    item_holder.fibonacci()
+    print(item_holder)
+}
