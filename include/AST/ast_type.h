@@ -230,6 +230,10 @@ void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base);
 // that's preceded by two pointer elements
 void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base);
 
+// ---------------- ast_type_make_base_with_generics ----------------
+// Takes ownership of 'base' and creates a type from it
+void ast_type_make_base_with_generics(ast_type_t *type, strong_cstr_t base, strong_cstr_t *generics, length_t generics_length);
+
 // ---------------- ast_type_prepend_ptr ----------------
 // Prepends a pointer to an AST type
 void ast_type_prepend_ptr(ast_type_t *type);

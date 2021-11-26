@@ -98,11 +98,11 @@ errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name
 // ---------------- ir_gen_stmts_auto_terminate ----------------
 // If not 'already_terminated', then this function will handle
 // variable deference calls and breaking to the continuation block
-void ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated, length_t continuation_block_id);
+errorcode_t ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated, length_t continuation_block_id);
 
 // ---------------- ir_gen_variable_deference ----------------
 // Generate IR instructions to make variable deference calls up until a scope.
 // NOTE: If 'up_until_scope' is NULL, then all parent scopes will be visited.
-void ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope);
+errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope);
 
 #endif // _ISAAC_IR_GEN_STMT_H

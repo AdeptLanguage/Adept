@@ -890,7 +890,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     //       Returns ALT_FAILURE if a compiler time error occurred
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
-    funcpair_t defer_func;
+    length_t defer_ir_func_id;
     ir_pool_snapshot_t pool_snapshot;
     ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
 
@@ -901,9 +901,11 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
             arguments[0] = mutable_value;
 
-            if(ir_gen_find_defer_func(builder, arguments, ast_type, &defer_func)){
+            errorcode_t errorcode = ir_gen_find_defer_func(builder, arguments, ast_type, &defer_ir_func_id);
+
+            if(errorcode){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-                return FAILURE;
+                return errorcode;
             }
         }
         break;
@@ -939,15 +941,15 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
                 ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
                 
                 // Handle deference for that single item
-                errorcode_t res = handle_single_deference(builder, &temporary_rest_of_type, mutable_item_value);
+                errorcode_t errorcode = handle_single_deference(builder, &temporary_rest_of_type, mutable_item_value);
 
-                if(res){
+                if(errorcode){
                     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
 
                     // Restore basicblock to previous amount of instructions
                     // NOTE: This is only okay because this function 'handle_single_dereference' cannot generate new basicblocks
                     builder->current_block->instructions_length = before_modification_instructions_length;
-                    return res;
+                    return errorcode;
                 }
             }
         }
@@ -957,8 +959,8 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     }
 
     // Call __defer__()
-    ir_type_t *result_type = builder->object->ir_module.funcs[defer_func.ir_func_id].return_type;
-    build_call(builder, defer_func.ir_func_id, result_type, arguments, 1, false);
+    ir_type_t *result_type = builder->object->ir_module.funcs[defer_ir_func_id].return_type;
+    build_call(builder, defer_ir_func_id, result_type, arguments, 1, false);
     return SUCCESS;
 }
 
@@ -1139,11 +1141,11 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                 ir_pool_snapshot_t snapshot;
                 ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-                funcpair_t result;
+                length_t pass_ir_func_id;
                 ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
                 arguments[0] = values[i];
 
-                errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &result);
+                errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &pass_ir_func_id);
                 if(errorcode == ALT_FAILURE) return FAILURE;
 
                 if(errorcode == FAILURE){
@@ -1151,8 +1153,8 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                     continue;
                 }
 
-                ir_type_t *result_type = builder->object->ir_module.funcs[result.ir_func_id].return_type;                
-                values[i] = build_call(builder, result.ir_func_id, result_type, arguments, 1, true);
+                ir_type_t *result_type = builder->object->ir_module.funcs[pass_ir_func_id].return_type;                
+                values[i] = build_call(builder, pass_ir_func_id, result_type, arguments, 1, true);
             }
         }
     }
@@ -1182,10 +1184,11 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
             arguments[0] = build_load(builder, mutable_value, ast_type->source);
 
-            if(ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, NULL, false, from_source, &pass_func)){
-                ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+            errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", arguments, ast_type, 1, NULL, false, from_source, &pass_func);
 
-                return FAILURE;
+            if(errorcode){
+                ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+                return errorcode;
             }
         }
         break;
@@ -1221,15 +1224,15 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
                 ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
                 
                 // Handle passing for that single item
-                errorcode_t res = handle_single_pass(builder, &temporary_rest_of_type, mutable_item_value, from_source);
+                errorcode_t errorcode = handle_single_pass(builder, &temporary_rest_of_type, mutable_item_value, from_source);
 
-                if(res){
+                if(errorcode){
                     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
 
                     // Restore basicblock to previous amount of instructions
                     // NOTE: This is only okay because this function 'handle_single_dereference' cannot generate new basicblocks
                     builder->current_block->instructions_length = before_modification_instructions_length;
-                    return res;
+                    return errorcode;
                 }
             }
         }
@@ -1744,7 +1747,7 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, source_t instant
         func->return_type.elements = NULL;
         func->return_type.elements_length = 0;
         func->return_type.source = NULL_SOURCE;
-        return FAILURE;
+        goto failure;
     }
     
     func->statements_length = poly_func->statements_length;
@@ -1754,13 +1757,13 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, source_t instant
     for(length_t s = 0; s != poly_func->statements_length; s++){
         func->statements[s] = ast_expr_clone(poly_func->statements[s]);
         if(resolve_expr_polymorphics(builder->compiler, builder->type_table, catalog, func->statements[s])){
-            return FAILURE;
+            goto failure;
         }
     }
 
     ir_func_mapping_t newest_mapping;
     if(ir_gen_func_head(builder->compiler, builder->object, func, ast_func_id, true, &newest_mapping)){
-        return FAILURE;
+        goto failure;
     }
 
     // Add mapping to IR jobs
@@ -1770,6 +1773,12 @@ errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, source_t instant
 
     if(out_mapping) *out_mapping = newest_mapping;
     return SUCCESS;
+
+failure:
+    func = &ast->funcs[ast_func_id];
+    compiler_panicf(builder->compiler, func->source, "During polymorphic instantiation of function");
+    compiler_panicf(builder->compiler, instantiation_source, "Failed to instantiate polymorphic function");
+    return FAILURE;
 }
 
 errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,

@@ -229,7 +229,13 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                     }
 
                     if(!case_terminated){
-                        handle_deference_for_variables(builder, &builder->scope->list);
+                        if(handle_deference_for_variables(builder, &builder->scope->list)){
+                            ast_type_free(&master_ast_type);
+                            close_scope(builder);
+                            free(uniqueness);
+                            return FAILURE;
+                        }
+
                         build_break(builder, resume_block_id);
                     }
                     
@@ -264,7 +270,12 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                     }
 
                     if(!case_terminated){
-                        handle_deference_for_variables(builder, &builder->scope->list);
+                        if(handle_deference_for_variables(builder, &builder->scope->list)){
+                            ast_type_free(&master_ast_type);
+                            close_scope(builder);
+                            return FAILURE;
+                        }
+
                         build_break(builder, resume_block_id);
                     }
                     
@@ -450,7 +461,11 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 }
 
                 if(!terminated){
-                    handle_deference_for_variables(builder, &builder->scope->list);
+                    if(handle_deference_for_variables(builder, &builder->scope->list)){
+                        close_scope(builder);
+                        return FAILURE;
+                    }
+
                     build_break(builder, adv_basicblock_id);
                 }
 
@@ -584,7 +599,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
     }
 
     // Make '__defer__()' calls for variables running out of scope
-    ir_gen_variable_deference(builder, NULL);
+    if(ir_gen_variable_deference(builder, NULL)) return FAILURE;
 
     // Make '__defer__()' calls for global variables and (anonymous) static variables running out of scope
     if(is_in_main_function){
@@ -934,14 +949,13 @@ errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t 
     build_using_basicblock(builder, new_basicblock_id);
 
     // Generate IR instructions for the statements within the conditional block
+    // and terminate the conditional block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
         return FAILURE;
     }
-
-    // Terminate the conditional block if it wasn't already terminated
-    ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id);
 
     // Close block scope and continue building at the continuation point
     close_scope(builder);
@@ -971,14 +985,13 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
     build_using_basicblock(builder, new_basicblock_id);
 
     // Generate IR instructions for the statements within the primary conditional block
+    // and terminate the primary conditional block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
         return FAILURE;
     }
-
-    // Terminate the primary conditional block if it wasn't already terminated
-    ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id);
 
     // Close primary block scope
     close_scope(builder);
@@ -988,13 +1001,12 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
     build_using_basicblock(builder, else_basicblock_id);
 
     // Generate IR instructions for the statements within the secondary conditional block
-    if(ir_gen_stmts(builder, stmt->else_statements, stmt->else_statements_length, &terminated)){
+    // and terminate the secondary conditional block if it wasn't already terminated
+    if(ir_gen_stmts(builder, stmt->else_statements, stmt->else_statements_length, &terminated)
+    || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
         return FAILURE;
     }
-
-    // Terminate the secondary conditional block if it wasn't already terminated
-    ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id);
 
     // Close secondary block scope and continue building at the continuation point
     close_scope(builder);
@@ -1042,14 +1054,13 @@ errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stm
     build_using_basicblock(builder, new_basicblock_id);
 
     // Generate IR instructions for the statements within the conditional block
+    // and terminate the conditional block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    || ir_gen_stmts_auto_terminate(builder, terminated, test_basicblock_id)){
         close_scope(builder);
         return FAILURE;
     }
-
-    // Terminate the conditional block if it wasn't already terminated
-    ir_gen_stmts_auto_terminate(builder, terminated, test_basicblock_id);
 
     // Remove loop label
     if(stmt->label != NULL) pop_loop_label(builder);
@@ -1089,15 +1100,15 @@ errorcode_t ir_gen_stmt_recurrent_loop(ir_builder_t *builder, ast_expr_whilecont
     // Open block scope and prepare for block statements
     open_scope(builder);
     build_using_basicblock(builder, new_basicblock_id);
+
     // Generate IR instructions for the statements within the block
+    // and terminate the block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    || ir_gen_stmts_auto_terminate(builder, terminated, stmt->id == EXPR_WHILECONTINUE ? end_basicblock_id : new_basicblock_id)){
         close_scope(builder);
         return FAILURE;
     }
-
-    // Terminate the block if it wasn't already terminated
-    ir_gen_stmts_auto_terminate(builder, terminated, stmt->id == EXPR_WHILECONTINUE ? end_basicblock_id : new_basicblock_id);
 
     // Remove loop label
     if(stmt->label != NULL) pop_loop_label(builder);
@@ -1147,7 +1158,7 @@ errorcode_t ir_gen_stmt_break(ir_builder_t *builder, ast_expr_t *stmt, bool *out
     }
 
     // Make '__defer__()' calls for variables whose scope will end
-    ir_gen_variable_deference(builder, builder->break_continue_scope);
+    if(ir_gen_variable_deference(builder, builder->break_continue_scope)) return FAILURE;
 
     // Break to the targeted block
     build_break(builder, builder->break_block_id);
@@ -1165,7 +1176,7 @@ errorcode_t ir_gen_stmt_continue(ir_builder_t *builder, ast_expr_t *stmt, bool *
     }
 
     // Make '__defer__()' calls for variables whose scope will end
-    ir_gen_variable_deference(builder, builder->break_continue_scope);
+    if(ir_gen_variable_deference(builder, builder->break_continue_scope)) return FAILURE;
 
     // Continue to the targeted block
     build_break(builder, builder->continue_block_id);
@@ -1183,7 +1194,7 @@ errorcode_t ir_gen_stmt_fallthrough(ir_builder_t *builder, ast_expr_t *stmt, boo
     }
 
     // Make '__defer__()' calls for variables whose scope will end
-    ir_gen_variable_deference(builder, builder->fallthrough_scope);
+    if(ir_gen_variable_deference(builder, builder->fallthrough_scope)) return FAILURE;
 
     // Fallthrough to the targeted block
     build_break(builder, builder->fallthrough_block_id);
@@ -1225,7 +1236,7 @@ errorcode_t ir_gen_stmt_continue_to(ir_builder_t *builder, ast_expr_break_to_t *
     }
 
     // Make '__defer__()' calls for variables whose scope will end
-    ir_gen_variable_deference(builder, block_scope);
+    if(ir_gen_variable_deference(builder, block_scope)) return FAILURE;
 
     // Break to the targeted block
     build_break(builder, target_block_id);
@@ -1459,7 +1470,11 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     }
 
     if(!terminated){
-        handle_deference_for_variables(builder, &builder->scope->list);
+        if(handle_deference_for_variables(builder, &builder->scope->list)){
+            close_scope(builder);
+            goto failure;
+        }
+
         build_break(builder, inc_basicblock_id);
     }
 
@@ -1588,7 +1603,11 @@ errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
     }
 
     if(!terminated){
-        handle_deference_for_variables(builder, &builder->scope->list);
+        if(handle_deference_for_variables(builder, &builder->scope->list)){
+            close_scope(builder);
+            return FAILURE;
+        }
+
         build_break(builder, inc_basicblock_id);
     }
 
@@ -1669,20 +1688,23 @@ errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name
 }
 
 
-void ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated, length_t continuation_block_id){
-    if(already_terminated) return;
+errorcode_t ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated, length_t continuation_block_id){
+    if(already_terminated) return SUCCESS;
 
-    handle_deference_for_variables(builder, &builder->scope->list);
+    if(handle_deference_for_variables(builder, &builder->scope->list)) return FAILURE;
     build_break(builder, continuation_block_id);
+    return SUCCESS;
 }
 
-void ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope){
+errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope){
     // Make '__defer__()' calls for variables running out of scope
 
     bridge_scope_t *visit_scope = builder->scope;
 
     do {
-        handle_deference_for_variables(builder, &visit_scope->list);
+        if(handle_deference_for_variables(builder, &visit_scope->list)) return FAILURE;
         visit_scope = visit_scope->parent;
     } while(visit_scope && visit_scope != up_until_scope);
+
+    return SUCCESS;
 }

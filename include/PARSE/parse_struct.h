@@ -42,7 +42,8 @@ bool parse_struct_is_function_like_beginning(tokenid_t token);
 
 // ------------------ parse_create_record_constructor ------------------
 // Generate a constructor for a record type
-errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, ast_layout_t *layout, source_t source);
+// NOTE: Ownership of 'return_type' is taken
+errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, strong_cstr_t *generics, length_t generics_length, ast_layout_t *layout, source_t source);
 
 #ifdef __cplusplus
 }

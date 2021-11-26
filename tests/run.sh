@@ -145,6 +145,7 @@ compile polymorphic_structs || exit $?
 compile pragma || exit $?
 compile primitives || exit $?
 compile records || exit $?
+compile records_polymorphic || exit $?
 compile repeat || exit $?
 compile repeat_args || exit $?
 compile repeat_fields || exit $?

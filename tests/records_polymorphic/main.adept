@@ -1,0 +1,12 @@
+
+import basics
+
+record <$T> Dummy ()
+record <$T> Couple (a, b $T)
+
+func main {
+    _dummy <long> Dummy = Dummy() ~> <long> Dummy
+
+    couple <long> Couple = Couple(8, 13)
+    printf("8 + 13 = %d\n", couple.a + couple.b)
+}

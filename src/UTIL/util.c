@@ -80,6 +80,16 @@ strong_cstr_t strclone(const char *src){
     return clone;
 }
 
+strong_cstr_t *strsclone(strong_cstr_t *list, length_t length){
+    strong_cstr_t *new_list = malloc(sizeof(strong_cstr_t) * length);
+
+    for(length_t i = 0; i < length; i++){
+        new_list[i] = strclone(list[i]);
+    }
+
+    return new_list;
+}
+
 void freestrs(strong_cstr_t *array, length_t length){
     for(length_t i = 0; i != length; i++) free(array[i]);
     free(array);

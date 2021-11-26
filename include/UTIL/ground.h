@@ -78,7 +78,7 @@ typedef long long maybe_index_t;
 
 // ---------------- troolean ----------------
 // 3-state value
-typedef signed char troolean;
+typedef unsigned char troolean;
 
 // ---------------- lenstr_t and friends ----------------
 // C-String with cached length

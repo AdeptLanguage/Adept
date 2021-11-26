@@ -203,7 +203,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
     return FAILURE; // No function with that definition found
 }
 
-errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result){
+errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, length_t *out_ir_func_id){
     // Finds the correct __pass__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
@@ -216,32 +216,31 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
         return ALT_FAILURE;
     }
 
-    if(cache_entry->has_pass_func == TROOLEAN_TRUE){
-        result->ast_func_id = cache_entry->pass_ast_func_id;
-        result->ir_func_id = cache_entry->pass_ir_func_id;
-        result->ast_func = &builder->object->ast.funcs[result->ast_func_id];
-        result->ir_func = &builder->object->ir_module.funcs[result->ir_func_id];
+    if(cache_entry->has_pass == TROOLEAN_TRUE){
+        *out_ir_func_id = cache_entry->pass_ir_func_id;
         return SUCCESS;
-    } else if(cache_entry->has_pass_func == TROOLEAN_FALSE){
+    } else if(cache_entry->has_pass == TROOLEAN_FALSE){
         return FAILURE;
     }
 
     // Whether we have a __pass__ function is unknown, so lets try to see if we have one
-    errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, NULL, true, NULL_SOURCE, result);
+    funcpair_t result;
+    errorcode_t errorcode = ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, NULL, true, NULL_SOURCE, &result);
+
     if(errorcode != SUCCESS){
-        if(errorcode == FAILURE) cache_entry->has_pass_func = TROOLEAN_FALSE;
+        if(errorcode == FAILURE) cache_entry->has_pass = TROOLEAN_FALSE;
         return errorcode;
     }
 
     // Found / Generated __pass__ function for that type successfully
     // NOTE: 'result' already has the correct values, we only have to cache them
-    cache_entry->has_pass_func = TROOLEAN_TRUE;
-    cache_entry->pass_ast_func_id = result->ast_func_id;
-    cache_entry->pass_ir_func_id = result->ir_func_id;
+    cache_entry->has_pass = TROOLEAN_TRUE;
+    cache_entry->pass_ir_func_id = result.ir_func_id;
+    *out_ir_func_id = cache_entry->pass_ir_func_id;
     return SUCCESS;
 }
 
-errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result){
+errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, length_t *out_ir_func_id){
     // Finds the correct __defer__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
@@ -254,13 +253,10 @@ errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument,
         return ALT_FAILURE;
     }
 
-    if(cache_entry->has_defer_func == TROOLEAN_TRUE){
-        result->ast_func_id = cache_entry->defer_ast_func_id;
-        result->ir_func_id = cache_entry->defer_ir_func_id;
-        result->ast_func = &builder->object->ast.funcs[result->ast_func_id];
-        result->ir_func = &builder->object->ir_module.funcs[result->ir_func_id];
+    if(cache_entry->has_defer == TROOLEAN_TRUE){
+        *out_ir_func_id = cache_entry->defer_ir_func_id;
         return SUCCESS;
-    } else if(cache_entry->has_defer_func == TROOLEAN_FALSE){
+    } else if(cache_entry->has_defer == TROOLEAN_FALSE){
         return FAILURE;
     }
 
@@ -277,17 +273,18 @@ errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument,
     ast_type_ptr.source = arg_type->source;
 
     // Whether we have a __defer__ function is unknown, so lets try to see if we have one
+    funcpair_t result;
     errorcode_t errorcode = FAILURE;
     
     switch(arg_type->elements[0]->id){
     case AST_ELEM_BASE: {
             weak_cstr_t struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
-            errorcode = ir_gen_find_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, NULL, NULL_SOURCE, result);
+            errorcode = ir_gen_find_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, NULL, NULL_SOURCE, &result);
         }
         break;
     case AST_ELEM_GENERIC_BASE: {
             weak_cstr_t struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
-            errorcode = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, NULL, NULL_SOURCE,result);
+            errorcode = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__defer__", argument, &ast_type_ptr, 1, NULL, NULL_SOURCE, &result);
         }
         break;
     default:
@@ -296,15 +293,15 @@ errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument,
     }
     
     if(errorcode != SUCCESS){
-        if(errorcode == FAILURE) cache_entry->has_defer_func = TROOLEAN_FALSE;
+        if(errorcode == FAILURE) cache_entry->has_defer = TROOLEAN_FALSE;
         return errorcode;
     }
 
     // Found / Generated __pass__ function for that type successfully
     // NOTE: 'result' already has the correct values, we only have to cache them
-    cache_entry->has_defer_func = TROOLEAN_TRUE;
-    cache_entry->defer_ast_func_id = result->ast_func_id;
-    cache_entry->defer_ir_func_id = result->ir_func_id;
+    cache_entry->has_defer = TROOLEAN_TRUE;
+    cache_entry->defer_ir_func_id = result.ir_func_id;
+    *out_ir_func_id = cache_entry->defer_ir_func_id;
     return SUCCESS;
 }
 
@@ -771,6 +768,7 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
         length_t type_list_length, ast_poly_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode){
 
+    errorcode_t res;
     length_t required_arity = poly_template->arity;
 
     // Ensure argument supplied meet length requirements
@@ -816,8 +814,6 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     length_t i;
 
     for(i = 0; i != type_list_length; i++){
-        errorcode_t res = SUCCESS;
-
         if(ast_type_has_polymorph(&poly_template->arg_types[i]))
             res = arg_type_polymorphable(builder, &poly_template->arg_types[i], &arg_types[i], &catalog);
         else
@@ -831,12 +827,15 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 
     // Ensure return type matches if provided
     if(gives && gives->elements_length != 0){
-        if(arg_type_polymorphable(builder, &poly_template->return_type, gives, &catalog)){
+        res = arg_type_polymorphable(builder, &poly_template->return_type, gives, &catalog);
+
+        if(res != SUCCESS){
             goto polymorphic_failure;
         }
 
         ast_type_t concrete_return_type;
         if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &poly_template->return_type, &concrete_return_type)){
+            res = FAILURE;
             goto polymorphic_failure;
         }
 
@@ -844,6 +843,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
         ast_type_free(&concrete_return_type);
 
         if(!meets_return_matching_requirement){
+            res = FAILURE;
             goto polymorphic_failure;
         }
     }
@@ -861,7 +861,7 @@ polymorphic_failure:
     memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * i);
     free(arg_value_list_unmodified);
     ast_poly_catalog_free(&catalog);
-    return FAILURE;
+    return res;
 }
 
 errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_poly_catalog_t *catalog){

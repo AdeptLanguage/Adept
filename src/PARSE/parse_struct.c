@@ -49,6 +49,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     trait_t traits = is_packed ? AST_LAYOUT_PACKED : TRAIT_NONE;
     ast_layout_kind_t layout_kind = is_union ? AST_LAYOUT_UNION : AST_LAYOUT_STRUCT;
 
+    // AST type of composite being declared (if it's a record)
     ast_layout_t layout;
     ast_layout_init(&layout, layout_kind, field_map, skeleton, traits);
     
@@ -58,8 +59,11 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
         domain = ast_add_composite(ast, name, layout, source);
     }
 
+    // Create constructor function if composite is a record type
     if(is_record){
-        if(parse_create_record_constructor(ctx, name, &layout, source)) return FAILURE;
+
+        // NOTE: Ownership of 'return_type' is given away
+        if(parse_create_record_constructor(ctx, name, generics, generics_length, &layout, source)) return FAILURE;
     }
 
     // Look for start of struct domain and set it up if it exists
@@ -391,7 +395,7 @@ errorcode_t parse_anonymous_composite(parse_ctx_t *ctx, ast_field_map_t *inout_f
     return SUCCESS;
 }
 
-errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, ast_layout_t *layout, source_t source){
+errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, strong_cstr_t *generics, length_t generics_length, ast_layout_t *layout, source_t source){
     if(!ast_layout_is_simple_struct(layout)) {
         compiler_panicf(ctx->compiler, source, "Record type '%s' cannot be defined to have a complicated structure", name);
         return FAILURE;
@@ -411,7 +415,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     ast_t *ast = ctx->ast;
     ast_layout_skeleton_t *skeleton = &layout->skeleton;
     ast_field_map_t *field_map = &layout->field_map;
-    bool is_polymorphic = ast_layout_skeleton_has_polymorph(skeleton);
+    bool is_polymorphic = ast_layout_skeleton_has_polymorph(skeleton) || generics;
 
     // Variable name of value being made in the constructor,
     // this name should not be able to be used in normal contexts
@@ -429,8 +433,13 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
         return FAILURE;
     }
 
-    // Set return type
-    ast_type_make_base(&func->return_type, strclone(name));
+    // Figure out AST type to return for record
+    if(generics){
+        strong_cstr_t *type_generics = strsclone(generics, generics_length);
+        ast_type_make_base_with_generics(&func->return_type, strclone(name), type_generics, generics_length);
+    } else {
+        ast_type_make_base(&func->return_type, strclone(name));
+    }
 
     // Track whether or not all fields are primitive builtin types,
     // if so, we can skip out on zero initializing the '$' value
@@ -500,6 +509,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     if(is_polymorphic){
         expand((void**) &ast->polymorphic_funcs, sizeof(ast_polymorphic_func_t), ast->polymorphic_funcs_length, &ast->polymorphic_funcs_capacity, 1, 4);
 
+        func->traits |= AST_FUNC_POLYMORPHIC;
         ast_polymorphic_func_t *poly_func = &ast->polymorphic_funcs[ast->polymorphic_funcs_length++];
         poly_func->name = func->name;
         poly_func->ast_func_id = ast_func_id;

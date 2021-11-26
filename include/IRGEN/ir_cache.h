@@ -3,10 +3,16 @@
 #define _ISAAC_IR_GEN_CACHE_H
 
 /*
-    ============================== ir_gen_find.h ==============================
-    Module for locating intermediate representation data structures
-    that reside in organized lists
-    ---------------------------------------------------------------------------
+    =============================== ir_cache.h ===============================
+    Module for efficiently looking up information about AST types
+    during IR generation
+
+    This module primarily deals with the Special Function cache, which is
+    used to quickly lookup commonly accessed special purpose functions such as:
+    - __pass__
+    - __defer__
+    - __assign__
+    --------------------------------------------------------------------------
 */
 
 #include "AST/ast.h"
@@ -15,20 +21,21 @@
 #define IR_GEN_SF_CACHE_SIZE 1024
 
 // ---------------- ir_gen_sf_cache_entry_t ----------------
-// Special functions cache entry
+// Special Functions cache entry.
+// The structural layout is squished together tightly, since we
+// know that there will be a large array of them
+#define ir_gen_sf_cache_entry_is_occupied(a) ((a)->ast_type.elements_length != 0)
+
 typedef struct ir_gen_sf_cache_entry {
-    bool occupied;
     ast_type_t ast_type;
 
-    // __pass__
-    troolean has_pass_func;
-    length_t pass_ir_func_id;
-    length_t pass_ast_func_id;
+    troolean has_pass : 2,
+             has_defer : 2,
+             has_assign : 2;
 
-    // __defer__
-    troolean has_defer_func;
-    length_t defer_ir_func_id;
-    length_t defer_ast_func_id;
+    length_t pass_ir_func_id;   // __pass__
+    length_t defer_ir_func_id;  // __defer__
+    length_t assign_ir_func_id; // __assign__
 
     struct ir_gen_sf_cache_entry *next;
 } ir_gen_sf_cache_entry_t;
@@ -51,5 +58,9 @@ void ir_gen_sf_cache_free(ir_gen_sf_cache_t *cache);
 // ---------------- ir_gen_sf_cache_locate ----------------
 // Locates cache entry for AST type in special functions cache
 ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_type_t type);
+
+// ---------------- ir_gen_sf_cache_dump ----------------
+// Dumps a visual representation of an special function cache
+void ir_gen_sf_cache_dump(FILE *file, ir_gen_sf_cache_t *sf_cache);
 
 #endif // _ISAAC_IR_GEN_CACHE_H

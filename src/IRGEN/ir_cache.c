@@ -11,7 +11,7 @@ void ir_gen_sf_cache_init(ir_gen_sf_cache_t *cache){
 
 void ir_gen_sf_cache_free(ir_gen_sf_cache_t *cache){
     for(length_t i = 0; i != cache->capacity; i++){
-        if(!cache->storage[i].occupied) continue;
+        if(!ir_gen_sf_cache_entry_is_occupied(&cache->storage[i])) continue;
 
         bool is_first = true;
         ir_gen_sf_cache_entry_t *head = &cache->storage[i];
@@ -34,7 +34,7 @@ ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_ty
     hash_t hash = ast_type_hash(&type);
     ir_gen_sf_cache_entry_t *entry = &cache->storage[hash % cache->capacity];
 
-    if(entry->occupied){
+    if(ir_gen_sf_cache_entry_is_occupied(entry)){
         while(true){
             if(ast_types_identical(&type, &entry->ast_type)) return entry;
 
@@ -45,11 +45,9 @@ ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_ty
 
                 memset(entry, 0, sizeof(ir_gen_sf_cache_entry_t));
                 entry->ast_type = ast_type_clone(&type);
-                entry->has_pass_func  = TROOLEAN_UNKNOWN;
-                entry->has_defer_func = TROOLEAN_UNKNOWN;
-
-                // Unnecessary, only used for first entry
-                /* entry->occupied = true; */
+                entry->has_pass = TROOLEAN_UNKNOWN;
+                entry->has_defer = TROOLEAN_UNKNOWN;
+                entry->has_assign = TROOLEAN_UNKNOWN;
                 return entry;
             }
             entry = entry->next;
@@ -57,11 +55,25 @@ ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_ty
     } else {
         // New entry here
         entry->ast_type = ast_type_clone(&type);
-        entry->has_pass_func  = TROOLEAN_UNKNOWN;
-        entry->has_defer_func = TROOLEAN_UNKNOWN;
-        entry->occupied = true;
+        entry->has_pass = TROOLEAN_UNKNOWN;
+        entry->has_defer = TROOLEAN_UNKNOWN;
+        entry->has_assign = TROOLEAN_UNKNOWN;
         return entry;
     }
 
     return NULL;
+}
+
+void ir_gen_sf_cache_dump(FILE *file, ir_gen_sf_cache_t *sf_cache){
+    for(length_t i = 0; i < sf_cache->capacity; i++){
+        ir_gen_sf_cache_entry_t *entry = &sf_cache->storage[i];
+        if(ir_gen_sf_cache_entry_is_occupied(entry)) fprintf(file, "+");
+
+        while(entry->next){
+            fprintf(file, "+");
+            entry = entry->next;
+        }
+
+        fprintf(file, "\n");
+    }
 }

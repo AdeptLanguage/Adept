@@ -52,14 +52,14 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result);
+errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, length_t *out_ir_func_id);
 
 // ---------------- ir_gen_find_defer_func ----------------
 // Finds the correct __defer__ function for a type
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, funcpair_t *result);
+errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, length_t *out_ir_func_id);
 
 // ---------------- ir_gen_find_method_conforming ----------------
 // Finds a method that has the given name and conforms

@@ -905,6 +905,12 @@ void compiler_print_source(compiler_t *compiler, int line, source_t source){
     object_t *relevant_object = compiler->objects[source.object_index];
     if(relevant_object->buffer == NULL || relevant_object->traits & OBJECT_PACKAGE) return;
 
+    if(SOURCE_IS_NULL(source)){
+        printf("  N/A| (no source code)\n");
+        printf("\n");
+        return;
+    }
+
     length_t line_index = 0;
     for(int current_line = 1; current_line != line; line_index++){
         if(relevant_object->buffer[line_index] == '\n') current_line++;

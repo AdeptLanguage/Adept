@@ -166,7 +166,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
             // Do basic checking to make sure the type is in the format: *Structure
             if(this_type->elements_length != 2 || this_type->elements[0]->id != AST_ELEM_POINTER){
-                compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
+                compiler_panic(compiler, this_type->source, "Type of 'this' parameter must be a pointer to a struct");
                 return FAILURE; 
             }
 
@@ -175,7 +175,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                     // Check that the base isn't a primitive
                     char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
                     if(typename_is_entended_builtin_type(base)){
-                        compiler_panicf(compiler, this_type->source, "Type of 'this' must be a pointer to a struct (%s is a primitive)", base);
+                        compiler_panicf(compiler, this_type->source, "Type of 'this' parameter must be a pointer to a struct (%s is a primitive)", base);
                         return FAILURE;
                     }
 
