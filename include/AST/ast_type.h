@@ -231,7 +231,7 @@ void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base);
 void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base);
 
 // ---------------- ast_type_make_base_with_generics ----------------
-// Takes ownership of 'base' and creates a type from it
+// Takes ownership of 'base' and 'generics', and creates a type from it
 void ast_type_make_base_with_generics(ast_type_t *type, strong_cstr_t base, strong_cstr_t *generics, length_t generics_length);
 
 // ---------------- ast_type_prepend_ptr ----------------
@@ -261,6 +261,10 @@ strong_cstr_t ast_type_str(const ast_type_t *type);
 // ---------------- ast_types_identical ----------------
 // Returns whether or not two AST types are identical
 bool ast_types_identical(const ast_type_t *a, const ast_type_t *b);
+
+// ---------------- ast_type_lists_identical ----------------
+// Returns whether or not two lists of AST types are identical
+bool ast_type_lists_identical(const ast_type_t *a, const ast_type_t *b, length_t length);
 
 // ---------------- ast_type_is_void ----------------
 // Returns whether an AST type is "void"
@@ -336,6 +340,10 @@ bool ast_type_is_func(const ast_type_t *type);
 // ---------------- ast_type_has_polymorph ----------------
 // Returns whether an AST type contains a polymorphic type
 bool ast_type_has_polymorph(const ast_type_t *type);
+
+// ---------------- ast_type_list_has_polymorph ----------------
+// Returns whether a list of AST types contains a polymorphic type
+bool ast_type_list_has_polymorph(const ast_type_t *types, length_t length);
 
 // ---------------- ast_type_dereference ----------------
 // Removes the first pointer element of a pointer type

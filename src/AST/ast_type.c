@@ -595,6 +595,13 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
     return true;
 }
 
+bool ast_type_lists_identical(const ast_type_t *a, const ast_type_t *b, length_t length){
+    for(length_t i = 0; i != length; i++){
+        if(!ast_types_identical(&a[i], &b[i])) return false;
+    }
+    return true;
+}
+
 bool ast_type_is_void(const ast_type_t *type){
     if(type->elements_length != 1 || type->elements[0]->id != AST_ELEM_BASE) return false;
     if(strcmp(((ast_elem_base_t*) type->elements[0])->base, "void") != 0) return false;
@@ -754,6 +761,13 @@ bool ast_type_has_polymorph(const ast_type_t *type){
         default:
             internalerrorprintf("ast_type_has_polymorph() encountered unknown element id 0x%08X\n", type->elements[i]->id);
         }
+    }
+    return false;
+}
+
+bool ast_type_list_has_polymorph(const ast_type_t *types, length_t length){
+    for(length_t i = 0; i != length; i++){
+        if(ast_type_has_polymorph(&types[i])) return true;
     }
     return false;
 }

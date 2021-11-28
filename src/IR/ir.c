@@ -972,7 +972,7 @@ void ir_print_type(ir_type_t *type){
     free(s);
 }
 
-void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness){
+void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness){
     ir_method_t method;
     method.struct_name = struct_name;
     method.name = method_name;
@@ -1007,8 +1007,8 @@ void ir_module_insert_generic_method(ir_module_t *module,
     ast_type_t *weak_generics,
     length_t generics_length,
     weak_cstr_t name,
-    length_t ir_func_id,
-    length_t ast_func_id,
+    funcid_t ir_func_id,
+    funcid_t ast_func_id,
 bool preserve_sortedness){
     
     ir_generic_base_method_t method;
@@ -1046,7 +1046,7 @@ bool preserve_sortedness){
     }
 }
 
-ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness){
+ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness){
     ir_func_mapping_t mapping, *result;
     mapping.name = name;
     mapping.ir_func_id = ir_func_id;

@@ -38,6 +38,7 @@ LOW-PRIORITY:
 * 'adept install https://github.com/IsaacShelton/Box2D'
 * conditionless blocks
 * match/when statement or something like that
+* support for disallowing/disencouraging assignment for a composite type
 
 v2.4 COMPLETED:
 + Standard Library Imports

@@ -346,7 +346,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     ast_expr_call_method_t *call_expr = malloc(sizeof(ast_expr_call_method_t));
 
                     // DANGEROUS: Partially initialize ast_expr_call_method_t
-                    ast_expr_create_call_method_in_place(call_expr, (char*) tokens[*i].data, *inout_expr, 0, NULL, is_tentative, true, NULL, sources[*i]);
+                    ast_expr_create_call_method_in_place(call_expr, (char*) tokens[*i].data, *inout_expr, 0, NULL, is_tentative, false, NULL, sources[*i]);
                     tokens[*i].data = NULL;
                     *i += 2;
 

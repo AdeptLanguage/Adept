@@ -97,12 +97,12 @@ typedef struct {
     ir_type_t *ir_type;
 } ir_field_info_t;
 
-// Gets info about a field in order to help complete a 'MEMBER' expression
-errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info);
+// Gets info about a field of a compsite
+errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_cstr_t member, source_t source, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info);
 
 // Finds the appropriate method for a 'CALL METHOD' expression to call
 errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values,
-        ast_type_t *arg_types, ast_type_t *gives, funcpair_t *result);
+        ast_type_t *arg_types, ast_type_t *gives, optional_funcpair_t *result);
 
 // Fills in any missing arguments for a 'CALL'/'CALL METHOD' expression
 errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types, ast_type_t *all_expected_arg_types,

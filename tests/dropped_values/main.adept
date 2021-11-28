@@ -19,7 +19,7 @@ func main {
     
     // "Shelton".clone() is destroyed
     // The string that "Isaac ".clone() becomes, which is "Isaac Shelton" is destroyed
-    // "Isaac ".clone() is never destroyed because it because "Isaac Shelton"
+    // "Isaac ".clone() is never destroyed because it becomes "Isaac Shelton"
     "Isaac ".clone().append("Shelton".clone())
     
     // Each returned value of 'Bomb' has __defer__ called on it because none are stored in a variable

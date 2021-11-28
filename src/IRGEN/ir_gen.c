@@ -79,7 +79,13 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
         if(falias->match_first_of_name){
             error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
         } else {
-            error = ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, &pair);
+            optional_funcpair_t result;
+            error = ir_gen_find_func(compiler, object, job_list, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, &result);
+
+            if(error == SUCCESS){
+                if(!result.has) continue;
+                pair = result.value;
+            }
         }
 
         if(error){
@@ -97,19 +103,25 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
     errorcode_t error;
 
     // Find __variadic_array__ (if it exists)
-    error = ir_gen_find_special_func(compiler, object, "__variadic_array__", &module->common.variadic_ir_func_id);
+    error = ir_gen_find_singular_special_func(compiler, object, "__variadic_array__", &module->common.variadic_ir_func_id);
     if(error == ALT_FAILURE) return FAILURE;
     
     return SUCCESS;
 }
 
-errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, length_t ast_func_id,
+errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, funcid_t ast_func_id,
         bool preserve_sortedness, ir_func_mapping_t *optional_out_new_mapping){
+    
     ir_module_t *module = &object->ir_module;
+
+    if(module->funcs_length >= MAX_FUNCID){
+        compiler_panic(compiler, ast_func->source, "Maximum number of IR functions reached\n");
+        return FAILURE;
+    }
 
     expand((void**) &module->funcs, sizeof(ir_func_t), module->funcs_length, &module->funcs_capacity, 1, object->ast.funcs_length);
     ir_func_t *module_func = &module->funcs[module->funcs_length];
-    length_t ir_func_id = module->funcs_length;
+    funcid_t ir_func_id = module->funcs_length;
 
     module_func->name = ast_func->name;
     module_func->maybe_filename = NULL;
@@ -277,7 +289,7 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
     return SUCCESS;
 }
 
-errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list){
+errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, ir_job_list_t *job_list){
     // ir_gens statements into basicblocks with instructions and sets in 'module_func'
 
     ir_module_t *ir_module = &object->ir_module;

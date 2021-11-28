@@ -40,8 +40,8 @@ typedef struct ir_builder {
     ir_type_map_t *type_map;
     compiler_t *compiler;
     object_t *object;
-    length_t ast_func_id;
-    length_t ir_func_id;
+    funcid_t ast_func_id;
+    funcid_t ir_func_id;
     bridge_scope_t *scope;
     length_t next_var_id;
     length_t *next_reference_id;
@@ -59,7 +59,7 @@ typedef struct ir_builder {
 
 // ---------------- ir_builder_init ----------------
 // Initializes an IR builder
-void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, length_t ast_func_id, length_t ir_func_id, ir_job_list_t *job_list, bool static_builder);
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, ir_job_list_t *job_list, bool static_builder);
 
 // ---------------- build_basicblock ----------------
 // Builds a new basic block in the current function
@@ -115,7 +115,7 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
 // ---------------- build_call ----------------
 // Builds a call instruction
 // NOTE: If 'return_result_value' is false, then NULL will be returned (in an effort to avoid unnecessary allocations)
-ir_value_t *build_call(ir_builder_t *builder, length_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value);
+ir_value_t *build_call(ir_builder_t *builder, funcid_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value);
 
 // ---------------- build_break ----------------
 // Builds a break instruction
@@ -412,22 +412,30 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function
 // NOTE: 'instantiation_source' may be NULL_SOURCE
-errorcode_t instantiate_polymorphic_func(ir_builder_t *builder, source_t instantiation_source, length_t ast_poly_func_id, ast_type_t *types,
-    length_t types_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping);
+errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
+        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping);
 
 // ---------------- attempt_autogen___defer__ ----------------
 // Attempts to auto-generate __defer__ management method
 // NOTE: Does NOT check for existing suitable __defer__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
 errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result);
+        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
 
 // ---------------- attempt_autogen___pass__ ----------------
 // Attempts to auto-generate __pass__ management function
 // NOTE: Does NOT check for existing suitable __pass__ functions
 // NOTE: Returns FAILURE if couldn't auto generate
 errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, funcpair_t *result);
+        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
+
+// ---------------- attempt_autogen___assign__ ----------------
+// Attempts to auto-generate __assign__ management method
+// NOTE: Does NOT check for existing suitable __assign__ methods
+// NOTE: Returns FAILURE if couldn't auto generate
+// NOTE: Returns ALT_FAILURE if something went really wrong
+errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
+        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
 
 // ---------------- resolve_type_polymorphics ----------------
 // Resolves any polymorphic type variables within an AST type
@@ -444,10 +452,21 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
 // ---------------- is_allowed_auto_conversion ----------------
 // Returns whether a builtin auto conversion is allowed
 // (For integers / floats)
-bool is_allowed_auto_conversion(ir_builder_t *builder, const ast_type_t *a_type, const ast_type_t *b_type);
+bool is_allowed_auto_conversion(compiler_t *compiler, object_t *object, const ast_type_t *a_type, const ast_type_t *b_type);
 
 // ---------------- ir_builder_get_loop_label_info ----------------
 // Gets information associated with a loop label
 successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id);
+
+// ---------------- instructions_snapshot_t ----------------
+// Snapshot used to easily reset the forward generation of IR instructions
+typedef struct {
+    length_t current_block_id;
+    length_t current_basicblock_instructions_length;
+    length_t basicblocks_length;
+} instructions_snapshot_t;
+
+void instructions_snapshot_capture(ir_builder_t *builder, instructions_snapshot_t *snapshot);
+void instructions_snapshot_restore(ir_builder_t *builder, instructions_snapshot_t *snapshot);
 
 #endif // _ISAAC_IR_BUILDER_H

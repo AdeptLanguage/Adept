@@ -164,7 +164,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
-    length_t ir_func_id;
+    funcid_t ir_func_id;
     ir_value_t **values;
     length_t values_length;
 } ir_instr_call_t;
@@ -288,7 +288,7 @@ typedef struct {
     unsigned int id;
     ir_type_t *result_type;
     const char *name;
-    length_t ir_func_id;
+    funcid_t ir_func_id;
 } ir_instr_func_address_t;
 
 // ---------------- ir_instr_cast_t ----------------
@@ -448,8 +448,8 @@ typedef struct {
 // ('ast_func_id' is used for domestic implementations)
 typedef struct {
     const char *name;
-    length_t ir_func_id;
-    length_t ast_func_id;
+    funcid_t ir_func_id;
+    funcid_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_func_mapping_t;
 
@@ -458,8 +458,8 @@ typedef struct {
 typedef struct {
     const char *struct_name;
     const char *name;
-    length_t ir_func_id;
-    length_t ast_func_id;
+    funcid_t ir_func_id;
+    funcid_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_method_t;
 
@@ -470,8 +470,8 @@ typedef struct {
     ast_type_t *generics;
     length_t generics_length;
     weak_cstr_t name;
-    length_t ir_func_id;
-    length_t ast_func_id;
+    funcid_t ir_func_id;
+    funcid_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_generic_base_method_t;
 
@@ -536,10 +536,10 @@ typedef struct {
     length_t rtti_array_index;
     troolean has_rtti_array;
     ir_type_t *ir_variadic_array;         // NOTE: Can be NULL
-    length_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
+    funcid_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
     bool has_main;
-    length_t ast_main_id;
-    length_t ir_main_id;
+    funcid_t ast_main_id;
+    funcid_t ir_main_id;
     length_t next_static_variable_id;
 } ir_shared_common_t;
 
@@ -656,7 +656,7 @@ void ir_print_type(ir_type_t *type);
 
 // ---------------- ir_module_insert_method ----------------
 // Inserts a method into a module's method list
-void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness);
+void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness);
 
 // ---------------- ir_module_insert_generic_method ----------------
 // Inserts a generic method into a module's method list
@@ -667,13 +667,13 @@ void ir_module_insert_generic_method(ir_module_t *module,
     ast_type_t *weak_generics,
     length_t generics_length,
     weak_cstr_t name,
-    length_t ir_func_id,
-    length_t ast_func_id,
+    funcid_t ir_func_id,
+    funcid_t ast_func_id,
 bool preserve_sortedness);
 
 // ---------------- ir_module_insert_generic_method ----------------
 // Inserts a new function mapping into a module's function mappings list
-ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, length_t ir_func_id, length_t ast_func_id, bool preserve_sortedness);
+ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness);
 
 // ---------------- ir_module_find_insert_method_position ----------------
 // Finds the position to insert a method into a module's method list

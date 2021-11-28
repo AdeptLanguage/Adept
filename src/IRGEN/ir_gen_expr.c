@@ -481,8 +481,17 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
 }
 
 errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    ast_t *ast = &builder->object->ast;
+    ir_pool_snapshot_t pool_snapshot;
+    instructions_snapshot_t instructions_snapshot;
 
+    // Take snapshot of construction state,
+    // so that if this call ends up to be a no-op,
+    // we can reset back as if nothing happened
+    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
+    instructions_snapshot_capture(builder, &instructions_snapshot);
+
+    // Setup for generating call
+    ast_t *ast = &builder->object->ast;
     length_t arity = expr->arity;
     ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
     ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
@@ -542,8 +551,8 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     }
 
     // If there doesn't exist a nearby scoped variable with the same name, look for function
-    funcpair_t pair;
-    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, expr->no_user_casts, expr->source, &pair);
+    optional_funcpair_t result;
+    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, expr->no_user_casts, expr->source, &result);
 
     // Propagate failure if something went wrong during the search
     if(error == ALT_FAILURE){
@@ -553,6 +562,24 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
     // Found function that fits given name and arguments
     if(error == SUCCESS){
+        if(!result.has){
+            // This function call is a no-op
+            instructions_snapshot_restore(builder, &instructions_snapshot);
+            ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+
+            if(expr->is_tentative){
+                if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
+                ast_types_free_fully(arg_types, expr->arity);
+                return SUCCESS;
+            } else {
+                compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives);
+                ast_types_free_fully(arg_types, expr->arity);
+                return FAILURE;
+            }
+        }
+
+        funcpair_t pair = result.value;
+
         // If requires implicit, fail if conforming function isn't marked as implicit
         if(expr->only_implicit && expr->is_tentative && !(pair.ast_func->traits & AST_FUNC_IMPLICIT)){
             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
@@ -935,9 +962,8 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
 
     ir_type_t *type;
     ir_field_info_t field_info;
-    ast_elem_t *elem = ast_type_of_composite.elements[0];
 
-    if(ir_gen_expr_member_get_field_info(builder, expr, elem, &ast_type_of_composite, &field_info)
+    if(ir_gen_get_field_info(builder->compiler, builder->object, expr->member, expr->source, &ast_type_of_composite, &field_info)
     || ir_gen_resolve_type(builder->compiler, builder->object, &ast_type_of_composite, &type)){
         ast_type_free(&ast_type_of_composite);
         return FAILURE;
@@ -992,25 +1018,28 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_member_t *expr, ast_elem_t *elem, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info){
+errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_cstr_t member, source_t source, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info){
     // TODO: CLEANUP: Clean up the code in this function
+
+    ast_elem_t *elem = ast_type_of_composite->elements[0];
+    type_table_t *type_table = object->ast.type_table;
 
     if(elem->id == AST_ELEM_BASE){
         // Non-polymorphic composite type
         weak_cstr_t composite_name = ((ast_elem_base_t*) elem)->base;
-        ast_composite_t *target = ast_composite_find_exact(&builder->object->ast, composite_name);
+        ast_composite_t *target = ast_composite_find_exact(&object->ast, composite_name);
 
         // If we didn't find the composite, show an error message and return failure
         if(target == NULL){
             weak_cstr_t message_format = typename_is_entended_builtin_type(composite_name) ? "Can't use member operator on built-in type '%s'" : "INTERNAL ERROR: Failed to find composite '%s' that should exist";
-            compiler_panicf(builder->compiler, expr->source, message_format, composite_name);
+            compiler_panicf(compiler, source, message_format, composite_name);
             return FAILURE;
         }
 
         // Find the field of the structure by name
-        if(!ast_composite_find_exact_field(target, expr->member, &out_field_info->endpoint, &out_field_info->path)){
+        if(!ast_composite_find_exact_field(target, member, &out_field_info->endpoint, &out_field_info->path)){
             char *s = ast_type_str(ast_type_of_composite);
-            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in %s '%s'", expr->member, ast_layout_kind_name(target->layout.kind), s);
+            compiler_panicf(compiler, source, "Field '%s' doesn't exist in %s '%s'", member, ast_layout_kind_name(target->layout.kind), s);
             free(s);
             return FAILURE;
         }
@@ -1018,12 +1047,12 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         ast_type_t *field_type = ast_layout_skeleton_get_type(&target->layout.skeleton, out_field_info->endpoint);
 
         if(field_type == NULL){
-            internalerrorprintf("ir_gen_expr_member_get_field_info() couldn't get type for invalid endpoint\n");
+            internalerrorprintf("ir_gen_get_field_info() couldn't get type for invalid endpoint\n");
             return FAILURE;
         }
 
         // Resolve AST field type to IR field type
-        if(ir_gen_resolve_type(builder->compiler, builder->object, field_type, &out_field_info->ir_type)) return FAILURE;
+        if(ir_gen_resolve_type(compiler, object, field_type, &out_field_info->ir_type)) return FAILURE;
 
         out_field_info->ast_type = ast_type_clone(field_type);
         return SUCCESS;
@@ -1034,18 +1063,18 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
 
         weak_cstr_t composite_name = generic_base->name;
-        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&builder->object->ast, composite_name);
+        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, composite_name);
 
         // Find the polymorphic structure
         if(template == NULL){
-            compiler_panicf(builder->compiler, ((ast_expr_member_t*) expr)->source, "INTERNAL ERROR: Failed to find polymorphic composite '%s' that should exist", composite_name);
+            compiler_panicf(compiler, source, "INTERNAL ERROR: Failed to find polymorphic composite '%s' that should exist", composite_name);
             return FAILURE;
         }
 
         // Find the field of the polymorphic structure by name
-        if(!ast_composite_find_exact_field((ast_composite_t*) template, expr->member, &out_field_info->endpoint, &out_field_info->path)){
+        if(!ast_composite_find_exact_field((ast_composite_t*) template, member, &out_field_info->endpoint, &out_field_info->path)){
             char *s = ast_type_str(ast_type_of_composite);
-            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in %s '%s'", expr->member, ast_layout_kind_name(template->layout.kind), s);
+            compiler_panicf(compiler, source, "Field '%s' doesn't exist in %s '%s'", member, ast_layout_kind_name(template->layout.kind), s);
             free(s);
             return FAILURE;
         }
@@ -1059,7 +1088,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
 
         // Ensure that the number of parameters given for the generic base is the same as expected for the polymorphic structure
         if(template->generics_length != generic_base->generics_length){
-            compiler_panicf(builder->compiler, expr->source, "Polymorphic %s '%s' type parameter length mismatch!", ast_layout_kind_name(template->layout.kind), generic_base->name);
+            compiler_panicf(compiler, source, "Polymorphic %s '%s' type parameter length mismatch!", ast_layout_kind_name(template->layout.kind), generic_base->name);
             ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
@@ -1071,13 +1100,13 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
 
         // Get the AST field type of the target field by index and resolve any polymorphs
         ast_type_t field_type;
-        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, maybe_polymorphic_field_type, &field_type)){
+        if(resolve_type_polymorphics(compiler, type_table, &catalog, maybe_polymorphic_field_type, &field_type)){
             ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
 
         // Resolve AST field type to IR field type
-        if(ir_gen_resolve_type(builder->compiler, builder->object, &field_type, &out_field_info->ir_type)) return FAILURE;
+        if(ir_gen_resolve_type(compiler, object, &field_type, &out_field_info->ir_type)) return FAILURE;
 
         out_field_info->ast_type = field_type;
 
@@ -1092,10 +1121,10 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) elem;
         ast_layout_t *layout = &layout_elem->layout;
 
-        if(!ast_field_map_find(&layout->field_map, expr->member, &out_field_info->endpoint)
+        if(!ast_field_map_find(&layout->field_map, member, &out_field_info->endpoint)
         || !ast_layout_get_path(layout, out_field_info->endpoint, &out_field_info->path)){
             char *s = ast_type_str(ast_type_of_composite);
-            compiler_panicf(builder->compiler, expr->source, "Field '%s' doesn't exist in %s '%s'", expr->member, ast_layout_kind_name(layout->kind), s);
+            compiler_panicf(compiler, source, "Field '%s' doesn't exist in %s '%s'", member, ast_layout_kind_name(layout->kind), s);
             free(s);
             return FAILURE;
         }
@@ -1103,12 +1132,12 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
         ast_type_t *field_type = ast_layout_skeleton_get_type(&layout->skeleton, out_field_info->endpoint);
 
         if(field_type == NULL){
-            internalerrorprintf("ir_gen_expr_member_get_field_info() couldn't get type for invalid endpoint (of anonymous composite)\n");
+            internalerrorprintf("ir_gen_get_field_info() couldn't get type for invalid endpoint (of anonymous composite)\n");
             return FAILURE;
         }
 
         // Resolve AST field type to IR field type
-        if(ir_gen_resolve_type(builder->compiler, builder->object, field_type, &out_field_info->ir_type)) return FAILURE;
+        if(ir_gen_resolve_type(compiler, object, field_type, &out_field_info->ir_type)) return FAILURE;
 
         out_field_info->ast_type = ast_type_clone(field_type);
         return SUCCESS;
@@ -1116,7 +1145,7 @@ errorcode_t ir_gen_expr_member_get_field_info(ir_builder_t *builder, ast_expr_me
 
     // Otherwise, we got a value that isn't a structure type
     char *s = ast_type_str(ast_type_of_composite);
-    compiler_panicf(builder->compiler, expr->source, "Can't use member operator on non-composite type '%s'", s);
+    compiler_panicf(compiler, source, "Can't use member operator on non-composite type '%s'", s);
     free(s);
     return FAILURE;
 }
@@ -1312,13 +1341,28 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     }
     
     // Otherwise we have arguments we can try to match against
-    else if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &pair)){
-        // If nothing exists and the lookup is tentative, fail tentatively
-        if(expr->tentative) goto fail_tentatively;
+    else {
+        optional_funcpair_t result;
 
-        // Otherwise, we failed to find a function we were expecting to find
-        compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL);
-        return FAILURE;
+        if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &result)){
+            // If nothing exists and the lookup is tentative, fail tentatively
+            if(expr->tentative) goto fail_tentatively;
+    
+            // Otherwise, we failed to find a function we were expecting to find
+            compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL);
+            return FAILURE;
+        }
+    
+        if(!result.has){
+            if(expr->tentative){
+                goto fail_tentatively;
+            } else {
+                compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL);
+                return FAILURE;
+            }
+        }
+
+        pair = result.value;
     }
 
     // Create the IR function pointer type
@@ -1607,9 +1651,18 @@ errorcode_t ir_gen_expr_phantom(ast_expr_phantom_t *expr, ir_value_t **ir_value,
 }
 
 errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_pool_snapshot_t pool_snapshot;
+    instructions_snapshot_t instructions_snapshot;
+
+    // Take snapshot of construction state,
+    // so that if this call ends up to be a no-op,
+    // we can reset back as if nothing happened
+    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
+    instructions_snapshot_capture(builder, &instructions_snapshot);
+
+    // Setup for generating method call
     ast_t *ast = &builder->object->ast;
     length_t arity = expr->arity + 1;
-
     ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
     ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
     ir_value_t *stack_pointer = NULL;
@@ -1679,8 +1732,8 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     }
 
     // Find the appropriate method to call
-    funcpair_t pair;
-    errorcode_t error = ir_gen_expr_call_method_find_appropriate_method(builder, expr, arg_values, arg_types, &expr->gives, &pair);
+    optional_funcpair_t result;
+    errorcode_t error = ir_gen_expr_call_method_find_appropriate_method(builder, expr, arg_values, arg_types, &expr->gives, &result);
     
     // If we couldn't find a suitable method, handle the failure
     if(error != SUCCESS){
@@ -1691,6 +1744,18 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
         return SUCCESS;
     }
+
+    if(!result.has){
+        // This method call is a no-op
+        instructions_snapshot_restore(builder, &instructions_snapshot);
+        ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+        ast_types_free_fully(arg_types, arity);
+
+        if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
+        return SUCCESS;
+    }
+
+    funcpair_t pair = result.value;
 
     // Fill in default arguments
     ast_type_t *all_expected_arg_types = pair.ast_func->arg_types;
@@ -1757,7 +1822,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 }
 
 errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values,
-        ast_type_t *arg_types, ast_type_t *gives, funcpair_t *result){
+        ast_type_t *arg_types, ast_type_t *gives, optional_funcpair_t *result){
     
     weak_cstr_t subject;
     ast_type_t *subject_type = &arg_types[0];

@@ -22,7 +22,7 @@
 // name and arguments. Result info stored 'result'
 // NOTE: optional_required_traits can be TRAIT_NONE
 errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
-    ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, funcpair_t *result);
+    ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_func_named ----------------
 // Finds a function that exactly matches the given name.
@@ -41,10 +41,10 @@ errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out
 //       to indicate no return matching
 // NOTE: 'from_source' is used for error messages, it may be NULL_SOURCE if not applicable
 errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, source_t from_source, funcpair_t *result);
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, source_t from_source, optional_funcpair_t *result);
 
 errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, source_t from_source, funcpair_t *result, trait_t conform_mode);
+        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode);
 
 
 // ---------------- ir_gen_find_pass_func ----------------
@@ -52,14 +52,14 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, length_t *out_ir_func_id);
+errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_defer_func ----------------
 // Finds the correct __defer__ function for a type
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, length_t *out_ir_func_id);
+errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, ast_type_t *arg_type, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_method_conforming ----------------
 // Finds a method that has the given name and conforms
@@ -67,11 +67,11 @@ errorcode_t ir_gen_find_defer_func(ir_builder_t *builder, ir_value_t **argument,
 // NOTE: 'from_source' is used for error messages, it may be NULL_SOURCE if not applicable
 errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, ast_type_t *gives, source_t from_source, funcpair_t *result);
+    length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result);
 
 errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *struct_name,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, ast_type_t *gives, source_t from_source, funcpair_t *result, trait_t conform_mode);
+    length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode);
 
 // ---------------- ir_gen_find_generic_base_method_conforming ----------------
 // Finds a method that has the matches a generic base and conforms
@@ -79,11 +79,21 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
 // NOTE: 'from_source' is used for error messages, it may be NULL_SOURCE if not applicable
 errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, const char *generic_base,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, ast_type_t *gives, source_t from_source, funcpair_t *result);
+    length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result);
 
 errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder, const char *generic_base,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, ast_type_t *gives, source_t from_source, funcpair_t *result, trait_t conform_mode);
+    length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode);
+
+// ---------------- ir_gen_find_method ----------------
+// Find method without any conforming
+errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *struct_name, 
+        const char *name, ast_type_t *arg_types, length_t type_list_length, source_t from_source, optional_funcpair_t *result);
+
+// ---------------- ir_gen_find_generic_base_method ----------------
+// Find method without any conforming
+errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *generic_base,
+    const char *name, ast_type_t *arg_types, length_t type_list_length, source_t from_source, optional_funcpair_t *result);
 
 // ---------------- find_beginning_of_func_group ----------------
 // Searches for beginning of function group in a list of mappings
@@ -127,20 +137,21 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 // NOTE: 'gives' may be NULL
 errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types,
         length_t type_length, ast_poly_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode);
+errorcode_t func_args_polymorphable_no_conform(compiler_t *compiler, object_t *object, ast_func_t *poly_template, ast_type_t *arg_types, length_t type_list_length, ast_poly_catalog_t *out_catalog);
 
 // ---------------- ast_type_has_polymorph ----------------
 // Finds whether a concrete AST type is valid for a given polymorphic type
 // NOTE: Returns SUCCESS if true
 // NOTE: Returns FAILURE if false
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
-errorcode_t arg_type_polymorphable(ir_builder_t *builder, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
+errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
 
-// ---------------- ir_gen_find_special_func ----------------
+// ---------------- ir_gen_find_singular_special_func ----------------
 // Finds a special function (such as __variadic_array__)
 // Sets 'out_ir_func_id' ONLY IF the IR function was found.
 // Returns SUCCESS if found
 // Returns FAILURE if not found
 // Returns ALT_FAILURE if something went wrong
-errorcode_t ir_gen_find_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, length_t *out_ir_func_id);
+errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, funcid_t *out_ir_func_id);
 
 #endif // _ISAAC_IR_GEN_FIND_H

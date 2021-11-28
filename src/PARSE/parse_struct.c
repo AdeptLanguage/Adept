@@ -424,7 +424,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     // Add function
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    length_t ast_func_id = ast->funcs_length;
+    funcid_t ast_func_id = (funcid_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, strclone(name), false, false, false, false, source, false, strclone(name));
 

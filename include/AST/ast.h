@@ -152,7 +152,7 @@ typedef struct {
 
 typedef struct {
     weak_cstr_t name;
-    length_t ast_func_id;
+    funcid_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ast_polymorphic_func_t;
 

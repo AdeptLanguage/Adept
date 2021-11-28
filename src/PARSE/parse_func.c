@@ -18,6 +18,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return parse_func_alias(ctx);
     }
 
+    if(ctx->ast->funcs_length >= MAX_FUNCID){
+        compiler_panic(ctx->compiler, source, "Maximum number of AST functions reached\n");
+        return FAILURE;
+    }
+
     strong_cstr_t name;
     maybe_null_strong_cstr_t export_name; 
     bool is_stdcall, is_foreign, is_verbatim, is_implicit;
@@ -31,7 +36,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    length_t ast_func_id = ast->funcs_length;
+    funcid_t ast_func_id = (funcid_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     bool is_entry = strcmp(name, ctx->compiler->entry_point) == 0;
     ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, is_implicit, source, is_entry, export_name);
@@ -757,6 +762,11 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
     weak_cstr_t to = parse_eat_word(ctx, "Expected function alias destination name");
     if(to == NULL){
         ast_types_free_fully(arg_types, arity);
+        return FAILURE;
+    }
+    
+    if(ast->func_aliases_length >= MAX_FUNCID){
+        compiler_panic(ctx->compiler, source, "Maximum number of AST function aliases reached\n");
         return FAILURE;
     }
 

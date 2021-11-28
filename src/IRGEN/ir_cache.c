@@ -30,11 +30,14 @@ void ir_gen_sf_cache_free(ir_gen_sf_cache_t *cache){
     free(cache->storage);
 }
 
-ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_type_t type){
+ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate_or_insert(ir_gen_sf_cache_t *cache, ast_type_t type){
     hash_t hash = ast_type_hash(&type);
     ir_gen_sf_cache_entry_t *entry = &cache->storage[hash % cache->capacity];
 
     if(ir_gen_sf_cache_entry_is_occupied(entry)){
+        // Space already occupied, so put it in the linked list
+        // for that space
+
         while(true){
             if(ast_types_identical(&type, &entry->ast_type)) return entry;
 
@@ -52,16 +55,14 @@ ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_ty
             }
             entry = entry->next;
         }
-    } else {
-        // New entry here
-        entry->ast_type = ast_type_clone(&type);
-        entry->has_pass = TROOLEAN_UNKNOWN;
-        entry->has_defer = TROOLEAN_UNKNOWN;
-        entry->has_assign = TROOLEAN_UNKNOWN;
-        return entry;
     }
 
-    return NULL;
+    // New entry here
+    entry->ast_type = ast_type_clone(&type);
+    entry->has_pass = TROOLEAN_UNKNOWN;
+    entry->has_defer = TROOLEAN_UNKNOWN;
+    entry->has_assign = TROOLEAN_UNKNOWN;
+    return entry;
 }
 
 void ir_gen_sf_cache_dump(FILE *file, ir_gen_sf_cache_t *sf_cache){

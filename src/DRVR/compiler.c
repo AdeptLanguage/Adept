@@ -1316,13 +1316,9 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
             ast_elem_generic_base_t *first_arg_generic_base = (ast_elem_generic_base_t*) first_arg_type->elements[1];
 
             // Ensure the generics of the generic base match up
-            bool generics_match_up = maybe_generic_base->generics_length == first_arg_generic_base->generics_length;
-            if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
-                if(!(ast_types_identical(&maybe_generic_base->generics[i], &first_arg_generic_base->generics[i]) || ast_type_has_polymorph(&first_arg_generic_base->generics[i]))){
-                    generics_match_up = false;
-                    break;
-                }
-            }
+            bool generics_match_up = maybe_generic_base->generics_length == first_arg_generic_base->generics_length
+                                  && ast_type_lists_identical(maybe_generic_base->generics, first_arg_generic_base->generics, first_arg_generic_base->generics_length)
+                                  && !ast_type_list_has_polymorph(first_arg_generic_base->generics, first_arg_generic_base->generics_length);
 
             if(!generics_match_up) continue;
         }

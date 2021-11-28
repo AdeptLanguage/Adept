@@ -1030,14 +1030,15 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             break;
         case INSTRUCTION_MALLOC: {
                 instr = instructions[i];
-                LLVMTypeRef ty = ir_to_llvm_type(llvm, ((ir_instr_malloc_t*) instr)->type);
+                ir_instr_malloc_t *malloc_instr = (ir_instr_malloc_t*) instr;
+                LLVMTypeRef ty = ir_to_llvm_type(llvm, malloc_instr->type);
                 LLVMValueRef allocated;
 
-                if( ((ir_instr_malloc_t*) instr)->amount == NULL ){    
+                if(malloc_instr->amount == NULL){    
                     allocated = LLVMBuildMalloc(builder, ty, "");
                     catalog->blocks[b].value_references[i] = allocated;
                     
-                    if(!(((ir_instr_malloc_t*) instr)->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
+                    if(!(malloc_instr->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
                         LLVMBuildStore(builder, LLVMConstNull(ty), LLVMBuildBitCast(builder, allocated, LLVMPointerType(ty, 0), ""));
                     }
                 } else {
@@ -1045,7 +1046,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                     allocated = LLVMBuildArrayMalloc(builder, ty, count, "");
                     catalog->blocks[b].value_references[i] = allocated;
 
-                    if(!(((ir_instr_malloc_t*) instr)->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
+                    if(!(malloc_instr->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
                         LLVMValueRef *memset_intrinsic = &llvm->memset_intrinsic;
 
                         if(*memset_intrinsic == NULL){

@@ -23,7 +23,7 @@
 // ---------------- ir_gen_sf_cache_entry_t ----------------
 // Special Functions cache entry.
 // The structural layout is squished together tightly, since we
-// know that there will be a large array of them
+// know that there will be a huge array of them
 #define ir_gen_sf_cache_entry_is_occupied(a) ((a)->ast_type.elements_length != 0)
 
 typedef struct ir_gen_sf_cache_entry {
@@ -33,9 +33,13 @@ typedef struct ir_gen_sf_cache_entry {
              has_defer : 2,
              has_assign : 2;
 
-    length_t pass_ir_func_id;   // __pass__
-    length_t defer_ir_func_id;  // __defer__
-    length_t assign_ir_func_id; // __assign__
+    // NOTE: Assume function IDs are less than 2^32-1
+    unsigned int pass_ast_func_id,   // __pass__
+                 pass_ir_func_id,
+                 defer_ast_func_id,  // __defer__
+                 defer_ir_func_id,
+                 assign_ast_func_id, // __assign__
+                 assign_ir_func_id;
 
     struct ir_gen_sf_cache_entry *next;
 } ir_gen_sf_cache_entry_t;
@@ -55,9 +59,11 @@ void ir_gen_sf_cache_init(ir_gen_sf_cache_t *cache);
 // Frees special functions cache
 void ir_gen_sf_cache_free(ir_gen_sf_cache_t *cache);
 
-// ---------------- ir_gen_sf_cache_locate ----------------
-// Locates cache entry for AST type in special functions cache
-ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate(ir_gen_sf_cache_t *cache, ast_type_t type);
+// ---------------- ir_gen_sf_cache_locate_or_insert ----------------
+// Locates a cache entry for AST type in special functions cache
+// If one doesn't exist yet, one will be created
+// Will always return a valid pointer
+ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate_or_insert(ir_gen_sf_cache_t *cache, ast_type_t type);
 
 // ---------------- ir_gen_sf_cache_dump ----------------
 // Dumps a visual representation of an special function cache

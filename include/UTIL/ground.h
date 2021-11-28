@@ -73,12 +73,20 @@ typedef struct {
 
 #define NULL_SOURCE (source_t){0, 0, 0}
 
+// ---------------- funcid_t ----------------
+// Used as an ID to refer to functions
+#define MAX_FUNCID 0xFFFFFFFF
+typedef uint32_t funcid_t;
+
 // ---------------- maybe_index_t ----------------
 typedef long long maybe_index_t;
 
 // ---------------- troolean ----------------
 // 3-state value
 typedef unsigned char troolean;
+
+// ---------------- optional ----------------
+#define optional(TYPE) struct { bool has; TYPE value; }
 
 // ---------------- lenstr_t and friends ----------------
 // C-String with cached length
