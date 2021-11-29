@@ -1,0 +1,10 @@
+
+struct Test ()
+
+func main {
+    test POD Test
+
+    // Even though Test.__defer__() does not exist (won't be auto-generated since it's unnecessary),
+    // trying to call it will be ignored, for backwards compatibility reasons
+    test.__defer__()
+}

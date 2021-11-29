@@ -283,7 +283,6 @@ typedef struct {
 // ---------------- ir_instr_func_address_t ----------------
 // An IR instruction for getting the address of a function
 // ('name' is only used for foreign implementations)
-// ('ast_func_id' is used for domestic implementations)
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;

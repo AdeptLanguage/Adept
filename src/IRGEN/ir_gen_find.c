@@ -210,6 +210,7 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_jo
 
     ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&object->ir_module.sf_cache, *arg_type);
 
+    // If result is cached, use the cached version
     if(cache_entry->has_defer == TROOLEAN_TRUE){
         optional_funcpair_set(result, true, cache_entry->defer_ast_func_id, cache_entry->defer_ir_func_id, object);
         return SUCCESS;
@@ -217,7 +218,8 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_jo
         return FAILURE;
     }
 
-    // Create temporary AST pointer type
+    // Create temporary AST pointer type without allocating on the heap
+    // Will be used as AST type for subject of method during lookup
     ast_type_t ast_type_ptr;
     ast_elem_t *ast_type_ptr_elems[2];
     ast_elem_t ast_type_ptr_elem;
@@ -229,21 +231,33 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_jo
     ast_type_ptr.elements_length = 2;
     ast_type_ptr.source = arg_type->source;
 
+    // Try to find '__defer__' method
+    errorcode_t errorcode;
+    weak_cstr_t struct_name;
+
     switch(arg_type->elements[0]->id){
-    case AST_ELEM_BASE: {
-            weak_cstr_t struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
-            return ir_gen_find_method(compiler, object, job_list, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
-        }
+    case AST_ELEM_BASE:
+        struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
+        errorcode = ir_gen_find_method(compiler, object, job_list, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
         break;
-    case AST_ELEM_GENERIC_BASE: {
-            weak_cstr_t struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
-            return ir_gen_find_generic_base_method(compiler, object, job_list, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
-        }
+    case AST_ELEM_GENERIC_BASE:
+        struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
+        errorcode = ir_gen_find_generic_base_method(compiler, object, job_list, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
         break;
+    default:
+        errorcode = FAILURE;
     }
 
-    internalerrorprintf("ir_gen_find_defer_func got unknown first element kind for arg_type\n");
-    return ALT_FAILURE;
+    // Cache result
+    if(errorcode == SUCCESS && result->has){
+        cache_entry->defer_ast_func_id = result->value.ast_func_id;
+        cache_entry->defer_ir_func_id = result->value.ir_func_id;
+        cache_entry->has_defer = TROOLEAN_TRUE;
+    } else {
+        cache_entry->has_defer = TROOLEAN_FALSE;
+    }
+
+    return errorcode;
 }
 
 errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
@@ -334,16 +348,12 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
         }
     }
 
-    if(strcmp(name, "__defer__") == 0
-    && attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result) == SUCCESS){
-        // Auto-generate __defer__ method if possible
-        return SUCCESS;
+    if(strcmp(name, "__defer__") == 0){
+        return attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
     }
-
-    if(strcmp(name, "__assign__") == 0
-    && attempt_autogen___assign__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result) == SUCCESS){
-        // Auto-generate __assign__ method if possible
-        return SUCCESS;
+    
+    if(strcmp(name, "__assign__") == 0){
+        return attempt_autogen___assign__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
     }
 
     return FAILURE; // No method with that definition found

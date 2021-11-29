@@ -22,6 +22,10 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object);
 // Generates IR function skeletons for AST functions.
 errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list_t *job_list);
 
+// ---------------- ir_gen_func_template ----------------
+// Generates empty template IR function
+errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, funcid_t *out_ir_func_id);
+
 // ---------------- ir_gen_func_head ----------------
 // Generates IR function skeleton for an AST function.
 errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, funcid_t ast_func_id,

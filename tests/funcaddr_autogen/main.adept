@@ -1,9 +1,16 @@
 
 import 'sys/cstdio.adept'
 
-struct Thing ()
+struct RequiresDefer () {
+    func __defer__ {}
+}
+
+struct ThingWithoutDefer ()
+struct ThingWithDefer (value RequiresDefer)
 
 func main {
-    printf('%p\n', func &__defer__(*Thing))
-    printf('%p\n', func null &__defer__(*int))
+    // __defer__ functions will automatically be generated if referenced from a 'func &' expression
+    printf('   ThingWithDefer.__defer__()     => %p\n', func null &__defer__(*ThingWithDefer))
+    printf('ThingWithoutDefer.__defer__()     => %p\n', func null &__defer__(*ThingWithoutDefer))
+    printf('                  __defer__(*int) => %p\n', func null &__defer__(*int))
 }

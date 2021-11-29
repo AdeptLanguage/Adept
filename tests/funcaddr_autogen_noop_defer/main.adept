@@ -1,0 +1,16 @@
+
+import basics
+
+struct ThingWith (firstname, lastname String)
+struct ThingWithout (firstname, lastname int)
+
+func main {
+    // For backwards compatibility reasons,
+    // 'func &__defer__(*Type)' will return no-op function if it doesn't exist.
+    // (Doesn't apply to 'func null &__defer__(*Type)', where null will be returned instead)
+    printf("%p = noop __defer__ function\n", func &__defer__(*ptr) as ptr)
+    printf("%p = ThingWith.__defer__\n", cast ptr func &__defer__(*ThingWith))
+    printf("%p = ThingWithout.__defer__\n", cast ptr func &__defer__(*ThingWithout))
+    printf("%p = ThingWith.__defer__ or null\n", cast ptr func null &__defer__(*ThingWith))
+    printf("%p = ThingWithout.__defer__ or null\n", cast ptr func null &__defer__(*ThingWithout))
+}

@@ -109,34 +109,48 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object, ir_job_list
     return SUCCESS;
 }
 
-errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, funcid_t ast_func_id,
-        bool preserve_sortedness, ir_func_mapping_t *optional_out_new_mapping){
-    
+errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, funcid_t *out_ir_func_id){
     ir_module_t *module = &object->ir_module;
 
     if(module->funcs_length >= MAX_FUNCID){
-        compiler_panic(compiler, ast_func->source, "Maximum number of IR functions reached\n");
+        compiler_panic(compiler, from_source, "Maximum number of IR functions reached\n");
         return FAILURE;
     }
 
     expand((void**) &module->funcs, sizeof(ir_func_t), module->funcs_length, &module->funcs_capacity, 1, object->ast.funcs_length);
     ir_func_t *module_func = &module->funcs[module->funcs_length];
-    funcid_t ir_func_id = module->funcs_length;
 
-    module_func->name = ast_func->name;
+    *out_ir_func_id = module->funcs_length++;
+
+    module_func->name = name;
     module_func->maybe_filename = NULL;
     module_func->maybe_definition_string = NULL;
     module_func->maybe_line_number = 0;
     module_func->maybe_column_number = 0;
     module_func->traits = TRAIT_NONE;
     module_func->return_type = NULL;
-    module_func->argument_types = malloc(sizeof(ir_type_t*) * (ast_func->traits & AST_FUNC_VARIADIC ? ast_func->arity + 1 : ast_func->arity));
+    module_func->argument_types = NULL;
     module_func->arity = 0;
-    module_func->basicblocks = NULL; // Will be set after 'basicblocks' contains all of the basicblocks
-    module_func->basicblocks_length = 0; // Will be set after 'basicblocks' contains all of the basicblocks
+    module_func->basicblocks = NULL;
+    module_func->basicblocks_length = 0;
     module_func->scope = NULL;
     module_func->variable_count = 0;
+    module_func->export_as = NULL;
+
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, funcid_t ast_func_id,
+        bool preserve_sortedness, ir_func_mapping_t *optional_out_new_mapping){
+
+    funcid_t ir_func_id;
+    if(ir_gen_func_template(compiler, object, ast_func->name, ast_func->source, &ir_func_id)) return FAILURE;
+
+    ir_module_t *module = &object->ir_module;
+    ir_func_t *module_func = &module->funcs[ir_func_id];
+
     module_func->export_as = ast_func->export_as;
+    module_func->argument_types = malloc(sizeof(ir_type_t*) * (ast_func->traits & AST_FUNC_VARIADIC ? ast_func->arity + 1 : ast_func->arity));
 
     if(ast_func->traits & AST_FUNC_VARIADIC){
         module_func->argument_types[ast_func->arity] = module->common.ir_variadic_array;
@@ -165,8 +179,6 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(ast_func->traits & AST_FUNC_STDCALL)     module_func->traits |= IR_FUNC_STDCALL;
     if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
     #endif
-
-    module->funcs_length++;
 
     ir_func_mapping_t *new_mapping = ir_module_insert_func_mapping(module, ast_func->name, ir_func_id, ast_func_id, preserve_sortedness);
     if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;

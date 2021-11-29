@@ -75,6 +75,8 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     builder->ptr_type = ir_type_pointer_to(builder->pool, builder->s8_type);
     builder->type_table = object->ast.type_table;
     builder->tmpbuf = &compiler->tmp;
+    builder->has_noop_defer_function = false;
+    builder->noop_defer_function = 0;
 }
 
 length_t build_basicblock(ir_builder_t *builder){
@@ -908,6 +910,13 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
                 return errorcode;
             }
+
+            // Call __defer__()
+            if(pair.has){
+                ir_type_t *result_type = builder->object->ir_module.funcs[pair.value.ir_func_id].return_type;
+                build_call(builder, pair.value.ir_func_id, result_type, arguments, 1, false);
+                return SUCCESS;
+            }
         }
         break;
     case AST_ELEM_FIXED_ARRAY: {
@@ -958,13 +967,6 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
         return SUCCESS;
     default:
         return FAILURE;
-    }
-
-    // Call __defer__()
-    if(pair.has){
-        ir_type_t *result_type = builder->object->ir_module.funcs[pair.value.ir_func_id].return_type;
-        build_call(builder, pair.value.ir_func_id, result_type, arguments, 1, false);
-        return SUCCESS;
     }
 
     // Return FAILURE, since we didn't utilize given value
@@ -1804,17 +1806,34 @@ failure:
 errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
         ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
     
-    if(type_list_length != 1) return FAILURE; // Require single argument ('this') for auto-generated __defer__
+    if(type_list_length != 1) return FAILURE;
 
     bool is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
     bool is_generic_base_ptr = is_base_ptr ? false : ast_type_is_generic_base_ptr(&arg_types[0]);
 
-    if(!(is_base_ptr || is_generic_base_ptr)){
-        return FAILURE; // Require '*Type' or '*<...> Type' for 'this' type
-    }
+    if(!(is_base_ptr || is_generic_base_ptr)) return FAILURE;
+
+    ast_type_t dereferenced;
+    dereferenced.elements = &arg_types[0].elements[1];
+    dereferenced.elements_length = 1;
+    dereferenced.source = dereferenced.elements[0]->source;
 
     ast_t *ast = &object->ast;
+    ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
 
+    ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, dereferenced);
+    assert(entry->has_defer == TROOLEAN_UNKNOWN);
+
+    entry->has_defer = TROOLEAN_FALSE;
+
+    if(ast->funcs_length >= MAX_FUNCID){
+        compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
+        return FAILURE;
+    }
+
+    ast_field_map_t field_map;
+
+    // Cannot make if type is not a composite or if it's not simple
     if(is_base_ptr){
         weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
 
@@ -1826,6 +1845,8 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
         // Don't handle children for complex composite types
         if(!ast_layout_is_simple_struct(&composite->layout)) return FAILURE;
 
+        // Remember weak copy of field map
+        field_map = composite->layout.field_map;
     } else if(is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
         weak_cstr_t struct_name = generic_base->name;
@@ -1839,8 +1860,43 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
 
         // Don't handle children for complex composite types
         if(!ast_layout_is_simple_struct(&template->layout)) return FAILURE;
+
+        // Remember weak copy of field map
+        field_map = template->layout.field_map;
     }
 
+    // See if any of the children will require a __defer__ call,
+    // if not, return no function
+    bool some_have_defer = false;
+
+    for(length_t i = 0; i != field_map.arrows_length; i++){
+        weak_cstr_t member = field_map.arrows[i].name;
+
+        ir_field_info_t field_info;
+        if(ir_gen_get_field_info(compiler, object, member, NULL_SOURCE, &dereferenced, &field_info)){
+            return FAILURE;
+        }
+
+        optional_funcpair_t result;
+        errorcode_t errorcode = ir_gen_find_defer_func(compiler, object, job_list, &field_info.ast_type, &result);
+        if(errorcode == ALT_FAILURE) return errorcode;
+
+        if(errorcode == SUCCESS && result.has){
+            some_have_defer = true;
+            break;
+        }
+    }
+
+    // If no children have __defer__ calls, return "none" function
+    if(!some_have_defer){
+        // Cache result
+        entry->has_defer = TROOLEAN_FALSE;
+
+        optional_funcpair_set(result, false, 0, 0, NULL);
+        return SUCCESS;
+    }
+
+    // Create AST function
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
     length_t ast_func_id = ast->funcs_length;
@@ -1867,10 +1923,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
 
     ast_type_make_base(&func->return_type, strclone("void"));
 
-    // Don't generate any statements because children will
-    // be taken care of inside __defer__ function during IR generation
-    // of the auto-generated function
-
+    // Create IR function
     ir_func_mapping_t newest_mapping;
     if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
         return FAILURE;
@@ -1880,6 +1933,12 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
     expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
     job_list->jobs[job_list->length++] = newest_mapping;
 
+    // Cache result
+    entry->has_defer = TROOLEAN_TRUE;
+    entry->defer_ast_func_id = ast_func_id;
+    entry->defer_ir_func_id = newest_mapping.ir_func_id;
+
+    // Return result
     optional_funcpair_set(result, true, ast_func_id, newest_mapping.ir_func_id, object);
     return SUCCESS;
 }
@@ -1985,6 +2044,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, i
     (void) result;
     return FAILURE;
     
+    // (work in progress)
     // (unimplemented)
 }
 
@@ -2409,6 +2469,44 @@ successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *l
     }
 
     return false;
+}
+
+errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, funcid_t *out_ir_func_id){
+    if(builder->has_noop_defer_function){
+        *out_ir_func_id = builder->noop_defer_function;
+        return SUCCESS;
+    }
+
+    funcid_t ir_func_id;
+    if(ir_gen_func_template(builder->compiler, builder->object, "__noop_defer__", source_on_error, &ir_func_id)) return FAILURE;
+
+    ir_module_t *module = &builder->object->ir_module;
+    ir_func_t *module_func = &module->funcs[ir_func_id];
+    module_func->argument_types = malloc(sizeof(ir_type_t) * 1);
+    module_func->arity = 1;
+
+    module_func->argument_types[0] = module->common.ir_ptr;
+    module_func->return_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    module_func->return_type->kind = TYPE_KIND_VOID;
+
+    module_func->basicblocks = malloc(sizeof(ir_basicblock_t));
+    module_func->basicblocks_length = 1;
+
+    module_func->basicblocks[0].instructions = malloc(sizeof(ir_instr_t));
+    module_func->basicblocks[0].instructions_length = 1;
+
+    ir_instr_ret_t *ret_void = (ir_instr_ret_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_ret_t));
+    ret_void->id = INSTRUCTION_RET;
+    ret_void->result_type = NULL;
+    ret_void->value = NULL;
+
+    module_func->basicblocks[0].instructions[0] = (ir_instr_t*) ret_void;
+
+    builder->noop_defer_function = ir_func_id;
+    builder->has_noop_defer_function = true;
+
+    *out_ir_func_id = ir_func_id;
+    return SUCCESS;
 }
 
 void instructions_snapshot_capture(ir_builder_t *builder, instructions_snapshot_t *snapshot){

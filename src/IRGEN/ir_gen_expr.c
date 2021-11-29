@@ -1344,19 +1344,16 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     else {
         optional_funcpair_t result;
 
-        if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &result)){
+        if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &result)
+        || !result.has){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;
-    
-            // Otherwise, we failed to find a function we were expecting to find
-            compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL);
-            return FAILURE;
-        }
-    
-        if(!result.has){
-            if(expr->tentative){
-                goto fail_tentatively;
+
+            // For '__defer__' that doesn't exist, return no-op function for backwards compatibility
+            if(strcmp(expr->name, "__defer__") == 0 && expr->match_args_length == 1 && ast_type_is_pointer(&expr->match_args[0])){
+                return ir_gen_expr_func_addr_noop_result_for_defer(builder, &expr->match_args[0], expr->source, ir_value, out_expr_type);
             } else {
+                // Otherwise, we failed to find a function we were expecting to find
                 compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL);
                 return FAILURE;
             }
@@ -1419,6 +1416,69 @@ fail_tentatively:
     // - Isaac (Mar 21 2020)
     *ir_value = build_null_pointer(builder->pool);
     if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("ptr"));
+    return SUCCESS;
+}
+
+
+errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, ast_type_t *match_arg, source_t source_on_error, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    // NOTE: CLEANUP: Cleanup this code
+
+    funcid_t ir_func_id;
+    if(ir_builder_get_noop_defer_func(builder, source_on_error, &ir_func_id)) return FAILURE;
+
+    ir_module_t *module = &builder->object->ir_module;
+    ir_func_t *ir_func = &module->funcs[ir_func_id];
+
+    // Create the no-op IR function pointer type
+    ir_type_extra_function_t *noop_extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
+    noop_extra->arg_types = ir_func->argument_types;
+    noop_extra->arity = 1;
+    noop_extra->traits = TRAIT_NONE;
+    noop_extra->return_type = ir_func->return_type;
+
+    ir_type_t *ir_noop_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    ir_noop_funcptr_type->kind = TYPE_KIND_FUNCPTR;
+    ir_noop_funcptr_type->extra = noop_extra;
+
+    // Create the final IR function pointer type
+    ir_type_extra_function_t *final_extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
+    final_extra->arg_types = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+
+    if(ir_gen_resolve_type(builder->compiler, builder->object, match_arg, &final_extra->arg_types[0])){
+        return FAILURE;
+    }
+
+    final_extra->arity = 1;
+    final_extra->traits = TRAIT_NONE;
+    final_extra->return_type = ir_func->return_type;
+
+    ir_type_t *ir_final_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+    ir_final_funcptr_type->kind = TYPE_KIND_FUNCPTR;
+    ir_final_funcptr_type->extra = final_extra;
+
+    // Create function address instruction
+    ir_instr_func_address_t *instruction = (ir_instr_func_address_t*) build_instruction(builder, sizeof(ir_instr_func_address_t));
+    instruction->id = INSTRUCTION_FUNC_ADDRESS;
+    instruction->result_type = ir_noop_funcptr_type;
+    instruction->name = NULL;
+    instruction->ir_func_id = ir_func_id;
+    *ir_value = build_value_from_prev_instruction(builder);
+
+    // Cast to proper type
+    *ir_value = build_const_cast(builder->pool, VALUE_TYPE_CONST_BITCAST, *ir_value, module->common.ir_ptr);
+    *ir_value = build_const_cast(builder->pool, VALUE_TYPE_CONST_BITCAST, *ir_value, ir_final_funcptr_type);
+
+    // Write resulting type if requested
+    if(out_expr_type != NULL){
+        ast_type_t *args = malloc(sizeof(ast_type_t));
+        args[0] = ast_type_clone(match_arg);
+
+        ast_type_t *void_ast_type = malloc(sizeof(ast_type_t));
+        ast_type_make_base(void_ast_type, strclone("void"));
+
+        ast_type_make_func_ptr(out_expr_type, source_on_error, args, 1, void_ast_type, TRAIT_NONE, true);
+    }
+
     return SUCCESS;
 }
 

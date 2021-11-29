@@ -87,6 +87,12 @@ errorcode_t ir_gen_expr_math_uvsvf(ir_builder_t *builder, ast_expr_math_t *expr,
 errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_expr, ir_value_t **a, ir_value_t **b,
         length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
 
+// ---------------- ir_gen_expr_func_addr_noop_result_for_defer ----------------
+// Generates a no-op function value for func &__defer__(Type) functions
+// that don't exist
+// (Used for backward compatibility)
+errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, ast_type_t *match_arg, source_t source_on_error, ir_value_t **ir_value, ast_type_t *out_expr_type);
+
 // ---------------- ir_field_info_t ----------------
 // In-depth information about a field of a composite
 // NOTE: This structure has ownership over 'ast_type' must be freed

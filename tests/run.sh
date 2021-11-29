@@ -49,6 +49,7 @@ compile continue || exit $?
 compile continue_to || exit $?
 compile default_args || exit $?
 compile defer || exit $?
+compile defer_auto_noop || exit $?
 compile defer_global || exit $?
 compile deprecated || exit $?
 compile dereference || exit $?
@@ -78,6 +79,7 @@ compile func_aliases || exit $?
 compile func_aliases_va || exit $?
 compile funcaddr || exit $?
 compile funcaddr_autogen || exit $?
+compile funcaddr_autogen_noop_defer || exit $?
 compile funcaddrnull || exit $?
 compile funcptr || exit $?
 compile functions || exit $?
@@ -188,6 +190,7 @@ compile undef || exit $?
 compile union || exit $?
 compile unless || exit $?
 compile unlesselse || exit $?
+compile unnecessary_manual_defer_call || exit $?
 # This file should always fail
 !(compile unsupported) || exit $?
 compile until || exit $?

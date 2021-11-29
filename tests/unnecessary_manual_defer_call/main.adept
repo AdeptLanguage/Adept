@@ -1,0 +1,19 @@
+
+pragma ignore_unused
+
+struct DoesntNeedDefer ()
+
+func main {
+    value *DoesntNeedDefer = new DoesntNeedDefer
+
+    // Even though this function doesn't exist, since it's a no-op,
+    // We will give back a dummy no-op function for backwards compatibility
+    // e.g. func __noop__(ptr) void
+    f func(*DoesntNeedDefer) void = func &__defer__(*DoesntNeedDefer)
+
+    // Even though __defer__(*DoesntNeedDefer) is unnecessary
+    // and therefore doesn't exist, this is still permitted.
+    // (partially for backwards-compatibility, but also to encourage good code practice)
+    value.__defer__()
+    delete value
+}

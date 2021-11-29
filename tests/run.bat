@@ -81,6 +81,8 @@ call :compile default_args
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile defer
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile defer_auto_noop
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile defer_global
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile deprecated
@@ -141,6 +143,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddr
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddr_autogen
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile funcaddr_autogen_noop_defer
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile funcaddrnull
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
@@ -349,6 +353,8 @@ if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile unless
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile unlesselse
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile unnecessary_manual_defer_call 
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 REM This file should always fail
 call :compile unsupported

@@ -55,6 +55,8 @@ typedef struct ir_builder {
     ir_type_t *ptr_type;
     type_table_t *type_table;
     tmpbuf_t *tmpbuf;
+    funcid_t noop_defer_function;
+    bool has_noop_defer_function;
 } ir_builder_t;
 
 // ---------------- ir_builder_init ----------------
@@ -179,10 +181,6 @@ ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_cons
 // ---------------- build_anon_global_initializer ----------------
 // Builds an anonymous global variable initializer
 void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer);
-
-// ---------------- ir_builder_funcptr ----------------
-// Gets a shared IR function pointer type
-ir_type_t *ir_builder_funcptr(ir_builder_t *builder);
 
 // ---------------- ir_builder_usize ----------------
 // Gets a shared IR usize type
@@ -457,6 +455,11 @@ bool is_allowed_auto_conversion(compiler_t *compiler, object_t *object, const as
 // ---------------- ir_builder_get_loop_label_info ----------------
 // Gets information associated with a loop label
 successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id);
+
+// ---------------- ir_builder_get_loop_label_info ----------------
+// Gets no-op defer function
+// Will create if doesn't already exist
+errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, funcid_t *out_ir_func_id);
 
 // ---------------- instructions_snapshot_t ----------------
 // Snapshot used to easily reset the forward generation of IR instructions
