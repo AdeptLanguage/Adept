@@ -1,0 +1,31 @@
+
+import basics
+
+record PrintWhenAssign () {
+    func __assign__(_other POD PrintWhenAssign) {
+        print(" - PrintWhenAssign was assigned")
+    }
+}
+
+record Container (pwa PrintWhenAssign)
+
+// Even though 'Container.__assign__' is not directly declared,
+// it will automatically be generated because it directly contains
+// 'PrintWhenAssign' which does have an __assign__ function.
+// (and so the whole structure should not be treated as plain-old-data for assignment)
+
+func main {
+    // Should print the message five times
+
+    print("line one (2 messages expected)")
+    container1 Container = Container(PrintWhenAssign())
+    newline()
+
+    print("line two (2 messages expected)")
+    container2 Container = Container(PrintWhenAssign())
+    newline()
+
+    print("line three (1 messages expected)")
+    container1 = container2
+    newline()
+}

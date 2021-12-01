@@ -26,7 +26,6 @@ MEDIUM-PRIORITY:
 LOW-PRIORITY:
 * Finish 'Any'
     * Casting to Any from non-builtin types
-* __assign__ auto-generation
 * __assign__ for fixed arrays maybe
 * Allow polymorphic names for generic bases
 * Add full linux cross-compilation support
@@ -71,3 +70,4 @@ v2.6 COMPLETED:
 + records
 + fixed arrays of size determined at compile time
 + variable sized fixed arrays inside of data structures
++ __assign__ auto-generation

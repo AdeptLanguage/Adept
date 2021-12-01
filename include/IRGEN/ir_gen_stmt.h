@@ -101,8 +101,13 @@ errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name
 errorcode_t ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_terminated, length_t continuation_block_id);
 
 // ---------------- ir_gen_variable_deference ----------------
-// Generate IR instructions to make variable deference calls up until a scope.
+// Generates IR instructions to make variable deference calls up until a scope.
 // NOTE: If 'up_until_scope' is NULL, then all parent scopes will be visited.
 errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope);
+
+// ---------------- ir_gen_perform_pod_assignment ----------------
+// Generates IR instructions for a POD (plain-old-data) assignment
+errorcode_t ir_gen_perform_pod_assignment(ir_builder_t *builder, ir_value_t **value, ast_type_t *value_ast_type,
+        ir_value_t *destination, ast_type_t *destination_ast_type, source_t source_on_error);
 
 #endif // _ISAAC_IR_GEN_STMT_H

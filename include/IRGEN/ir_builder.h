@@ -391,8 +391,11 @@ bool could_have_pass(ast_type_t *ast_type);
 // ---------------- handle_assign_management ----------------
 // Handles '__assign__' management method calls
 // NOTE: 'ast_destination_type' is not a pointer, but value provided is mutable
-successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_value_type, ir_value_t *destination,
-    ast_type_t *ast_destination_type, bool zero_initialize);
+// NOTE: Returns SUCCESS if value was utilized in deference
+//       Returns FAILURE if value was not utilized in deference
+//       Returns ALT_FAILURE if a compile time error occurred
+errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_type,
+        ir_value_t *destination, bool zero_initialize);
 
 // ---------------- handle_math_management ----------------
 // Handles basic math management function calls
@@ -456,7 +459,7 @@ bool is_allowed_auto_conversion(compiler_t *compiler, object_t *object, const as
 // Gets information associated with a loop label
 successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id);
 
-// ---------------- ir_builder_get_loop_label_info ----------------
+// ---------------- ir_builder_get_noop_defer_func ----------------
 // Gets no-op defer function
 // Will create if doesn't already exist
 errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, funcid_t *out_ir_func_id);

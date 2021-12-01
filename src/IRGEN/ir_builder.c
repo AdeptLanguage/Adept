@@ -1522,72 +1522,55 @@ bool could_have_pass(ast_type_t *ast_type){
     return false;
 }
 
-successful_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_value_type, ir_value_t *destination,
-        ast_type_t *ast_destination_type, bool zero_initialize){
+errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_type,
+        ir_value_t *destination, bool zero_initialize){
 
-    if(value->type->kind != TYPE_KIND_STRUCTURE || ast_destination_type->elements_length != 1) return UNSUCCESSFUL;
+    if(value->type->kind != TYPE_KIND_STRUCTURE || ast_type->elements_length != 1) return FAILURE;
 
     optional_funcpair_t result;
-    weak_cstr_t struct_name;
+    errorcode_t errorcode;
 
-    ir_pool_snapshot_t snapshot;
-    ir_pool_snapshot_capture(builder->pool, &snapshot);
+    ir_pool_snapshot_t pool_snapshot;
+    instructions_snapshot_t instructions_snapshot;
+    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
+    instructions_snapshot_capture(builder, &instructions_snapshot);
+
     ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
     arguments[0] = destination;
     arguments[1] = value;
 
-    ast_type_t arg_types[2];
-    arg_types[0] = ast_type_clone(ast_destination_type);
-    arg_types[1] = *ast_value_type;
-    ast_type_prepend_ptr(&arg_types[0]);
-
-    switch(ast_destination_type->elements[0]->id){
-    case AST_ELEM_BASE:
-        struct_name = ((ast_elem_base_t*) ast_destination_type->elements[0])->base;
-
-        if(ir_gen_find_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, NULL_SOURCE, &result) == FAILURE){
-            ir_pool_snapshot_restore(builder->pool, &snapshot);
-            ast_type_free(&arg_types[0]);
-            // NOTE: Don't free arg_types[1] because we don't have ownership
-            return UNSUCCESSFUL;
-        }
-        break;
-    case AST_ELEM_GENERIC_BASE:
-        struct_name = ((ast_elem_generic_base_t*) ast_destination_type->elements[0])->name;
-
-        if(ir_gen_find_generic_base_method_conforming(builder, struct_name, "__assign__", arguments, arg_types, 2, NULL, NULL_SOURCE, &result) == FAILURE){
-            ir_pool_snapshot_restore(builder->pool, &snapshot);
-            ast_type_free(&arg_types[0]);
-            // NOTE: Don't free arg_types[1] because we don't have ownership
-            return UNSUCCESSFUL;
-        }
-        break;
-    default:
-        ir_pool_snapshot_restore(builder->pool, &snapshot);
-        ast_type_free(&arg_types[0]);
-        // NOTE: Don't free arg_types[1] because we don't have ownership
-        return UNSUCCESSFUL;
-    }
-
-    if(zero_initialize){
-        build_zeroinit(builder, destination);
-    }
+    errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, builder->job_list, ast_type, &result);
+    if(errorcode) goto failure;
 
     if(result.has){
-        funcpair_t pair = result.value;
-        if(handle_pass_management(builder, arguments, arg_types, pair.ast_func->arg_type_traits, 2)){
-            ast_type_free(&arg_types[0]);
-            // NOTE: Don't free arg_types[1] because we don't have ownership
-            return NULL;
+        if(zero_initialize){
+            build_zeroinit(builder, destination);
         }
+    
+        ast_type_t ast_type_ptr = ast_type_clone(ast_type);
+        ast_type_prepend_ptr(&ast_type_ptr);
+    
+        ast_type_t arg_types[2];
+        arg_types[0] = ast_type_ptr;
+        arg_types[1] = *ast_type;
+
+        funcpair_t pair = result.value;
+        errorcode = handle_pass_management(builder, arguments, arg_types, pair.ast_func->arg_type_traits, 2);
+        ast_type_free(&ast_type_ptr);
+
+        if(errorcode) goto failure;
     
         ir_type_t *result_type = builder->object->ir_module.funcs[pair.ir_func_id].return_type;
         build_call(builder, pair.ir_func_id, result_type, arguments, 2, false);
+        return SUCCESS;
     }
 
-    ast_type_free(&arg_types[0]);
-    // NOTE: Don't free arg_types[1] because we don't have ownership
-    return SUCCESSFUL;
+    errorcode = FAILURE;
+
+failure:
+    instructions_snapshot_restore(builder, &instructions_snapshot);
+    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+    return errorcode;
 }
 
 ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, const char *overload_name){
@@ -2035,17 +2018,166 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
 
 errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
         ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
+
+    if(type_list_length != 2) return FAILURE;
+
+    bool subject_is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
+    bool subject_is_generic_base_ptr = subject_is_base_ptr ? false : ast_type_is_generic_base_ptr(&arg_types[0]);
+
+    if(!(subject_is_base_ptr || subject_is_generic_base_ptr)) return FAILURE;
+
+    ast_type_t dereferenced;
+    dereferenced.elements = &arg_types[0].elements[1];
+    dereferenced.elements_length = 1;
+    dereferenced.source = dereferenced.elements[0]->source;
+
+    if(!ast_types_identical(&dereferenced, &arg_types[1])) return FAILURE;
+
+    ast_t *ast = &object->ast;
+    ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
+
+    ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, dereferenced);
+    assert(entry->has_assign == TROOLEAN_UNKNOWN);
+
+    entry->has_assign = TROOLEAN_FALSE;
+
+    if(ast->funcs_length >= MAX_FUNCID){
+        compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
+        return FAILURE;
+    }
+
+    ast_field_map_t field_map;
+
+    // Cannot make if type is not a composite or if it's not simple
+    if(subject_is_base_ptr){
+        weak_cstr_t struct_name = ((ast_elem_base_t*) arg_types[0].elements[1])->base;
+
+        ast_composite_t *composite = ast_composite_find_exact(&object->ast, struct_name);
+
+        // Require structure to exist
+        if(composite == NULL) return FAILURE;
+
+        // Don't handle children for complex composite types
+        if(!ast_layout_is_simple_struct(&composite->layout)) return FAILURE;
+
+        // Remember weak copy of field map
+        field_map = composite->layout.field_map;
+    } else if(subject_is_generic_base_ptr){
+        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
+        weak_cstr_t struct_name = generic_base->name;
+        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, struct_name);
+
+        // Require generic structure to exist
+        if(template == NULL) return FAILURE;
+
+        // Require generics count to match
+        if(template->generics_length != generic_base->generics_length) return FAILURE;
+
+        // Don't handle children for complex composite types
+        if(!ast_layout_is_simple_struct(&template->layout)) return FAILURE;
+
+        // Remember weak copy of field map
+        field_map = template->layout.field_map;
+    }
+
+    // See if any of the children will require an __assign__ call,
+    // if not, return no function
+    bool some_have_assign = false;
+
+    for(length_t i = 0; i != field_map.arrows_length; i++){
+        weak_cstr_t member = field_map.arrows[i].name;
+
+        ir_field_info_t field_info;
+        if(ir_gen_get_field_info(compiler, object, member, NULL_SOURCE, &dereferenced, &field_info)){
+            return FAILURE;
+        }
+
+        optional_funcpair_t result;
+        errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, job_list, &field_info.ast_type, &result);
+        if(errorcode == ALT_FAILURE) return errorcode;
+
+        if(errorcode == SUCCESS && result.has){
+            some_have_assign = true;
+            break;
+        }
+    }
+
+    // If no children have __assign__ calls, return "none" function
+    if(!some_have_assign){
+        // Cache result
+        entry->has_assign = TROOLEAN_FALSE;
+
+        optional_funcpair_set(result, false, 0, 0, NULL);
+        return SUCCESS;
+    }
+
+    // Create AST function
+    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+
+    length_t ast_func_id = ast->funcs_length;
+    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    ast_func_create_template(func, strclone("__assign__"), false, false, false, false, NULL_SOURCE, false, NULL);
+    func->traits |= AST_FUNC_GENERATED;
+
+    func->arg_names = malloc(sizeof(weak_cstr_t) * 2);
+    func->arg_types = malloc(sizeof(ast_type_t) * 2);
+    func->arg_sources = malloc(sizeof(source_t) * 2);
+    func->arg_flows = malloc(sizeof(char) * 2);
+    func->arg_type_traits = malloc(sizeof(trait_t) * 2);
+
+    func->arg_names[0] = strclone("this");
+    func->arg_names[1] = strclone("$");
+    func->arg_types[0] = ast_type_clone(&arg_types[0]);
+    func->arg_types[1] = ast_type_clone(&arg_types[1]);
+    func->arg_sources[0] = NULL_SOURCE;
+    func->arg_sources[1] = NULL_SOURCE;
+    func->arg_flows[0] = FLOW_IN;
+    func->arg_flows[1] = FLOW_IN;
+    func->arg_type_traits[0] = AST_FUNC_ARG_TYPE_TRAIT_POD;
+    func->arg_type_traits[1] = AST_FUNC_ARG_TYPE_TRAIT_POD;
+    func->arity = 2;
     
-    (void) compiler;
-    (void) object;
-    (void) job_list;
-    (void) arg_types;
-    (void) type_list_length;
-    (void) result;
-    return FAILURE;
-    
-    // (work in progress)
-    // (unimplemented)
+    func->statements_length = field_map.arrows_length;
+    func->statements_capacity = func->statements_length;
+    func->statements = malloc(sizeof(ast_expr_t*) * func->statements_length);
+
+    ast_type_make_base(&func->return_type, strclone("void"));
+
+    // Generate assignment statements
+    for(length_t i = 0; i != field_map.arrows_length; i++){
+        weak_cstr_t member = field_map.arrows[i].name;
+
+        // this.member = other.member
+
+        ast_expr_t *this_value, *other_value;
+        ast_expr_create_variable(&this_value, "this", NULL_SOURCE);
+        ast_expr_create_variable(&other_value, "$", NULL_SOURCE);
+
+        ast_expr_t *this_member, *other_member;
+        ast_expr_create_member(&this_member, this_value, strclone(member), NULL_SOURCE);
+        ast_expr_create_member(&other_member, other_value, strclone(member), NULL_SOURCE);
+
+        ast_expr_create_assignment(&func->statements[i], EXPR_ASSIGN, NULL_SOURCE, this_member, other_member, false);
+    }
+
+    // Create IR function
+    ir_func_mapping_t newest_mapping;
+    if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
+        return FAILURE;
+    }
+
+    // Add mapping to IR jobs
+    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
+    job_list->jobs[job_list->length++] = newest_mapping;
+
+    // Cache result
+    entry->has_assign = TROOLEAN_TRUE;
+    entry->assign_ast_func_id = ast_func_id;
+    entry->assign_ir_func_id = newest_mapping.ir_func_id;
+
+    // Return result
+    optional_funcpair_set(result, true, ast_func_id, newest_mapping.ir_func_id, object);
+    return SUCCESS;
 }
 
 errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){

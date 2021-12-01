@@ -7,6 +7,7 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
+#include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
 #include "BRIDGE/rtti.h"
 #include "BRIDGE/bridge.h"
@@ -2535,8 +2536,20 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
         // Assign the initial value to the newly created variable
-        if(is_assign_pod || !handle_assign_management(builder, initial, &temporary_type, destination, &def->type, true)){
-            build_store(builder, initial, destination, expr->source);
+        bool used_assign_function;
+
+        if(is_assign_pod){
+            used_assign_function = false;
+        } else {
+            errorcode_t errorcode = handle_assign_management(builder, initial, &temporary_type, destination, true);
+            if(errorcode == ALT_FAILURE) return errorcode;
+
+            used_assign_function = errorcode == SUCCESS;
+        }
+
+        if(!used_assign_function && ir_gen_perform_pod_assignment(builder, &initial, &temporary_type, destination, &def->type, def->source)){
+            ast_type_free(&temporary_type);
+            return FAILURE;
         }
 
         // Dispose of temporary initial value AST type

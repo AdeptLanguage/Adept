@@ -61,6 +61,13 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
 //               ALT_FAILURE when something goes wrong
 errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, ast_type_t *arg_type, optional_funcpair_t *result);
 
+// ---------------- ir_gen_find_assign_func ----------------
+// Finds the correct __assign__ function for a type
+// NOTE: Returns SUCCESS when a function was found,
+//               FAILURE when a function wasn't found and
+//               ALT_FAILURE when something goes wrong
+errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, ast_type_t *arg_type, optional_funcpair_t *result);
+
 // ---------------- ir_gen_find_method_conforming ----------------
 // Finds a method that has the given name and conforms
 // to the arguments given. Result info stored 'result'

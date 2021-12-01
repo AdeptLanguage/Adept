@@ -28,6 +28,7 @@ compile any_type_sizes || exit $?
 compile array_access || exit $?
 compile as || exit $?
 compile assign_func || exit $?
+compile assign_func_autogen || exit $?
 compile assignment || exit $?
 compile at || exit $?
 compile bitwise || exit $?

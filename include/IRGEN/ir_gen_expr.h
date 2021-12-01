@@ -88,7 +88,7 @@ errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_
         length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
 
 // ---------------- ir_gen_expr_func_addr_noop_result_for_defer ----------------
-// Generates a no-op function value for func &__defer__(Type) functions
+// Generates a no-op function value for func &__defer__(*Type) functions
 // that don't exist
 // (Used for backward compatibility)
 errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, ast_type_t *match_arg, source_t source_on_error, ir_value_t **ir_value, ast_type_t *out_expr_type);

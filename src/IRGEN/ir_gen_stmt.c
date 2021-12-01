@@ -732,22 +732,21 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
         // Generate instructions to get initial value
         if(ir_gen_expr(working_builder, stmt->value, &initial, false, &initial_ast_type)) goto failure;
 
-        // Assign the initial value to the variable, using Plain-Old-Data assignment if enabled
-        if(is_assign_pod || !handle_assign_management(working_builder, initial, &initial_ast_type, destination, &stmt->type, true)){
-            // When doing normal assignment (which is POD), ensure the new value is of the same type
+        // Assign the initial value to the newly created variable
+        bool used_assign_function;
 
-            // Conform initial value to the type of the variable
-            if(!ast_types_conform(working_builder, &initial, &initial_ast_type, &stmt->type, CONFORM_MODE_ASSIGNING)){
-                char *a_type_str = ast_type_str(&initial_ast_type);
-                char *b_type_str = ast_type_str(&stmt->type);
-                compiler_panicf(primary_builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-                free(a_type_str);
-                free(b_type_str);
-                ast_type_free(&initial_ast_type);
-                goto failure;
-            }
+        if(is_assign_pod){
+            used_assign_function = false;
+        } else {
+            errorcode_t errorcode = handle_assign_management(working_builder, initial, &initial_ast_type, destination, true);
+            if(errorcode == ALT_FAILURE) return errorcode;
 
-            build_store(working_builder, initial, destination, stmt->source);
+            used_assign_function = errorcode == SUCCESS;
+        }
+
+        if(!used_assign_function && ir_gen_perform_pod_assignment(working_builder, &initial, &initial_ast_type, destination, &stmt->type, stmt->source)){
+            ast_type_free(&initial_ast_type);
+            goto failure;
         }
 
         ast_type_free(&initial_ast_type);
@@ -786,27 +785,23 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
         return FAILURE;
     }
 
-    // Conform "other value" to the type of the declared variable
-    trait_t conform_mode = assignment_kind == EXPR_ASSIGN ? CONFORM_MODE_ASSIGNING : CONFORM_MODE_CALCULATION;
-
     // Regular Assignment
     if(assignment_kind == EXPR_ASSIGN){
-        if(stmt->is_pod || !handle_assign_management(builder, other_value, &other_value_type, destination, &destination_type, false)){
-            // Regular assignment (which is POD)
+        bool used_assign_function;
+    
+        if(stmt->is_pod){
+            used_assign_function = false;
+        } else {
+            errorcode_t errorcode = handle_assign_management(builder, other_value, &other_value_type, destination, true);
+            if(errorcode == ALT_FAILURE) return errorcode;
+    
+            used_assign_function = errorcode == SUCCESS;
+        }
 
-            // Only manually conform other type if doing POD assignment
-            if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, conform_mode)){
-                char *a_type_str = ast_type_str(&other_value_type);
-                char *b_type_str = ast_type_str(&destination_type);
-                compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-                free(a_type_str);
-                free(b_type_str);
-                ast_type_free(&destination_type);
-                ast_type_free(&other_value_type);
-                return FAILURE;
-            }
-
-            build_store(builder, other_value, destination, stmt->source);
+        if(!used_assign_function && ir_gen_perform_pod_assignment(builder, &other_value, &other_value_type, destination, &destination_type, stmt->source)){
+            ast_type_free(&destination_type);
+            ast_type_free(&other_value_type);
+            return FAILURE;
         }
 
         ast_type_free(&destination_type);
@@ -817,7 +812,7 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
         // and since as of now, non-POD assignment arithmetic isn't supported,
         // all non-regular assignments will be POD
 
-        if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, conform_mode)){
+        if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, CONFORM_MODE_CALCULATION)){
             char *a_type_str = ast_type_str(&other_value_type);
             char *b_type_str = ast_type_str(&destination_type);
             compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
@@ -1706,5 +1701,23 @@ errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_
         visit_scope = visit_scope->parent;
     } while(visit_scope && visit_scope != up_until_scope);
 
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_perform_pod_assignment(ir_builder_t *builder, ir_value_t **value, ast_type_t *value_ast_type,
+        ir_value_t *destination, ast_type_t *destination_ast_type, source_t source_on_error){
+    // When doing normal assignment (which is POD), ensure the new value is of the same type
+
+    // Conform initial value to the type of the variable
+    if(!ast_types_conform(builder, value, value_ast_type, destination_ast_type, CONFORM_MODE_ASSIGNING)){
+        char *a_type_str = ast_type_str(value_ast_type);
+        char *b_type_str = ast_type_str(destination_ast_type);
+        compiler_panicf(builder->compiler, source_on_error, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
+        free(a_type_str);
+        free(b_type_str);
+        return FAILURE;
+    }
+
+    build_store(builder, *value, destination, source_on_error);
     return SUCCESS;
 }
