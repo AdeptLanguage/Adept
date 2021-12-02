@@ -1,0 +1,19 @@
+
+// Data is put here.
+// Everything except textures belongs in here.
+// Textures should instead by put inside the 'Textures' struct
+struct GameData (
+    example_value int
+) {
+    func load {
+        this.example_value = 1234 // etc.
+    }
+    
+    func reset {
+        this.__defer__()
+        memset(this, 0, sizeof(*this))
+        this.load()
+    }
+}
+
+gamedata GameData

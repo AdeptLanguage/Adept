@@ -39,6 +39,7 @@ extern "C" {
 #define COMPILER_EMIT_OBJECT      TRAIT_2_2
 #define COMPILER_COLON_COLON      TRAIT_2_3
 #define COMPILER_TYPE_COLON       TRAIT_2_4
+#define COMPILER_WINDOWED         TRAIT_2_5
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1

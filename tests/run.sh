@@ -206,6 +206,7 @@ compile version || exit $?
 compile void_ptr || exit $?
 compile while || exit $?
 compile while_continue || exit $?
+compile windowed || exit $?
 
 # Delete debugging dump files if present
 rm -f ast.txt

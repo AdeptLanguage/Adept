@@ -1,0 +1,116 @@
+
+// 'pragma windowed' or '--windowed' or 'pragma mwindows' or '-mwindows' will cause any applications
+// compiled for windows to not spawn a command prompt window.
+// (will only apply to Windows)
+pragma windowed
+
+// Rest of code is just using the Sailboat game template
+// to quickly have a window to test it with
+
+/*
+    Sailboat Game Template
+    Created by Isaac Shelton, Licensed under the Unlicense
+
+    -------------------------------------------------
+    This is free and unencumbered software released into the public domain.
+
+    Anyone is free to copy, modify, publish, use, compile, sell, or
+    distribute this software, either in source code form or as a compiled
+    binary, for any purpose, commercial or non-commercial, and by any
+    means.
+
+    In jurisdictions that recognize copyright laws, the author or authors
+    of this software dedicate any and all copyright interest in the
+    software to the public domain. We make this dedication for the benefit
+    of the public at large and to the detriment of our heirs and
+    successors. We intend this dedication to be an overt act of
+    relinquishment in perpetuity of all present and future rights to this
+    software under copyright law.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+    OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
+
+    For more information, please refer to <http://unlicense.org/>
+    -------------------------------------------------
+
+    Technologies:
+    - Adept Language and Standard Library
+    - Captain 2D Window & Graphics Library
+
+    Optional Technologies:
+    - 2.5/JSON.adept
+    - Box2D          :  adept install box2d
+    - Base64         :  adept install base64
+*/
+
+pragma compiler_version '2.5'
+
+#define SAILBOAT_GAME_TITLE            "Example Title"
+#define SAILBOAT_FULLSCREEN            false
+#define SAILBOAT_USE_MOUSE_VIEW_COORDS true
+
+import basics
+import captain
+
+import "GameData.adept"
+import "Textures.adept"
+
+func main {
+    captOnSetup(func &onSetup)
+    captOnStep(func &onStep)
+    captOnKey(func &onKey)
+    captOnClick(func &onClick, #get SAILBOAT_USE_MOUSE_VIEW_COORDS)
+    captOnDraw(func &onDraw)
+    captOnExit(func &onExit)
+    captStart(#get SAILBOAT_GAME_TITLE, #get SAILBOAT_FULLSCREEN)
+}
+
+func onSetup {
+    // Called before the first frame, should be used to load assets and prepare for application loop
+
+    textures.load()
+    gamedata.load()
+}
+
+func onExit {
+    // Called when the application is preparing to close, should be used to free remaining assets
+
+    textures.unload()
+}
+
+func onStep {
+    // Called once per frame, should be used to update gamedata
+    gamedata.example_value += 3
+}
+
+func onKey(_key, _scancode, _action, _mods int) {
+    // Called once per keyboard event    
+}
+
+func onClick(_mouse_x, _mouse_y float, _button int) {
+    // Called once per mouse click
+    // 'mouse_x' and 'mouse_y' coords are in view coordinates by default (as set by captOnClick)
+    // Button 1 == left
+    // Button 2 == right
+    // Button 3 == middle
+    // etc.
+}
+
+func onDraw {
+    // Called once per frame, should be used to render everything
+
+    gray CaptColor = captColor(0.2f, 0.2f, 0.2f, 1.0f)
+    captClearColor(gray)
+    captDrawText("Press ALT-F4 or CMD+Q to exit\n", 16.0f, 16.0f)
+    captDrawText("example value is %\n" % gamedata.example_value, 16.0f, 64.0f)
+
+    center_x float = captViewWidth() / 2.0f
+    center_y float = captViewHeight() / 2.0f
+    size float = 128.0f
+    captDrawTexture(textures.example_texture, center_x - size / 2.0f, center_y - size / 2.0f, size, size)
+}

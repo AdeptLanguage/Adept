@@ -500,6 +500,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(strncmp(argv[arg_index], "--std=", 6) == 0){
                 compiler->default_stdlib = &argv[arg_index][6];
                 compiler->traits |= COMPILER_FORCE_STDLIB;
+            } else if(strcmp(argv[arg_index], "--windowed") == 0 || strcmp(argv[arg_index], "-mwindows") == 0){
+                compiler->traits |= COMPILER_WINDOWED;
             } else if(strcmp(argv[arg_index], "--entry") == 0){
                 if(arg_index + 1 == argc){
                     redprintf("Expected entry point after '--entry' flag\n");
@@ -722,6 +724,7 @@ void show_help(bool show_advanced_options){
     }
     
     printf("    -O0,-O1,-O2,-O3   Set optimization level\n");
+    printf("    --windowed        Don't open console with executable (only applies to Windows)\n");
     printf("    -std=2.x          Set standard library version\n");
     
     if(show_advanced_options)

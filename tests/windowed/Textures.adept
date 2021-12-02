@@ -1,0 +1,25 @@
+
+import where
+import captain
+
+// Textures are put here, and automatically loaded when 'Textures.load()' is called.
+// Then, textures can be accessed by doing 'textures.example_texture',
+// Until they are destroyed when 'Textures.unload()' is called.
+struct Textures (
+    example_texture CaptTexture
+) {
+    func load {
+        assets_folder String = where() + "assets/"
+        error_message String = "Failed to load texture \"%S\"\n"
+        exceptions <String> Array
+        suffix String = ".png"
+        approximate_by_default bool = false
+        captLoadTexturesByFieldName(this, assets_folder, error_message, suffix, approximate_by_default, exceptions.length ? &exceptions : null as *<String> Array)
+    }
+
+    func unload {
+        captUnloadTexturesByFieldName(this)
+    }
+}
+
+textures Textures

@@ -385,6 +385,8 @@ call :compile while
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile while_continue
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile windowed
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 
 :: Delete debugging dump files if present
 if exist ast.txt   del /F ast.txt
