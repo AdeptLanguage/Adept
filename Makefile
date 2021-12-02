@@ -340,7 +340,7 @@ ifeq ($(OS), Windows_NT)
 	@del bin\adept_debug.exe /S /Q 1> nul 2>&1
 	@if exist unittests\obj @del unittests\obj\*.* /S /Q 1> nul 2>&1
 else
-	@find . -name "*.o" -type f -delete 2> /dev/null
+	@find obj -name "*.o" -type f -delete 2> /dev/null
 	@rm -rf 2> /dev/null bin/adept
 	@rm -rf 2> /dev/null bin/adept_debug
 endif

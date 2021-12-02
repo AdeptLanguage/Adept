@@ -1,12 +1,4 @@
 
-// 'pragma windowed' or '--windowed' or 'pragma mwindows' or '-mwindows' will cause any applications
-// compiled for windows to not spawn a command prompt window.
-// (will only apply to Windows)
-pragma windowed
-
-// Rest of code is just using the Sailboat game template
-// to quickly have a window to test it with
-
 /*
     Sailboat Game Template
     Created by Isaac Shelton, Licensed under the Unlicense
@@ -43,12 +35,19 @@ pragma windowed
     - Captain 2D Window & Graphics Library
 
     Optional Technologies:
-    - 2.5/JSON.adept
+    - 2.6/JSON.adept
     - Box2D          :  adept install box2d
     - Base64         :  adept install base64
 */
 
-pragma compiler_version '2.5'
+pragma compiler_version '2.6'
+
+// -------------------------------------------------------------------
+// 'pragma windowed' or '--windowed' or 'pragma mwindows' or '-mwindows' will cause any applications
+// compiled for windows to not spawn a command prompt window.
+// (will only apply to Windows)
+pragma windowed
+// -------------------------------------------------------------------
 
 #define SAILBOAT_GAME_TITLE            "Example Title"
 #define SAILBOAT_FULLSCREEN            false
