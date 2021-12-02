@@ -443,6 +443,7 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 const char *polyname = ((ast_elem_polycount_t*) type->elements[i])->name;
                 string_builder_append_view(&builder, "$#", 2);
                 string_builder_append(&builder, polyname);
+                string_builder_append_view(&builder, " ", 1);
             }
             break;
         case AST_ELEM_GENERIC_BASE: {

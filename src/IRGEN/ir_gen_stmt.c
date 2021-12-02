@@ -738,7 +738,7 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
         if(is_assign_pod){
             used_assign_function = false;
         } else {
-            errorcode_t errorcode = handle_assign_management(working_builder, initial, &initial_ast_type, destination, true);
+            errorcode_t errorcode = handle_assign_management(working_builder, initial, &initial_ast_type, destination, &stmt->type);
             if(errorcode == ALT_FAILURE) return errorcode;
 
             used_assign_function = errorcode == SUCCESS;
@@ -792,7 +792,7 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
         if(stmt->is_pod){
             used_assign_function = false;
         } else {
-            errorcode_t errorcode = handle_assign_management(builder, other_value, &other_value_type, destination, true);
+            errorcode_t errorcode = handle_assign_management(builder, other_value, &other_value_type, destination, &destination_type);
             if(errorcode == ALT_FAILURE) return errorcode;
     
             used_assign_function = errorcode == SUCCESS;

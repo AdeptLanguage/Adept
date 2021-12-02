@@ -21,7 +21,7 @@
 // Finds a function that exactly matches the given
 // name and arguments. Result info stored 'result'
 // NOTE: optional_required_traits can be TRAIT_NONE
-errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
+errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
     ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_func_named ----------------
@@ -59,14 +59,14 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, ast_type_t *arg_type, optional_funcpair_t *result);
+errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_assign_func ----------------
 // Finds the correct __assign__ function for a type
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, ast_type_t *arg_type, optional_funcpair_t *result);
+errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_method_conforming ----------------
 // Finds a method that has the given name and conforms
@@ -94,12 +94,12 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
 
 // ---------------- ir_gen_find_method ----------------
 // Find method without any conforming
-errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *struct_name, 
+errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, const char *struct_name, 
         const char *name, ast_type_t *arg_types, length_t type_list_length, source_t from_source, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_generic_base_method ----------------
 // Find method without any conforming
-errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *generic_base,
+errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *object, const char *generic_base,
     const char *name, ast_type_t *arg_types, length_t type_list_length, source_t from_source, optional_funcpair_t *result);
 
 // ---------------- find_beginning_of_func_group ----------------
@@ -151,7 +151,7 @@ errorcode_t func_args_polymorphable_no_conform(compiler_t *compiler, object_t *o
 // NOTE: Returns SUCCESS if true
 // NOTE: Returns FAILURE if false
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
-errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
+errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
 
 // ---------------- ir_gen_find_singular_special_func ----------------
 // Finds a special function (such as __variadic_array__)

@@ -38,6 +38,17 @@ LOW-PRIORITY:
 * conditionless blocks
 * match/when statement or something like that
 * support for disallowing/disencouraging assignment for a composite type
+* macro/snippet functions? that expand to be inline and never become an actual function
+    ```
+    snippet func boundsCheck(this *<$T> Array, index usize) {
+        #if array_bounds_checks
+        if index >= this.length {
+            printf('<$%s> Array - error index out of bound\n', typenameof $T)
+        }
+        #end
+    }
+    ```
+* fix issues with __assign__ auto-generation broken in b32ccdb5d397d645a0f4c65de0bfbc0eff38c61e
 
 v2.4 COMPLETED:
 + Standard Library Imports

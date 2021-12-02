@@ -833,6 +833,7 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->static_variables = NULL;
     ir_module->static_variables_length = 0;
     ir_module->static_variables_capacity = 0;
+    memset(&ir_module->job_list, 0, sizeof(ir_job_list_t));
 
     // Initialize common data
     ir_shared_common_t *common = &ir_module->common;
@@ -888,6 +889,8 @@ void ir_module_free(ir_module_t *ir_module){
         free(ir_module->rtti_relocations[i].human_notation);
     }
     free(ir_module->rtti_relocations);
+
+    ir_job_list_free(&ir_module->job_list);
 }
 
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
@@ -1102,4 +1105,13 @@ int ir_generic_base_method_cmp(const void *a, const void *b){
     diff = strcmp(((ir_generic_base_method_t*) a)->name, ((ir_generic_base_method_t*) b)->name);
     if(diff != 0) return diff;
     return (int) ((ir_generic_base_method_t*) a)->ast_func_id - (int) ((ir_generic_base_method_t*) b)->ast_func_id;
+}
+
+void ir_job_list_append(ir_job_list_t *job_list, ir_func_mapping_t *mapping){
+    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
+    job_list->jobs[job_list->length++] = *mapping;
+}
+
+void ir_job_list_free(ir_job_list_t *job_list){
+    free(job_list->jobs);
 }

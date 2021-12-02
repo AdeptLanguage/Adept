@@ -1345,7 +1345,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     else {
         optional_funcpair_t result;
 
-        if(ir_gen_find_func(builder->compiler, builder->object, builder->job_list, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &result)
+        if(ir_gen_find_func(builder->compiler, builder->object, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &result)
         || !result.has){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;
@@ -2541,7 +2541,7 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         if(is_assign_pod){
             used_assign_function = false;
         } else {
-            errorcode_t errorcode = handle_assign_management(builder, initial, &temporary_type, destination, true);
+            errorcode_t errorcode = handle_assign_management(builder, initial, &temporary_type, destination, &def->type);
             if(errorcode == ALT_FAILURE) return errorcode;
 
             used_assign_function = errorcode == SUCCESS;

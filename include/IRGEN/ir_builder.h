@@ -61,7 +61,7 @@ typedef struct ir_builder {
 
 // ---------------- ir_builder_init ----------------
 // Initializes an IR builder
-void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, ir_job_list_t *job_list, bool static_builder);
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, bool static_builder);
 
 // ---------------- build_basicblock ----------------
 // Builds a new basic block in the current function
@@ -394,8 +394,7 @@ bool could_have_pass(ast_type_t *ast_type);
 // NOTE: Returns SUCCESS if value was utilized in deference
 //       Returns FAILURE if value was not utilized in deference
 //       Returns ALT_FAILURE if a compile time error occurred
-errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_type,
-        ir_value_t *destination, bool zero_initialize);
+errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *value_ast_type, ir_value_t *destination, ast_type_t *destination_ast_type);
 
 // ---------------- handle_math_management ----------------
 // Handles basic math management function calls
@@ -413,30 +412,27 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 // ---------------- instantiate_polymorphic_func ----------------
 // Instantiates a polymorphic function
 // NOTE: 'instantiation_source' may be NULL_SOURCE
-errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
+errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping);
 
 // ---------------- attempt_autogen___defer__ ----------------
 // Attempts to auto-generate __defer__ management method
 // NOTE: Does NOT check for existing suitable __defer__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
 
 // ---------------- attempt_autogen___pass__ ----------------
 // Attempts to auto-generate __pass__ management function
 // NOTE: Does NOT check for existing suitable __pass__ functions
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
 
 // ---------------- attempt_autogen___assign__ ----------------
 // Attempts to auto-generate __assign__ management method
 // NOTE: Does NOT check for existing suitable __assign__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
 // NOTE: Returns ALT_FAILURE if something went really wrong
-errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
+errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
 
 // ---------------- resolve_type_polymorphics ----------------
 // Resolves any polymorphic type variables within an AST type

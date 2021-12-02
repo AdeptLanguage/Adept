@@ -6,7 +6,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "IRGEN/ir_builder.h"
 
-errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *name,
+errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
         ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, optional_funcpair_t *result){
     
     ir_module_t *ir_module = &object->ir_module;
@@ -36,15 +36,15 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, ir_job_list
     }
 
     if(strcmp(name, "__pass__") == 0){
-        return attempt_autogen___pass__(compiler, object, job_list, arg_types, arg_types_length, result);
+        return attempt_autogen___pass__(compiler, object, arg_types, arg_types_length, result);
     }
 
     if(strcmp(name, "__defer__") == 0){
-        return attempt_autogen___defer__(compiler, object, job_list, arg_types, arg_types_length, result);
+        return attempt_autogen___defer__(compiler, object, arg_types, arg_types_length, result);
     }
 
     if(strcmp(name, "__assign__") == 0){
-        return attempt_autogen___assign__(compiler, object, job_list, arg_types, arg_types_length, result);
+        return attempt_autogen___assign__(compiler, object, arg_types, arg_types_length, result);
     }
 
     return FAILURE; // No function with that definition found
@@ -139,7 +139,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
                 ir_func_mapping_t instance;
                 
-                if(instantiate_polymorphic_func(builder->compiler, builder->object, builder->job_list, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
+                if(instantiate_polymorphic_func(builder->compiler, builder->object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
                     ast_poly_catalog_free(&using_catalog);
                     return ALT_FAILURE;
                 }
@@ -163,15 +163,15 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
     }
 
     if(strcmp(name, "__pass__") == 0){
-        return attempt_autogen___pass__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
+        return attempt_autogen___pass__(builder->compiler, builder->object, arg_types, type_list_length, result);
     }
 
     if(strcmp(name, "__defer__") == 0){
-        return attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
+        return attempt_autogen___defer__(builder->compiler, builder->object, arg_types, type_list_length, result);
     }
 
     if(strcmp(name, "__assign__") == 0){
-        return attempt_autogen___assign__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
+        return attempt_autogen___assign__(builder->compiler, builder->object, arg_types, type_list_length, result);
     }
 
     return FAILURE; // No function with that definition found
@@ -202,7 +202,7 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
     return ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, NULL, true, NULL_SOURCE, result);
 }
 
-errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, ast_type_t *arg_type, optional_funcpair_t *result){
+errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_funcpair_t *result){
     // Finds the correct __defer__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
@@ -238,11 +238,11 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_jo
     switch(arg_type->elements[0]->id){
     case AST_ELEM_BASE:
         struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
-        errorcode = ir_gen_find_method(compiler, object, job_list, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
+        errorcode = ir_gen_find_method(compiler, object, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
         break;
     case AST_ELEM_GENERIC_BASE:
         struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
-        errorcode = ir_gen_find_generic_base_method(compiler, object, job_list, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
+        errorcode = ir_gen_find_generic_base_method(compiler, object, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
         break;
     default:
         errorcode = FAILURE;
@@ -260,7 +260,7 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ir_jo
     return errorcode;
 }
 
-errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, ast_type_t *arg_type, optional_funcpair_t *result){
+errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_funcpair_t *result){
     // Finds the correct __assign__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
@@ -300,11 +300,11 @@ errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ir_j
     switch(arg_type->elements[0]->id){
     case AST_ELEM_BASE:
         struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
-        errorcode = ir_gen_find_method(compiler, object, job_list, struct_name, "__assign__", args, 2, NULL_SOURCE, result);
+        errorcode = ir_gen_find_method(compiler, object, struct_name, "__assign__", args, 2, NULL_SOURCE, result);
         break;
     case AST_ELEM_GENERIC_BASE:
         struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
-        errorcode = ir_gen_find_generic_base_method(compiler, object, job_list, struct_name, "__assign__", args, 2, NULL_SOURCE, result);
+        errorcode = ir_gen_find_generic_base_method(compiler, object, struct_name, "__assign__", args, 2, NULL_SOURCE, result);
         break;
     default:
         errorcode = FAILURE;
@@ -386,7 +386,7 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0){
                 ir_func_mapping_t instance;
     
-                if(instantiate_polymorphic_func(builder->compiler, builder->object, builder->job_list, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
+                if(instantiate_polymorphic_func(builder->compiler, builder->object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
                     ast_poly_catalog_free(&using_catalog);
                     return ALT_FAILURE;
                 }
@@ -411,11 +411,11 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
     }
 
     if(strcmp(name, "__defer__") == 0){
-        return attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
+        return attempt_autogen___defer__(builder->compiler, builder->object, arg_types, type_list_length, result);
     }
     
     if(strcmp(name, "__assign__") == 0){
-        return attempt_autogen___assign__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
+        return attempt_autogen___assign__(builder->compiler, builder->object, arg_types, type_list_length, result);
     }
 
     return FAILURE; // No method with that definition found
@@ -485,7 +485,7 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0){
                 ir_func_mapping_t instance;
     
-                if(instantiate_polymorphic_func(builder->compiler, builder->object, builder->job_list, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
+                if(instantiate_polymorphic_func(builder->compiler, builder->object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
                     ast_poly_catalog_free(&using_catalog);
                     return ALT_FAILURE;
                 }
@@ -510,17 +510,17 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
     }
 
     if(strcmp(name, "__defer__") == 0){
-        return attempt_autogen___defer__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
+        return attempt_autogen___defer__(builder->compiler, builder->object, arg_types, type_list_length, result);
     }
 
     if(strcmp(name, "__assign__") == 0){
-        return attempt_autogen___assign__(builder->compiler, builder->object, builder->job_list, arg_types, type_list_length, result);
+        return attempt_autogen___assign__(builder->compiler, builder->object, arg_types, type_list_length, result);
     }
 
     return FAILURE; // No method with that definition found
 }
 
-errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *struct_name, 
+errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, const char *struct_name, 
         const char *name, ast_type_t *arg_types, length_t type_list_length,
         source_t from_source, optional_funcpair_t *result){
 
@@ -574,7 +574,7 @@ errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, ir_job_li
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0){
                 ir_func_mapping_t instance;
 
-                if(instantiate_polymorphic_func(compiler, object, job_list, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
+                if(instantiate_polymorphic_func(compiler, object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
                 ast_poly_catalog_free(&using_catalog);
 
                 optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, object); 
@@ -595,17 +595,17 @@ errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, ir_job_li
     }
 
     if(strcmp(name, "__defer__") == 0){
-        return attempt_autogen___defer__(compiler, object, job_list, arg_types, type_list_length, result);
+        return attempt_autogen___defer__(compiler, object, arg_types, type_list_length, result);
     }
 
     if(strcmp(name, "__assign__") == 0){
-        return attempt_autogen___assign__(compiler, object, job_list, arg_types, type_list_length, result);
+        return attempt_autogen___assign__(compiler, object, arg_types, type_list_length, result);
     }
 
     return FAILURE; // No method with that definition found
 }
 
-errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, const char *generic_base,
+errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *object, const char *generic_base,
     const char *name, ast_type_t *arg_types,
     length_t type_list_length, source_t from_source, optional_funcpair_t *result){
     
@@ -654,7 +654,7 @@ errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *obje
             if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && strcmp(poly_template->arg_names[0], "this") == 0){
                 ir_func_mapping_t instance;
     
-                if(instantiate_polymorphic_func(compiler, object, job_list, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
+                if(instantiate_polymorphic_func(compiler, object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
                     ast_poly_catalog_free(&using_catalog);
                     return ALT_FAILURE;
                 }
@@ -678,11 +678,11 @@ errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *obje
     }
 
     if(strcmp(name, "__defer__") == 0){
-        return attempt_autogen___defer__(compiler, object, job_list, arg_types, type_list_length, result);
+        return attempt_autogen___defer__(compiler, object, arg_types, type_list_length, result);
     }
 
     if(strcmp(name, "__assign__") == 0){
-        return attempt_autogen___assign__(compiler, object, job_list, arg_types, type_list_length, result);
+        return attempt_autogen___assign__(compiler, object, arg_types, type_list_length, result);
     }
 
     return FAILURE; // No method with that definition found
@@ -1055,7 +1055,7 @@ polymorphic_failure:
     return res;
 }
 
-errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, const ast_type_t *polymorphic_type, const ast_type_t *concrete_type, ast_poly_catalog_t *catalog){
+errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog){
     if(polymorphic_type->elements_length > concrete_type->elements_length) return FAILURE;
 
     for(length_t i = 0; i != concrete_type->elements_length; i++){
@@ -1071,20 +1071,34 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, const
 
             // NOTE: Must be presorted
             const char *reserved_prereqs[] = {
-                "__number__", "__primitive__", "__signed__", "__struct__", "__unsigned__"
+                "__assign__", "__number__", "__pod__", "__primitive__", "__signed__", "__struct__", "__unsigned__"
             };
             const length_t reserved_prereqs_length = sizeof(reserved_prereqs) / sizeof(weak_cstr_t*);
             maybe_index_t special_prereq = binary_string_search(reserved_prereqs, reserved_prereqs_length, prereq->similarity_prerequisite);
             bool meets_special_prereq = false;
 
             switch(special_prereq){
-            case 0: // __number__
+            case 0: { // __assign__
+                    optional_funcpair_t result;
+                    errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, concrete_type, &result);
+                    if(errorcode == ALT_FAILURE) return errorcode;
+                    meets_special_prereq = errorcode == SUCCESS && result.has;
+                }
+                break;
+            case 1: // __number__
                 meets_special_prereq = concrete_type->elements[i]->id == AST_ELEM_BASE && typename_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base) != BUILTIN_TYPE_NONE;
                 break;
-            case 1: // __primitive__
+            case 2: { // __pod__
+                    optional_funcpair_t result;
+                    errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, concrete_type, &result);
+                    if(errorcode == ALT_FAILURE) return errorcode;
+                    meets_special_prereq = !(errorcode == SUCCESS && result.has);
+                }
+                break;
+            case 3: // __primitive__
                 meets_special_prereq = concrete_type->elements[i]->id == AST_ELEM_BASE && typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
                 break;
-            case 2: { // __signed__
+            case 4: { // __signed__
                     if(concrete_type->elements[i]->id != AST_ELEM_BASE) break;
                     weak_cstr_t base = ((ast_elem_base_t*) concrete_type->elements[i])->base;
 
@@ -1094,10 +1108,10 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, const
                     }
                 }
                 break;
-            case 3: // __struct__
+            case 5: // __struct__
                 meets_special_prereq = concrete_type->elements[i]->id != AST_ELEM_BASE || !typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
                 break;
-            case 4: { // __unsigned__
+            case 6: { // __unsigned__
                     if(concrete_type->elements[i]->id != AST_ELEM_BASE) break;
                     weak_cstr_t base = ((ast_elem_base_t*) concrete_type->elements[i])->base;
 

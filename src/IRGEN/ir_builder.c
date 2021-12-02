@@ -8,7 +8,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
 
-void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, ir_job_list_t *job_list, bool static_builder){
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, bool static_builder){
     builder->basicblocks = malloc(sizeof(ir_basicblock_t) * 4);
     builder->basicblocks_length = 1;
     builder->basicblocks_capacity = 4;
@@ -55,7 +55,7 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
         builder->scope = NULL;
     }
 
-    builder->job_list = job_list;
+    builder->job_list = &object->ir_module.job_list;
 
     builder->static_bool_base.id = AST_ELEM_BASE;
     builder->static_bool_base.source = NULL_SOURCE;
@@ -904,7 +904,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
             arguments[0] = mutable_value;
 
-            errorcode_t errorcode = ir_gen_find_defer_func(builder->compiler, builder->object, builder->job_list, ast_type, &pair);
+            errorcode_t errorcode = ir_gen_find_defer_func(builder->compiler, builder->object, ast_type, &pair);
 
             if(errorcode){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
@@ -1522,10 +1522,13 @@ bool could_have_pass(ast_type_t *ast_type){
     return false;
 }
 
-errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *ast_type,
-        ir_value_t *destination, bool zero_initialize){
+errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *value_ast_type, ir_value_t *destination, ast_type_t *destination_ast_type){
+    // Ensure value is a structure value
+    if(value->type->kind != TYPE_KIND_STRUCTURE || value_ast_type->elements_length != 1) return FAILURE;
 
-    if(value->type->kind != TYPE_KIND_STRUCTURE || ast_type->elements_length != 1) return FAILURE;
+    if(!ast_types_conform(builder, &value, value_ast_type, destination_ast_type, CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
+        return FAILURE;
+    }
 
     optional_funcpair_t result;
     errorcode_t errorcode;
@@ -1539,20 +1542,18 @@ errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, a
     arguments[0] = destination;
     arguments[1] = value;
 
-    errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, builder->job_list, ast_type, &result);
+    errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, destination_ast_type, &result);
     if(errorcode) goto failure;
 
     if(result.has){
-        if(zero_initialize){
-            build_zeroinit(builder, destination);
-        }
+        build_zeroinit(builder, destination);
     
-        ast_type_t ast_type_ptr = ast_type_clone(ast_type);
+        ast_type_t ast_type_ptr = ast_type_clone(destination_ast_type);
         ast_type_prepend_ptr(&ast_type_ptr);
     
         ast_type_t arg_types[2];
         arg_types[0] = ast_type_ptr;
-        arg_types[1] = *ast_type;
+        arg_types[1] = *destination_ast_type;
 
         funcpair_t pair = result.value;
         errorcode = handle_pass_management(builder, arguments, arg_types, pair.ast_func->arg_type_traits, 2);
@@ -1655,7 +1656,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     return result_value;
 }
 
-errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object, ir_job_list_t *job_list, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
+errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping){
 
     ast_func_t *poly_func = &object->ast.funcs[ast_poly_func_id];
@@ -1772,9 +1773,7 @@ errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object,
         goto failure;
     }
 
-    // Add mapping to IR jobs
-    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
-    job_list->jobs[job_list->length++] = newest_mapping;
+    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
 
     if(out_mapping) *out_mapping = newest_mapping;
     return SUCCESS;
@@ -1786,8 +1785,7 @@ failure:
     return FAILURE;
 }
 
-errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
     
     if(type_list_length != 1) return FAILURE;
 
@@ -1861,7 +1859,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
         }
 
         optional_funcpair_t result;
-        errorcode_t errorcode = ir_gen_find_defer_func(compiler, object, job_list, &field_info.ast_type, &result);
+        errorcode_t errorcode = ir_gen_find_defer_func(compiler, object, &field_info.ast_type, &result);
         if(errorcode == ALT_FAILURE) return errorcode;
 
         if(errorcode == SUCCESS && result.has){
@@ -1912,9 +1910,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
         return FAILURE;
     }
 
-    // Add mapping to IR jobs
-    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
-    job_list->jobs[job_list->length++] = newest_mapping;
+    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
 
     // Cache result
     entry->has_defer = TROOLEAN_TRUE;
@@ -1926,8 +1922,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ir
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
     
     if(type_list_length != 1) return FAILURE; // Require single argument for auto-generated __pass__
 
@@ -2008,16 +2003,13 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ir_
         return FAILURE;
     }
 
-    // Add mapping to IR jobs
-    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
-    job_list->jobs[job_list->length++] = newest_mapping;
+    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
 
     optional_funcpair_set(result, true, ast_func_id, newest_mapping.ir_func_id, object);
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ir_job_list_t *job_list,
-        ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
+errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
 
     if(type_list_length != 2) return FAILURE;
 
@@ -2093,7 +2085,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, i
         }
 
         optional_funcpair_t result;
-        errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, job_list, &field_info.ast_type, &result);
+        errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, &field_info.ast_type, &result);
         if(errorcode == ALT_FAILURE) return errorcode;
 
         if(errorcode == SUCCESS && result.has){
@@ -2166,9 +2158,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, i
         return FAILURE;
     }
 
-    // Add mapping to IR jobs
-    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
-    job_list->jobs[job_list->length++] = newest_mapping;
+    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
 
     // Cache result
     entry->has_assign = TROOLEAN_TRUE;

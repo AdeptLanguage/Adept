@@ -583,6 +583,7 @@ typedef struct {
     ir_static_variable_t *static_variables;
     length_t static_variables_length;
     length_t static_variables_capacity;
+    ir_job_list_t job_list;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------
@@ -703,5 +704,13 @@ int ir_method_cmp(const void *a, const void *b);
 // Compares two 'ir_generic_base_method_t' structures.
 // Used for qsort()
 int ir_generic_base_method_cmp(const void *a, const void *b);
+
+// ---------------- ir_job_list_append ----------------
+// Appends a mapping to an IR job list
+void ir_job_list_append(ir_job_list_t *job_list, ir_func_mapping_t *mapping);
+
+// ---------------- ir_job_list_free ----------------
+// Frees an IR job list
+void ir_job_list_free(ir_job_list_t *job_list);
 
 #endif // _ISAAC_IR_H
