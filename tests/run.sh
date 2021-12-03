@@ -208,6 +208,9 @@ compile while || exit $?
 compile while_continue || exit $?
 compile windowed || exit $?
 
+#compile winmain || exit $?
+printf "Skipping \033[0;31mwinmain_entry\033[0m test program\n"
+
 # Delete debugging dump files if present
 rm -f ast.txt
 rm -f infer.txt

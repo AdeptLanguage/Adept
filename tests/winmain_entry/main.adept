@@ -1,0 +1,25 @@
+pragma windows_only
+
+import 'sys/cstdio.adept'
+
+alias HANDLE = ptr
+alias HINSTANCE = HANDLE
+alias LPSTR = *ubyte
+
+record Bomb (message *ubyte) {
+    func __defer__ {
+        printf('%s\n', this.message)
+    }
+}
+
+bomb Bomb = Bomb('Hello World')
+
+external stdcall func WinMain(hInstance, hPrevInstance HINSTANCE, lpCmdLine LPSTR, nCmdShow int) int {
+    // The initialization of 'bomb' and its automatic '__defer__' call should
+    // happen here implicitly
+}
+
+/*
+If no main function exists, and an 'external stdcall func WinMain' exists,
+then it will be treated as the entry point
+*/
