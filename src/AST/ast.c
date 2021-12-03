@@ -873,6 +873,9 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     if(is_stdcall)                     func->traits |= AST_FUNC_STDCALL;
     if(is_foreign)                     func->traits |= AST_FUNC_FOREIGN;
     if(is_implicit)                    func->traits |= AST_FUNC_IMPLICIT;
+
+    // Handle WinMain
+    if(strcmp(name, "WinMain") == 0 && export_as && strcmp(export_as, "WinMain") == 0)  func->traits |= AST_FUNC_WINMAIN;
 }
 
 bool ast_func_is_polymorphic(ast_func_t *func){

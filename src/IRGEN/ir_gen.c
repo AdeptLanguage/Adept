@@ -340,7 +340,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     ast_expr_t **statements = ast_func->statements;
     length_t statements_length = ast_func->statements_length;
 
-    if(ast_func->traits & AST_FUNC_MAIN){
+    if(ast_func->traits & AST_FUNC_MAIN || ast_func->traits & AST_FUNC_WINMAIN){
         // Initialize all global variables
         if(ir_gen_globals_init(&builder)){
             module_func->basicblocks = builder.basicblocks;
@@ -375,7 +375,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         // Make sure to update references that may have been invalidated
         ast_func = &object->ast.funcs[ast_func_id];
 
-        if(ast_func->traits & AST_FUNC_MAIN){
+        if(ast_func->traits & AST_FUNC_MAIN || ast_func->traits & AST_FUNC_WINMAIN){
             handle_deference_for_globals(&builder);
             build_deinit_svars(&builder);
         }

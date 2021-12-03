@@ -530,6 +530,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
     bool is_in_main_function;
     bool is_in_pass_function;
     bool is_in_defer_function;
+    bool is_in_winmain_function;
     bool autogen_enabled;
     
     // 'ast_func' is only guaranteed to be valid within this scope.
@@ -542,6 +543,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
         is_in_main_function  = ast_func->traits & AST_FUNC_MAIN;
         is_in_pass_function  = ast_func->traits & AST_FUNC_PASS;
         is_in_defer_function = ast_func->traits & AST_FUNC_DEFER;
+        is_in_winmain_function  = ast_func->traits & AST_FUNC_WINMAIN;
         autogen_enabled      = ast_func->traits & AST_FUNC_AUTOGEN;
     }
 
@@ -602,7 +604,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
     if(ir_gen_variable_deference(builder, NULL)) return FAILURE;
 
     // Make '__defer__()' calls for global variables and (anonymous) static variables running out of scope
-    if(is_in_main_function){
+    if(is_in_main_function || is_in_winmain_function){
         handle_deference_for_globals(builder);
         build_deinit_svars(builder);
     }

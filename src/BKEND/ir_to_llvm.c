@@ -1612,7 +1612,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         const char *linker = "ld.exe"; // May need to change depending on system etc.
         const char *linker_options = "--start-group";
         const char *root = compiler->root;
-        const char *subsystem = (compiler->traits & COMPILER_WINDOWED) ? "-subsystem,windows " : "";
+        const char *subsystem = (compiler->traits & COMPILER_WINDOWED) ? "--subsystem windows " : "";
         link_command = mallocandsprintf("\"\"%s%s\" -static \"%scrt2.o\" \"%scrtbegin.o\" %s%s \"%s\" \"%slibdep.a\" C:/Windows/System32/msvcrt.dll %s-o \"%s\"\"", root, linker, root, root, linker_options, linker_additional, object_filename, root, subsystem, compiler->output_filename);
     }
 	#else
@@ -1622,7 +1622,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         const char *linker = "cross-compile-windows/x86_64-w64-mingw32-ld";
         const char *linker_options = "";
         const char *root = compiler->root;
-        const char *subsystem = (compiler->traits & COMPILER_WINDOWED) ? "-subsystem,windows " : "";
+        const char *subsystem = (compiler->traits & COMPILER_WINDOWED) ? "--subsystem windows " : "";
 
         strong_cstr_t cross_linker = mallocandsprintf("%s%s", compiler->root, linker);
         if(!file_exists(cross_linker)){

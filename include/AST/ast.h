@@ -72,6 +72,7 @@ typedef struct {
 #define AST_FUNC_AUTOGEN     TRAIT_9
 #define AST_FUNC_VARIADIC    TRAIT_A
 #define AST_FUNC_IMPLICIT    TRAIT_B
+#define AST_FUNC_WINMAIN     TRAIT_C
 
 // Additional AST function traits for builtin uses
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
