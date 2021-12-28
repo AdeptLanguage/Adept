@@ -10,7 +10,7 @@ errorcode_t parse_import(parse_ctx_t *ctx){
 
     // Don't allow importing while inside struct domains
     if(ctx->composite_association != NULL){
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot import dependencies within struct domain");
+        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Cannot import dependencies within struct domain");
         return FAILURE;
     }
 
@@ -87,7 +87,7 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
     //    ^
 
     if(ctx->composite_association != NULL){
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot declare foreign dependencies within struct domain");
+        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Cannot declare foreign dependencies within struct domain");
         return FAILURE;
     }
 
@@ -149,7 +149,7 @@ maybe_null_strong_cstr_t parse_standard_library_component(parse_ctx_t *ctx, sour
     if(first_part_of_component == NULL) return NULL;
 
     // Set base source
-    *out_source = ctx->tokenlist->sources[*ctx->i];
+    *out_source = parse_ctx_peek_source(ctx);
 
     while(ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_DIVIDE){
         // Skip over previous component name
@@ -218,7 +218,7 @@ maybe_null_strong_cstr_t parse_resolve_import(parse_ctx_t *ctx, weak_cstr_t file
     char *absolute = filename_absolute(filename);
     if(absolute) return absolute;
 
-    compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "INTERNAL ERROR: Failed to get absolute path of filename '%s'", filename);
+    compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "INTERNAL ERROR: Failed to get absolute path of filename '%s'", filename);
     return NULL;
 }
 

@@ -10,7 +10,7 @@
 
 errorcode_t parse_func(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
-    source_t source = ctx->tokenlist->sources[*ctx->i];
+    source_t source = parse_ctx_peek_source(ctx);
     token_t *tokens = ctx->tokenlist->tokens;
 
     if(tokens[*ctx->i + 1].id == TOKEN_ALIAS && tokens[*ctx->i].id == TOKEN_FUNC){
@@ -290,7 +290,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out
 errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     if(func->traits & AST_FUNC_FOREIGN) {
         #ifdef ADEPT_INSIGHT_BUILD
-        func->end_source = ctx->tokenlist->sources[*ctx->i];
+        func->end_source = parse_ctx_peek_source(ctx);
         #endif
 
         return SUCCESS;
@@ -302,9 +302,9 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     defer_scope_t defer_scope;
     defer_scope_init(&defer_scope, NULL, NULL, TRAIT_NONE);
 
-    if(ctx->tokenlist->tokens[*ctx->i].id == TOKEN_ASSIGN){
+    if(parse_ctx_peek(ctx) == TOKEN_ASSIGN){
         if(ast_type_is_void(&func->return_type)){
-            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Cannot return 'void' from single line function");
+            compiler_panic(ctx->compiler, parse_ctx_peek_source(ctx), "Cannot return 'void' from single line function");
             return FAILURE;
         }
 
@@ -321,7 +321,7 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
         }
 
         #ifdef ADEPT_INSIGHT_BUILD
-        func->end_source = ctx->tokenlist->sources[*ctx->i];
+        func->end_source = parse_ctx_peek_source(ctx);
         #endif
 
         ast_expr_return_t *stmt = malloc(sizeof(ast_expr_return_t));
@@ -353,7 +353,7 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     defer_scope_free(&defer_scope);
 
     #ifdef ADEPT_INSIGHT_BUILD
-    func->end_source = ctx->tokenlist->sources[*ctx->i];
+    func->end_source = parse_ctx_peek_source(ctx);
     #endif
 
     func->statements = stmts.statements;
@@ -500,7 +500,7 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
 
     if(func->arg_defaults)
         func->arg_defaults[func->arity + *backfill] = NULL;
-
+    
     if(tokens[*i].id == TOKEN_ELLIPSIS){
         // Alone ellipsis, used for c-style varargs
 
@@ -516,8 +516,39 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         return SUCCESS;
     }
 
-    if(!(func->traits & AST_FUNC_FOREIGN)){
-        char *name = parse_take_word(ctx, "Expected argument name before argument type");
+    // Argument name
+    if(func->traits & AST_FUNC_FOREIGN){
+        // If this is a foreign function, argument names are optional
+
+        // Look ahead to see if word token is for type, or is for argument name
+        length_t lookahead = *i;
+        bool is_argument_name = NULL;
+
+        if(tokens[lookahead].id == TOKEN_WORD){
+            lookahead++;
+            while(tokens[lookahead].id == TOKEN_NEWLINE) lookahead++;
+            if(tokens[lookahead].id != TOKEN_NEXT && tokens[lookahead].id != TOKEN_CLOSE) is_argument_name = true;
+        }
+
+        if(is_argument_name){
+            if(func->arg_names == NULL){
+                if(func->arity != 0 && ast_type_is_base(&func->arg_types[func->arity - 1])){
+                    strong_cstr_t name = ast_type_str(&func->arg_types[func->arity - 1]);
+                    compiler_panicf(ctx->compiler, func->arg_sources[func->arity - 1], "'%s' is ambiguous, did you mean '%s Type' (as a parameter name) or '_ %s' (as a type name)?", name, name, name);
+                    parse_free_unbackfilled_arguments(func, *backfill);
+                    free(name);
+                    return FAILURE;
+                }
+
+                func->arg_names = calloc(capacity, sizeof(strong_cstr_t));
+            }
+
+            maybe_null_strong_cstr_t arg_name = parse_take_word(ctx, "INTERNAL ERROR: Expected argument name while parsing foreign function declaration, will probably crash...");
+            func->arg_names[func->arity + *backfill] = arg_name;
+        }
+    } else {
+        // Otherwise, if this is a normal function, argument names are required
+        maybe_null_strong_cstr_t name = parse_take_word(ctx, "Expected argument name before argument type");
 
         if(name == NULL){
             parse_free_unbackfilled_arguments(func, *backfill);
@@ -530,10 +561,14 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
     if(tokens[*i].id == TOKEN_ELLIPSIS){
         // Ellipsis as type, used for modern variadic argument
 
+        if(func->traits & AST_FUNC_FOREIGN){
+            compiler_panic(ctx->compiler, sources[*i - 1], "Foreign functions cannot have Adept-style named variadic arguments");
+            goto failure;
+        }
+
         if(*backfill != 0){
             compiler_panic(ctx->compiler, sources[*i], "Expected type for previous arguments before ellipsis");
-            parse_free_unbackfilled_arguments(func, *backfill);
-            return FAILURE;
+            goto failure;
         }
 
         (*i)++;
@@ -549,56 +584,53 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
         return SUCCESS;
     }
 
-    if(
-        parse_ignore_newlines(ctx, "Expected type") ||
-        (tokens[*i].id == TOKEN_ASSIGN && parse_func_default_arg_value(ctx, func, capacity, backfill)) ||
-        parse_ignore_newlines(ctx, "Expected type")
-    ){
-        if(func->arg_names) free(func->arg_names[func->arity + *backfill]);
-        parse_free_unbackfilled_arguments(func, *backfill);
-        return FAILURE;
+    if(parse_ignore_newlines(ctx, "Expected type")
+    || parse_func_default_arg_value_if_applicable(ctx, func, capacity, backfill)
+    || parse_ignore_newlines(ctx, "Expected type")){
+        goto failure;
     }
 
     if(!(func->traits & AST_FUNC_FOREIGN) && tokens[*i].id == TOKEN_NEXT){
         if(tokens[++(*i)].id == TOKEN_CLOSE){
             compiler_panic(ctx->compiler, sources[*i], "Expected type after ',' in argument list");
-            if(func->arg_names) free(func->arg_names[func->arity + *backfill]);
-            parse_free_unbackfilled_arguments(func, *backfill);
-            return FAILURE;
+            goto failure;
         }
 
         *backfill += 1;
         *out_is_solid = false;
         return SUCCESS;
     }
-    
+
     if(tokens[*i].id == TOKEN_POD){
         func->arg_type_traits[func->arity + *backfill] = AST_FUNC_ARG_TYPE_TRAIT_POD;
         (*i)++;
     } else {
         func->arg_type_traits[func->arity + *backfill] = TRAIT_NONE;
     }
-
-    if(
-        parse_ignore_newlines(ctx, "Expected type") ||
-        parse_type(ctx, &func->arg_types[func->arity + *backfill]) ||
-        parse_ignore_newlines(ctx, "Expected type") ||
-        (tokens[*i].id == TOKEN_ASSIGN && parse_func_default_arg_value(ctx, func, capacity, backfill))
-    ){
-        if(func->arg_names) free(func->arg_names[func->arity + *backfill]);
-        parse_free_unbackfilled_arguments(func, *backfill);
-        return FAILURE;
+    
+    if(parse_ignore_newlines(ctx, "Expected type")
+    || parse_type(ctx, &func->arg_types[func->arity + *backfill])
+    || parse_ignore_newlines(ctx, "Expected type")
+    || parse_func_default_arg_value_if_applicable(ctx, func, capacity, backfill)){
+        goto failure;
     }
 
     parse_func_backfill_arguments(func, backfill);
     func->arity++;
     *out_is_solid = true;
     return SUCCESS;
+
+failure:
+    if(func->arg_names) free(func->arg_names[func->arity + *backfill]);
+    parse_free_unbackfilled_arguments(func, *backfill);
+    return FAILURE;
 }
 
-errorcode_t parse_func_default_arg_value(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill){
+errorcode_t parse_func_default_arg_value_if_applicable(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill){
     // my_argument float = 0.0f
     //                   ^
+    
+    if(parse_ctx_peek(ctx) != TOKEN_ASSIGN) return SUCCESS;
 
     if(func->arg_defaults && func->arg_defaults[func->arity + *backfill]){
         compiler_panic(ctx->compiler, func->arg_sources[func->arity + *backfill], "Function argument already has default value");
@@ -666,7 +698,7 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
     if(func->arity + backfill != *capacity) return;
     *capacity *= 2;
 
-    if(!(func->traits & AST_FUNC_FOREIGN)){
+    if(!(func->traits & AST_FUNC_FOREIGN) || func->arg_names){
         grow((void**) &func->arg_names, sizeof(char*), func->arity + backfill, *capacity);
     }
 
@@ -680,7 +712,7 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
 }
 
 void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim, bool *out_is_implicit, bool *out_is_external){
-    tokenid_t token_id = ctx->tokenlist->tokens[*ctx->i].id;
+    tokenid_t token_id = parse_ctx_peek(ctx);
 
     *out_is_stdcall = false;
     *out_is_verbatim = false;
@@ -691,20 +723,24 @@ void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_ve
     while(true){
         switch(token_id){
         case TOKEN_STDCALL:
-            token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
+            *ctx->i += 1;
             *out_is_stdcall = true;
+            token_id = parse_ctx_peek(ctx);
             continue;
         case TOKEN_VERBATIM:
-            token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
+            *ctx->i += 1;
             *out_is_verbatim = true;
+            token_id = parse_ctx_peek(ctx);
             continue;
         case TOKEN_IMPLICIT:
-            token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
+            *ctx->i += 1;
             *out_is_implicit = true;
+            token_id = parse_ctx_peek(ctx);
             continue;
         case TOKEN_EXTERNAL:
-            token_id = ctx->tokenlist->tokens[++(*ctx->i)].id;
+            *ctx->i += 1;
             *out_is_external = true;
+            token_id = parse_ctx_peek(ctx);
             continue;
         }
 

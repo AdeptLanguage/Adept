@@ -9,7 +9,7 @@
 
 errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_t *ast = ctx->ast;
-    source_t source = ctx->tokenlist->sources[*ctx->i];
+    source_t source = parse_ctx_peek_source(ctx);
 
     if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare %s within another struct's domain", is_union ? "union" : "struct");
@@ -67,7 +67,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     }
 
     // Look for start of struct domain and set it up if it exists
-    if(parse_struct_is_function_like_beginning(ctx->tokenlist->tokens[*ctx->i].id)){
+    if(parse_struct_is_function_like_beginning(parse_ctx_peek(ctx))){
         ctx->composite_association = (ast_polymorphic_composite_t *)domain;
         *ctx->i -= 1;
     } else {

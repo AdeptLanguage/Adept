@@ -569,38 +569,48 @@ static errorcode_t parse_expr_ternary(parse_ctx_t *ctx, ast_expr_t **inout_condi
     // Skip over '?'
     (*ctx->i)++;
 
-    // Allow newlines between '?' and when true expression
-    if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
-    
-    // Parse the "when true" expression
+    // "when true" expression
     ast_expr_t *expr_a;
-    if(parse_expr(ctx, &expr_a)) return FAILURE;
 
-    // Allow newlines between when true expression and ':'
-    if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
-
-    // Expect ':'
-    if(ctx->tokenlist->tokens[(*ctx->i)++].id != TOKEN_COLON){
-        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Ternary operator expected ':' after expression");
+    // Parse the "when true" expression
+    // (allowing newlines between '?' and when true expression)
+    if(parse_ignore_newlines(ctx, "Unexpected end of expression")
+    || parse_expr(ctx, &expr_a)){
         ast_expr_free_fully(*inout_condition);
-        ast_expr_free_fully(expr_a);
         return FAILURE;
     }
 
+    // Allow newlines between when true expression and ':'
+    if(parse_ignore_newlines(ctx, "Unexpected end of expression")){
+        goto failure;
+    }
+
+    // Expect ':'
+    if(parse_ctx_peek(ctx) != TOKEN_COLON){
+        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Ternary operator expected ':' after expression");
+        goto failure;
+    }
+    *ctx->i += 1;
+
     // Allow newlines between ':' and when false expression
-    if(parse_ignore_newlines(ctx, "Unexpected end of expression")) return FAILURE;
+    if(parse_ignore_newlines(ctx, "Unexpected end of expression")){
+        goto failure;
+    }
 
     // Parse the "when false" expression
     ast_expr_t *expr_b;
     if(parse_expr(ctx, &expr_b)){
-        ast_expr_free_fully(*inout_condition);
-        ast_expr_free_fully(expr_a);
-        return FAILURE;
+        goto failure;
     }
 
     // Construct and yield ternary expression
     ast_expr_create_ternary(inout_condition, *inout_condition, expr_a, expr_b, source);
     return SUCCESS;
+
+failure:
+    ast_expr_free_fully(*inout_condition);
+    ast_expr_free_fully(expr_a);
+    return FAILURE;
 }
 
 errorcode_t parse_op_expr(parse_ctx_t *ctx, int precedence, ast_expr_t **inout_left, bool keep_mutable){
@@ -982,21 +992,19 @@ errorcode_t parse_expr_cast(parse_ctx_t *ctx, ast_expr_t **out_expr){
     // cast <type> (value)
     //   ^
 
-    length_t *i = ctx->i;
-
     ast_type_t to;
     ast_expr_t *from;
 
     // Assume that expression starts with 'cast' keyword
-    source_t source = ctx->tokenlist->sources[(*i)++];
+    source_t source = parse_ctx_peek_source(ctx);
+    *ctx->i += 1;
 
     if(parse_type(ctx, &to)) return FAILURE;
     if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
-
-    if(ctx->tokenlist->tokens[*i].id == TOKEN_OPEN){
+    
+    if(parse_eat(ctx, TOKEN_OPEN, NULL) == SUCCESS){
         // 'cast' will only apply to expression in parentheses if present.
         // If this behavior is undesired, use the newer 'as' operator instead
-        (*i)++;
 
         // Ignore newlines before actual expression
         if(parse_ignore_newlines(ctx, "Unexpected statement termination")) return FAILURE;
@@ -1029,8 +1037,8 @@ errorcode_t parse_expr_as(parse_ctx_t *ctx, ast_expr_t **inout_expr){
     // (value) as <type>
     //         ^
 
-    // Assume that expression starts with 'as' keyword
-    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
+    source_t source = parse_ctx_peek_source(ctx);
+    *ctx->i += 1;
 
     ast_type_t to;
     if(parse_type(ctx, &to)) return FAILURE;
@@ -1043,50 +1051,46 @@ errorcode_t parse_expr_at(parse_ctx_t *ctx, ast_expr_t **inout_expr){
     // (value) at <index>
     //         ^
 
+    source_t source = parse_ctx_peek_source(ctx);
+    *ctx->i += 1;
+
     ast_expr_t *index_expr;
+    if(parse_primary_expr(ctx, &index_expr)) return FAILURE;
+
     ast_expr_array_access_t *at_expr = malloc(sizeof(ast_expr_array_access_t));
-    at_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
-
-    if(parse_primary_expr(ctx, &index_expr)){
-        free(at_expr);
-        return FAILURE;
-    }
-
     at_expr->id = EXPR_AT;
     at_expr->value = *inout_expr;
     at_expr->index = index_expr;
+    at_expr->source = source;
     *inout_expr = (ast_expr_t*) at_expr;
     return SUCCESS;
 }
 
 errorcode_t parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr){
-    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
+    source_t source = parse_ctx_peek_source(ctx);
+    *ctx->i += 1;
 
-    if(ctx->tokenlist->tokens[(*ctx->i)].id == TOKEN_OPEN){
+    if(parse_ctx_peek(ctx) == TOKEN_OPEN){
         // sizeof (value)
+
+        ast_expr_t *value;
+        if(parse_primary_expr(ctx, &value)) return FAILURE;
 
         ast_expr_sizeof_value_t *sizeof_value_expr = malloc(sizeof(ast_expr_sizeof_value_t));
         sizeof_value_expr->id = EXPR_SIZEOF_VALUE;
         sizeof_value_expr->source = source;
-
-        if(parse_primary_expr(ctx, &sizeof_value_expr->value)){
-            free(sizeof_value_expr);
-            return FAILURE;
-        }
-
+        sizeof_value_expr->value = value;
         *out_expr = (ast_expr_t*) sizeof_value_expr;
     } else {
         // sizeof Type
 
+        ast_type_t type;
+        if(parse_type(ctx, &type)) return FAILURE;
+
         ast_expr_sizeof_t *sizeof_expr = malloc(sizeof(ast_expr_sizeof_t));
         sizeof_expr->id = EXPR_SIZEOF;
         sizeof_expr->source = source;
-
-        if(parse_type(ctx, &sizeof_expr->type)){
-            free(sizeof_expr);
-            return FAILURE;
-        }
-
+        sizeof_expr->type = type;
         *out_expr = (ast_expr_t*) sizeof_expr;
     }
 
@@ -1096,29 +1100,31 @@ errorcode_t parse_expr_sizeof(parse_ctx_t *ctx, ast_expr_t **out_expr){
 errorcode_t parse_expr_alignof(parse_ctx_t *ctx, ast_expr_t **out_expr){
     // alignof Type
 
+    source_t source = parse_ctx_peek_source(ctx);
+    *ctx->i += 1;
+
+    ast_type_t type;
+    if(parse_type(ctx, &type)) return FAILURE;
+
     ast_expr_alignof_t *alignof_expr = malloc(sizeof(ast_expr_alignof_t));
     alignof_expr->id = EXPR_ALIGNOF;
-    alignof_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
-
-    if(parse_type(ctx, &alignof_expr->type)){
-        free(alignof_expr);
-        return FAILURE;
-    }
-
+    alignof_expr->source = source;
+    alignof_expr->type = type;
     *out_expr = (ast_expr_t*) alignof_expr;
     return SUCCESS;
 }
 
 errorcode_t parse_expr_unary(parse_ctx_t *ctx, unsigned int expr_id, ast_expr_t **out_expr){
+    source_t source = parse_ctx_peek_source(ctx);
+    *ctx->i += 1;
+
+    ast_expr_t *value;
+    if(parse_primary_expr(ctx, &value)) return FAILURE;
+
     ast_expr_unary_t *unary_expr = malloc(sizeof(ast_expr_unary_t));
     unary_expr->id = expr_id;
-    unary_expr->source = ctx->tokenlist->sources[(*ctx->i)++];
-
-    if(parse_primary_expr(ctx, &unary_expr->value)){
-        free(unary_expr);
-        return FAILURE;
-    }
-
+    unary_expr->source = source;
+    unary_expr->value = value;
     *out_expr = (ast_expr_t*) unary_expr;
     return SUCCESS;
 }

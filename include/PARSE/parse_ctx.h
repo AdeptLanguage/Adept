@@ -144,6 +144,14 @@ maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error);
 // Prepends the current namespace to a strong cstring
 void parse_prepend_namespace(parse_ctx_t *ctx, strong_cstr_t *inout_name);
 
+// ------------------ parse_ctx_peek ------------------
+// Equivalent to: 'ctx->tokenlist->tokens[*ctx->i].id'
+tokenid_t parse_ctx_peek(parse_ctx_t *ctx);
+
+// ------------------ parse_ctx_peek_source ------------------
+// Equivalent to: 'ctx->tokenlist->sources[*ctx->i]'
+source_t parse_ctx_peek_source(parse_ctx_t *ctx);
+
 #ifdef __cplusplus
 }
 #endif

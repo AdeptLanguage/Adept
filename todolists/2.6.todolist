@@ -22,6 +22,10 @@ MEDIUM-PRIORITY:
 * built-in meta functions like supports()
 * constructor and @undef constructor
 * static asserts
+* compile-time evaluation
+* better error propagation mechanism
+* better enums
+* module system
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -82,3 +86,5 @@ v2.6 COMPLETED:
 + fixed arrays of size determined at compile time
 + variable sized fixed arrays inside of data structures
 + __assign__ auto-generation
++ no more "new update" false-positives for preview builds
++ optional parameter names for foreign functions

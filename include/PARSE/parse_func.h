@@ -30,9 +30,9 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func);
 // Parses a single argument that a function takes
 errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill, bool *out_is_solid);
 
-// ------------------ parse_func_default_arg_value ------------------
-// Parses the default value portion of a function argument
-errorcode_t parse_func_default_arg_value(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill);
+// ------------------ parse_func_default_arg_value_if_applicable ------------------
+// Parses the default value portion of a function argument if the current token at '*ctx->i' is an assign token
+errorcode_t parse_func_default_arg_value_if_applicable(parse_ctx_t *ctx, ast_func_t *func, length_t capacity, length_t *backfill);
 
 // ------------------ parse_func_backfill_arguments ------------------
 // Backfills arguments that weren't initially given a type / default value

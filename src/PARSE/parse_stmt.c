@@ -544,8 +544,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
             if(parse_meta(ctx)) return FAILURE;
             break;
         case TOKEN_EXHAUSTIVE:
-            if(ctx->tokenlist->tokens[++(*i)].id != TOKEN_SWITCH){
-                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected 'switch' keyword after 'exhaustive' keyword");
+            *i += 1;
+            if(parse_ctx_peek(ctx) != TOKEN_SWITCH){
+                compiler_panic(ctx->compiler, parse_ctx_peek_source(ctx), "Expected 'switch' keyword after 'exhaustive' keyword");
                 return FAILURE;
             }
             
@@ -555,7 +556,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
             if(parse_switch(ctx, stmt_list, defer_scope, false)) return FAILURE;
             break;
         case TOKEN_VA_START: case TOKEN_VA_END: {
-                tokenid_t tokenid = tokens[*i].id;
+                tokenid_t tokenid = parse_ctx_peek(ctx);
                 source = sources[(*i)++];
 
                 ast_expr_t *va_list_value;
@@ -950,7 +951,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
         return FAILURE;
     }
 
-    unsigned int token_id = ctx->tokenlist->tokens[*ctx->i].id;
+    unsigned int token_id = parse_ctx_peek(ctx);
     bool failed = false;
 
     defer_scope_init(&current_defer_scope, parent_defer_scope, NULL, FALLTHROUGHABLE);
@@ -958,11 +959,11 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
     while(token_id != TOKEN_END){
         if(token_id == TOKEN_CASE){
             ast_expr_t *condition;
-            source_t case_source = ctx->tokenlist->sources[*ctx->i];
+            source_t case_source = parse_ctx_peek_source(ctx);
             failed = failed || parse_eat(ctx, TOKEN_CASE, "Expected 'case' keyword for switch case") || parse_expr(ctx, &condition);
 
             // Skip over ',' if present
-            if(!failed && ctx->tokenlist->tokens[*ctx->i].id == TOKEN_NEXT) (*ctx->i)++;
+            if(!failed && parse_ctx_peek(ctx) == TOKEN_NEXT) (*ctx->i)++;
             failed = failed || parse_ignore_newlines(ctx, "Expected '}' before end of file");
 
             if(!failed){
@@ -1022,7 +1023,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
             return FAILURE;
         }
 
-        token_id = ctx->tokenlist->tokens[*ctx->i].id;
+        token_id = parse_ctx_peek(ctx);
     }
 
     // Skip over '}'
@@ -1277,7 +1278,7 @@ errorcode_t parse_ambiguous_open_bracket(parse_ctx_t *ctx, ast_expr_list_t *stmt
 
 errorcode_t parse_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     ast_expr_t *mutable_expr;
-    source_t source = ctx->tokenlist->sources[*ctx->i];
+    source_t source = parse_ctx_peek_source(ctx);
     if(parse_expr(ctx, &mutable_expr)) return FAILURE;
     return parse_mid_mutable_expr_operation(ctx, stmt_list, mutable_expr, source);
 }
@@ -1388,7 +1389,7 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     } else if(strcmp(maybe_dialect, "att") == 0){
         is_intel = TROOLEAN_FALSE;
     } else {
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected either intel or att for LLVM inline assembly dialect");
+        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Expected either intel or att for LLVM inline assembly dialect");
         return FAILURE;
     }
 
@@ -1403,7 +1404,7 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         } else if(strcmp(additional_info, "stack_align")){
             is_stack_align = true;
         } else {
-            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Unrecognized assembly trait '%s', valid traits are: 'side_effects', 'stack_align'", additional_info);
+            compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Unrecognized assembly trait '%s', valid traits are: 'side_effects', 'stack_align'", additional_info);
             return FAILURE;
         }
     }
@@ -1531,7 +1532,7 @@ errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *
 }
 
 errorcode_t parse_block_beginning(parse_ctx_t *ctx, weak_cstr_t block_readable_mother, unsigned int *out_stmts_mode){
-    switch(ctx->tokenlist->tokens[*ctx->i].id){
+    switch(parse_ctx_peek(ctx)){
     case TOKEN_BEGIN:
         *out_stmts_mode = PARSE_STMTS_STANDARD;
         (*ctx->i)++;

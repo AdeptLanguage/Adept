@@ -254,6 +254,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         }
         break;
     default:
+        compiler_panic(ctx->compiler, sources[start], "Expected type");
         goto failure;
     }
 

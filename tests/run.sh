@@ -75,6 +75,7 @@ compile fixed_array_pass || exit $?
 compile fixed_array_var_size || exit $?
 compile fixed_array_var_size_field || exit $?
 compile for || exit $?
+compile foreign_func_optional_names || exit $?
 compile foreign_in_namespace || exit $?
 compile func_aliases || exit $?
 compile func_aliases_va || exit $?

@@ -1,0 +1,20 @@
+
+// Examples of malformed foreign function declarations (where argument/types are ambiguous)
+#if false
+    foreign calloc(usize, num usize) ptr // Error - 'usize' is ambiguous, did you mean 'usize Type' or '_ usize'?
+    foreign atan2f(y, x float) float     // Error - 'y' is ambiguous, did you mean 'y Type' (as a parameter name) or '_ y' (as a type name)?
+#end
+
+foreign atan2(y double, x double) double
+foreign atan2f(float, float) float
+foreign printf(format *ubyte, ...) int
+foreign free(ptr) void
+foreign malloc(size usize) ptr
+
+func main {
+    x *int = malloc(sizeof int)
+    defer free(x)
+
+    *x = 123
+    printf('Hello World %f %f %d\n', atan2(1.0, 1.0), cast double atan2f(-1.0f, -1.0f), *x)
+}

@@ -214,19 +214,12 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
     for(length_t i = 0; i != functions_length; i++){
         ast_func_t *func = &functions[i];
         free(func->name);
- 
-        if(func->traits & AST_FUNC_FOREIGN){
-            for(length_t a = 0; a != func->arity; a++){
-                ast_type_free(&func->arg_types[a]);
-            }
-        } else {
-            for(length_t a = 0; a != func->arity; a++){
-                free(func->arg_names[a]);
-                ast_type_free(&func->arg_types[a]);
-            }
+
+        if(func->arg_names){
+            freestrs(func->arg_names, func->arity);
         }
 
-        free(func->arg_names);
+        ast_types_free(func->arg_types, func->arity);
         free(func->arg_types);
         free(func->arg_sources);
         free(func->arg_flows);
@@ -342,9 +335,9 @@ void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_le
         strong_cstr_t return_type_string = ast_type_str(&func->return_type);
 
         if(func->traits & AST_FUNC_FOREIGN){
-            fprintf(file, "foreign %s(%s) %s\n", func->name, arguments_string, return_type_string);
+            fprintf(file, "foreign %s(%s) %s\n", func->name, arguments_string ? arguments_string : "", return_type_string);
         } else {
-            fprintf(file, "func %s(%s) %s {\n", func->name, arguments_string, return_type_string);
+            fprintf(file, "func %s(%s) %s {\n", func->name, arguments_string ? arguments_string : "", return_type_string);
             if(func->statements != NULL) ast_dump_statements(file, func->statements, func->statements_length, 1);
             fprintf(file, "}\n");
         }
@@ -359,7 +352,7 @@ strong_cstr_t ast_func_args_str(ast_func_t *func){
     string_builder_init(&builder);
 
     for(length_t i = 0; i != func->arity; i++){
-        if(func->arg_names){
+        if(func->arg_names && func->arg_names[i]){
             string_builder_append(&builder, func->arg_names[i]);
             string_builder_append(&builder, " ");
         }
@@ -448,7 +441,13 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 char *variable_type_str = ast_type_str(&declare_stmt->type);
                 char *pod = declare_stmt->traits & AST_EXPR_DECLARATION_POD ? "POD " : "";
                 char *assign_pod = declare_stmt->traits & AST_EXPR_DECLARATION_ASSIGN_POD ? "POD " : "";
-                fprintf(file, (declare_stmt->value == NULL && !is_undef) ? "%s %s%s\n" : "%s %s%s = %s", declare_stmt->name, pod, assign_pod, variable_type_str);
+
+                if(declare_stmt->value == NULL && !is_undef){
+                    fprintf(file, "%s %s%s\n", declare_stmt->name, pod, variable_type_str);
+                } else {
+                    fprintf(file, "%s %s%s = %s", declare_stmt->name, pod, variable_type_str, assign_pod);
+                }
+
                 free(variable_type_str);
 
                 if(is_undef){

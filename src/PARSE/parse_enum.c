@@ -6,7 +6,7 @@
 errorcode_t parse_enum(parse_ctx_t *ctx){
     char **kinds = NULL;
     length_t length = 0;
-    source_t source = ctx->tokenlist->sources[*ctx->i];
+    source_t source = parse_ctx_peek_source(ctx);
 
     if(ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare enum within struct domain");

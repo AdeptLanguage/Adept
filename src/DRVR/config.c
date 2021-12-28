@@ -304,7 +304,11 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
                 return false;
             }
 
-            if(strcmp(stash_header.latest_compiler_version, ADEPT_VERSION_STRING) != 0 && config->show_new_compiler_available){
+            if(
+                strcmp(stash_header.latest_compiler_version, ADEPT_VERSION_STRING) != 0 &&
+                strcmp(stash_header.latest_compiler_version, ADEPT_PREVIOUS_STABLE_VERSION_STRING) != 0 &&
+                config->show_new_compiler_available
+            ){
                 blueprintf("\nNEWS: A newer version of Adept is available!\n");
                 printf("    (Visit https://github.com/AdeptLanguage/Adept for more information)\n\n");
                 return true;

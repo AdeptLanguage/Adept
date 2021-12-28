@@ -9,7 +9,7 @@
 #include "PARSE/parse_dependency.h"
 
 errorcode_t parse_meta(parse_ctx_t *ctx){
-    // NOTE: Assumes (ctx->tokenlist->tokens[*ctx->i].id == TOKEN_META)
+    // NOTE: Assumes (parse_ctx_peek(ctx) == TOKEN_META)
 
     length_t *i = ctx->i;
     tokenlist_t *tokenlist = ctx->tokenlist;
@@ -271,7 +271,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     case META_DIRECTIVE_IMPORT: {
             length_t old_i = (*i)++;
 
-            if(ctx->tokenlist->tokens[*i].id == TOKEN_LESSTHAN){
+            if(parse_ctx_peek(ctx) == TOKEN_LESSTHAN){
                 // Do special stuff for #import <library>
                 if(parse_meta_import_stdlib(ctx, ctx->tokenlist->sources[old_i])) return FAILURE;
                 return SUCCESS;

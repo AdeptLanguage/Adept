@@ -136,6 +136,8 @@ call :compile fixed_array_var_size_field
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile for
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile foreign_func_optional_names
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile foreign_in_namespace
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile func_aliases
