@@ -1,8 +1,11 @@
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/levenshtein.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "BRIDGE/bridge.h"
+#include "UTIL/ground.h"
+#include "UTIL/levenshtein.h"
 
 void bridge_scope_init(bridge_scope_t *out_scope, bridge_scope_t *parent){
     out_scope->parent = parent;

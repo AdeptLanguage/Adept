@@ -2,9 +2,12 @@
 #ifndef _ISAAC_FUNCPAIR_H
 #define _ISAAC_FUNCPAIR_H
 
+#include <stdbool.h>
+
 #include "AST/ast.h"
-#include "IR/ir.h"
 #include "DRVR/object.h"
+#include "IR/ir.h"
+#include "UTIL/ground.h"
 
 // ---------------- funcpair_t ----------------
 // A container for function results

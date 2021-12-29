@@ -1,8 +1,14 @@
 
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "LEX/lex.h"
 #include "LEX/token.h"
+#include "TOKEN/token_data.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
 
 void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
     // Prints detailed information contained in tokenlist

@@ -12,10 +12,11 @@ extern "C" {
     ---------------------------------------------------------------------------
 */
 
-#include "LEX/token.h"
-#include "UTIL/ground.h"
-#include "UTIL/datatypes.h"
+#include <stdbool.h>
+
 #include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "UTIL/ground.h"
 
 // ---------------- lex_state_t ----------------
 // Container for lexical analysis state

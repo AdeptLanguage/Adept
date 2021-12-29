@@ -1,6 +1,8 @@
 
 #include "UTIL/search.h"
 
+#include <string.h>
+
 maybe_index_t binary_string_search(const char * const strings[], length_t string_count, const char *target){
     // Searches for 'target' inside 'strings'
     // If not found returns -1 else returns index inside array

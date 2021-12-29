@@ -11,30 +11,32 @@ extern "C" {
 struct object;
 struct compiler;
 
-#define META_EXPR_UNDEF 0x00
-#define META_EXPR_NULL  0x01
-#define META_EXPR_TRUE  0x02
-#define META_EXPR_FALSE 0x03
-#define META_EXPR_AND   0x04
-#define META_EXPR_OR    0x05
-#define META_EXPR_XOR   0x06
-#define META_EXPR_STR   0x07
-#define META_EXPR_VAR   0x08
-#define META_EXPR_INT   0x09
-#define META_EXPR_FLOAT 0x0A
-#define META_EXPR_ADD   0x0B
-#define META_EXPR_SUB   0x0C
-#define META_EXPR_MUL   0x0D
-#define META_EXPR_DIV   0x0E
-#define META_EXPR_MOD   0x0F
-#define META_EXPR_POW   0x10
-#define META_EXPR_EQ    0x11
-#define META_EXPR_NEQ   0x12
-#define META_EXPR_GT    0x13
-#define META_EXPR_GTE   0x15
-#define META_EXPR_LT    0x16
-#define META_EXPR_LTE   0x17
-#define META_EXPR_NOT   0x18
+enum {
+    META_EXPR_UNDEF,
+    META_EXPR_NULL,
+    META_EXPR_TRUE,
+    META_EXPR_FALSE,
+    META_EXPR_AND,
+    META_EXPR_OR,
+    META_EXPR_XOR,
+    META_EXPR_STR,
+    META_EXPR_VAR,
+    META_EXPR_INT,
+    META_EXPR_FLOAT,
+    META_EXPR_ADD,
+    META_EXPR_SUB,
+    META_EXPR_MUL,
+    META_EXPR_DIV,
+    META_EXPR_MOD,
+    META_EXPR_POW,
+    META_EXPR_EQ,
+    META_EXPR_NEQ,
+    META_EXPR_GT,
+    META_EXPR_GTE,
+    META_EXPR_LT,
+    META_EXPR_LTE,
+    META_EXPR_NOT,
+};
 
 #define IS_META_EXPR_ID_COLLAPSED(m) ( \
     m == META_EXPR_UNDEF || m == META_EXPR_NULL || m == META_EXPR_TRUE || m == META_EXPR_FALSE || \

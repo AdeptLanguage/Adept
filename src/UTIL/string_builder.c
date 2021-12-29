@@ -1,6 +1,10 @@
 
-#include "UTIL/util.h"
+#include <stdlib.h>
+#include <string.h>
+
+#include "UTIL/ground.h"
 #include "UTIL/string_builder.h"
+#include "UTIL/util.h"
 
 void string_builder_init(string_builder_t *builder){
     builder->buffer = NULL;
@@ -10,6 +14,13 @@ void string_builder_init(string_builder_t *builder){
 
 strong_cstr_t string_builder_finalize(string_builder_t *builder){
     return builder->buffer;
+}
+
+strong_lenstr_t string_builder_finalize_with_length(string_builder_t *builder){
+    return (strong_lenstr_t){
+        .cstr = builder->buffer,
+        .length = builder->length,
+    };
 }
 
 void string_builder_abandon(string_builder_t *builder){

@@ -1,17 +1,31 @@
 
-#include "UTIL/util.h"
-#include "UTIL/search.h"
-#include "PARSE/parse.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_func.h"
 #include "PARSE/parse_stmt.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
+#include "UTIL/search.h"
+#include "UTIL/string.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 errorcode_t parse_func(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
-    source_t source = parse_ctx_peek_source(ctx);
     token_t *tokens = ctx->tokenlist->tokens;
+    source_t source = parse_ctx_peek_source(ctx);
 
     if(tokens[*ctx->i + 1].id == TOKEN_ALIAS && tokens[*ctx->i].id == TOKEN_FUNC){
         // Parse function alias instead of regular function
@@ -23,13 +37,10 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    strong_cstr_t name;
-    maybe_null_strong_cstr_t export_name; 
-    bool is_stdcall, is_foreign, is_verbatim, is_implicit;
-    
-    if(parse_func_head(ctx, &name, &is_stdcall, &is_foreign, &is_verbatim, &is_implicit, &export_name)) return FAILURE;
+    ast_func_head_t func_head;
+    if(parse_func_head(ctx, &func_head)) return FAILURE;
 
-    if(is_foreign && ctx->composite_association != NULL){
+    if(func_head.is_foreign && ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
         return FAILURE;
     }
@@ -38,8 +49,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     funcid_t ast_func_id = (funcid_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    bool is_entry = strcmp(name, ctx->compiler->entry_point) == 0;
-    ast_func_create_template(func, name, is_stdcall, is_foreign, is_verbatim, is_implicit, source, is_entry, export_name);
+    ast_func_create_template(func, &func_head);
 
     if(ctx->next_builtin_traits != TRAIT_NONE){
         func->traits |= ctx->next_builtin_traits;
@@ -51,7 +61,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     tokenid_t beginning_token_id = tokens[*ctx->i].id;
 
-    if(!is_foreign && (beginning_token_id == TOKEN_BEGIN || beginning_token_id == TOKEN_ASSIGN)){
+    if(!func_head.is_foreign && (beginning_token_id == TOKEN_BEGIN || beginning_token_id == TOKEN_ASSIGN)){
         ast_type_make_base(&func->return_type, strclone("void"));
     } else {
         if(parse_type(ctx, &func->return_type)){
@@ -221,7 +231,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     if(ast_func_is_polymorphic(func)){
         // Ensure this isn't a foreign function
-        if(is_foreign){
+        if(func_head.is_foreign){
             compiler_panic(ctx->compiler, source, "Cannot declare polymorphic foreign functions");
             return FAILURE;
         }
@@ -248,43 +258,54 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     return SUCCESS;
 }
 
-errorcode_t parse_func_head(parse_ctx_t *ctx, strong_cstr_t *out_name, bool *out_is_stdcall,
-        bool *out_is_foreign, bool *out_is_verbatim, bool *out_is_implicit, maybe_null_strong_cstr_t *out_export_name){
-    
-    bool is_external;
-    parse_func_prefixes(ctx, out_is_stdcall, out_is_verbatim, out_is_implicit, &is_external);
+errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
+    source_t source = parse_ctx_peek_source(ctx);
 
-    tokenid_t id = ctx->tokenlist->tokens[(*ctx->i)++].id;
-    *out_is_foreign = (id == TOKEN_FOREIGN);
+    ast_func_prefixes_t prefixes;
+    parse_func_prefixes(ctx, &prefixes);
 
-    if(*out_is_foreign || id == TOKEN_FUNC){
-        *out_export_name = parse_eat_string(ctx, NULL);
-        
-        if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
-            *out_name = ctx->prename;
-            ctx->prename = NULL;
-        } else if(*out_is_foreign){
-            *out_name = parse_take_word(ctx, "Expected function name after 'foreign' keyword");
-        } else {
-            *out_name = parse_take_word(ctx, "Expected function name after 'func' keyword");
-        }
+    tokenid_t id = parse_ctx_peek(ctx);
+    *ctx->i += 1;
 
-        if(*out_name == NULL) return FAILURE;
+    bool is_foreign = id == TOKEN_FOREIGN;
 
-        // Form export name if applicable
-        if(*out_export_name){
-            *out_export_name = strclone(*out_export_name);
-        } else if(is_external){
-            *out_export_name = strclone(*out_name);
-        }
-
-        // If not in struct association, then prepend current namespace
-        if(ctx->composite_association == NULL) parse_prepend_namespace(ctx, out_name);
-        return SUCCESS;
+    if(id != TOKEN_FUNC && !is_foreign){
+        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Expected 'func' or 'foreign' keyword after 'stdcall' keyword");
+        return FAILURE;
     }
 
-    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Expected 'func' or 'foreign' keyword after 'stdcall' keyword");
-    return FAILURE;
+    maybe_null_weak_cstr_t custom_export_name = parse_eat_string(ctx, NULL);
+    strong_cstr_t name;
+
+    if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+        name = ctx->prename;
+        ctx->prename = NULL;
+    } else {
+        const char *message_on_failure = is_foreign
+            ? "Expected function name after 'foreign' keyword"
+            : "Expected function name after 'func' keyword";
+        
+        name = parse_take_word(ctx, message_on_failure);
+    }
+
+    if(name == NULL) return FAILURE;
+    if(ctx->composite_association == NULL) parse_prepend_namespace(ctx, &name);
+
+
+    maybe_null_strong_cstr_t export_name = custom_export_name ? custom_export_name : (prefixes.is_external ? strclone(name) : NULL);
+
+    bool is_entry = strcmp(ctx->compiler->entry_point, name) == 0;
+
+    *out_head = (ast_func_head_t){
+        .name = name,
+        .source = source,
+        .is_foreign = is_foreign,
+        .is_entry = is_entry,
+        .prefixes = prefixes,
+        .export_name = export_name,
+    };
+
+    return SUCCESS;
 }
 
 errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
@@ -517,6 +538,7 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
     }
 
     // Argument name
+    // TODO: CLEANUP: Cleanup this messy code
     if(func->traits & AST_FUNC_FOREIGN){
         // If this is a foreign function, argument names are optional
 
@@ -683,10 +705,7 @@ void parse_func_backfill_arguments(ast_func_t *func, length_t *backfill){
 
 void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *capacity){
     if(*capacity == 0){
-        if(!(func->traits & AST_FUNC_FOREIGN)){
-            func->arg_names = malloc(sizeof(char*) * 4);
-        }
-
+        func->arg_names = (func->traits & AST_FUNC_FOREIGN) ? NULL : malloc(sizeof(char*) * 4);
         func->arg_types   = malloc(sizeof(ast_type_t) * 4);
         func->arg_sources = malloc(sizeof(source_t) * 4);
         func->arg_flows   = malloc(sizeof(char) * 4);
@@ -711,43 +730,20 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
         grow((void**) &func->arg_defaults, sizeof(ast_expr_t*), func->arity + backfill, *capacity);
 }
 
-void parse_func_prefixes(parse_ctx_t *ctx, bool *out_is_stdcall, bool *out_is_verbatim, bool *out_is_implicit, bool *out_is_external){
-    tokenid_t token_id = parse_ctx_peek(ctx);
+void parse_func_prefixes(parse_ctx_t *ctx, ast_func_prefixes_t *out_prefixes){
+    memset(out_prefixes, 0, sizeof(ast_func_prefixes_t));
 
-    *out_is_stdcall = false;
-    *out_is_verbatim = false;
-    *out_is_implicit = false;
-    *out_is_external = false;
-
-    // NOTE: Duplicates are allowed, maybe they shouldn't be or does it really matter?
     while(true){
-        switch(token_id){
-        case TOKEN_STDCALL:
-            *ctx->i += 1;
-            *out_is_stdcall = true;
-            token_id = parse_ctx_peek(ctx);
-            continue;
-        case TOKEN_VERBATIM:
-            *ctx->i += 1;
-            *out_is_verbatim = true;
-            token_id = parse_ctx_peek(ctx);
-            continue;
-        case TOKEN_IMPLICIT:
-            *ctx->i += 1;
-            *out_is_implicit = true;
-            token_id = parse_ctx_peek(ctx);
-            continue;
-        case TOKEN_EXTERNAL:
-            *ctx->i += 1;
-            *out_is_external = true;
-            token_id = parse_ctx_peek(ctx);
-            continue;
+        switch(parse_ctx_peek(ctx)){
+        case TOKEN_STDCALL:  out_prefixes->is_stdcall  = true; break;
+        case TOKEN_VERBATIM: out_prefixes->is_verbatim = true; break;
+        case TOKEN_IMPLICIT: out_prefixes->is_implicit = true; break;
+        case TOKEN_EXTERNAL: out_prefixes->is_external = true; break;
+        default: return;
         }
 
-        return;
+        *ctx->i += 1;
     }
-
-    return;
 }
 
 void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill){
@@ -895,7 +891,7 @@ failure:
 void parse_collapse_polycount_var_fixed_arrays(ast_type_t *types, length_t length){
     // Will collapse all [$#N] type elements to $#N
 
-    // TODO: Cleanup?
+    // TODO: CLEANUP: Cleanup?
     for(length_t type_index = 0; type_index != length; type_index++){
         ast_type_t *type = &types[type_index];
 

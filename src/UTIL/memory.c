@@ -1,13 +1,13 @@
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#ifdef TRACK_MEMORY_USAGE
+
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "UTIL/memory.h"
  
-#ifdef TRACK_MEMORY_USAGE
-
 #undef malloc
 #undef free
 

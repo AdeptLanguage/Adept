@@ -8,9 +8,12 @@
     ---------------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "AST/ast_type_lean.h"
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
-#include "AST/ast_type_lean.h"
 
 // ---------------- AST_LAYOUT_ENDPOINT_END_INDEX ----------------
 // Special number used to indicate that no more indices
@@ -114,8 +117,6 @@ typedef struct {
 // ---------------- ast_field_map_init ----------------
 // Constructs an empty AST field map
 void ast_field_map_init(ast_field_map_t *field_map);
-
-struct ast_layout_bone;
 
 // ---------------- ast_layout_skeleton_t ----------------
 // Represents a composite type layout, without any names attached

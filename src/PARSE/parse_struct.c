@@ -1,11 +1,27 @@
 
-#include "UTIL/util.h"
-#include "UTIL/search.h"
-#include "UTIL/builtin_type.h"
-#include "PARSE/parse.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
+#include "PARSE/parse_struct.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
-#include "PARSE/parse_struct.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/builtin_type.h"
+#include "UTIL/ground.h"
+#include "UTIL/search.h"
+#include "UTIL/string.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_t *ast = ctx->ast;
@@ -122,33 +138,33 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
             expand((void**) &generics, sizeof(strong_cstr_t), generics_length, &generics_capacity, 1, 4);
 
             if(parse_ignore_newlines(ctx, "Expected polymorphic generic type")){
-                freestrs(generics, generics_length);
+                free_string_list(generics, generics_length);
                 return FAILURE;
             }
 
             if(tokens[*i].id != TOKEN_POLYMORPH){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type");
-                freestrs(generics, generics_length);
+                free_string_list(generics, generics_length);
                 return FAILURE;
             }
 
-            generics[generics_length++] = tokens[*i].data;
-            tokens[(*i)++].data = NULL; // Take ownership
+            generics[generics_length++] = parse_ctx_peek_data_take(ctx);
+            *i += 1;
 
             if(parse_ignore_newlines(ctx, "Expected '>' or ',' after polymorphic generic type")){
-                freestrs(generics, generics_length);
+                free_string_list(generics, generics_length);
                 return FAILURE;
             }
 
             if(tokens[*i].id == TOKEN_NEXT){
                 if(tokens[++(*i)].id == TOKEN_GREATERTHAN){
                     compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type after ',' in generics list");
-                    freestrs(generics, generics_length);
+                    free_string_list(generics, generics_length);
                     return FAILURE;
                 }
             } else if(tokens[*i].id != TOKEN_GREATERTHAN){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after polymorphic generic type");
-                freestrs(generics, generics_length);
+                free_string_list(generics, generics_length);
                 return FAILURE;
             }
         }
@@ -163,7 +179,7 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
         *out_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
 
         if(*out_name == NULL){
-            freestrs(generics, generics_length);
+            free_string_list(generics, generics_length);
             return FAILURE;
         }
     }
@@ -426,7 +442,15 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
 
     funcid_t ast_func_id = (funcid_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone(name), false, false, false, false, source, false, strclone(name));
+
+    ast_func_create_template(func, &(ast_func_head_t){
+        .name = strclone(name),
+        .source = NULL_SOURCE,
+        .is_foreign = false,
+        .is_entry = false,
+        .prefixes = {0},
+        .export_name = NULL,
+    });
 
     if(func->traits != TRAIT_NONE){
         compiler_panicf(ctx->compiler, source, "Name of record type '%s' conflicts with special symbol", name);

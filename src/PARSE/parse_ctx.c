@@ -1,7 +1,16 @@
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 void parse_ctx_init(parse_ctx_t *ctx, compiler_t *compiler, object_t *object){
     ctx->compiler = compiler;
@@ -131,8 +140,8 @@ maybe_null_strong_cstr_t parse_take_word(parse_ctx_t *ctx, const char *error){
         return NULL;
     }
 
-    strong_cstr_t ownership = (char*) ctx->tokenlist->tokens[*ctx->i].data;
-    ctx->tokenlist->tokens[(*ctx->i)++].data = NULL;
+    strong_cstr_t ownership = (strong_cstr_t) parse_ctx_peek_data_take(ctx);
+    *ctx->i += 1;
     return ownership;
 }
 
@@ -142,13 +151,13 @@ maybe_null_strong_cstr_t parse_take_string(parse_ctx_t *ctx, const char *error){
     // be called from a newline token
 
     if(parse_ctx_peek(ctx) != TOKEN_STRING){
-        // ERROR: That token isn't a word
+        // ERROR: That token isn't a string
         if(error) compiler_panic(ctx->compiler, parse_ctx_peek_source(ctx), error);
         return NULL;
     }
 
-    strong_cstr_t ownership = (char*) ctx->tokenlist->tokens[*ctx->i].data;
-    ctx->tokenlist->tokens[(*ctx->i)++].data = NULL;
+    strong_cstr_t ownership = (char*) parse_ctx_peek_data_take(ctx);
+    *ctx->i += 1;
     return ownership;
 }
 
@@ -169,7 +178,7 @@ maybe_null_weak_cstr_t parse_grab_word(parse_ctx_t *ctx, const char *error){
         return NULL;
     }
 
-    return (char*) ctx->tokenlist->tokens[*ctx->i].data;
+    return (char*) parse_ctx_peek_data(ctx);
 }
 
 maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error){
@@ -208,4 +217,15 @@ tokenid_t parse_ctx_peek(parse_ctx_t *ctx){
 
 source_t parse_ctx_peek_source(parse_ctx_t *ctx){
     return ctx->tokenlist->sources[*ctx->i];
+}
+
+void *parse_ctx_peek_data(parse_ctx_t *ctx){
+    return ctx->tokenlist->tokens[*ctx->i].data;
+}
+
+void *parse_ctx_peek_data_take(parse_ctx_t *ctx){
+    token_t *token = &ctx->tokenlist->tokens[*ctx->i];
+    void *tmp = token->data;
+    token->data = NULL;
+    return tmp;
 }

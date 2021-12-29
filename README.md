@@ -568,6 +568,7 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
 
 # Differences from Adept 1.1
+
 - Updated and improved syntax
 - Simplified programming structure
 - Type Inference
@@ -576,4 +577,9 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 - Newer LLVM Backend
 - Written in C instead of C++
 - Better system to build the compiler
-    
+
+
+
+#### Thank you for sponsering Adept: ❤️
+
+- Fernando Dantas

@@ -1,9 +1,25 @@
 
-#include "PARSE/parse.h"
-#include "PARSE/parse_type.h"
-#include "PARSE/parse_util.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_struct.h"
+#include "PARSE/parse_type.h"
+#include "PARSE/parse_util.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 #include "UTIL/util.h"
 
 errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
@@ -79,8 +95,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         case TOKEN_POLYCOUNT: {
                 ast_elem_polycount_t *polycount = malloc(sizeof(ast_elem_polycount_t));
                 polycount->id = AST_ELEM_POLYCOUNT;
-                polycount->name = tokens[*i].data;
-                tokens[*i].data = NULL;
+                polycount->name = parse_ctx_peek_data_take(ctx);
                 polycount->source = sources[*i];
 
                 out_type->elements[out_type->elements_length] = (ast_elem_t*) polycount;
@@ -97,9 +112,9 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
     case TOKEN_WORD: {
             ast_elem_base_t *base_elem = malloc(sizeof(ast_elem_base_t));
             base_elem->id = AST_ELEM_BASE;
-            base_elem->base = tokens[*i].data;
+            base_elem->base = parse_ctx_peek_data_take(ctx);
             base_elem->source = sources[*i];
-            tokens[(*i)++].data = NULL; // Take ownership
+            *i += 1;
             
             out_type->elements[out_type->elements_length] = (ast_elem_t*) base_elem;
         }
@@ -146,10 +161,9 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
         }
         break;
     case TOKEN_POLYMORPH: {
-            strong_cstr_t name = tokens[*i].data;
-            source_t source = sources[*i];
+            strong_cstr_t name = parse_ctx_peek_data_take(ctx);
+            source_t source = sources[(*i)++];
             bool allow_auto_conversion = false;
-            tokens[(*i)++].data = NULL; // Take ownership
 
             // If polymorph tokens starts with tilde, then we allow auto conversion
             if(name[0] == '~'){

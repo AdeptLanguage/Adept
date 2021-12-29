@@ -12,10 +12,11 @@ extern "C" {
     ---------------------------------------------------------------------------
 */
 
+#include <stdio.h>
+
+#include "DRVR/object.h"
 #include "LEX/token.h"
 #include "UTIL/ground.h"
-#include "DRVR/object.h"
-#include "DRVR/compiler.h"
 
 // ---------------- pkg_version_t ----------------
 // Container for package version information

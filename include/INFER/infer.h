@@ -9,10 +9,17 @@
     ----------------------------------------------------------------------------
 */
 
-#include "UTIL/ground.h"
-#include "DRVR/object.h"
-#include "DRVR/compiler.h"
+#include <stdbool.h>
+
+#include "AST/ast.h"
+#include "AST/ast_constant.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type_lean.h"
 #include "BRIDGE/type_table.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "UTIL/ground.h"
 
 // ---------------- infer_var_t ----------------
 // Variable mapping used for inference stage

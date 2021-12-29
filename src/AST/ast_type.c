@@ -1,10 +1,21 @@
 
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
 #include "AST/ast_type.h"
-#include "UTIL/util.h"
-#include "UTIL/hash.h"
+#include "AST/ast_type_lean.h"
 #include "UTIL/color.h"
+#include "UTIL/ground.h"
+#include "UTIL/hash.h"
+#include "UTIL/string.h"
 #include "UTIL/string_builder.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 ast_elem_t *ast_elem_clone(const ast_elem_t *element){
     ast_elem_t *new_element = NULL;

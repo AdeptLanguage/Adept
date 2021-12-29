@@ -1,8 +1,16 @@
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "IR/ir_lowering.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_type_spec.h"
+#include "IR/ir_value.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
-#include "IR/ir_lowering.h"
-#include "IR/ir_type_spec.h"
+#include "UTIL/ground.h"
 
 errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
     unsigned int value_type = (*inout_value)->value_type;

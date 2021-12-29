@@ -1,12 +1,26 @@
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/search.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/meta_directives.h"
+#include "DRVR/compiler.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
+#include "PARSE/parse_dependency.h"
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_meta.h"
-#include "PARSE/parse_util.h"
 #include "PARSE/parse_pragma.h"
-#include "PARSE/parse_dependency.h"
+#include "PARSE/parse_util.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/color.h"
+#include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
+#include "UTIL/search.h"
+#include "UTIL/string.h"
+#include "UTIL/util.h"
 
 errorcode_t parse_meta(parse_ctx_t *ctx){
     // NOTE: Assumes (parse_ctx_peek(ctx) == TOKEN_META)

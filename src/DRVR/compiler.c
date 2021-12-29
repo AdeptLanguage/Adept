@@ -4,6 +4,7 @@
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <mach-o/dyld.h>
+#include <unistd.h>
 #endif
 
 #ifdef __linux__
@@ -12,24 +13,42 @@
 #endif
 
 #include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
+#include "AST/UTIL/string_builder_extensions.h"
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "DRVR/config.h"
+#include "DRVR/object.h"
 #include "LEX/lex.h"
 #include "LEX/pkg.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "AST/ast_type.h"
-#include "UTIL/filename.h"
-#include "DRVR/compiler.h"
+#include "LEX/token.h"
 #include "PARSE/parse.h"
+#include "UTIL/color.h"
+#include "UTIL/filename.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/string_builder.h"
+#include "UTIL/tmpbuf.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
-#include "IR/ir.h"
-#include "DRVR/repl.h"
+#include "BKEND/backend.h"
 #include "DRVR/debug.h"
+#include "DRVR/repl.h"
 #include "INFER/infer.h"
+#include "IR/ir.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_find.h"
-#include "BKEND/backend.h"
 #endif
 
 #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
@@ -254,7 +273,7 @@ void compiler_free(compiler_t *compiler){
     free(compiler->root);
     free(compiler->output_filename);
     free(compiler->user_linker_options);
-    freestrs(compiler->user_search_paths, compiler->user_search_paths_length);
+    free_string_list(compiler->user_search_paths, compiler->user_search_paths_length);
 
     compiler_free_objects(compiler);
     compiler_free_error(compiler);
@@ -1344,53 +1363,29 @@ void print_candidate(ast_func_t *ast_func){
 }
 
 strong_cstr_t make_args_string(ast_type_t *types, ast_expr_t **defaults, length_t arity, trait_t traits){
-    char *args_string = NULL;
-    length_t args_string_length = 0;
-    length_t args_string_capacity = 0;
+    string_builder_t builder;
+    string_builder_init(&builder);
 
     for(length_t i = 0; i != arity; i++){
-        char *type_string = ast_type_str(&types[i]);
-        length_t type_string_length = strlen(type_string);
-
-        expand((void**) &args_string, sizeof(char), args_string_length, &args_string_capacity, type_string_length + 3, 256);
-        memcpy(&args_string[args_string_length], type_string, type_string_length);
-        args_string_length += type_string_length;
+        string_builder_append_type(&builder, &types[i]);
 
         if(defaults && defaults[i]){
-            char *expr_string = ast_expr_str(defaults[i]);
-            length_t expr_string_length = strlen(expr_string);
-
-            expand((void**) &args_string, sizeof(char), args_string_length, &args_string_capacity, expr_string_length + 3, 256);
-
-            memcpy(&args_string[args_string_length], " = ", 3);
-            args_string_length += 3;
-            
-            memcpy(&args_string[args_string_length], expr_string, expr_string_length);
-            args_string_length += expr_string_length;
-            free(expr_string);
+            string_builder_append(&builder, " = ");
+            string_builder_append_expr(&builder, defaults[i]);
         }
 
-        if(i + 1 != arity || traits & AST_FUNC_VARARG || traits & AST_FUNC_VARIADIC){
-            memcpy(&args_string[args_string_length], ", ", 2);
-            args_string_length += 2;
+        if(i + 1 != arity || traits & (AST_FUNC_VARARG | AST_FUNC_VARIADIC)){
+            string_builder_append(&builder, ", ");
         }
-
-        args_string[args_string_length] = '\0';
-        free(type_string);
     }
 
     if(traits & AST_FUNC_VARARG){
-        expand((void**) &args_string, sizeof(char), args_string_length, &args_string_capacity, 4, 256);
-        memcpy(&args_string[args_string_length],  "...", 4);
-        args_string_length += 3;
+        string_builder_append(&builder, "...");
     } else if(traits & AST_FUNC_VARIADIC){
-        expand((void**) &args_string, sizeof(char), args_string_length, &args_string_capacity, 3, 256);
-        memcpy(&args_string[args_string_length], "..", 3);
-        args_string_length += 2;
+        string_builder_append(&builder, "..");
     }
-    
-    if(args_string == NULL) args_string = strclone("");
-    return args_string;
+
+    return strong_cstr_empty_if_null(string_builder_finalize(&builder));
 }
 
 void object_panic_plain(object_t *object, const char *message){

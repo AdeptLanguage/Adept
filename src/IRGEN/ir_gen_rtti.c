@@ -1,11 +1,25 @@
 
-#include "IR/ir.h"
-#include "IR/ir_type.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "AST/ast.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 #include "BRIDGE/any.h"
+#include "BRIDGE/type_table.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen_rtti.h"
 #include "IRGEN/ir_gen_type.h"
+#include "UTIL/builtin_type.h" // IWYU pragma: keep
+#include "UTIL/color.h"
+#include "UTIL/ground.h"
 
 errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t *ir_global){
     

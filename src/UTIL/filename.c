@@ -15,11 +15,15 @@
 #include <linux/limits.h>
 #endif
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/ground.h"
-#include "UTIL/filename.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "DRVR/compiler.h"
+#include "UTIL/color.h"
+#include "UTIL/filename.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
 
 strong_cstr_t filename_name(const char *filename){
     length_t i;

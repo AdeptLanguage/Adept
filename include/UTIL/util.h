@@ -41,43 +41,12 @@ void grow_impl(void **inout_memory, length_t unit_size, length_t new_length);
 void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, length_t new_length);
 #endif
 
-// ---------------- strclone ----------------
-// Clones a string, producing a duplicate
-strong_cstr_t strclone(const char *src);
-
-// ---------------- strsclone ----------------
-// Clones a strong string list
-strong_cstr_t *strsclone(strong_cstr_t *list, length_t length);
-
-// ---------------- freestrs ----------------
-// Frees every string in an array, and then the array
-void freestrs(strong_cstr_t *array, length_t length);
-
 // ---------------- mallocandsprintf ----------------
 // NOTE: Only supports using '%s', '%d', and '%%'
 // Allocates enough memory to hold the result
 // of a sprintf() and then runs sprintf() and
 // returns the newly-allocated null-termianted string
 strong_cstr_t mallocandsprintf(const char *format, ...);
-
-// ---------------- string_to_escaped_string ----------------
-// Escapes the contents of a modern string so that
-// special characters such as \n are transfromed into \\n
-// and surrounds the string with double quotes
-// NOTE: 'escaped_quote' may be 0x00 to signify no surrounding quote character
-strong_cstr_t string_to_escaped_string(char *array, length_t length, char escaped_quote);
-
-// ---------------- string_needs_escaping ----------------
-// (insight API only)
-// Returns whether a string contains characters that need escaping
-#ifdef ADEPT_INSIGHT_BUILD
-bool string_needs_escaping(weak_cstr_t string, char escaped_quote);
-#endif // ADEPT_INSIGHT_BUILD
-
-// ---------------- string_count_character ----------------
-// Returns the number of occurrences of 'character' in modern
-// string 'string' of 'length'
-length_t string_count_character(weak_cstr_t string, length_t length, char character);
 
 // ---------------- find_insert_position ----------------
 // Finds the position to insert an object into an object list

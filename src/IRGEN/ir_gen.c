@@ -1,19 +1,40 @@
 
-#include "LEX/lex.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/ground.h"
-#include "UTIL/search.h"
-#include "UTIL/filename.h"
-#include "UTIL/builtin_type.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/UTIL/string_builder_extensions.h"
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 #include "BRIDGE/any.h"
+#include "BRIDGE/bridge.h"
+#include "BRIDGE/funcpair.h"
 #include "BRIDGE/rtti.h"
+#include "BRIDGE/type_table.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
+#include "IRGEN/ir_gen_rtti.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
-#include "IRGEN/ir_gen_rtti.h"
+#include "LEX/lex.h"
+#include "UTIL/builtin_type.h"
+#include "UTIL/color.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/string_builder.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
@@ -190,7 +211,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
             case AST_ELEM_BASE: {
                     // Check that the base isn't a primitive
                     char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
-                    if(typename_is_entended_builtin_type(base)){
+                    if(typename_is_extended_builtin_type(base)){
                         compiler_panicf(compiler, this_type->source, "Type of 'this' parameter must be a pointer to a struct (%s is a primitive)", base);
                         return FAILURE;
                     }
@@ -636,65 +657,29 @@ errorcode_t ir_gen_fill_in_rtti(object_t *object){
 }
 
 weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
-    length_t length = 0;
-    length_t capacity = 96;
-    strong_cstr_t string = malloc(capacity);
+    string_builder_t builder;
+    string_builder_init(&builder);
 
-    // TODO: CLEANUP: Clean up this messy code
-    // TODO: CLEANUP: Factor out a lot of this garbage
+    string_builder_append(&builder, ast_func->name);
+    string_builder_append(&builder, "(");
 
-    {
-        // Append function name
-        length_t name_length = strlen(ast_func->name);
-        expand((void**) &string, sizeof(char), length, &capacity, name_length, capacity);
-        memcpy(&string[length], ast_func->name, name_length);
-        length += name_length;
-    }
-
-    // Append '('
-    expand((void**) &string, sizeof(char), length, &capacity, 1, capacity);
-    string[length++] = '(';
-
-    // Append argument list
     for(length_t i = 0; i != ast_func->arity; i++){
-        char *type_str = ast_type_str(&ast_func->arg_types[i]);
-        length_t type_str_len = strlen(type_str);
-        expand((void**) &string, sizeof(char), length, &capacity, type_str_len, capacity);
-        memcpy(&string[length], type_str, type_str_len);
-        length += type_str_len;
-        free(type_str);
+        string_builder_append_type(&builder, &ast_func->arg_types[i]);
 
         if(i + 1 != ast_func->arity){
-            expand((void**) &string, sizeof(char), length, &capacity, 2, capacity);
-            string[length++] = ',';
-            string[length++] = ' ';
+            string_builder_append(&builder, ", ");
         }
     }
+    
+    string_builder_append(&builder, ") ");
+    string_builder_append_type(&builder, &ast_func->return_type);
 
-    // Append '( '
-    expand((void**) &string, sizeof(char), length, &capacity, 2, capacity);
-    string[length++] = ')';
-    string[length++] = ' ';
+    strong_lenstr_t finalized = string_builder_finalize_with_length(&builder);
+    weak_cstr_t result = ir_pool_alloc(pool, finalized.length + 1);
+    memcpy(result, finalized.cstr, finalized.length + 1);
+    free(finalized.cstr);
 
-    {
-        // Append return type
-        char *type_str = ast_type_str(&ast_func->return_type);
-        length_t type_str_len = strlen(type_str);
-        expand((void**) &string, sizeof(char), length, &capacity, type_str_len, capacity);
-        memcpy(&string[length], type_str, type_str_len);
-        length += type_str_len;
-        free(type_str);
-    }
-
-    // Terminate string
-    expand((void**) &string, sizeof(char), length, &capacity, 1, capacity);
-    string[length++] = '\0';
-
-    // Trade heap allocated string for IR memory pooled string
-    char *destination = ir_pool_alloc(pool, length);
-    memcpy(destination, string, length);
-    free(string);
-    return destination;
+    return result;
 }
 
 errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, funcpair_t pair, ast_type_t *ast_types, ir_value_t **ir_values, source_t source, length_t variadic_length){

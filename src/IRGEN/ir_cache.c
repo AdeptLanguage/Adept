@@ -1,7 +1,14 @@
 
-#include "UTIL/hash.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 #include "IRGEN/ir_cache.h"
+#include "UTIL/ground.h"
+#include "UTIL/hash.h"
 
 void ir_gen_sf_cache_init(ir_gen_sf_cache_t *cache){
     cache->capacity = IR_GEN_SF_CACHE_SIZE;

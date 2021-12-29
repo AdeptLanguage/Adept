@@ -1,6 +1,18 @@
 
-#include "UTIL/color.h"
+#include <stddef.h>
+
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 #include "BRIDGE/rtti.h"
+#include "BRIDGE/type_table.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
+#include "UTIL/color.h"
+#include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
 
 ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t source_on_failure){
     // NOTE: Returns NULL on failure

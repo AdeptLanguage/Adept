@@ -1,10 +1,13 @@
 
+#include "BKEND/backend.h"
+
+#include "BKEND/backend_llvm.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
-#include "BKEND/backend.h"
-#include "BKEND/backend_llvm.h"
 
-errorcode_t ir_export(compiler_t *compiler, object_t *object, unsigned int backend){
+errorcode_t ir_export(compiler_t *compiler, object_t *object, enum ir_export_backend backend){
     switch(backend){
     case BACKEND_NONE:
         internalerrorprintf("No backend specified\n");

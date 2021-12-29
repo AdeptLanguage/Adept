@@ -8,15 +8,19 @@
     ----------------------------------------------------------------------------
 */
 
-#include "AST/ast.h"
-#include "UTIL/trait.h"
-#include "UTIL/ground.h"
-#include "UTIL/datatypes.h"
+#include <stdbool.h>
+#include <stdio.h>
+
+#include "AST/ast_type_lean.h"
 #include "BRIDGE/bridge.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
 #include "IRGEN/ir_cache.h"
+#include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 // =============================================================
 // ---------------- Possible IR instruction IDs ----------------
@@ -547,8 +551,6 @@ typedef struct {
 typedef struct {
     ir_type_t *type;
 } ir_static_variable_t;
-
-struct ir_builder;
 
 // ---------------- ir_module_t ----------------
 // An intermediate representation module

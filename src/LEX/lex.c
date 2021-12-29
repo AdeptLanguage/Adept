@@ -1,10 +1,17 @@
 
 #include "LEX/lex.h"
-#include "LEX/pkg.h"
-#include "UTIL/util.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "LEX/token.h"
+#include "TOKEN/token_data.h"
 #include "UTIL/color.h"
-#include "UTIL/search.h"
+#include "UTIL/datatypes.h"
 #include "UTIL/filename.h"
+#include "UTIL/search.h"
+#include "UTIL/string.h"
+#include "UTIL/util.h"
 
 errorcode_t lex(compiler_t *compiler, object_t *object){
     if(!file_text_contents(object->filename, &object->buffer, &object->buffer_length, true)){

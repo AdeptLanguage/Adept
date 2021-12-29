@@ -1,9 +1,22 @@
 
-#include "UTIL/util.h"
-#include "PARSE/parse.h"
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "AST/ast.h"
+#include "AST/ast_constant.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_expr.h"
-#include "PARSE/parse_type.h"
 #include "PARSE/parse_global.h"
+#include "PARSE/parse_type.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 errorcode_t parse_global(parse_ctx_t *ctx){
     length_t *i = ctx->i;

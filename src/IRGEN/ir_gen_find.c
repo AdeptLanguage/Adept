@@ -1,10 +1,28 @@
 
-#include "UTIL/color.h"
-#include "UTIL/search.h"
-#include "UTIL/builtin_type.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "BRIDGE/funcpair.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_cache.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
-#include "IRGEN/ir_builder.h"
+#include "UTIL/builtin_type.h"
+#include "UTIL/color.h"
+#include "UTIL/ground.h"
+#include "UTIL/search.h"
+#include "UTIL/trait.h"
 
 errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
         ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, optional_funcpair_t *result){
@@ -1027,10 +1045,7 @@ errorcode_t func_args_polymorphable_no_conform(compiler_t *compiler, object_t *o
     ast_poly_catalog_t catalog;
     ast_poly_catalog_init(&catalog);
 
-    // Number of polymorphic paramater types that have been processed (used for cleanup)
-    length_t i;
-
-    for(i = 0; i != type_list_length; i++){
+    for(length_t i = 0; i != type_list_length; i++){
         if(ast_type_has_polymorph(&poly_template->arg_types[i]))
             res = arg_type_polymorphable(compiler, object, &poly_template->arg_types[i], &arg_types[i], &catalog);
         else
@@ -1096,7 +1111,7 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
                 }
                 break;
             case 3: // __primitive__
-                meets_special_prereq = concrete_type->elements[i]->id == AST_ELEM_BASE && typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
+                meets_special_prereq = concrete_type->elements[i]->id == AST_ELEM_BASE && typename_is_extended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
                 break;
             case 4: { // __signed__
                     if(concrete_type->elements[i]->id != AST_ELEM_BASE) break;
@@ -1109,7 +1124,7 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
                 }
                 break;
             case 5: // __struct__
-                meets_special_prereq = concrete_type->elements[i]->id != AST_ELEM_BASE || !typename_is_entended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
+                meets_special_prereq = concrete_type->elements[i]->id != AST_ELEM_BASE || !typename_is_extended_builtin_type(((ast_elem_base_t*) concrete_type->elements[i])->base);
                 break;
             case 6: { // __unsigned__
                     if(concrete_type->elements[i]->id != AST_ELEM_BASE) break;

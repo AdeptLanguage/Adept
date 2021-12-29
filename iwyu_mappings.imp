@@ -1,0 +1,3 @@
+[
+    { include: ["<_ctype.h>", "private", "<ctype.h>", "public"] }
+]

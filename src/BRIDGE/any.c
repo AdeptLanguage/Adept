@@ -1,7 +1,14 @@
 
-#include "UTIL/util.h"
-#include "BRIDGE/any.h"
+#include <stdlib.h>
+
+#include "AST/ast.h"
+#include "AST/ast_layout.h"
 #include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "BRIDGE/any.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/trait.h"
 
 const char *any_type_kind_names[] = {
     "void", "bool", "byte", "ubyte", "short", "ushort", "int", "uint",

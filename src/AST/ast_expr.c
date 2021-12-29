@@ -1,10 +1,22 @@
 
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
+#include "AST/ast_constant.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "UTIL/util.h"
+#include "AST/ast_type_lean.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/string_builder.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 bool expr_is_mutable(ast_expr_t *expr){
     switch(expr->id){
@@ -175,7 +187,7 @@ static strong_cstr_t ast_expr_values_to_str(ast_expr_t **arg_values, length_t ar
 
     result[put_index] = '\0';
 
-    freestrs(args, arity);
+    free_string_list(args, arity);
     free(arg_lengths);
     return result;
 }
@@ -470,30 +482,20 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             return representation;
         }
     case EXPR_INITLIST: {
-            char *compound = NULL;
-            length_t compound_length = 0;
-            length_t compound_capacity = 0;
+            string_builder_t builder;
+            string_builder_init(&builder);
+            string_builder_append(&builder, "{");
 
             for(length_t i = 0; i != ((ast_expr_initlist_t*) expr)->length; i++){
-                char *s = ast_expr_str(((ast_expr_initlist_t*) expr)->elements[i]);
-                length_t s_length = strlen(s);
-
                 if(i != 0){
-                    expand((void**) &compound, sizeof(char), compound_length, &compound_capacity, 3, 256);
-                    memcpy(&compound[compound_length], ", ", 3);
-                    compound_length += 2;
+                    string_builder_append(&builder, ", ");
                 }
 
-                expand((void**) &compound, sizeof(char), compound_length, &compound_capacity, s_length + 1, 256);
-                memcpy(&compound[compound_length], s, s_length + 1);
-                compound_length += s_length;
-
-                free(s);
+                string_builder_append_expr(&builder, ((ast_expr_initlist_t*) expr)->elements[i]);
             }
 
-            representation = mallocandsprintf("{%s}", compound ? compound : "");
-            free(compound);
-            return representation;
+            string_builder_append(&builder, "}");
+            return string_builder_finalize(&builder);
         }
     case EXPR_POLYCOUNT:
         return mallocandsprintf("$#%s", ((ast_expr_polycount_t*) expr)->name);
@@ -607,6 +609,8 @@ void ast_expr_free(ast_expr_t *expr){
         ast_type_free( &((ast_expr_phantom_t*) expr)->type );
         break;
     case EXPR_CALL_METHOD:
+        free(((ast_expr_call_method_t*) expr)->name);
+
         ast_expr_free_fully( ((ast_expr_call_method_t*) expr)->value );
         ast_exprs_free_fully(((ast_expr_call_method_t*) expr)->args, ((ast_expr_call_method_t*) expr)->arity);
 
@@ -1500,10 +1504,11 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
     out_expr->is_tentative = is_tentative;
     out_expr->source = source;
 
-    if(gives && gives->elements_length != 0)
+    if(gives && gives->elements_length != 0){
         out_expr->gives = *gives;
-    else
+    } else {
         memset(&out_expr->gives, 0, sizeof(ast_type_t));
+    }
     
     out_expr->only_implicit = false;
     out_expr->no_user_casts = false;
@@ -1526,10 +1531,11 @@ void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, stro
     out_expr->allow_drop = allow_drop;
     out_expr->source = source;
 
-    if(gives && gives->elements_length != 0)
+    if(gives && gives->elements_length != 0){
         out_expr->gives = *gives;
-    else
+    } else {
         memset(&out_expr->gives, 0, sizeof(ast_type_t));
+    }
 }
 
 void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cstr_t kind, source_t source){

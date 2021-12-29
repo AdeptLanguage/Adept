@@ -152,6 +152,18 @@ tokenid_t parse_ctx_peek(parse_ctx_t *ctx);
 // Equivalent to: 'ctx->tokenlist->sources[*ctx->i]'
 source_t parse_ctx_peek_source(parse_ctx_t *ctx);
 
+// ------------------ parse_ctx_peek_data ------------------
+// Equivalent to: 'ctx->tokenlist->tokens[*ctx->i].data'
+void *parse_ctx_peek_data(parse_ctx_t *ctx);
+
+// ------------------ parse_ctx_peek_data_take ------------------
+// Equivalent to: {
+//     void *tmp = ctx->tokenlist->tokens[*ctx->i].data;
+//     ctx->tokenlist->tokens[*ctx->i].data = NULL;
+//     tmp
+// }
+void *parse_ctx_peek_data_take(parse_ctx_t *ctx);
+
 #ifdef __cplusplus
 }
 #endif

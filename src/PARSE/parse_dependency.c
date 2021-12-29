@@ -1,7 +1,20 @@
 
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/token.h"
 #include "PARSE/parse.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_dependency.h"
+#include "TOKEN/token_data.h"
 #include "UTIL/filename.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
 #include "UTIL/util.h"
 
 errorcode_t parse_import(parse_ctx_t *ctx){
@@ -98,6 +111,7 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
+    // TODO: CLEANUP: This code isn't very straight forward
     if(tokens[*i + 1].id == TOKEN_WORD){
         const char *data = tokens[*i + 1].data;
 
@@ -115,10 +129,10 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
             compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i + 1], "Unrecognized foreign library type '%s'", data);
         }
 
-        (*ctx->i)++;
+        *i += 1;
     }
 
-    // NOTE: 'library' become as strong_cstr_t
+    // NOTE: 'library' becomes a strong_cstr_t
     if(kind == LIBRARY_KIND_NONE) library = filename_local(ctx->object->filename, library);
     ast_add_foreign_library(ctx->ast, library, kind);
     return SUCCESS;

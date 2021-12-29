@@ -1,8 +1,14 @@
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
 #include "BRIDGE/type_table.h"
+#include "UTIL/color.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
 
 void type_table_init(type_table_t *table){
     table->entries = NULL;

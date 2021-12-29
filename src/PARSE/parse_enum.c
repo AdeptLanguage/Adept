@@ -1,7 +1,15 @@
 
-#include "UTIL/util.h"
+#include <stdlib.h>
+
+#include "AST/ast.h"
+#include "DRVR/compiler.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_enum.h"
 #include "PARSE/parse_util.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
+#include "UTIL/util.h"
 
 errorcode_t parse_enum(parse_ctx_t *ctx){
     char **kinds = NULL;

@@ -1,6 +1,9 @@
 
 #include "IR/ir_pool.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 void ir_pool_init(ir_pool_t *pool){
     pool->fragments = malloc(sizeof(ir_pool_fragment_t) * 4);
     pool->fragments_length = 1;

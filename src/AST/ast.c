@@ -1,10 +1,16 @@
 
 #include "AST/ast.h"
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/ast_type.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/string_builder.h"
 #include "DRVR/compiler.h"
+#include "UTIL/color.h"
+#include "UTIL/string.h"
+#include "UTIL/string_builder.h"
+#include "UTIL/util.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -205,7 +211,7 @@ void ast_free(ast_t *ast){
         ast_polymorphic_composite_t *poly_composite = &ast->polymorphic_composites[i];
 
         ast_free_composites((ast_composite_t*) poly_composite, 1);
-        freestrs(poly_composite->generics, poly_composite->generics_length);
+        free_string_list(poly_composite->generics, poly_composite->generics_length);
     }
     free(ast->polymorphic_composites);
 }
@@ -216,7 +222,7 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
         free(func->name);
 
         if(func->arg_names){
-            freestrs(func->arg_names, func->arity);
+            free_string_list(func->arg_names, func->arity);
         }
 
         ast_types_free(func->arg_types, func->arity);
@@ -315,7 +321,7 @@ void ast_dump(ast_t *ast, const char *filename){
     for(i = 0; i != ast->aliases_length; i++){
         ast_alias_t *alias = &ast->aliases[i];
 
-        char *s = ast_type_str(&alias->type);
+        strong_cstr_t s = ast_type_str(&alias->type);
         fprintf(file, "alias %s = %s\n", alias->name, s);
         free(s);
     }
@@ -765,7 +771,7 @@ void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, a
                 char *field_name = ast_field_map_get_name_of_endpoint(field_map, endpoint);
                 assert(field_name);
 
-                char *s = ast_type_str(&bone->type);
+                strong_cstr_t s = ast_type_str(&bone->type);
                 fprintf(file, "%s %s", field_name, s);
                 free(s);
             }
@@ -838,10 +844,8 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length){
     }
 }
 
-void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdcall, bool is_foreign, bool is_verbatim,
-        bool is_implicit, source_t source, bool is_entry, maybe_null_strong_cstr_t export_as){
-    
-    func->name = name;
+void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
+    func->name = options->name;
     func->arg_names = NULL;
     func->arg_types = NULL;
     func->arg_sources = NULL;
@@ -852,29 +856,31 @@ void ast_func_create_template(ast_func_t *func, strong_cstr_t name, bool is_stdc
     func->return_type.elements = NULL;
     func->return_type.elements_length = 0;
     func->return_type.source = NULL_SOURCE;
-    func->return_type.source.object_index = source.object_index;
+    func->return_type.source.object_index = options->source.object_index;
     func->traits = TRAIT_NONE;
     func->variadic_arg_name = NULL;
     func->variadic_source = NULL_SOURCE;
     func->statements = NULL;
     func->statements_length = 0;
     func->statements_capacity = 0;
-    func->source = source;
-    func->export_as = export_as;
+    func->source = options->source;
+    func->export_as = options->export_name;
 
     #if ADEPT_INSIGHT_BUILD
     func->end_source = source;
     #endif
 
-    if(is_entry)                       func->traits |= AST_FUNC_MAIN;
-    if(strcmp(name, "__defer__") == 0) func->traits |= AST_FUNC_DEFER | (is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
-    if(strcmp(name, "__pass__") == 0)  func->traits |= AST_FUNC_PASS  | (is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
-    if(is_stdcall)                     func->traits |= AST_FUNC_STDCALL;
-    if(is_foreign)                     func->traits |= AST_FUNC_FOREIGN;
-    if(is_implicit)                    func->traits |= AST_FUNC_IMPLICIT;
+    if(options->is_entry)                       func->traits |= AST_FUNC_MAIN;
+    if(strcmp(options->name, "__defer__") == 0) func->traits |= AST_FUNC_DEFER | (options->prefixes.is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
+    if(strcmp(options->name, "__pass__") == 0)  func->traits |= AST_FUNC_PASS  | (options->prefixes.is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
+    if(options->prefixes.is_stdcall)            func->traits |= AST_FUNC_STDCALL;
+    if(options->prefixes.is_implicit)           func->traits |= AST_FUNC_IMPLICIT;
+    if(options->is_foreign)                     func->traits |= AST_FUNC_FOREIGN;
 
     // Handle WinMain
-    if(strcmp(name, "WinMain") == 0 && export_as && strcmp(export_as, "WinMain") == 0)  func->traits |= AST_FUNC_WINMAIN;
+    if(strcmp(options->name, "WinMain") == 0 && options->export_name && strcmp(options->export_name, "WinMain") == 0){
+        func->traits |= AST_FUNC_WINMAIN;
+    }
 }
 
 bool ast_func_is_polymorphic(ast_func_t *func){

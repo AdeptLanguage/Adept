@@ -14,7 +14,8 @@ extern "C" {
 
 #include "AST/ast.h"
 #include "LEX/token.h"
-#include "UTIL/tmpbuf.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "IR/ir.h"

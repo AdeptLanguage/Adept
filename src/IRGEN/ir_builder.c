@@ -1,12 +1,38 @@
 
-#include "LEX/lex.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "BRIDGE/bridge.h"
+#include "BRIDGE/funcpair.h"
+#include "BRIDGE/type_table.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_cache.h"
+#include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
+#include "LEX/lex.h"
 #include "UTIL/builtin_type.h"
+#include "UTIL/color.h"
+#include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, bool static_builder){
     builder->basicblocks = malloc(sizeof(ir_basicblock_t) * 4);
@@ -1704,8 +1730,21 @@ errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object,
 
     maybe_null_strong_cstr_t export_name = poly_func->export_as ? strclone(poly_func->export_as) : NULL;
     
-    ast_func_create_template(func, strclone(poly_func->name), poly_func->traits & AST_FUNC_STDCALL, false,
-        !(poly_func->traits & AST_FUNC_AUTOGEN), poly_func->traits & AST_FUNC_IMPLICIT, poly_func->source, is_entry, export_name);
+    ast_func_prefixes_t prefixes = (ast_func_prefixes_t){
+        .is_stdcall = poly_func->traits & AST_FUNC_STDCALL,
+        .is_external = false,
+        .is_implicit = poly_func->traits & AST_FUNC_IMPLICIT,
+        .is_verbatim = !(poly_func->traits & AST_FUNC_AUTOGEN),
+    };
+
+    ast_func_create_template(func, &(ast_func_head_t){
+        .name = strclone(poly_func->name),
+        .source = poly_func->source,
+        .is_foreign = false,
+        .is_entry = is_entry,
+        .prefixes = prefixes,
+        .export_name = export_name,
+    });
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * poly_func->arity);
     func->arg_types = malloc(sizeof(ast_type_t) * poly_func->arity);
@@ -1882,7 +1921,16 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone("__defer__"), false, false, false, false, NULL_SOURCE, false, NULL);
+
+    ast_func_create_template(func, &(ast_func_head_t){
+        .name = strclone("__defer__"),
+        .source = NULL_SOURCE,
+        .is_foreign = false,
+        .is_entry = false,
+        .prefixes = {0},
+        .export_name = NULL,
+    });
+
     func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
@@ -1972,7 +2020,16 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
 
     funcid_t ast_func_id = (funcid_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone("__pass__"), false, false, false, false, NULL_SOURCE, false, NULL);
+    
+    ast_func_create_template(func, &(ast_func_head_t){
+        .name = strclone("__pass__"),
+        .source = NULL_SOURCE,
+        .is_foreign = false,
+        .is_entry = false,
+        .prefixes = {0},
+        .export_name = NULL,
+    });
+
     func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
@@ -2108,7 +2165,16 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
     length_t ast_func_id = ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    ast_func_create_template(func, strclone("__assign__"), false, false, false, false, NULL_SOURCE, false, NULL);
+
+    ast_func_create_template(func, &(ast_func_head_t){
+        .name = strclone("__assign__"),
+        .source = NULL_SOURCE,
+        .is_foreign = false,
+        .is_entry = false,
+        .prefixes = {0},
+        .export_name = NULL,
+    });
+
     func->traits |= AST_FUNC_GENERATED;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 2);
@@ -2555,8 +2621,8 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
 // (For integers / floats)
 bool is_allowed_auto_conversion(compiler_t *compiler, object_t *object, const ast_type_t *a_type, const ast_type_t *b_type){
     if(!ast_type_is_base(a_type) || !ast_type_is_base(b_type)) return false;
-    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return false;
-    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return false;
+    if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return false;
+    if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return false;
 
     ir_pool_t *pool = &object->ir_module.pool;
 

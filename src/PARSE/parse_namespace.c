@@ -1,7 +1,16 @@
 
-#include "UTIL/util.h"
-#include "PARSE/parse_util.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_namespace.h"
+#include "PARSE/parse_util.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
 
 errorcode_t parse_namespace(parse_ctx_t *ctx){
     // namespace my_namespace
@@ -48,7 +57,7 @@ errorcode_t parse_namespace(parse_ctx_t *ctx){
     parse_ignore_newlines(ctx, NULL);
 
     // Look for '{'
-    if(*i < ctx->tokenlist->length && ctx->tokenlist->tokens[*i].id == TOKEN_BEGIN){
+    if(*i < ctx->tokenlist->length && parse_ctx_peek(ctx) == TOKEN_BEGIN){
         // If '{' was found, start the namespace scope
         ctx->has_namespace_scope = true;
     } else {

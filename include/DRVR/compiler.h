@@ -13,11 +13,16 @@ extern "C" {
 */
 
 #include <stdarg.h>
-#include "UTIL/trait.h"
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type_lean.h"
 #include "DRVR/config.h"
 #include "DRVR/object.h"
+#include "UTIL/ground.h"
 #include "UTIL/tmpbuf.h"
+#include "UTIL/trait.h"
 
 // Possible compiler trait options
 #define COMPILER_SHOW_CONSOLE     TRAIT_1

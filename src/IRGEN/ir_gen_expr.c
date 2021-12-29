@@ -1,16 +1,39 @@
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/ground.h"
-#include "UTIL/filename.h"
-#include "UTIL/builtin_type.h"
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "BRIDGE/bridge.h"
+#include "BRIDGE/funcpair.h"
+#include "BRIDGE/rtti.h"
+#include "BRIDGE/type_table.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
-#include "BRIDGE/rtti.h"
-#include "BRIDGE/bridge.h"
+#include "UTIL/builtin_type.h"
+#include "UTIL/color.h"
+#include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
     // NOTE: Generates an ir_value_t from an ast_expr_t
@@ -675,7 +698,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
             }
 
             // Otherwise print error message
-            char *s = ast_type_str(tmp_ast_variable_type);
+            strong_cstr_t s = ast_type_str(tmp_ast_variable_type);
             compiler_panicf(builder->compiler, expr->source, "Can't call value of non function type '%s'", s);
             ast_types_free_fully(arg_types, expr->arity);
             free(s);
@@ -1032,14 +1055,14 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
 
         // If we didn't find the composite, show an error message and return failure
         if(target == NULL){
-            weak_cstr_t message_format = typename_is_entended_builtin_type(composite_name) ? "Can't use member operator on built-in type '%s'" : "INTERNAL ERROR: Failed to find composite '%s' that should exist";
+            weak_cstr_t message_format = typename_is_extended_builtin_type(composite_name) ? "Can't use member operator on built-in type '%s'" : "INTERNAL ERROR: Failed to find composite '%s' that should exist";
             compiler_panicf(compiler, source, message_format, composite_name);
             return FAILURE;
         }
 
         // Find the field of the structure by name
         if(!ast_composite_find_exact_field(target, member, &out_field_info->endpoint, &out_field_info->path)){
-            char *s = ast_type_str(ast_type_of_composite);
+            strong_cstr_t s = ast_type_str(ast_type_of_composite);
             compiler_panicf(compiler, source, "Field '%s' doesn't exist in %s '%s'", member, ast_layout_kind_name(target->layout.kind), s);
             free(s);
             return FAILURE;
@@ -1074,7 +1097,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
 
         // Find the field of the polymorphic structure by name
         if(!ast_composite_find_exact_field((ast_composite_t*) template, member, &out_field_info->endpoint, &out_field_info->path)){
-            char *s = ast_type_str(ast_type_of_composite);
+            strong_cstr_t s = ast_type_str(ast_type_of_composite);
             compiler_panicf(compiler, source, "Field '%s' doesn't exist in %s '%s'", member, ast_layout_kind_name(template->layout.kind), s);
             free(s);
             return FAILURE;
@@ -1124,7 +1147,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
 
         if(!ast_field_map_find(&layout->field_map, member, &out_field_info->endpoint)
         || !ast_layout_get_path(layout, out_field_info->endpoint, &out_field_info->path)){
-            char *s = ast_type_str(ast_type_of_composite);
+            strong_cstr_t s = ast_type_str(ast_type_of_composite);
             compiler_panicf(compiler, source, "Field '%s' doesn't exist in %s '%s'", member, ast_layout_kind_name(layout->kind), s);
             free(s);
             return FAILURE;
@@ -1145,7 +1168,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
     }
 
     // Otherwise, we got a value that isn't a structure type
-    char *s = ast_type_str(ast_type_of_composite);
+    strong_cstr_t s = ast_type_str(ast_type_of_composite);
     compiler_panicf(compiler, source, "Can't use member operator on non-composite type '%s'", s);
     free(s);
     return FAILURE;
@@ -1771,7 +1794,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
             return SUCCESS;
         }
         
-        char *s = ast_type_str(&arg_types[0]);
+        strong_cstr_t s = ast_type_str(&arg_types[0]);
         compiler_panicf(builder->compiler, expr->source, "Can't call methods on type '%s'", s);
         ast_types_free_fully(arg_types, 1);
         free(s);
@@ -2840,8 +2863,8 @@ successful_t ir_gen_resolve_ternay_conflict(ir_builder_t *builder, ir_value_t **
         length_t *inout_a_basicblock, length_t *inout_b_basicblock){
     
     if(!ast_type_is_base(a_type) || !ast_type_is_base(b_type)) return UNSUCCESSFUL;
-    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return UNSUCCESSFUL;
-    if(!typename_is_entended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return UNSUCCESSFUL;
+    if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return UNSUCCESSFUL;
+    if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return UNSUCCESSFUL;
     if(global_type_kind_signs[(*a)->type->kind] != global_type_kind_signs[(*b)->type->kind]) return UNSUCCESSFUL;
     if(global_type_kind_is_float[(*a)->type->kind] != global_type_kind_is_float[(*b)->type->kind]) return UNSUCCESSFUL;
     if(global_type_kind_is_integer[(*a)->type->kind] != global_type_kind_is_integer[(*b)->type->kind]) return UNSUCCESSFUL;

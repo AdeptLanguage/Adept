@@ -1,15 +1,27 @@
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/ground.h"
-#include "UTIL/filename.h"
-#include "UTIL/builtin_type.h"
-#include "IRGEN/ir_gen.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "BRIDGE/bridge.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen_expr.h"
-#include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
-#include "BRIDGE/bridge.h"
+#include "UTIL/builtin_type.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated){
     ir_instr_t *built_instr;
@@ -643,7 +655,7 @@ errorcode_t ir_gen_stmt_call_like(ir_builder_t *builder, ast_expr_t *call_like_s
     }
     
     // Handle dropped values from call expressions
-    if(base_name && !typename_is_entended_builtin_type(base_name)){
+    if(base_name && !typename_is_extended_builtin_type(base_name)){
         // Temporarily allocate space on the stack to store the dropped value
         ir_value_t *stack_pointer = build_stack_save(builder);
         ir_value_t *temporary_mutable = build_alloc(builder, dropped_value->type);
@@ -1362,9 +1374,9 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     ir_value_t *whether_keep_going_value = build_math(builder, INSTRUCTION_ULESSER, idx_value, array_length, ir_builder_bool(builder));
 
     // Generate body blocks
-    length_t new_basicblock_id  = build_basicblock(builder);
-    length_t inc_basicblock_id  = build_basicblock(builder);
-    length_t end_basicblock_id  = build_basicblock(builder);
+    length_t new_basicblock_id = build_basicblock(builder);
+    length_t inc_basicblock_id = build_basicblock(builder);
+    length_t end_basicblock_id = build_basicblock(builder);
 
     // Hook up labels
     if(stmt->label != NULL) push_loop_label(builder, stmt->label, end_basicblock_id, inc_basicblock_id);

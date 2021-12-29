@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #include "UTIL/ground.h"
+#include "UTIL/trait.h"
 #include "AST/ast_expr.h"
 
 // ---------------- ast_constant_t ----------------

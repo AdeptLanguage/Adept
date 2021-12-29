@@ -3,6 +3,13 @@
 #define REPL_OUTPUT_FILENAME ".adeptreplx.tmp"
 
 #include "DRVR/repl.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "UTIL/trait.h"
 #include "UTIL/util.h"
 
 int main(int argc, char **argv);

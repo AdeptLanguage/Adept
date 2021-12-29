@@ -19,23 +19,27 @@ extern "C" {
 #include "IRGEN/ir_builder.h"
 #endif
 
-#define ANY_TYPE_KIND_VOID        0x00
-#define ANY_TYPE_KIND_BOOL        0x01
-#define ANY_TYPE_KIND_BYTE        0x02
-#define ANY_TYPE_KIND_UBYTE       0x03
-#define ANY_TYPE_KIND_SHORT       0x04
-#define ANY_TYPE_KIND_USHORT      0x05
-#define ANY_TYPE_KIND_INT         0x06
-#define ANY_TYPE_KIND_UINT        0x07
-#define ANY_TYPE_KIND_LONG        0x08
-#define ANY_TYPE_KIND_ULONG       0x09
-#define ANY_TYPE_KIND_FLOAT       0x0A
-#define ANY_TYPE_KIND_DOUBLE      0x0B
-#define ANY_TYPE_KIND_PTR         0x0C
-#define ANY_TYPE_KIND_STRUCT      0x0D
-#define ANY_TYPE_KIND_UNION       0x0E
-#define ANY_TYPE_KIND_FUNC_PTR    0x0F
-#define ANY_TYPE_KIND_FIXED_ARRAY 0x10
+// NOTE: These values should agree with the automatically
+// generated Adept definition of the enum 'AnyTypeKind'
+enum {
+    ANY_TYPE_KIND_VOID,
+    ANY_TYPE_KIND_BOOL,
+    ANY_TYPE_KIND_BYTE,
+    ANY_TYPE_KIND_UBYTE,
+    ANY_TYPE_KIND_SHORT,
+    ANY_TYPE_KIND_USHORT,
+    ANY_TYPE_KIND_INT,
+    ANY_TYPE_KIND_UINT,
+    ANY_TYPE_KIND_LONG,
+    ANY_TYPE_KIND_ULONG,
+    ANY_TYPE_KIND_FLOAT,
+    ANY_TYPE_KIND_DOUBLE,
+    ANY_TYPE_KIND_PTR,
+    ANY_TYPE_KIND_STRUCT,
+    ANY_TYPE_KIND_UNION,
+    ANY_TYPE_KIND_FUNC_PTR,
+    ANY_TYPE_KIND_FIXED_ARRAY,
+};
 #define MAX_ANY_TYPE_KIND ANY_TYPE_KIND_FIXED_ARRAY
 
 // ---------------- any_type_kind_names ----------------

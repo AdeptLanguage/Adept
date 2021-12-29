@@ -6,8 +6,7 @@
 extern "C" {
 #endif
 
-#include "UTIL/ground.h"
-#include "UTIL/search.h"
+#include "UTIL/search.h" // IWYU pragma: keep
 
 #define BUILTIN_TYPE_NONE      -1
 #define BUILTIN_TYPE_BOOL       0
@@ -29,7 +28,7 @@ extern const char * const global_primitives_extended[15];
 
 #define typename_builtin_type(base) binary_string_search(global_primitives, 13, base)
 
-#define typename_is_entended_builtin_type(base) (binary_string_search(global_primitives_extended, 15, base) != -1)
+#define typename_is_extended_builtin_type(base) (binary_string_search(global_primitives_extended, 15, base) != -1)
 
 #ifdef __cplusplus
 }

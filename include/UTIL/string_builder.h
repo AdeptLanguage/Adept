@@ -28,6 +28,11 @@ void string_builder_init(string_builder_t *builder);
 // Destroys a string builder and returns the finalized concatenated string
 strong_cstr_t string_builder_finalize(string_builder_t *builder);
 
+// ---------------- string_builder_finalize_with_length ----------------
+// Destroys a string builder and returns the finalized concatenated string
+// with length information attached
+strong_lenstr_t string_builder_finalize_with_length(string_builder_t *builder);
+
 // ---------------- string_builder_abandon ----------------
 // Destroys a string builder without returning the work-in-progress string
 void string_builder_abandon(string_builder_t *builder);

@@ -20,3 +20,4 @@ counter.py
 build
 tests/*/*.exe
 Makefile_Windows_Backup_5_12_2019.txt
+iwyu.out

@@ -1,10 +1,16 @@
 
 #include "IR/ir.h"
+
+#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "IR/ir_lowering.h"
 #include "IRGEN/ir_builder.h"
-#include "UTIL/util.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
+#include "UTIL/string.h"
+#include "UTIL/util.h"
 
 strong_cstr_t ir_value_str(ir_value_t *value){
     if(value == NULL){
@@ -964,13 +970,13 @@ unsigned long long ir_value_uniqueness_value(ir_pool_t *pool, ir_value_t **value
 }
 
 void ir_print_value(ir_value_t *value){
-    char *s = ir_value_str(value);
+    strong_cstr_t s = ir_value_str(value);
     printf("%s\n", s);
     free(s);
 }
 
 void ir_print_type(ir_type_t *type){
-    char *s = ir_type_str(type);
+    strong_cstr_t s = ir_type_str(type);
     printf("%s\n", s);
     free(s);
 }

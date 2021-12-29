@@ -1,6 +1,11 @@
 
-#include "UTIL/util.h"
+#include <stddef.h>
+
 #include "AST/ast_constant.h"
+#include "AST/ast_expr.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/trait.h"
 
 ast_constant_t ast_constant_clone(ast_constant_t *original){
     ast_constant_t clone;

@@ -1,11 +1,19 @@
 
 #include <math.h>
-#include "LEX/lex.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/search.h"
-#include "DRVR/compiler.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/meta_directives.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/lex.h"
+#include "UTIL/color.h"
+#include "UTIL/ground.h"
+#include "UTIL/search.h"
+#include "UTIL/string.h"
+#include "UTIL/util.h"
 
 strong_cstr_t meta_expr_str(meta_expr_t *meta){
     switch(meta->id){

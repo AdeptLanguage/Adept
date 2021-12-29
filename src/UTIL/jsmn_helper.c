@@ -1,5 +1,13 @@
 
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "UTIL/color.h"
+#include "UTIL/ground.h"
+// Include implementation of jsmn
+#include "UTIL/jsmn.h"
 #include "UTIL/jsmn_helper.h"
 
 void jsmn_helper_print_token(weak_cstr_t buffer, jsmntok_t token){

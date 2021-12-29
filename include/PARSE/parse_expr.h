@@ -2,9 +2,11 @@
 #ifndef _ISAAC_PARSE_EXPR_H
 #define _ISAAC_PARSE_EXPR_H
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
 #include "AST/ast_expr.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 #ifdef __cplusplus
 extern "C" {

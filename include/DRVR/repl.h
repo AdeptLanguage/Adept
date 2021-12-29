@@ -2,8 +2,10 @@
 #ifndef _ISAAC_REPL_H
 #define _ISAAC_REPL_H
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
 #include "DRVR/compiler.h"
+#include "UTIL/ground.h"
 
 typedef struct {
     length_t global_marker;
@@ -49,7 +51,7 @@ bool repl_execute(repl_t *repl, weak_cstr_t code);
 successful_t repl_run(repl_t *repl);
 
 // ---------------- repl_add_history ----------------
-// Rembers the code state of a REPL
+// Remembers the code state of a REPL
 void repl_add_history(repl_t *repl);
 
 // ---------------- repl_undo ----------------

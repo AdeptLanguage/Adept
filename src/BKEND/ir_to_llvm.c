@@ -1,21 +1,34 @@
 
+#include <assert.h>
+#include <ctype.h>
 #include <llvm-c/Core.h>
-#include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Target.h>
-#include <llvm-c/Analysis.h>
-#include <llvm-c/BitWriter.h>
 #include <llvm-c/Transforms/IPO.h>
 #include <llvm/Config/llvm-config.h>
-#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "IR/ir.h"
-#include "IRGEN/ir_builder.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/filename.h"
+#include "AST/ast.h"
 #include "BKEND/ir_to_llvm.h"
+#include "BRIDGE/bridge.h"
+#include "DRVR/compiler.h"
 #include "DRVR/debug.h"
 #include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
+#include "UTIL/color.h"
+#include "UTIL/datatypes.h"
+#include "UTIL/filename.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/util.h"
+#include "llvm-c/Analysis.h" // IWYU pragma: keep
+#include "llvm-c/TargetMachine.h"
+#include "llvm-c/Types.h"
 
 LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
     // Converts an ir type to an llvm type

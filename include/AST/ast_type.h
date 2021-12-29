@@ -24,26 +24,30 @@ extern "C" {
 #include "AST/ast_layout.h"
 
 // Possible AST type elements
-#define AST_ELEM_NONE             0x00
-#define AST_ELEM_BASE             0x01
-#define AST_ELEM_POINTER          0x02
-#define AST_ELEM_ARRAY            0x03
-#define AST_ELEM_FIXED_ARRAY      0x04
-#define AST_ELEM_VAR_FIXED_ARRAY  0x05
-#define AST_ELEM_GENERIC_INT      0x06
-#define AST_ELEM_GENERIC_FLOAT    0x07
-#define AST_ELEM_FUNC             0x08
-#define AST_ELEM_POLYMORPH        0x09
-#define AST_ELEM_POLYCOUNT        0x0A
-#define AST_ELEM_POLYMORPH_PREREQ 0x0B
-#define AST_ELEM_GENERIC_BASE     0x0C
-#define AST_ELEM_LAYOUT           0x0D
+enum {
+    AST_ELEM_NONE,
+    AST_ELEM_BASE,
+    AST_ELEM_POINTER,
+    AST_ELEM_ARRAY,
+    AST_ELEM_FIXED_ARRAY,
+    AST_ELEM_VAR_FIXED_ARRAY,
+    AST_ELEM_GENERIC_INT,
+    AST_ELEM_GENERIC_FLOAT,
+    AST_ELEM_FUNC,
+    AST_ELEM_POLYMORPH,
+    AST_ELEM_POLYCOUNT,
+    AST_ELEM_POLYMORPH_PREREQ,
+    AST_ELEM_GENERIC_BASE,
+    AST_ELEM_LAYOUT,
+};
 
 // Possible data flow patterns
-#define FLOW_NONE  0x00
-#define FLOW_IN    0x01
-#define FLOW_OUT   0x02
-#define FLOW_INOUT 0x03
+enum {
+    FLOW_NONE,
+    FLOW_IN,
+    FLOW_OUT,
+    FLOW_INOUT,
+};
 
 // Acquire 'ast_elem_t' and 'ast_type_t' definitions from lean version of header
 #include "AST/ast_type_lean.h"

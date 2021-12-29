@@ -1,7 +1,17 @@
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/lex.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
+#include "PARSE/parse_util.h"
+#include "TOKEN/token_data.h"
 #include "UTIL/color.h"
 #include "UTIL/filename.h"
-#include "PARSE/parse_util.h"
+#include "UTIL/ground.h"
 
 errorcode_t parse_ignore_newlines(parse_ctx_t *ctx, const char *error_message){
     length_t *i = ctx->i;

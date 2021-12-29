@@ -10,18 +10,19 @@
     ----------------------------------------------------------------------------
 */
 
-#include "IR/ir.h"
-#include "UTIL/ground.h"
-#include "DRVR/object.h"
 #include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "UTIL/ground.h"
 
 // Possible backends
-#define BACKEND_NONE 0x00000000
-#define BACKEND_LLVM 0x00000001
+enum ir_export_backend {
+    BACKEND_NONE,
+    BACKEND_LLVM,
+};
 
 // ---------------- ir_export ----------------
 // Exports intermediate representation given
 // some backend.
-errorcode_t ir_export(compiler_t *compiler, object_t *object, unsigned int backend);
+errorcode_t ir_export(compiler_t *compiler, object_t *object, enum ir_export_backend backend);
 
 #endif // _ISAAC_BACKEND_H

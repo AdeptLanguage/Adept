@@ -19,7 +19,6 @@ extern "C" {
 #define ADEPT_VERSION_MINOR     6
 #define ADEPT_VERSION_RELEASE   0
 #define ADEPT_VERSION_QUALIFIER ""
-#define ADEPT_PREVIEW_EDITION   "dec-21-2021"
 
 // Previous stable version string
 // (only used by preview builds to ignore "new update" false positives)

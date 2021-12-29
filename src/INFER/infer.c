@@ -1,13 +1,19 @@
 
 #include "INFER/infer.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/search.h"
-#include "UTIL/levenshtein.h"
-#include "UTIL/builtin_type.h"
 #include "BRIDGE/type_table.h"
+#include "UTIL/builtin_type.h"
+#include "UTIL/color.h"
+#include "UTIL/levenshtein.h"
+#include "UTIL/string.h"
+#include "UTIL/util.h"
 
 errorcode_t infer(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
@@ -661,7 +667,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             if(infer_type(ctx, &static_data->type)) return FAILURE;
 
             if(static_data->type.elements_length != 1 || static_data->type.elements[0]->id != AST_ELEM_BASE){
-                char *s = ast_type_str(&static_data->type);
+                strong_cstr_t s = ast_type_str(&static_data->type);
                 compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for non-struct type '%s'\n", s);
                 free(s);
                 return FAILURE;
@@ -671,7 +677,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             ast_composite_t *composite = ast_composite_find_exact(ctx->ast, base);
 
             if(composite == NULL){
-                if(typename_is_entended_builtin_type(base)){
+                if(typename_is_extended_builtin_type(base)){
                     compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for built-in type '%s'", base);
                 } else {
                     compiler_panicf(ctx->compiler, static_data->type.source, "Struct '%s' does not exist", base);

@@ -8,9 +8,9 @@
     ----------------------------------------------------------------------------
 */
 
-#include "UTIL/trait.h"
-#include "UTIL/ground.h"
 #include "IR/ir_type.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 #define IR_TYPE_TRAIT_NONE      TRAIT_NONE
 #define IR_TYPE_TRAIT_POINTER   TRAIT_1

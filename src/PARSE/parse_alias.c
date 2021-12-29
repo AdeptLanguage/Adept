@@ -1,10 +1,18 @@
 
+#include <stdlib.h>
+
 #include "AST/ast.h"
-#include "UTIL/util.h"
-#include "UTIL/search.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "LEX/token.h"
+#include "PARSE/parse_alias.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
-#include "PARSE/parse_alias.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
+#include "UTIL/search.h"
+#include "UTIL/trait.h"
 
 errorcode_t parse_alias(parse_ctx_t *ctx){
     // NOTE: Assumes 'alias' keyword

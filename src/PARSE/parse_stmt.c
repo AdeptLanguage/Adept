@@ -1,11 +1,28 @@
 
-#include "UTIL/util.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_constant.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/token.h"
+#include "PARSE/parse_ctx.h"
 #include "PARSE/parse_expr.h"
+#include "PARSE/parse_global.h"
 #include "PARSE/parse_meta.h"
 #include "PARSE/parse_stmt.h"
 #include "PARSE/parse_type.h"
 #include "PARSE/parse_util.h"
-#include "PARSE/parse_global.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 void defer_scope_init(defer_scope_t *defer_scope, defer_scope_t *parent, weak_cstr_t label, trait_t traits){
     defer_scope->list.statements = NULL;
@@ -1502,7 +1519,7 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     ast_expr_llvm_asm_t *stmt = malloc(sizeof(ast_expr_llvm_asm_t));
     stmt->id = EXPR_LLVM_ASM;
     stmt->source = source;
-    stmt->assembly = assembly ? assembly : strclone("");
+    stmt->assembly = strong_cstr_empty_if_null(assembly);
     stmt->constraints = constraints;
     stmt->args = args;
     stmt->arity = arity;

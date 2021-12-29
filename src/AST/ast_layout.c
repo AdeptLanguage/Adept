@@ -1,9 +1,20 @@
 
-#include "UTIL/util.h"
-#include "UTIL/color.h"
-#include "UTIL/string_builder.h"
-#include "AST/ast_type.h"
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "AST/ast_type_lean.h"
+#include "UTIL/color.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/string_builder.h"
+#include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 void ast_layout_init(ast_layout_t *layout, ast_layout_kind_t kind, ast_field_map_t field_map, ast_layout_skeleton_t skeleton, trait_t traits){
     layout->kind = kind;
@@ -232,7 +243,7 @@ void ast_layout_bone_print(ast_layout_bone_t *bone, int indentation){
 
     switch(bone->kind){
     case AST_LAYOUT_BONE_KIND_TYPE: {
-            char *s = ast_type_str(&bone->type);
+            strong_cstr_t s = ast_type_str(&bone->type);
             printf("%s\n", s);
             free(s);
         }

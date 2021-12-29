@@ -1,13 +1,13 @@
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include "UTIL/color.h"
 
 #ifdef __WIN32__
 #include <windows.h>
 
-void terminal_set_color_win32(char color){
+void terminal_set_color_win32(enum color_h_terminal_color color){
     switch(color){
     case TERMINAL_COLOR_DEFAULT:
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
@@ -29,7 +29,7 @@ void terminal_set_color_win32(char color){
 
 #else
 
-void terminal_set_color_posix(char color){
+void terminal_set_color_posix(enum color_h_terminal_color color){
     switch(color){
     case TERMINAL_COLOR_DEFAULT:
         fputs("\e[0m", stdout);

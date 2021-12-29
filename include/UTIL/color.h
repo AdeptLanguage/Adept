@@ -13,20 +13,22 @@ extern "C" {
 */
 
 // Possible colors for terminal_set_color
-#define TERMINAL_COLOR_DEFAULT 0x00
-#define TERMINAL_COLOR_RED     0x01
-#define TERMINAL_COLOR_YELLOW  0x02
-#define TERMINAL_COLOR_WHITE   0x03
-#define TERMINAL_COLOR_BLUE    0x04
+enum color_h_terminal_color {
+    TERMINAL_COLOR_DEFAULT,
+    TERMINAL_COLOR_RED,
+    TERMINAL_COLOR_YELLOW,
+    TERMINAL_COLOR_WHITE,
+    TERMINAL_COLOR_BLUE,
+};
 
 // ---------------- terminal_set_color(color) ----------------
 // Sets the output color for the current terminal
 #ifdef _WIN32
 #define terminal_set_color(a) terminal_set_color_win32(a)
-void terminal_set_color_win32(char color);
+void terminal_set_color_win32(enum color_h_terminal_color color);
 #else
 #define terminal_set_color(a) terminal_set_color_posix(a)
-void terminal_set_color_posix(char color);
+void terminal_set_color_posix(enum color_h_terminal_color color);
 #endif
 
 #if defined(ADEPT_INSIGHT_BUILD) && !defined(__EMSCRIPTEN__)
@@ -83,5 +85,9 @@ void internalerrorprintf(const char *format, ...);
 // ---------------- warningprintf ----------------
 // Version of 'printf' for non-specific internal warnings
 void internalwarningprintf(const char *format, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _ISAAC_COLOR_H

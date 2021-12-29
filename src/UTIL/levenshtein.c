@@ -3,7 +3,8 @@
 // I did not write this code myself, this is a public implementation
 // SOURCE: https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
 
-#include "UTIL/ground.h"
+#include <string.h>
+
 #include "UTIL/levenshtein.h"
 
 #define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))

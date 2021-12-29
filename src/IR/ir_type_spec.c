@@ -1,6 +1,8 @@
 
 #include "IR/ir_type_spec.h"
 
+#include <stdbool.h>
+
 successful_t ir_type_get_spec(ir_type_t *type, ir_type_spec_t *out_spec){
     out_spec->bytes = 0;
     out_spec->traits = IR_TYPE_TRAIT_NONE;
