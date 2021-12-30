@@ -199,7 +199,9 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
                 ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) statements[s];
+
                 if(infer_type(ctx, &declare_stmt->type)) return FAILURE;
+
                 if(declare_stmt->value != NULL){
                     if(infer_expr(ctx, func, &declare_stmt->value, ast_primitive_from_ast_type(&declare_stmt->type), false)) return FAILURE;
                 }
@@ -1133,7 +1135,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
     length_t capacity = 0;
     maybe_null_strong_cstr_t maybe_alias_name = NULL;
 
-    for(length_t e = 0; e != type->elements_length; e++){
+    for(length_t e = 0; e < type->elements_length; e++){
         ast_elem_t *elem = type->elements[e];
 
         switch(elem->id){
@@ -1151,6 +1153,9 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                     ptr_elem->id = AST_ELEM_BASE;
                     ptr_elem->source = type->elements[e]->source;
                     ptr_elem->base = strclone("ptr");
+
+                    // Free base type element 'void' that will disappear
+                    ast_elem_free(elem);
 
                     // DANGEROUS: Manually freeing pointer ast_elem_pointer_t element
                     free(new_elements[length - 1]);
@@ -1205,7 +1210,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                     return FAILURE;
                 }
 
-                ast_expr_free(*length);
+                ast_expr_free_fully(*length);
 
                 // Boil it down to a regular fixed array
                 // DANGEROUS: Relying on memory layout

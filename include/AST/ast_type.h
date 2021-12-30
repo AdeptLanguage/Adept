@@ -201,7 +201,7 @@ ast_type_t ast_type_clone(const ast_type_t *type);
 void ast_type_free(ast_type_t *type);
 
 // ---------------- ast_type_free_fully ----------------
-// Frees data within an AST type and the container
+// Frees data within an AST type and the container (type can be NULL)
 void ast_type_free_fully(ast_type_t *type);
 
 // ---------------- ast_types_free ----------------

@@ -17,6 +17,14 @@ WINDOWS_LLVM_BUILD_INCLUDE=C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release/
 WINDOWS_LIBCURL_LIB=C:/Users/isaac/Projects/curl-7.79.1_4-win64-mingw/curl-7.79.1-win64-mingw/lib
 WINDOWS_LIBCURL_INCLUDE=C:/Users/isaac/Projects/curl-7.79.1_4-win64-mingw/curl-7.79.1-win64-mingw/include
 WINDOWS_LIBCURL_BUILD_INCLUDE=
+MACOS_CC=gcc
+MACOS_CXX=g++
+MACOS_LLVM_LIB=/opt/homebrew/opt/llvm/lib
+MACOS_LLVM_INCLUDE=/opt/homebrew/opt/llvm/include
+MACOS_LLVM_BUILD_INCLUDE=
+MACOS_LIBCURL_LIB=/opt/homebrew/opt/curl/lib
+MACOS_LIBCURL_INCLUDE=/opt/homebrew/opt/curl/lib
+MACOS_LIBCURL_BUILD_INCLUDE=
 UNIX_CC=gcc
 UNIX_CXX=g++
 UNIX_LLVM_LIB=/opt/homebrew/opt/llvm/lib
@@ -25,18 +33,21 @@ UNIX_LLVM_BUILD_INCLUDE=
 UNIX_LIBCURL_LIB=/opt/homebrew/opt/curl/lib
 UNIX_LIBCURL_INCLUDE=/opt/homebrew/opt/curl/lib
 UNIX_LIBCURL_BUILD_INCLUDE=
-DEBUG_ADDRESS_SANITIZE=true
+DEBUG_ADDRESS_SANITIZE=false
+DEBUG_LEAK_SANITIZE=false
 #UNIX_CC=gcc
 #UNIX_CXX=g++
 #UNIX_LLVM_LIB=/usr/lib/llvm-7/lib
 #UNIX_LLVM_INCLUDE=/usr/include/llvm-7 -I/usr/include/llvm-c-7
 #UNIX_LLVM_BUILD_INCLUDE=/usr/lib/llvm-7/include
 
-ifeq ($(DEBUG_ADDRESS_SANITIZE),true)
+ifneq (,$(or $(findstring true,$(DEBUG_ADDRESS_SANITIZE)), $(findstring true,$(DEBUG_LEAK_SANITIZE))))
 	WINDOWS_CC=clang
 	WINDOWS_CXX=clang++
 	UNIX_CC=clang
 	UNIX_CXX=clang++
+	MACOS_CC=/opt/homebrew/opt/llvm/bin/clang
+	MACOS_CXX=/opt/homebrew/opt/llvm/bin/clang++
 endif
 
 INSIGHT_OUT_DIR=INSIGHT
@@ -61,13 +72,11 @@ ifeq ($(OS), Windows_NT)
 
 	# Libcurl info
 	ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
-		LIBCURL_INCLUDE_FLAGS=-I$(WINDOWS_LIBCURL_INCLUDE) -I$(WINDOWS_LIBCURL_BULID_INCLUDE)
+		LIBCURL_INCLUDE_FLAGS=-I$(WINDOWS_LIBCURL_INCLUDE) -I$(WINDOWS_LIBCURL_BUILD_INCLUDE)
 		LIBCURL_LINKER_FLAGS=-L$(WINDOWS_LIBCURL_LIB)
 		LIBCURL_LIBS=-lcurl # -lz
 	endif
 else
-	CC=$(UNIX_CC)
-	LINKER=$(UNIX_CXX)
 	EXECUTABLE=bin/adept
 	DEBUG_EXECUTABLE=bin/adept_debug
 	UNITTEST_EXECUTABLE=bin/adept_unittest
@@ -75,6 +84,9 @@ else
 	llvm_config=$(UNIX_LLVM_LIB)/../bin/llvm-config
 
 	ifeq ($(UNAME_S),Darwin)
+		CC=$(MACOS_CC)
+		LINKER=$(MACOS_CXX)
+
 		# Depends on where user has llvm
 		LLVM_LINKER_FLAGS=-L$(UNIX_LLVM_LIB) -Wl,-search_paths_first -Wl,-headerpad_max_install_names
 		LLVM_INCLUDE_DIRS=-I$(UNIX_LLVM_INCLUDE) -I$(UNIX_LLVM_BUILD_INCLUDE)
@@ -82,11 +94,14 @@ else
 		# Libraries that will satisfy clang on Mac
 		LLVM_LIBS=$(shell $(llvm_config) --libs --link-static)
 	else
+		CC=$(UNIX_CC)
+		LINKER=$(UNIX_CXX)
+
 		# /usr/lib/
 		LLVM_LINKER_FLAGS=-L$(UNIX_LLVM_LIB)
 		LLVM_INCLUDE_DIRS=-I$(UNIX_LLVM_INCLUDE) -I$(UNIX_LLVM_BUILD_INCLUDE)
 
-		LIBCURL_INCLUDE_FLAGS=-I$(UNIX_LIBCURL_INCLUDE) -I$(UNIX_LIBCURL_BULID_INCLUDE)
+		LIBCURL_INCLUDE_FLAGS=-I$(UNIX_LIBCURL_INCLUDE) -I$(UNIX_LIBCURL_BUILD_INCLUDE)
 	endif
 
 	LLVM_LIBS=$(shell $(llvm_config) --libs --link-static)
@@ -94,7 +109,7 @@ else
 
 	# Libcurl info
 	ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
-		LIBCURL_INCLUDE_FLAGS=-I$(UNIX_LIBCURL_INCLUDE) -I$(UNIX_LIBCURL_BULID_INCLUDE)
+		LIBCURL_INCLUDE_FLAGS=-I$(UNIX_LIBCURL_INCLUDE) -I$(UNIX_LIBCURL_BUILD_INCLUDE)
 		LIBCURL_LINKER_FLAGS=-L$(UNIX_LIBCURL_LIB)
 		LIBCURL_LIBS=-lcurl -lldap # -lz
 	endif
@@ -117,6 +132,11 @@ LDFLAGS=$(LIBCURL_LINKER_FLAGS) $(LLVM_LINKER_FLAGS)
 ifeq ($(DEBUG_ADDRESS_SANITIZE),true)
 	CFLAGS+= -fsanitize=address,undefined
 	LDFLAGS+= -fsanitize=address,undefined
+endif
+
+ifeq ($(DEBUG_LEAK_SANITIZE),true)
+	CFLAGS+= -fsanitize=leak
+	LDFLAGS+= -fsanitize=leak
 endif
 
 ESSENTIAL_SOURCES= src/AST/UTIL/string_builder_extensions.c src/AST/ast_constant.c \

@@ -18,7 +18,7 @@ extern "C" {
 
 // ---------------- ast_constant_t ----------------
 // A named constant expression
-typedef struct ast_constant {
+typedef struct {
     strong_cstr_t name;
     ast_expr_t *expression;
     trait_t traits;
@@ -30,7 +30,7 @@ typedef struct ast_constant {
 typedef struct {
     unsigned int id;
     source_t source;
-    struct ast_constant constant;
+    ast_constant_t constant;
 } ast_expr_declare_constant_t;
 
 // ---------------- ast_constant_clone ----------------

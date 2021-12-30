@@ -314,7 +314,7 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
         *inout_backfill -= 1;
     }
 
-    ast_layout_skeleton_add_type(inout_skeleton, ast_type_clone(&field_type));
+    ast_layout_skeleton_add_type(inout_skeleton, field_type);
     return SUCCESS;
 }
 

@@ -70,10 +70,15 @@ typedef float64 adept_generic_float;
 #define float32_to_string(value, suffix) float64_to_string((float64) value, suffix)
 strong_cstr_t float64_to_string(float64 value, weak_cstr_t suffix);
 
+// ---------------- bool_to_string ----------------
+// Returns a 'weak_cstr_t' containing the string
+// representation of a boolean
+#define bool_to_string(VALUE) ((VALUE) ? "true" : "false")
+
 // ---------------- string_to_intXX ----------------
 // Returns a signed integer value from a string
 // NOTE: 'string' must be in the format /[0-9]*/ or /[0-9A-Za-z]*/
-// NOTE: 'string' CANNOT be prefexed with '0x', '0o', etc.
+// NOTE: 'string' CANNOT be prefixed with '0x', '0o', etc.
 // NOTE: 'string' CANNOT be suffixed with 'si', 'sl', etc.
 #define string_to_int8(string, base)  ((int8)  string_to_int64(string, base))
 #define string_to_int16(string, base) ((int16) string_to_int64(string, base))
@@ -83,7 +88,7 @@ int64   string_to_int64(weak_cstr_t string, int base);
 // ---------------- string_to_uintXX ----------------
 // Returns a unsigned integer value from a string
 // NOTE: 'string' must be in the format /[0-9]*/ or /[0-9A-Za-z]*/
-// NOTE: 'string' CANNOT be prefexed with '0x', '0o', etc.
+// NOTE: 'string' CANNOT be prefixed with '0x', '0o', etc.
 // NOTE: 'string' CANNOT be suffixed with 'ui', 'ul', etc.
 #define string_to_uint8(string, base)  ((uint8)  string_to_uint64(string, base))
 #define string_to_uint16(string, base) ((uint16) string_to_uint64(string, base))

@@ -38,3 +38,7 @@ void string_builder_append_view(string_builder_t *builder, const char *portion, 
     builder->length += portion_length;
     builder->buffer[builder->length] = 0x00;
 }
+
+void string_builder_append_char(string_builder_t *builder, char character){
+    string_builder_append_view(builder, &character, 1);
+}

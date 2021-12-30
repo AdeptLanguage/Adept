@@ -64,6 +64,13 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *expr_list, bool i
 // ------------------ parse_stmt_declare ------------------
 // Parses a variable declaration statement
 errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *expr_list);
+
+// ------------------ parse_stmt_mid_declare ------------------
+// Parses the body portion of variable declaration statement
+// DANGEROUS: Don't use this function unless you know what you're doing
+// NOTE: Ownership of 'master_type' is taken
+// NOTE: 'length' is used for the length of both 'names' and 'sources'
+// NOTE: No ownership is taken of the arrays 'names' and 'sources' themselves
 errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_type_t master_type, weak_cstr_t *names, source_t *source_list, length_t length, trait_t traits);
 
 // ------------------ parse_switch ------------------

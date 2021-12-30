@@ -201,7 +201,7 @@ strong_cstr_t ast_layout_skeleton_str(ast_layout_skeleton_t *skeleton, ast_field
     string_builder_t builder;
     string_builder_init(&builder);
 
-    string_builder_append_view(&builder, "(", 1);
+    string_builder_append_char(&builder, '(');
 
     for(length_t i = 0; i != skeleton->bones_length; i++){
         ast_layout_bone_t *bone = &skeleton->bones[i];
@@ -218,7 +218,7 @@ strong_cstr_t ast_layout_skeleton_str(ast_layout_skeleton_t *skeleton, ast_field
         }
     }
 
-    string_builder_append_view(&builder, ")", 1);
+    string_builder_append_char(&builder, ')');
     return string_builder_finalize(&builder);
 }
 
@@ -310,7 +310,7 @@ strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *fiel
 
             if(name){
                 string_builder_append(&builder, name);
-                string_builder_append(&builder, " ");
+                string_builder_append_char(&builder, ' ');
 
                 strong_cstr_t type_str = ast_type_str(&bone->type);
                 string_builder_append(&builder, type_str);

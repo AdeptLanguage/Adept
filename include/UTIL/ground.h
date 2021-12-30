@@ -108,6 +108,13 @@ typedef struct {
 // Whether or not a 'source_t' is NULL_SOURCE
 #define SOURCE_IS_NULL(_src) (_src.index == 0 && _src.object_index == 0 && _src.stride == 0)
 
+// ---------------- typecast ----------------
+// Syntactic sugar for when traditional (TYPE) VALUE
+// casting is confusing.
+// e.g.    ast_expr_str(((ast_expr_math_t*) expr)->a)
+// becomes ast_expr_str(typecast(ast_expr_math_t*, expr)->a)
+#define typecast(TYPE, VALUE) ((TYPE)(VALUE))
+
 // ---------------- special characters ----------------
 #ifdef __APPLE__
 #define USE_UTF8_INSTEAD_OF_EXTENDED_ASCII_FOR_SPECIAL_CHARACTERS

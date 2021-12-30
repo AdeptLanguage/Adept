@@ -1,13 +1,14 @@
 
+#include "UTIL/memory.h" // IWYU pragma: keep
+
 #ifdef TRACK_MEMORY_USAGE
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "UTIL/color.h"
 
-#include "UTIL/memory.h"
- 
 #undef malloc
 #undef free
 
@@ -81,7 +82,7 @@ void memory_free(void* data){
     if(global_memblocks_sorted) { memory_free_fast(data); return; }
     #endif // TRACK_MEMORY_FILE_AND_LINE
 
-    for(size_t i = global_memblocks_length - 1; i != -1; i--){
+    for(size_t i = global_memblocks_length - 1; i != (size_t) -1; i--){
         if(global_memblocks[i].pointer == data && !global_memblocks[i].freed){
             global_memory_size -= global_memblocks[i].size;
             global_memblocks[i].freed = true;
@@ -177,10 +178,6 @@ void memory_scan(){
 
             #ifdef TRACK_MEMORY_FILE_AND_LINE
             printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: %p) - %s %d\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer, global_memblocks[i].filename, global_memblocks[i].line_number);
-
-            // strclone() helper
-            if(strcmp("src/UTIL/util.c", global_memblocks[i].filename) == 0 && global_memblocks[i].line_number == 73)
-                printf("strclone() leak: '%s'\n", (char*) global_memblocks[i].pointer);
             
             #else // TRACK_MEMORY_FILE_AND_LINE
             printf("[MEMORY TRACKING] Found unfreed block! (Size: %04lu) (Address: %p)\n", (unsigned long) global_memblocks[i].size, global_memblocks[i].pointer);

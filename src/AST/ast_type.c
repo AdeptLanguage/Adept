@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
@@ -146,6 +147,7 @@ void ast_type_free(ast_type_t *type){
 }
 
 void ast_type_free_fully(ast_type_t *type){
+    if(type == NULL) return;
     ast_type_free(type);
     free(type);
 }
@@ -371,7 +373,7 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
             string_builder_append(&builder, ((ast_elem_base_t*) type->elements[i])->base);
             break;
         case AST_ELEM_POINTER:
-            string_builder_append_view(&builder, "*", 1);
+            string_builder_append_char(&builder, '*');
             break;
         case AST_ELEM_ARRAY:
             break;
@@ -383,7 +385,7 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
             break;
         case AST_ELEM_VAR_FIXED_ARRAY: {
                 strong_cstr_t length_string = ast_expr_str(((ast_elem_var_fixed_array_t*) type->elements[i])->length);
-                string_builder_append(&builder, "[");
+                string_builder_append_char(&builder, '[');
                 string_builder_append(&builder, length_string);
                 string_builder_append(&builder, "] ");
                 free(length_string);
@@ -397,44 +399,31 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
             break;
         case AST_ELEM_FUNC: {
                 ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];
-                char *type_str;
 
                 if(func_elem->traits & AST_FUNC_STDCALL){
                     string_builder_append(&builder, "stdcall ");
                 }
 
                 string_builder_append(&builder, "func(");
+                string_builder_append_type_list(&builder, func_elem->arg_types, func_elem->arity, false);
 
-                // Stringify argument types
-                for(length_t a = 0; a != func_elem->arity; a++){
-                    type_str = ast_type_str(&func_elem->arg_types[a]);
-                    
-                    string_builder_append(&builder, type_str);
-                    free(type_str);
-
-                    if(a != func_elem->arity - 1){
-                        string_builder_append(&builder, ", ");
-                    } else if(func_elem->traits & AST_FUNC_VARARG){
-                        string_builder_append(&builder, ", ...");
-                    } else if(func_elem->traits & AST_FUNC_VARIADIC){
-                        string_builder_append(&builder, ", ..");
-                    }
+                if(func_elem->traits & AST_FUNC_VARARG){
+                    string_builder_append(&builder, ", ...");
+                } else if(func_elem->traits & AST_FUNC_VARIADIC){
+                    string_builder_append(&builder, ", ..");
                 }
 
                 string_builder_append(&builder, ") ");
-
-                type_str = ast_type_str(func_elem->return_type);
-                string_builder_append(&builder, type_str);
-                free(type_str);
+                string_builder_append_type(&builder, func_elem->return_type);
             }
             break;
         case AST_ELEM_POLYMORPH: {
                 const char *polyname = ((ast_elem_polymorph_t*) type->elements[i])->name;
 
-                string_builder_append_view(&builder, "$", 1);
+                string_builder_append_char(&builder, '$');
 
                 if(((ast_elem_polymorph_t*) type->elements[i])->allow_auto_conversion){
-                    string_builder_append_view(&builder, "~", 1);
+                    string_builder_append_char(&builder, '~');
                 }
 
                 string_builder_append(&builder, polyname);
@@ -444,9 +433,14 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 const char *polyname = ((ast_elem_polymorph_prereq_t*) type->elements[i])->name;
                 const char *prereqname = ((ast_elem_polymorph_prereq_t*) type->elements[i])->similarity_prerequisite;
 
-                string_builder_append_view(&builder, "$", 1);
+                string_builder_append_char(&builder, '$');
+
+                if(((ast_elem_polymorph_prereq_t*) type->elements[i])->allow_auto_conversion){
+                    string_builder_append_char(&builder, '~');
+                }
+
                 string_builder_append(&builder, polyname);
-                string_builder_append_view(&builder, "~", 1);
+                string_builder_append_char(&builder, '~');
                 string_builder_append(&builder, prereqname);
             }
             break;
@@ -454,29 +448,18 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
                 const char *polyname = ((ast_elem_polycount_t*) type->elements[i])->name;
                 string_builder_append_view(&builder, "$#", 2);
                 string_builder_append(&builder, polyname);
-                string_builder_append_view(&builder, " ", 1);
+                string_builder_append_char(&builder, ' ');
             }
             break;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) type->elements[i];
 
-                string_builder_append_view(&builder, "<", 1);
-
-                for(length_t i = 0; i != generic_base->generics_length; i++){
-                    strong_cstr_t type_str = ast_type_str(&generic_base->generics[i]);
-                    
-                    string_builder_append(&builder, type_str);
-                    free(type_str);
-
-                    if(i != generic_base->generics_length - 1){
-                        string_builder_append(&builder, ", ");
-                    }
-                }
-
+                string_builder_append_char(&builder, '<');
+                string_builder_append_type_list(&builder, generic_base->generics, generic_base->generics_length, false);
                 string_builder_append_view(&builder, "> ", 2);
 
                 if(generic_base->name_is_polymorphic){
-                    string_builder_append_view(&builder, "$", 1);
+                    string_builder_append_char(&builder, '$');
                 }
 
                 string_builder_append(&builder, generic_base->name);
@@ -485,7 +468,6 @@ strong_cstr_t ast_type_str(const ast_type_t *type){
         case AST_ELEM_LAYOUT: {
                 ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) type->elements[i];
                 strong_cstr_t layout_str = ast_layout_str(&layout_elem->layout, &layout_elem->layout.field_map);
-
                 string_builder_append(&builder, layout_str);
                 free(layout_str);
             }

@@ -5,7 +5,7 @@ struct ThingWith (firstname, lastname String)
 struct ThingWithout (firstname, lastname int)
 
 func main {
-
+    // For backwards compatibility reasons,
     // 'func &__defer__(*Type)' will return no-op function if it doesn't exist.
     // (Doesn't apply to 'func null &__defer__(*Type)', where null will be returned instead)
     printf("%p = noop __defer__ function\n", func &__defer__(*ptr) as ptr)

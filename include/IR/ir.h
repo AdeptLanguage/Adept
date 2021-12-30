@@ -586,6 +586,9 @@ typedef struct {
     length_t static_variables_length;
     length_t static_variables_capacity;
     ir_job_list_t job_list;
+    void **defer_free;
+    length_t defer_free_length;
+    length_t defer_free_capacity;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------
@@ -714,5 +717,11 @@ void ir_job_list_append(ir_job_list_t *job_list, ir_func_mapping_t *mapping);
 // ---------------- ir_job_list_free ----------------
 // Frees an IR job list
 void ir_job_list_free(ir_job_list_t *job_list);
+
+// ---------------- ir_job_list_free ----------------
+// Schedules a heap allocation to be deallocated
+// when an IR module is destroyed.
+// Can be used to preserve data that an IR module weakly references
+void ir_module_defer_free(ir_module_t *module, void *pointer);
 
 #endif // _ISAAC_IR_H

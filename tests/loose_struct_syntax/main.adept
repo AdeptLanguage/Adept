@@ -5,7 +5,7 @@ import Vector2f
 struct Parent (q, w, e usize)
 
 // Demonstrating previous syntax "errors" that
-
+// for struct declarations that are now acceptable
 struct Thing (
     struct Parent
     i int // Missing comma at end of line allowed

@@ -148,7 +148,7 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base){
 
     // Since we cannot know whether or not '&' is ever used on the type,
     // force another type entry which is a pointer the the type
-    // (unless of course the type is void, cause *void is invalid)
+    // (unless of course the type is void, cause *void is an alias for 'ptr')
     if(strcmp(weak_ast_type_entry.name, "void") != 0){
         // Add *T type table entry
         weak_ast_type_entry.ast_type.elements = &static_elements[0];

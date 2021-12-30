@@ -45,6 +45,10 @@ void string_builder_append(string_builder_t *builder, const char *portion);
 // Appends a string view to the string being built by a string builder
 void string_builder_append_view(string_builder_t *builder, const char *portion, length_t portion_length);
 
+// ---------------- string_builder_append ----------------
+// Appends a character to the string being built by a string builder
+void string_builder_append_char(string_builder_t *builder, char character);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1130,7 +1130,10 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
         }
 
         // Resolve AST field type to IR field type
-        if(ir_gen_resolve_type(compiler, object, &field_type, &out_field_info->ir_type)) return FAILURE;
+        if(ir_gen_resolve_type(compiler, object, &field_type, &out_field_info->ir_type)){
+            ast_type_free(&field_type);
+            return FAILURE;
+        }
 
         out_field_info->ast_type = field_type;
 
@@ -2614,6 +2617,7 @@ errorcode_t ir_gen_expr_typenameof(ir_builder_t *builder, ast_expr_typenameof_t 
 
     weak_cstr_t name = ir_pool_alloc(builder->pool, size);
     memcpy(name, on_heap, size);
+    free(on_heap);
     
     *ir_value = build_literal_cstr_of_length(builder, name, size);
 
@@ -2631,6 +2635,7 @@ errorcode_t ir_gen_expr_embed(ir_builder_t *builder, ast_expr_embed_t *expr, ir_
     }
     
     *ir_value = build_literal_str(builder, array, length);
+    ir_module_defer_free(&builder->object->ir_module, array);
 
     if(out_expr_type) ast_type_make_base(out_expr_type, strclone("String"));
     return SUCCESS;

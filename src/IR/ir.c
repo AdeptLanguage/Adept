@@ -80,7 +80,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             return value_str;
         case TYPE_KIND_BOOLEAN:
             value_str = malloc(typename_length + 7);
-            sprintf(value_str, "%s %s", typename, *((adept_bool*) value->extra) ? "true" : "false");
+            sprintf(value_str, "%s %s", typename, bool_to_string(*typecast(adept_bool*, value->extra)));
             free(typename);
             return value_str;
         case TYPE_KIND_POINTER:
@@ -840,6 +840,9 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->static_variables_length = 0;
     ir_module->static_variables_capacity = 0;
     memset(&ir_module->job_list, 0, sizeof(ir_job_list_t));
+    ir_module->defer_free = NULL;
+    ir_module->defer_free_length = 0;
+    ir_module->defer_free_capacity = 0;
 
     // Initialize common data
     ir_shared_common_t *common = &ir_module->common;
@@ -877,6 +880,7 @@ void ir_module_free(ir_module_t *ir_module){
         for(length_t i = 0; i < ir_module->init_builder->basicblocks_length; i++){
             ir_basicblock_free(&ir_module->init_builder->basicblocks[i]);
         }
+        free(ir_module->init_builder->basicblocks);
         free(ir_module->init_builder);
     }
 
@@ -885,6 +889,7 @@ void ir_module_free(ir_module_t *ir_module){
         for(length_t i = 0; i < ir_module->deinit_builder->basicblocks_length; i++){
             ir_basicblock_free(&ir_module->deinit_builder->basicblocks[i]);
         }
+        free(ir_module->deinit_builder->basicblocks);
         free(ir_module->deinit_builder);
     }
 
@@ -897,6 +902,11 @@ void ir_module_free(ir_module_t *ir_module){
     free(ir_module->rtti_relocations);
 
     ir_job_list_free(&ir_module->job_list);
+
+    for(length_t i = 0; i != ir_module->defer_free_length; i++){
+        free(ir_module->defer_free[i]);
+    }
+    free(ir_module->defer_free);
 }
 
 void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length){
@@ -1120,4 +1130,11 @@ void ir_job_list_append(ir_job_list_t *job_list, ir_func_mapping_t *mapping){
 
 void ir_job_list_free(ir_job_list_t *job_list){
     free(job_list->jobs);
+}
+
+void ir_module_defer_free(ir_module_t *module, void *pointer){
+    expand((void**) &module->defer_free, sizeof(void*), module->defer_free_length,
+        &module->defer_free_capacity, 1, 4);
+    
+    module->defer_free[module->defer_free_length++] = pointer;
 }

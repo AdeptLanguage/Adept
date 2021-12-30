@@ -94,6 +94,8 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_END:
             return SUCCESS;
         case TOKEN_RETURN: {
+                // TODO: CLEANUP: Refactor this
+
                 ast_expr_t *return_expression;
                 source = sources[(*i)++]; // Pass over return keyword
 
@@ -108,19 +110,18 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 defer_scope_fulfill(defer_scope, &last_minute);
 
                 // Duplicate defer statements of ancestors
-                defer_scope_t *traverse = defer_scope->parent;
-
-                while(traverse){
+                for(defer_scope_t *traverse = defer_scope->parent; traverse; traverse = traverse->parent){
                     for(size_t r = traverse->list.length; r != 0; r--){
                         last_minute.statements[last_minute.length++] = ast_expr_clone(traverse->list.statements[r - 1]);
                     }
-                    traverse = traverse->parent;
                 }
 
                 ast_expr_create_return(&stmt_list->statements[stmt_list->length++], source, return_expression, last_minute);
             }
             break;
         case TOKEN_STRING: {
+                // Allow statements such as: "This is a string".doSomething()
+
                 ast_expr_t *expression;
                 if(parse_expr(ctx, &expression)) return FAILURE;
                 
@@ -814,120 +815,105 @@ errorcode_t parse_stmt_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     // <variable_name> <variable_type> [ = expression ]
     //       ^
 
-    length_t *i = ctx->i;
-    token_t *tokens = ctx->tokenlist->tokens;
-    source_t *token_sources = ctx->tokenlist->sources;
-
     weak_cstr_t *names = NULL;
     source_t *source_list = NULL;
     length_t length = 0;
     length_t capacity = 0;
     trait_t traits = TRAIT_NONE;
 
-    switch(tokens[*i].id){
-    case TOKEN_CONST:
+    // Handle variable modifiers
+    if(parse_eat(ctx, TOKEN_CONST, NULL) == SUCCESS){
+        // 'const' keyword
         traits |= AST_EXPR_DECLARATION_CONST;
-        (*i)++;
-        break;
-    case TOKEN_STATIC:
+    } else if(parse_eat(ctx, TOKEN_STATIC, NULL) == SUCCESS){
+        // 'static' keyword
         traits |= AST_EXPR_DECLARATION_STATIC;
-        (*i)++;
-        break;
     }
 
-    // Collect all variable names & sources into arrays
-    while(true){
+    // Collect variable names and sources
+    do {
         coexpand((void**) &names, sizeof(const char*), (void**) &source_list,
             sizeof(source_t), length, &capacity, 1, 4);
 
-        if(tokens[*i].id != TOKEN_WORD){
-            compiler_panic(ctx->compiler, token_sources[*i], "Expected variable name");
-            free(names);
-            free(source_list);
-            return FAILURE;
+        if(parse_ctx_peek(ctx) != TOKEN_WORD){
+            compiler_panic(ctx->compiler, parse_ctx_peek_source(ctx), "Expected variable name");
+            goto failure;
         }
 
-        names[length] = tokens[*i].data;
-        source_list[length++] = token_sources[(*i)++];
+        names[length] = (char*) parse_ctx_peek_data(ctx);
+        source_list[length++] = parse_ctx_peek_source(ctx);
+        *ctx->i += 1;
+    } while(parse_eat(ctx, TOKEN_NEXT, NULL) == SUCCESS);
 
-        if(tokens[*i].id == TOKEN_NEXT){
-            (*i)++; continue;
-        } else break;
-    }
-
-    if(tokens[*i].id == TOKEN_POD){
+    // Determine whether variable is POD
+    if(parse_eat(ctx, TOKEN_POD, NULL) == SUCCESS){
         traits |= AST_EXPR_DECLARATION_POD;
-        (*i)++;
     }
 
-    // Parse the type for the variable(s)
+    // Parse the type for the variable(s) and handle any initial assignment
     ast_type_t type;
-    if(parse_type(ctx, &type)){
-        free(names);
-        free(source_list);
-        return FAILURE;
-    }
 
-    if(parse_stmt_mid_declare(ctx, stmt_list, type, names, source_list, length, traits)){
-        ast_type_free(&type);
-        free(names);
-        free(source_list);
-        return FAILURE;
+    if(parse_type(ctx, &type)
+    || parse_stmt_mid_declare(ctx, stmt_list, type, names, source_list, length, traits)){
+        goto failure;
     }
 
     free(names);
     free(source_list);
     return SUCCESS;
+
+failure:
+    free(names);
+    free(source_list);
+    return FAILURE;
 }
 
 errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_type_t master_type, weak_cstr_t *names, source_t *source_list, length_t length, trait_t traits){
+    // DANGEROUS: Don't use this function unless you know what you're doing
+    // NOTE: Ownership of 'master_type' is taken
     // NOTE: 'length' is used for the length of both 'names' and 'sources'
+    // NOTE: No ownership is taken of the arrays 'names' and 'sources' themselves
 
-    length_t *i = ctx->i;
-    token_t *tokens = ctx->tokenlist->tokens;
     unsigned int declare_stmt_type = EXPR_DECLARE;
     ast_expr_t *initial_value = NULL;
 
-    // Parse the initial value for the variable(s) (if an initial value is given)
-    if(tokens[*i].id == TOKEN_ASSIGN){
-        (*i)++; // Skip over 'assign' token
-
-        // Handle either 'undef' or an expression
-        if(tokens[*i].id == TOKEN_UNDEF){
+    // Handle initial value assignment
+    if(parse_eat(ctx, TOKEN_ASSIGN, NULL) == SUCCESS){
+        if(parse_eat(ctx, TOKEN_UNDEF, NULL) == SUCCESS){
+            // Handle ' = undef'
             declare_stmt_type = EXPR_DECLAREUNDEF;
-            (*i)++;
         } else {
-            if(tokens[*i].id == TOKEN_POD){
+            // Handle ' = value'
+
+            if(parse_eat(ctx, TOKEN_POD, NULL) == SUCCESS){
                 traits |= AST_EXPR_DECLARATION_ASSIGN_POD;
-                (*i)++;
             }
 
-            if(parse_expr(ctx, &initial_value)) return FAILURE;
+            if(parse_expr(ctx, &initial_value)){
+                goto failure;
+            }
         }
-    }    
+    }
 
-    // Add each variable to the necessary data sets
-    for(length_t v = 0; v != length; v++){
-        ast_type_t type;
-        ast_expr_t *value;
+    // Create variable declarations
+    for(length_t i = 0; i != length; i++){
+        bool is_last = (i + 1 == length);
+        ast_type_t type = is_last ? master_type : ast_type_clone(&master_type);
+        ast_expr_t *value = is_last ? initial_value : (initial_value ? ast_expr_clone(initial_value) : NULL);
 
-        if(v + 1 == length){
-            type = master_type;
-            value = initial_value;
-        } else {
-            type = ast_type_clone(&master_type);
-            value = initial_value == NULL ? NULL : ast_expr_clone(initial_value);
-        }
-
-        if(v != 0){
+        if(i != 0){
+            // Only one statement expected, so we have to make room for any additional ones
             expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, 1, 8);
         }
 
-        // Create the declare statement
-        ast_expr_create_declaration(&stmt_list->statements[stmt_list->length++], declare_stmt_type, source_list[v], names[v], type, traits, value);
+        ast_expr_create_declaration(&stmt_list->statements[stmt_list->length++], declare_stmt_type, source_list[i], names[i], type, traits, value);
     }
 
     return SUCCESS;
+
+failure:
+    ast_type_free(&master_type);
+    return FAILURE;
 }
 
 errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *parent_defer_scope, bool is_exhaustive){

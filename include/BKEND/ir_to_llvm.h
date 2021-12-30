@@ -163,7 +163,7 @@ LLVMValueRef llvm_create_static_variable(llvm_context_t *llvm, ir_type_t *type, 
 
 // ---------------- value_catalog_prepare ----------------
 // Creates a value_catalog_t cabable of holding value results
-
+// for a list of basicblocks
 void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblock_t *basicblocks, length_t basicblocks_length);
 
 // ---------------- value_catalog_free ----------------

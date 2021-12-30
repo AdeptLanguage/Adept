@@ -616,8 +616,13 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             ast_type_free(&phantom_value.type);
 
             // Ensure tentative call was successful
-            if(error || ast_type_is_void(&temporary_type)) return false;
+            if(error || ast_type_is_void(&temporary_type)){
+                ast_type_free(&temporary_type);
+                return false;
+            }
             
+            ast_type_free(&temporary_type);
+
             *ir_value = converted;
             return true;
         }

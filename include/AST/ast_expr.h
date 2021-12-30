@@ -705,19 +705,19 @@ bool expr_is_mutable(ast_expr_t *expr);
 strong_cstr_t ast_expr_str(ast_expr_t *expr);
 
 // ---------------- ast_expr_free ----------------
-// Frees data within an AST expression
+// Frees data within an AST expression (expression can be NULL)
 void ast_expr_free(ast_expr_t *expr);
 
 // ---------------- ast_expr_free_fully ----------------
-// Frees data within an AST expression and the container
+// Frees data within an AST expression and the container (expression can be NULL)
 void ast_expr_free_fully(ast_expr_t *expr);
 
 // ---------------- ast_exprs_free ----------------
-// Calls 'ast_expr_free' for each expression in a list
+// Calls 'ast_expr_free' for each expression in a list (expressions can be NULL)
 void ast_exprs_free(ast_expr_t **expr, length_t length);
 
 // ---------------- ast_exprs_free_fully ----------------
-// Calls 'ast_expr_free_fully' for each expression in a list
+// Calls 'ast_expr_free_fully' for each expression in a list (expressions can be NULL)
 void ast_exprs_free_fully(ast_expr_t **expr, length_t length);
 
 // ---------------- ast_expr_clone ----------------

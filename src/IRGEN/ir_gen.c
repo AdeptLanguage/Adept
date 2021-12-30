@@ -661,17 +661,8 @@ weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
     string_builder_init(&builder);
 
     string_builder_append(&builder, ast_func->name);
-    string_builder_append(&builder, "(");
-
-    for(length_t i = 0; i != ast_func->arity; i++){
-        string_builder_append_type(&builder, &ast_func->arg_types[i]);
-
-        if(i + 1 != ast_func->arity){
-            string_builder_append(&builder, ", ");
-        }
-    }
-    
-    string_builder_append(&builder, ") ");
+    string_builder_append_type_list(&builder, ast_func->arg_types, ast_func->arity, true);
+    string_builder_append_char(&builder, ' ');
     string_builder_append_type(&builder, &ast_func->return_type);
 
     strong_lenstr_t finalized = string_builder_finalize_with_length(&builder);

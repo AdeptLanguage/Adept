@@ -36,6 +36,10 @@ bool expr_is_mutable(ast_expr_t *expr){
     }
 }
 
+static strong_cstr_t ast_expr_string_to_str(ast_expr_str_t *str_expr){
+    return string_to_escaped_string(str_expr->array, str_expr->length, '"');
+}
+
 static strong_cstr_t ast_expr_ubyte_to_str(ast_expr_ubyte_t *ubyte_expr){
     // Converts a literal ubyte expression into a human-readable string
     // ast_expr_ubyte_t   --->   "0x0Aub"
@@ -144,82 +148,52 @@ static strong_cstr_t ast_expr_math_to_str(ast_expr_math_t *expr){
 }
 
 static strong_cstr_t ast_expr_values_to_str(ast_expr_t **arg_values, length_t arity){
-    // DANGEROUS: This function contains bare-bones string manipulation
-    // Modify with caution
-
-    // Short-term cache for string representations of values
-    strong_cstr_t *args = malloc(sizeof(char*) * arity); 
-    length_t *arg_lengths = malloc(sizeof(length_t) * arity); 
-
-    // Calculate resulting buffer size
-    length_t result_buffer_size = 0;
-
-    // Each value will be contained in result, so enough space is
-    // needed for all of them
-    for(length_t i = 0; i != arity; i++){
-        args[i] = ast_expr_str(arg_values[i]);
-        arg_lengths[i] = strlen(args[i]);
-        result_buffer_size += arg_lengths[i];
-    }
-
-    // We also need one character for '\0', and also max(0, arity - 1) ','s
-    result_buffer_size += 1 + (arity <= 1 ? 0 : 2 * (arity - 1));
-
-    // Now that we now the required capacity,
-    // Allocate buffer to store resulting string representation of value list
-    strong_cstr_t result = malloc(result_buffer_size);
-
-    // Index to write into buffer
-    length_t put_index = 0;
-
-    // Concatenate args onto value list representation
-    for(length_t i = 0; i != arity; i++){
-        // Append argument
-        memcpy(&result[put_index], args[i], arg_lengths[i]);
-        put_index += arg_lengths[i];
-
-        // Append ', ' if applicable
-        if(i + 1 != arity){
-            result[put_index++] = ',';
-            result[put_index++] = ' ';
-        }
-    }
-
-    result[put_index] = '\0';
-
-    free_string_list(args, arity);
-    free(arg_lengths);
-    return result;
+    string_builder_t builder;
+    string_builder_init(&builder);
+    string_builder_append_expr_list(&builder, arg_values, arity, false);
+    return string_builder_finalize(&builder);
 }
 
 static strong_cstr_t ast_expr_call_to_str(ast_expr_call_t *call_expr){
-    strong_cstr_t gives_return_type = call_expr->gives.elements_length ? ast_type_str(&call_expr->gives) : NULL;
-    strong_cstr_t args = ast_expr_values_to_str(call_expr->args, call_expr->arity);
-    weak_cstr_t   tentative_flag = call_expr->is_tentative ? "?" : "";
+    string_builder_t builder;
+    string_builder_init(&builder);
 
-    strong_cstr_t result = gives_return_type ?
-        mallocandsprintf("%s%s(%s) ~> %s", call_expr->name, tentative_flag, args, gives_return_type) :
-        mallocandsprintf("%s%s(%s)", call_expr->name, tentative_flag, args);
+    string_builder_append(&builder, call_expr->name);
 
-    free(args);
-    free(gives_return_type);
-    return result;
+    if(call_expr->is_tentative){
+        string_builder_append_char(&builder, '?');
+    }
+
+    string_builder_append_expr_list(&builder, call_expr->args, call_expr->arity, true);
+
+    if(call_expr->gives.elements_length > 0){
+        string_builder_append(&builder, " ~> ");
+        string_builder_append_type(&builder, &call_expr->gives);
+    }
+
+    return string_builder_finalize(&builder);
 }
 
-static strong_cstr_t ast_expr_call_method_to_str(ast_expr_call_method_t *call_method_expr){
-    strong_cstr_t gives_return_type = call_method_expr->gives.elements_length ? ast_type_str(&call_method_expr->gives) : NULL;
-    strong_cstr_t subject = ast_expr_str(call_method_expr->value);
-    strong_cstr_t args = ast_expr_values_to_str(call_method_expr->args, call_method_expr->arity);
-    weak_cstr_t   tentative_flag = call_method_expr->is_tentative ? "?" : "";
-    
-    strong_cstr_t result = gives_return_type ?
-        mallocandsprintf("%s.%s%s(%s) ~> %s", subject, tentative_flag, call_method_expr->name, args, gives_return_type) :
-        mallocandsprintf("%s.%s%s(%s)", subject, tentative_flag, call_method_expr->name, args);
+static strong_cstr_t ast_expr_call_method_to_str(ast_expr_call_method_t *method_expr){
+    string_builder_t builder;
+    string_builder_init(&builder);
 
-    free(args);
-    free(subject);
-    free(gives_return_type);
-    return result;
+    string_builder_append_expr(&builder, method_expr->value);
+    string_builder_append_char(&builder, '.');
+
+    if(method_expr->is_tentative){
+        string_builder_append_char(&builder, '?');
+    }
+
+    string_builder_append(&builder, method_expr->name);
+    string_builder_append_expr_list(&builder, method_expr->args, method_expr->arity, true);
+
+    if(method_expr->gives.elements_length > 0){
+        string_builder_append(&builder, " ~> ");
+        string_builder_append_type(&builder, &method_expr->gives);
+    }
+
+    return string_builder_finalize(&builder);
 }
 
 static strong_cstr_t ast_expr_member_to_str(ast_expr_member_t *member_expr){
@@ -238,8 +212,23 @@ static strong_cstr_t ast_expr_unary_to_str(ast_expr_unary_t *unary_expr, const c
 }
 
 static strong_cstr_t ast_expr_func_addr_to_str(ast_expr_func_addr_t *func_addr_expr){
-    // TODO: Include variant that has support for printing "match args"
-    return mallocandsprintf("func %s&%s", func_addr_expr->tentative ? "null " : "", func_addr_expr->name);
+    string_builder_t builder;
+    string_builder_init(&builder);
+
+    string_builder_append(&builder, "func ");
+
+    if(func_addr_expr->tentative){
+        string_builder_append(&builder, "null ");
+    }
+    
+    string_builder_append_char(&builder, '&');
+    string_builder_append(&builder, func_addr_expr->name);
+
+    if(func_addr_expr->has_match_args){
+        string_builder_append_type_list(&builder, func_addr_expr->match_args, func_addr_expr->match_args_length, true);
+    }
+
+    return string_builder_finalize(&builder);
 }
 
 static strong_cstr_t ast_expr_array_access_to_str(ast_expr_array_access_t *array_access_expr, const char *format){
@@ -252,8 +241,8 @@ static strong_cstr_t ast_expr_array_access_to_str(ast_expr_array_access_t *array
 }
 
 static strong_cstr_t ast_expr_cast_to_str(ast_expr_cast_t *cast_expr){
-    char *type = ast_type_str(&cast_expr->to);
-    char *value = ast_expr_str(cast_expr->from);
+    strong_cstr_t type = ast_type_str(&cast_expr->to);
+    strong_cstr_t value = ast_expr_str(cast_expr->from);
     strong_cstr_t result = mallocandsprintf("cast %s (%s)", type, value);
     free(type);
     free(value);
@@ -265,6 +254,30 @@ static strong_cstr_t ast_expr_sizeof_like_to_str(ast_type_t *type, const char *k
     strong_cstr_t result = mallocandsprintf("%s %s", kind_name, typename);
     free(typename);
     return result;
+}
+
+static strong_cstr_t ast_expr_new_to_str(ast_expr_new_t *new_expr){
+    strong_cstr_t type = ast_type_str(&new_expr->type);
+    strong_cstr_t result;
+
+    if(new_expr->amount == NULL){
+        result = mallocandsprintf("new %s", type);
+    } else {
+        strong_cstr_t amount = ast_expr_str(new_expr->amount);
+        result = mallocandsprintf("new %s * (%s)", type, amount);
+        free(amount);
+    }
+
+    free(type);
+    return result;
+}
+
+static strong_cstr_t ast_expr_new_cstring_to_str(ast_expr_new_cstring_t *new_cstring_expr){
+    return mallocandsprintf("new '%s'", new_cstring_expr->value);
+}
+
+static strong_cstr_t ast_expr_enum_value_to_str(ast_expr_enum_value_t *enum_value_expr){
+    return mallocandsprintf("%s::%s", enum_value_expr->enum_name, enum_value_expr->kind_name);
 }
 
 static strong_cstr_t ast_expr_static_data_to_str(ast_expr_static_data_t *data_expr, const char *format){
@@ -286,75 +299,33 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
 
     switch(expr->id){
     case EXPR_BYTE:
-        return int8_to_string(
-                ((ast_expr_byte_t*) expr)->value,
-                "sb" // Integer Suffix
-            );
+        return int8_to_string(typecast(ast_expr_byte_t*, expr)->value, "sb");
     case EXPR_SHORT:
-        return int16_to_string(
-                ((ast_expr_short_t*) expr)->value,
-                "ss" // Integer Suffix
-            );
+        return int16_to_string(typecast(ast_expr_short_t*, expr)->value, "ss");
     case EXPR_USHORT:
-        return uint16_to_string(
-                ((ast_expr_ushort_t*) expr)->value,
-                "us" // Integer Suffix
-            );
+        return uint16_to_string(typecast(ast_expr_ushort_t*, expr)->value, "us");
     case EXPR_INT:
-        return int32_to_string(
-                ((ast_expr_int_t*) expr)->value,
-                "si" // Integer Suffix
-            );
+        return int32_to_string(typecast(ast_expr_int_t*, expr)->value, "si");
     case EXPR_UINT:
-        return uint32_to_string(
-                ((ast_expr_uint_t*) expr)->value,
-                "ui" // Integer Suffix
-            );
+        return uint32_to_string(typecast(ast_expr_uint_t*, expr)->value, "ui");
     case EXPR_LONG:
-        return int64_to_string(
-                ((ast_expr_long_t*) expr)->value,
-                "sl" // Integer Suffix
-            );
+        return int64_to_string(typecast(ast_expr_long_t*, expr)->value, "sl");
     case EXPR_ULONG:
-        return uint64_to_string(
-                ((ast_expr_ulong_t*) expr)->value,
-                "ul" // Integer Suffix
-            );
+        return uint64_to_string(typecast(ast_expr_ulong_t*, expr)->value, "ul");
     case EXPR_USIZE:
-        return uint64_to_string(
-                ((ast_expr_usize_t*) expr)->value,
-                "uz" // Integer Suffix
-            );
+        return uint64_to_string(typecast(ast_expr_usize_t*, expr)->value, "uz");
     case EXPR_GENERIC_INT:
-        return int64_to_string(
-                ((ast_expr_generic_int_t*) expr)->value,
-                "" // Integer Suffix
-            );
+        return int64_to_string(typecast(ast_expr_generic_int_t*, expr)->value, "");
     case EXPR_FLOAT:
-        return float32_to_string(
-                ((ast_expr_float_t*) expr)->value,
-                "f" // Floating Point Suffix
-            );
+        return float32_to_string(typecast(ast_expr_float_t*, expr)->value, "f");
     case EXPR_DOUBLE:
-        return float64_to_string(
-                ((ast_expr_double_t*) expr)->value,
-                "d" // Floating Point Suffix
-            );
+        return float64_to_string(typecast(ast_expr_double_t*, expr)->value, "d");
     case EXPR_GENERIC_FLOAT:
-        return float64_to_string(
-                ((ast_expr_generic_float_t*) expr)->value,
-                "" // Floating Point Suffix
-            );
+        return float64_to_string(typecast(ast_expr_generic_float_t*, expr)->value, "");
     case EXPR_BOOLEAN:
-        return strclone(
-                ((ast_expr_boolean_t*) expr)->value ? "true" : "false"
-            );
+        return strclone(bool_to_string(typecast(ast_expr_boolean_t*, expr)->value));
     case EXPR_STR:
-        return string_to_escaped_string(
-                ((ast_expr_str_t*) expr)->array,
-                ((ast_expr_str_t*) expr)->length,
-                '"'
-            );
+        return ast_expr_string_to_str((ast_expr_str_t*) expr);
     case EXPR_NULL:
         return strclone("null");
     case EXPR_CSTR:
@@ -385,7 +356,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_CALL:
         return ast_expr_call_to_str((ast_expr_call_t*) expr);
     case EXPR_VARIABLE:
-        return strclone(((ast_expr_variable_t*) expr)->name);
+        return strclone(typecast(ast_expr_variable_t*, expr)->name);
     case EXPR_MEMBER:
         return ast_expr_member_to_str((ast_expr_member_t*) expr);
     case EXPR_ADDRESS:
@@ -410,33 +381,12 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         return ast_expr_call_method_to_str((ast_expr_call_method_t*) expr);
     case EXPR_NOT:
         return ast_expr_unary_to_str((ast_expr_unary_t*) expr, "!(%s)");
-    case EXPR_NEW: {
-            char *type_str = ast_type_str(&((ast_expr_new_t*) expr)->type);
-
-            if( ((ast_expr_new_t*) expr)->amount == NULL ){
-                representation = mallocandsprintf("new %s", type_str);
-            } else {
-                char *a_str = ast_expr_str(((ast_expr_new_t*) expr)->amount);
-                representation = mallocandsprintf("new %s * (%s)", type_str, a_str);
-                free(a_str);
-            }
-
-            free(type_str);
-            return representation;
-        }
-    case EXPR_NEW_CSTRING: {
-            char *value = ((ast_expr_new_cstring_t*) expr)->value;
-            representation = mallocandsprintf("new '%s'", value);
-            return representation;
-        }
-    case EXPR_ENUM_VALUE: {
-            const char *enum_name = ((ast_expr_enum_value_t*) expr)->enum_name;
-            const char *kind_name = ((ast_expr_enum_value_t*) expr)->kind_name;
-            if(enum_name == NULL) enum_name = "<contextual>";
-
-            representation = mallocandsprintf("%s::%s", enum_name, kind_name);
-            return representation;
-        }
+    case EXPR_NEW:
+        return ast_expr_new_to_str((ast_expr_new_t*) expr);
+    case EXPR_NEW_CSTRING:
+        return ast_expr_new_cstring_to_str((ast_expr_new_cstring_t*) expr);
+    case EXPR_ENUM_VALUE:
+        return ast_expr_enum_value_to_str((ast_expr_enum_value_t*) expr);
     case EXPR_BIT_COMPLEMENT:
         return ast_expr_unary_to_str((ast_expr_unary_t*) expr, "~(%s)");
     case EXPR_NEGATE:
@@ -452,9 +402,9 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
             return representation;
         }
     case EXPR_TERNARY: {
-            char *condition_str = ast_expr_str(((ast_expr_ternary_t*) expr)->condition);
-            char *true_str = ast_expr_str(((ast_expr_ternary_t*) expr)->if_true);
-            char *false_str = ast_expr_str(((ast_expr_ternary_t*) expr)->if_false);
+            strong_cstr_t condition_str = ast_expr_str(typecast(ast_expr_ternary_t*, expr)->condition);
+            strong_cstr_t true_str      = ast_expr_str(typecast(ast_expr_ternary_t*, expr)->if_true);
+            strong_cstr_t false_str     = ast_expr_str(typecast(ast_expr_ternary_t*, expr)->if_false);
 
             representation = mallocandsprintf("(%s ? %s : %s)", condition_str, true_str, false_str);
 
@@ -484,7 +434,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_INITLIST: {
             string_builder_t builder;
             string_builder_init(&builder);
-            string_builder_append(&builder, "{");
+            string_builder_append_char(&builder, '{');
 
             for(length_t i = 0; i != ((ast_expr_initlist_t*) expr)->length; i++){
                 if(i != 0){
@@ -494,7 +444,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
                 string_builder_append_expr(&builder, ((ast_expr_initlist_t*) expr)->elements[i]);
             }
 
-            string_builder_append(&builder, "}");
+            string_builder_append_char(&builder, '}');
             return string_builder_finalize(&builder);
         }
     case EXPR_POLYCOUNT:
@@ -547,8 +497,9 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
 }
 
 void ast_expr_free(ast_expr_t *expr){
-    if(!expr) return;
+    if(expr == NULL) return;
 
+    // TODO: CLEANUP: Clean up messy typecasting
     switch(expr->id){
     case EXPR_ADD:
     case EXPR_SUBTRACT:
@@ -570,15 +521,17 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_BIT_RSHIFT:
     case EXPR_BIT_LGC_LSHIFT:
     case EXPR_BIT_LGC_RSHIFT:
-        ast_expr_free_fully( ((ast_expr_math_t*) expr)->a );
-        ast_expr_free_fully( ((ast_expr_math_t*) expr)->b );
+        ast_expr_free_fully(typecast(ast_expr_math_t*, expr)->a);
+        ast_expr_free_fully(typecast(ast_expr_math_t*, expr)->b);
         break;
     case EXPR_CALL:
-        ast_exprs_free_fully(((ast_expr_call_t*) expr)->args, ((ast_expr_call_t*) expr)->arity);
+        ast_exprs_free_fully(typecast(ast_expr_call_t*, expr)->args, typecast(ast_expr_call_t*, expr)->arity);
 
-        if(((ast_expr_call_t*) expr)->gives.elements_length != 0){
+        if(typecast(ast_expr_call_t*, expr)->gives.elements_length != 0){
             ast_type_free(&((ast_expr_call_t*) expr)->gives);
         }
+
+        free(typecast(ast_expr_call_t*, expr)->name);
         break;
     case EXPR_VARIABLE:
         // name is a weak_cstr_t so we don't have to worry about it
@@ -679,16 +632,12 @@ void ast_expr_free(ast_expr_t *expr){
         ast_expr_free_fully( ((ast_expr_ternary_t*) expr)->if_false );
         break;
     case EXPR_RETURN:
-        if(((ast_expr_return_t*) expr)->value != NULL){
-            ast_expr_free_fully( ((ast_expr_return_t*) expr)->value );
-        }
+        ast_expr_free_fully( ((ast_expr_return_t*) expr)->value );
         ast_free_statements_fully(((ast_expr_return_t*) expr)->last_minute.statements, ((ast_expr_return_t*) expr)->last_minute.length);
         break;
     case EXPR_DECLARE: case EXPR_ILDECLARE:
         ast_type_free(&((ast_expr_declare_t*) expr)->type);
-        if(((ast_expr_declare_t*) expr)->value != NULL){
-            ast_expr_free_fully(((ast_expr_declare_t*) expr)->value);
-        }
+        ast_expr_free_fully(((ast_expr_declare_t*) expr)->value);
         break;
     case EXPR_DECLAREUNDEF: case EXPR_ILDECLAREUNDEF:
         ast_type_free(&((ast_expr_declare_t*) expr)->type);
@@ -715,9 +664,7 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_EACH_IN:
         free(((ast_expr_each_in_t*) expr)->it_name);
-        if(((ast_expr_each_in_t*) expr)->it_type){
-            ast_type_free_fully(((ast_expr_each_in_t*) expr)->it_type);
-        }
+        ast_type_free_fully(((ast_expr_each_in_t*) expr)->it_type);
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->low_array);
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->length);
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->list);
@@ -747,41 +694,35 @@ void ast_expr_free(ast_expr_t *expr){
             ast_expr_for_t *for_loop = (ast_expr_for_t*) expr;
             ast_free_statements_fully(for_loop->before.statements, for_loop->before.length);
             ast_free_statements_fully(for_loop->after.statements, for_loop->after.length);
-            if(for_loop->condition) ast_expr_free_fully(for_loop->condition);
+            ast_expr_free_fully(for_loop->condition);
             ast_free_statements_fully(for_loop->statements.statements, for_loop->statements.length);
         }
         break;
-    case EXPR_DECLARE_CONSTANT: {
-            ast_expr_declare_constant_t *declare_constant = (ast_expr_declare_constant_t*) expr;
-            ast_free_constants(&declare_constant->constant, 1);
-        }
+    case EXPR_DECLARE_CONSTANT:
+        ast_free_constants(&typecast(ast_expr_declare_constant_t*, expr)->constant, 1);
         break;
     }
 }
 
 void ast_expr_free_fully(ast_expr_t *expr){
-    if(!expr) return;
-
     ast_expr_free(expr);
     free(expr);
 }
 
 void ast_exprs_free(ast_expr_t **exprs, length_t length){
-    for(length_t e = 0; e != length; e++){
-        ast_expr_free(exprs[e]);
+    for(length_t i = 0; i != length; i++){
+        ast_expr_free(exprs[i]);
     }
 }
 
 void ast_exprs_free_fully(ast_expr_t **exprs, length_t length){
-    for(length_t e = 0; e != length; e++){
-        ast_expr_free(exprs[e]);
-        free(exprs[e]);
+    for(length_t i = 0; i != length; i++){
+        ast_expr_free_fully(exprs[i]);
     }
     free(exprs);
 }
 
 ast_expr_t *ast_expr_clone(ast_expr_t* expr){
-    // NOTE: Exclusively statement expressions are currently unimplemented
     ast_expr_t *clone = NULL;
 
     #define MACRO_VALUE_CLONE(expr_type) { \

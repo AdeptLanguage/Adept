@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
 #include "UTIL/color.h"
@@ -45,6 +46,7 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast_type_make_base(&ast->common.ast_int_type, strclone("int"));
     ast_type_make_base(&ast->common.ast_usize_type, strclone("usize"));
     ast->common.ast_variadic_array = NULL;
+    ast->common.ast_initializer_list = NULL;
 
     ast->type_table = NULL;
     ast->meta_definitions = NULL;
@@ -193,26 +195,27 @@ void ast_free(ast_t *ast){
 
     ast_type_free(&ast->common.ast_int_type);
     ast_type_free(&ast->common.ast_usize_type);
+    ast_type_free_fully(ast->common.ast_variadic_array);
+    ast_type_free_fully(ast->common.ast_initializer_list);
 
-    if(ast->common.ast_variadic_array != NULL){
-        ast_type_free_fully(ast->common.ast_variadic_array);
-    }
-    
     type_table_free(ast->type_table);
     free(ast->type_table);
 
     for(i = 0; i != ast->meta_definitions_length; i++){
         meta_expr_free_fully(ast->meta_definitions[i].value);
     }
+
     free(ast->meta_definitions);
     free(ast->polymorphic_funcs);
     free(ast->polymorphic_methods);
+
     for(i = 0; i != ast->polymorphic_composites_length; i++){
         ast_polymorphic_composite_t *poly_composite = &ast->polymorphic_composites[i];
 
         ast_free_composites((ast_composite_t*) poly_composite, 1);
         free_string_list(poly_composite->generics, poly_composite->generics_length);
     }
+
     free(ast->polymorphic_composites);
 }
 
@@ -360,22 +363,18 @@ strong_cstr_t ast_func_args_str(ast_func_t *func){
     for(length_t i = 0; i != func->arity; i++){
         if(func->arg_names && func->arg_names[i]){
             string_builder_append(&builder, func->arg_names[i]);
-            string_builder_append(&builder, " ");
+            string_builder_append_char(&builder, ' ');
         }
 
         if(func->arg_type_traits && func->arg_type_traits[i] & AST_FUNC_ARG_TYPE_TRAIT_POD){
             string_builder_append(&builder, "POD ");
         }
 
-        strong_cstr_t typename = ast_type_str(&func->arg_types[i]);
-        string_builder_append(&builder, typename);
-        free(typename);
+        string_builder_append_type(&builder, &func->arg_types[i]);
 
         if(func->arg_defaults && func->arg_defaults[i]){
-            strong_cstr_t default_value = ast_expr_str(func->arg_defaults[i]);
             string_builder_append(&builder, " = ");
-            string_builder_append(&builder, default_value);
-            free(default_value);
+            string_builder_append_expr(&builder, func->arg_defaults[i]);
         }
 
         if(i + 1 != func->arity){

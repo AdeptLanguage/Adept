@@ -83,33 +83,34 @@ uint64 string_to_uint64(weak_cstr_t string, int base){
     length_t length = strlen(string);
     if(length == 0) return 0; // Avoid problems with zero length strings
 
-    uint64 power = 1;
+    uint64_t power = 1;
     length_t i = length - 1;
-    uint64 result = 0;
+    uint64_t result = 0;
 
+    // Faster specialized method for base 10 integers
     if(base == 10){
-        // Faster method for parsing base 10 integers
-    
         do {
             char c = string[i];
             if(c < '0' || c > '9') return 0;
-            result += (uint64) (c - '0') * power;
+            result += (uint64_t) (c - '0') * power;
             power *= 10;
         } while(i-- != 0);
 
         return result;
     }
 
-    // Slightly slower method for parsing integers of any base
+    // Slightly slower method for parsing integers of "any" base
     // NOTE: Maximum base supported is 36
     
     do {
         char c = string[i];
 
-        // bool is_arabic_digit             = c_traits & TRAIT_1
-        // bool is_extended_digit           = c_traits & TRAIT_2
-        // bool is_extended_lowercase_digit = c_traits & TRAIT_3
-        // bool is_digit                    = c_traits != TRAIT_NONE
+        // -------------------------------------------------------
+        // | is_arabic_digit              =  cinfo & TRAIT_1     |
+        // | is_extended_digit            =  cinfo & TRAIT_2     |
+        // | is_extended_lowercase_digit  =  cinfo & TRAIT_3     |
+        // | is_any_digit                 =  cinfo != TRAIT_NONE |
+        // -------------------------------------------------------
         trait_t cinfo = (c >= '0' && c <= '9')
             ? TRAIT_1 // is_arabic_digit
             : (c >= 'A' && c < 'A' + base - 10) // NOTE: Checking that (base > 10) isn't necessary

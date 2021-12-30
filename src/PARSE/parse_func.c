@@ -180,9 +180,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
             return FAILURE;
         }
 
-        ctx->ast->common.ast_variadic_array = malloc(sizeof(ast_type_t));
-        *ctx->ast->common.ast_variadic_array = ast_type_clone(&func->return_type);
-        ctx->ast->common.ast_variadic_source = func->source;
+        if(ctx->ast->common.ast_variadic_array == NULL){
+            ctx->ast->common.ast_variadic_array = malloc(sizeof(ast_type_t));
+            *ctx->ast->common.ast_variadic_array = ast_type_clone(&func->return_type);
+            ctx->ast->common.ast_variadic_source = func->source;
+        }
     }
 
     if(strcmp(func->name, "__initializer_list__") == 0){
@@ -201,9 +203,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
             return FAILURE;
         }
 
-        ctx->ast->common.ast_initializer_list = malloc(sizeof(ast_type_t));
-        *ctx->ast->common.ast_initializer_list = ast_type_clone(&func->return_type);
-        ctx->ast->common.ast_initializer_list_source = func->source;
+        if(ctx->ast->common.ast_initializer_list == NULL){
+            ctx->ast->common.ast_initializer_list = malloc(sizeof(ast_type_t));
+            *ctx->ast->common.ast_initializer_list = ast_type_clone(&func->return_type);
+            ctx->ast->common.ast_initializer_list_source = func->source;
+        }
     }
     
     static const char *math_management_funcs[] = {
@@ -291,9 +295,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
     if(name == NULL) return FAILURE;
     if(ctx->composite_association == NULL) parse_prepend_namespace(ctx, &name);
 
-
     maybe_null_strong_cstr_t export_name = custom_export_name ? custom_export_name : (prefixes.is_external ? strclone(name) : NULL);
-
     bool is_entry = strcmp(ctx->compiler->entry_point, name) == 0;
 
     *out_head = (ast_func_head_t){

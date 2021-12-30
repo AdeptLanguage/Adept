@@ -1899,6 +1899,8 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
         optional_funcpair_t result;
         errorcode_t errorcode = ir_gen_find_defer_func(compiler, object, &field_info.ast_type, &result);
+        ast_type_free(&field_info.ast_type);
+
         if(errorcode == ALT_FAILURE) return errorcode;
 
         if(errorcode == SUCCESS && result.has){
@@ -2143,6 +2145,9 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
         optional_funcpair_t result;
         errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, &field_info.ast_type, &result);
+        
+        ast_type_free(&field_info.ast_type);
+
         if(errorcode == ALT_FAILURE) return errorcode;
 
         if(errorcode == SUCCESS && result.has){
