@@ -1,6 +1,6 @@
 
-#ifndef AST_UTIL_STRING_BUILDER_EXTENSIONS_H
-#define AST_UTIL_STRING_BUILDER_EXTENSIONS_H
+#ifndef _ISAAC_AST_UTIL_STRING_BUILDER_EXTENSIONS_H
+#define _ISAAC_AST_UTIL_STRING_BUILDER_EXTENSIONS_H
 
 
 /*
@@ -38,4 +38,4 @@ void string_builder_append_expr_list(string_builder_t *builder, ast_expr_t **ast
 }
 #endif
 
-#endif /* AST_UTIL_STRING_BUILDER_EXTENSIONS_H */
+#endif /* _ISAAC_AST_UTIL_STRING_BUILDER_EXTENSIONS_H */

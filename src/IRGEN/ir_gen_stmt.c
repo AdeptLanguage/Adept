@@ -23,7 +23,7 @@
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
 
-errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated){
+errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool *out_is_terminated){
     ir_instr_t *built_instr;
     ir_value_t *expression_value = NULL;
     ast_type_t temporary_type;
@@ -31,20 +31,21 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
     // Default value of whether the statements were terminated is 'false'
     if(out_is_terminated) *out_is_terminated = false;
 
-    for(length_t s = 0; s != statements_length; s++){
-        ast_expr_t *stmt = statements[s];
+    for(length_t s = 0; s != stmt_list->length; s++){
+        ast_expr_t *stmt = stmt_list->statements[s];
 
         switch(stmt->id){
         case EXPR_RETURN:
+            // TODO: CLEANUP: Refactor this code
             // Generate instructions in order to return
             if(ir_gen_stmt_return(builder, (ast_expr_return_t*) stmt, out_is_terminated)) return FAILURE;
 
             // Warn if there are statements following
             if(builder->compiler->traits & COMPILER_FUSSY && !(builder->compiler->ignore & COMPILER_IGNORE_EARLY_RETURN)){
-                if(s + 1 != statements_length){
+                if(s + 1 != stmt_list->length){
                     const char *f_name = builder->object->ast.funcs[builder->ast_func_id].name;
 
-                    if(compiler_warnf(builder->compiler, statements[s + 1]->source, "Statements after 'return' in function '%s'", f_name))
+                    if(compiler_warnf(builder->compiler, stmt_list->statements[s + 1]->source, "Statements after 'return' in function '%s'", f_name))
                         return FAILURE;
                 }
             }
@@ -127,6 +128,8 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
             if(ir_gen_stmt_repeat(builder, (ast_expr_repeat_t*) stmt)) return FAILURE;
             break;
         case EXPR_SWITCH: {
+                // TODO: CLEANUP: Refactor this code
+
                 ast_expr_switch_t *switch_expr = (ast_expr_switch_t*) stmt;
 
                 ir_value_t *condition;
@@ -158,17 +161,17 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                     return FAILURE;
                 }
 
-                ir_value_t **case_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * switch_expr->cases_length);
-                length_t *case_block_ids = ir_pool_alloc(builder->pool, sizeof(length_t) * switch_expr->cases_length);
-                unsigned long long *uniqueness = malloc(sizeof(unsigned long long) * switch_expr->cases_length);
+                ir_value_t **case_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * switch_expr->cases.length);
+                length_t *case_block_ids = ir_pool_alloc(builder->pool, sizeof(length_t) * switch_expr->cases.length);
+                unsigned long long *uniqueness = malloc(sizeof(unsigned long long) * switch_expr->cases.length);
 
                 // Layout basicblocks for each case
-                for(length_t c = 0; c != switch_expr->cases_length; c++){
+                for(length_t c = 0; c != switch_expr->cases.length; c++){
                     case_block_ids[c] = build_basicblock(builder);
                 }
                 
                 // Create basicblocks for default case and/or resuming control flow
-                if(switch_expr->default_statements_length != 0){
+                if(switch_expr->or_default.length != 0){
                     default_block_id = build_basicblock(builder);
                     resume_block_id = build_basicblock(builder);
                 } else {
@@ -177,8 +180,8 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 }
 
                 // Populate each case
-                for(length_t c = 0; c != switch_expr->cases_length; c++){
-                    ast_case_t *switch_case = &switch_expr->cases[c];
+                for(length_t c = 0; c != switch_expr->cases.length; c++){
+                    ast_case_t *switch_case = &switch_expr->cases.cases[c];
 
                     ast_type_t slave_ast_type;
                     if(ir_gen_expr(builder, switch_case->condition, &case_values[c], false, &slave_ast_type)){
@@ -214,7 +217,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
 
                     for(length_t u = 0; u != c; u++){
                         if(uniqueness_value == uniqueness[u]){
-                            compiler_panicf(builder->compiler, switch_expr->cases[u].condition->source, "Non-unique case value");
+                            compiler_panicf(builder->compiler, switch_expr->cases.cases[u].condition->source, "Non-unique case value");
                             compiler_panicf(builder->compiler, switch_case->condition->source, "Duplicate here");
                             ast_type_free(&master_ast_type);
                             free(uniqueness);
@@ -226,14 +229,14 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                     bridge_scope_t *prev_fallthrough_scope = builder->fallthrough_scope;
 
                     // For 'fallthrough' statements, go to the next case, if it doesn't exist go to the default/resume case
-                    builder->fallthrough_block_id = c + 1 == switch_expr->cases_length ? default_block_id : case_block_ids[c + 1];
+                    builder->fallthrough_block_id = c + 1 == switch_expr->cases.length ? default_block_id : case_block_ids[c + 1];
                     builder->fallthrough_scope = builder->scope;
 
                     open_scope(builder);
 
                     bool case_terminated;
                     build_using_basicblock(builder, case_block_ids[c]);
-                    if(ir_gen_stmts(builder, switch_case->statements, switch_case->statements_length, &case_terminated)){
+                    if(ir_gen_stmts(builder, &switch_case->statements, &case_terminated)){
                         ast_type_free(&master_ast_type);
                         close_scope(builder);
                         free(uniqueness);
@@ -260,7 +263,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 if(switch_expr->is_exhaustive && ast_type_is_base(&master_ast_type)){
                     weak_cstr_t enum_name = ((ast_elem_base_t*) master_ast_type.elements[0])->base;
                     
-                    if(exhaustive_switch_check(builder, enum_name, switch_expr->source, uniqueness, switch_expr->cases_length)){
+                    if(exhaustive_switch_check(builder, enum_name, switch_expr->source, uniqueness, switch_expr->cases.length)){
                         ast_type_free(&master_ast_type);
                         free(uniqueness);
                         return FAILURE;
@@ -275,7 +278,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
 
                     bool case_terminated;
                     build_using_basicblock(builder, default_block_id);
-                    if(ir_gen_stmts(builder, switch_expr->default_statements, switch_expr->default_statements_length, &case_terminated)){
+                    if(ir_gen_stmts(builder, &switch_expr->or_default, &case_terminated)){
                         ast_type_free(&master_ast_type);
                         close_scope(builder);
                         return FAILURE;
@@ -301,7 +304,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 ((ir_instr_switch_t*) built_instr)->id = INSTRUCTION_SWITCH;
                 ((ir_instr_switch_t*) built_instr)->result_type = condition->type;
                 ((ir_instr_switch_t*) built_instr)->condition = condition;
-                ((ir_instr_switch_t*) built_instr)->cases_length = switch_expr->cases_length;
+                ((ir_instr_switch_t*) built_instr)->cases_length = switch_expr->cases.length;
                 ((ir_instr_switch_t*) built_instr)->case_values = case_values;
                 ((ir_instr_switch_t*) built_instr)->case_block_ids = case_block_ids;
                 ((ir_instr_switch_t*) built_instr)->default_block_id = default_block_id;
@@ -410,7 +413,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
 
                 // Do 'before' statements
                 bool terminated;
-                if(ir_gen_stmts(builder, for_loop->before.statements, for_loop->before.length, &terminated)){
+                if(ir_gen_stmts(builder, &for_loop->before, &terminated)){
                     close_scope(builder);
                     return FAILURE;
                 }
@@ -467,7 +470,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 build_using_basicblock(builder, new_basicblock_id);
 
                 // Generate new_block user-defined statements
-                if(ir_gen_stmts(builder, for_loop->statements.statements, for_loop->statements.length, &terminated)){
+                if(ir_gen_stmts(builder, &for_loop->statements, &terminated)){
                     close_scope(builder);
                     return FAILURE;
                 }
@@ -484,7 +487,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_
                 build_using_basicblock(builder, adv_basicblock_id);
 
                 // Do 'after' statements
-                if(ir_gen_stmts(builder, for_loop->after.statements, for_loop->after.length, &terminated)){
+                if(ir_gen_stmts(builder, &for_loop->after, &terminated)){
                     close_scope(builder);
                     return FAILURE;
                 }
@@ -603,7 +606,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
     {
         bool illegally_terminated;
 
-        if(ir_gen_stmts(builder, stmt->last_minute.statements, stmt->last_minute.length, &illegally_terminated))
+        if(ir_gen_stmts(builder, &stmt->last_minute, &illegally_terminated))
             return FAILURE;
 
         if(illegally_terminated){
@@ -960,7 +963,7 @@ errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t 
     // Generate IR instructions for the statements within the conditional block
     // and terminate the conditional block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    if(ir_gen_stmts(builder, &stmt->statements, &terminated)
     || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
         return FAILURE;
@@ -996,7 +999,7 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
     // Generate IR instructions for the statements within the primary conditional block
     // and terminate the primary conditional block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    if(ir_gen_stmts(builder, &stmt->statements, &terminated)
     || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
         return FAILURE;
@@ -1011,7 +1014,7 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
 
     // Generate IR instructions for the statements within the secondary conditional block
     // and terminate the secondary conditional block if it wasn't already terminated
-    if(ir_gen_stmts(builder, stmt->else_statements, stmt->else_statements_length, &terminated)
+    if(ir_gen_stmts(builder, &stmt->else_statements, &terminated)
     || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
         return FAILURE;
@@ -1065,7 +1068,7 @@ errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stm
     // Generate IR instructions for the statements within the conditional block
     // and terminate the conditional block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    if(ir_gen_stmts(builder, &stmt->statements, &terminated)
     || ir_gen_stmts_auto_terminate(builder, terminated, test_basicblock_id)){
         close_scope(builder);
         return FAILURE;
@@ -1113,7 +1116,7 @@ errorcode_t ir_gen_stmt_recurrent_loop(ir_builder_t *builder, ast_expr_whilecont
     // Generate IR instructions for the statements within the block
     // and terminate the block if it wasn't already terminated
     bool terminated;
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)
+    if(ir_gen_stmts(builder, &stmt->statements, &terminated)
     || ir_gen_stmts_auto_terminate(builder, terminated, stmt->id == EXPR_WHILECONTINUE ? end_basicblock_id : new_basicblock_id)){
         close_scope(builder);
         return FAILURE;
@@ -1473,7 +1476,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     // Generate new_block user-defined statements
     bool terminated;
     build_using_basicblock(builder, new_basicblock_id);
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+    if(ir_gen_stmts(builder, &stmt->statements, &terminated)){
         close_scope(builder);
         goto failure;
     }
@@ -1606,7 +1609,7 @@ errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
     // Generate new_block user-defined statements
     bool terminated;
     build_using_basicblock(builder, new_basicblock_id);
-    if(ir_gen_stmts(builder, stmt->statements, stmt->statements_length, &terminated)){
+    if(ir_gen_stmts(builder, &stmt->statements, &terminated)){
         close_scope(builder);
         return FAILURE;
     }

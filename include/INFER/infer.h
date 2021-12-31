@@ -85,7 +85,7 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
 
 // ---------------- infer_in_stmts ----------------
 // Infers aliases and generics in a list of statements
-errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length);
+errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *statements);
 
 // ---------------- infer_expr ----------------
 // Infers an expression from the root of it

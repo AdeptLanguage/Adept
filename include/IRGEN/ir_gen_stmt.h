@@ -19,7 +19,7 @@
 // ---------------- ir_gen_stmts ----------------
 // Generates intermediate representation for
 // statements given an existing 'ir_builder_t'
-errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_t **statements, length_t statements_length, bool *out_is_terminated);
+errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool *out_is_terminated);
 
 // ---------------- ir_gen_stmt_return ----------------
 // Generates IR instructions for a return statement

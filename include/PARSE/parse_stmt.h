@@ -39,7 +39,11 @@ length_t defer_scope_total(defer_scope_t *defer_scope);
 // ------------------ defer_scope_fulfill ------------------
 // Fulfill deferred statements in a single scope, handing over ownership in the process
 void defer_scope_fulfill(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list);
-void defer_scope_fulfill_into(defer_scope_t *defer_scope, ast_expr_t ***statements, length_t *length, length_t *capacity);
+
+// ------------------ defer_scope_fulfill_by_cloning ------------------
+// Fulfill deferred statements in a single scope WITHOUT handing over ownership
+// (will clone children instead)
+void defer_scope_fulfill_by_cloning(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list);
 
 // ------------------ defer_scope_rewind ------------------
 // Fulfill current scope's deferred statements and duplicate parent scopes' deferred statements that would

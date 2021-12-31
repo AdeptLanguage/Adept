@@ -633,7 +633,7 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_RETURN:
         ast_expr_free_fully( ((ast_expr_return_t*) expr)->value );
-        ast_free_statements_fully(((ast_expr_return_t*) expr)->last_minute.statements, ((ast_expr_return_t*) expr)->last_minute.length);
+        ast_expr_list_free(&typecast(ast_expr_return_t*, expr)->last_minute);
         break;
     case EXPR_DECLARE: case EXPR_ILDECLARE:
         ast_type_free(&((ast_expr_declare_t*) expr)->type);
@@ -652,15 +652,15 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL:
         ast_expr_free_fully(((ast_expr_if_t*) expr)->value);
-        ast_free_statements_fully(((ast_expr_if_t*) expr)->statements, ((ast_expr_if_t*) expr)->statements_length);
+        ast_expr_list_free(&typecast(ast_expr_if_t*, expr)->statements);
         break;
     case EXPR_IFELSE: case EXPR_UNLESSELSE:
         ast_expr_free_fully(((ast_expr_ifelse_t*) expr)->value);
-        ast_free_statements_fully(((ast_expr_ifelse_t*) expr)->statements, ((ast_expr_ifelse_t*) expr)->statements_length);
-        ast_free_statements_fully(((ast_expr_ifelse_t*) expr)->else_statements, ((ast_expr_ifelse_t*) expr)->else_statements_length);
+        ast_expr_list_free(&typecast(ast_expr_ifelse_t*, expr)->statements);
+        ast_expr_list_free(&typecast(ast_expr_ifelse_t*, expr)->else_statements);
         break;
     case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK:
-        ast_free_statements_fully(((ast_expr_whilecontinue_t*) expr)->statements, ((ast_expr_whilecontinue_t*) expr)->statements_length);
+        ast_expr_list_free(&typecast(ast_expr_whilecontinue_t*, expr)->statements);
         break;
     case EXPR_EACH_IN:
         free(((ast_expr_each_in_t*) expr)->it_name);
@@ -668,23 +668,16 @@ void ast_expr_free(ast_expr_t *expr){
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->low_array);
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->length);
         ast_expr_free_fully(((ast_expr_each_in_t*) expr)->list);
-        ast_free_statements_fully(((ast_expr_each_in_t*) expr)->statements, ((ast_expr_each_in_t*) expr)->statements_length);
+        ast_expr_list_free(&typecast(ast_expr_each_in_t*, expr)->statements);
         break;
     case EXPR_REPEAT:
-        ast_expr_free_fully(((ast_expr_repeat_t*) expr)->limit);
-        ast_free_statements_fully(((ast_expr_repeat_t*) expr)->statements, ((ast_expr_repeat_t*) expr)->statements_length);
+        ast_expr_free_fully(typecast(ast_expr_repeat_t*, expr)->limit);
+        ast_expr_list_free(&typecast(ast_expr_repeat_t*, expr)->statements);
         break;
     case EXPR_SWITCH:
         ast_expr_free_fully(((ast_expr_switch_t*) expr)->value);
-        ast_free_statements_fully(((ast_expr_switch_t*) expr)->default_statements, ((ast_expr_switch_t*) expr)->default_statements_length);
-
-        for(length_t c = 0; c != ((ast_expr_switch_t*) expr)->cases_length; c++){
-            ast_case_t *expr_case = &((ast_expr_switch_t*) expr)->cases[c];
-            ast_expr_free_fully(expr_case->condition);
-            ast_free_statements_fully(expr_case->statements, expr_case->statements_length);
-        }
-
-        free(((ast_expr_switch_t*) expr)->cases);
+        ast_expr_list_free(&typecast(ast_expr_switch_t*, expr)->or_default);
+        ast_case_list_free(&typecast(ast_expr_switch_t*, expr)->cases);
         break;
     case EXPR_VA_COPY:
         ast_expr_free_fully(((ast_expr_va_copy_t*) expr)->dest_value);
@@ -692,10 +685,10 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_FOR: {
             ast_expr_for_t *for_loop = (ast_expr_for_t*) expr;
-            ast_free_statements_fully(for_loop->before.statements, for_loop->before.length);
-            ast_free_statements_fully(for_loop->after.statements, for_loop->after.length);
+            ast_expr_list_free(&for_loop->before);
+            ast_expr_list_free(&for_loop->after);
             ast_expr_free_fully(for_loop->condition);
-            ast_free_statements_fully(for_loop->statements.statements, for_loop->statements.length);
+            ast_expr_list_free(&for_loop->statements);
         }
         break;
     case EXPR_DECLARE_CONSTANT:
@@ -1159,13 +1152,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         clone = malloc(sizeof(ast_expr_return_t));
         clone_as_return->value = expr_as_return->value ? ast_expr_clone(expr_as_return->value) : NULL;
-        clone_as_return->last_minute.length = expr_as_return->last_minute.length;
-        clone_as_return->last_minute.capacity = expr_as_return->last_minute.length; // (using 'length' on purpose)
-        clone_as_return->last_minute.statements = malloc(sizeof(ast_expr_t*) * expr_as_return->last_minute.length);
-        
-        for(length_t s = 0; s != expr_as_return->last_minute.length; s++){
-            clone_as_return->last_minute.statements[s] = ast_expr_clone(expr_as_return->last_minute.statements[s]);
-        }
+        clone_as_return->last_minute = ast_expr_list_clone(&expr_as_return->last_minute);
         break;
 
         #undef expr_as_return
@@ -1182,13 +1169,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone = malloc(sizeof(ast_expr_if_t));
         clone_as_if->label = expr_as_if->label;
         clone_as_if->value = expr_as_if->value ? ast_expr_clone(expr_as_if->value) : NULL;
-        clone_as_if->statements_length = expr_as_if->statements_length;
-        clone_as_if->statements_capacity = expr_as_if->statements_length; // (statements_length is on purpose)
-        clone_as_if->statements = malloc(sizeof(ast_expr_t*) * expr_as_if->statements_length);
-
-        for(length_t s = 0; s != expr_as_if->statements_length; s++){
-            clone_as_if->statements[s] = ast_expr_clone(expr_as_if->statements[s]);
-        }
+        clone_as_if->statements = ast_expr_list_clone(&expr_as_if->statements);
         break;
         
         #undef expr_as_if
@@ -1201,20 +1182,8 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone = malloc(sizeof(ast_expr_ifelse_t));
         clone_as_ifelse->label = expr_as_ifelse->label;
         clone_as_ifelse->value = ast_expr_clone(expr_as_ifelse->value);
-        clone_as_ifelse->statements_length = expr_as_ifelse->statements_length;
-        clone_as_ifelse->statements_capacity = expr_as_ifelse->statements_length; // (statements_length is on purpose)
-        clone_as_ifelse->statements = malloc(sizeof(ast_expr_t*) * expr_as_ifelse->statements_length);
-        clone_as_ifelse->else_statements_length = expr_as_ifelse->else_statements_length;
-        clone_as_ifelse->else_statements_capacity = expr_as_ifelse->else_statements_length; // (else_statements_length is on purpose)
-        clone_as_ifelse->else_statements = malloc(sizeof(ast_expr_t*) * expr_as_ifelse->else_statements_length);
-
-        for(length_t s = 0; s != expr_as_ifelse->statements_length; s++){
-            clone_as_ifelse->statements[s] = ast_expr_clone(expr_as_ifelse->statements[s]);
-        }
-
-        for(length_t e = 0; e != expr_as_ifelse->else_statements_length; e++){
-            clone_as_ifelse->else_statements[e] = ast_expr_clone(expr_as_ifelse->else_statements[e]);
-        }
+        clone_as_ifelse->statements = ast_expr_list_clone(&expr_as_ifelse->statements);
+        clone_as_ifelse->else_statements = ast_expr_list_clone(&expr_as_ifelse->else_statements);
         break;
         
         #undef expr_as_ifelse
@@ -1230,19 +1199,15 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         if(expr_as_each_in->it_type){
             clone_as_each_in->it_type = malloc(sizeof(ast_type_t));
             *clone_as_each_in->it_type = ast_type_clone(expr_as_each_in->it_type);
+        } else {
+            clone_as_each_in->it_type = NULL;
         }
 
         clone_as_each_in->low_array = expr_as_each_in->low_array ? ast_expr_clone(expr_as_each_in->low_array) : NULL;
         clone_as_each_in->length = expr_as_each_in->length ? ast_expr_clone(expr_as_each_in->length) : NULL;
         clone_as_each_in->list = expr_as_each_in->list ? ast_expr_clone(expr_as_each_in->list) : NULL;
-        clone_as_each_in->statements_length = expr_as_each_in->statements_length;
-        clone_as_each_in->statements_capacity = expr_as_each_in->statements_length; // (statements_length is on purpose)
-        clone_as_each_in->statements = malloc(sizeof(ast_expr_t*) * expr_as_each_in->statements_length);
+        clone_as_each_in->statements = ast_expr_list_clone(&expr_as_each_in->statements);
         clone_as_each_in->is_static = expr_as_each_in->is_static;
-
-        for(length_t s = 0; s != expr_as_each_in->statements_length; s++){
-            clone_as_each_in->statements[s] = ast_expr_clone(expr_as_each_in->statements[s]);
-        }
         break;
 
         #undef expr_as_each_in
@@ -1254,15 +1219,9 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone = malloc(sizeof(ast_expr_repeat_t));
         clone_as_repeat->label = expr_as_repeat->label;
         clone_as_repeat->limit = expr_as_repeat->limit ? ast_expr_clone(expr_as_repeat->limit) : NULL;
-        clone_as_repeat->statements_length = expr_as_repeat->statements_length;
-        clone_as_repeat->statements_capacity = expr_as_repeat->statements_length; // (statements_length is on purpose)
-        clone_as_repeat->statements = malloc(sizeof(ast_expr_t*) * expr_as_repeat->statements_length);
+        clone_as_repeat->statements = ast_expr_list_clone(&expr_as_repeat->statements);
         clone_as_repeat->is_static = expr_as_repeat->is_static;
         clone_as_repeat->idx_overload_name = expr_as_repeat->idx_overload_name;
-        
-        for(length_t s = 0; s != expr_as_repeat->statements_length; s++){
-            clone_as_repeat->statements[s] = ast_expr_clone(expr_as_repeat->statements[s]);
-        }
         break;
 
         #undef expr_as_repeat
@@ -1285,32 +1244,8 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         clone = malloc(sizeof(ast_expr_switch_t));
         clone_as_switch->value = ast_expr_clone(expr_as_switch->value);
-
-        clone_as_switch->cases = malloc(sizeof(ast_case_t) * expr_as_switch->cases_length);
-        clone_as_switch->cases_length = expr_as_switch->cases_length;
-        clone_as_switch->cases_capacity = expr_as_switch->cases_length; // (on purpose)
-        for(length_t c = 0; c != expr_as_switch->cases_length; c++){
-            ast_case_t *expr_case = &expr_as_switch->cases[c];
-            ast_case_t *clone_case = &clone_as_switch->cases[c];
-
-            clone_case->condition = ast_expr_clone(expr_case->condition);
-            clone_case->source = expr_case->source;
-            clone_case->statements_length = expr_case->statements_length;
-            clone_case->statements_capacity = expr_case->statements_capacity; // (on purpose)
-
-            clone_case->statements = malloc(sizeof(ast_expr_t*) * expr_case->statements_length);
-            for(length_t s = 0; s != expr_case->statements_length; s++){
-                clone_case->statements[s] = ast_expr_clone(expr_case->statements[s]);
-            }
-        }
-
-        clone_as_switch->default_statements = malloc(sizeof(ast_expr_t*) * expr_as_switch->default_statements_length);
-        for(length_t s = 0; s != expr_as_switch->default_statements_length; s++){
-            clone_as_switch->default_statements[s] = ast_expr_clone(expr_as_switch->default_statements[s]);
-        }
-        
-        clone_as_switch->default_statements_length = expr_as_switch->default_statements_length;
-        clone_as_switch->default_statements_capacity = expr_as_switch->default_statements_length; // (on purpose)
+        clone_as_switch->cases = ast_case_list_clone(&expr_as_switch->cases);
+        clone_as_switch->or_default = ast_expr_list_clone(&expr_as_switch->or_default);
         clone_as_switch->is_exhaustive = expr_as_switch->is_exhaustive;
         break;
 
@@ -1334,30 +1269,9 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone = malloc(sizeof(ast_expr_for_t));
         clone_as_for->label = expr_as_for->label;
         clone_as_for->condition = expr_as_for->condition ? ast_expr_clone(expr_as_for->condition) : NULL;
-        
-        clone_as_for->before.statements = malloc(sizeof(ast_expr_t*) * expr_as_for->before.length);
-        clone_as_for->before.length = expr_as_for->before.length;
-        clone_as_for->before.capacity = expr_as_for->before.length; // (on purpose)
-
-        for(length_t i = 0; i != expr_as_for->before.length; i++){
-            clone_as_for->before.statements[i] = ast_expr_clone(expr_as_for->before.statements[i]);
-        }
-        
-        clone_as_for->after.statements = malloc(sizeof(ast_expr_t*) * expr_as_for->after.length);
-        clone_as_for->after.length = expr_as_for->after.length;
-        clone_as_for->after.capacity = expr_as_for->after.length; // (on purpose)
-
-        for(length_t i = 0; i != expr_as_for->after.length; i++){
-            clone_as_for->after.statements[i] = ast_expr_clone(expr_as_for->after.statements[i]);
-        }
-        
-        clone_as_for->statements.statements = malloc(sizeof(ast_expr_t*) * expr_as_for->statements.length);
-        clone_as_for->statements.length = expr_as_for->statements.length;
-        clone_as_for->statements.capacity = expr_as_for->statements.length; // (on purpose)
-
-        for(length_t i = 0; i != expr_as_for->statements.length; i++){
-            clone_as_for->statements.statements[i] = ast_expr_clone(expr_as_for->statements.statements[i]);
-        }
+        clone_as_for->before = ast_expr_list_clone(&expr_as_for->before);
+        clone_as_for->after = ast_expr_list_clone(&expr_as_for->after);
+        clone_as_for->statements = ast_expr_list_clone(&expr_as_for->statements);
         break;
 
         #undef expr_as_for
@@ -1589,6 +1503,19 @@ void ast_expr_list_append(ast_expr_list_t *list, ast_expr_t *value){
     list->statements[list->length++] = value;
 }
 
+ast_expr_list_t ast_expr_list_clone(ast_expr_list_t *list){
+    ast_expr_list_t result;
+    result.statements = malloc(sizeof(ast_expr_t*) * list->capacity);
+    result.length = list->length;
+    result.capacity = list->capacity;
+
+    for(length_t i = 0; i != result.length; i++){
+        result.statements[i] = ast_expr_clone(list->statements[i]);
+    }
+
+    return result;
+}
+
 errorcode_t ast_expr_deduce_to_size(ast_expr_t *expr, length_t *out_value){
     switch(expr->id){
     case EXPR_GENERIC_INT: {
@@ -1668,4 +1595,43 @@ errorcode_t ast_expr_deduce_to_size(ast_expr_t *expr, length_t *out_value){
         }
     }
     return FAILURE;
+}
+
+ast_case_t ast_case_clone(ast_case_t *original){
+    ast_case_t result;
+    result.condition = ast_expr_clone(original->condition);
+    result.statements = ast_expr_list_clone(&original->statements);
+    result.source = original->source;
+    return result;
+}
+
+ast_case_list_t ast_case_list_clone(ast_case_list_t *original){
+    ast_case_list_t result;
+    result.cases = malloc(sizeof(ast_case_t) * original->capacity);
+    result.length = original->length;
+    result.capacity = original->capacity;
+
+    for(length_t i = 0; i != result.length; i++){
+        result.cases[i] = ast_case_clone(&original->cases[i]);
+    }
+
+    return result;
+}
+
+void ast_case_list_free(ast_case_list_t *list){
+    for(length_t i = 0; i != list->length; i++){
+        ast_case_t *single_case = &list->cases[i];
+        ast_expr_free_fully(single_case->condition);
+        ast_expr_list_free(&single_case->statements);
+    }
+
+    free(list->cases);
+}
+
+ast_case_t *ast_case_list_append(ast_case_list_t *list, ast_case_t ast_case){
+    expand((void**) &list->cases, sizeof(ast_case_t), list->length, &list->capacity, 1, 8);
+
+    ast_case_t *new_case = &list->cases[list->length++];
+    *new_case = ast_case;
+    return new_case;
 }

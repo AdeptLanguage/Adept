@@ -335,31 +335,13 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
         ctx->func = func;
         
         if(parse_ignore_newlines(ctx, "Expected function body")) return FAILURE;
-        ast_expr_list_init(&stmts, 1);
 
         ast_expr_t *return_expression;
-        if(parse_expr(ctx, &return_expression)){
-            ast_free_statements_fully(stmts.statements, stmts.length);
-            return FAILURE;
-        }
+        if(parse_expr(ctx, &return_expression)) return FAILURE;
 
-        #ifdef ADEPT_INSIGHT_BUILD
-        func->end_source = parse_ctx_peek_source(ctx);
-        #endif
-
-        ast_expr_return_t *stmt = malloc(sizeof(ast_expr_return_t));
-        stmt->id = EXPR_RETURN;
-        stmt->source = return_expression->source;
-        stmt->value = return_expression;
-        stmt->last_minute.statements = NULL;
-        stmt->last_minute.length = 0;
-        stmt->last_minute.capacity = 0;
-        stmts.statements[stmts.length++] = (ast_expr_t*) stmt;
-
-        func->statements = stmts.statements;
-        func->statements_length = stmts.length;
-        func->statements_capacity = stmts.capacity;
-        return SUCCESS;
+        ast_expr_list_init(&stmts, 1);
+        ast_expr_create_return(&stmts.statements[stmts.length++], return_expression->source, return_expression, (ast_expr_list_t){0});
+        goto success;
     }
 
     if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return FAILURE;
@@ -368,20 +350,19 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
     ctx->func = func;
 
     if(parse_stmts(ctx, &stmts, &defer_scope, PARSE_STMTS_STANDARD)){
-        ast_free_statements_fully(stmts.statements, stmts.length);
+        ast_expr_list_free(&stmts);
         defer_scope_free(&defer_scope);
         return FAILURE;
     }
 
     defer_scope_free(&defer_scope);
 
+success:
     #ifdef ADEPT_INSIGHT_BUILD
     func->end_source = parse_ctx_peek_source(ctx);
     #endif
 
-    func->statements = stmts.statements;
-    func->statements_length = stmts.length;
-    func->statements_capacity = stmts.capacity;
+    func->statements = stmts;
     return SUCCESS;
 }
 

@@ -120,7 +120,7 @@ LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__ST
 # -lgtest_main -lgtest -lLLVMTestingSupport
 
 # -static-libgcc -static-libstdc++ -static
-CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=gnu99 -Wall -O0 -DNDEBUG # -fmax-errors=5 -Werror
+CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=gnu11 -Wall -O0 -DNDEBUG # -fmax-errors=5 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 
 ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
@@ -192,9 +192,11 @@ insight: $(SOURCES)
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/UTIL
 	
 #   Insight - Required Header Files
+	@cp include/AST/EXPR/ast_expr_ids.h $(INSIGHT_OUT_DIR)/include/AST/EXPR/ast_expr_ids.h
 	@cp include/AST/UTIL/string_builder_extensions.h $(INSIGHT_OUT_DIR)/include/AST/UTIL/string_builder_extensions.h
 	@cp include/AST/ast_constant.h $(INSIGHT_OUT_DIR)/include/AST/ast_constant.h
 	@cp include/AST/ast_expr.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr.h
+	@cp include/AST/ast_expr_lean.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr_lean.h
 	@cp include/AST/ast_layout.h $(INSIGHT_OUT_DIR)/include/AST/ast_layout.h
 	@cp include/AST/ast_type.h $(INSIGHT_OUT_DIR)/include/AST/ast_type.h
 	@cp include/AST/ast_type_lean.h $(INSIGHT_OUT_DIR)/include/AST/ast_type_lean.h

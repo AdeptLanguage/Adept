@@ -496,13 +496,16 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
         }
     }
 
-    // Set statements
-    func->statements_capacity = func->arity + 2;
-    func->statements_length = func->statements_capacity;
-    func->statements = malloc(sizeof(ast_expr_t*) * func->statements_capacity);
+    length_t num_stmts = func->arity + 2;
+
+    func->statements = (ast_expr_list_t){
+        .statements = malloc(sizeof(ast_expr_t*) * num_stmts),
+        .length = num_stmts,
+        .capacity = num_stmts,
+    };
 
     trait_t traits = AST_EXPR_DECLARATION_POD | AST_EXPR_DECLARATION_ASSIGN_POD;
-    ast_expr_create_declaration(&func->statements[0], all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE, source, master_variable_name, ast_type_clone(&func->return_type), traits, NULL);
+    ast_expr_create_declaration(&func->statements.statements[0], all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE, source, master_variable_name, ast_type_clone(&func->return_type), traits, NULL);
 
     for(length_t i = 0; i != func->arity; i++){
         weak_cstr_t field_name = field_map->arrows[i].name;
@@ -518,7 +521,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
         ast_expr_t *variable;
         ast_expr_create_variable(&variable, field_name, source);
 
-        ast_expr_create_assignment(&func->statements[i + 1], EXPR_ASSIGN, source, mutable_expression, variable, false);
+        ast_expr_create_assignment(&func->statements.statements[i + 1], EXPR_ASSIGN, source, mutable_expression, variable, false);
     }
 
     ast_expr_t *variable;
@@ -527,7 +530,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     ast_expr_list_t last_minute;
     memset(&last_minute, 0, sizeof(ast_expr_list_t));
 
-    ast_expr_create_return(&func->statements[func->arity + 1], source, variable, last_minute);
+    ast_expr_create_return(&func->statements.statements[func->arity + 1], source, variable, last_minute);
 
     // Add function to polymorphic function registry if it's polymorphic
     if(is_polymorphic){

@@ -4,7 +4,7 @@ import Vector2f
 
 struct Parent (q, w, e usize)
 
-// Demonstrating previous syntax "errors" that
+// Demonstrating previous syntax "errors"
 // for struct declarations that are now acceptable
 struct Thing (
     struct Parent

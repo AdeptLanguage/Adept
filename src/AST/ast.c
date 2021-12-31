@@ -237,8 +237,7 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
         if(func->arg_defaults) ast_exprs_free_fully(func->arg_defaults, func->arity);
         
         free(func->variadic_arg_name);
-        ast_free_statements(func->statements, func->statements_length);
-        free(func->statements);
+        ast_expr_list_free(&func->statements);
         ast_type_free(&func->return_type);
         free(func->export_as);
     }
@@ -250,18 +249,6 @@ void ast_free_function_aliases(ast_func_alias_t *faliases, length_t length){
         free(falias->from);
         ast_types_free_fully(falias->arg_types, falias->arity);
     }
-}
-
-void ast_free_statements(ast_expr_t **statements, length_t length){
-    for(length_t s = 0; s != length; s++){
-        ast_expr_free(statements[s]); // Free statement-specific memory
-        free(statements[s]); // Free statement memory
-    }
-}
-
-void ast_free_statements_fully(ast_expr_t **statements, length_t length){
-    ast_free_statements(statements, length);
-    free(statements);
 }
 
 void ast_free_composites(ast_composite_t *composites, length_t composites_length){
@@ -276,7 +263,7 @@ void ast_free_composites(ast_composite_t *composites, length_t composites_length
 void ast_free_constants(ast_constant_t *constants, length_t constants_length){
     for(length_t i = 0; i != constants_length; i++){
         ast_constant_t *constant = &constants[i];
-        if(constant->expression) ast_expr_free_fully(constant->expression);
+        ast_expr_free_fully(constant->expression);
         free(constant->name);
     }
 }
@@ -293,9 +280,7 @@ void ast_free_globals(ast_global_t *globals, length_t globals_length){
         ast_global_t *global = &globals[i];
         free(global->name);
         ast_type_free(&global->type);
-        if(global->initial != NULL){
-            ast_expr_free_fully(global->initial);
-        }
+        ast_expr_free_fully(global->initial);
     }
 }
 
@@ -347,7 +332,7 @@ void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_le
             fprintf(file, "foreign %s(%s) %s\n", func->name, arguments_string ? arguments_string : "", return_type_string);
         } else {
             fprintf(file, "func %s(%s) %s {\n", func->name, arguments_string ? arguments_string : "", return_type_string);
-            if(func->statements != NULL) ast_dump_statements(file, func->statements, func->statements_length, 1);
+            ast_dump_statement_list(file, &func->statements, 1);
             fprintf(file, "}\n");
         }
 
@@ -396,7 +381,13 @@ strong_cstr_t ast_func_args_str(ast_func_t *func){
     return string_builder_finalize(&builder);
 }
 
+void ast_dump_statement_list(FILE *file, ast_expr_list_t *statements, length_t indentation){
+    ast_dump_statements(file, statements->statements, statements->length, indentation);
+}
+
 void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, length_t indentation){
+    // TODO: CLEANUP: Cleanup this messy code
+
     for(length_t s = 0; s != length; s++){
         // Print indentation
         indent(file, indentation);
@@ -535,7 +526,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 }
 
                 fprintf(file, "%s %s {\n", keyword_name, if_value_str);
-                ast_dump_statements(file, ((ast_expr_if_t*) statements[s])->statements, ((ast_expr_if_t*) statements[s])->statements_length, indentation+1);
+                ast_dump_statement_list(file, &typecast(ast_expr_if_t*, statements[s])->statements, indentation + 1);
                 indent(file, indentation);
                 fprintf(file, "}\n");
                 free(if_value_str);
@@ -545,10 +536,10 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 ast_expr_t *if_value = ((ast_expr_ifelse_t*) statements[s])->value;
                 strong_cstr_t if_value_str = ast_expr_str(if_value);
                 fprintf(file, "%s %s {\n", (statements[s]->id == EXPR_IFELSE ? "if" : "unless"), if_value_str);
-                ast_dump_statements(file, ((ast_expr_ifelse_t*) statements[s])->statements, ((ast_expr_ifelse_t*) statements[s])->statements_length, indentation+1);
+                ast_dump_statement_list(file, &typecast(ast_expr_ifelse_t*, statements[s])->statements, indentation + 1);
                 indent(file, indentation);
                 fprintf(file, "} else {\n");
-                ast_dump_statements(file, ((ast_expr_ifelse_t*) statements[s])->else_statements, ((ast_expr_ifelse_t*) statements[s])->else_statements_length, indentation+1);
+                ast_dump_statement_list(file, &typecast(ast_expr_ifelse_t*, statements[s])->else_statements, indentation + 1);
                 indent(file, indentation);
                 fprintf(file, "}\n");
                 free(if_value_str);
@@ -566,7 +557,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 }
 
                 fprintf(file, "{\n");
-                ast_dump_statements(file, repeat->statements, repeat->statements_length, indentation + 1);
+                ast_dump_statement_list(file, &repeat->statements, indentation + 1);
                 indent(file, indentation);
                 fprintf(file, "}\n");
                 free(value_str);
@@ -591,7 +582,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                     free(length_str);
                 }
 
-                ast_dump_statements(file, each_in->statements, each_in->statements_length, indentation + 1);
+                ast_dump_statement_list(file, &each_in->statements, indentation + 1);
                 indent(file, indentation);
                 fprintf(file, "}\n");
             }
@@ -623,19 +614,19 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 fprintf(file, "switch (%s) {\n", value_str);
                 free(value_str);
 
-                for(length_t c = 0; c != switch_stmt->cases_length; c++){
+                for(length_t c = 0; c != switch_stmt->cases.length; c++){
                     indent(file, indentation);
-                    ast_case_t *expr_case = &switch_stmt->cases[c];
+                    ast_case_t *expr_case = &switch_stmt->cases.cases[c];
                     strong_cstr_t condition_str = ast_expr_str(expr_case->condition);
                     fprintf(file, "case (%s)\n", condition_str);
                     free(condition_str);
-                    ast_dump_statements(file, expr_case->statements, expr_case->statements_length, indentation + 1);
+                    ast_dump_statement_list(file, &expr_case->statements, indentation + 1);
                 }
 
-                if(switch_stmt->default_statements_length != 0){
+                if(switch_stmt->or_default.length != 0){
                     indent(file, indentation);
                     fprintf(file, "default\n");
-                    ast_dump_statements(file, switch_stmt->default_statements, switch_stmt->default_statements_length, indentation + 1);
+                    ast_dump_statement_list(file, &switch_stmt->or_default, indentation + 1);
                 }
 
                 indent(file, indentation);
@@ -859,9 +850,7 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->traits = TRAIT_NONE;
     func->variadic_arg_name = NULL;
     func->variadic_source = NULL_SOURCE;
-    func->statements = NULL;
-    func->statements_length = 0;
-    func->statements_capacity = 0;
+    memset(&func->statements, 0, sizeof(ast_expr_list_t));
     func->source = options->source;
     func->export_as = options->export_name;
 

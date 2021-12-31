@@ -1,0 +1,142 @@
+
+#ifndef _ISAAC_AST_EXPR_IDS_H
+#define _ISAAC_AST_EXPR_IDS_H
+
+/*
+    ============================= ast_expr_ids.h ==============================
+    List of all AST expressions
+    ---------------------------------------------------------------------------
+*/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+enum {
+    EXPR_NONE,
+// Literal values ---------------------
+    EXPR_BYTE,
+    EXPR_UBYTE,
+    EXPR_SHORT,
+    EXPR_USHORT,
+    EXPR_INT,
+    EXPR_UINT,
+    EXPR_LONG,
+    EXPR_ULONG,
+    EXPR_USIZE,
+    EXPR_FLOAT,
+    EXPR_DOUBLE,
+    EXPR_BOOLEAN,
+    EXPR_STR,
+    EXPR_CSTR,
+    EXPR_NULL,
+    EXPR_GENERIC_INT,
+    EXPR_GENERIC_FLOAT,
+// Basic operators --------------------
+    EXPR_ADD,
+    EXPR_SUBTRACT,
+    EXPR_MULTIPLY,
+    EXPR_DIVIDE,
+    EXPR_MODULUS,
+    EXPR_EQUALS,
+    EXPR_NOTEQUALS,
+    EXPR_GREATER,
+    EXPR_LESSER,
+    EXPR_GREATEREQ,
+    EXPR_LESSEREQ,
+    EXPR_AND,
+    EXPR_OR,
+    EXPR_NOT,
+    EXPR_BIT_AND,
+    EXPR_BIT_OR,
+    EXPR_BIT_XOR,
+    EXPR_BIT_COMPLEMENT,
+    EXPR_BIT_LSHIFT,
+    EXPR_BIT_RSHIFT,
+    EXPR_BIT_LGC_LSHIFT,
+    EXPR_BIT_LGC_RSHIFT,
+    EXPR_NEGATE,
+    EXPR_AT,
+// Complex operators ------------------
+    EXPR_CALL,
+    EXPR_VARIABLE,
+    EXPR_MEMBER,
+    EXPR_ADDRESS,
+    EXPR_FUNC_ADDR,
+    EXPR_DEREFERENCE,
+    EXPR_ARRAY_ACCESS,
+    EXPR_CAST,
+    EXPR_SIZEOF,
+    EXPR_SIZEOF_VALUE,
+    EXPR_CALL_METHOD,
+    EXPR_NEW,
+    EXPR_NEW_CSTRING,
+    EXPR_ENUM_VALUE,
+    EXPR_STATIC_ARRAY,
+    EXPR_STATIC_STRUCT,
+    EXPR_TYPEINFO,
+    EXPR_TERNARY,
+    EXPR_PREINCREMENT,
+    EXPR_PREDECREMENT,
+    EXPR_POSTINCREMENT,
+    EXPR_POSTDECREMENT,
+    EXPR_PHANTOM,
+    EXPR_TOGGLE,
+    EXPR_VA_ARG,
+    EXPR_INITLIST,
+    EXPR_POLYCOUNT,
+    EXPR_TYPENAMEOF,
+    EXPR_LLVM_ASM,
+    EXPR_EMBED,
+    EXPR_ALIGNOF,
+// Exclusive statements ---------------
+    EXPR_DECLARE,
+    EXPR_DECLAREUNDEF,
+    EXPR_ILDECLARE,
+    EXPR_ILDECLAREUNDEF,
+    EXPR_ASSIGN,
+    EXPR_ADD_ASSIGN,
+    EXPR_SUBTRACT_ASSIGN,
+    EXPR_MULTIPLY_ASSIGN,
+    EXPR_DIVIDE_ASSIGN,
+    EXPR_MODULUS_ASSIGN,
+    EXPR_AND_ASSIGN,
+    EXPR_OR_ASSIGN,
+    EXPR_XOR_ASSIGN,
+    EXPR_LS_ASSIGN,
+    EXPR_RS_ASSIGN,
+    EXPR_LGC_LS_ASSIGN,
+    EXPR_LGC_RS_ASSIGN,
+    EXPR_RETURN,
+    EXPR_IF,
+    EXPR_UNLESS,
+    EXPR_IFELSE,
+    EXPR_UNLESSELSE,
+    EXPR_WHILE,
+    EXPR_UNTIL,
+    EXPR_WHILECONTINUE,
+    EXPR_UNTILBREAK,
+    EXPR_EACH_IN,
+    EXPR_REPEAT,
+    EXPR_DELETE,
+    EXPR_BREAK,
+    EXPR_CONTINUE,
+    EXPR_FALLTHROUGH,
+    EXPR_BREAK_TO,
+    EXPR_CONTINUE_TO,
+    EXPR_SWITCH,
+    EXPR_VA_START,
+    EXPR_VA_END,
+    EXPR_VA_COPY,
+    EXPR_FOR,
+    EXPR_DECLARE_CONSTANT,
+    EXPR_TOTAL,
+};
+
+#define MAX_AST_EXPR (EXPR_TOTAL - 1)
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _ISAAC_AST_EXPR_IDS_H */

@@ -41,9 +41,7 @@ typedef struct {
     trait_t traits;
     strong_cstr_t variadic_arg_name;
     source_t variadic_source;
-    ast_expr_t **statements;
-    length_t statements_length;
-    length_t statements_capacity;
+    ast_expr_list_t statements;
     source_t source;
     maybe_null_strong_cstr_t export_as;
 
@@ -253,8 +251,6 @@ void ast_free(ast_t *ast);
 // Frees a specific part of the data within an AST
 void ast_free_functions(ast_func_t *functions, length_t functions_length);
 void ast_free_function_aliases(ast_func_alias_t *faliases, length_t length);
-void ast_free_statements(ast_expr_t **statements, length_t length);
-void ast_free_statements_fully(ast_expr_t **statements, length_t length);
 void ast_free_composites(ast_composite_t *composites, length_t composites_length);
 void ast_free_constants(ast_constant_t *constants, length_t constants_length);
 void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length);
@@ -269,6 +265,7 @@ void ast_dump(ast_t *ast, const char *filename);
 // ---------------- ast_dump_* ----------------
 // Writes a specific part of an AST to a file
 void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_length);
+void ast_dump_statement_list(FILE *file, ast_expr_list_t *statements, length_t indentation);
 void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, length_t indentation);
 void ast_dump_composites(FILE *file, ast_composite_t *composites, length_t composites_length);
 void ast_dump_composite(FILE *file, ast_composite_t *composite, length_t additional_indentation);

@@ -155,7 +155,7 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
         }
         
         // Infer expressions in statements
-        if(infer_in_stmts(ctx, function, function->statements, function->statements_length)){
+        if(infer_in_stmts(ctx, function, &function->statements)){
             infer_var_scope_free(ctx->compiler, ctx->scope);
             ctx->scope = previous_scope;
             return FAILURE;
@@ -168,17 +168,19 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
     return SUCCESS;
 }
 
-errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **statements, length_t statements_length){
-    for(length_t s = 0; s != statements_length; s++){
-        switch(statements[s]->id){
+errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *stmt_list){
+    for(length_t s = 0; s != stmt_list->length; s++){
+        ast_expr_t *stmt = stmt_list->statements[s];
+
+        switch(stmt->id){
         case EXPR_RETURN: {
-                ast_expr_return_t *return_stmt = (ast_expr_return_t*) statements[s];
+                ast_expr_return_t *return_stmt = (ast_expr_return_t*) stmt;
                 if(return_stmt->value != NULL && infer_expr(ctx, func, &return_stmt->value, ast_primitive_from_ast_type(&func->return_type), false)) return FAILURE;
-                if(infer_in_stmts(ctx, func, return_stmt->last_minute.statements, return_stmt->last_minute.length)) return FAILURE;
+                if(infer_in_stmts(ctx, func, &return_stmt->last_minute)) return FAILURE;
             }
             break;
         case EXPR_CALL: {
-                ast_expr_call_t *call_stmt = (ast_expr_call_t*) statements[s];
+                ast_expr_call_t *call_stmt = (ast_expr_call_t*) stmt;
 
                 // HACK: Mark a variable as used if a call is made to a function with the same name
                 // SPEED: PERFORMANCE: This is probably really slow to do
@@ -198,7 +200,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
             }
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
-                ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) statements[s];
+                ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) stmt;
 
                 if(infer_type(ctx, &declare_stmt->type)) return FAILURE;
 
@@ -214,7 +216,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
         case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
         case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
-                ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) statements[s];
+                ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) stmt;
                 if(infer_expr(ctx, func, &assign_stmt->destination, EXPR_NONE, true)) return FAILURE;
                 if(infer_expr(ctx, func, &assign_stmt->value, EXPR_NONE, false)) return FAILURE;
             }
@@ -222,11 +224,11 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {
                 assert(ctx->scope);
 
-                ast_expr_if_t *conditional = (ast_expr_if_t*) statements[s];
+                ast_expr_if_t *conditional = (ast_expr_if_t*) stmt;
                 if(infer_expr(ctx, func, &conditional->value, EXPR_NONE, false)) return FAILURE;
 
                 infer_var_scope_push(&ctx->scope);
-                if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length)){
+                if(infer_in_stmts(ctx, func, &conditional->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
@@ -236,18 +238,18 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_IFELSE: case EXPR_UNLESSELSE: {
                 assert(ctx->scope);
 
-                ast_expr_ifelse_t *complex_conditional = (ast_expr_ifelse_t*) statements[s];
+                ast_expr_ifelse_t *complex_conditional = (ast_expr_ifelse_t*) stmt;
                 if(infer_expr(ctx, func, &complex_conditional->value, EXPR_NONE, false)) return FAILURE;
 
                 infer_var_scope_push(&ctx->scope);
-                if(infer_in_stmts(ctx, func, complex_conditional->statements, complex_conditional->statements_length)){
+                if(infer_in_stmts(ctx, func, &complex_conditional->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
                 
                 infer_var_scope_pop(ctx->compiler, &ctx->scope);
                 infer_var_scope_push(&ctx->scope);
-                if(infer_in_stmts(ctx, func, complex_conditional->else_statements, complex_conditional->else_statements_length)){
+                if(infer_in_stmts(ctx, func, &complex_conditional->else_statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
@@ -257,10 +259,10 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_WHILECONTINUE: case EXPR_UNTILBREAK: {
                 assert(ctx->scope);
 
-                ast_expr_whilecontinue_t *conditional = (ast_expr_whilecontinue_t*) statements[s];
+                ast_expr_whilecontinue_t *conditional = (ast_expr_whilecontinue_t*) stmt;
 
                 infer_var_scope_push(&ctx->scope);
-                if(infer_in_stmts(ctx, func, conditional->statements, conditional->statements_length)){
+                if(infer_in_stmts(ctx, func, &conditional->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
@@ -268,8 +270,9 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
             }
             break;
         case EXPR_CALL_METHOD: {
-                ast_expr_call_method_t *call_stmt = (ast_expr_call_method_t*) statements[s];
+                ast_expr_call_method_t *call_stmt = (ast_expr_call_method_t*) stmt;
                 if(infer_expr(ctx, func, &call_stmt->value, EXPR_NONE, true)) return FAILURE;
+
                 for(length_t a = 0; a != call_stmt->arity; a++){
                     if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, false)) return FAILURE;
                 }
@@ -280,14 +283,14 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
             }
             break;
         case EXPR_DELETE: case EXPR_VA_START: case EXPR_VA_END: {
-                ast_expr_unary_t *unary_stmt = (ast_expr_unary_t*) statements[s];
+                ast_expr_unary_t *unary_stmt = (ast_expr_unary_t*) stmt;
                 if(infer_expr(ctx, func, &unary_stmt->value, EXPR_NONE, false)) return FAILURE;
             }
             break;
         case EXPR_EACH_IN: {
                 assert(ctx->scope);
 
-                ast_expr_each_in_t *loop = (ast_expr_each_in_t*) statements[s];
+                ast_expr_each_in_t *loop = (ast_expr_each_in_t*) stmt;
                 if(infer_type(ctx, loop->it_type)) return FAILURE;
                 
                 if(loop->low_array && infer_expr(ctx, func, &loop->low_array, EXPR_NONE, true)) return FAILURE;
@@ -298,7 +301,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 infer_var_scope_add_variable(ctx->scope, "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
                 infer_var_scope_add_variable(ctx->scope, loop->it_name ? loop->it_name : "it", loop->it_type, loop->source, true, false);
 
-                if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length)){
+                if(infer_in_stmts(ctx, func, &loop->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
@@ -308,13 +311,13 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_REPEAT: {
                 assert(ctx->scope);
 
-                ast_expr_repeat_t *loop = (ast_expr_repeat_t*) statements[s];
+                ast_expr_repeat_t *loop = (ast_expr_repeat_t*) stmt;
                 if(infer_expr(ctx, func, &loop->limit, EXPR_USIZE, false)) return FAILURE;
  
                 infer_var_scope_push(&ctx->scope);
                 infer_var_scope_add_variable(ctx->scope, loop->idx_overload_name ? loop->idx_overload_name : "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
 
-                if(infer_in_stmts(ctx, func, loop->statements, loop->statements_length)){
+                if(infer_in_stmts(ctx, func, &loop->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
@@ -325,16 +328,16 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_SWITCH: {
                 assert(ctx->scope);
 
-                ast_expr_switch_t *expr_switch = (ast_expr_switch_t*) statements[s];
+                ast_expr_switch_t *expr_switch = (ast_expr_switch_t*) stmt;
                 if(infer_expr(ctx, func, &expr_switch->value, EXPR_NONE, false)) return FAILURE;
 
-                for(length_t c = 0; c != expr_switch->cases_length; c++){
-                    ast_case_t *expr_case = &expr_switch->cases[c];
+                for(length_t c = 0; c != expr_switch->cases.length; c++){
+                    ast_case_t *expr_case = &expr_switch->cases.cases[c];
 
                     if(infer_expr(ctx, func, &expr_case->condition, EXPR_NONE, false)) return FAILURE;
 
                     infer_var_scope_push(&ctx->scope);
-                    if(infer_in_stmts(ctx, func, expr_case->statements, expr_case->statements_length)){
+                    if(infer_in_stmts(ctx, func, &expr_case->statements)){
                         infer_var_scope_pop(ctx->compiler, &ctx->scope);
                         return FAILURE;
                     }
@@ -342,7 +345,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
                 }
 
                 infer_var_scope_push(&ctx->scope);
-                if(infer_in_stmts(ctx, func, expr_switch->default_statements, expr_switch->default_statements_length)){
+                if(infer_in_stmts(ctx, func, &expr_switch->or_default)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
@@ -351,7 +354,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
             }
             break;
         case EXPR_VA_COPY: {
-                ast_expr_va_copy_t *va_copy_stmt = (ast_expr_va_copy_t*) statements[s];
+                ast_expr_va_copy_t *va_copy_stmt = (ast_expr_va_copy_t*) stmt;
                 if(infer_expr(ctx, func, &va_copy_stmt->src_value, EXPR_NONE, false)) return FAILURE;
                 if(infer_expr(ctx, func, &va_copy_stmt->dest_value, EXPR_NONE, true)) return FAILURE;
             }
@@ -359,22 +362,22 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_FOR: {
                 assert(ctx->scope);
 
-                ast_expr_for_t *loop = (ast_expr_for_t*) statements[s];
+                ast_expr_for_t *loop = (ast_expr_for_t*) stmt;
                 infer_var_scope_push(&ctx->scope);
 
-                if(infer_in_stmts(ctx, func, loop->before.statements, loop->before.length)){
+                if(infer_in_stmts(ctx, func, &loop->before)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
 
-                if(infer_in_stmts(ctx, func, loop->after.statements, loop->after.length)){
+                if(infer_in_stmts(ctx, func, &loop->after)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
 
                 if(loop->condition && infer_expr(ctx, func, &loop->condition, EXPR_NONE, false)) return FAILURE;
 
-                if(infer_in_stmts(ctx, func, loop->statements.statements, loop->statements.length)){
+                if(infer_in_stmts(ctx, func, &loop->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
                     return FAILURE;
                 }
@@ -385,7 +388,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_DECLARE_CONSTANT: {
                 assert(ctx->scope);
 
-                ast_expr_declare_constant_t *declare_constant_stmt = (ast_expr_declare_constant_t*) statements[s];
+                ast_expr_declare_constant_t *declare_constant_stmt = (ast_expr_declare_constant_t*) stmt;
 
                 infer_var_scope_add_constant(ctx->scope, &declare_constant_stmt->constant);
                 ast_constant_make_empty(&declare_constant_stmt->constant);
@@ -396,10 +399,10 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_t **stat
         case EXPR_POSTDECREMENT:
         case EXPR_POSTINCREMENT:
         case EXPR_TOGGLE:
-            if(infer_expr(ctx, func, &((ast_expr_unary_t*) statements[s])->value, EXPR_NONE, true)) return FAILURE;
+            if(infer_expr(ctx, func, &((ast_expr_unary_t*) stmt)->value, EXPR_NONE, true)) return FAILURE;
             break;
         case EXPR_LLVM_ASM: {
-                ast_expr_llvm_asm_t *llvm_asm_stmt = (ast_expr_llvm_asm_t*) statements[s];
+                ast_expr_llvm_asm_t *llvm_asm_stmt = (ast_expr_llvm_asm_t*) stmt;
 
                 for(length_t a = 0; a != llvm_asm_stmt->arity; a++){
                     if(infer_expr(ctx, func, &llvm_asm_stmt->args[a], EXPR_NONE, false)) return FAILURE;

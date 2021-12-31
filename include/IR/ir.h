@@ -718,7 +718,7 @@ void ir_job_list_append(ir_job_list_t *job_list, ir_func_mapping_t *mapping);
 // Frees an IR job list
 void ir_job_list_free(ir_job_list_t *job_list);
 
-// ---------------- ir_job_list_free ----------------
+// ---------------- ir_module_defer_free ----------------
 // Schedules a heap allocation to be deallocated
 // when an IR module is destroyed.
 // Can be used to preserve data that an IR module weakly references

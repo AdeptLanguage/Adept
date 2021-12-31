@@ -324,7 +324,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
     ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
 
-    if(ast_func->statements_length == 0 && !(ast_func->traits & AST_FUNC_GENERATED) && compiler->traits & COMPILER_FUSSY){
+    if(ast_func->statements.length == 0 && !(ast_func->traits & AST_FUNC_GENERATED) && compiler->traits & COMPILER_FUSSY){
         if(compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name))
             return FAILURE;
     }
@@ -357,9 +357,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         add_variable(&builder, ast_func->variadic_arg_name, object->ast.common.ast_variadic_array, ir_module->common.ir_variadic_array, TRAIT_NONE);
         module_func->arity++;
     }
-    
-    ast_expr_t **statements = ast_func->statements;
-    length_t statements_length = ast_func->statements_length;
 
     if(ast_func->traits & AST_FUNC_MAIN || ast_func->traits & AST_FUNC_WINMAIN){
         // Initialize all global variables
@@ -373,10 +370,13 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
             free(builder.block_stack_scopes);
             return FAILURE;
         }
+
+        // Refresh 'ast_func' pointer, since function may have moved
+        ast_func = &object->ast.funcs[ast_func_id];
     }
 
     bool terminated;
-    if(ir_gen_stmts(&builder, statements, statements_length, &terminated)){
+    if(ir_gen_stmts(&builder, &ast_func->statements, &terminated)){
         // Make sure to update 'module_func' because ir_module.funcs may have been moved
         module_func = &object->ir_module.funcs[ir_func_id];
         module_func->basicblocks = builder.basicblocks;
@@ -427,10 +427,11 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         // TODO: CLEANUP: Clean this up
         // We have to recheck whether the function was terminated because of 'handle_children_pass_root(&builder)'
         if(!terminated){
-            // Ensure latest version of module_func reference
+            // Ensure function pointers are up-to-date with the latest function locations
             ast_func = &object->ast.funcs[ast_func_id];
             module_func = &object->ir_module.funcs[ir_func_id];
 
+            // Handle auto-return
             if(module_func->return_type->kind == TYPE_KIND_VOID){
                 build_return(&builder, NULL);
             } else if(ast_func->traits & AST_FUNC_MAIN && module_func->return_type->kind == TYPE_KIND_S32
