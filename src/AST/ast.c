@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/EXPR/ast_expr_ids.h"
 #include "AST/UTIL/string_builder_extensions.h"
+#include "AST/ast_expr.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
 #include "UTIL/color.h"
@@ -614,9 +616,9 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 fprintf(file, "switch (%s) {\n", value_str);
                 free(value_str);
 
-                for(length_t c = 0; c != switch_stmt->cases.length; c++){
+                for(length_t i = 0; i != switch_stmt->cases.length; i++){
                     indent(file, indentation);
-                    ast_case_t *expr_case = &switch_stmt->cases.cases[c];
+                    ast_case_t *expr_case = &switch_stmt->cases.cases[i];
                     strong_cstr_t condition_str = ast_expr_str(expr_case->condition);
                     fprintf(file, "case (%s)\n", condition_str);
                     free(condition_str);

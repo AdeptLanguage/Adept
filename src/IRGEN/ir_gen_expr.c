@@ -6,8 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/EXPR/ast_expr_ids.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_expr_lean.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
 #include "AST/ast_type_lean.h"
@@ -2229,7 +2231,7 @@ errorcode_t ir_gen_expr_typeinfo(ir_builder_t *builder, ast_expr_typeinfo_t *exp
     }
 
     // Get IR value for pointer to AnyType struct
-    *ir_value = rtti_for(builder, &expr->target, expr->source);
+    *ir_value = rtti_for(builder, &expr->type, expr->source);
     if(*ir_value == NULL) return FAILURE;
 
     // Result type is *AnyType

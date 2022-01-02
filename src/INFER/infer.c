@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/EXPR/ast_expr_ids.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/type_table.h"
@@ -331,8 +332,8 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 ast_expr_switch_t *expr_switch = (ast_expr_switch_t*) stmt;
                 if(infer_expr(ctx, func, &expr_switch->value, EXPR_NONE, false)) return FAILURE;
 
-                for(length_t c = 0; c != expr_switch->cases.length; c++){
-                    ast_case_t *expr_case = &expr_switch->cases.cases[c];
+                for(length_t i = 0; i != expr_switch->cases.length; i++){
+                    ast_case_t *expr_case = &expr_switch->cases.cases[i];
 
                     if(infer_expr(ctx, func, &expr_case->condition, EXPR_NONE, false)) return FAILURE;
 
@@ -717,7 +718,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         break;
     case EXPR_TYPEINFO: {
             // Don't infer target type, but give it to the type table
-            type_table_give(ctx->type_table, &(((ast_expr_typeinfo_t*) *expr)->target), NULL);
+            type_table_give(ctx->type_table, &(((ast_expr_typeinfo_t*) *expr)->type), NULL);
         }
         break;
     case EXPR_TERNARY: {

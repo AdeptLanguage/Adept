@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/EXPR/ast_expr_ids.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_expr_lean.h"
 #include "AST/ast_type.h"
 #include "AST/ast_type_lean.h"
 #include "AST/meta_directives.h"
@@ -1286,26 +1288,24 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
     ast_type_t type;
     if(parse_type(ctx, &type)) return FAILURE;
 
-    ast_expr_t *value;
-    if(tokens[*i].id == TOKEN_ASSIGN){
+    ast_expr_t *value = NULL;
+
+    if(parse_eat(ctx, TOKEN_ASSIGN, NULL) == SUCCESS){
         if(expr_id == EXPR_ILDECLAREUNDEF){
-            compiler_panic(ctx->compiler, sources[*i], "Can't initialize undefined inline variable");
+            compiler_panic(ctx->compiler, sources[*i - 1], "Can't initialize undefined inline variable");
             printf("\nDid you mean to use 'def' instead of 'undef'?\n");
             ast_type_free(&type);
             return FAILURE;
         }
 
-        if(tokens[++(*i)].id == TOKEN_POD){
+        if(parse_eat(ctx, TOKEN_POD, NULL) == SUCCESS){
             traits |= AST_EXPR_DECLARATION_ASSIGN_POD;
-            (*i)++;
         }
 
         if(parse_expr(ctx, &value)){
             ast_type_free(&type);
             return FAILURE;
         }
-    } else {
-        value = NULL;
     }
 
     ast_expr_create_declaration(out_expr, expr_id, source, name, type, traits, value);
@@ -1317,7 +1317,7 @@ errorcode_t parse_expr_typeinfo(parse_ctx_t *ctx, ast_expr_t **out_expr){
     typeinfo->id = EXPR_TYPEINFO;
     typeinfo->source = ctx->tokenlist->sources[(*ctx->i)++];
 
-    if(parse_type(ctx, &typeinfo->target)){
+    if(parse_type(ctx, &typeinfo->type)){
         free(typeinfo);
         return FAILURE;
     }

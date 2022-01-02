@@ -5,8 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/EXPR/ast_expr_ids.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_expr_lean.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
 #include "AST/ast_type_lean.h"
@@ -2522,10 +2524,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
         if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_cast_t*) expr)->from)) return FAILURE;
         break;
     case EXPR_SIZEOF:
-        if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_sizeof_t*) expr)->type, NULL)) return FAILURE;
-        break;
     case EXPR_ALIGNOF:
-        if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_alignof_t*) expr)->type, NULL)) return FAILURE;
+    case EXPR_TYPEINFO:
+    case EXPR_TYPENAMEOF:
+        if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_unary_type_t*) expr)->type, NULL)) return FAILURE;
         break;
     case EXPR_NEW:
         if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_new_t*) expr)->type, NULL)) return FAILURE;
@@ -2544,10 +2546,6 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
         break;
     case EXPR_STATIC_STRUCT: {
             if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_static_data_t*) expr)->type, NULL)) return FAILURE;
-        }
-        break;
-    case EXPR_TYPEINFO: {
-            if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_typeinfo_t*) expr)->target, NULL)) return FAILURE;
         }
         break;
     case EXPR_TERNARY: {
@@ -2579,11 +2577,6 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
             ast_expr_free(expr);
             expr->id = EXPR_USIZE;
             ((ast_expr_usize_t*) expr)->value = count_var->binding;
-        }
-        break;
-    case EXPR_TYPENAMEOF: {
-            ast_expr_typenameof_t *typenameof = (ast_expr_typenameof_t*) expr;
-            if(resolve_type_polymorphics(compiler, type_table, catalog, &typenameof->type, NULL)) return FAILURE;
         }
         break;
     default: break;

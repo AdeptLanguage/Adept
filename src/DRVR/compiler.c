@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+// IWYU pragma: no_include "unistd.h"
 
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"

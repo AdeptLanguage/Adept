@@ -139,7 +139,7 @@ ifeq ($(DEBUG_LEAK_SANITIZE),true)
 	LDFLAGS+= -fsanitize=leak
 endif
 
-ESSENTIAL_SOURCES= src/AST/UTIL/string_builder_extensions.c src/AST/ast_constant.c \
+ESSENTIAL_SOURCES= src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c src/AST/UTIL/string_builder_extensions.c src/AST/ast_constant.c \
 	src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c \
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c \
 	src/BRIDGE/bridge.c src/BRIDGE/funcpair.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
@@ -248,6 +248,8 @@ insight: $(SOURCES)
 	@cp include/UTIL/util.h $(INSIGHT_OUT_DIR)/include/UTIL/util.h
 	
 #   Insight - Required Source Code Files
+	@cp src/AST/EXPR/ast_expr_free.c $(INSIGHT_OUT_DIR)/src/AST/EXPR/ast_expr_free.c
+	@cp src/AST/EXPR/ast_expr_str.c $(INSIGHT_OUT_DIR)/src/AST/EXPR/ast_expr_str.c
 	@cp src/AST/UTIL/string_builder_extensions.c $(INSIGHT_OUT_DIR)/src/AST/UTIL/string_builder_extensions.c
 	@cp src/AST/ast_constant.c $(INSIGHT_OUT_DIR)/src/AST/ast_constant.c
 	@cp src/AST/ast_expr.c $(INSIGHT_OUT_DIR)/src/AST/ast_expr.c

@@ -151,7 +151,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
             config_update_last_updated(filename, buffer, length, maybe_last_update);
 
         download_buffer_t dlbuffer;
-        if(download_to_memory(config->stash, &dlbuffer, &config->testcookie_solution)){
+        if(download_to_memory(config->stash, &dlbuffer)){
             update_installation(config, dlbuffer);
             free(dlbuffer.bytes);
         } else {

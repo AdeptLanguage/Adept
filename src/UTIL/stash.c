@@ -37,7 +37,7 @@ successful_t adept_install(config_t *config, weak_cstr_t root, weak_cstr_t raw_i
     printf("%s\n", identifier);
 
     download_buffer_t dlbuffer;
-    if(download_to_memory(config->stash, &dlbuffer, &config->testcookie_solution) == false){   
+    if(download_to_memory(config->stash, &dlbuffer) == false){   
         redprintf("Internet address for stash could not be reached\n");
         goto failure;
     }
@@ -52,7 +52,7 @@ successful_t adept_install(config_t *config, weak_cstr_t root, weak_cstr_t raw_i
     }
 
     free(dlbuffer.bytes);
-    if(download_to_memory(location, &dlbuffer, &config->testcookie_solution) == false){   
+    if(download_to_memory(location, &dlbuffer) == false){   
         redprintf("Internet address for package location could not be reached\n");
         free(dlbuffer.bytes);
         goto failure;
@@ -184,7 +184,7 @@ silent_failure:
     return NULL;
 }
 
-static successful_t perform_procedure_command(char *buffer, jsmntok_t *tokens, length_t num_tokens, length_t token_index, weak_cstr_t root, maybe_null_weak_cstr_t host, strong_cstr_t *testcookie_solution){
+static successful_t perform_procedure_command(char *buffer, jsmntok_t *tokens, length_t num_tokens, length_t token_index, weak_cstr_t root, maybe_null_weak_cstr_t host){
     if(!jsmn_helper_get_object(buffer, tokens, num_tokens, token_index)) return false;
 
     jsmntok_t command_object_token = tokens[token_index++];
@@ -226,7 +226,7 @@ static successful_t perform_procedure_command(char *buffer, jsmntok_t *tokens, l
         strong_cstr_t to = filename_local(root, file);
         strong_cstr_t url = host ? filename_local(host, from) : strclone(from);
 
-        if(!download(url, to, testcookie_solution ? *testcookie_solution : NULL)){
+        if(!download(url, to)){
             redprintf("Failed to download %s\n", url);
             free(to);
             free(url);
@@ -302,7 +302,7 @@ successful_t adept_install_stash(config_t *config, weak_cstr_t root, char *buffe
                     goto failure;
                 }
 
-                if(!perform_procedure_command(buffer, tokens, num_tokens, token_index, root, host, &config->testcookie_solution)){
+                if(!perform_procedure_command(buffer, tokens, num_tokens, token_index, root, host)){
                     goto failure;
                 }
 

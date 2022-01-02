@@ -22,6 +22,7 @@ extern "C" {
 #include "UTIL/ground.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
+#include "AST/ast_type_lean.h" // IWYU pragma: export
 
 // Possible AST type elements
 enum {
@@ -48,9 +49,6 @@ enum {
     FLOW_OUT,
     FLOW_INOUT,
 };
-
-// Acquire 'ast_elem_t' and 'ast_type_t' definitions from lean version of header
-#include "AST/ast_type_lean.h"
 
 // ---------------- ast_elem_base_t ----------------
 // Type element for base structure or primitive

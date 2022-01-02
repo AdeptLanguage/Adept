@@ -5,6 +5,7 @@
 #include "AST/ast.h"
 #include "AST/ast_constant.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_expr_lean.h"
 #include "AST/ast_type.h"
 #include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"

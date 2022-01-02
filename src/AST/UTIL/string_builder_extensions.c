@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 
+#include "AST/ast_expr.h"
 #include "AST/ast_type.h"
 #include "UTIL/ground.h"
 

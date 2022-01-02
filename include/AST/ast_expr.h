@@ -16,8 +16,8 @@ extern "C" {
 #include "UTIL/ground.h"
 #include "UTIL/datatypes.h"
 #include "AST/ast_constant.h"
-#include "AST/ast_type_lean.h"
-#include "AST/EXPR/ast_expr_ids.h"
+#include "AST/ast_type_lean.h" // IWYU pragma: export
+#include "AST/EXPR/ast_expr_ids.h" // IWYU pragma: export
 
 // ---------------- ast_expr_byte_t ----------------
 // Expression for a literal byte value
@@ -101,6 +101,13 @@ typedef struct { DERIVE_AST_EXPR; ast_expr_t *value; } ast_expr_unary_t,
     ast_expr_address_t, ast_expr_dereference_t, ast_expr_bitwise_complement_t, ast_expr_not_t,
     ast_expr_negate_t, ast_expr_delete_t, ast_expr_toggle_t, ast_expr_va_start_t, ast_expr_va_end_t, ast_expr_sizeof_value_t;
 
+// ---------------- ast_expr_unary_type_t ----------------
+// Generic expression that only operates on a type
+typedef struct {
+    DERIVE_AST_EXPR;
+    ast_type_t type;
+} ast_expr_unary_type_t;
+
 // ---------------- ast_expr_new_t ----------------
 // Expression for 'new' keyword, used to dynamically
 // allocate memory on the heap
@@ -131,7 +138,7 @@ typedef struct {
 
 // ---------------- ast_expr_typeinfo_t ----------------
 // Expression for getting runtime type information for a type
-typedef struct { DERIVE_AST_EXPR; ast_type_t target; } ast_expr_typeinfo_t;
+typedef ast_expr_unary_type_t ast_expr_typeinfo_t;
 
 // ---------------- ast_expr_ternary_t ----------------
 // Expression for conditionally selecting between two expressions
@@ -213,12 +220,13 @@ typedef struct {
     ast_expr_t *from;
 } ast_expr_cast_t;
 
-// ---------------- ast_expr_sizeof_t, ast_expr_alignof_t ----------------
-// Expression for getting the size/alignment of a type
-typedef struct {
-    DERIVE_AST_EXPR;
-    ast_type_t type;
-} ast_expr_sizeof_t, ast_expr_alignof_t;
+// ---------------- ast_expr_sizeof_t ----------------
+// Expression for getting the sizeof a type
+typedef ast_expr_unary_type_t ast_expr_sizeof_t;
+
+// ---------------- ast_expr_alignof_t ----------------
+// Expression for getting the alignment a type
+typedef ast_expr_unary_type_t ast_expr_alignof_t;
 
 // ---------------- ast_expr_phantom_t ----------------
 // Expression for passing precomputed ir_value_t values into AST expressions
@@ -272,7 +280,7 @@ typedef struct { DERIVE_AST_EXPR; strong_cstr_t name; } ast_expr_polycount_t;
 
 // ---------------- ast_expr_typenameof ----------------
 // Expression for getting the name of a type (as a C-String) at compile-time
-typedef struct { DERIVE_AST_EXPR; ast_type_t type; } ast_expr_typenameof_t;
+typedef ast_expr_unary_type_t ast_expr_typenameof_t;
 
 // ---------------- ast_expr_asm_t ----------------
 // Expression for inline LLVM assembly (LLVM backend only)
@@ -326,16 +334,18 @@ typedef struct {
     ast_expr_list_t last_minute;
 } ast_expr_return_t;
 
-// ---------------- ast_expr_if_t (and friends) ----------------
+// ---------------- ast_expr_conditional_t (and variants) ----------------
 // Expressions that conditionally execute code found in a single block
 typedef struct {
     DERIVE_AST_EXPR;
     weak_cstr_t label;
     ast_expr_t *value;
     ast_expr_list_t statements;
-} ast_expr_if_t, ast_expr_unless_t, ast_expr_while_t, ast_expr_until_t, ast_expr_whilecontinue_t, ast_expr_untilbreak_t;
+} ast_expr_conditional_t,
+    // Aliases
+    ast_expr_if_t, ast_expr_unless_t, ast_expr_while_t, ast_expr_until_t, ast_expr_whilecontinue_t, ast_expr_untilbreak_t;
 
-// ---------------- ast_expr_ifelse_t (and friends) ----------------
+// ---------------- ast_expr_conditional_else_t (and friends) ----------------
 // Expressions that conditionally execute code found in a two blocks
 typedef struct {
     DERIVE_AST_EXPR;
@@ -343,7 +353,9 @@ typedef struct {
     ast_expr_t *value;
     ast_expr_list_t statements;
     ast_expr_list_t else_statements;
-} ast_expr_ifelse_t, ast_expr_unlesselse_t, ast_expr_ifwhileelse_t, ast_expr_unlessuntilelse_t;
+} ast_expr_conditional_else_t,
+    // Aliases
+    ast_expr_ifelse_t, ast_expr_unlesselse_t, ast_expr_ifwhileelse_t, ast_expr_unlessuntilelse_t;
 
 // ---------------- ast_expr_each_in_t ----------------
 // Expression for 'each in' loop. Used for iterating
