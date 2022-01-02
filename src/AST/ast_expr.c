@@ -4,17 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "AST/UTIL/string_builder_extensions.h"
-#include "AST/ast.h"
 #include "AST/ast_constant.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
-#include "UTIL/string_builder.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 

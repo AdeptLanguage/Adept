@@ -5,7 +5,6 @@
 #include "AST/ast.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "BRIDGE/any.h"
 #include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"

@@ -8,7 +8,6 @@
 
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"

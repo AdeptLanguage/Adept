@@ -14,8 +14,11 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 #include "AST/ast_expr.h"
 #include "AST/ast_type_lean.h"
+#include "UTIL/ground.h"
 #include "UTIL/string_builder.h"
 
 // ---------------- string_builder_append_type ----------------

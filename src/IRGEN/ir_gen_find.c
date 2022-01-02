@@ -7,7 +7,6 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "BRIDGE/funcpair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"

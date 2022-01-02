@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "IRGEN/ir_cache.h"
 #include "UTIL/ground.h"
 #include "UTIL/hash.h"

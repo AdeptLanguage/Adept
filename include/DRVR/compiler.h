@@ -135,8 +135,6 @@ typedef struct compiler {
     strong_cstr_t *user_search_paths;
     length_t user_search_paths_length;
     length_t user_search_paths_capacity;
-
-    strong_cstr_t testcookie_solution;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00

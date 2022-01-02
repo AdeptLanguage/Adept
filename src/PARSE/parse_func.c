@@ -3,12 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "AST/EXPR/ast_expr_ids.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
-#include "AST/ast_expr_lean.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"

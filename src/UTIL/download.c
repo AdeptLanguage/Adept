@@ -1,19 +1,15 @@
 
 #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
 
-#include <ctype.h>
 #include <curl/curl.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "UTIL/aes.h"
 #include "UTIL/color.h"
 #include "UTIL/download.h"
 #include "UTIL/ground.h"
-#include "UTIL/util.h"
 
 static size_t download_write_data_to_file(void *ptr, size_t size, size_t items, FILE *f);
 static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items, void *buffer_voidptr);

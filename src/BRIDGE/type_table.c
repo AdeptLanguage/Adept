@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "BRIDGE/type_table.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"

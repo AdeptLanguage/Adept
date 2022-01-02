@@ -1,16 +1,28 @@
 
-#include "UTIL/util.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "BRIDGE/rtti.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_gen_expr.h"
+#include "IRGEN/ir_gen_type.h"
+#include "UTIL/builtin_type.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
-#include "UTIL/search.h"
-#include "UTIL/filename.h"
-#include "UTIL/builtin_type.h"
-#include "IRGEN/ir_gen.h"
-#include "IRGEN/ir_gen_type.h"
-#include "IRGEN/ir_gen_find.h"
-#include "IRGEN/ir_gen_expr.h"
-#include "BRIDGE/any.h"
-#include "BRIDGE/rtti.h"
+#include "UTIL/trait.h"
 
 errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     // NOTE: Maps all accessible types in the program

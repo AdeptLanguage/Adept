@@ -28,8 +28,8 @@
 #define TRACK_MEMORY_QUIET_UNLESS_LEAK
 // -------------------------------------------
 
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #ifdef TRACK_MEMORY_USAGE // Special stuff if we are tracking heap allocations
 

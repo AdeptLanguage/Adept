@@ -8,7 +8,6 @@
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "BRIDGE/any.h"
 #include "BRIDGE/bridge.h"
 #include "BRIDGE/funcpair.h"

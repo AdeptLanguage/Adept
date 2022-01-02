@@ -16,7 +16,8 @@ extern "C" {
 #include "UTIL/ground.h"
 #include "UTIL/datatypes.h"
 #include "AST/ast_constant.h"
-#include "AST/ast_type_lean.h" // IWYU pragma: export
+#include "AST/ast_type_lean.h"
+#include "AST/ast_expr_lean.h" // IWYU pragma: export
 #include "AST/EXPR/ast_expr_ids.h" // IWYU pragma: export
 
 // ---------------- ast_expr_byte_t ----------------

@@ -32,7 +32,6 @@ successful_t download(weak_cstr_t url, weak_cstr_t destination);
 // ---------------- download_to_memory ----------------
 // Downloads a file into memory, returns whether successful
 // NOTE: If successful, out_memory->buffer must be freed by the caller
-// NOTE: 'testcookie_solution' can be NULL
 successful_t download_to_memory(weak_cstr_t url, download_buffer_t *out_memory);
 
 #endif // ADEPT_ENABLE_PACKAGE_MANAGER

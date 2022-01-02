@@ -1,3 +1,4 @@
 [
-    { include: ["<_ctype.h>", "private", "<ctype.h>", "public"] }
+    { include: ["<_ctype.h>", "private", "<ctype.h>", "public"] },
+    { include: ["<sys/unistd.h>", "private", "<unistd.h>", "public"] }
 ]

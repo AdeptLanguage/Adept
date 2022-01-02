@@ -1,15 +1,15 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <windows.h> // IWYU pragma: keep
 #elif defined(__APPLE__)
-#include <mach-o/dyld.h>
-#include <unistd.h>
+#include <unistd.h> // IWYU pragma: keep
+#include <mach-o/dyld.h> // IWYU pragma: keep
 #endif
 
 #ifdef __linux__
-#include <unistd.h>
-#include <linux/limits.h>
+#include <unistd.h> // IWYU pragma: keep
+#include <linux/limits.h> // IWYU pragma: keep
 #endif
 
 #include <stdarg.h>
@@ -18,13 +18,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// IWYU pragma: no_include "unistd.h"
 
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"
 #include "DRVR/config.h"
 #include "DRVR/object.h"
@@ -255,8 +253,6 @@ void compiler_init(compiler_t *compiler){
     compiler->user_search_paths = NULL;
     compiler->user_search_paths_length = 0;
     compiler->user_search_paths_capacity = 0;
-
-    compiler->testcookie_solution = NULL;
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;

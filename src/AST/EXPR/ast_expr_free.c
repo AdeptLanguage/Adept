@@ -1,12 +1,9 @@
 
 #include <stdlib.h>
 
-#include "AST/EXPR/ast_expr_ids.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
-#include "AST/ast_expr_lean.h"
 #include "AST/ast_type.h"
-#include "AST/ast_type_lean.h"
 
 /*
     Implementation details of the ast_expr_free(ast_expr_t*) function.

@@ -35,7 +35,7 @@ set(app_source_files
 	src/PARSE/parse_global.c src/PARSE/parse_meta.c src/PARSE/parse_namespace.c src/PARSE/parse_pragma.c
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c
-	src/UTIL/aes.c src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c
+	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c
 	src/UTIL/memory.c src/UTIL/string.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
 )
 
