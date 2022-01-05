@@ -483,7 +483,7 @@ maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_fai
     case TROOLEAN_UNKNOWN:
         // TODO: SPEED: It works, but the global variable lookup could be faster
         for(length_t index = 0; index != ir_module->globals_length; index++){
-            if(strcmp("__types__", ir_module->globals[index].name) == 0){
+            if(streq("__types__", ir_module->globals[index].name)){
                 ir_module->common.rtti_array_index = index;
                 ir_module->common.has_rtti_array = TROOLEAN_TRUE;
                 return index;
@@ -1725,7 +1725,7 @@ errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object,
 
     funcid_t ast_func_id = (funcid_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
-    bool is_entry = strcmp(poly_func->name, compiler->entry_point) == 0;
+    bool is_entry = streq(poly_func->name, compiler->entry_point);
 
     maybe_null_strong_cstr_t export_name = poly_func->export_as ? strclone(poly_func->export_as) : NULL;
     
@@ -2615,7 +2615,7 @@ bool is_allowed_auto_conversion(compiler_t *compiler, object_t *object, const as
 successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id){
     // Find loop label by name and return requested information
     for(length_t i = builder->block_stack_length; i != 0; i--){
-        if(strcmp(label, builder->block_stack_labels[i - 1]) == 0){
+        if(streq(label, builder->block_stack_labels[i - 1])){
             if(out_scope)             *out_scope = builder->block_stack_scopes[i - 1];
             if(out_break_block_id)    *out_break_block_id = builder->block_stack_break_ids[i - 1];
             if(out_continue_block_id) *out_continue_block_id = builder->block_stack_continue_ids[i - 1];

@@ -143,7 +143,7 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
             if(!(function->traits & AST_FUNC_FOREIGN)){
                 const bool force_used = ctx->compiler->ignore & COMPILER_IGNORE_UNUSED
                         ? true
-                        : function->traits & AST_FUNC_MAIN || (a == 0 && strcmp(function->arg_names[a], "this") == 0);
+                        : function->traits & AST_FUNC_MAIN || (a == 0 && streq(function->arg_names[a], "this"));
                 
                 infer_var_scope_add_variable(ctx->scope, function->arg_names[a], &function->arg_types[a], function->arg_sources[a], force_used, false);
             }
@@ -1145,7 +1145,7 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
         case AST_ELEM_BASE: {
                 weak_cstr_t base = ((ast_elem_base_t*) elem)->base;
 
-                if(strcmp(base, "void") == 0 && type->elements_length > 1 && e != 0 && type->elements[e - 1]->id == AST_ELEM_POINTER){
+                if(streq(base, "void") && type->elements_length > 1 && e != 0 && type->elements[e - 1]->id == AST_ELEM_POINTER){
                     // Substitute '*void' with 'ptr'
 
                     // Set alias name to be original type
@@ -1293,7 +1293,7 @@ void infer_var_scope_pop(compiler_t *compiler, infer_var_scope_t **scope){
 
 infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
-        if(strcmp(scope->list.variables[i].name, name) == 0){
+        if(streq(scope->list.variables[i].name, name)){
             return &scope->list.variables[i];
         }
     }

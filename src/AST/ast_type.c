@@ -496,21 +496,24 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
         if(id != b->elements[i]->id) return false;
 
         // Do more specific checking if needed
+        // TODO: CLEANUP: Cleanup this messy code
         switch(id){
-        case AST_ELEM_BASE:
-            if(strcmp(((ast_elem_base_t*) a->elements[i])->base, "usize") == 0 || strcmp(((ast_elem_base_t*) a->elements[i])->base, "ulong") == 0){
-                // Cheap little hack to get 'usize' to be treated the same as 'ulong'
-                // MAYBE TODO: Create special function func non-identical comparison, or modify the name of this function
-                if(strcmp(((ast_elem_base_t*) b->elements[i])->base, "usize") == 0 || strcmp(((ast_elem_base_t*) b->elements[i])->base, "ulong") == 0)
-                    break;
+        case AST_ELEM_BASE: {
+                weak_cstr_t a_name = ((ast_elem_base_t*) a->elements[i])->base;
+                weak_cstr_t b_name = ((ast_elem_base_t*) b->elements[i])->base;
+
+                if(streq(a_name, "usize") || streq(a_name, "ulong")){
+                    // HACK: Cheap little hack to get 'usize' to be treated the same as 'ulong'
+                    // MAYBE TODO: Create special function func non-identical comparison, or modify the name of this function
+                    if(streq(b_name, "usize") || streq(b_name, "ulong")) break;
+                }
+                if(streq(a_name, "successful") || streq(a_name, "bool")){
+                    // HACK: Cheap little hack to get 'successful' to be treated the same as 'bool'
+                    // MAYBE TODO: Create special function func non-identical comparison, or modify the name of this function
+                    if(streq(b_name, "successful") || streq(b_name, "bool")) break;
+                }
+                if(!streq(a_name, b_name)) return false;
             }
-            if(strcmp(((ast_elem_base_t*) a->elements[i])->base, "successful") == 0 || strcmp(((ast_elem_base_t*) a->elements[i])->base, "bool") == 0){
-                // Cheap little hack to get 'successful' to be treated the same as 'bool'
-                // MAYBE TODO: Create special function func non-identical comparison, or modify the name of this function
-                if(strcmp(((ast_elem_base_t*) b->elements[i])->base, "successful") == 0 || strcmp(((ast_elem_base_t*) b->elements[i])->base, "bool") == 0)
-                    break;
-            }
-            if(strcmp(((ast_elem_base_t*) a->elements[i])->base, ((ast_elem_base_t*) b->elements[i])->base) != 0) return false;
             break;
         case AST_ELEM_FIXED_ARRAY:
             if(((ast_elem_fixed_array_t*) a->elements[i])->length != ((ast_elem_fixed_array_t*) b->elements[i])->length) return false;
@@ -544,7 +547,7 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
                 }
 
                 if(generic_base_a->generics_length != generic_base_b->generics_length) return false;
-                if(strcmp(generic_base_a->name, generic_base_b->name) != 0) return false;
+                if(!streq(generic_base_a->name, generic_base_b->name)) return false;
 
                 for(length_t i = 0; i != generic_base_a->generics_length; i++){
                     if(!ast_types_identical(&generic_base_a->generics[i], &generic_base_b->generics[i])) return false;
@@ -554,21 +557,21 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
         case AST_ELEM_POLYMORPH: {
                 ast_elem_polymorph_t *polymorph_a = (ast_elem_polymorph_t*) a->elements[i];
                 ast_elem_polymorph_t *polymorph_b = (ast_elem_polymorph_t*) b->elements[i];
-                if(strcmp(polymorph_a->name, polymorph_b->name) != 0) return false;
+                if(!streq(polymorph_a->name, polymorph_b->name)) return false;
                 if(polymorph_a->allow_auto_conversion != polymorph_b->allow_auto_conversion) return false;
             }
             break;
         case AST_ELEM_POLYCOUNT: {
                 ast_elem_polycount_t *polycount_a = (ast_elem_polycount_t*) a->elements[i];
                 ast_elem_polycount_t *polycount_b = (ast_elem_polycount_t*) b->elements[i];
-                if(strcmp(polycount_a->name, polycount_b->name) != 0) return false;
+                if(!streq(polycount_a->name, polycount_b->name)) return false;
             }
             break;
         case AST_ELEM_POLYMORPH_PREREQ: {
                 ast_elem_polymorph_prereq_t *polymorph_a = (ast_elem_polymorph_prereq_t*) a->elements[i];
                 ast_elem_polymorph_prereq_t *polymorph_b = (ast_elem_polymorph_prereq_t*) b->elements[i];
-                if(strcmp(polymorph_a->name, polymorph_b->name) != 0) return false;
-                if(strcmp(polymorph_a->similarity_prerequisite, polymorph_b->similarity_prerequisite) != 0) return false;
+                if(!streq(polymorph_a->name, polymorph_b->name)) return false;
+                if(!streq(polymorph_a->similarity_prerequisite, polymorph_b->similarity_prerequisite)) return false;
                 if(polymorph_a->allow_auto_conversion != polymorph_b->allow_auto_conversion) return false;
             }
             break;
@@ -597,7 +600,7 @@ bool ast_type_lists_identical(const ast_type_t *a, const ast_type_t *b, length_t
 
 bool ast_type_is_void(const ast_type_t *type){
     if(type->elements_length != 1 || type->elements[0]->id != AST_ELEM_BASE) return false;
-    if(strcmp(((ast_elem_base_t*) type->elements[0])->base, "void") != 0) return false;
+    if(!streq(((ast_elem_base_t*) type->elements[0])->base, "void")) return false;
     return true;
 }
 
@@ -616,14 +619,14 @@ bool ast_type_is_base_ptr(const ast_type_t *type){
 bool ast_type_is_base_of(const ast_type_t *type, const char *base){
     if(type->elements_length != 1) return false;
     if(type->elements[0]->id != AST_ELEM_BASE) return false;
-    if(strcmp(((ast_elem_base_t*) type->elements[0])->base, base) != 0) return false;
+    if(!streq(((ast_elem_base_t*) type->elements[0])->base, base)) return false;
     return true;
 }
 
 bool ast_type_is_base_ptr_of(const ast_type_t *type, const char *base){
     if(type->elements_length != 2) return false;
     if(type->elements[0]->id != AST_ELEM_POINTER || type->elements[1]->id != AST_ELEM_BASE) return false;
-    if(strcmp(((ast_elem_base_t*) type->elements[1])->base, base) != 0) return false;
+    if(!streq(((ast_elem_base_t*) type->elements[1])->base, base)) return false;
     return true;
 }
 
@@ -834,17 +837,17 @@ ast_poly_catalog_type_t *ast_poly_catalog_find_type(ast_poly_catalog_t *catalog,
     // TODO: SPEED: Improve searching (maybe not worth it?)
 
     for(length_t i = 0; i != catalog->types_length; i++){
-        if(strcmp(catalog->types[i].name, name) == 0) return &catalog->types[i];
+        if(streq(catalog->types[i].name, name)) return &catalog->types[i];
     }
 
     return NULL;
 }
 
 ast_poly_catalog_count_t *ast_poly_catalog_find_count(ast_poly_catalog_t *catalog, weak_cstr_t name){
-    // TODO: SPEED: Improve searching (maybe not worth it?)
+    // TODO: CLEANUP: SPEED: Improve searching (maybe not worth it?)
 
     for(length_t i = 0; i != catalog->counts_length; i++){
-        if(strcmp(catalog->counts[i].name, name) == 0) return &catalog->counts[i];
+        if(streq(catalog->counts[i].name, name)) return &catalog->counts[i];
     }
 
     return NULL;

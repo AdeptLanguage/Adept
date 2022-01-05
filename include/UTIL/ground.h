@@ -115,6 +115,8 @@ typedef struct {
 // becomes ast_expr_str(typecast(ast_expr_math_t*, expr)->a)
 #define typecast(TYPE, VALUE) ((TYPE)(VALUE))
 
+#define streq(STRING, VALUE) (strcmp(STRING, VALUE) == 0)
+
 // ---------------- special characters ----------------
 #ifdef __APPLE__
 #define USE_UTF8_INSTEAD_OF_EXTENDED_ASCII_FOR_SPECIAL_CHARACTERS

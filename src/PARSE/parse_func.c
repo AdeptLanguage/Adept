@@ -75,7 +75,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(func->traits == AST_FUNC_DEFER && (
         !ast_type_is_void(&func->return_type)
         || func->arity != 1
-        || strcmp(func->arg_names[0], "this") != 0
+        || !streq(func->arg_names[0], "this")
         || !(  ast_type_is_base_ptr(&func->arg_types[0])
             || ast_type_is_polymorph_ptr(&func->arg_types[0])
             || ast_type_is_generic_base_ptr(&func->arg_types[0])
@@ -100,11 +100,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    if(strcmp(func->name, "__assign__") == 0 && (
+    if(streq(func->name, "__assign__") && (
         func->traits != TRAIT_NONE
         || !ast_type_is_void(&func->return_type)
         || func->arity != 2
-        || strcmp(func->arg_names[0], "this") != 0
+        || !streq(func->arg_names[0], "this")
         || !(  ast_type_is_base_ptr(&func->arg_types[0])
             || ast_type_is_polymorph_ptr(&func->arg_types[0])
             || ast_type_is_generic_base_ptr(&func->arg_types[0])
@@ -116,43 +116,43 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return FAILURE;
     }
 
-    if(strcmp(func->name, "__access__") == 0 && (
+    if(streq(func->name, "__access__") && (
         func->traits != TRAIT_NONE
         || func->arity != 2
         || !ast_type_is_pointer(&func->arg_types[0])
         || !ast_type_is_pointer(&func->return_type)
-        || strcmp(func->arg_names[0], "this") != 0
+        || !streq(func->arg_names[0], "this")
         || func->arg_type_traits[0] != TRAIT_NONE
     )){
         compiler_panic(ctx->compiler, source, "Management method __access__ must be declared like '__access__(this *T, index $Key) *$Value'");
         return FAILURE;
     }
 
-    if(strcmp(func->name, "__array__") == 0 && (
+    if(streq(func->name, "__array__") && (
         func->traits != TRAIT_NONE
         || func->arity != 1
         || !ast_type_is_pointer(&func->arg_types[0])
         || !ast_type_is_pointer(&func->return_type)
-        || strcmp(func->arg_names[0], "this") != 0
+        || !streq(func->arg_names[0], "this")
         || func->arg_type_traits[0] != TRAIT_NONE
     )){
         compiler_panic(ctx->compiler, source, "Management method __array__ must be declared like '__array__(this *T) *$ArrayElementType'");
         return FAILURE;
     }
 
-    if(strcmp(func->name, "__length__") == 0 && (
+    if(streq(func->name, "__length__") && (
         func->traits != TRAIT_NONE
         || func->arity != 1
         || !ast_type_is_pointer(&func->arg_types[0])
         || !ast_type_is_base_of(&func->return_type, "usize")
-        || strcmp(func->arg_names[0], "this") != 0
+        || !streq(func->arg_names[0], "this")
         || func->arg_type_traits[0] != TRAIT_NONE
     )){
         compiler_panic(ctx->compiler, source, "Management method __length__ must be declared like '__length__(this *T) usize'");
         return FAILURE;
     }
 
-    if(strcmp(func->name, "__variadic_array__") == 0){
+    if(streq(func->name, "__variadic_array__")){
         if(ctx->ast->common.ast_variadic_array != NULL){
             compiler_panic(ctx->compiler, source, "The function __variadic_array__ can only be defined once");
             compiler_panic(ctx->compiler, ctx->ast->common.ast_variadic_source, "Previous definition");
@@ -186,7 +186,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         }
     }
 
-    if(strcmp(func->name, "__initializer_list__") == 0){
+    if(streq(func->name, "__initializer_list__")){
         if(ast_type_is_void(&func->return_type)){
             compiler_panic(ctx->compiler, source, "The function __initializer_list__ must return a value");
             return FAILURE;
@@ -248,7 +248,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         poly_func->ast_func_id = ast_func_id;
         poly_func->is_beginning_of_group = -1; // Uncalculated
 
-        if(func->arity != 0 && strcmp(func->arg_names[0], "this") == 0){
+        if(func->arity != 0 && streq(func->arg_names[0], "this")){
             expand((void**) &ast->polymorphic_methods, sizeof(ast_polymorphic_func_t), ast->polymorphic_methods_length, &ast->polymorphic_methods_capacity, 1, 4);
             ast_polymorphic_func_t *poly_method = &ast->polymorphic_methods[ast->polymorphic_methods_length++];
             poly_method->name = func->name;
@@ -295,7 +295,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
     if(ctx->composite_association == NULL) parse_prepend_namespace(ctx, &name);
 
     maybe_null_strong_cstr_t export_name = custom_export_name ? custom_export_name : (prefixes.is_external ? strclone(name) : NULL);
-    bool is_entry = strcmp(ctx->compiler->entry_point, name) == 0;
+    bool is_entry = streq(ctx->compiler->entry_point, name);
 
     *out_head = (ast_func_head_t){
         .name = name,

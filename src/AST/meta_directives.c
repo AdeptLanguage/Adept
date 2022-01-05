@@ -634,7 +634,7 @@ void meta_definition_add_int(meta_definition_t **definitions, length_t *length, 
 
 meta_definition_t *meta_definition_find(meta_definition_t *definitions, length_t length, weak_cstr_t name){
     for(length_t i = 0; i != length; i++){
-        if(strcmp(definitions[i].name, name) == 0) return &definitions[i];
+        if(streq(definitions[i].name, name)) return &definitions[i];
     }
     return NULL;
 }

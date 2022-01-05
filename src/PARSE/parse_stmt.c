@@ -61,7 +61,7 @@ void defer_scope_fulfill_by_cloning(defer_scope_t *defer_scope, ast_expr_list_t 
 void defer_scope_rewind(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list, trait_t scope_trait, weak_cstr_t label){
     defer_scope_fulfill(defer_scope, stmt_list);
     
-    while((!(defer_scope->traits & scope_trait) || (label && defer_scope->label && strcmp(defer_scope->label, label) != 0)) && defer_scope->parent != NULL){
+    while((!(defer_scope->traits & scope_trait) || (label && defer_scope->label && !streq(defer_scope->label, label))) && defer_scope->parent != NULL){
         defer_scope = defer_scope->parent;
         defer_scope_fulfill_by_cloning(defer_scope, stmt_list);
     }
@@ -248,6 +248,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                     stmt->id = (conditional_type == TOKEN_UNTIL) ? EXPR_UNTILBREAK : EXPR_WHILECONTINUE;
                     stmt->source = source;
                     stmt->label = label;
+                    stmt->value = NULL;
                     stmt->statements = while_stmt_list;
                     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
                 } else {
@@ -742,7 +743,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
 
         // Continue over newline token
         // TODO: INVESTIGATE: Investigate whether TOKEN_META #else/#elif should be having (*i)++ here
-        if(tokens[*i].id == TOKEN_NEWLINE || (tokens[*i].id == TOKEN_META && (strcmp(tokens[*i].data, "else") == 0 || strcmp(tokens[*i].data, "elif") == 0))){
+        if(tokens[*i].id == TOKEN_NEWLINE || (tokens[*i].id == TOKEN_META && (streq(tokens[*i].data, "else") || streq(tokens[*i].data, "elif")))){
             (*i)++;
         } else if(tokens[*i].id != TOKEN_ELSE && tokens[*i].id != TOKEN_TERMINATE_JOIN && tokens[*i].id != TOKEN_CLOSE && tokens[*i].id != TOKEN_BEGIN && tokens[*i].id != TOKEN_NEXT){
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at end of statement");
@@ -1341,9 +1342,9 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     if(maybe_dialect == NULL){
         compiler_panicf(ctx->compiler, source, "Expected either intel or att after llvm_asm keyword");
         return FAILURE;
-    } else if(strcmp(maybe_dialect, "intel") == 0){
+    } else if(streq(maybe_dialect, "intel")){
         is_intel = TROOLEAN_TRUE;
-    } else if(strcmp(maybe_dialect, "att") == 0){
+    } else if(streq(maybe_dialect, "att")){
         is_intel = TROOLEAN_FALSE;
     } else {
         compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Expected either intel or att for LLVM inline assembly dialect");
@@ -1356,9 +1357,9 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
     maybe_null_weak_cstr_t additional_info;
     
     while((additional_info = parse_eat_word(ctx, NULL))){
-        if(strcmp(additional_info, "side_effects")){
+        if(streq(additional_info, "side_effects")){
             has_side_effects = true;
-        } else if(strcmp(additional_info, "stack_align")){
+        } else if(streq(additional_info, "stack_align")){
             is_stack_align = true;
         } else {
             compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Unrecognized assembly trait '%s', valid traits are: 'side_effects', 'stack_align'", additional_info);

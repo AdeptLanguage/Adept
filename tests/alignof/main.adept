@@ -14,5 +14,5 @@ func main {
 }
 
 func printAlignof(_type *$T) {
-    printf("alignof %s = %zu\n", typenameof $T, alignof $T)
+    printf('alignof %s = %zu\n', typenameof $T, alignof $T)
 }

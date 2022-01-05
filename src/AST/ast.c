@@ -859,15 +859,15 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->end_source = source;
     #endif
 
-    if(options->is_entry)                       func->traits |= AST_FUNC_MAIN;
-    if(strcmp(options->name, "__defer__") == 0) func->traits |= AST_FUNC_DEFER | (options->prefixes.is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
-    if(strcmp(options->name, "__pass__") == 0)  func->traits |= AST_FUNC_PASS  | (options->prefixes.is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
-    if(options->prefixes.is_stdcall)            func->traits |= AST_FUNC_STDCALL;
-    if(options->prefixes.is_implicit)           func->traits |= AST_FUNC_IMPLICIT;
-    if(options->is_foreign)                     func->traits |= AST_FUNC_FOREIGN;
+    if(options->is_entry)                 func->traits |= AST_FUNC_MAIN;
+    if(streq(options->name, "__defer__")) func->traits |= AST_FUNC_DEFER | (options->prefixes.is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
+    if(streq(options->name, "__pass__"))  func->traits |= AST_FUNC_PASS  | (options->prefixes.is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
+    if(options->prefixes.is_stdcall)      func->traits |= AST_FUNC_STDCALL;
+    if(options->prefixes.is_implicit)     func->traits |= AST_FUNC_IMPLICIT;
+    if(options->is_foreign)               func->traits |= AST_FUNC_FOREIGN;
 
     // Handle WinMain
-    if(strcmp(options->name, "WinMain") == 0 && options->export_name && strcmp(options->export_name, "WinMain") == 0){
+    if(streq(options->name, "WinMain") && options->export_name && streq(options->export_name, "WinMain")){
         func->traits |= AST_FUNC_WINMAIN;
     }
 }
@@ -911,9 +911,9 @@ void ast_enum_init(ast_enum_t *enum_definition,  weak_cstr_t name, weak_cstr_t *
 }
 
 ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name){
-    // TODO: Maybe sort and do a binary search or something
+    // TODO: CLEANUP: SPEED: Maybe sort and do a binary search or something
     for(length_t i = 0; i != ast->composites_length; i++){
-        if(strcmp(ast->composites[i].name, name) == 0){
+        if(streq(ast->composites[i].name, name)){
             return &ast->composites[i];
         }
     }
@@ -929,7 +929,7 @@ successful_t ast_composite_find_exact_field(ast_composite_t *composite, const ch
 ast_polymorphic_composite_t *ast_polymorphic_composite_find_exact(ast_t *ast, const char *name){
     // TODO: Maybe sort and do a binary search or something
     for(length_t i = 0; i != ast->polymorphic_composites_length; i++){
-        if(strcmp(ast->polymorphic_composites[i].name, name) == 0){
+        if(streq(ast->polymorphic_composites[i].name, name)){
             return &ast->polymorphic_composites[i];
         }
     }
@@ -938,7 +938,7 @@ ast_polymorphic_composite_t *ast_polymorphic_composite_find_exact(ast_t *ast, co
 
 successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t *out_index){
     for(length_t i = 0; i != ast_enum->length; i++){
-        if(strcmp(ast_enum->kinds[i], name) == 0){
+        if(streq(ast_enum->kinds[i], name)){
             *out_index = i;
             return true;
         }

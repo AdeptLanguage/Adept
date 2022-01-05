@@ -30,7 +30,7 @@ void bridge_scope_free(bridge_scope_t *scope){
 }
 bridge_var_t* bridge_scope_find_var(bridge_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
-        if(strcmp(scope->list.variables[i].name, name) == 0){
+        if(streq(scope->list.variables[i].name, name)){
             return &scope->list.variables[i];
         }
     }
@@ -63,7 +63,7 @@ bridge_var_t* bridge_scope_find_var_by_id(bridge_scope_t *scope, length_t id){
 
 bool bridge_scope_var_already_in_list(bridge_scope_t *scope, const char *name){
     for(length_t i = 0; i != scope->list.length; i++){
-        if(strcmp(scope->list.variables[i].name, name) == 0) return true;
+        if(streq(scope->list.variables[i].name, name)) return true;
     }
     return false;
 }

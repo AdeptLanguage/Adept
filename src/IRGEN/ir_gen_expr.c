@@ -1376,7 +1376,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
             if(expr->tentative) goto fail_tentatively;
 
             // For '__defer__' that doesn't exist, return no-op function for backwards compatibility
-            if(strcmp(expr->name, "__defer__") == 0 && expr->match_args_length == 1 && ast_type_is_pointer(&expr->match_args[0])){
+            if(streq(expr->name, "__defer__") && expr->match_args_length == 1 && ast_type_is_pointer(&expr->match_args[0])){
                 return ir_gen_expr_func_addr_noop_result_for_defer(builder, &expr->match_args[0], expr->source, ir_value, out_expr_type);
             } else {
                 // Otherwise, we failed to find a function we were expecting to find

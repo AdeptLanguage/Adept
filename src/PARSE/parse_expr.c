@@ -170,7 +170,7 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_META: {
             weak_cstr_t directive = tokens[(*i)++].data;
 
-            if(strcmp(directive, "get") != 0){
+            if(!streq(directive, "get")){
                 compiler_panicf(ctx->compiler, sources[*i - 1], "Unexpected meta directive '%s' in expression", directive);
                 return FAILURE;
             }

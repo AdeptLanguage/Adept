@@ -196,7 +196,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
 
     if(!(ast_func->traits & AST_FUNC_FOREIGN)){
-        if(ast_func->arity > 0 && strcmp(ast_func->arg_names[0], "this") == 0){
+        if(ast_func->arity > 0 && streq(ast_func->arg_names[0], "this")){
             // This is a struct method, attach a reference to the struct
             ast_type_t *this_type = &ast_func->arg_types[0];
 
@@ -678,7 +678,7 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
     maybe_index_t format_index = -1;
 
     for(length_t name_index = 0; name_index != pair.ast_func->arity; name_index++){
-        if(strcmp(pair.ast_func->arg_names[name_index], "format") == 0){
+        if(streq(pair.ast_func->arg_names[name_index], "format")){
             format_index = name_index;
             break;
         }

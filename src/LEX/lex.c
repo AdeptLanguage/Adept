@@ -251,7 +251,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 t = &((*tokens)[tokenlist->length]);
                 t->id = BEGINNING_OF_KEYWORD_TOKENS + (unsigned int) array_index; // Values 0x00000050..0x0000009F are reserved for keywords
                 t->data = NULL;
-            } else if(strcmp(lex_state.buildup, "elif") == 0){
+            } else if(streq(lex_state.buildup, "elif")){
                 // Is a shorthand keyword
                 t = &((*tokens)[tokenlist->length]);
                 t->id = TOKEN_ELSE;

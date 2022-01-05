@@ -61,7 +61,7 @@ successful_t adept_install(config_t *config, weak_cstr_t root, weak_cstr_t raw_i
     blueprintf(" - Copying        ");
     printf("%s\n", identifier);
 
-    if(adept_install_stash(config, root, dlbuffer.bytes, dlbuffer.length) == false){
+    if(adept_install_stash(root, dlbuffer.bytes, dlbuffer.length) == false){
         redprintf("   Failed to install ")
         printf("%s\n", identifier);
         free(dlbuffer.bytes);
@@ -80,98 +80,93 @@ failure:
     return false;
 }
 
-maybe_null_strong_cstr_t adept_locate_package(weak_cstr_t identifier, char *buffer, length_t length){
-    jsmn_parser parser;
-    jsmn_init(&parser);
+static errorcode_t adept_locate_package_handle_metadata(jsmnh_obj_ctx_t *parent_ctx){
+    jsmnh_obj_ctx_t fork;
+    if(jsmnh_obj_ctx_subobject(parent_ctx, &fork)) return FAILURE;
 
-    length_t required_tokens = jsmn_parse(&parser, buffer, length, NULL, 0);
-    jsmntok_t *tokens = malloc(sizeof(jsmntok_t) * required_tokens);
-
-    jsmn_init(&parser);
-    int parse_error = jsmn_parse(&parser, buffer, length, tokens, required_tokens);
-    
-    if(parse_error < 0 || (int) required_tokens != parse_error){
-        goto failure;
-    }
-
-    if(!jsmn_helper_get_object(buffer, tokens, required_tokens, 0)){
-        goto failure;
-    }
-
-    jsmntok_t master_object_token = tokens[0];
-
-    char key[256];
-    length_t token_index = 1;
-    length_t num_tokens = required_tokens;
-    length_t total_sections = master_object_token.size;
-
-    // TODO: CLEANUP: Clean up this dirty code
-    for(length_t section = 0; section != total_sections; section++){
-        if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index++, key, sizeof(key))){
+    for(length_t i = 0; i != fork.total_sections; i++){
+        if(jsmnh_obj_ctx_read_key(&fork)){
             goto failure;
         }
 
-        char content[1024];
-        length_t max_content = 1024;
-
-        if(strcmp(key, "adept.stash") == 0){
-            // Metadata
-
-            if(!jsmn_helper_get_object(buffer, tokens, num_tokens, token_index)){
+        if(jsmnh_obj_ctx_eq(&fork, "minSpecVersion")){
+            long long min_spec_version;
+            if(!jsmnh_get_integer(fork.fulltext.content, fork.tokens, fork.token_index, &min_spec_version)){
                 goto failure;
             }
 
-            jsmntok_t children_object_token = tokens[token_index++];
-            
-            for(int i = 0; i != children_object_token.size; i++){
-                if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index++, content, max_content)){
-                    goto failure;
-                }
-
-                if(strcmp(content, "minSpecVersion") == 0){
-                    long long min_spec_version;
-                    if(!jsmn_helper_get_integer(buffer, tokens, num_tokens, token_index, &min_spec_version)){
-                        goto failure;
-                    }
-
-                    if (min_spec_version > ADEPT_PACKAGE_MANAGER_SPEC_VERSION){
-                        redprintf("Remote stash has minimum spec version of '%d', but compiler has spec version '%d'\n", (int) min_spec_version, ADEPT_PACKAGE_MANAGER_SPEC_VERSION);
-                        redprintf("   (The remote stash no longer supports this compiler version)\n");
-                        goto silent_failure;
-                    }
-                }
-
-                token_index += jsmn_helper_subtoken_count(tokens, token_index);
+            if(min_spec_version > ADEPT_PACKAGE_MANAGER_SPEC_VERSION){
+                redprintf("Remote stash has minimum spec version of '%d', but compiler has spec version '%d'\n", (int) min_spec_version, ADEPT_PACKAGE_MANAGER_SPEC_VERSION);
+                redprintf("   (The remote stash no longer supports this compiler version)\n");
+                goto failure;
             }
-        } else if(strcmp(key, "children") == 0){
-            // Locations
+        }
 
-            if(!jsmn_helper_get_object(buffer, tokens, num_tokens, token_index)){
+        jsmnh_obj_ctx_blind_advance(&fork);
+    }
+
+    return SUCCESS;
+
+failure:
+    jsmnh_obj_ctx_free(&fork);
+    return FAILURE;
+}
+
+static errorcode_t adept_locate_package_handle_children(jsmnh_obj_ctx_t *parent_ctx, weak_cstr_t target_package_name, strong_cstr_t *output){
+    jsmnh_obj_ctx_t fork;
+    if(jsmnh_obj_ctx_subobject(parent_ctx, &fork)) return FAILURE;
+
+    for(length_t i = 0; i != fork.total_sections; i++){
+        if(jsmnh_obj_ctx_read_key(&fork)) goto failure;
+
+        if(jsmnh_obj_ctx_eq(&fork, target_package_name)){
+            if(!jsmnh_obj_ctx_get_variable_string(&fork, output)){
                 goto failure;
             }
 
-            jsmntok_t children_object_token = tokens[token_index++];
+            jsmnh_obj_ctx_free(&fork);
+            return SUCCESS;
+        }
 
-            for(int i = 0; i != children_object_token.size; i++){
-                if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index++, content, max_content)){
-                    goto failure;
-                }
+        jsmnh_obj_ctx_blind_advance(&fork);
+    }
 
-                if(strcmp(content, identifier) == 0){
-                    if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index, content, max_content)){
-                        goto failure;
-                    }
+    *output = NULL;
+    return SUCCESS;
 
-                    free(tokens);               
-                    return strclone(content);
-                }
+failure:
+    jsmnh_obj_ctx_free(&fork);
+    return FAILURE;
+}
 
-                token_index += jsmn_helper_subtoken_count(tokens, token_index);
+maybe_null_strong_cstr_t adept_locate_package(weak_cstr_t package_name, char *raw_buffer, length_t raw_buffer_length){
+    jsmnh_obj_ctx_t ctx;
+    if(jsmnh_obj_ctx_easy_init(&ctx, raw_buffer, raw_buffer_length)) goto failure;
+
+    // Handle values of JSON object
+    for(length_t section = 0; section != ctx.total_sections; section++){
+        if(jsmnh_obj_ctx_read_key(&ctx)) goto failure;
+
+        if(jsmnh_obj_ctx_eq(&ctx, "adept.stash")){
+            if(adept_locate_package_handle_metadata(&ctx)){
+                goto failure;
+            }
+        } else if(jsmnh_obj_ctx_eq(&ctx, "children")){
+            strong_cstr_t output = NULL;
+
+            if(adept_locate_package_handle_children(&ctx, package_name, &output)){
+                goto failure;
+            }
+
+            if(output){
+                jsmnh_obj_ctx_free(&ctx);
+                return output;
             }
         } else {
-            // Ignore everything else
-            token_index += jsmn_helper_subtoken_count(tokens, token_index);
+            // Ignore invalid keys
         }
+
+        jsmnh_obj_ctx_blind_advance(&ctx);
     }
 
     goto silent_failure;
@@ -180,41 +175,38 @@ failure:
     redprintf("Failed to parse master stash file\n");
 
 silent_failure:
-    free(tokens);
+    jsmnh_obj_ctx_free(&ctx);
     return NULL;
 }
 
-static successful_t perform_procedure_command(char *buffer, jsmntok_t *tokens, length_t num_tokens, length_t token_index, weak_cstr_t root, maybe_null_weak_cstr_t host){
-    if(!jsmn_helper_get_object(buffer, tokens, num_tokens, token_index)) return false;
+static successful_t perform_procedure_command(jsmnh_obj_ctx_t *parent_ctx, weak_cstr_t root, maybe_null_weak_cstr_t host){
+    jsmnh_obj_ctx_t fork;
+    if(jsmnh_obj_ctx_subobject(parent_ctx, &fork)) return false;
 
-    jsmntok_t command_object_token = tokens[token_index++];
-    length_t total_sections = command_object_token.size;
-    
-    char key[64];
     maybe_null_strong_cstr_t file = NULL;
     maybe_null_strong_cstr_t folder = NULL;
     maybe_null_strong_cstr_t from = NULL;
 
-    for(length_t section = 0; section != total_sections; section++){
-        if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index++, key, sizeof(key))){
-            goto failure;
-        }
+    for(length_t section = 0; section != fork.total_sections; section++){
+        if(jsmnh_obj_ctx_read_key(&fork)) goto failure;
 
-        if(strcmp(key, "file") == 0){
-            if(!jsmn_helper_get_vstring(buffer, tokens, num_tokens, token_index++, &file)){
+        if(jsmnh_obj_ctx_eq(&fork, "file")){
+            if(!jsmnh_obj_ctx_get_variable_string(&fork, &file)){
                 goto failure;
             }
-        } else if(strcmp(key, "folder") == 0){
-            if(!jsmn_helper_get_vstring(buffer, tokens, num_tokens, token_index++, &folder)){
+        } else if(jsmnh_obj_ctx_eq(&fork, "folder")){
+            if(!jsmnh_obj_ctx_get_variable_string(&fork, &folder)){
                 goto failure;
             }
-        } else if(strcmp(key, "from") == 0){
-            if(!jsmn_helper_get_vstring(buffer, tokens, num_tokens, token_index++, &from)){
+        } else if(jsmnh_obj_ctx_eq(&fork, "from")){
+            if(!jsmnh_obj_ctx_get_variable_string(&fork, &from)){
                 goto failure;
             }
         } else {
-            token_index += jsmn_helper_subtoken_count(tokens, token_index);
+            // Ignore unrecognized keys
         }
+
+        jsmnh_obj_ctx_blind_advance(&fork);
     }
 
     if(folder){
@@ -238,85 +230,61 @@ static successful_t perform_procedure_command(char *buffer, jsmntok_t *tokens, l
     }
 
 success:
+    jsmnh_obj_ctx_free(&fork);
     free(file);
     free(folder);
     free(from);
     return true;
 
 failure:
+    jsmnh_obj_ctx_free(&fork);
     free(file);
     free(folder);
     free(from);
     return false;
 }
 
-successful_t adept_install_stash(config_t *config, weak_cstr_t root, char *buffer, length_t length){
-    (void) config; // unused
+successful_t adept_install_stash(weak_cstr_t root, char *raw_buffer, length_t raw_buffer_length){
+    jsmnh_obj_ctx_t ctx;
+    if(jsmnh_obj_ctx_easy_init(&ctx, raw_buffer, raw_buffer_length)) goto failure;
 
-    jsmn_parser parser;
-    jsmn_init(&parser);
-
-    length_t required_tokens = jsmn_parse(&parser, buffer, length, NULL, 0);
-    jsmntok_t *tokens = malloc(sizeof(jsmntok_t) * required_tokens);
-
-    jsmn_init(&parser);
-    int parse_error = jsmn_parse(&parser, buffer, length, tokens, required_tokens);
-    
-    if(parse_error < 0 || (int) required_tokens != parse_error){
-        goto failure;
-    }
-
-    if(!jsmn_helper_get_object(buffer, tokens, required_tokens, 0)){
-        goto failure;
-    }
-
-    jsmntok_t master_object_token = tokens[0];
     maybe_null_strong_cstr_t host = NULL;
 
-    char key[256];
-    length_t token_index = 1;
-    length_t num_tokens = required_tokens;
-    length_t total_sections = master_object_token.size;
+    for(length_t section = 0; section != ctx.total_sections; section++){
+        if(jsmnh_obj_ctx_read_key(&ctx)) goto failure;
 
-    for(length_t section = 0; section != total_sections; section++){
-        if(!jsmn_helper_get_string(buffer, tokens, num_tokens, token_index++, key, sizeof(key))){
-            printf("1\n");
-            goto failure;
-        }
-
-        if(strcmp(key, "host") == 0){
-            if(!jsmn_helper_get_vstring(buffer, tokens, required_tokens, token_index++, &host)){
+        if(jsmnh_obj_ctx_eq(&ctx, "host")){
+            if(!jsmnh_obj_ctx_get_variable_string(&ctx, &host)){
                 goto failure;
             }
-        } else if(strcmp(key, "procedure") == 0){
+            jsmnh_obj_ctx_blind_advance(&ctx);
+        } else if(jsmnh_obj_ctx_eq(&ctx, "procedure")){
             // Locations
 
-            if(!jsmn_helper_get_array(buffer, tokens, num_tokens, token_index)){
+            if(!jsmnh_obj_ctx_get_array(&ctx)){
                 goto failure;
             }
 
-            jsmntok_t procedure_object_token = tokens[token_index++];
+            jsmntok_t procedure_object_token = ctx.tokens.tokens[ctx.token_index++];
 
-            for(int i = 0; i != procedure_object_token.size; i++){
-                if(!jsmn_helper_get_object(buffer, tokens, required_tokens, token_index)){
+            for(length_t i = 0; i != (length_t) procedure_object_token.size; i++){
+                if(!perform_procedure_command(&ctx, root, host)){
                     goto failure;
                 }
 
-                if(!perform_procedure_command(buffer, tokens, num_tokens, token_index, root, host)){
-                    goto failure;
-                }
-
-                token_index += jsmn_helper_subtoken_count(tokens, token_index);
+                jsmnh_obj_ctx_blind_advance(&ctx);
             }
         } else {
-            // Ignore everything else
-            token_index += jsmn_helper_subtoken_count(tokens, token_index);
+            // Ignore unrecognized keys
+            jsmnh_obj_ctx_blind_advance(&ctx);
         }
     }
 
+    jsmnh_obj_ctx_free(&ctx);
     return true;
 
 failure:
+    jsmnh_obj_ctx_free(&ctx);
     return false;
 }
 

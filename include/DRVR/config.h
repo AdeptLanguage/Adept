@@ -36,7 +36,7 @@ typedef struct {
 
 void config_prepare(config_t *config);
 void config_free(config_t *config);
-successful_t config_read(config_t *config, weak_cstr_t filename, bool force_check_update, weak_cstr_t *out_warning);
+successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *out_warning);
 
 #ifdef __cplusplus
 }

@@ -99,7 +99,7 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     #endif
 
     if(compiler->location == NULL){
-        if(argv == NULL || argv[0] == NULL || strcmp(argv[0], "") == 0){
+        if(argv == NULL || argv[0] == NULL || streq(argv[0], "")){
             redprintf("external-error: ");
     		printf("Compiler was invoked with NULL or empty argv[0]\n");
     	} else {
@@ -120,15 +120,12 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
         // Read persistent config file
         strong_cstr_t config_filename = mallocandsprintf("%sadept.config", compiler->root);
         weak_cstr_t config_warning = NULL;
-        bool force_check_update = argc > 1 && strcmp(argv[1], "update") == 0;
 
-        if(!config_read(&compiler->config, config_filename, force_check_update, &config_warning) && config_warning){
+        if(!config_read(&compiler->config, config_filename, &config_warning) && config_warning){
             yellowprintf("%s\n", config_warning);
         }
 
         free(config_filename);
-
-        if(force_check_update) return;
     }
     #endif
 
@@ -188,7 +185,7 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
 }
 
 bool handle_package_management(compiler_t *compiler, int argc, char **argv){
-    if(argc > 1 && strcmp(argv[1], "install") == 0){
+    if(argc > 1 && streq(argv[1], "install")){
         #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
             if(argc < 3){
                 redprintf("Usage: ");
@@ -407,22 +404,22 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
 
     while(arg_index != argc){
         if(argv[arg_index][0] == '-'){
-            if(strcmp(argv[arg_index], "-h") == 0 || strcmp(argv[arg_index], "--help") == 0){
+            if(streq(argv[arg_index], "-h") || streq(argv[arg_index], "--help")){
                 show_help(false);
                 return FAILURE;
-            } else if(strcmp(argv[arg_index], "-H") == 0 || strcmp(argv[arg_index], "--help-advanced") == 0){
+            } else if(streq(argv[arg_index], "-H") || streq(argv[arg_index], "--help-advanced")){
                 show_help(true);
                 return FAILURE;
-            } else if(strcmp(argv[arg_index], "-p") == 0 || strcmp(argv[arg_index], "--package") == 0){
+            } else if(streq(argv[arg_index], "-p") || streq(argv[arg_index], "--package")){
                 compiler->traits |= COMPILER_MAKE_PACKAGE;
-            } else if(strcmp(argv[arg_index], "-o") == 0){
+            } else if(streq(argv[arg_index], "-o")){
                 if(arg_index + 1 == argc){
                     redprintf("Expected output filename after '-o' flag\n");
                     return FAILURE;
                 }
                 free(compiler->output_filename);
                 compiler->output_filename = strclone(argv[++arg_index]);
-            } else if(strcmp(argv[arg_index], "-n") == 0){
+            } else if(streq(argv[arg_index], "-n")){
                 if(arg_index + 1 == argc){
                     redprintf("Expected output name after '-n' flag\n");
                     return FAILURE;
@@ -430,84 +427,87 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
 
                 free(compiler->output_filename);
                 compiler->output_filename = filename_local(object->filename, argv[++arg_index]);
-            } else if(strcmp(argv[arg_index], "-i") == 0 || strcmp(argv[arg_index], "--inflate") == 0){
+            } else if(streq(argv[arg_index], "-i") || streq(argv[arg_index], "--inflate")){
                 compiler->traits |= COMPILER_INFLATE_PACKAGE;
-            } else if(strcmp(argv[arg_index], "-d") == 0){
+            } else if(streq(argv[arg_index], "-d")){
                 compiler->traits |= COMPILER_DEBUG_SYMBOLS;
-            } else if(strcmp(argv[arg_index], "-e") == 0){
+            } else if(streq(argv[arg_index], "-e")){
                 compiler->traits |= COMPILER_EXECUTE_RESULT;
-            } else if(strcmp(argv[arg_index], "-w") == 0){
+            } else if(streq(argv[arg_index], "-w")){
                 compiler->traits |= COMPILER_NO_WARN;
-            } else if(strcmp(argv[arg_index], "-Werror") == 0){
+            } else if(streq(argv[arg_index], "-Werror")){
                 compiler->traits |= COMPILER_WARN_AS_ERROR;
-            } else if(strcmp(argv[arg_index], "-Wshort") == 0 || strcmp(argv[arg_index], "--short-warnings") == 0){
+            } else if(streq(argv[arg_index], "-Wshort") || streq(argv[arg_index], "--short-warnings")){
                 compiler->traits |= COMPILER_SHORT_WARNINGS;
-            } else if(strcmp(argv[arg_index], "-j") == 0){
+            } else if(streq(argv[arg_index], "-j")){
                 compiler->traits |= COMPILER_NO_REMOVE_OBJECT;
-            } else if(strcmp(argv[arg_index], "-c") == 0){
+            } else if(streq(argv[arg_index], "-c")){
                 compiler->traits |= COMPILER_NO_REMOVE_OBJECT | COMPILER_EMIT_OBJECT;
-            } else if(strcmp(argv[arg_index], "-O0") == 0){
+            } else if(streq(argv[arg_index], "-O0")){
                 compiler->optimization = OPTIMIZATION_NONE;
-            } else if(strcmp(argv[arg_index], "-O1") == 0){
+            } else if(streq(argv[arg_index], "-O1")){
                 compiler->optimization = OPTIMIZATION_LESS;
-            } else if(strcmp(argv[arg_index], "-O2") == 0){
+            } else if(streq(argv[arg_index], "-O2")){
                 compiler->optimization = OPTIMIZATION_DEFAULT;
-            } else if(strcmp(argv[arg_index], "-O3") == 0){
+            } else if(streq(argv[arg_index], "-O3")){
                 compiler->optimization = OPTIMIZATION_AGGRESSIVE;
-            } else if(strcmp(argv[arg_index], "--fussy") == 0){
+            } else if(streq(argv[arg_index], "--fussy")){
                 compiler->traits |= COMPILER_FUSSY;
-            } else if(strcmp(argv[arg_index], "-v") == 0 || strcmp(argv[arg_index], "--version") == 0){
+            } else if(streq(argv[arg_index], "-v") || streq(argv[arg_index], "--version")){
                 show_version(compiler);
                 return FAILURE;
-            } else if (strcmp(argv[arg_index], "--root") == 0){
+            } else if (streq(argv[arg_index], "--root")){
                 show_root(compiler);
                 return FAILURE;
-            } else if(strcmp(argv[arg_index], "--no-undef") == 0){
+            } else if(streq(argv[arg_index], "--no-undef")){
                 compiler->traits |= COMPILER_NO_UNDEF;
-            } else if(strcmp(argv[arg_index], "--no-type-info") == 0 || strcmp(argv[arg_index], "--no-typeinfo") == 0){
+            } else if(streq(argv[arg_index], "--no-type-info") || streq(argv[arg_index], "--no-typeinfo")){
                 compiler->traits |= COMPILER_NO_TYPEINFO;
-            } else if(strcmp(argv[arg_index], "--unsafe-meta") == 0){
+            } else if(streq(argv[arg_index], "--unsafe-meta")){
                 compiler->traits |= COMPILER_UNSAFE_META;
-            } else if(strcmp(argv[arg_index], "--unsafe-new") == 0){
+            } else if(streq(argv[arg_index], "--unsafe-new")){
                 compiler->traits |= COMPILER_UNSAFE_NEW;
-            } else if(strcmp(argv[arg_index], "--null-checks") == 0){
+            } else if(streq(argv[arg_index], "--null-checks")){
                 compiler->checks |= COMPILER_NULL_CHECKS;
-            } else if(strcmp(argv[arg_index], "--ignore-all") == 0){
+            } else if(streq(argv[arg_index], "--ignore-all")){
                 compiler->ignore |= COMPILER_IGNORE_ALL;
-            } else if(strcmp(argv[arg_index], "--ignore-deprecation") == 0){
+            } else if(streq(argv[arg_index], "--ignore-deprecation")){
                 compiler->ignore |= COMPILER_IGNORE_DEPRECATION;
-            } else if(strcmp(argv[arg_index], "--ignore-early-return") == 0){
+            } else if(streq(argv[arg_index], "--ignore-early-return")){
                 compiler->ignore |= COMPILER_IGNORE_EARLY_RETURN;
-            } else if(strcmp(argv[arg_index], "--ignore-obsolete") == 0){
+            } else if(streq(argv[arg_index], "--ignore-obsolete")){
                 compiler->ignore |= COMPILER_IGNORE_OBSOLETE;
-            } else if(strcmp(argv[arg_index], "--ignore-partial-support") == 0){
+            } else if(streq(argv[arg_index], "--ignore-partial-support")){
                 compiler->ignore |= COMPILER_IGNORE_PARTIAL_SUPPORT;
-            } else if(strcmp(argv[arg_index], "--ignore-unrecognized-directives") == 0){
+            } else if(streq(argv[arg_index], "--ignore-unrecognized-directives")){
                 compiler->ignore |= COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES;
-            } else if(strcmp(argv[arg_index], "--ignore-unused") == 0){
+            } else if(streq(argv[arg_index], "--ignore-unused")){
                 compiler->ignore |= COMPILER_IGNORE_UNUSED;
-            } else if(strcmp(argv[arg_index], "--pic") == 0 || strcmp(argv[arg_index], "-fPIC") == 0 ||
-                        strcmp(argv[arg_index], "-fpic") == 0){
+            } else if(streq(argv[arg_index], "--pic")
+                   || streq(argv[arg_index], "-fPIC")
+                   || streq(argv[arg_index], "-fpic")){
                 // Accessibility versions of --PIC
                 warningprintf("Flag '%s' is not valid, assuming you meant to use --PIC\n", argv[arg_index]);
                 compiler->use_pic = TROOLEAN_TRUE;
-            } else if(strcmp(argv[arg_index], "--PIC") == 0){
+            } else if(streq(argv[arg_index], "--PIC")){
                 compiler->use_pic = TROOLEAN_TRUE;
-            } else if(strcmp(argv[arg_index], "--noPIC") == 0 || strcmp(argv[arg_index], "--no-pic") == 0 ||
-                        strcmp(argv[arg_index], "--nopic") == 0 || strcmp(argv[arg_index], "-fno-pic") == 0 ||
-                        strcmp(argv[arg_index], "-fno-PIC") == 0){
+            } else if(streq(argv[arg_index], "--noPIC")
+                   || streq(argv[arg_index], "--no-pic")
+                   || streq(argv[arg_index], "--nopic")
+                   || streq(argv[arg_index], "-fno-pic")
+                   || streq(argv[arg_index], "-fno-PIC")){
                 // Accessibility versions of --no-PIC
                 warningprintf("Flag '%s' is not valid, assuming you meant to use --no-PIC\n", argv[arg_index]);
                 compiler->use_pic = TROOLEAN_FALSE;
-            } else if(strcmp(argv[arg_index], "--no-PIC") == 0){
+            } else if(streq(argv[arg_index], "--no-PIC")){
                 compiler->use_pic = TROOLEAN_FALSE;
-            } else if(strcmp(argv[arg_index], "-lm") == 0){
+            } else if(streq(argv[arg_index], "-lm")){
                 // Accessibility versions of --libm
                 warningprintf("Flag '%s' is not valid, assuming you meant to use --libm\n", argv[arg_index]);
                 compiler->use_libm = true;
-            } else if(strcmp(argv[arg_index], "--libm") == 0){
+            } else if(streq(argv[arg_index], "--libm")){
                 compiler->use_libm = true;
-            } else if(strcmp(argv[arg_index], "--extract-import-order") == 0){
+            } else if(streq(argv[arg_index], "--extract-import-order")){
                 compiler->extract_import_order = true; 
             } else if(strncmp(argv[arg_index], "-std=", 5) == 0){
                 compiler->default_stdlib = &argv[arg_index][5];
@@ -515,27 +515,27 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             } else if(strncmp(argv[arg_index], "--std=", 6) == 0){
                 compiler->default_stdlib = &argv[arg_index][6];
                 compiler->traits |= COMPILER_FORCE_STDLIB;
-            } else if(strcmp(argv[arg_index], "--windowed") == 0 || strcmp(argv[arg_index], "-mwindows") == 0){
+            } else if(streq(argv[arg_index], "--windowed") || streq(argv[arg_index], "-mwindows")){
                 compiler->traits |= COMPILER_WINDOWED;
-            } else if(strcmp(argv[arg_index], "--entry") == 0){
+            } else if(streq(argv[arg_index], "--entry")){
                 if(arg_index + 1 == argc){
                     redprintf("Expected entry point after '--entry' flag\n");
                     return FAILURE;
                 }
                 compiler->entry_point = argv[++arg_index];
-            } else if(strcmp(argv[arg_index], "--repl") == 0){
+            } else if(streq(argv[arg_index], "--repl")){
                 compiler->traits |= COMPILER_REPL;
-            } else if(strcmp(argv[arg_index], "--windows") == 0){
+            } else if(streq(argv[arg_index], "--windows")){
                 #ifndef _WIN32
                 printf("[-] Cross compiling for Windows x86_64\n");
                 compiler->cross_compile_for = CROSS_COMPILE_WINDOWS;
                 #endif
-            } else if(strcmp(argv[arg_index], "--macos") == 0){
+            } else if(streq(argv[arg_index], "--macos")){
                 #ifndef __APPLE__
                 printf("[-] Cross compiling for MacOS x86_64\n");
                 compiler->cross_compile_for = CROSS_COMPILE_MACOS;
                 #endif
-            } else if(strcmp(argv[arg_index], "--wasm32") == 0){
+            } else if(streq(argv[arg_index], "--wasm32")){
                 printf("[-] Cross compiling for WebAssembly\n");
                 printf("    (Adept is intended for true 64-bit architectures, some things may break!)\n");
                 compiler->cross_compile_for = CROSS_COMPILE_WASM32;
@@ -555,15 +555,15 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             }
             
             #ifdef ENABLE_DEBUG_FEATURES //////////////////////////////////
-            else if(strcmp(argv[arg_index], "--stages") == 0){
+            else if(streq(argv[arg_index], "--stages")){
                 compiler->debug_traits |= COMPILER_DEBUG_STAGES;
-            } else if(strcmp(argv[arg_index], "--dump") == 0){
+            } else if(streq(argv[arg_index], "--dump")){
                 compiler->debug_traits |= COMPILER_DEBUG_DUMP;
-            } else if(strcmp(argv[arg_index], "--llvmir") == 0){
+            } else if(streq(argv[arg_index], "--llvmir")){
                 compiler->debug_traits |= COMPILER_DEBUG_LLVMIR;
-            } else if(strcmp(argv[arg_index], "--no-verification") == 0){
+            } else if(streq(argv[arg_index], "--no-verification")){
                 compiler->debug_traits |= COMPILER_DEBUG_NO_VERIFICATION;
-            } else if(strcmp(argv[arg_index], "--no-result") == 0){
+            } else if(streq(argv[arg_index], "--no-result")){
                 compiler->debug_traits |= COMPILER_DEBUG_NO_RESULT;
             }
 
@@ -897,7 +897,7 @@ errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){
 errorcode_t compiler_read_file(compiler_t *compiler, object_t *object){
     length_t filename_length = strlen(object->filename);
 
-    if(filename_length >= 4 && strcmp(&object->filename[filename_length - 4], ".dep") == 0){
+    if(filename_length >= 4 && streq(&object->filename[filename_length - 4], ".dep")){
         return pkg_read(object);
     } else {
         return lex(compiler, object);
@@ -1175,13 +1175,15 @@ bool compiler_undeclared_function_possibilities(object_t *object, const char *na
     maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
     if(!should_print) goto return_result;
 
+    // TODO: CLEANUP: Clean up this code
+
     maybe_index_t index = original_index;
 
     if(index != -1) do {
         ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
 
         if(mapping->is_beginning_of_group == -1){
-            mapping->is_beginning_of_group = index == 0 ? 1 : (strcmp(mapping->name, ir_module->func_mappings[index - 1].name) != 0);
+            mapping->is_beginning_of_group = index == 0 ? 1 : !streq(mapping->name, ir_module->func_mappings[index - 1].name);
         }
         if(mapping->is_beginning_of_group == 1 && index != original_index) break;
 
@@ -1194,7 +1196,7 @@ bool compiler_undeclared_function_possibilities(object_t *object, const char *na
         ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
         
         if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = index == 0 ? 1 : (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
+            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.polymorphic_funcs[index - 1].name);
         }
         if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 
@@ -1266,13 +1268,13 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
     maybe_index_t index = original_index;
 
     // Print potential candidates for basic struct
-    // TODO: Clean up this messy code
+    // TODO: CLEANUP: Clean up this messy code
     if(index != -1){
         if(kind == AST_ELEM_BASE) do {
             ir_method_t *method = &ir_module->methods[index];
 
             if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = index == 0 ? 1 : (strcmp(method->name, ir_module->methods[index - 1].name) != 0 || strcmp(method->struct_name, ir_module->methods[index - 1].struct_name) != 0);
+                method->is_beginning_of_group = index == 0 ? 1 : (!streq(method->name, ir_module->methods[index - 1].name) || !streq(method->struct_name, ir_module->methods[index - 1].struct_name));
             }
             if(method->is_beginning_of_group == 1 && index != original_index) break;
 
@@ -1285,7 +1287,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
             ir_generic_base_method_t *generic_base_method = &ir_module->generic_base_methods[index];
             
             if(generic_base_method->is_beginning_of_group == -1){
-                generic_base_method->is_beginning_of_group = index == 0 ? 1 : (strcmp(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) != 0 || strcmp(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base) != 0);
+                generic_base_method->is_beginning_of_group = index == 0 ? 1 : (!streq(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) || !streq(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base));
             }
             if(generic_base_method->is_beginning_of_group == 1 && index != original_index) break;
 
@@ -1313,14 +1315,14 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
 
         if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = index == 0 ? 1 : (strcmp(poly->name, object->ast.polymorphic_funcs[index - 1].name) != 0);
+            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.polymorphic_funcs[index - 1].name);
         }
         if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 
         ast_func_t *ast_func = &object->ast.funcs[poly->ast_func_id];
 
         // Ensure this function could possibly a method
-        if(ast_func->arity == 0 || strcmp(ast_func->arg_names[0], "this") != 0) continue;
+        if(ast_func->arity == 0 || !streq(ast_func->arg_names[0], "this")) continue;
 
         // Ensure the first type is valid for a method
         if(ast_func->arity == 0) continue;

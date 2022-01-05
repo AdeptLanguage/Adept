@@ -531,7 +531,7 @@ bool ast_field_maps_identical(ast_field_map_t *field_map_a, ast_field_map_t *fie
         ast_field_arrow_t *arrow_b = &field_map_b->arrows[i];
 
         if(!ast_layout_endpoint_equals(&arrow_a->endpoint, &arrow_b->endpoint)) return false;
-        if(strcmp(arrow_a->name, arrow_b->name) != 0) return false;
+        if(!streq(arrow_a->name, arrow_b->name)) return false;
     }
 
     return true;
@@ -561,7 +561,7 @@ successful_t ast_field_map_find(ast_field_map_t *field_map, const char *name, as
     for(length_t i = 0; i != field_map->arrows_length; i++){
         ast_field_arrow_t *arrow = &field_map->arrows[i];
 
-        if(strcmp(arrow->name, name) == 0){
+        if(streq(arrow->name, name)){
             *out_endpoint = arrow->endpoint;
             return true;
         }

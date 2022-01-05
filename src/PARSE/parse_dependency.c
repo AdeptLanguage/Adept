@@ -115,12 +115,12 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
     if(tokens[*i + 1].id == TOKEN_WORD){
         const char *data = tokens[*i + 1].data;
 
-        if(strcmp(data, "framework") == 0){
+        if(streq(data, "framework")){
             kind = LIBRARY_KIND_FRAMEWORK;
 
             // Take ownership of library string
             tokens[*i].data = NULL;
-        } else if(strcmp(data, "library") == 0){
+        } else if(streq(data, "library")){
             kind = LIBRARY_KIND_LIBRARY;
 
             // Take ownership of library string
@@ -241,7 +241,7 @@ bool already_imported(parse_ctx_t *ctx, weak_cstr_t filename){
     length_t objects_length = ctx->compiler->objects_length;
 
     for(length_t i = 0; i != objects_length; i++){
-        if(strcmp(objects[i]->full_filename, filename) == 0) return true;
+        if(streq(objects[i]->full_filename, filename)) return true;
     }
 
     return false;

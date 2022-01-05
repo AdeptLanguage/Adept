@@ -421,7 +421,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
         return FAILURE;
     }
 
-    bool would_collide_with_entry = strcmp(name, ctx->compiler->entry_point) == 0;
+    bool would_collide_with_entry = streq(name, ctx->compiler->entry_point);
     if(would_collide_with_entry){
         compiler_panicf(ctx->compiler, source, "Name of record type '%s' conflicts with name of entry point", name);
         return FAILURE;

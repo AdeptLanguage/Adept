@@ -97,20 +97,20 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
 
     // EXPERIMENTAL: Make sure each identifier is unique
     for(length_t i = 1; i < type_map->mappings_length; i++){
-        if(strcmp(mappings[i - 1].name, mappings[i].name) == 0){
+        if(streq(mappings[i - 1].name, mappings[i].name)){
             // ERROR: Multiple types with the same name
             weak_cstr_t name = mappings[i].name;
             object_panicf_plain(object, "Multiple definitions of type '%s'", name);
 
             // Find every struct with that name
             for(length_t s = 0; s != ast->composites_length; s++){
-                if(strcmp(ast->composites[s].name, name) == 0)
+                if(streq(ast->composites[s].name, name))
                     compiler_panic(compiler, ast->composites[s].source, "Here");
             }
 
             // Find every enum with that name
             for(length_t e = 0; e != ast->enums_length; e++){
-                if(strcmp(ast->enums[e].name, name) == 0)
+                if(streq(ast->enums[e].name, name))
                     compiler_panic(compiler, ast->enums[e].source, "Here");
             }
 
@@ -126,7 +126,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
         ast_composite_t *composite = mappings[i].type.extra;
 
         // Special enforcement of type 'String'
-        if(strcmp(composite->name, "String") == 0){
+        if(streq(composite->name, "String")){
             if(composite->layout.traits != TRAIT_NONE
             || !ast_layout_is_simple_struct(&composite->layout)
             || ast_simple_field_map_get_count(&composite->layout.field_map) != 4
@@ -304,7 +304,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     // Macro to determine whether a specific base
     #define MACRO_TYPE_IS_BASE(ast_type, a) (ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE && \
-        strcmp(((ast_elem_base_t*) ast_type->elements[0])->base, a) == 0)
+        streq(((ast_elem_base_t*) ast_type->elements[0])->base, a))
     
     // Macro to determine whether a type is 'ptr'
     #define MACRO_TYPE_IS_BASE_PTR(ast_type) ast_type_is_base_of(ast_type, "ptr")

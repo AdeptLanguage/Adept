@@ -14,11 +14,11 @@
 #include "UTIL/jsmn_helper.h"
 #include "UTIL/string.h"
 
-successful_t config_update_last_updated(weak_cstr_t filename, weak_cstr_t buffer, length_t buffer_length, jsmntok_t last_update);
-successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, jsmntok_t *out_maybe_last_update);
+static successful_t config_update_last_updated(weak_cstr_t filename, jsmnh_buffer_t buffer, jsmntok_t last_update);
+static successful_t config_read_adept_config_value(config_t *config, jsmnh_obj_ctx_t *parent_ctx, jsmntok_t *out_maybe_last_update);
 
-successful_t update_installation(config_t *config, download_buffer_t dlbuffer);
-successful_t process_adept_stash_value(stash_header_t *out_header, download_buffer_t dlbuffer, jsmntok_t *tokens, length_t num_tokens, length_t index);
+static successful_t update_installation(config_t *config, download_buffer_t dlbuffer);
+static successful_t process_adept_stash_value(jsmnh_obj_ctx_t *parent_ctx, stash_header_t *out_header);
 
 void config_prepare(config_t *config){
     memset(config, 0, sizeof(config_t));
@@ -28,9 +28,9 @@ void config_free(config_t *config){
     free(config->stash);
 }
 
-successful_t config_read(config_t *config, weak_cstr_t filename, bool force_check_update, weak_cstr_t *out_warning){
-    strong_cstr_t buffer = NULL;
-    length_t length;
+successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *out_warning){
+    char *raw_buffer = NULL;
+    length_t raw_buffer_length;
 
     FILE *f = fopen(filename, "rb");
     if(f == NULL){
@@ -39,76 +39,48 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
     }
 
     fseek(f, 0, SEEK_END);
-    length = ftell(f);
+    raw_buffer_length = ftell(f);
     fseek(f, 0, SEEK_SET);
     
-    buffer = malloc(length + 1);
-    if(buffer == NULL){
+    raw_buffer = malloc(raw_buffer_length + 1);
+    if(raw_buffer == NULL){
         fclose(f);
-
         *out_warning = "Adept failed to read local configuration file due to not enough memory";
         return false;
     }
 
-    fread(buffer, 1, length, f);
+    fread(raw_buffer, 1, raw_buffer_length, f);
     fclose(f);
 
-    buffer[length] = 0x00;
+    raw_buffer[raw_buffer_length] = 0x00;
 
-    jsmn_parser parser;
-    jsmn_init(&parser);
-
-    length_t required_tokens = jsmn_parse(&parser, buffer, length, NULL, 0);
-    jsmntok_t *tokens = malloc(sizeof(jsmntok_t) * required_tokens);
-
-    jsmn_init(&parser);
-    int parse_error = jsmn_parse(&parser, buffer, length, tokens, required_tokens);
-    
-    if(parse_error < 0 || (int) required_tokens != parse_error){
-        redprintf("Failed to parse %s, %s\n", filename_name_const(filename), jsmn_helper_parse_fail_reason(parse_error));
-        free(tokens);
-        free(buffer);
-        return false;
+    jsmnh_obj_ctx_t ctx;
+    if(jsmnh_obj_ctx_easy_init(&ctx, raw_buffer, raw_buffer_length)){
+        redprintf("Failed to parse %s\n", filename_name_const(filename));
+        goto failure;
     }
-
-    if(!jsmn_helper_get_object(buffer, tokens, required_tokens, 0)){
-        *out_warning = "Invalid Adept Configuration File";
-        free(tokens);
-        free(buffer);
-        return false;
-    }
-
-    jsmntok_t master_object_token = tokens[0];
-
-    // Handle each section of configuration
-    char key[256];
-    length_t section_token_index = 1;
-    length_t total_sections = master_object_token.size;
 
     jsmntok_t maybe_last_update;
-    memset(&maybe_last_update, 0, sizeof(jsmntok_t));
 
-    for(length_t section = 0; section != total_sections; section++){
-        if(!jsmn_helper_get_string(buffer, tokens, required_tokens, section_token_index++, key, sizeof(key))){
+    for(length_t section = 0; section != ctx.total_sections; section++){
+        if(jsmnh_obj_ctx_read_key(&ctx)){
             *out_warning = "Configuration file expected section key";
-            free(tokens);
-            free(buffer);
-            return false;
+            goto failure;
         }
 
-        if(strcmp(key, "adept.config") == 0){
+        if(jsmnh_obj_ctx_eq(&ctx, "adept.config")){
             // Config information
-            if(!config_read_adept_config_value(config, buffer, tokens, required_tokens, section_token_index, &maybe_last_update)){
+            if(!config_read_adept_config_value(config, &ctx, &maybe_last_update)){
                 redprintf("Failed to handle value in configuration file\n");
-                return false;
+                goto failure;
             }
-        } else if(strcmp(key, "installs") == 0){
+        } else if(jsmnh_obj_ctx_eq(&ctx, "installs")){
             // Local imports
         } else {
-            yellowprintf("Invalid section key '%s' in configuration file, %s\n", key, filename_name_const(filename));
+            yellowprintf("Invalid section key '%s' in configuration file, %s\n", ctx.value.content, filename_name_const(filename));
         }
 
-        section_token_index += jsmn_helper_subtoken_count(tokens, section_token_index);
+        jsmnh_obj_ctx_blind_advance(&ctx);
     }
 
     config->has = true;
@@ -139,8 +111,6 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
         break;
     }
 
-    should_update = should_update || force_check_update;
-
     if(should_update){
         if(config->show_checking_for_updates_message){
             blueprintf("NOTE: Checking for updates as scheduled in 'adept.config'\n");
@@ -148,7 +118,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
 
         // Ignore failure to update last updated
         if(maybe_last_update.type == JSMN_PRIMITIVE)
-            config_update_last_updated(filename, buffer, length, maybe_last_update);
+            config_update_last_updated(filename, ctx.fulltext, maybe_last_update);
 
         download_buffer_t dlbuffer;
         if(download_to_memory(config->stash, &dlbuffer)){
@@ -160,21 +130,23 @@ successful_t config_read(config_t *config, weak_cstr_t filename, bool force_chec
     }
     #endif // ADEPT_ENABLE_PACKAGE_MANAGER
 
-    // Ignore unused
-    (void) force_check_update;
-
-    free(tokens);
-    free(buffer);
+    jsmnh_obj_ctx_free(&ctx);
+    free(raw_buffer);
     return true;
+
+failure:
+    jsmnh_obj_ctx_free(&ctx);
+    free(raw_buffer);
+    return false;
 }
 
-successful_t config_update_last_updated(weak_cstr_t filename, weak_cstr_t buffer, length_t buffer_length, jsmntok_t last_update){
+static successful_t config_update_last_updated(weak_cstr_t filename, jsmnh_buffer_t buffer, jsmntok_t last_update){
     if(last_update.type != JSMN_PRIMITIVE) return false;
 
     FILE *f = fopen(filename, "wb");
     if(f == NULL) return false;
 
-    fwrite(buffer, 1, last_update.start, f);
+    fwrite(buffer.content, 1, last_update.start, f);
 
     // Since we are using binary file stream mode, don't rely on fprintf
     time_t timestamp = time(NULL);
@@ -182,145 +154,111 @@ successful_t config_update_last_updated(weak_cstr_t filename, weak_cstr_t buffer
     sprintf(timestamp_buffer, "%"PRIu64, (uint64_t) timestamp);
     fwrite(timestamp_buffer, 1, strlen(timestamp_buffer), f);
     
-    fwrite(buffer + last_update.end, 1, buffer_length - last_update.end, f);
+    fwrite(buffer.content + last_update.end, 1, buffer.capacity - last_update.end, f);
     fclose(f);
 
     return true;
 }
 
-successful_t config_read_adept_config_value(config_t *config, weak_cstr_t buffer, jsmntok_t *tokens, length_t num_tokens, length_t index, jsmntok_t *out_maybe_last_update){
-    char content[1024];
-    length_t max_content = 1024;
-    long long integer_value;
-    bool boolean;
+static successful_t config_read_adept_config_value(config_t *config, jsmnh_obj_ctx_t *parent_ctx, jsmntok_t *out_maybe_last_update){
+    jsmnh_obj_ctx_t fork;
+    if(jsmnh_obj_ctx_subobject(parent_ctx, &fork)) return false;
 
-    if(!jsmn_helper_get_object(buffer, tokens, num_tokens, index)){
-        internalwarningprintf("config_read_adept_config_value() -> jsmn_helper_get_object() failed\n");
-        return false;
-    }
+    for(length_t i = 0; i != fork.total_sections; i++){
+        if(jsmnh_obj_ctx_read_key(&fork)) goto failure;
 
-    jsmntok_t main_object_token = tokens[index++];
-
-    for(int i = 0; i != main_object_token.size; i++){
-        if(!jsmn_helper_get_string(buffer, tokens, num_tokens, index, content, max_content)){
-            internalwarningprintf("config_read_adept_config_value() -> jsmn_helper_get_string() failed\n");
-            return false;
-        }
-
-        if(strcmp(content, "lastUpdated") == 0){
-            if(!jsmn_helper_get_integer(buffer, tokens, num_tokens, ++index, &integer_value)){
-                warningprintf("Failed to parse integer value for label '%s'\n", content);
-                return false;
+        if(jsmnh_obj_ctx_eq(&fork, "lastUpdated")){
+            if(!jsmnh_obj_ctx_get_integer(&fork, &config->last_updated)){
+                warningprintf("Failed to parse integer value for label '%s'\n", fork.value.content);
+                goto failure;
             }
-            config->last_updated = integer_value;
-            *out_maybe_last_update = tokens[index];
-            index++;
-        } else if(strcmp(content, "update") == 0){
-            if(!jsmn_helper_get_string(buffer, tokens, num_tokens, ++index, content, max_content)){
-                warningprintf("Failed to parse string value for label '%s'\n", content);
-                return false;
+
+            *out_maybe_last_update = fork.tokens.tokens[fork.token_index];
+        } else if(jsmnh_obj_ctx_eq(&fork, "update")){
+            if(!jsmnh_obj_ctx_get_fixed_string(&fork, fork.value.content, fork.value.capacity)){
+                warningprintf("Failed to parse string value for label '%s'\n", fork.value.content);
+                goto failure;
             }
             
-            if     (strcmp(content, "never") == 0)     config->update = UPDATE_SCHEDULE_NEVER;
-            else if(strcmp(content, "always") == 0)    config->update = UPDATE_SCHEDULE_EVERYTIME; // aka everytime
-            else if(strcmp(content, "everytime") == 0) config->update = UPDATE_SCHEDULE_EVERYTIME;
-            else if(strcmp(content, "hourly") == 0)    config->update = UPDATE_SCHEDULE_HOURLY;
-            else if(strcmp(content, "daily") == 0)     config->update = UPDATE_SCHEDULE_DAILY;
-            else if(strcmp(content, "weekly") == 0)    config->update = UPDATE_SCHEDULE_WEEKLY;
-            else if(strcmp(content, "monthly") == 0)   config->update = UPDATE_SCHEDULE_MONTHLY;
-            else if(strcmp(content, "yearly") == 0)    config->update = UPDATE_SCHEDULE_YEARLY;
-            else                                       config->update = UPDATE_SCHEDULE_NEVER;
-            index++;
-        } else if(strcmp(content, "stash") == 0){
-            if(!jsmn_helper_get_string(buffer, tokens, num_tokens, ++index, content, max_content)){
-                warningprintf("Failed to parse string value for label '%s'\n", content);
-                return false;
+            if     (jsmnh_obj_ctx_eq(&fork, "never"))     config->update = UPDATE_SCHEDULE_NEVER;
+            else if(jsmnh_obj_ctx_eq(&fork, "always"))    config->update = UPDATE_SCHEDULE_EVERYTIME; // aka everytime
+            else if(jsmnh_obj_ctx_eq(&fork, "everytime")) config->update = UPDATE_SCHEDULE_EVERYTIME;
+            else if(jsmnh_obj_ctx_eq(&fork, "hourly"))    config->update = UPDATE_SCHEDULE_HOURLY;
+            else if(jsmnh_obj_ctx_eq(&fork, "daily"))     config->update = UPDATE_SCHEDULE_DAILY;
+            else if(jsmnh_obj_ctx_eq(&fork, "weekly"))    config->update = UPDATE_SCHEDULE_WEEKLY;
+            else if(jsmnh_obj_ctx_eq(&fork, "monthly"))   config->update = UPDATE_SCHEDULE_MONTHLY;
+            else if(jsmnh_obj_ctx_eq(&fork, "yearly"))    config->update = UPDATE_SCHEDULE_YEARLY;
+            else                                          config->update = UPDATE_SCHEDULE_NEVER;
+        } else if(jsmnh_obj_ctx_eq(&fork, "stash")){
+            strong_cstr_t new_stash_location;
+
+            if(!jsmnh_obj_ctx_get_variable_string(&fork, &new_stash_location)){
+                warningprintf("Failed to parse string value for label '%s'\n", fork.value.content);
+                goto failure;
             }
 
             free(config->stash);
-            config->stash = strclone(content);
-            index++;
-        } else if(strcmp(content, "showNewCompilerAvailable") == 0){
-            if(!jsmn_helper_get_boolean(buffer, tokens, num_tokens, ++index, &boolean)){
-                warningprintf("Failed to parse boolean value for label '%s'\n", content);
-                return false;
+            config->stash = new_stash_location;
+        } else if(jsmnh_obj_ctx_eq(&fork, "showNewCompilerAvailable")){
+            if(!jsmnh_obj_ctx_get_boolean(&fork, &config->show_new_compiler_available)){
+                warningprintf("Failed to parse boolean value for label '%s'\n", fork.value.content);
+                goto failure;
             }
-
-            config->show_new_compiler_available = boolean;
-            index++;
-        } else if(strcmp(content, "showCheckingForUpdatesMessage") == 0){
-            if(!jsmn_helper_get_boolean(buffer, tokens, num_tokens, ++index, &boolean)){
-                warningprintf("Failed to parse boolean value for label '%s'\n", content);
-                return false;
+        } else if(jsmnh_obj_ctx_eq(&fork, "showCheckingForUpdatesMessage")){
+            if(!jsmnh_obj_ctx_get_boolean(&fork, &config->show_checking_for_updates_message)){
+                warningprintf("Failed to parse boolean value for label '%s'\n", fork.value.content);
+                goto failure;
             }
-
-            config->show_checking_for_updates_message = boolean;
-            index++;
         } else {
-            warningprintf("Ignoring unrecognized option '%s' in adept configuration file\n", content);
-            index += jsmn_helper_subtoken_count(tokens, index + 1) + 1;
+            warningprintf("Ignoring unrecognized option '%s' in adept configuration file\n", fork.value.content);
         }
+
+        jsmnh_obj_ctx_blind_advance(&fork);
     }
     
+    jsmnh_obj_ctx_free(&fork);
     return true;
+
+failure:
+    jsmnh_obj_ctx_free(&fork);
+    return false;
 }
 
-successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
-    jsmn_parser parser;
-    jsmn_init(&parser);
+static successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
+    jsmnh_obj_ctx_t ctx;
 
-    int required_tokens = jsmn_parse(&parser, dlbuffer.bytes, dlbuffer.length, NULL, 0);
-    jsmntok_t *tokens = malloc(sizeof(jsmntok_t) * required_tokens);
-
-    jsmn_init(&parser);
-    int parse_error = jsmn_parse(&parser, dlbuffer.bytes, dlbuffer.length, tokens, required_tokens);
-
-    if(parse_error < 0 || required_tokens != parse_error){
-        redprintf("Failed to parse downloaded JSON, %s\n", jsmn_helper_parse_fail_reason(parse_error));
-        free(tokens);
-        return false;
+    if(jsmnh_obj_ctx_easy_init(&ctx, dlbuffer.bytes, dlbuffer.length)){
+        redprintf("Failed to parse downloaded JSON\n");
+        goto failure;
     }
-
-    if(!jsmn_helper_get_object(dlbuffer.bytes, tokens, required_tokens, 0)){
-        free(tokens);
-        return false;
-    }
-
-    jsmntok_t master_object_token = tokens[0];
-
-    // Handle each section of configuration
-    char key[256];
-    length_t section_token_index = 1;
-    length_t total_sections = master_object_token.size;
 
     jsmntok_t maybe_last_update;
     memset(&maybe_last_update, 0, sizeof(jsmntok_t));
 
-    for(length_t section = 0; section != total_sections; section++){
-        if(!jsmn_helper_get_string(dlbuffer.bytes, tokens, required_tokens, section_token_index++, key, sizeof(key))){
+    for(length_t section = 0; section != ctx.total_sections; section++){
+        if(jsmnh_obj_ctx_read_key(&ctx)){
             redprintf("Failed to process downloaded JSON\n");
-            free(tokens);
-            return false;
+            goto failure;
         }
 
-        if(strcmp(key, "adept.stash") == 0){
+        if(jsmnh_obj_ctx_eq(&ctx, "adept.stash")){
             // Stash Header
             stash_header_t stash_header;
             memset(&stash_header, 0, sizeof(stash_header_t));
 
-            if(!process_adept_stash_value(&stash_header, dlbuffer, tokens, required_tokens, section_token_index)){
+            if(!process_adept_stash_value(&ctx, &stash_header)){
                 redprintf("Failed to handle value while processing stash header of downloaded JSON file\n");
-                return false;
+                goto failure;
             }
 
             if(
-                strcmp(stash_header.latest_compiler_version, ADEPT_VERSION_STRING) != 0 &&
-                strcmp(stash_header.latest_compiler_version, ADEPT_PREVIOUS_STABLE_VERSION_STRING) != 0 &&
+                !streq(stash_header.latest_compiler_version, ADEPT_VERSION_STRING) &&
+                !streq(stash_header.latest_compiler_version, ADEPT_PREVIOUS_STABLE_VERSION_STRING) &&
                 config->show_new_compiler_available
             ){
                 blueprintf("\nNEWS: A newer version of Adept is available!\n");
                 printf("    (Visit https://github.com/AdeptLanguage/Adept for more information)\n\n");
-                return true;
+                goto success;
             } else if(config->show_checking_for_updates_message){
                 blueprintf(" -> Already up to date!\n");
             }
@@ -328,45 +266,45 @@ successful_t update_installation(config_t *config, download_buffer_t dlbuffer){
             // Free potentially allocated values
             free(stash_header.latest_compiler_version);
         } else {
-            // Ignore unknown keys
+            // Ignore unrecognized keys
         }
 
-        section_token_index += jsmn_helper_subtoken_count(tokens, section_token_index);
+        jsmnh_obj_ctx_blind_advance(&ctx);
     }
 
-    free(tokens);
+success:
+    jsmnh_obj_ctx_free(&ctx);
     return true;
+
+failure:
+    jsmnh_obj_ctx_free(&ctx);
+    return false;
 }
 
-successful_t process_adept_stash_value(stash_header_t *out_header, download_buffer_t dlbuffer, jsmntok_t *tokens, length_t num_tokens, length_t index){
-    char content[1024];
-    length_t max_content = 1024;
-    long long integer_value;
+static successful_t process_adept_stash_value(jsmnh_obj_ctx_t *parent_ctx, stash_header_t *out_header){
+    jsmnh_obj_ctx_t fork;
+    if(jsmnh_obj_ctx_subobject(parent_ctx, &fork)) goto failure;
 
-    if(!jsmn_helper_get_object(dlbuffer.bytes, tokens, num_tokens, index)) return false;
+    for(length_t i = 0; i != fork.total_sections; i++){
+        if(jsmnh_obj_ctx_read_key(&fork)) goto failure;
 
-    jsmntok_t main_object_token = tokens[index++];
-
-    for(int i = 0; i != main_object_token.size; i++){
-        if(!jsmn_helper_get_string(dlbuffer.bytes, tokens, num_tokens, index, content, max_content)) return false;
-
-        if(strcmp(content, "minSpecVersion") == 0){
-            if(!jsmn_helper_get_integer(dlbuffer.bytes, tokens, num_tokens, ++index, &integer_value)) return false;
-            out_header->min_spec_version = integer_value;
-            index++;
-        } else if(strcmp(content, "lastUpdated") == 0){
-            if(!jsmn_helper_get_integer(dlbuffer.bytes, tokens, num_tokens, ++index, &integer_value)) return false;
-            out_header->last_updated = integer_value;
-            index++;
-        } else if(strcmp(content, "latestCompilerVersion") == 0){
-            if(!jsmn_helper_get_string(dlbuffer.bytes, tokens, num_tokens, ++index, content, max_content)) return false;
-            out_header->latest_compiler_version = strclone(content);
-            index++;
+        if(jsmnh_obj_ctx_eq(&fork, "minSpecVersion")){
+            if(!jsmnh_obj_ctx_get_integer(&fork, &out_header->min_spec_version)) goto failure;
+        } else if(jsmnh_obj_ctx_eq(&fork, "lastUpdated")){
+            if(!jsmnh_obj_ctx_get_integer(&fork, &out_header->last_updated)) goto failure;
+        } else if(jsmnh_obj_ctx_eq(&fork, "latestCompilerVersion")){
+            if(!jsmnh_obj_ctx_get_variable_string(&fork, &out_header->latest_compiler_version)) goto failure;
         } else {
             // Ignore unknown keys
-            index += jsmn_helper_subtoken_count(tokens, index + 1) + 1;
         }
+
+        jsmnh_obj_ctx_blind_advance(&fork);
     }
 
+    jsmnh_obj_ctx_free(&fork);
     return true;
+
+failure:
+    jsmnh_obj_ctx_free(&fork);
+    return false;
 }

@@ -52,16 +52,16 @@ void repl_free(repl_t *repl){
 bool repl_execute(repl_t *repl, weak_cstr_t code){
     // Exit on '#halt'
     if(
-        strcmp(code, "#halt\n") == 0 ||
-        strcmp(code, "halt\n") == 0 ||
-        strcmp(code, "#exit\n") == 0 ||
-        strcmp(code, "exit\n") == 0 ||
-        strcmp(code, "#quit\n") == 0 ||
-        strcmp(code, "quit\n") == 0 ||
-        strcmp(code, "q\n") == 0) return true;
+        streq(code, "#halt\n") ||
+        streq(code, "halt\n") ||
+        streq(code, "#exit\n") ||
+        streq(code, "exit\n") ||
+        streq(code, "#quit\n") ||
+        streq(code, "quit\n") ||
+        streq(code, "q\n")) return true;
 
     // Reset on '#reset'
-    if(strcmp(code, "#reset\n") == 0){
+    if(streq(code, "#reset\n")){
         compiler_t *compiler = repl->compiler;
 
         printf("[reset]\n");
@@ -71,13 +71,13 @@ bool repl_execute(repl_t *repl, weak_cstr_t code){
     }
 
     // Undo change on '#undo'
-    if(strcmp(code, "#undo\n") == 0){
+    if(streq(code, "#undo\n")){
         printf("[undo]\n");
         repl_undo(repl);
         return false;
     }
 
-    if(strcmp(code, "#clear\n") == 0){
+    if(streq(code, "#clear\n")){
         #ifdef _WIN32
         printf("#clear isn't supported yet on Windows\n");
         #else
@@ -94,12 +94,12 @@ bool repl_execute(repl_t *repl, weak_cstr_t code){
             printf("[run complete]\n");
 
             // Add to history if successfully run
-            if(strcmp(code, "\n") != 0) repl_add_history(repl);
+            if(!streq(code, "\n")) repl_add_history(repl);
         } else {
             // Undo last change if failed to run
             repl_undo(repl);
         }
-    } else if(strcmp(code, "\n") != 0){
+    } else if(!streq(code, "\n")){
         repl_append_global(repl, code);
         repl_add_history(repl);
     }
@@ -204,7 +204,7 @@ bool repl_should_main(repl_t *repl, weak_cstr_t inout_code){
 }
 
 void repl_append_main(repl_t *repl, weak_cstr_t code){
-    if(strcmp(code, "\n") == 0) return;
+    if(streq(code, "\n")) return;
 
     length_t code_length = strlen(code);
     expand((void**) &repl->main_code, sizeof(char), repl->main_code_length, &repl->main_code_capacity, code_length + 1, 5120);
@@ -214,7 +214,7 @@ void repl_append_main(repl_t *repl, weak_cstr_t code){
 }
 
 void repl_append_global(repl_t *repl, weak_cstr_t code){
-    if(strcmp(code, "\n") == 0) return;
+    if(streq(code, "\n")) return;
 
     length_t code_length = strlen(code);
     expand((void**) &repl->global_code, sizeof(char), repl->global_code_length, &repl->global_code_capacity, code_length + 1, 5120);
