@@ -22,6 +22,7 @@ include_directories(include)
 
 set(app_source_files
 	src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c
+	src/AST/TYPE/ast_type_clone.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_str.c
 	src/AST/UTIL/string_builder_extensions.c
 	src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c

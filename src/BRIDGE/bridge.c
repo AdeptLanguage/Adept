@@ -1,7 +1,6 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "BRIDGE/bridge.h"
 #include "UTIL/ground.h"

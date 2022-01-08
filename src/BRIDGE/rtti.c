@@ -31,7 +31,7 @@ errorcode_t rtti_resolve(type_table_t *type_table, rtti_relocation_t *relocation
     maybe_index_t index = type_table_find(type_table, human_notation);
 
     if(index == -1){
-        internalerrorprintf("typeinfo failed to find info for type '%s', which should exist\n", human_notation);
+        internalerrorprintf("rtti_resolve() - Failed to find info for type '%s', which should exist\n", human_notation);
         return FAILURE;
     }
 

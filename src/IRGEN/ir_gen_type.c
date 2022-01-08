@@ -92,7 +92,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
         mappings[i].type.kind = TYPE_KIND_U64;
     }
 
-    qsort(mappings, type_map->mappings_length, sizeof(ir_type_mapping_t), (void*) ir_type_mapping_cmp);
+    qsort(mappings, type_map->mappings_length, sizeof(ir_type_mapping_t), ir_type_mapping_cmp);
     type_map->mappings = mappings;
 
     // EXPERIMENTAL: Make sure each identifier is unique
@@ -553,7 +553,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         }
 
         if(!ir_type_map_find(builder->type_map, "Any", &any_type)){
-            internalerrorprintf("Failed to find 'Any' type used by the runtime type table that should've been injected\n");
+            internalerrorprintf("ast_types_conform() - Failed to find critical 'Any' type used by the runtime type table that should exist\n");
             return false;
         }
 
@@ -722,7 +722,7 @@ ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, as
         result->kind = TYPE_KIND_STRUCTURE;
         break;
     default:
-        internalerrorprintf("ast_layout_bone_to_ir_type() got unknown bone kind\n");
+        panic("ast_layout_bone_to_ir_type() - Unrecognized bone kind %d\n", (int) bone->kind);
     }
     
     result->extra = extra;

@@ -16,7 +16,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "DRVR/config.h"
 #include "UTIL/color.h"

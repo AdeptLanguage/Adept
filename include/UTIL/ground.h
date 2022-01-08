@@ -115,6 +115,9 @@ typedef struct {
 // becomes ast_expr_str(typecast(ast_expr_math_t*, expr)->a)
 #define typecast(TYPE, VALUE) ((TYPE)(VALUE))
 
+// ---------------- streq ----------------
+// Returns whether two null-termianted strings are equal
+// Equivalent to 'strcmp(STRING, VALUE) == 0)'
 #define streq(STRING, VALUE) (strcmp(STRING, VALUE) == 0)
 
 // ---------------- special characters ----------------

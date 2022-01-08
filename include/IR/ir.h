@@ -520,12 +520,6 @@ typedef struct {
     source_t source_on_failure;
 } rtti_relocation_t;
 
-// ---------------- ir_metadata_t ----------------
-// General global IR metadata
-typedef struct {
-
-} ir_metadata_t;
-
 // ---------------- ir_shared_common_t ----------------
 // General data that can be directly accessed by the
 // entire IR module
@@ -556,7 +550,6 @@ typedef struct {
 // An intermediate representation module
 typedef struct {
     ir_shared_common_t common;
-    ir_metadata_t metadata;
     ir_pool_t pool;
     ir_type_map_t type_map;
     ir_func_t *funcs;

@@ -57,7 +57,7 @@ errorcode_t ir_gen_rtti_fetch_rtti_types(ir_module_t *ir_module, ir_rtti_types_t
     || !ir_type_map_find(type_map, "AnyFuncPtrType", &out_rtti_types->any_funcptr_type_type)
     || !ir_type_map_find(type_map, "AnyFixedArrayType", &out_rtti_types->any_fixed_array_type_type)
     || !ir_type_map_find(type_map, "ubyte", &out_rtti_types->ubyte_ptr_type)){
-        internalerrorprintf("Failed to find types used by the runtime type table that should've been injected\n");
+        internalerrorprintf("ir_gen_rtti_fetch_rtti_types() - Failed to find critical types used by the runtime type table, which should already exist\n");
         return FAILURE;
     }
 
@@ -80,7 +80,7 @@ errorcode_t ir_gen__types__placeholder(object_t *object, ir_global_t *ir_global)
 
     // Fetch 'AnyType' IR Type
     if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)){
-        internalerrorprintf("Failed to get 'AnyType' which should've been injected\n");
+        internalerrorprintf("ir_gen__types__placeholder() - Failed to get critical type 'AnyType' which should exist\n");
         redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)\n");
         return FAILURE;
     }
@@ -159,7 +159,7 @@ errorcode_t ir_gen__types__fixed_array_entry(object_t *object, ir_value_t **arra
 
     // Ensure we're working with a fixed array AST type
     if(entry->ast_type.elements[0]->id != AST_ELEM_FIXED_ARRAY){
-        internalerrorprintf("ir_gen__types__fixed_array_entry() got non-fixed-array AST type in entry\n");
+        internalerrorprintf("ir_gen__types__fixed_array_entry() - Received non-fixed-array AST type in entry\n");
         return FAILURE;
     }
 
@@ -212,7 +212,7 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
 
     // Ensure we're working with a function pointer AST type
     if(entry->ast_type.elements[0]->id != AST_ELEM_FUNC){
-        internalerrorprintf("ir_gen__types__func_ptr_entry() got non-function-pointer AST type in entry\n");
+        internalerrorprintf("ir_gen__types__func_ptr_entry() - Received non-function-pointer AST type in entry\n");
         return FAILURE;
     }
 
@@ -429,13 +429,13 @@ errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_ty
         out_info->anonymous_composite_info_collection.name = name;
         out_info->anonymous_composite_info_collection.source = layout_elem->source;
     } else {
-        internalerrorprintf("ir_gen__types__composite_entry_get_info() found 'first_ast_elem' to not be a base-like elem");
+        internalerrorprintf("ir_gen__types__composite_entry_get_info() - found 'first_ast_elem' to not be a base-like elem");
         return FAILURE;
     }
 
     if(core_composite_info == NULL){
         const char *composite_kind_name = is_polymorphic ? "polymorphic composite" : "composite";
-        internalerrorprintf("Failed to find %s '%s' that should exist when generating runtime type table!\n", composite_kind_name, name);
+        internalerrorprintf("ir_gen__types__composite_entry_get_info() - Failed to find %s '%s' that should exist when generating runtime type table!\n", composite_kind_name, name);
         return FAILURE;
     }
 
@@ -443,7 +443,7 @@ errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_ty
         ast_polymorphic_composite_t *template = (ast_polymorphic_composite_t*) core_composite_info;
 
         if(template->generics_length != maybe_weak_generics_length){
-            internalerrorprintf("Polymorphic composite '%s' type parameter length mismatch when generating runtime type table!\n", name);
+            internalerrorprintf("ir_gen__types__composite_entry_get_into() - Mismatching type parementer count for polymorphic composite '%s' when generating runtime type table!\n", name);
             return FAILURE;
         }
 

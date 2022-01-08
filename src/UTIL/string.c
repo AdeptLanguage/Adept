@@ -58,8 +58,8 @@ strong_cstr_t string_to_escaped_string(char *array, length_t length, char escape
         case '\n': string[put_index++] =  'n'; break;
         case '\r': string[put_index++] =  'r'; break;
         case '\b': string[put_index++] =  'b'; break;
-        case '\e': string[put_index++] =  'e'; break;
         case '\\': string[put_index++] = '\\'; break;
+        case 0x1B: string[put_index++] =  'e'; break;
         default:
             if(array[i] == escaped_quote){
                 string[put_index++] = escaped_quote;

@@ -6,6 +6,7 @@
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "DRVR/compiler.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"

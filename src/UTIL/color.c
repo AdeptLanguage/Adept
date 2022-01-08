@@ -1,6 +1,8 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdnoreturn.h>
 
 #include "UTIL/color.h"
 
@@ -32,20 +34,20 @@ void terminal_set_color_win32(enum color_h_terminal_color color){
 void terminal_set_color_posix(enum color_h_terminal_color color){
     switch(color){
     case TERMINAL_COLOR_DEFAULT:
-        fputs("\e[0m", stdout);
+        fputs("\033[0m", stdout);
         fflush(stdout);
         break;
     case TERMINAL_COLOR_RED:
-        fputs("\e[31;1m", stdout);
+        fputs("\033[31;1m", stdout);
         break;
     case TERMINAL_COLOR_YELLOW:
-        fputs("\e[33;1m", stdout);
+        fputs("\033[33;1m", stdout);
         break;
     case TERMINAL_COLOR_WHITE:
-        fputs("\e[37;1m", stdout);
+        fputs("\033[37;1m", stdout);
         break;
     case TERMINAL_COLOR_BLUE:
-        fputs("\e[34;1m", stdout);
+        fputs("\033[34;1m", stdout);
         break;
     }
 }
@@ -82,4 +84,14 @@ void internalwarningprintf(const char *format, ...){
     yellowprintf("internal-warning: ");
     vprintf(format, args);
     va_end(args);
+}
+
+noreturn void panic(const char *format, ...){
+    va_list args;
+    va_start(args, format);
+    redprintf("critical-error: ");
+    vprintf(format, args);
+    va_end(args);
+    redprintf("    Exiting with status of -1\n");
+    exit(-1);
 }

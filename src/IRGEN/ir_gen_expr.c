@@ -10,6 +10,7 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "BRIDGE/bridge.h"
 #include "BRIDGE/funcpair.h"
 #include "BRIDGE/rtti.h"
@@ -1010,7 +1011,7 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
             *ir_value = build_member(builder, *ir_value, waypoint.index, ir_type_pointer_to(builder->pool, field_type), expr->source);
             break;
         default:
-            internalerrorprintf("ir_gen_expr_member() got unknown waypoint kind\n");
+            internalerrorprintf("ir_gen_expr_member() - Unrecognized waypoint kind\n");
             ast_type_free(&field_info.ast_type);
             ast_type_free(&ast_type_of_composite);
             return FAILURE;
@@ -1070,7 +1071,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
         ast_type_t *field_type = ast_layout_skeleton_get_type(&target->layout.skeleton, out_field_info->endpoint);
 
         if(field_type == NULL){
-            internalerrorprintf("ir_gen_get_field_info() couldn't get type for invalid endpoint\n");
+            internalerrorprintf("ir_gen_get_field_info() - Failed to get AST type for endpoint of field '%s'\n", member);
             return FAILURE;
         }
 
@@ -1158,7 +1159,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
         ast_type_t *field_type = ast_layout_skeleton_get_type(&layout->skeleton, out_field_info->endpoint);
 
         if(field_type == NULL){
-            internalerrorprintf("ir_gen_get_field_info() couldn't get type for invalid endpoint (of anonymous composite)\n");
+            internalerrorprintf("ir_gen_get_field_info() - Failed to get AST type for invalid endpoint (of anonymous composite)\n");
             return FAILURE;
         }
 
@@ -1924,7 +1925,7 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
         error = ir_gen_find_generic_base_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, expr->source, result);
     }
     else {
-        internalerrorprintf("ir_gen_expr_call_method_find_appropriate_method() received bad subject AST type\n");
+        internalerrorprintf("ir_gen_expr_call_method_find_appropriate_method() - Bad subject type\n");
         return FAILURE;
     }
     

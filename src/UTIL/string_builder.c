@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,4 +42,10 @@ void string_builder_append_view(string_builder_t *builder, const char *portion, 
 
 void string_builder_append_char(string_builder_t *builder, char character){
     string_builder_append_view(builder, &character, 1);
+}
+
+void string_builder_append_int(string_builder_t *builder, int integer){
+    char buffer[32];
+    sprintf(buffer, "%d", integer);
+    string_builder_append(builder, buffer);
 }

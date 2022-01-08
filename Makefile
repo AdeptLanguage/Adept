@@ -33,7 +33,7 @@ UNIX_LLVM_BUILD_INCLUDE=
 UNIX_LIBCURL_LIB=/opt/homebrew/opt/curl/lib
 UNIX_LIBCURL_INCLUDE=/opt/homebrew/opt/curl/lib
 UNIX_LIBCURL_BUILD_INCLUDE=
-DEBUG_ADDRESS_SANITIZE=false
+DEBUG_ADDRESS_SANITIZE=true
 DEBUG_LEAK_SANITIZE=false
 #UNIX_CC=gcc
 #UNIX_CXX=g++
@@ -139,7 +139,9 @@ ifeq ($(DEBUG_LEAK_SANITIZE),true)
 	LDFLAGS+= -fsanitize=leak
 endif
 
-ESSENTIAL_SOURCES= src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c src/AST/UTIL/string_builder_extensions.c src/AST/ast_constant.c \
+ESSENTIAL_SOURCES= src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c \
+	src/AST/TYPE/ast_type_clone.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_str.c \
+	src/AST/UTIL/string_builder_extensions.c src/AST/ast_constant.c \
 	src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c \
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c \
 	src/BRIDGE/bridge.c src/BRIDGE/funcpair.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
@@ -193,6 +195,7 @@ insight: $(SOURCES)
 	
 #   Insight - Required Header Files
 	@cp include/AST/EXPR/ast_expr_ids.h $(INSIGHT_OUT_DIR)/include/AST/EXPR/ast_expr_ids.h
+	@cp include/AST/TYPE/ast_type_make.h $(INSIGHT_OUT_DIR)/include/AST/TYPE/ast_type_make.h
 	@cp include/AST/UTIL/string_builder_extensions.h $(INSIGHT_OUT_DIR)/include/AST/UTIL/string_builder_extensions.h
 	@cp include/AST/ast_constant.h $(INSIGHT_OUT_DIR)/include/AST/ast_constant.h
 	@cp include/AST/ast_expr.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr.h
@@ -250,6 +253,9 @@ insight: $(SOURCES)
 #   Insight - Required Source Code Files
 	@cp src/AST/EXPR/ast_expr_free.c $(INSIGHT_OUT_DIR)/src/AST/EXPR/ast_expr_free.c
 	@cp src/AST/EXPR/ast_expr_str.c $(INSIGHT_OUT_DIR)/src/AST/EXPR/ast_expr_str.c
+	@cp src/AST/TYPE/ast_type_clone.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_clone.c
+	@cp src/AST/TYPE/ast_type_make.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_make.c
+	@cp src/AST/TYPE/ast_type_str.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_str.c
 	@cp src/AST/UTIL/string_builder_extensions.c $(INSIGHT_OUT_DIR)/src/AST/UTIL/string_builder_extensions.c
 	@cp src/AST/ast_constant.c $(INSIGHT_OUT_DIR)/src/AST/ast_constant.c
 	@cp src/AST/ast_expr.c $(INSIGHT_OUT_DIR)/src/AST/ast_expr.c

@@ -184,7 +184,7 @@ void ast_layout_free(ast_layout_t *layout);
 
 // ---------------- ast_layout_clone ----------------
 // Clones an 'ast_layout_t'
-ast_layout_t ast_layout_clone(ast_layout_t *layout);
+ast_layout_t ast_layout_clone(const ast_layout_t *layout);
 
 // ---------------- ast_layout_str ----------------
 // Converts an 'ast_layout_t' to a string
@@ -225,7 +225,7 @@ void ast_layout_skeleton_free(ast_layout_skeleton_t *skeleton);
 
 // ---------------- ast_layout_skeleton_clone ----------------
 // Clones an 'ast_layout_skeleton_t'
-ast_layout_skeleton_t ast_layout_skeleton_clone(ast_layout_skeleton_t *skeleton);
+ast_layout_skeleton_t ast_layout_skeleton_clone(const ast_layout_skeleton_t *skeleton);
 
 // ---------------- ast_layout_skeleton_str ----------------
 // Converts an 'ast_layout_skeleton_t' to a string
@@ -280,7 +280,7 @@ void ast_field_map_free(ast_field_map_t *field_map);
 
 // ---------------- ast_field_map_clone ----------------
 // Clones an 'ast_field_map_t'
-ast_field_map_t ast_field_map_clone(ast_field_map_t *field_map);
+ast_field_map_t ast_field_map_clone(const ast_field_map_t *field_map);
 
 // ---------------- ast_field_maps_identical ----------------
 // Returns whether two AST field maps are identical

@@ -60,17 +60,11 @@ typedef struct {
 
 // ---------------- ast_elem_pointer_t ----------------
 // Type element for a pointer
-typedef struct {
-    unsigned int id;
-    source_t source;
-} ast_elem_pointer_t;
+typedef ast_elem_t ast_elem_pointer_t;
 
 // ---------------- ast_elem_array_t ----------------
 // Type element for a array
-typedef struct {
-    unsigned int id;
-    source_t source;
-} ast_elem_array_t;
+typedef ast_elem_t ast_elem_array_t;
 
 // ---------------- ast_elem_fixed_array_t ----------------
 // Type element for a fixed array
@@ -79,6 +73,14 @@ typedef struct {
     source_t source;
     length_t length;
 } ast_elem_fixed_array_t;
+
+// ---------------- ast_elem_generic_int_t ----------------
+// Type element for a generic integer type
+typedef struct ast_elem_t ast_elem_generic_int_t;
+
+// ---------------- ast_elem_generic_float_t ----------------
+// Type element for a generic floating point type
+typedef struct ast_elem_t ast_elem_generic_float_t;
 
 // ---------------- ast_elem_var_fixed_array_t ----------------
 // Type element for a variable fixed array
@@ -186,13 +188,13 @@ typedef struct {
     length_t counts_capacity;
 } ast_poly_catalog_t;
 
-// ---------------- ast_elem_clone ----------------
-// Clones an AST type element, producing a duplicate
-ast_elem_t *ast_elem_clone(const ast_elem_t *element);
-
 // ---------------- ast_type_clone ----------------
 // Clones an AST type, producing a duplicate
 ast_type_t ast_type_clone(const ast_type_t *type);
+
+// ---------------- ast_types_clone ----------------
+// Clones a list of AST types
+ast_type_t *ast_types_clone(ast_type_t *types, length_t length);
 
 // ---------------- ast_type_free ----------------
 // Frees data within an AST type
@@ -210,51 +212,9 @@ void ast_types_free(ast_type_t *types, length_t length);
 // Calls 'ast_type_free_fully' on each type in the list
 void ast_types_free_fully(ast_type_t *types, length_t length);
 
-// ---------------- ast_elem_free ----------------
-// Frees a collection of AST type elements
-void ast_elems_free(ast_elem_t **elements, length_t elements_length);
-
-// ---------------- ast_elem_free ----------------
-// Frees an individual AST type element
-void ast_elem_free(ast_elem_t *elem);
-
-// ---------------- ast_type_make_base ----------------
-// Takes ownership of 'base' and creates a type from it
-void ast_type_make_base(ast_type_t *type, strong_cstr_t base);
-
-// ---------------- ast_type_make_base_ptr ----------------
-// Takes ownership of 'base' and creates a type from it
-// that's preceded by a pointer element
-void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base);
-
-// ---------------- ast_type_make_base_ptr_ptr ----------------
-// Takes ownership of 'base' and creates a type from it
-// that's preceded by two pointer elements
-void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base);
-
-// ---------------- ast_type_make_base_with_generics ----------------
-// Takes ownership of 'base' and 'generics', and creates a type from it
-void ast_type_make_base_with_generics(ast_type_t *type, strong_cstr_t base, strong_cstr_t *generics, length_t generics_length);
-
 // ---------------- ast_type_prepend_ptr ----------------
 // Prepends a pointer to an AST type
 void ast_type_prepend_ptr(ast_type_t *type);
-
-// ---------------- ast_type_make_polymorph ----------------
-// Takes ownership of 'name' and creates a polymorphic type variable
-void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name, bool allow_auto_conversion);
-
-// ---------------- ast_type_make_func_ptr ----------------
-// Makes a function pointer AST type
-void ast_type_make_func_ptr(ast_type_t *type, source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership);
-
-// ---------------- ast_type_make_generic_int ----------------
-// Creates a generic integer type
-void ast_type_make_generic_int(ast_type_t *type);
-
-// ---------------- ast_type_make_generic_float ----------------
-// Creates a generic floating point type
-void ast_type_make_generic_float(ast_type_t *type);
 
 // ---------------- ast_type_str ----------------
 // Generates a c-string given an AST type
@@ -347,6 +307,10 @@ bool ast_type_has_polymorph(const ast_type_t *type);
 // Returns whether a list of AST types contains a polymorphic type
 bool ast_type_list_has_polymorph(const ast_type_t *types, length_t length);
 
+// ---------------- ast_type_dereferenced_view ----------------
+// Creates a temporary view of a pointer type as if it had been dereferenced
+ast_type_t ast_type_dereferenced_view(ast_type_t *pointer_type);
+
 // ---------------- ast_type_dereference ----------------
 // Removes the first pointer element of a pointer type
 // NOTE: Assumes inout_type has ownership of AST type elements
@@ -365,6 +329,22 @@ ast_type_t ast_type_unwrapped_view(ast_type_t *type);
 // NOTE: Assumes inout_type has ownership of AST type elements
 // NOTE: Frees memory allocated for the fixed-array element
 void ast_type_unwrap_fixed_array(ast_type_t *inout_type);
+
+// ---------------- ast_elem_clone ----------------
+// Clones an AST type element, producing a duplicate
+ast_elem_t *ast_elem_clone(const ast_elem_t *element);
+
+// ---------------- ast_elems_clone ----------------
+// Clones a list of AST type elements
+ast_elem_t **ast_elems_clone(ast_elem_t **elements, length_t length);
+
+// ---------------- ast_elem_free ----------------
+// Frees a collection of AST type elements
+void ast_elems_free(ast_elem_t **elements, length_t elements_length);
+
+// ---------------- ast_elem_free ----------------
+// Frees an individual AST type element
+void ast_elem_free(ast_elem_t *elem);
 
 // ---------------- ast_poly_catalog_init ----------------
 // Initializes an AST type var catalog

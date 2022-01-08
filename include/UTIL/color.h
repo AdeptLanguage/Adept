@@ -12,6 +12,9 @@ extern "C" {
     ---------------------------------------------------------------------------
 */
 
+#include <stdio.h> // IWYU pragma: keep
+#include <stdnoreturn.h>
+
 // Possible colors for terminal_set_color
 enum color_h_terminal_color {
     TERMINAL_COLOR_DEFAULT,
@@ -85,6 +88,10 @@ void internalerrorprintf(const char *format, ...);
 // ---------------- warningprintf ----------------
 // Version of 'printf' for non-specific internal warnings
 void internalwarningprintf(const char *format, ...);
+
+// ---------------- panic  ----------------
+// Displays a critical error and then calls exit(-1)
+noreturn void panic(const char *format, ...);
 
 #ifdef __cplusplus
 }

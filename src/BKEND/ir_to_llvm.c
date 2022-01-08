@@ -131,8 +131,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
     // Retrieves a literal or previously computed value
 
     if(value == NULL){
-        internalerrorprintf("ir_to_llvm_value() got NULL pointer\n");
-        return NULL;
+        panic("ir_to_llvm_value() - Received NULL pointer\n");
     }
 
     switch(value->value_type){
@@ -150,8 +149,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             case TYPE_KIND_DOUBLE: return LLVMConstReal(llvm->f64_type, *((adept_double*) value->extra));
             case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((adept_bool*) value->extra), false);
             default:
-                internalerrorprintf("Unknown type kind literal in ir_to_llvm_value\n");
-                return NULL;
+                panic("ir_to_llvm_value() - Unrecognized type kind for literal in ir_to_llvm_value\n");
             }
         }
     case VALUE_TYPE_RESULT: {
@@ -285,8 +283,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             return LLVMConstAdd(ir_to_llvm_value(llvm, const_add->a), ir_to_llvm_value(llvm, const_add->b));
         }
     default:
-        internalerrorprintf("Unknown value type %d of value in ir_to_llvm_value\n", value->value_type);
-        return NULL;
+        panic("ir_to_llvm_value() - Unrecognized value type %d\n", (int) value->value_type);
     }
 
     return NULL;
@@ -470,12 +467,11 @@ errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblock_t *basicb
 errorcode_t ir_to_llvm_allocate_stack_variables(llvm_context_t *llvm, varstack_t *stack, LLVMValueRef func_skeleton, ir_func_t *module_func){
     LLVMBuilderRef builder = llvm->builder;
 
-    for(length_t s = 0; s != stack->length; s++){
-        bridge_var_t *var = bridge_scope_find_var_by_id(module_func->scope, s);
+    for(length_t i = 0; i != stack->length; i++){
+        bridge_var_t *var = bridge_scope_find_var_by_id(module_func->scope, i);
 
         if(var == NULL){
-            internalerrorprintf("VAR IN EXPORT STAGE COULD NOT BE FOUND (id: %d)\n", (int) s);
-            return FAILURE;
+            panic("ir_to_llvm_allocate_stack_variables() - Variable with ID %d could not be found\n", (int) i);
         }
 
         LLVMTypeRef alloca_type = ir_to_llvm_type(llvm, var->ir_type);
@@ -485,16 +481,16 @@ errorcode_t ir_to_llvm_allocate_stack_variables(llvm_context_t *llvm, varstack_t
         }
 
         if(var->traits & BRIDGE_VAR_STATIC){
-            stack->values[s] = llvm->static_globals[var->static_id].global;
+            stack->values[i] = llvm->static_globals[var->static_id].global;
         } else {
-            stack->values[s] = LLVMBuildAlloca(builder, alloca_type, "");
+            stack->values[i] = LLVMBuildAlloca(builder, alloca_type, "");
         }
 
-        stack->types[s] = alloca_type;
+        stack->types[i] = alloca_type;
 
-        if(s < module_func->arity){
+        if(i < module_func->arity){
             // Function argument that needs passed argument value
-            LLVMBuildStore(builder, LLVMGetParam(func_skeleton, s), stack->values[s]);
+            LLVMBuildStore(builder, LLVMGetParam(func_skeleton, i), stack->values[i]);
         }
     }
 
@@ -990,8 +986,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 case TYPE_KIND_FUNCPTR:
                 case TYPE_KIND_POINTER: zero = LLVMConstNull(ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->value->type)); break;
                 default:
-                    internalerrorprintf("INSTRUCTION_ISxxZERO received unknown type kind\n");
-                    return FAILURE;
+                    panic("ir_to_llvm_instructions() - INSTRUCTION_ISxxZERO received unrecognized type kind\n");
                 }
 
                 bool isz = (instructions[i]->id == INSTRUCTION_ISZERO);
@@ -1210,9 +1205,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                 ir_type_t *target_result_type = alloc->result_type;
 
                 if(target_result_type->kind != TYPE_KIND_POINTER){
-                    internalerrorprintf("INSTRUCTION_ALLOC got non-pointer result type when exporting ir to llvm\n");
-                    catalog->blocks[b].value_references[i] = LLVMConstPointerNull(ir_to_llvm_type(llvm, target_result_type));
-                    break;
+                    panic("ir_to_llvm_instructions() - INSTRUCTION_ALLOC has non-pointer result type\n");
                 }
 
                 catalog->blocks[b].value_references[i] = (alloc->count)
@@ -1334,15 +1327,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             break;
         case INSTRUCTION_DEINIT_SVARS:
             if(llvm->static_globals_deinitialization_function == NULL){
-                internalerrorprintf("INSTRUCTION_DEINIT_SVARS cannot operate since static_globals_deinitialization_function doesn't exist\n");
-                return FAILURE;
+                panic("ir_to_llvm_instructions() - INSTRUCTION_DEINIT_SVARS cannot operate since static_globals_deinitialization_function doesn't exist\n");
             }
 
             LLVMBuildCall(builder, llvm->static_globals_deinitialization_function, NULL, 0, "");
             break;
         default:
-            internalerrorprintf("Unexpected instruction '%d' when exporting ir to llvm\n", instructions[i]->id);
-            return FAILURE;
+            panic("ir_to_llvm_instructions() - Unrecognized instruction '%d'\n", (int) instructions[i]->id);
         }
     }
 
@@ -1451,7 +1442,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMTargetRef target;
 
     if(LLVMGetTargetFromTriple(triple, &target, &error_message)){
-        internalerrorprintf("LLVMGetTargetFromTriple failed: %s\n", error_message);
+        internalerrorprintf("ir_to_llvm() - LLVMGetTargetFromTriple() failed with message: %s\n", error_message);
 
         if(compiler->cross_compile_for == CROSS_COMPILE_WASM32){
             blueprintf("NOTICE: If you built this compiler yourself, make sure that the build of LLVM you linked against includes support for the 'wasm64' target!\n");
@@ -1680,7 +1671,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMRunPassManager(pass_manager, llvm.module);
     
     if(LLVMTargetMachineEmitToFile(target_machine, llvm.module, object_filename, codegen, &error_message)){
-        internalerrorprintf("LLVMTargetMachineEmitToFile failed: %s\n", error_message);
+        internalerrorprintf("ir_to_llvm() - LLVMTargetMachineEmitToFile() failed with message: %s\n", error_message);
         LLVMDisposeTargetData(data_layout);
         LLVMRunPassManager(pass_manager, llvm.module);
         LLVMDisposeTargetMachine(target_machine);
@@ -1950,7 +1941,7 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     length_t basicblocks_length = deinit_builder->basicblocks_length;
 
     if(llvm->static_globals_deinitialization_function == NULL){
-        internalerrorprintf("ir_to_llvm_inject_deinit_built() called when no static_globals_deinitialization_function present\n");
+        internalerrorprintf("ir_to_llvm_inject_deinit_built() - static_globals_deinitialization_function does not exist\n");
         return FAILURE;
     }
 
@@ -2013,7 +2004,7 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
 
 errorcode_t ir_to_llvm_generate_deinit_svars_function_head(llvm_context_t *llvm){
     if(llvm->static_globals_deinitialization_function != NULL){
-        internalerrorprintf("ir_to_llvm_generate_deinit_svars_function_head(): Static variable deinitialization function already exists\n");
+        internalerrorprintf("ir_to_llvm_generate_deinit_svars_function_head() - Static variable deinitialization function already exists\n");
         return FAILURE;
     }
 

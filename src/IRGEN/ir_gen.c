@@ -565,7 +565,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     ptr_to_type->extra = NULL;
 
     if(ir_gen_resolve_type(compiler, object, &ast_global->type, (ir_type_t**) &ptr_to_type->extra)){
-        internalerrorprintf("Failed to get IR type for special global variable\n");
+        internalerrorprintf("ir_gen_special_global() - Could not find IR type for special global variable\n");
         return FAILURE;
     }
 
@@ -591,7 +591,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         ir_type_t *ubyte_ptr_type, *ubyte_ptr_ptr_type;
 
         if(!ir_type_map_find(&ir_module->type_map, "ubyte", &ubyte_ptr_type)){
-            internalerrorprintf("Failed to find types used by the runtime type table that should've been injected\n");
+            internalerrorprintf("ir_gen_special_global() - Failed to find critical 'ubyte' type used by the runtime type table that should exist\n");
             return FAILURE;
         }
 
@@ -636,7 +636,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     }
 
     // Should never reach
-    internalerrorprintf("Encountered unknown special global variable '%s'\n", ast_global->name);
+    internalerrorprintf("ir_gen_special_global() - Unknown special global variable '%s'\n", ast_global->name);
     return FAILURE;
 }
 

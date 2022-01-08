@@ -68,9 +68,9 @@ static strong_cstr_t ast_expr_cstr_to_str(ast_expr_cstr_t *cstr_expr){
             case '\r': result[put_index++] = 'r';  break;
             case '\t': result[put_index++] = 't';  break;
             case '\b': result[put_index++] = 'b';  break;
-            case '\e': result[put_index++] = 'e';  break;
             case '\'': result[put_index++] = '\''; break;
             case '\\': result[put_index++] = '\\'; break;
+            case 0x1B: result[put_index++] = 'e';  break;
             default:   result[put_index++] = '?';  break;
             }
         }

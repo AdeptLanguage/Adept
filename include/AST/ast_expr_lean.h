@@ -17,7 +17,7 @@ extern "C" {
 #define DERIVE_AST_EXPR struct { \
     unsigned int id;  /* What type of expression */ \
     source_t source;  /* Where in source code */ \
-};
+}
 
 // ---------------- ast_expr_t ----------------
 // General purpose struct for an expression

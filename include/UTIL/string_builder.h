@@ -41,13 +41,17 @@ void string_builder_abandon(string_builder_t *builder);
 // Appends a string to the string being built by a string builder
 void string_builder_append(string_builder_t *builder, const char *portion);
 
-// ---------------- string_builder_append ----------------
+// ---------------- string_builder_append_view ----------------
 // Appends a string view to the string being built by a string builder
 void string_builder_append_view(string_builder_t *builder, const char *portion, length_t portion_length);
 
-// ---------------- string_builder_append ----------------
+// ---------------- string_builder_append_char ----------------
 // Appends a character to the string being built by a string builder
 void string_builder_append_char(string_builder_t *builder, char character);
+
+// ---------------- string_builder_append_int ----------------
+// Appends an int to the string being built by a string builder
+void string_builder_append_int(string_builder_t *builder, int integer);
 
 #ifdef __cplusplus
 }

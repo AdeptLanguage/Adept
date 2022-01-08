@@ -38,9 +38,7 @@ strong_cstr_t meta_expr_str(meta_expr_t *meta){
             return representation;
         }
     default:
-        internalerrorprintf("Tried to get string from non-collapsed meta expression!\n");
-        redprintf("A crash will probably follow...\n");
-        return NULL;
+        panic("meta_expr_str() - Cannot get string value for non-collapsed meta expression\n");
     }
 }
 
@@ -87,7 +85,7 @@ void meta_expr_free(meta_expr_t *expr){
         meta_expr_free_fully(((meta_expr_not_t*) expr)->value);
         break;
     default:
-        internalerrorprintf("meta_expr_free encountered unknown meta expression id %d\n", (int) expr->id);
+        panic("meta_expr_free() - Unrecognized meta expression ID %d\n", (int) expr->id);
     }
 }
 
@@ -122,9 +120,7 @@ meta_expr_t *meta_expr_clone(meta_expr_t *expr){
             return (meta_expr_t*) result;
         }
     default:
-        internalerrorprintf("Tried to clone a non-collapsed meta expression!\n");
-        redprintf("A crash will probably follow...\n");
-        return NULL;
+        panic("meta_expr_clone() - Cannot clone a non-collapsed meta expression\n");
     }
 }
 
@@ -460,8 +456,7 @@ errorcode_t meta_collapse(compiler_t *compiler, object_t *object, meta_definitio
             }
             break;
         default:
-            internalerrorprintf("Unrecognized meta expression in meta_collapse!\n");
-            return FAILURE;
+            panic("meta_collapse() - Unrecognized meta expression ID %d\n", (int) (*expr)->id);
         }
     }
 
@@ -705,8 +700,7 @@ meta_expr_t *meta_get_special_variable(compiler_t *compiler, object_t *object, w
         result->id = compiler->traits & COMPILER_NO_TYPEINFO ? META_EXPR_FALSE : META_EXPR_TRUE;
         break;
     default:
-        internalerrorprintf("meta_get_special_variable() got unimplemented index\n");
-        return NULL;
+        panic("meta_get_special_variable() - Unimplemented index\n");
     }
     
     return result;

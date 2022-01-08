@@ -63,7 +63,8 @@ void ir_gen_sf_cache_free(ir_gen_sf_cache_t *cache);
 // Locates a cache entry for AST type in special functions cache
 // If one doesn't exist yet, one will be created
 // Will always return a valid pointer
-ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate_or_insert(ir_gen_sf_cache_t *cache, ast_type_t type);
+// NOTE: Does not take any ownership of 'type'
+ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate_or_insert(ir_gen_sf_cache_t *cache, ast_type_t *type);
 
 // ---------------- ir_gen_sf_cache_dump ----------------
 // Dumps a visual representation of an special function cache

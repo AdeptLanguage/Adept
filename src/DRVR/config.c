@@ -12,7 +12,6 @@
 #include "UTIL/filename.h"
 #include "UTIL/ground.h"
 #include "UTIL/jsmn_helper.h"
-#include "UTIL/string.h"
 
 static successful_t config_update_last_updated(weak_cstr_t filename, jsmnh_buffer_t buffer, jsmntok_t last_update);
 static successful_t config_read_adept_config_value(config_t *config, jsmnh_obj_ctx_t *parent_ctx, jsmntok_t *out_maybe_last_update);

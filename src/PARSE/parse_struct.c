@@ -8,6 +8,7 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "DRVR/compiler.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
@@ -458,8 +459,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
 
     // Figure out AST type to return for record
     if(generics){
-        strong_cstr_t *type_generics = strsclone(generics, generics_length);
-        ast_type_make_base_with_generics(&func->return_type, strclone(name), type_generics, generics_length);
+        ast_type_make_base_with_polymorphs(&func->return_type, strclone(name), generics, generics_length);
     } else {
         ast_type_make_base(&func->return_type, strclone(name));
     }

@@ -305,9 +305,9 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 case 'r': lex_state.buildup[lex_state.buildup_length++] = '\r';  break;
                 case 't': lex_state.buildup[lex_state.buildup_length++] = '\t';  break;
                 case 'b': lex_state.buildup[lex_state.buildup_length++] = '\b';  break;
-                case 'e': lex_state.buildup[lex_state.buildup_length++] = '\e';  break;
                 case '0': lex_state.buildup[lex_state.buildup_length++] = '\0';  break;
                 case '"': lex_state.buildup[lex_state.buildup_length++] = '"';   break;
+                case 'e': lex_state.buildup[lex_state.buildup_length++] = 0x1B;  break;
                 case '\'': lex_state.buildup[lex_state.buildup_length++] = '\''; break;
                 case '\\': lex_state.buildup[lex_state.buildup_length++] = '\\'; break;
                 default:
@@ -367,10 +367,10 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                 case 'r': lex_state.buildup[lex_state.buildup_length++] = '\r'; break;
                 case 't': lex_state.buildup[lex_state.buildup_length++] = '\t'; break;
                 case 'b': lex_state.buildup[lex_state.buildup_length++] = '\b'; break;
-                case 'e': lex_state.buildup[lex_state.buildup_length++] = '\e'; break;
                 case '0': lex_state.buildup[lex_state.buildup_length++] = '\0'; break;
                 case '\'': lex_state.buildup[lex_state.buildup_length++] = '\''; break;
                 case '\\': lex_state.buildup[lex_state.buildup_length++] = '\\'; break;
+                case 'e':  lex_state.buildup[lex_state.buildup_length++] = 0x1B; break;
                 default:
                     lex_get_location(buffer, i, &line, &column);
                     redprintf("%s:%d:%d: Unknown escape sequence '\\%c'\n", filename_name_const(object->filename), line, column, buffer[i]);

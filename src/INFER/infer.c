@@ -92,7 +92,7 @@ errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skele
             if(infer_type(ctx, &bone->type)) return FAILURE;
             break;
         default:
-            internalerrorprintf("infer_layout_skeleton() got unknown bone kind\n");
+            panic("infer_layout_skeleton() - Unrecognized bone kind %d\n", (int) bone->kind);
         }
     }
 
@@ -1280,7 +1280,7 @@ void infer_var_scope_push(infer_var_scope_t **scope){
 
 void infer_var_scope_pop(compiler_t *compiler, infer_var_scope_t **scope){
     if((*scope)->parent == NULL){
-        internalerrorprintf("tried to pop infer variable scope with no parent\n");
+        internalerrorprintf("infer_var_scope_pop() - Cannot pop infer-variable-scope with no parent\n");
         return;
     }
 
@@ -1298,13 +1298,8 @@ infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name){
         }
     }
 
-    if(scope->parent){
-        return infer_var_scope_find(scope->parent, name);
-    } else {
-        return NULL;
-    }
+    return scope->parent ? infer_var_scope_find(scope->parent, name) : NULL;
 }
-
 
 ast_constant_t* infer_var_scope_find_constant(infer_var_scope_t *scope, const char *name){
     // If the scope has local constants, search through them
@@ -1314,11 +1309,7 @@ ast_constant_t* infer_var_scope_find_constant(infer_var_scope_t *scope, const ch
     }
 
     // Otherwise try in parent scope
-    if(scope->parent){
-        return infer_var_scope_find_constant(scope->parent, name);
-    } else {
-        return NULL;
-    }
+    return scope->parent ? infer_var_scope_find_constant(scope->parent, name) : NULL;
 }
 
 void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const){
@@ -1490,7 +1481,6 @@ void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expres
         type_table_give_base(ctx->type_table, "String");
         break;
     default:
-        internalerrorprintf("Failed to mention type to type table for primitive from generic!\n");
-        redprintf("Continuing regardless...\n");
+        panic("infer_mention_expression_literal_type() - Unrecognized literal expression ID\n", (int) expression_literal_id);
     }
 }

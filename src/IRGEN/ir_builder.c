@@ -9,6 +9,7 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "BRIDGE/bridge.h"
 #include "BRIDGE/funcpair.h"
 #include "BRIDGE/type_table.h"
@@ -155,8 +156,7 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
     if(ir_value->type == NULL){
         internalerrorprintf("build_value_from_prev_instruction() tried to create value from instruction without return_type set\n");
         redprintf("Previous instruction id: 0x%08X\n", (int) result->instruction_id);
-        redprintf("Returning NULL, a crash will probably follow...\n");
-        return NULL;
+        panic("Terminating...\n");
     }
 
     return ir_value;
@@ -284,7 +284,7 @@ ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
 ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source){
     // NOTE: Array access is only for pointer values
     if(value->type->kind != TYPE_KIND_POINTER){
-        internalerrorprintf("build_array_access called on non-pointer value\n");
+        internalerrorprintf("build_array_access() - Cannot perform array access on non-pointer value\n");
         redprintf("                (value left unmodified)\n");
         return value;
     }
@@ -372,7 +372,7 @@ ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t 
     value->type = usize_type;
 
     if(type->kind != TYPE_KIND_STRUCTURE){
-        internalerrorprintf("build_offsetof() got non-struct type as type\n");
+        panic("build_offsetof() - Cannot get offset of field for non-struct type\n");
     }
 
     ir_value_offsetof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_offsetof_t));
@@ -446,7 +446,7 @@ ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_cons
 
 void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer){
     if(anon_global->value_type != VALUE_TYPE_ANON_GLOBAL && anon_global->value_type != VALUE_TYPE_CONST_ANON_GLOBAL){
-        internalerrorprintf("Failed to set initializer on value that isn't an anonymous global reference\n");
+        internalerrorprintf("build_anon_global_initializer() - Cannot set initializer on a value that isn't a reference to an anonymous global variable\n");
         return;
     }
 
@@ -568,8 +568,7 @@ ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type
     ir_type_t *ubyte_type;
 
     if(!ir_type_map_find(type_map, "ubyte", &ubyte_type)){
-        internalerrorprintf("ir_type_map_find failed to find mapping for ubyte for build_literal_cstr_of_length_ex!\n");
-        return NULL;
+        panic("build_literal_cstr_of_length_ex() - Failed to find 'ubyte' type mapping\n");
     }
 
     ir_value->type = ir_type_pointer_to(pool, ubyte_type);
@@ -783,8 +782,9 @@ void close_scope(ir_builder_t *builder){
     builder->scope->following_var_id = builder->next_var_id;
     builder->scope = builder->scope->parent;
     
-    if(builder->scope == NULL)
-        internalerrorprintf("tried to close bridge scope with no parent, probably will crash...\n");
+    if(builder->scope == NULL){
+        panic("close_scope() - Cannot close bridge scope with no parent\n");
+    }
 }
 
 void push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id){
@@ -1086,7 +1086,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             ast_poly_catalog_init(&catalog);
 
             if(template->generics_length != generic_base->generics_length){
-                internalerrorprintf("Polymorphic struct '%s' type parameter length mismatch when generating child deference!\n", generic_base->name);
+                internalerrorprintf("handle_children_dereference() - Polymorphic struct '%s' type parameter length mismatch when generating child deference!\n", generic_base->name);
                 ast_poly_catalog_free(&catalog);
                 return ALT_FAILURE;
             }
@@ -1407,7 +1407,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             ast_poly_catalog_init(&catalog);
 
             if(template->generics_length != generic_base->generics_length){
-                internalerrorprintf("Polymorphic struct '%s' type parameter length mismatch when generating child passing!\n", generic_base->name);
+                internalerrorprintf("handle_children_pass() - Polymorphic struct '%s' type parameter length mismatch when generating child passing!\n", generic_base->name);
                 ast_poly_catalog_free(&catalog);
                 return ALT_FAILURE;
             }
@@ -1827,15 +1827,12 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
     if(!(is_base_ptr || is_generic_base_ptr)) return FAILURE;
 
-    ast_type_t dereferenced;
-    dereferenced.elements = &arg_types[0].elements[1];
-    dereferenced.elements_length = 1;
-    dereferenced.source = dereferenced.elements[0]->source;
+    ast_type_t dereferenced_view = ast_type_dereferenced_view(&arg_types[0]);
 
     ast_t *ast = &object->ast;
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
 
-    ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, dereferenced);
+    ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &dereferenced_view);
     assert(entry->has_defer == TROOLEAN_UNKNOWN);
 
     entry->has_defer = TROOLEAN_FALSE;
@@ -1887,7 +1884,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
         weak_cstr_t member = field_map.arrows[i].name;
 
         ir_field_info_t field_info;
-        if(ir_gen_get_field_info(compiler, object, member, NULL_SOURCE, &dereferenced, &field_info)){
+        if(ir_gen_get_field_info(compiler, object, member, NULL_SOURCE, &dereferenced_view, &field_info)){
             return FAILURE;
         }
 
@@ -1964,8 +1961,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 }
 
 errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
-    
-    if(type_list_length != 1) return FAILURE; // Require single argument for auto-generated __pass__
+    if(type_list_length != 1) return FAILURE;
 
     bool is_base = ast_type_is_base(&arg_types[0]);
     bool is_generic_base = is_base ? false : ast_type_is_generic_base(&arg_types[0]);
@@ -2058,7 +2054,6 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
 }
 
 errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
-
     if(type_list_length != 2) return FAILURE;
 
     bool subject_is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
@@ -2066,17 +2061,14 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
     if(!(subject_is_base_ptr || subject_is_generic_base_ptr)) return FAILURE;
 
-    ast_type_t dereferenced;
-    dereferenced.elements = &arg_types[0].elements[1];
-    dereferenced.elements_length = 1;
-    dereferenced.source = dereferenced.elements[0]->source;
+    ast_type_t dereferenced_view = ast_type_dereferenced_view(&arg_types[0]);
 
-    if(!ast_types_identical(&dereferenced, &arg_types[1])) return FAILURE;
+    if(!ast_types_identical(&dereferenced_view, &arg_types[1])) return FAILURE;
 
     ast_t *ast = &object->ast;
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
 
-    ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, dereferenced);
+    ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &dereferenced_view);
     assert(entry->has_assign == TROOLEAN_UNKNOWN);
 
     entry->has_assign = TROOLEAN_FALSE;
@@ -2128,7 +2120,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         weak_cstr_t member = field_map.arrows[i].name;
 
         ir_field_info_t field_info;
-        if(ir_gen_get_field_info(compiler, object, member, NULL_SOURCE, &dereferenced, &field_info)){
+        if(ir_gen_get_field_info(compiler, object, member, NULL_SOURCE, &dereferenced_view, &field_info)){
             return FAILURE;
         }
 

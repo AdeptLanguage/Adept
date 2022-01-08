@@ -44,9 +44,9 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
                     case '\n': putchar('\\'); putchar('n');  break;
                     case '\r': putchar('\\'); putchar('r');  break;
                     case '\b': putchar('\\'); putchar('b');  break;
-                    case '\e': putchar('\\'); putchar('e');  break;
                     case '\\': putchar('\\'); putchar('\\'); break;
                     case '"':  putchar('\\'); putchar('"');  break;
+                    case 0x1B: putchar('\\'); putchar('e');  break;
                     default:
                         putchar(string_data->array[i]);
                     }
@@ -60,7 +60,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
             token_print_literal_value(token);
             break;
         default:
-            internalerrorprintf("tokenlist_print() got unknown extra data format\n");
+            panic("tokenlist_print() - Unrecognized data format\n");
         }
     }
 }
@@ -101,7 +101,7 @@ void token_print_literal_value(token_t *token){
         printf("%f\n", *((adept_double*) token->data));
         break;
     default:
-        internalerrorprintf("unknown token 0x%08X literal: this token has an unrecognized id\n", token->id);
+        internalerrorprintf("token_print_literal_value() - Unrecognized token 0x%08X literal\n", token->id);
     }
 }
 

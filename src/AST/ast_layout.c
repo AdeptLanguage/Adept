@@ -47,7 +47,7 @@ void ast_layout_free(ast_layout_t *layout){
     ast_field_map_free(&layout->field_map);
 }
 
-ast_layout_t ast_layout_clone(ast_layout_t *layout){
+ast_layout_t ast_layout_clone(const ast_layout_t *layout){
     ast_layout_t clone;
 
     clone.kind = layout->kind;
@@ -93,16 +93,14 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
         out_path->waypoints[0].index = endpoint.indices[0];
         break;
     default:
-        internalerrorprintf("ast_layout_get_path() got unknown layout type\n");
-        return false;
+        panic("ast_layout_get_path() - Unrecognized layout type %d\n", (int) layout->kind);
     }
 
     for(length_t i = 0; i < AST_LAYOUT_MAX_DEPTH && endpoint.indices[i] != AST_LAYOUT_ENDPOINT_END_INDEX; i++){
         length_t bone_index = endpoint.indices[i];
 
         if(bone_index >= skeleton->bones_length){
-            internalerrorprintf("ast_layout_skeleton_get_path() got bad endpoint - bone out of bounds\n");
-            return false;
+            panic("ast_layout_skeleton_get_path() - The requested bone is out of bounds\n");
         }
 
         ast_layout_bone_t *bone = &skeleton->bones[bone_index];
@@ -130,18 +128,17 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
         }
     }
 
-    // Bad endpoint
-    internalerrorprintf("ast_layout_skeleton_get_path() got bad endpoint - endpoint is incomplete\n");
+    panic("ast_layout_skeleton_get_path() - Incomplete endpoint\n");
     return false;
 }
 
 const char *ast_layout_kind_name(ast_layout_kind_t kind){
     switch(kind){
-    case AST_LAYOUT_UNION: return "union";
+    case AST_LAYOUT_UNION:  return "union";
     case AST_LAYOUT_STRUCT: return "struct";
-    default: internalerrorprintf("ast_layout_kind_name() got unknown layout kind\n");
     }
-    return "unkcomposite";
+
+    panic("ast_layout_kind_name() got unknown layout kind\n");
 }
 
 bool ast_layout_is_simple_struct(ast_layout_t *layout){
@@ -176,7 +173,7 @@ void ast_layout_skeleton_free(ast_layout_skeleton_t *skeleton){
     free(skeleton->bones);
 }
 
-ast_layout_skeleton_t ast_layout_skeleton_clone(ast_layout_skeleton_t *skeleton){
+ast_layout_skeleton_t ast_layout_skeleton_clone(const ast_layout_skeleton_t *skeleton){
     ast_layout_skeleton_t clone;
     clone.bones = malloc(sizeof(ast_layout_bone_t) * skeleton->bones_length);
     clone.bones_length = skeleton->bones_length;
@@ -280,7 +277,7 @@ ast_layout_bone_t ast_layout_bone_clone(ast_layout_bone_t *bone){
         clone.children = ast_layout_skeleton_clone(&bone->children);
         break;
     default:
-        internalerrorprintf("ast_layout_bone_clone() got unknown bone kind\n");
+        panic("ast_layout_bone_clone() - Unrecognized bone kind %d\n", (int) bone->kind);
     }
 
     return clone;
@@ -294,8 +291,9 @@ bool ast_layout_bone_has_polymorph(ast_layout_bone_t *bone){
     case AST_LAYOUT_BONE_KIND_STRUCT:
         return ast_layout_skeleton_has_polymorph(&bone->children);
     default:
-        internalerrorprintf("ast_layout_bone_has_polymorph() got unknown bone kind\n");
+        panic("ast_layout_bone_has_polymorph() - Unrecognized bone kind %d\n", (int) bone->kind);
     }
+
     return false;
 }
 
@@ -315,8 +313,7 @@ strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *fiel
                 string_builder_append(&builder, type_str);
                 free(type_str);
             } else {
-                internalerrorprintf("ast_layout_bone_str() failed to find name given to endpoint\n");
-                goto failure;
+                panic("ast_layout_bone_str() - Failed to find name for endpoint\n");
             }
         }
         break;
@@ -337,15 +334,10 @@ strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *fiel
         }
         break;
     default:
-        internalerrorprintf("ast_layout_str() got unknown layout kind\n");
-        goto failure;
+        panic("ast_layout_str() - Unrecognized layout kind %d\n", (int) bone->kind);
     }
 
     return string_builder_finalize(&builder);
-
-failure:
-    string_builder_abandon(&builder);
-    return NULL;
 }
 
 bool ast_layout_bones_identical(ast_layout_bone_t *bone_a, ast_layout_bone_t *bone_b){
@@ -358,8 +350,7 @@ bool ast_layout_bones_identical(ast_layout_bone_t *bone_a, ast_layout_bone_t *bo
     case AST_LAYOUT_BONE_KIND_STRUCT:
         return ast_layout_skeletons_identical(&bone_a->children, &bone_b->children);
     default:
-        internalerrorprintf("ast_layout_bones_identical() got unknown bone kind\n");
-        return false;
+        panic("ast_layout_bones_identical() - Unrecognized bone kind %d\n", (int) bone_a->kind);
     }
 
     return true;
@@ -483,8 +474,7 @@ ast_type_t *ast_layout_skeleton_get_type_at_index(ast_layout_skeleton_t *skeleto
     ast_layout_bone_t *bone = &skeleton->bones[index];
 
     if(bone->kind != AST_LAYOUT_BONE_KIND_TYPE){
-        internalerrorprintf("ast_layout_skeleton_get_type_at_index() found non-AST-type at given index\n");
-        return NULL;
+        panic("ast_layout_skeleton_get_type_at_index() - Bone at index is not a type\n");
     }
 
     return &bone->type;
@@ -504,7 +494,7 @@ void ast_field_map_free(ast_field_map_t *field_map){
     free(field_map->arrows);
 }
 
-ast_field_map_t ast_field_map_clone(ast_field_map_t *field_map){
+ast_field_map_t ast_field_map_clone(const ast_field_map_t *field_map){
     ast_field_map_t clone;
     clone.arrows = malloc(sizeof(ast_field_arrow_t) * field_map->arrows_length);
     clone.arrows_length = field_map->arrows_length;

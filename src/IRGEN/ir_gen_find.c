@@ -202,7 +202,7 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
     //               FAILURE when a function wasn't found and
     //               ALT_FAILURE when something goes wrong
 
-    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&builder->object->ir_module.sf_cache, *arg_type);
+    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&builder->object->ir_module.sf_cache, arg_type);
 
     if(cache_entry->has_pass == TROOLEAN_TRUE){
         funcpair_t *out_result = &result->value;
@@ -227,7 +227,7 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_t
     //               FAILURE when a function wasn't found and
     //               ALT_FAILURE when something goes wrong
 
-    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&object->ir_module.sf_cache, *arg_type);
+    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&object->ir_module.sf_cache, arg_type);
 
     // If result is cached, use the cached version
     if(cache_entry->has_defer == TROOLEAN_TRUE){
@@ -285,7 +285,7 @@ errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_
     //               FAILURE when a function wasn't found and
     //               ALT_FAILURE when something goes wrong
 
-    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&object->ir_module.sf_cache, *arg_type);
+    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&object->ir_module.sf_cache, arg_type);
 
     // If result is cached, use the cached version
     if(cache_entry->has_assign == TROOLEAN_TRUE){
@@ -1082,6 +1082,8 @@ polymorphic_failure:
 errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog){
     if(polymorphic_type->elements_length > concrete_type->elements_length) return FAILURE;
 
+    // TODO: CLEANUP: Cleanup this dirty code
+
     for(length_t i = 0; i != concrete_type->elements_length; i++){
         length_t poly_elem_id = polymorphic_type->elements[i]->id;
 
@@ -1194,7 +1196,7 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
                     // therefore 'given' is similar to 'similar' and the prerequisite is met
                 } else if(concrete_type->elements[i]->id != AST_ELEM_GENERIC_BASE){
                     if(((ast_elem_generic_base_t*) concrete_type->elements[i])->name_is_polymorphic){
-                        internalerrorprintf("arg_type_polymorphable() encountered polymorphic generic struct name in middle of AST type\n");
+                        internalerrorprintf("arg_type_polymorphable() - Encountered polymorphic generic struct name in middle of AST type\n");
                         return ALT_FAILURE;
                     }
 
@@ -1202,7 +1204,7 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
                     ast_polymorphic_composite_t *given = ast_polymorphic_composite_find_exact(&object->ast, given_name);
 
                     if(given == NULL){
-                        internalerrorprintf("arg_type_polymorphable() failed to find polymophic struct '%s' which should exist\n", given_name);
+                        internalerrorprintf("arg_type_polymorphable() - Failed to find polymophic struct '%s', which should exist\n", given_name);
                         return FAILURE;
                     }
 
@@ -1224,7 +1226,7 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
             
             // Ensure there aren't other elements following the polymorphic element
             if(i + 1 != polymorphic_type->elements_length){
-                internalerrorprintf("arg_type_polymorphable encountered polymorphic element in middle of AST type\n");
+                internalerrorprintf("arg_type_polymorphable() - Encountered polymorphic element in middle of AST type\n");
                 return ALT_FAILURE;
             }
 
@@ -1259,7 +1261,7 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
         if(poly_elem_id == AST_ELEM_POLYMORPH){
             // Ensure there aren't other elements following the polymorphic element
             if(i + 1 != polymorphic_type->elements_length){
-                internalerrorprintf("arg_type_polymorphable encountered polymorphic element in middle of AST type\n");
+                internalerrorprintf("arg_type_polymorphable() - Encountered polymorphic element in middle of AST type\n");
                 return ALT_FAILURE;
             }
 
@@ -1359,7 +1361,7 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
                 ast_elem_generic_base_t *generic_base_b = (ast_elem_generic_base_t*) concrete_type->elements[i];
 
                 if(generic_base_a->name_is_polymorphic || generic_base_b->name_is_polymorphic){
-                    internalerrorprintf("polymorphic names for generic structs not implemented in arg_type_polymorphable\n");
+                    internalerrorprintf("arg_type_polymorphable() - Polymorphic names for generic structs is unimplemented\n");
                     return ALT_FAILURE;
                 }
 
@@ -1374,10 +1376,10 @@ errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_t
             break;
         case AST_ELEM_POLYMORPH:
         case AST_ELEM_POLYMORPH_PREREQ:
-            internalerrorprintf("arg_type_polymorphable encountered uncaught polymorphic type element\n");
+            internalerrorprintf("arg_type_polymorphable() - Encountered uncaught polymorphic type element\n");
             return ALT_FAILURE;
         default:
-            internalerrorprintf("arg_type_polymorphable encountered unknown element id 0x%8X\n", polymorphic_type->elements[i]->id);
+            internalerrorprintf("arg_type_polymorphable() - Encountered unrecognized element ID 0x%8X\n", polymorphic_type->elements[i]->id);
             return ALT_FAILURE;
         }
     }

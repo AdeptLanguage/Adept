@@ -14,14 +14,14 @@
 
 strong_cstr_t ir_value_str(ir_value_t *value){
     if(value == NULL){
-        internalerrorprintf("The value passed to ir_value_str is NULL, a crash will probably follow...\n");
+        panic("ir_value_str() - Received NULL pointer\n");
     }
 
     if(value->type == NULL){
-        internalerrorprintf("The value passed to ir_value_str has a type pointer to NULL, a crash will probably follow...\n");
+        panic("ir_value_str() - Received value that has a NULL type pointer\n");
     }
 
-    char *typename = ir_type_str(value->type);
+    strong_cstr_t typename = ir_type_str(value->type);
     length_t typename_length = strlen(typename);
     char *value_str;
 
@@ -253,9 +253,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         }
         break;
     default:
-        internalerrorprintf("Unexpected value type of value in ir_value_str function\n");
-        free(typename);
-        return NULL;
+        panic("ir_value_str() - Unrecognized value type\n");
     }
 
     free(typename);
