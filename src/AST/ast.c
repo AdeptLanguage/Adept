@@ -854,7 +854,7 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->export_as = options->export_name;
 
     #if ADEPT_INSIGHT_BUILD
-    func->end_source = source;
+    func->end_source = NULL_SOURCE;
     #endif
 
     if(options->is_entry)                 func->traits |= AST_FUNC_MAIN;

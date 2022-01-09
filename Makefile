@@ -120,7 +120,7 @@ LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__ST
 # -lgtest_main -lgtest -lLLVMTestingSupport
 
 # -static-libgcc -static-libstdc++ -static
-CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=gnu11 -Wall -O0 -DNDEBUG # -fmax-errors=5 -Werror
+CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=c11 -pedantic-errors -O0 -DNDEBUG # -Werror -ferror-limit=1 # -fmax-errors=1 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 
 ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
@@ -139,10 +139,14 @@ ifeq ($(DEBUG_LEAK_SANITIZE),true)
 	LDFLAGS+= -fsanitize=leak
 endif
 
-ESSENTIAL_SOURCES= src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c \
-	src/AST/TYPE/ast_type_clone.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_str.c \
-	src/AST/UTIL/string_builder_extensions.c src/AST/ast_constant.c \
-	src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_type.c src/AST/ast.c \
+ESSENTIAL_SOURCES= \
+	src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c \
+	src/AST/TYPE/ast_type_clone.c src/AST/TYPE/ast_type_free.c \
+	src/AST/TYPE/ast_type_hash.c src/AST/TYPE/ast_type_helpers.c src/AST/TYPE/ast_type_identical.c \
+	src/AST/TYPE/ast_type_is.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_str.c \
+	src/AST/UTIL/string_builder_extensions.c \
+	src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c \
+	src/AST/ast_poly_catalog.c src/AST/ast.c \
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c \
 	src/BRIDGE/bridge.c src/BRIDGE/funcpair.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
 	src/DRVR/config.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c \
@@ -155,7 +159,8 @@ ESSENTIAL_SOURCES= src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c \
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c \
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c \
 	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c \
-	src/UTIL/memory.c src/UTIL/search.c src/UTIL/string.c src/UTIL/stash.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
+	src/UTIL/list.c \
+	src/UTIL/memory.c src/UTIL/string.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
 SOURCES= $(ESSENTIAL_SOURCES) src/DRVR/main.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
@@ -176,6 +181,8 @@ insight: $(SOURCES)
 	@mkdir -p $(INSIGHT_OUT_DIR)
 	@mkdir -p $(INSIGHT_OUT_DIR)/include
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/AST
+	@mkdir -p $(INSIGHT_OUT_DIR)/include/AST/EXPR
+	@mkdir -p $(INSIGHT_OUT_DIR)/include/AST/TYPE
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/AST/UTIL
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/BRIDGE
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/DRVR
@@ -185,6 +192,8 @@ insight: $(SOURCES)
 	@mkdir -p $(INSIGHT_OUT_DIR)/include/UTIL
 	@mkdir -p $(INSIGHT_OUT_DIR)/src
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/AST
+	@mkdir -p $(INSIGHT_OUT_DIR)/src/AST/EXPR
+	@mkdir -p $(INSIGHT_OUT_DIR)/src/AST/TYPE
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/AST/UTIL
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/BRIDGE
 	@mkdir -p $(INSIGHT_OUT_DIR)/src/DRVR
@@ -195,12 +204,15 @@ insight: $(SOURCES)
 	
 #   Insight - Required Header Files
 	@cp include/AST/EXPR/ast_expr_ids.h $(INSIGHT_OUT_DIR)/include/AST/EXPR/ast_expr_ids.h
+	@cp include/AST/TYPE/ast_type_hash.h $(INSIGHT_OUT_DIR)/include/AST/TYPE/ast_type_hash.h
+	@cp include/AST/TYPE/ast_type_identical.h $(INSIGHT_OUT_DIR)/include/AST/TYPE/ast_type_identical.h
 	@cp include/AST/TYPE/ast_type_make.h $(INSIGHT_OUT_DIR)/include/AST/TYPE/ast_type_make.h
 	@cp include/AST/UTIL/string_builder_extensions.h $(INSIGHT_OUT_DIR)/include/AST/UTIL/string_builder_extensions.h
 	@cp include/AST/ast_constant.h $(INSIGHT_OUT_DIR)/include/AST/ast_constant.h
 	@cp include/AST/ast_expr.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr.h
 	@cp include/AST/ast_expr_lean.h $(INSIGHT_OUT_DIR)/include/AST/ast_expr_lean.h
 	@cp include/AST/ast_layout.h $(INSIGHT_OUT_DIR)/include/AST/ast_layout.h
+	@cp include/AST/ast_poly_catalog.h $(INSIGHT_OUT_DIR)/include/AST/ast_poly_catalog.h
 	@cp include/AST/ast_type.h $(INSIGHT_OUT_DIR)/include/AST/ast_type.h
 	@cp include/AST/ast_type_lean.h $(INSIGHT_OUT_DIR)/include/AST/ast_type_lean.h
 	@cp include/AST/ast.h $(INSIGHT_OUT_DIR)/include/AST/ast.h
@@ -242,6 +254,7 @@ insight: $(SOURCES)
 	@cp include/UTIL/jsmn_helper.h $(INSIGHT_OUT_DIR)/include/UTIL/jsmn_helper.h
 	@cp include/UTIL/ground.h $(INSIGHT_OUT_DIR)/include/UTIL/ground.h
 	@cp include/UTIL/levenshtein.h $(INSIGHT_OUT_DIR)/include/UTIL/levenshtein.h
+	@cp include/UTIL/list.h $(INSIGHT_OUT_DIR)/include/UTIL/list.h
 	@cp include/UTIL/memory.h $(INSIGHT_OUT_DIR)/include/UTIL/memory.h
 	@cp include/UTIL/search.h $(INSIGHT_OUT_DIR)/include/UTIL/search.h
 	@cp include/UTIL/string.h $(INSIGHT_OUT_DIR)/include/UTIL/string.h
@@ -254,13 +267,18 @@ insight: $(SOURCES)
 	@cp src/AST/EXPR/ast_expr_free.c $(INSIGHT_OUT_DIR)/src/AST/EXPR/ast_expr_free.c
 	@cp src/AST/EXPR/ast_expr_str.c $(INSIGHT_OUT_DIR)/src/AST/EXPR/ast_expr_str.c
 	@cp src/AST/TYPE/ast_type_clone.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_clone.c
+	@cp src/AST/TYPE/ast_type_free.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_free.c
+	@cp src/AST/TYPE/ast_type_hash.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_hash.c
+	@cp src/AST/TYPE/ast_type_helpers.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_helpers.c
+	@cp src/AST/TYPE/ast_type_identical.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_identical.c
+	@cp src/AST/TYPE/ast_type_is.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_is.c
 	@cp src/AST/TYPE/ast_type_make.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_make.c
 	@cp src/AST/TYPE/ast_type_str.c $(INSIGHT_OUT_DIR)/src/AST/TYPE/ast_type_str.c
 	@cp src/AST/UTIL/string_builder_extensions.c $(INSIGHT_OUT_DIR)/src/AST/UTIL/string_builder_extensions.c
 	@cp src/AST/ast_constant.c $(INSIGHT_OUT_DIR)/src/AST/ast_constant.c
 	@cp src/AST/ast_expr.c $(INSIGHT_OUT_DIR)/src/AST/ast_expr.c
 	@cp src/AST/ast_layout.c $(INSIGHT_OUT_DIR)/src/AST/ast_layout.c
-	@cp src/AST/ast_type.c $(INSIGHT_OUT_DIR)/src/AST/ast_type.c
+	@cp src/AST/ast_poly_catalog.c $(INSIGHT_OUT_DIR)/src/AST/ast_poly_catalog.c
 	@cp src/AST/ast.c $(INSIGHT_OUT_DIR)/src/AST/ast.c
 	@cp src/AST/meta_directives.c $(INSIGHT_OUT_DIR)/src/AST/meta_directives.c
 	@cp src/BRIDGE/any.c $(INSIGHT_OUT_DIR)/src/BRIDGE/any.c
@@ -296,6 +314,7 @@ insight: $(SOURCES)
 	@cp src/UTIL/hash.c $(INSIGHT_OUT_DIR)/src/UTIL/hash.c
 	@cp src/UTIL/jsmn_helper.c $(INSIGHT_OUT_DIR)/src/UTIL/jsmn_helper.c
 	@cp src/UTIL/levenshtein.c $(INSIGHT_OUT_DIR)/src/UTIL/levenshtein.c
+	@cp src/UTIL/list.c $(INSIGHT_OUT_DIR)/src/UTIL/list.c
 	@cp src/UTIL/search.c $(INSIGHT_OUT_DIR)/src/UTIL/search.c
 	@cp src/UTIL/string.c $(INSIGHT_OUT_DIR)/src/UTIL/string.c
 	@cp src/UTIL/string_builder.c $(INSIGHT_OUT_DIR)/src/UTIL/string_builder.c

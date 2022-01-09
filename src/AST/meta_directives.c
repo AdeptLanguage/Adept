@@ -14,6 +14,7 @@
 #include "UTIL/search.h"
 #include "UTIL/string.h"
 #include "UTIL/util.h"
+#include "UTIL/datatypes.h"
 
 strong_cstr_t meta_expr_str(meta_expr_t *meta){
     switch(meta->id){
@@ -27,16 +28,10 @@ strong_cstr_t meta_expr_str(meta_expr_t *meta){
         return strclone("false");
     case META_EXPR_STR:
         return strclone(((meta_expr_str_t*) meta)->value);
-    case META_EXPR_INT: {
-            strong_cstr_t representation = malloc(21);
-            sprintf(representation, "%ld", (long) ((meta_expr_int_t*) meta)->value);
-            return representation;
-        }
-    case META_EXPR_FLOAT: {
-            strong_cstr_t representation = malloc(21);
-            sprintf(representation, "%06.6f", ((meta_expr_float_t*) meta)->value);
-            return representation;
-        }
+    case META_EXPR_INT:
+        return int64_to_string(((meta_expr_int_t*) meta)->value, "");
+    case META_EXPR_FLOAT:
+        return float64_to_string(((meta_expr_float_t*) meta)->value, "");
     default:
         panic("meta_expr_str() - Cannot get string value for non-collapsed meta expression\n");
     }
@@ -368,7 +363,7 @@ errorcode_t meta_collapse(compiler_t *compiler, object_t *object, meta_definitio
                 }
 
                 char mode = comparison_modes[(int) a_mode][(int) b_mode];
-                meta_expr_int_t *result = malloc(sizeof(meta_expr_t));
+                meta_expr_int_t *result = malloc(sizeof *result);
 
                 switch(mode){
                 case META_EXPR_MATH_MODE_INT: {
@@ -572,17 +567,11 @@ errorcode_t meta_expr_into_string(compiler_t *compiler, object_t *object, meta_d
     case META_EXPR_FALSE:
         *out = strclone("false");
         break;
-    case META_EXPR_INT: {
-            strong_cstr_t representation = malloc(21);
-            sprintf(representation, "%ld", (long) ((meta_expr_int_t*) *expr)->value);
-            *out = representation;
-        }
+    case META_EXPR_INT:
+        *out = int64_to_string(((meta_expr_int_t*) *expr)->value, "");
         break;
-    case META_EXPR_FLOAT: {
-            strong_cstr_t representation = malloc(21);
-            sprintf(representation, "%06.6f", ((meta_expr_float_t*) *expr)->value);
-            *out = representation;
-        }
+    case META_EXPR_FLOAT:
+        *out = float64_to_string(((meta_expr_float_t*) *expr)->value, "");
         break;
     case META_EXPR_STR:
         *out = strclone(((meta_expr_str_t*) *expr)->value);

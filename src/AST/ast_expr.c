@@ -804,11 +804,6 @@ void ast_expr_list_free(ast_expr_list_t *list){
     ast_exprs_free_fully(list->statements, list->length);
 }
 
-void ast_expr_list_append(ast_expr_list_t *list, ast_expr_t *value){
-    expand((void**) &list->statements, sizeof(ast_expr_t*), list->length, &list->capacity, 1, 4);
-    list->statements[list->length++] = value;
-}
-
 ast_expr_list_t ast_expr_list_clone(ast_expr_list_t *list){
     ast_expr_list_t result;
     result.statements = malloc(sizeof(ast_expr_t*) * list->capacity);

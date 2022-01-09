@@ -1,11 +1,6 @@
 
-ifeq ($(OS), Windows_NT)
-	CC=x86_64-w64-mingw32-gcc
-	AR=x86_64-w64-mingw32-gcc-ar
-else
-	CC=gcc
-	AR=ar
-endif
+CC=emcc
+AR=emar
 
 SRCDIR=src
 OBJDIR=obj
@@ -26,6 +21,8 @@ ifeq ($(OS), Windows_NT)
 directories:
 	@if not exist obj mkdir obj
 	@if not exist obj\AST mkdir obj\AST
+	@if not exist obj\AST\EXPR mkdir obj\AST\EXPR
+	@if not exist obj\AST\TYPE mkdir obj\AST\TYPE
 	@if not exist obj\AST\UTIL mkdir obj\AST\UTIL
 	@if not exist obj\BRIDGE mkdir obj\BRIDGE
 	@if not exist obj\DRVR mkdir obj\DRVR
@@ -37,6 +34,8 @@ else
 directories:
 	@mkdir -p obj
 	@mkdir -p obj/AST
+	@mkdir -p obj/AST/EXPR
+	@mkdir -p obj/AST/TYPE
 	@mkdir -p obj/AST/UTIL
 	@mkdir -p obj/BRIDGE
 	@mkdir -p obj/DRVR
@@ -50,6 +49,8 @@ clean:
 ifeq ($(OS), Windows_NT)
 	if exist $(INSIGHT) del $(INSIGHT) /Q
 	del obj\AST\*.* /Q
+	del obj\AST\EXPR\*.* /Q
+	del obj\AST\TYPE\*.* /Q
 	del obj\AST\UTIL\*.* /Q
 	del obj\BRIDGE\*.* /Q
 	del obj\DRVR\*.* /Q
@@ -60,6 +61,8 @@ ifeq ($(OS), Windows_NT)
 else
 	rm -f 2> /dev/null $(INSIGHT)
 	rm -f 2> /dev/null obj/AST/*.*
+	rm -f 2> /dev/null obj/AST/EXPR/*.*
+	rm -f 2> /dev/null obj/AST/TYPE/*.*
 	rm -f 2> /dev/null obj/AST/UTIL/*.*
 	rm -f 2> /dev/null obj/BRIDGE/*.*
 	rm -f 2> /dev/null obj/DRVR/*.*

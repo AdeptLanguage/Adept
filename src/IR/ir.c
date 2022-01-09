@@ -68,16 +68,20 @@ strong_cstr_t ir_value_str(ir_value_t *value){
             sprintf(value_str, "%s %"PRIu64, typename, *((adept_ulong*) value->extra));
             free(typename);
             return value_str;
-        case TYPE_KIND_FLOAT:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %06.6f", typename, (double) *((adept_float*) value->extra));
-            free(typename);
-            return value_str;
-        case TYPE_KIND_DOUBLE:
-            value_str = malloc(typename_length + 21);
-            sprintf(value_str, "%s %06.6f", typename, (double) *((adept_double*) value->extra));
-            free(typename);
-            return value_str;
+        case TYPE_KIND_FLOAT: {
+                strong_cstr_t f_str = float64_to_string((double) *((adept_float*) value->extra), "");
+                value_str = mallocandsprintf("%s %s", typename, f_str);
+                free(f_str);
+                free(typename);
+                return value_str;
+            }
+        case TYPE_KIND_DOUBLE: {
+                strong_cstr_t f_str = float64_to_string(*((adept_double*) value->extra), "");
+                value_str = mallocandsprintf("%s %s", typename, f_str);
+                free(f_str);
+                free(typename);
+                return value_str;
+            }
         case TYPE_KIND_BOOLEAN:
             value_str = malloc(typename_length + 7);
             sprintf(value_str, "%s %s", typename, bool_to_string(*typecast(adept_bool*, value->extra)));
@@ -1119,11 +1123,6 @@ int ir_generic_base_method_cmp(const void *a, const void *b){
     diff = strcmp(((ir_generic_base_method_t*) a)->name, ((ir_generic_base_method_t*) b)->name);
     if(diff != 0) return diff;
     return (int) ((ir_generic_base_method_t*) a)->ast_func_id - (int) ((ir_generic_base_method_t*) b)->ast_func_id;
-}
-
-void ir_job_list_append(ir_job_list_t *job_list, ir_func_mapping_t *mapping){
-    expand((void**) &job_list->jobs, sizeof(ir_func_mapping_t), job_list->length, &job_list->capacity, 1, 4);
-    job_list->jobs[job_list->length++] = *mapping;
 }
 
 void ir_job_list_free(ir_job_list_t *job_list){

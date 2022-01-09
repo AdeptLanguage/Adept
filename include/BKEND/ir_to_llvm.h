@@ -30,11 +30,7 @@ typedef struct { LLVMValueRef *values; LLVMTypeRef *types; length_t length; } va
 // An entry in the string table
 typedef struct { weak_cstr_t data; length_t length; LLVMValueRef global_data; } llvm_string_table_entry_t;
 
-typedef struct {
-    llvm_string_table_entry_t *entries;
-    length_t length;
-    length_t capacity;
-} llvm_string_table_t;
+typedef listof(llvm_string_table_entry_t, entries) llvm_string_table_t;
 
 typedef struct {
     LLVMValueRef phi;
@@ -44,11 +40,7 @@ typedef struct {
     length_t basicblock_b;
 } llvm_phi2_relocation_t;
 
-typedef struct {
-    llvm_phi2_relocation_t *unrelocated;
-    length_t length;
-    length_t capacity;
-} llvm_phi2_relocation_list_t;
+typedef listof(llvm_phi2_relocation_t, unrelocated) llvm_phi2_relocation_list_t;
 
 typedef struct {
     LLVMValueRef global;

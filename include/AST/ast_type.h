@@ -63,7 +63,7 @@ typedef struct {
 typedef ast_elem_t ast_elem_pointer_t;
 
 // ---------------- ast_elem_array_t ----------------
-// Type element for a array
+// Type element for an array
 typedef ast_elem_t ast_elem_array_t;
 
 // ---------------- ast_elem_fixed_array_t ----------------
@@ -76,11 +76,11 @@ typedef struct {
 
 // ---------------- ast_elem_generic_int_t ----------------
 // Type element for a generic integer type
-typedef struct ast_elem_t ast_elem_generic_int_t;
+typedef ast_elem_t ast_elem_generic_int_t;
 
 // ---------------- ast_elem_generic_float_t ----------------
 // Type element for a generic floating point type
-typedef struct ast_elem_t ast_elem_generic_float_t;
+typedef ast_elem_t ast_elem_generic_float_t;
 
 // ---------------- ast_elem_var_fixed_array_t ----------------
 // Type element for a variable fixed array
@@ -163,31 +163,6 @@ typedef struct {
     char flow; // in | out | inout
 } ast_unnamed_arg_t;
 
-// ---------------- ast_poly_catalog_type_t ----------------
-// Data structure for a single polymorphic type binding
-typedef struct {
-    weak_cstr_t name;
-    ast_type_t binding;
-} ast_poly_catalog_type_t;
-
-// ---------------- ast_poly_catalog_count_t ----------------
-// Data structure for a single polymorphic count binding
-typedef struct {
-    weak_cstr_t name;
-    length_t binding;
-} ast_poly_catalog_count_t;
-
-// ---------------- ast_poly_catalog_t ----------------
-// Data structure for polymorphic type bindings
-typedef struct {
-    ast_poly_catalog_type_t *types;
-    length_t types_length;
-    length_t types_capacity;
-    ast_poly_catalog_count_t *counts;
-    length_t counts_length;
-    length_t counts_capacity;
-} ast_poly_catalog_t;
-
 // ---------------- ast_type_clone ----------------
 // Clones an AST type, producing a duplicate
 ast_type_t ast_type_clone(const ast_type_t *type);
@@ -219,14 +194,6 @@ void ast_type_prepend_ptr(ast_type_t *type);
 // ---------------- ast_type_str ----------------
 // Generates a c-string given an AST type
 strong_cstr_t ast_type_str(const ast_type_t *type);
-
-// ---------------- ast_types_identical ----------------
-// Returns whether or not two AST types are identical
-bool ast_types_identical(const ast_type_t *a, const ast_type_t *b);
-
-// ---------------- ast_type_lists_identical ----------------
-// Returns whether or not two lists of AST types are identical
-bool ast_type_lists_identical(const ast_type_t *a, const ast_type_t *b, length_t length);
 
 // ---------------- ast_type_is_void ----------------
 // Returns whether an AST type is "void"
@@ -345,40 +312,6 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length);
 // ---------------- ast_elem_free ----------------
 // Frees an individual AST type element
 void ast_elem_free(ast_elem_t *elem);
-
-// ---------------- ast_poly_catalog_init ----------------
-// Initializes an AST type var catalog
-void ast_poly_catalog_init(ast_poly_catalog_t *catalog);
-
-// ---------------- ast_poly_catalog_free ----------------
-// Frees an AST type var catalog
-void ast_poly_catalog_free(ast_poly_catalog_t *catalog);
-
-// ---------------- ast_poly_catalog_add_type ----------------
-// Adds an AST type variable binding to an AST type var catalog
-// NOTE: 'binding' doesn't have to be preserved after this call
-void ast_poly_catalog_add_type(ast_poly_catalog_t *catalog, weak_cstr_t name, ast_type_t *binding);
-
-// ---------------- ast_poly_catalog_add_count ----------------
-// Adds an AST count variable binding to an AST type var catalog
-// NOTE: 'binding' doesn't have to be preserved after this call
-void ast_poly_catalog_add_count(ast_poly_catalog_t *catalog, weak_cstr_t name, length_t binding);
-
-// ---------------- ast_poly_catalog_find_type ----------------
-// Finds an AST type variable binding within an AST type var catalog
-ast_poly_catalog_type_t *ast_poly_catalog_find_type(ast_poly_catalog_t *catalog, weak_cstr_t name);
-
-// ---------------- ast_poly_catalog_find_count ----------------
-// Finds an AST count variable binding within an AST type var catalog
-ast_poly_catalog_count_t *ast_poly_catalog_find_count(ast_poly_catalog_t *catalog, weak_cstr_t name);
-
-// ---------------- ast_type_hash ----------------
-// Hashes an AST type
-hash_t ast_type_hash(ast_type_t *type);
-
-// ---------------- ast_elem_hash ----------------
-// Hashes an AST type element
-hash_t ast_elem_hash(ast_elem_t *element);
 
 #ifdef __cplusplus
 }

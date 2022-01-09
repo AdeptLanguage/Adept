@@ -3,9 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
+#include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/funcpair.h"
 #include "DRVR/compiler.h"

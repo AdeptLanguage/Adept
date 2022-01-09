@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #include "UTIL/ground.h"
+#include "UTIL/list.h"
 
 #define DERIVE_AST_EXPR struct { \
     unsigned int id;  /* What type of expression */ \
@@ -27,11 +28,7 @@ typedef struct {
 
 // ---------------- ast_expr_list_t ----------------
 // List structure for holding statements/expressions
-typedef struct {
-    ast_expr_t **statements;
-    length_t length;
-    length_t capacity;
-} ast_expr_list_t;
+typedef listof(ast_expr_t*, statements) ast_expr_list_t;
 
 #ifdef __cplusplus
 }

@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_identical.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "AST/TYPE/ast_type_make.h"
 #include "BRIDGE/bridge.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"

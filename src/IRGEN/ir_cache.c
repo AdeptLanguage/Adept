@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_hash.h"
+#include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast_type.h"
 #include "IRGEN/ir_cache.h"
 #include "UTIL/ground.h"

@@ -28,11 +28,7 @@ typedef struct {
 
 // ---------------- type_table_t ----------------
 // A bridging type table
-typedef struct {
-    type_table_entry_t *entries;
-    length_t length;
-    length_t capacity;
-} type_table_t;
+typedef listof(type_table_entry_t, entries) type_table_t;
 
 // ---------------- type_table_init ----------------
 // Initializes a blank bridging type table

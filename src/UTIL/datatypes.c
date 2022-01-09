@@ -63,9 +63,10 @@ strong_cstr_t float64_to_string(float64 value, weak_cstr_t suffix){
     // -----------------------------------------------------------
 
     // TODO: Do a real implementation
-    char *memory = (char*) malloc(325 + strlen(suffix));
-    sprintf(memory, "%f%s", value, suffix);
-    return memory;
+    size_t buf_size = 325 + strlen(suffix);
+    char *buf = (char*) malloc(buf_size);
+    snprintf(buf, buf_size, "%f%s", value, suffix);
+    return buf;
 }
 
 int64 string_to_int64(weak_cstr_t string, int base){

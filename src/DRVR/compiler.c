@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_identical.h"
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"

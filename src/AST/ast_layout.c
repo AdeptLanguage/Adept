@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
 #include "UTIL/color.h"

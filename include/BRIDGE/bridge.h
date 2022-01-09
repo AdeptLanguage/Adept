@@ -13,6 +13,7 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
+#include "UTIL/list.h"
 #include "UTIL/trait.h"
 #include "AST/ast_type_lean.h"
 
@@ -42,12 +43,8 @@ typedef struct {
 
 // ---------------- bridge_var_list_t ----------------
 // A list for tracking variables within a scope
-typedef struct {
-    // Actual names, ast_types and ir_types aren't owned
-    bridge_var_t *variables;
-    length_t length;
-    length_t capacity;
-} bridge_var_list_t;
+// Actual names, ast_types and ir_types aren't owned
+typedef listof(bridge_var_t, variables) bridge_var_list_t;
 
 // ---------------- bridge_scope_t ----------------
 // A variable scope that contains a list of variables
@@ -89,7 +86,7 @@ bridge_var_t *bridge_scope_find_var_by_id(bridge_scope_t *scope, length_t id);
 // ---------------- bridge_scope_var_already_in_list ----------------
 // Checks to see if a variable with that name was already declared
 // within the variable list of the given scope.
-// NOTE: THIS DOESN'T CHCEK PARENT SCOPES, ONLY THE SCOPE GIVEN IS CHECKED
+// NOTE: THIS DOESN'T CHECK PARENT SCOPES, ONLY THE SCOPE GIVEN IS CHECKED
 bool bridge_scope_var_already_in_list(bridge_scope_t *scope, const char *name);
 
 // ---------------- bridge_scope_var_nearest ----------------

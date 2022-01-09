@@ -19,6 +19,7 @@
 #include "IRGEN/ir_cache.h"
 #include "UTIL/datatypes.h"
 #include "UTIL/ground.h"
+#include "UTIL/list.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
@@ -480,11 +481,7 @@ typedef struct {
 
 // ---------------- ir_job_list_t ----------------
 // List of jobs required during IR generation
-typedef struct {
-    ir_func_mapping_t *jobs;
-    length_t length;
-    length_t capacity;
-} ir_job_list_t;
+typedef listof(ir_func_mapping_t, jobs) ir_job_list_t;
 
 // ---------------- ir_global_t ----------------
 // An intermediate representation global variable
@@ -705,7 +702,7 @@ int ir_generic_base_method_cmp(const void *a, const void *b);
 
 // ---------------- ir_job_list_append ----------------
 // Appends a mapping to an IR job list
-void ir_job_list_append(ir_job_list_t *job_list, ir_func_mapping_t *mapping);
+#define ir_job_list_append(LIST, VALUE) list_append(LIST, VALUE, ir_func_mapping_t)
 
 // ---------------- ir_job_list_free ----------------
 // Frees an IR job list

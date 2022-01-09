@@ -20,6 +20,7 @@
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "UTIL/ground.h"
+#include "UTIL/list.h"
 
 // ---------------- infer_var_t ----------------
 // Variable mapping used for inference stage
@@ -33,11 +34,7 @@ typedef struct {
 
 // ---------------- infer_var_list_t ----------------
 // Variable list used for inference stage
-typedef struct {
-    infer_var_t *variables;
-    length_t length;
-    length_t capacity;
-} infer_var_list_t;
+typedef listof(infer_var_t, variables) infer_var_list_t;
 
 // ---------------- infer_var_scope_t ----------------
 // Variable scope used for inference stage

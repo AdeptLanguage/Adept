@@ -413,11 +413,7 @@ typedef struct {
     source_t source;
 } ast_case_t;
 
-typedef struct {
-    ast_case_t *cases;
-    length_t length;
-    length_t capacity;
-} ast_case_list_t;
+typedef listof(ast_case_t, cases) ast_case_list_t;
 
 // ---------------- ast_expr_switch_t ----------------
 // Expression for switching based on a value
@@ -596,7 +592,7 @@ void ast_expr_list_free(ast_expr_list_t *list);
 
 // ---------------- ast_expr_list_append ----------------
 // Appends an expression to an ast_expr_list_t
-void ast_expr_list_append(ast_expr_list_t *list, ast_expr_t *value);
+#define ast_expr_list_append(LIST, VALUE) list_append(LIST, VALUE, ast_expr_t*)
 
 // ---------------- ast_expr_list_clone ----------------
 // Deep-clones an AST expression list

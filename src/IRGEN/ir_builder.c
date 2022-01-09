@@ -5,11 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_identical.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
+#include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
-#include "AST/TYPE/ast_type_make.h"
 #include "BRIDGE/bridge.h"
 #include "BRIDGE/funcpair.h"
 #include "BRIDGE/type_table.h"
@@ -1806,7 +1808,7 @@ errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object,
         goto failure;
     }
 
-    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
+    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
 
     if(out_mapping) *out_mapping = newest_mapping;
     return SUCCESS;
@@ -1948,7 +1950,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
         return FAILURE;
     }
 
-    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
+    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
 
     // Cache result
     entry->has_defer = TROOLEAN_TRUE;
@@ -2047,7 +2049,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         return FAILURE;
     }
 
-    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
+    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
 
     optional_funcpair_set(result, true, ast_func_id, newest_mapping.ir_func_id, object);
     return SUCCESS;
@@ -2214,7 +2216,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         return FAILURE;
     }
 
-    ir_job_list_append(&object->ir_module.job_list, &newest_mapping);
+    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
 
     // Cache result
     entry->has_assign = TROOLEAN_TRUE;

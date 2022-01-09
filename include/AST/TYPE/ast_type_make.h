@@ -4,7 +4,7 @@
 
 /*
     ============================= ast_type_make.h ==============================
-    Defintiions for 'ast_type_make_*' and 'ast_elem_*_make' functions
+    Definitions for 'ast_type_make_*' and 'ast_elem_*_make' functions
     ----------------------------------------------------------------------------
 */
 
@@ -20,39 +20,37 @@ extern "C" {
 // =====================================================================
 
 // ---------------- ast_type_make_base ----------------
-// Takes ownership of 'base' and creates a type from it
-void ast_type_make_base(ast_type_t *type, strong_cstr_t base);
+// Makes a simple base type (e.g. void, int, ubyte, GameData, ptr)
+void ast_type_make_base(ast_type_t *out_type, strong_cstr_t base);
 
 // ---------------- ast_type_make_base_ptr ----------------
-// Takes ownership of 'base' and creates a type from it
-// that's preceded by a pointer element
-void ast_type_make_base_ptr(ast_type_t *type, strong_cstr_t base);
+// Makes a pointer-to-simple-base type (e.g. *ubyte, *int, *GameData)
+void ast_type_make_base_ptr(ast_type_t *out_type, strong_cstr_t base);
 
 // ---------------- ast_type_make_base_ptr_ptr ----------------
-// Takes ownership of 'base' and creates a type from it
-// that's preceded by two pointer elements
-void ast_type_make_base_ptr_ptr(ast_type_t *type, strong_cstr_t base);
+// Makes a pointer-to-pointer-to-simple-base type (e.g. **ubyte, **int)
+void ast_type_make_base_ptr_ptr(ast_type_t *out_type, strong_cstr_t base);
 
 // ---------------- ast_type_make_base_with_polymorphs ----------------
-// Takes ownership of 'base'
-// Creates copies of strings that are inside 'generics'
-void ast_type_make_base_with_polymorphs(ast_type_t *type, strong_cstr_t base, weak_cstr_t *generics, length_t length);
+// Makes base type with polymorphic parameter subtypes (e.g. <$T> List, <$K, $V> Pair)
+// NOTE: Creates copies of strings that are inside 'generics'
+void ast_type_make_base_with_polymorphs(ast_type_t *out_type, strong_cstr_t base, weak_cstr_t *generics, length_t length);
 
 // ---------------- ast_type_make_polymorph ----------------
-// Takes ownership of 'name' and creates a polymorphic type variable
-void ast_type_make_polymorph(ast_type_t *type, strong_cstr_t name, bool allow_auto_conversion);
+// Makes a polymorphic parameter type (e.g. $T, $K)
+void ast_type_make_polymorph(ast_type_t *out_type, strong_cstr_t name, bool allow_auto_conversion);
 
 // ---------------- ast_type_make_func_ptr ----------------
-// Makes a function pointer AST type
-void ast_type_make_func_ptr(ast_type_t *type, source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership);
+// Makes a function pointer type (e.g. func() void, func(ptr, ptr) int)
+void ast_type_make_func_ptr(ast_type_t *out_type, source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership);
 
 // ---------------- ast_type_make_generic_int ----------------
-// Creates a generic integer type
-void ast_type_make_generic_int(ast_type_t *type);
+// Creates a generic integer type (no syntactic equivalent - represents the type of an unsuffixed integer)
+void ast_type_make_generic_int(ast_type_t *out_type);
 
 // ---------------- ast_type_make_generic_float ----------------
-// Creates a generic floating point type
-void ast_type_make_generic_float(ast_type_t *type);
+// Creates a generic floating point type (no syntactic equivalent - represents the type of an unsuffixed float)
+void ast_type_make_generic_float(ast_type_t *out_type);
 
 // =====================================================================
 // =                          ast_elem_*_make                          =
@@ -84,7 +82,7 @@ ast_elem_t *ast_elem_base_make(strong_cstr_t base, source_t source);
 ast_elem_t *ast_elem_generic_base_make(strong_cstr_t base, source_t source, ast_type_t *generics, length_t generics_length);
 
 // ---------------- ast_elem_polymorph_make ----------------
-// Makes a polymorph element (e.g. $t, $k, $v, $initialierlist)
+// Makes a polymorph element (e.g. $T, $K, $V, $InitialierList)
 ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool allow_auto_conversion);
 
 // ---------------- ast_elem_func_make ----------------
