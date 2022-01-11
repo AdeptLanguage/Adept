@@ -16,9 +16,9 @@ strong_cstr_t strclone(const char *src);
 // Clones a strong string list
 strong_cstr_t *strsclone(strong_cstr_t *list, length_t length);
 
-// ---------------- free_string_list ----------------
+// ---------------- free_strings ----------------
 // Frees every string in a list, and then the list
-void free_string_list(strong_cstr_t *list, length_t length);
+void free_strings(strong_cstr_t *list, length_t length);
 
 // ---------------- strong_cstr_empty_if_null ----------------
 // Will heap-allocate an empty string in place of 'string'

@@ -28,7 +28,7 @@ set(app_source_files
 	src/AST/UTIL/string_builder_extensions.c
 	src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c
 	src/AST/ast_poly_catalog.c src/AST/ast.c
-	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BRIDGE/any.c
+	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BKEND/ir_to_llvm_impl.c src/BRIDGE/any.c
 	src/BRIDGE/bridge.c src/BRIDGE/funcpair.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c
 	src/DRVR/config.c src/DRVR/main.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c
 	src/IR/ir_pool.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir.c src/IR/ir_lowering.c
@@ -40,8 +40,8 @@ set(app_source_files
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c
 	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c
-	src/UTIL/list.c
-	src/UTIL/memory.c src/UTIL/string.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c src/UTIL/tmpbuf.c src/UTIL/util.c
+	src/UTIL/list.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c
+	src/UTIL/string_list.c src/UTIL/string.c src/UTIL/tmpbuf.c src/UTIL/util.c
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

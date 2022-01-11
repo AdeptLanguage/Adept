@@ -53,6 +53,14 @@ void string_builder_append_char(string_builder_t *builder, char character);
 // Appends an int to the string being built by a string builder
 void string_builder_append_int(string_builder_t *builder, int integer);
 
+// ---------------- string_builder_append_quoted ----------------
+// Surrounds a string with double quotes and appends it to
+// the string being built by a string builder.
+// NOTE: Does NOT escape 'portion'
+void string_builder_append_quoted(string_builder_t *builder, const char *portion);
+void string_builder_append2_quoted(string_builder_t *builder, const char *part_a, const char *part_b);
+void string_builder_append3_quoted(string_builder_t *builder, const char *part_a, const char *part_b, const char *part_c);
+
 #ifdef __cplusplus
 }
 #endif

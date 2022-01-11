@@ -54,13 +54,8 @@ bool ast_type_is_pointer_to(const ast_type_t *type, const ast_type_t *to){
     if(type->elements_length < 2 || type->elements_length != to->elements_length + 1) return false;
     if(type->elements[0]->id != AST_ELEM_POINTER) return false;
 
-    ast_type_t stripped = *type;
-    ast_elem_t *stripped_elements[to->elements_length];
-    memcpy(stripped_elements, &stripped.elements[1], sizeof(ast_elem_t*) * to->elements_length);
-    stripped.elements = stripped_elements;
-    stripped.elements_length--;
-    
-    return ast_types_identical(&stripped, to);
+    ast_type_t dereferenced_view = ast_type_dereferenced_view(type);
+    return ast_types_identical(&dereferenced_view, to);
 }
 
 bool ast_type_is_pointer_to_base(const ast_type_t *type){

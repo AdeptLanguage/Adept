@@ -838,9 +838,7 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->rtti_relocations_capacity = 0;
     ir_module->init_builder = NULL;
     ir_module->deinit_builder = NULL;
-    ir_module->static_variables = NULL;
-    ir_module->static_variables_length = 0;
-    ir_module->static_variables_capacity = 0;
+    ir_module->static_variables = (ir_static_variables_t){0};
     memset(&ir_module->job_list, 0, sizeof(ir_job_list_t));
     ir_module->defer_free = NULL;
     ir_module->defer_free_length = 0;
@@ -861,7 +859,6 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     common->has_main = false;
     common->ast_main_id = 0;
     common->ir_main_id = 0;
-    common->next_static_variable_id = 0;
 }
 
 void ir_module_free(ir_module_t *ir_module){
@@ -896,7 +893,7 @@ void ir_module_free(ir_module_t *ir_module){
     }
 
 
-    free(ir_module->static_variables);
+    free(ir_module->static_variables.variables);
     
     for(length_t i = 0; i != ir_module->rtti_relocations_length; i++){
         free(ir_module->rtti_relocations[i].human_notation);

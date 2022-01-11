@@ -35,10 +35,10 @@
 #include "UTIL/filename.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
-#include "UTIL/string_builder.h"
 #include "UTIL/tmpbuf.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
+#include "UTIL/string_builder.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "BKEND/backend.h"
@@ -245,12 +245,8 @@ void compiler_init(compiler_t *compiler){
     compiler->show_unused_variables_how_to_disable = false;
     compiler->cross_compile_for = CROSS_COMPILE_NONE;
     compiler->entry_point = "main";
-    compiler->user_linker_options = NULL;
-    compiler->user_linker_options_length = 0;
-    compiler->user_linker_options_capacity = 0;
-    compiler->user_search_paths = NULL;
-    compiler->user_search_paths_length = 0;
-    compiler->user_search_paths_capacity = 0;
+    string_builder_init(&compiler->user_linker_options);
+    compiler->user_search_paths = (strong_cstr_list_t){0};
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
@@ -266,8 +262,8 @@ void compiler_free(compiler_t *compiler){
     free(compiler->location);
     free(compiler->root);
     free(compiler->output_filename);
-    free(compiler->user_linker_options);
-    free_string_list(compiler->user_search_paths, compiler->user_search_paths_length);
+    string_builder_abandon(&compiler->user_linker_options);
+    cstr_list_free(&compiler->user_search_paths);
 
     compiler_free_objects(compiler);
     compiler_free_error(compiler);
@@ -847,32 +843,20 @@ strong_cstr_t compiler_get_string(){
 }
 
 void compiler_add_user_linker_option(compiler_t *compiler, weak_cstr_t option){
-    length_t length = strlen(option);
-
-    expand((void**) &compiler->user_linker_options, sizeof(char), compiler->user_linker_options_length,
-        &compiler->user_linker_options_capacity, length + 2, 512);
-    
-    compiler->user_linker_options[compiler->user_linker_options_length++] = ' ';
-    memcpy(&compiler->user_linker_options[compiler->user_linker_options_length], option, length + 1);
-    compiler->user_linker_options_length += length;
+    string_builder_append_char(&compiler->user_linker_options, ' ');
+    string_builder_append(&compiler->user_linker_options, option);
 }
 
 void compiler_add_user_search_path(compiler_t *compiler, weak_cstr_t search_path, maybe_null_weak_cstr_t current_file){
-    expand((void**) &compiler->user_search_paths, sizeof(weak_cstr_t), compiler->user_search_paths_length,
-        &compiler->user_search_paths_capacity, 1, 4);
-
-    if(current_file == NULL){
-        // Add absolute / cwd relative path
-        compiler->user_search_paths[compiler->user_search_paths_length++] = strclone(search_path);
-    } else {
+    if(current_file != NULL){
         // Add file relative path
         strong_cstr_t current_path = filename_path(current_file);
-        compiler->user_search_paths[compiler->user_search_paths_length++] = mallocandsprintf("%s%s", current_path, search_path);
+        cstr_list_append(&compiler->user_search_paths, mallocandsprintf("%s%s", current_path, search_path));
         free(current_path);
-
-        // Add absolute / cwd relative path
-        compiler->user_search_paths[compiler->user_search_paths_length++] = strclone(search_path);
     }
+
+    // Add absolute / cwd relative path
+    cstr_list_append(&compiler->user_search_paths, strclone(search_path));
 }
 
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){

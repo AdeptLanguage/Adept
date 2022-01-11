@@ -21,7 +21,7 @@ strong_cstr_t *strsclone(strong_cstr_t *list, length_t length){
     return new_list;
 }
 
-void free_string_list(strong_cstr_t *list, length_t length){
+void free_strings(strong_cstr_t *list, length_t length){
     for(length_t i = 0; i != length; i++) free(list[i]);
     free(list);
 }

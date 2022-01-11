@@ -23,6 +23,8 @@ extern "C" {
 #include "UTIL/ground.h"
 #include "UTIL/tmpbuf.h"
 #include "UTIL/trait.h"
+#include "UTIL/string_list.h"
+#include "UTIL/string_builder.h"
 
 // Possible compiler trait options
 #define COMPILER_SHOW_CONSOLE     TRAIT_1
@@ -128,13 +130,8 @@ typedef struct compiler {
     unsigned int cross_compile_for;
     
     weak_cstr_t entry_point;
-    maybe_null_strong_cstr_t user_linker_options;
-    length_t user_linker_options_length;
-    length_t user_linker_options_capacity;
-
-    strong_cstr_t *user_search_paths;
-    length_t user_search_paths_length;
-    length_t user_search_paths_capacity;
+    string_builder_t user_linker_options;
+    strong_cstr_list_t user_search_paths;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00

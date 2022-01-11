@@ -811,15 +811,15 @@ void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type,
     list->variables[list->length].ir_type = ir_type;
 
     if(traits & BRIDGE_VAR_STATIC){
-        ir_module_t *ir_module = &builder->object->ir_module;
-        expand((void**) &ir_module->static_variables, sizeof(ir_static_variable_t), ir_module->static_variables_length, &ir_module->static_variables_capacity, 1, 8);
+        ir_static_variables_t *static_variables = &builder->object->ir_module.static_variables;
 
-        list->variables[list->length].static_id = builder->object->ir_module.common.next_static_variable_id;
+        list->variables[list->length].static_id = static_variables->length;
         list->variables[list->length].id = -1;
 
         // Create ir_static_variable_t
-        ir_module->static_variables[builder->object->ir_module.common.next_static_variable_id++].type = ir_type;
-        ir_module->static_variables_length++;
+        ir_static_variables_append(static_variables, ((ir_static_variable_t){
+            .type = ir_type,
+        }));
     } else {
         list->variables[list->length].static_id = -1;
         list->variables[list->length].id = builder->next_var_id++;

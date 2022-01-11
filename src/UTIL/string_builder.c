@@ -49,3 +49,24 @@ void string_builder_append_int(string_builder_t *builder, int integer){
     sprintf(buffer, "%d", integer);
     string_builder_append(builder, buffer);
 }
+
+void string_builder_append_quoted(string_builder_t *builder, const char *portion){
+    string_builder_append_char(builder, '"');
+    string_builder_append(builder, portion);
+    string_builder_append_char(builder, '"');
+}
+
+void string_builder_append2_quoted(string_builder_t *builder, const char *part_a, const char *part_b){
+    string_builder_append_char(builder, '"');
+    string_builder_append(builder, part_a);
+    string_builder_append(builder, part_b);
+    string_builder_append_char(builder, '"');
+}
+
+void string_builder_append3_quoted(string_builder_t *builder, const char *part_a, const char *part_b, const char *part_c){
+    string_builder_append_char(builder, '"');
+    string_builder_append(builder, part_a);
+    string_builder_append(builder, part_b);
+    string_builder_append(builder, part_c);
+    string_builder_append_char(builder, '"');
+}

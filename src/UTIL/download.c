@@ -10,6 +10,7 @@
 #include "UTIL/color.h"
 #include "UTIL/download.h"
 #include "UTIL/ground.h"
+#include "UTIL/util.h" // IWYU pragma: keep
 
 static size_t download_write_data_to_file(void *ptr, size_t size, size_t items, FILE *f);
 static size_t download_write_data_to_memory(void *ptr, size_t size, size_t items, void *buffer_voidptr);

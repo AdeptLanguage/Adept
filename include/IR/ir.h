@@ -534,7 +534,6 @@ typedef struct {
     bool has_main;
     funcid_t ast_main_id;
     funcid_t ir_main_id;
-    length_t next_static_variable_id;
 } ir_shared_common_t;
 
 // ---------------- ir_static_variable_t ----------------
@@ -542,6 +541,11 @@ typedef struct {
 typedef struct {
     ir_type_t *type;
 } ir_static_variable_t;
+
+// ---------------- ir_static_variables_t ----------------
+// List of static variables
+typedef listof(ir_static_variable_t, variables) ir_static_variables_t;
+#define ir_static_variables_append(LIST, VALUE) list_append((LIST), (VALUE), ir_static_variable_t)
 
 // ---------------- ir_module_t ----------------
 // An intermediate representation module
@@ -572,9 +576,7 @@ typedef struct {
     length_t rtti_relocations_capacity;
     struct ir_builder *init_builder;
     struct ir_builder *deinit_builder;
-    ir_static_variable_t *static_variables;
-    length_t static_variables_length;
-    length_t static_variables_capacity;
+    ir_static_variables_t static_variables;
     ir_job_list_t job_list;
     void **defer_free;
     length_t defer_free_length;
@@ -702,7 +704,7 @@ int ir_generic_base_method_cmp(const void *a, const void *b);
 
 // ---------------- ir_job_list_append ----------------
 // Appends a mapping to an IR job list
-#define ir_job_list_append(LIST, VALUE) list_append(LIST, VALUE, ir_func_mapping_t)
+#define ir_job_list_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_mapping_t)
 
 // ---------------- ir_job_list_free ----------------
 // Frees an IR job list

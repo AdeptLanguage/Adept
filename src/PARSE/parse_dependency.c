@@ -213,8 +213,8 @@ maybe_null_strong_cstr_t parse_find_import(parse_ctx_t *ctx, weak_cstr_t filenam
     if(file_exists(test)) return test;
     free(test);
 
-    for(length_t i = 0; i != ctx->compiler->user_search_paths_length; i++){
-        weak_cstr_t path = ctx->compiler->user_search_paths[i];
+    for(length_t i = 0; i != ctx->compiler->user_search_paths.length; i++){
+        weak_cstr_t path = ctx->compiler->user_search_paths.items[i];
         length_t path_length = strlen(path);
         
         bool append_slash = path_length && path[path_length - 1] != '/' && path[path_length - 1] != '\\';

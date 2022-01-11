@@ -276,7 +276,7 @@ bool ast_type_list_has_polymorph(const ast_type_t *types, length_t length);
 
 // ---------------- ast_type_dereferenced_view ----------------
 // Creates a temporary view of a pointer type as if it had been dereferenced
-ast_type_t ast_type_dereferenced_view(ast_type_t *pointer_type);
+ast_type_t ast_type_dereferenced_view(const ast_type_t *pointer_type);
 
 // ---------------- ast_type_dereference ----------------
 // Removes the first pointer element of a pointer type

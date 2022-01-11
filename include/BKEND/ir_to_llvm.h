@@ -8,6 +8,8 @@
     ---------------------------------------------------------------------------
 */
 
+#include "UTIL/ground.h"
+#include "UTIL/list.h"
 #include "DRVR/compiler.h"
 #include <llvm-c/TargetMachine.h>
 
@@ -45,7 +47,9 @@ typedef listof(llvm_phi2_relocation_t, unrelocated) llvm_phi2_relocation_list_t;
 typedef struct {
     LLVMValueRef global;
     LLVMTypeRef type;
-} llvm_static_global_t;
+} llvm_static_variable_t;
+
+typedef listof(llvm_static_variable_t, variables) llvm_static_variables_t;
 
 // ---------------- llvm_context_t ----------------
 // A general container for the LLVM exporting context
@@ -78,12 +82,10 @@ typedef struct {
     llvm_string_table_t string_table;
     llvm_phi2_relocation_list_t relocation_list;
 
-    llvm_static_global_t *static_globals;
-    length_t static_globals_length;
-    length_t static_globals_capacity;
-    LLVMBasicBlockRef static_globals_initialization_routine;
-    LLVMBasicBlockRef static_globals_initialization_post;
-    LLVMValueRef static_globals_deinitialization_function;
+    llvm_static_variables_t static_variables;
+    LLVMBasicBlockRef static_variables_initialization_routine;
+    LLVMBasicBlockRef static_variables_initialization_post;
+    LLVMValueRef static_variables_deinitialization_function;
     LLVMBasicBlockRef boot;
 
     LLVMTypeRef i64_type;

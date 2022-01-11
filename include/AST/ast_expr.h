@@ -592,7 +592,7 @@ void ast_expr_list_free(ast_expr_list_t *list);
 
 // ---------------- ast_expr_list_append ----------------
 // Appends an expression to an ast_expr_list_t
-#define ast_expr_list_append(LIST, VALUE) list_append(LIST, VALUE, ast_expr_t*)
+#define ast_expr_list_append(LIST, VALUE) list_append((LIST), (VALUE), ast_expr_t*)
 
 // ---------------- ast_expr_list_clone ----------------
 // Deep-clones an AST expression list

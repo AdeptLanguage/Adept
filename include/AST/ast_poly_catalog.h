@@ -73,11 +73,11 @@ ast_poly_catalog_count_t *ast_poly_catalog_find_count(ast_poly_catalog_t *catalo
 
 // ---------------- ast_poly_catalog_types_append ----------------
 // Appends a single type binding to a polymorphic type binding list
-#define ast_poly_catalog_types_append(LIST, VALUE)  list_append(LIST, VALUE, ast_poly_catalog_type_t)
+#define ast_poly_catalog_types_append(LIST, VALUE)  list_append((LIST), (VALUE), ast_poly_catalog_type_t)
 
 // ---------------- ast_poly_catalog_counts_append ----------------
 // Appends a single count binding to a polymorphic count binding list
-#define ast_poly_catalog_counts_append(LIST, VALUE) list_append(LIST, VALUE, ast_poly_catalog_count_t)
+#define ast_poly_catalog_counts_append(LIST, VALUE) list_append((LIST), (VALUE), ast_poly_catalog_count_t)
 
 #ifdef __cplusplus
 }

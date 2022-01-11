@@ -118,7 +118,7 @@ typedef struct {
 // ---------------- streq ----------------
 // Returns whether two null-termianted strings are equal
 // Equivalent to 'strcmp(STRING, VALUE) == 0)'
-#define streq(STRING, VALUE) (strcmp(STRING, VALUE) == 0)
+#define streq(STRING, VALUE) (strcmp((STRING), (VALUE)) == 0)
 
 // ---------------- special characters ----------------
 #ifdef __APPLE__

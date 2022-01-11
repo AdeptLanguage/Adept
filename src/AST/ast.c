@@ -215,7 +215,7 @@ void ast_free(ast_t *ast){
         ast_polymorphic_composite_t *poly_composite = &ast->polymorphic_composites[i];
 
         ast_free_composites((ast_composite_t*) poly_composite, 1);
-        free_string_list(poly_composite->generics, poly_composite->generics_length);
+        free_strings(poly_composite->generics, poly_composite->generics_length);
     }
 
     free(ast->polymorphic_composites);
@@ -227,7 +227,7 @@ void ast_free_functions(ast_func_t *functions, length_t functions_length){
         free(func->name);
 
         if(func->arg_names){
-            free_string_list(func->arg_names, func->arity);
+            free_strings(func->arg_names, func->arity);
         }
 
         ast_types_free(func->arg_types, func->arity);
@@ -854,7 +854,7 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->export_as = options->export_name;
 
     #if ADEPT_INSIGHT_BUILD
-    func->end_source = NULL_SOURCE;
+    func->end_source = options->source;
     #endif
 
     if(options->is_entry)                 func->traits |= AST_FUNC_MAIN;

@@ -1,5 +1,4 @@
 
-
 #ifndef _ISAAC_AST_TYPE_HASH_H
 #define _ISAAC_AST_TYPE_HASH_H
 

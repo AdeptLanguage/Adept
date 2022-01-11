@@ -730,7 +730,7 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
     ir_value_t *destination;
 
     if(is_static){
-        destination = build_svarptr(working_builder, ir_type_ptr, primary_builder->object->ir_module.common.next_static_variable_id - 1);
+        destination = build_svarptr(working_builder, ir_type_ptr, primary_builder->object->ir_module.static_variables.length - 1);
     } else {
         destination = build_lvarptr(working_builder, ir_type_ptr, primary_builder->next_var_id - 1);
     }

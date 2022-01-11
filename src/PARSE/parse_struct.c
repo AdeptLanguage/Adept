@@ -138,13 +138,13 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
             expand((void**) &generics, sizeof(strong_cstr_t), generics_length, &generics_capacity, 1, 4);
 
             if(parse_ignore_newlines(ctx, "Expected polymorphic generic type")){
-                free_string_list(generics, generics_length);
+                free_strings(generics, generics_length);
                 return FAILURE;
             }
 
             if(tokens[*i].id != TOKEN_POLYMORPH){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type");
-                free_string_list(generics, generics_length);
+                free_strings(generics, generics_length);
                 return FAILURE;
             }
 
@@ -152,19 +152,19 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
             *i += 1;
 
             if(parse_ignore_newlines(ctx, "Expected '>' or ',' after polymorphic generic type")){
-                free_string_list(generics, generics_length);
+                free_strings(generics, generics_length);
                 return FAILURE;
             }
 
             if(tokens[*i].id == TOKEN_NEXT){
                 if(tokens[++(*i)].id == TOKEN_GREATERTHAN){
                     compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type after ',' in generics list");
-                    free_string_list(generics, generics_length);
+                    free_strings(generics, generics_length);
                     return FAILURE;
                 }
             } else if(tokens[*i].id != TOKEN_GREATERTHAN){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after polymorphic generic type");
-                free_string_list(generics, generics_length);
+                free_strings(generics, generics_length);
                 return FAILURE;
             }
         }
@@ -179,7 +179,7 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
         *out_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
 
         if(*out_name == NULL){
-            free_string_list(generics, generics_length);
+            free_strings(generics, generics_length);
             return FAILURE;
         }
     }
