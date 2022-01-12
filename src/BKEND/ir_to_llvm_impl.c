@@ -293,8 +293,8 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
     // Generates llvm function skeletons from ir function data
 
     LLVMModuleRef llvm_module = llvm->module;
-    ir_func_t *module_funcs = object->ir_module.funcs;
-    length_t module_funcs_length = object->ir_module.funcs_length;
+    ir_func_t *module_funcs = object->ir_module.funcs.funcs;
+    length_t module_funcs_length = object->ir_module.funcs.length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
     LLVMAttributeRef nounwind = LLVMCreateEnumAttribute(LLVMGetGlobalContext(), LLVMGetEnumAttributeKindForName("nounwind", 8), 0);
@@ -345,21 +345,18 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
     // Generates llvm function bodies from ir function data
     // NOTE: Expects function skeletons to already be present
 
-    ir_func_t *module_funcs = object->ir_module.funcs;
-    length_t module_funcs_length = object->ir_module.funcs_length;
+    ir_func_t *module_funcs = object->ir_module.funcs.funcs;
+    length_t module_funcs_length = object->ir_module.funcs.length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
 
-    llvm->relocation_list.unrelocated = NULL;
-    llvm->relocation_list.length = 0;
-    llvm->relocation_list.capacity = 0;
+    llvm->relocation_list = (llvm_phi2_relocation_list_t){0};
 
     for(length_t f = 0; f != module_funcs_length; f++){
         LLVMBuilderRef builder = LLVMCreateBuilder();
-        ir_basicblock_t *basicblocks = module_funcs[f].basicblocks;
-        length_t basicblocks_length = module_funcs[f].basicblocks_length;
+        ir_basicblocks_t basicblocks = module_funcs[f].basicblocks;
 
         value_catalog_t catalog;
-        value_catalog_prepare(&catalog, basicblocks, basicblocks_length);
+        value_catalog_prepare(&catalog, basicblocks);
 
         varstack_t stack;
         stack.values = malloc(sizeof(LLVMValueRef) * module_funcs[f].variable_count);
@@ -370,44 +367,36 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         llvm->catalog = &catalog;
         llvm->stack = &stack;
 
-        LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+        LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
 
         // If the true exit point of a block changed, its real value will be in here
         // (Used for PHI instructions to have the proper end point)
-        LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+        LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
 
         // Information about PHI instructions that need to have their incoming blocks delayed
         llvm->relocation_list.length = 0;
 
         // Determine whether this function is the entry point
-        bool is_entry_function = module_funcs[f].traits & IR_FUNC_MAIN && llvm->static_variables_initialization_routine == NULL;
+        bool is_entry_function = module_funcs[f].traits & IR_FUNC_MAIN && llvm->static_variable_info.init_routine == NULL;
 
         // Inject true entry before faux program entry
-        if(is_entry_function) llvm->static_variables_initialization_routine = LLVMAppendBasicBlock(func_skeletons[f], "");
+        if(is_entry_function) llvm->static_variable_info.init_routine = LLVMAppendBasicBlock(func_skeletons[f], "");
 
         // Create basicblocks
-        for(length_t b = 0; b != basicblocks_length; b++){
+        for(length_t b = 0; b != basicblocks.length; b++){
             llvm_blocks[b] = LLVMAppendBasicBlock(func_skeletons[f], "");
             llvm_exit_blocks[b] = llvm_blocks[b];
         }
 
         // Remember faux basicblock entry of main function
-        if(is_entry_function) llvm->static_variables_initialization_post = llvm_blocks[0];
+        if(is_entry_function) llvm->static_variable_info.init_post = llvm_blocks[0];
 
         // Drop references to any old PHIs
-        llvm->line_phi = NULL;
-        llvm->column_phi = NULL;
+        llvm->null_check.line_phi = NULL;
+        llvm->null_check.column_phi = NULL;
 
-        if(ir_to_llvm_basicblocks(llvm, basicblocks, basicblocks_length, func_skeletons[f],
-                &module_funcs[f], llvm_blocks, llvm_exit_blocks, f)){
-            value_catalog_free(&catalog);
-            free(stack.values);
-            free(stack.types);
-            free(llvm_blocks);
-            free(llvm_exit_blocks);
-            LLVMDisposeBuilder(builder);
-            return FAILURE;
-        }
+        errorcode_t errorcode = ir_to_llvm_basicblocks(llvm, basicblocks,
+            func_skeletons[f], &module_funcs[f], llvm_blocks, llvm_exit_blocks, f);
 
         value_catalog_free(&catalog);
         free(stack.values);
@@ -415,30 +404,32 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         free(llvm_blocks);
         free(llvm_exit_blocks);
         LLVMDisposeBuilder(builder);
+
+        if(errorcode) return errorcode;
     }
 
     return SUCCESS;
 }
 
-errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblock_t *basicblocks, length_t basicblocks_length, LLVMValueRef func_skeleton,
+errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblocks_t basicblocks, LLVMValueRef func_skeleton,
         ir_func_t *module_func, LLVMBasicBlockRef *llvm_blocks, LLVMBasicBlockRef *llvm_exit_blocks, length_t f){
     
     LLVMBuilderRef builder = llvm->builder;
     varstack_t *stack = llvm->stack;
 
-    if(llvm->compiler->checks & COMPILER_NULL_CHECKS && basicblocks_length != 0){
+    if(llvm->compiler->checks & COMPILER_NULL_CHECKS && basicblocks.length != 0){
         build_llvm_null_check_on_failure_block(llvm, func_skeleton, module_func);
     }
     
-    for(length_t b = 0; b != basicblocks_length; b++){
+    for(length_t b = 0; b != basicblocks.length; b++){
         LLVMPositionBuilderAtEnd(builder, llvm_blocks[b]);
-        ir_basicblock_t *basicblock = &basicblocks[b];
+        ir_basicblock_t *basicblock = &basicblocks.blocks[b];
 
         // Allocate stack variables
         if(b == 0 && ir_to_llvm_allocate_stack_variables(llvm, stack, func_skeleton, module_func)) return FAILURE;
 
         // Generate instructions
-        if(ir_to_llvm_instructions(llvm, basicblock->instructions, basicblock->instructions_length, b, f, llvm_blocks, llvm_exit_blocks)){
+        if(ir_to_llvm_instructions(llvm, basicblock->instructions, b, f, llvm_blocks, llvm_exit_blocks)){
             return FAILURE;
         }
     }
@@ -456,8 +447,8 @@ errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblock_t *basicb
     // Remove basicblock and PHI nodes for null check failure pseudo-function if not used
     if(llvm->compiler->checks & COMPILER_NULL_CHECKS) {
         // NOTE: Assumes (LLVMCountIncoming(llvm->line_phi) == LLVMCountIncoming(llvm->column_phi))
-        if(llvm->line_phi && LLVMCountIncoming(llvm->line_phi) == 0 && llvm->null_check_on_fail_block){
-            LLVMDeleteBasicBlock(llvm->null_check_on_fail_block);
+        if(llvm->null_check.line_phi && LLVMCountIncoming(llvm->null_check.line_phi) == 0 && llvm->null_check.on_fail_block){
+            LLVMDeleteBasicBlock(llvm->null_check.on_fail_block);
         }
     }
 
@@ -503,8 +494,8 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     // Line number and column number and created via a PHI node
     // when we call pseudo-function to handle null check failures
     // Create pseudo-function
-    llvm->null_check_on_fail_block = LLVMAppendBasicBlock(func_skeleton, "");
-    LLVMPositionBuilderAtEnd(builder, llvm->null_check_on_fail_block);
+    llvm->null_check.on_fail_block = LLVMAppendBasicBlock(func_skeleton, "");
+    LLVMPositionBuilderAtEnd(builder, llvm->null_check.on_fail_block);
 
     // Establish dependencies and define them if necessary
     LLVMValueRef printf_fn = LLVMGetNamedFunction(llvm->module, "printf");
@@ -526,21 +517,20 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     LLVMValueRef global_data;
 
     // Create template error message
-    if(!llvm->has_null_check_failure_message_bytes){
+    if(llvm->null_check.failure_message_bytes == NULL){
         const char *error_msg = "===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS! =====\nIn file:\t%s\nIn function:\t%s\nLine:\t%d\nColumn:\t%d\n";
         length_t error_msg_length = strlen(error_msg) + 1;
         global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), error_msg_length), ".str");
         LLVMSetLinkage(global_data, LLVMInternalLinkage);
         LLVMSetGlobalConstant(global_data, true);
         LLVMSetInitializer(global_data, LLVMConstString(error_msg, error_msg_length, true));
-        llvm->null_check_failure_message_bytes = global_data;
-        llvm->has_null_check_failure_message_bytes = true;
+        llvm->null_check.failure_message_bytes = global_data;
     }
-    
+
     LLVMValueRef indices[2];
     indices[0] = LLVMConstInt(LLVMInt32Type(), 0, true);
     indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
-    LLVMValueRef arg = LLVMConstGEP(llvm->null_check_failure_message_bytes, indices, 2);
+    LLVMValueRef arg = LLVMConstGEP(llvm->null_check.failure_message_bytes, indices, 2);
 
     // Decide on filename to use for error message
     const char *filename = module_func->maybe_filename;
@@ -570,11 +560,11 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     indices[1] = LLVMConstInt(LLVMInt32Type(), 0, true);
     LLVMValueRef func_name_str = LLVMConstGEP(global_data, indices, 2);
 
-    llvm->line_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
-    llvm->column_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
+    llvm->null_check.line_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
+    llvm->null_check.column_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
 
     // Create argument list
-    LLVMValueRef args[] = {arg, filename_str, func_name_str, llvm->line_phi, llvm->column_phi};
+    LLVMValueRef args[] = {arg, filename_str, func_name_str, llvm->null_check.line_phi, llvm->null_check.column_phi};
 
     // Print the error message
     LLVMBuildCall(builder, printf_fn, args, 5, "");
@@ -585,23 +575,21 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     LLVMBuildUnreachable(builder);
 }
 
-errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructions, length_t instructions_length, length_t basicblock_id,
+errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructions, length_t basicblock_id,
         length_t f, LLVMBasicBlockRef *llvm_blocks, LLVMBasicBlockRef *llvm_exit_blocks){
-    ir_instr_t *instr;
     length_t b = basicblock_id;
     LLVMBuilderRef builder = llvm->builder;
     value_catalog_t *catalog = llvm->catalog;
     LLVMValueRef llvm_result;
 
-    for(length_t i = 0; i != instructions_length; i++){
-        switch(instructions[i]->id){
+    for(length_t i = 0; i != instructions.length; i++){
+        ir_instr_t *instr = instructions.instructions[i];
+
+        switch(instr->id){
         case INSTRUCTION_RET:
-            instr = instructions[i];
             LLVMBuildRet(builder, ((ir_instr_ret_t*) instr)->value == NULL ? NULL : ir_to_llvm_value(llvm, ((ir_instr_ret_t*) instr)->value));
             break;
         case INSTRUCTION_ADD:
-            instr = instructions[i];
-
             // Do excess instructions for adding pointers to get llvm to shut up
             if(((ir_instr_math_t*) instr)->a->type->kind == TYPE_KIND_POINTER){
                 LLVMValueRef val_a = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
@@ -617,13 +605,10 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_FADD:
-            instr = instructions[i];
             llvm_result = LLVMBuildFAdd(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SUBTRACT:
-            instr = instructions[i];
-
             // Do excess instructions for subtracting pointers to get llvm to shut up
             if(((ir_instr_math_t*) instr)->a->type->kind == TYPE_KIND_POINTER){
                 LLVMValueRef val_a = ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a);
@@ -639,52 +624,42 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_FSUBTRACT:
-            instr = instructions[i];
             llvm_result = LLVMBuildFSub(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_MULTIPLY:
-            instr = instructions[i];
             llvm_result = LLVMBuildMul(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FMULTIPLY:
-            instr = instructions[i];
             llvm_result = LLVMBuildFMul(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_UDIVIDE:
-            instr = instructions[i];
             llvm_result = LLVMBuildUDiv(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SDIVIDE:
-            instr = instructions[i];
             llvm_result = LLVMBuildSDiv(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FDIVIDE:
-            instr = instructions[i];
             llvm_result = LLVMBuildFDiv(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_UMODULUS:
-            instr = instructions[i];
             llvm_result = LLVMBuildURem(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SMODULUS:
-            instr = instructions[i];
             llvm_result = LLVMBuildSRem(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FMODULUS:
-            instr = instructions[i];
             llvm_result = LLVMBuildFRem(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_CALL: {
-                instr = instructions[i];
                 LLVMValueRef arguments[((ir_instr_call_t*) instr)->values_length];
 
                 for(length_t v = 0; v != ((ir_instr_call_t*) instr)->values_length; v++){
@@ -693,7 +668,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
 
                 const char *implementation_name;
                 char adept_implementation_name[256];
-                ir_func_t *target_ir_func = &llvm->object->ir_module.funcs[((ir_instr_call_t*) instr)->ir_func_id];
+                ir_func_t *target_ir_func = &llvm->object->ir_module.funcs.funcs[((ir_instr_call_t*) instr)->ir_func_id];
 
                 if(target_ir_func->traits & IR_FUNC_FOREIGN){
                     implementation_name = compiler_unnamespaced_name(target_ir_func->name);
@@ -714,7 +689,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_CALL_ADDRESS: {
-                instr = instructions[i];
                 LLVMValueRef arguments[((ir_instr_call_address_t*) instr)->values_length];
 
                 for(length_t v = 0; v != ((ir_instr_call_address_t*) instr)->values_length; v++){
@@ -728,8 +702,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_STORE: {
-                instr = instructions[i];
-
                 ir_instr_store_t *store_instr = (ir_instr_store_t*) instr;
                 LLVMValueRef destination = ir_to_llvm_value(llvm, store_instr->destination);
                 ir_to_llvm_null_check(llvm, f, destination, store_instr->maybe_line_number, store_instr->maybe_column_number, &llvm_exit_blocks[b]);
@@ -739,8 +711,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_LOAD: {
-                instr = instructions[i];
-
                 ir_instr_load_t *load_instr = (ir_instr_load_t*) instr;
                 LLVMValueRef pointer = ir_to_llvm_value(llvm, load_instr->value);
                 ir_to_llvm_null_check(llvm, f, pointer, load_instr->maybe_line_number, load_instr->maybe_column_number, &llvm_exit_blocks[b]);
@@ -750,104 +720,85 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_VARPTR:
-            catalog->blocks[b].value_references[i] = llvm->stack->values[((ir_instr_varptr_t*) instructions[i])->index];
+            catalog->blocks[b].value_references[i] = llvm->stack->values[((ir_instr_varptr_t*) instr)->index];
             break;
         case INSTRUCTION_GLOBALVARPTR:
-            catalog->blocks[b].value_references[i] = llvm->global_variables[((ir_instr_varptr_t*) instructions[i])->index];
+            catalog->blocks[b].value_references[i] = llvm->global_variables[((ir_instr_varptr_t*) instr)->index];
             break;
         case INSTRUCTION_STATICVARPTR:
-            catalog->blocks[b].value_references[i] = llvm->static_variables.variables[((ir_instr_varptr_t*) instructions[i])->index].global;
+            catalog->blocks[b].value_references[i] = llvm->static_variables.variables[((ir_instr_varptr_t*) instr)->index].global;
             break;
         case INSTRUCTION_BREAK:
-            LLVMBuildBr(builder, llvm_blocks[((ir_instr_break_t*) instructions[i])->block_id]);
+            LLVMBuildBr(builder, llvm_blocks[((ir_instr_break_t*) instr)->block_id]);
             break;
         case INSTRUCTION_CONDBREAK:
-            instr = instructions[i];
             LLVMBuildCondBr(builder, ir_to_llvm_value(llvm, ((ir_instr_cond_break_t*) instr)->value), llvm_blocks[((ir_instr_cond_break_t*) instr)->true_block_id],
             llvm_blocks[((ir_instr_cond_break_t*) instr)->false_block_id]);
             break;
         case INSTRUCTION_EQUALS:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntEQ, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FEQUALS:
-            instr = instructions[i];
             llvm_result = LLVMBuildFCmp(builder, LLVMRealOEQ, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_NOTEQUALS:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntNE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FNOTEQUALS:
-            instr = instructions[i];
             llvm_result = LLVMBuildFCmp(builder, LLVMRealONE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_UGREATER:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntUGT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SGREATER:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntSGT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FGREATER:
-            instr = instructions[i];
             llvm_result = LLVMBuildFCmp(builder, LLVMRealOGT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_ULESSER:
-            instr = instructions[i];
             catalog->blocks[b].value_references[i] = LLVMBuildICmp(builder, LLVMIntULT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             break;
         case INSTRUCTION_SLESSER:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntSLT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FLESSER:
-            instr = instructions[i];
             llvm_result = LLVMBuildFCmp(builder, LLVMRealOLT, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_UGREATEREQ:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntUGE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SGREATEREQ:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntSGE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FGREATEREQ:
-            instr = instructions[i];
             llvm_result = LLVMBuildFCmp(builder, LLVMRealOGE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_ULESSEREQ:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntULE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SLESSEREQ:
-            instr = instructions[i];
             llvm_result = LLVMBuildICmp(builder, LLVMIntSLE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FLESSEREQ:
-            instr = instructions[i];
             llvm_result = LLVMBuildFCmp(builder, LLVMRealOLE, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_MEMBER: {
-                instr = instructions[i];
-
                 ir_instr_member_t *member_instr = (ir_instr_member_t*) instr;
                 LLVMValueRef foundation = ir_to_llvm_value(llvm, member_instr->value);
 
@@ -866,8 +817,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_ARRAY_ACCESS: {
-                instr = instructions[i];
-
                 ir_instr_array_access_t *array_access_instr = (ir_instr_array_access_t*) instr;
                 LLVMValueRef foundation = ir_to_llvm_value(llvm, array_access_instr->value);
 
@@ -886,11 +835,9 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_FUNC_ADDRESS:
-            instr = instructions[i];
-
             if(((ir_instr_func_address_t*) instr)->name == NULL){
-                if(llvm->object->ir_module.funcs[((ir_instr_func_address_t*) instr)->ir_func_id].export_as){
-                    llvm_result = LLVMGetNamedFunction(llvm->module, llvm->object->ir_module.funcs[((ir_instr_func_address_t*) instr)->ir_func_id].export_as);
+                if(llvm->object->ir_module.funcs.funcs[((ir_instr_func_address_t*) instr)->ir_func_id].export_as){
+                    llvm_result = LLVMGetNamedFunction(llvm->module, llvm->object->ir_module.funcs.funcs[((ir_instr_func_address_t*) instr)->ir_func_id].export_as);
                 } else {
                     // Not a foreign function, so resolve via id
                     char implementation_name[256];
@@ -905,68 +852,54 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_BITCAST:
-            instr = instructions[i];
             llvm_result = LLVMBuildBitCast(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_ZEXT:
-            instr = instructions[i];
             llvm_result = LLVMBuildZExt(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SEXT:
-            instr = instructions[i];
             llvm_result = LLVMBuildSExt(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FEXT:
-            instr = instructions[i];
             llvm_result = LLVMBuildFPExt(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_TRUNC:
-            instr = instructions[i];
             llvm_result = LLVMBuildTrunc(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FTRUNC:
-            instr = instructions[i];
             llvm_result = LLVMBuildFPTrunc(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_INTTOPTR:
-            instr = instructions[i];
             llvm_result = LLVMBuildIntToPtr(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_PTRTOINT:
-            instr = instructions[i];
             llvm_result = LLVMBuildPtrToInt(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FPTOUI:
-            instr = instructions[i];
             llvm_result = LLVMBuildFPToUI(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_FPTOSI:
-            instr = instructions[i];
             llvm_result = LLVMBuildFPToSI(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_UITOFP:
-            instr = instructions[i];
             llvm_result = LLVMBuildUIToFP(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SITOFP:
-            instr = instructions[i];
             llvm_result = LLVMBuildSIToFP(builder, ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value), ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->result_type), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_ISZERO: case INSTRUCTION_ISNTZERO: {
-                instr = instructions[i];
-
                 unsigned int type_kind = ((ir_instr_cast_t*) instr)->value->type->kind;
                 bool type_kind_is_float = (type_kind == TYPE_KIND_FLOAT || type_kind == TYPE_KIND_DOUBLE);
                 LLVMValueRef zero;
@@ -989,7 +922,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                     panic("ir_to_llvm_instructions() - INSTRUCTION_ISxxZERO received unrecognized type kind\n");
                 }
 
-                bool isz = (instructions[i]->id == INSTRUCTION_ISZERO);
+                bool isz = (instr->id == INSTRUCTION_ISZERO);
                 llvm_result = ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value);
 
                 if(type_kind_is_float){
@@ -1002,42 +935,35 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
         case INSTRUCTION_REINTERPRET:
             // Reinterprets a signed vs unsigned integer in higher level IR
             // LLVM Can ignore this instruction
-            instr = instructions[i];
             catalog->blocks[b].value_references[i] = ir_to_llvm_value(llvm, ((ir_instr_cast_t*) instr)->value);
             break;
         case INSTRUCTION_AND:
         case INSTRUCTION_BIT_AND:
-            instr = instructions[i];
             llvm_result = LLVMBuildAnd(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_OR:
         case INSTRUCTION_BIT_OR:
-            instr = instructions[i];
             llvm_result = LLVMBuildOr(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SIZEOF: {
-                instr = instructions[i];
                 length_t type_size = LLVMABISizeOfType(llvm->data_layout, ir_to_llvm_type(llvm, ((ir_instr_sizeof_t*) instr)->type));
                 catalog->blocks[b].value_references[i] = LLVMConstInt(llvm->i64_type, type_size, false);
             }
             break;
         case INSTRUCTION_OFFSETOF: {
-                instr = instructions[i];
                 unsigned long long offset = LLVMOffsetOfElement(llvm->data_layout, ir_to_llvm_type(llvm, ((ir_instr_offsetof_t*) instr)->type), ((ir_instr_offsetof_t*) instr)->index);
                 catalog->blocks[b].value_references[i] = LLVMConstInt(llvm->i64_type, offset, false);
             }
             break;
         case INSTRUCTION_ZEROINIT: {
-                instr = instructions[i];
                 ir_value_t *ir_value = ((ir_instr_zeroinit_t*) instr)->destination;
                 LLVMValueRef destination = ir_to_llvm_value(llvm, ir_value);
                 LLVMBuildStore(builder, LLVMConstNull(LLVMGetElementType(LLVMTypeOf(destination))), destination);
             }
             break;
         case INSTRUCTION_MALLOC: {
-                instr = instructions[i];
                 ir_instr_malloc_t *malloc_instr = (ir_instr_malloc_t*) instr;
                 LLVMTypeRef ty = ir_to_llvm_type(llvm, malloc_instr->type);
                 LLVMValueRef allocated;
@@ -1055,7 +981,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
                     catalog->blocks[b].value_references[i] = allocated;
 
                     if(!(malloc_instr->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
-                        LLVMValueRef *memset_intrinsic = &llvm->memset_intrinsic;
+                        LLVMValueRef *memset_intrinsic = &llvm->intrinsics.memset;
 
                         if(*memset_intrinsic == NULL){
                             LLVMTypeRef arg_types[4];
@@ -1083,14 +1009,11 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_FREE: {
-                instr = instructions[i];
                 catalog->blocks[b].value_references[i] = LLVMBuildFree(builder, ir_to_llvm_value(llvm, ((ir_instr_free_t*) instr)->value));
             }
             break;
         case INSTRUCTION_MEMCPY: {
-                instr = instructions[i];
-
-                LLVMValueRef *memcpy_intrinsic = &llvm->memcpy_intrinsic;
+                LLVMValueRef *memcpy_intrinsic = &llvm->intrinsics.memcpy;
 
                 if(*memcpy_intrinsic == NULL){
                     LLVMTypeRef arg_types[4];
@@ -1114,28 +1037,22 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_BIT_XOR:
-            instr = instructions[i];
             llvm_result = LLVMBuildXor(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_BIT_LSHIFT:
-            instr = instructions[i];
             llvm_result = LLVMBuildShl(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_BIT_RSHIFT:
-            instr = instructions[i];
             llvm_result = LLVMBuildAShr(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_BIT_LGC_RSHIFT:
-            instr = instructions[i];
             llvm_result = LLVMBuildLShr(builder, ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->a), ir_to_llvm_value(llvm, ((ir_instr_math_t*) instr)->b), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_BIT_COMPLEMENT: {
-                instr = instructions[i];
-
                 unsigned int type_kind = ((ir_instr_unary_t*) instr)->value->type->kind;
                 LLVMValueRef base = ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value);
                 
@@ -1147,7 +1064,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_NEGATE: {
-                instr = instructions[i];
                 LLVMValueRef base = ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value);
                 LLVMValueRef zero = LLVMConstNull(LLVMTypeOf(base));
                 llvm_result = LLVMBuildSub(builder, zero, base, "");
@@ -1155,19 +1071,16 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_FNEGATE:
-            instr = instructions[i];
             llvm_result = LLVMBuildFNeg(builder, ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value), "");
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_SELECT:
-            instr = instructions[i];
             catalog->blocks[b].value_references[i] = LLVMBuildSelect(builder,
                 ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->condition),
                 ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->if_true),
                 ir_to_llvm_value(llvm, ((ir_instr_select_t*) instr)->if_false), "");
             break;
         case INSTRUCTION_PHI2: {
-                instr = instructions[i];
                 LLVMValueRef phi = LLVMBuildPhi(llvm->builder, ir_to_llvm_type(llvm, instr->result_type), "");
 
                 LLVMValueRef when_a = ir_to_llvm_value(llvm, ((ir_instr_phi2_t*) instr)->a);
@@ -1185,8 +1098,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_SWITCH: {
-                instr = instructions[i];
-
                 LLVMValueRef value = ir_to_llvm_value(llvm, ((ir_instr_switch_t*) instr)->condition);
                 LLVMValueRef switch_val = LLVMBuildSwitch(builder, value, llvm_blocks[((ir_instr_switch_t*) instr)->default_block_id], ((ir_instr_switch_t*) instr)->cases_length);
                 
@@ -1199,8 +1110,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_ALLOC: {
-                instr = instructions[i];
-
                 ir_instr_alloc_t *alloc = (ir_instr_alloc_t*) instr;
                 ir_type_t *target_result_type = alloc->result_type;
 
@@ -1217,7 +1126,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_STACK_SAVE: {
-                LLVMValueRef *stacksave_intrinsic = &llvm->stacksave_intrinsic;
+                LLVMValueRef *stacksave_intrinsic = &llvm->intrinsics.stacksave;
 
                 if(*stacksave_intrinsic == NULL){
                     LLVMTypeRef stacksave_intrinsic_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), NULL, 0, 0);
@@ -1228,9 +1137,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_STACK_RESTORE: {
-                instr = instructions[i];
-
-                LLVMValueRef *stackrestore_intrinsic = &llvm->stackrestore_intrinsic;
+                LLVMValueRef *stackrestore_intrinsic = &llvm->intrinsics.stackrestore;
 
                 if(*stackrestore_intrinsic == NULL){
                     LLVMTypeRef arg_types[1];
@@ -1248,10 +1155,8 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_VA_START: case INSTRUCTION_VA_END: {
-                instr = instructions[i];
-
                 bool is_start = instr->id == INSTRUCTION_VA_START;
-                LLVMValueRef *va_intrinsic = is_start ? &llvm->va_start_intrinsic : &llvm->va_end_intrinsic;
+                LLVMValueRef *va_intrinsic = is_start ? &llvm->intrinsics.va_start : &llvm->intrinsics.va_end;
 
                 if(*va_intrinsic == NULL){
                     LLVMTypeRef params[] = {LLVMPointerType(LLVMInt8Type(), 0)};
@@ -1267,8 +1172,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_VA_ARG: {
-                instr = instructions[i];
-
                 LLVMValueRef list = ir_to_llvm_value(llvm, ((ir_instr_va_arg_t*) instr)->va_list);
                 LLVMTypeRef arg_type = ir_to_llvm_type(llvm, ((ir_instr_va_arg_t*) instr)->result_type);
 
@@ -1276,9 +1179,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_VA_COPY: {
-                instr = instructions[i];
-
-                LLVMValueRef *va_copy_intrinsic = &llvm->va_copy_intrinsic;
+                LLVMValueRef *va_copy_intrinsic = &llvm->intrinsics.va_copy;
 
                 if(*va_copy_intrinsic == NULL){
                     LLVMTypeRef llvm_ptr_type = LLVMPointerType(LLVMInt8Type(), 0);
@@ -1296,8 +1197,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_ASM: {
-                instr = instructions[i];
-
                 ir_instr_asm_t *asm_instr = (ir_instr_asm_t*) instr;
                 LLVMValueRef *args = (LLVMValueRef*) malloc(sizeof(LLVMValueRef) * asm_instr->arity);
                 LLVMTypeRef *types = (LLVMTypeRef*) malloc(sizeof(LLVMTypeRef) * asm_instr->arity);
@@ -1326,14 +1225,14 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
             }
             break;
         case INSTRUCTION_DEINIT_SVARS:
-            if(llvm->static_variables_deinitialization_function == NULL){
+            if(llvm->static_variable_info.deinit_function == NULL){
                 panic("ir_to_llvm_instructions() - INSTRUCTION_DEINIT_SVARS cannot operate since static_variables_deinitialization_function doesn't exist\n");
             }
 
-            LLVMBuildCall(builder, llvm->static_variables_deinitialization_function, NULL, 0, "");
+            LLVMBuildCall(builder, llvm->static_variable_info.deinit_function, NULL, 0, "");
             break;
         default:
-            panic("ir_to_llvm_instructions() - Unrecognized instruction '%d'\n", (int) instructions[i]->id);
+            panic("ir_to_llvm_instructions() - Unrecognized instruction '%d'\n", (int) instr->id);
         }
     }
 
@@ -1343,8 +1242,8 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructi
 errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
     ir_global_t *globals = object->ir_module.globals;
     length_t globals_length = object->ir_module.globals_length;
-    ir_anon_global_t *anon_globals = object->ir_module.anon_globals;
-    length_t anon_globals_length = object->ir_module.anon_globals_length;
+    ir_anon_global_t *anon_globals = object->ir_module.anon_globals.globals;
+    length_t anon_globals_length = object->ir_module.anon_globals.length;
 
     LLVMModuleRef module = llvm->module;
     char global_implementation_name[256];
@@ -1401,11 +1300,11 @@ void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, L
     LLVMValueRef line_value = LLVMConstInt(LLVMInt32Type(), line, true);
     LLVMValueRef column_value = LLVMConstInt(LLVMInt32Type(), column, true);
 
-    LLVMAddIncoming(llvm->line_phi, &line_value, &current_block, 1);
-    LLVMAddIncoming(llvm->column_phi, &column_value, &current_block, 1);
+    LLVMAddIncoming(llvm->null_check.line_phi, &line_value, &current_block, 1);
+    LLVMAddIncoming(llvm->null_check.column_phi, &column_value, &current_block, 1);
 
     LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, pointer, "");
-    LLVMBuildCondBr(llvm->builder, if_null, llvm->null_check_on_fail_block, not_null_block);
+    LLVMBuildCondBr(llvm->builder, if_null, llvm->null_check.on_fail_block, not_null_block);
     LLVMPositionBuilderAtEnd(llvm->builder, not_null_block);
 
     // Set landing basicblock output to be the not-null case block
@@ -1418,7 +1317,7 @@ LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler){
     case OPTIMIZATION_LESS:       return LLVMCodeGenLevelLess;
     case OPTIMIZATION_DEFAULT:    return LLVMCodeGenLevelDefault;
     case OPTIMIZATION_AGGRESSIVE: return LLVMCodeGenLevelAggressive;
-    default: return LLVMCodeGenLevelDefault;
+    default:                      return LLVMCodeGenLevelDefault;
     }
 }
 
@@ -1472,12 +1371,12 @@ int llvm_string_table_entry_cmp(const void *va, const void *vb){
     return strncmp(a->data, b->data, a->length);
 }
 
-void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblock_t *basicblocks, length_t basicblocks_length){
-    out_catalog->blocks = malloc(sizeof(value_catalog_block_t) * basicblocks_length);
-    out_catalog->blocks_length = basicblocks_length;
+void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblocks_t basicblocks){
+    out_catalog->blocks = malloc(sizeof(value_catalog_block_t) * basicblocks.length);
+    out_catalog->blocks_length = basicblocks.length;
 
-    for(length_t block_index = 0; block_index != basicblocks_length; block_index++){
-        out_catalog->blocks[block_index].value_references = malloc(sizeof(LLVMValueRef) * basicblocks[block_index].instructions_length);
+    for(length_t block_index = 0; block_index != basicblocks.length; block_index++){
+        out_catalog->blocks[block_index].value_references = malloc(sizeof(LLVMValueRef) * basicblocks.blocks[block_index].instructions.length);
     }
 }
 
@@ -1489,24 +1388,23 @@ void value_catalog_free(value_catalog_t *catalog){
 }
 
 errorcode_t ir_to_llvm_inject_init_built(llvm_context_t *llvm){
-    if(llvm->static_variables_initialization_routine == NULL) return SUCCESS;
+    if(llvm->static_variable_info.init_routine == NULL) return SUCCESS;
 
     object_t *object = llvm->object;
     ir_builder_t *init_builder = object->ir_module.init_builder;
 
     LLVMBuilderRef builder = LLVMCreateBuilder();
-    ir_basicblock_t *basicblocks = init_builder->basicblocks;
-    length_t basicblocks_length = init_builder->basicblocks_length;
+    ir_basicblocks_t basicblocks = init_builder->basicblocks;
 
     if(!llvm->object->ir_module.common.has_main){
-        LLVMPositionBuilderAtEnd(builder, llvm->static_variables_initialization_routine);
-        LLVMBuildBr(builder, llvm->static_variables_initialization_post);
+        LLVMPositionBuilderAtEnd(builder, llvm->static_variable_info.init_routine);
+        LLVMBuildBr(builder, llvm->static_variable_info.init_post);
         LLVMDisposeBuilder(builder);
         return SUCCESS;
     }
 
     value_catalog_t catalog;
-    value_catalog_prepare(&catalog, basicblocks, basicblocks_length);
+    value_catalog_prepare(&catalog, basicblocks);
 
     varstack_t stack;
     stack.values = NULL;
@@ -1518,60 +1416,53 @@ errorcode_t ir_to_llvm_inject_init_built(llvm_context_t *llvm){
     llvm->stack = &stack;
 
     length_t f = object->ir_module.common.ir_main_id;
-    ir_func_t *module_func = &object->ir_module.funcs[f];
+    ir_func_t *module_func = &object->ir_module.funcs.funcs[f];
 
-    LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+    LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
     LLVMValueRef func_skeleton = llvm->func_skeletons[f];
 
     // If the true exit point of a block changed, its real value will be in here
     // (Used for PHI instructions to have the proper end point)
-    LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+    LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
 
     // Information about PHI instructions that need to have their incoming blocks delayed
     llvm->relocation_list.length = 0;
 
     // Create basicblocks
-    for(length_t b = 0; b != basicblocks_length; b++){
+    for(length_t b = 0; b != basicblocks.length; b++){
         llvm_blocks[b] = LLVMAppendBasicBlock(func_skeleton, "");
         llvm_exit_blocks[b] = llvm_blocks[b];
     }
 
     // Drop references to any old PHIs
-    llvm->line_phi = NULL;
-    llvm->column_phi = NULL;
+    llvm->null_check.line_phi = NULL;
+    llvm->null_check.column_phi = NULL;
 
-    if(ir_to_llvm_basicblocks(llvm, basicblocks, basicblocks_length, func_skeleton,
-            module_func, llvm_blocks, llvm_exit_blocks, f)){
-        value_catalog_free(&catalog);
-        free(stack.values);
-        free(stack.types);
-        free(llvm_blocks);
-        free(llvm_exit_blocks);
-        LLVMDisposeBuilder(builder);
-        return FAILURE;
+    errorcode_t errorcode = ir_to_llvm_basicblocks(llvm, basicblocks, func_skeleton,
+            module_func, llvm_blocks, llvm_exit_blocks, f);
+
+    if(errorcode == SUCCESS){
+        LLVMPositionBuilderAtEnd(builder, llvm->static_variable_info.init_routine);
+    
+        if(basicblocks.length != 0){
+            LLVMBuildBr(builder, llvm_blocks[0]);
+            LLVMPositionBuilderAtEnd(builder, llvm_exit_blocks[basicblocks.length - 1]);
+        }
+
+        LLVMBuildBr(builder, llvm->static_variable_info.init_post);
     }
-
-    LLVMPositionBuilderAtEnd(builder, llvm->static_variables_initialization_routine);
-
-    if(basicblocks_length != 0){
-        LLVMBuildBr(builder, llvm_blocks[0]);
-        LLVMPositionBuilderAtEnd(builder, llvm_exit_blocks[basicblocks_length - 1]);
-    }
-
-    LLVMBuildBr(builder, llvm->static_variables_initialization_post);
     
     value_catalog_free(&catalog);
     free(stack.values);
     free(stack.types);
     free(llvm_blocks);
     free(llvm_exit_blocks);
-
     LLVMDisposeBuilder(builder);
-    return SUCCESS;
+    return errorcode;
 }
 
 errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
-    if(llvm->static_variables_deinitialization_function == NULL) return SUCCESS;
+    if(llvm->static_variable_info.deinit_function == NULL) return SUCCESS;
 
     // REFACTOR:
     // TODO: Refactor this to abstract out the parts needed
@@ -1581,16 +1472,15 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     ir_builder_t *deinit_builder = object->ir_module.deinit_builder;
 
     LLVMBuilderRef builder = LLVMCreateBuilder();
-    ir_basicblock_t *basicblocks = deinit_builder->basicblocks;
-    length_t basicblocks_length = deinit_builder->basicblocks_length;
+    ir_basicblocks_t basicblocks = deinit_builder->basicblocks;
 
-    if(llvm->static_variables_deinitialization_function == NULL){
+    if(llvm->static_variable_info.deinit_function == NULL){
         internalerrorprintf("ir_to_llvm_inject_deinit_built() - static_variables_deinitialization_function does not exist\n");
         return FAILURE;
     }
 
     value_catalog_t catalog;
-    value_catalog_prepare(&catalog, basicblocks, basicblocks_length);
+    value_catalog_prepare(&catalog, basicblocks);
 
     varstack_t stack;
     stack.values = NULL;
@@ -1602,37 +1492,33 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     llvm->stack = &stack;
 
     length_t f = object->ir_module.common.ir_main_id;
-    ir_func_t *module_func = &object->ir_module.funcs[f];
+    ir_func_t *module_func = &object->ir_module.funcs.funcs[f];
 
-    LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
-    LLVMValueRef func_skeleton = llvm->static_variables_deinitialization_function;
+    LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
+    LLVMValueRef func_skeleton = llvm->static_variable_info.deinit_function;
 
     // If the true exit point of a block changed, its real value will be in here
     // (Used for PHI instructions to have the proper end point)
-    LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks_length);
+    LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
 
     // Information about PHI instructions that need to have their incoming blocks delayed
     llvm->relocation_list.length = 0;
 
     // Create basicblocks
-    for(length_t b = 0; b != basicblocks_length; b++){
+    for(length_t b = 0; b != basicblocks.length; b++){
         llvm_blocks[b] = LLVMAppendBasicBlock(func_skeleton, "");
         llvm_exit_blocks[b] = llvm_blocks[b];
     }
 
     // Drop references to any old PHIs
-    llvm->line_phi = NULL;
-    llvm->column_phi = NULL;
+    llvm->null_check.line_phi = NULL;
+    llvm->null_check.column_phi = NULL;
 
-    if(ir_to_llvm_basicblocks(llvm, basicblocks, basicblocks_length, func_skeleton,
-            module_func, llvm_blocks, llvm_exit_blocks, f)){
-        value_catalog_free(&catalog);
-        free(stack.values);
-        free(stack.types);
-        free(llvm_blocks);
-        free(llvm_exit_blocks);
-        LLVMDisposeBuilder(builder);
-        return FAILURE;
+    errorcode_t errorcode = ir_to_llvm_basicblocks(llvm, basicblocks, func_skeleton,
+            module_func, llvm_blocks, llvm_exit_blocks, f);
+
+    if(errorcode == SUCCESS){
+        LLVMBuildRetVoid(builder);
     }
 
     value_catalog_free(&catalog);
@@ -1640,23 +1526,21 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     free(stack.types);
     free(llvm_blocks);
     free(llvm_exit_blocks);
-
-    LLVMBuildRetVoid(builder);
     LLVMDisposeBuilder(builder);
-    return SUCCESS;
+    return errorcode;
 }
 
 errorcode_t ir_to_llvm_generate_deinit_svars_function_head(llvm_context_t *llvm){
-    if(llvm->static_variables_deinitialization_function != NULL){
+    LLVMValueRef *deinit_function = &llvm->static_variable_info.deinit_function;
+
+    if(*deinit_function != NULL){
         internalerrorprintf("ir_to_llvm_generate_deinit_svars_function_head() - Static variable deinitialization function already exists\n");
         return FAILURE;
     }
 
-    // Create function head for function that will handle deinitialization
-    // of all static variables
+    // Create head of function that will deinitialize static variables
     LLVMTypeRef fty = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
-    llvm->static_variables_deinitialization_function = LLVMAddFunction(llvm->module, "____adeinitsvars", fty);
-    LLVMSetLinkage(llvm->static_variables_deinitialization_function, LLVMPrivateLinkage);
-
+    *deinit_function = LLVMAddFunction(llvm->module, "____adeinitsvars", fty);
+    LLVMSetLinkage(*deinit_function, LLVMPrivateLinkage);
     return SUCCESS;
 }

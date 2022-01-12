@@ -851,7 +851,7 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
     ir_value_result_t *value_result;
     value_result = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
     value_result->block_id = builder->current_block_id;
-    value_result->instruction_id = builder->current_block->instructions_length;
+    value_result->instruction_id = builder->current_block->instructions.length;
 
     ir_instr_math_t *math_instr = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
     math_instr->result_type = other_value->type;

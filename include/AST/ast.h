@@ -179,7 +179,7 @@ typedef struct {
     weak_cstr_t name;
     funcid_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
-} ast_polymorphic_func_t;
+} ast_poly_func_t;
 
 // ---------------- ast_t ----------------
 // The root AST
@@ -220,12 +220,12 @@ typedef struct {
     length_t meta_definitions_capacity;
 
     // Polymorphic functions (eventually sorted)
-    ast_polymorphic_func_t *polymorphic_funcs;
-    length_t polymorphic_funcs_length;
-    length_t polymorphic_funcs_capacity;
+    ast_poly_func_t *poly_funcs;
+    length_t poly_funcs_length;
+    length_t poly_funcs_capacity;
 
     // A second list of polymorphic functions that only contains methods
-    ast_polymorphic_func_t *polymorphic_methods;
+    ast_poly_func_t *polymorphic_methods;
     length_t polymorphic_methods_length;
     length_t polymorphic_methods_capacity;
 
@@ -381,10 +381,10 @@ int ast_constants_cmp(const void *a, const void *b);
 // Used for qsort()
 int ast_enums_cmp(const void *a, const void *b);
 
-// ---------------- ast_polymorphic_funcs_cmp ----------------
+// ---------------- ast_poly_funcs_cmp ----------------
 // Compares two 'ast_func_t*' structures by name.
 // Used for qsort()
-int ast_polymorphic_funcs_cmp(const void *a, const void *b);
+int ast_poly_funcs_cmp(const void *a, const void *b);
 
 // ---------------- ast_globals_cmp ----------------
 // Compares two 'ast_global_t*' structures by name

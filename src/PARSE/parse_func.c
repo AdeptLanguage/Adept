@@ -243,16 +243,16 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
         // Remember the function as polymorphic
         func->traits |= AST_FUNC_POLYMORPHIC;
-        expand((void**) &ast->polymorphic_funcs, sizeof(ast_polymorphic_func_t), ast->polymorphic_funcs_length, &ast->polymorphic_funcs_capacity, 1, 4);
+        expand((void**) &ast->poly_funcs, sizeof(ast_poly_func_t), ast->poly_funcs_length, &ast->poly_funcs_capacity, 1, 4);
 
-        ast_polymorphic_func_t *poly_func = &ast->polymorphic_funcs[ast->polymorphic_funcs_length++];
+        ast_poly_func_t *poly_func = &ast->poly_funcs[ast->poly_funcs_length++];
         poly_func->name = func->name;
         poly_func->ast_func_id = ast_func_id;
         poly_func->is_beginning_of_group = -1; // Uncalculated
 
         if(func->arity != 0 && streq(func->arg_names[0], "this")){
-            expand((void**) &ast->polymorphic_methods, sizeof(ast_polymorphic_func_t), ast->polymorphic_methods_length, &ast->polymorphic_methods_capacity, 1, 4);
-            ast_polymorphic_func_t *poly_method = &ast->polymorphic_methods[ast->polymorphic_methods_length++];
+            expand((void**) &ast->polymorphic_methods, sizeof(ast_poly_func_t), ast->polymorphic_methods_length, &ast->polymorphic_methods_capacity, 1, 4);
+            ast_poly_func_t *poly_method = &ast->polymorphic_methods[ast->polymorphic_methods_length++];
             poly_method->name = func->name;
             poly_method->ast_func_id = ast_func_id;
             poly_method->is_beginning_of_group = -1; // Uncalculated

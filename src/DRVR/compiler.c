@@ -1156,8 +1156,8 @@ bool compiler_undeclared_function_possibilities(object_t *object, const char *na
     #else
     ir_module_t *ir_module = &object->ir_module;
 
-    maybe_index_t original_index = find_beginning_of_func_group(ir_module->func_mappings, ir_module->func_mappings_length, name);
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
+    maybe_index_t original_index = find_beginning_of_func_group(&ir_module->func_mappings, name);
+    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.poly_funcs, object->ast.poly_funcs_length, name);
     if(!should_print) goto return_result;
 
     // TODO: CLEANUP: Clean up this code
@@ -1165,28 +1165,28 @@ bool compiler_undeclared_function_possibilities(object_t *object, const char *na
     maybe_index_t index = original_index;
 
     if(index != -1) do {
-        ir_func_mapping_t *mapping = &ir_module->func_mappings[index];
+        ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index];
 
         if(mapping->is_beginning_of_group == -1){
-            mapping->is_beginning_of_group = index == 0 ? 1 : !streq(mapping->name, ir_module->func_mappings[index - 1].name);
+            mapping->is_beginning_of_group = index == 0 ? 1 : !streq(mapping->name, ir_module->func_mappings.mappings[index - 1].name);
         }
         if(mapping->is_beginning_of_group == 1 && index != original_index) break;
 
         print_candidate(&object->ast.funcs[mapping->ast_func_id]);
-    } while((length_t) ++index != ir_module->funcs_length);
+    } while((length_t) ++index != ir_module->funcs.length);
 
     index = poly_index;
 
     if(index != -1) do {
-        ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
+        ast_poly_func_t *poly = &object->ast.poly_funcs[index];
         
         if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.polymorphic_funcs[index - 1].name);
+            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.poly_funcs[index - 1].name);
         }
         if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 
         print_candidate(&object->ast.funcs[poly->ast_func_id]);
-    } while((length_t) ++index != object->ast.polymorphic_funcs_length);
+    } while((length_t) ++index != object->ast.poly_funcs_length);
 
 return_result:
     return original_index != -1 || poly_index != -1;
@@ -1224,16 +1224,15 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
     ast_elem_generic_base_t *maybe_generic_base = NULL;
 
     if(kind == AST_ELEM_BASE){
-        original_index = find_beginning_of_method_group(ir_module->methods, ir_module->methods_length, ((ast_elem_base_t*) this_type.elements[0])->base, name);
+        original_index = find_beginning_of_method_group(&ir_module->methods, ((ast_elem_base_t*) this_type.elements[0])->base, name);
     } else if(kind == AST_ELEM_GENERIC_BASE){
         maybe_generic_base = (ast_elem_generic_base_t*) this_type.elements[0];
-        original_index = find_beginning_of_generic_base_method_group(ir_module->generic_base_methods, ir_module->generic_base_methods_length,
-            maybe_generic_base->name, name);
+        original_index = find_beginning_of_poly_method_group(&ir_module->poly_methods, maybe_generic_base->name, name);
     } else {
         original_index = -1;
     }
 
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, name);
+    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.poly_funcs, object->ast.poly_funcs_length, name);
 
     if(original_index == -1 && poly_index == -1){
         // No method with that name exists for that struct
@@ -1256,32 +1255,32 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
     // TODO: CLEANUP: Clean up this messy code
     if(index != -1){
         if(kind == AST_ELEM_BASE) do {
-            ir_method_t *method = &ir_module->methods[index];
+            ir_method_t *method = &ir_module->methods.methods[index];
 
             if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = index == 0 ? 1 : (!streq(method->name, ir_module->methods[index - 1].name) || !streq(method->struct_name, ir_module->methods[index - 1].struct_name));
+                method->is_beginning_of_group = index == 0 ? 1 : (!streq(method->name, ir_module->methods.methods[index - 1].name) || !streq(method->struct_name, ir_module->methods.methods[index - 1].struct_name));
             }
             if(method->is_beginning_of_group == 1 && index != original_index) break;
 
             // Print method candidate for basic struct type
             print_candidate(&object->ast.funcs[method->ast_func_id]);
-        } while((length_t) ++index != ir_module->methods_length);
+        } while((length_t) ++index != ir_module->methods.length);
 
         // Print potential candidates for generic struct
         else if(kind == AST_ELEM_GENERIC_BASE) do {
-            ir_generic_base_method_t *generic_base_method = &ir_module->generic_base_methods[index];
+            ir_poly_method_t *poly_method = &ir_module->poly_methods.methods[index];
             
-            if(generic_base_method->is_beginning_of_group == -1){
-                generic_base_method->is_beginning_of_group = index == 0 ? 1 : (!streq(generic_base_method->name, ir_module->generic_base_methods[index - 1].name) || !streq(generic_base_method->generic_base, ir_module->generic_base_methods[index - 1].generic_base));
+            if(poly_method->is_beginning_of_group == -1){
+                poly_method->is_beginning_of_group = index == 0 ? 1 : (!streq(poly_method->name, ir_module->poly_methods.methods[index - 1].name) || !streq(poly_method->struct_name, ir_module->poly_methods.methods[index - 1].struct_name));
             }
-            if(generic_base_method->is_beginning_of_group == 1 && index != original_index) break;
+            if(poly_method->is_beginning_of_group == 1 && index != original_index) break;
 
             // Ensure the generics of the generic base match up
-            bool generics_match_up = maybe_generic_base->generics_length == generic_base_method->generics_length;
+            bool generics_match_up = maybe_generic_base->generics_length == poly_method->generics_length;
             if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
-                if(!ast_types_identical(&maybe_generic_base->generics[i], &generic_base_method->generics[i])){
-                    // && !ast_type_has_polymorph(&generic_base_method->generics[i])
-                    // is unnecessary because generic_base_methods my themselves will never contain polymorphic type variables
+                if(!ast_types_identical(&maybe_generic_base->generics[i], &poly_method->generics[i])){
+                    // && !ast_type_has_polymorph(&poly_method->generics[i])
+                    // is unnecessary because poly_methods my themselves will never contain polymorphic type variables
                     generics_match_up = false;
                     break;
                 }
@@ -1289,18 +1288,18 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
 
             // Print method candidate for generic struct type (if the generics match up)
             if(generics_match_up){
-                print_candidate(&object->ast.funcs[generic_base_method->ast_func_id]);
+                print_candidate(&object->ast.funcs[poly_method->ast_func_id]);
             }
-        } while((length_t) ++index != ir_module->generic_base_methods_length);
+        } while((length_t) ++index != ir_module->poly_methods.length);
     }
 
     index = poly_index;
 
     if(index != -1) do {
-        ast_polymorphic_func_t *poly = &object->ast.polymorphic_funcs[index];
+        ast_poly_func_t *poly = &object->ast.poly_funcs[index];
 
         if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.polymorphic_funcs[index - 1].name);
+            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.poly_funcs[index - 1].name);
         }
         if(poly->is_beginning_of_group == 1 && index != poly_index) break;
 
@@ -1329,7 +1328,7 @@ void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t
         }
 
         print_candidate(ast_func);
-    } while((length_t) ++index != object->ast.polymorphic_funcs_length);
+    } while((length_t) ++index != object->ast.poly_funcs_length);
     #endif
 }
 #endif

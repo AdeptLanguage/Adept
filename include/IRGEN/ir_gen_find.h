@@ -80,15 +80,15 @@ errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
     length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode);
 
-// ---------------- ir_gen_find_generic_base_method_conforming ----------------
+// ---------------- ir_gen_find_poly_method_conforming ----------------
 // Finds a method that has the matches a generic base and conforms
 // to the arguments given. Result info stored 'result'
 // NOTE: 'from_source' is used for error messages, it may be NULL_SOURCE if not applicable
-errorcode_t ir_gen_find_generic_base_method_conforming(ir_builder_t *builder, const char *generic_base,
+errorcode_t ir_gen_find_poly_method_conforming(ir_builder_t *builder, const char *struct_name,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
     length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result);
 
-errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder, const char *generic_base,
+errorcode_t ir_gen_find_poly_method_conforming_to(ir_builder_t *builder, const char *struct_name,
     const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
     length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode);
 
@@ -97,28 +97,26 @@ errorcode_t ir_gen_find_generic_base_method_conforming_to(ir_builder_t *builder,
 errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, const char *struct_name, 
         const char *name, ast_type_t *arg_types, length_t type_list_length, source_t from_source, optional_funcpair_t *result);
 
-// ---------------- ir_gen_find_generic_base_method ----------------
+// ---------------- ir_gen_find_poly_method ----------------
 // Find method without any conforming
-errorcode_t ir_gen_find_generic_base_method(compiler_t *compiler, object_t *object, const char *generic_base,
+errorcode_t ir_gen_find_poly_method(compiler_t *compiler, object_t *object, const char *struct_name,
     const char *name, ast_type_t *arg_types, length_t type_list_length, source_t from_source, optional_funcpair_t *result);
 
 // ---------------- find_beginning_of_func_group ----------------
 // Searches for beginning of function group in a list of mappings
-maybe_index_t find_beginning_of_func_group(ir_func_mapping_t *mappings, length_t length, const char *name);
+maybe_index_t find_beginning_of_func_group(ir_func_mappings_t *mappings, const char *name);
 
 // ---------------- find_beginning_of_method_group ----------------
 // Searches for beginning of method group in a list of methods
-maybe_index_t find_beginning_of_method_group(ir_method_t *methods, length_t length,
-    const char *struct_name, const char *name);
+maybe_index_t find_beginning_of_method_group(ir_methods_t *methods, const char *struct_name, const char *name);
 
-// ---------------- find_beginning_of_generic_base_method_group ----------------
+// ---------------- find_beginning_of_poly_method_group ----------------
 // Searches for beginning of method group in a list of generic base methods
-maybe_index_t find_beginning_of_generic_base_method_group(ir_generic_base_method_t *methods, length_t length,
-    const char *generic_base, const char *name);
+maybe_index_t find_beginning_of_poly_method_group(ir_poly_methods_t *methods, const char *struct_name, const char *name);
 
 // ---------------- find_beginning_of_poly_func_group ----------------
 // Searches for beginning of function group in a list of mappings
-maybe_index_t find_beginning_of_poly_func_group(ast_polymorphic_func_t *polymorphic_funcs, length_t polymorphic_funcs_length, const char *name);
+maybe_index_t find_beginning_of_poly_func_group(ast_poly_func_t *poly_funcs, length_t poly_funcs_length, const char *name);
 
 // ---------------- func_args_match ----------------
 // Returns whether a function's arguments match

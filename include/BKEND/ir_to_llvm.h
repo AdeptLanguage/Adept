@@ -51,6 +51,29 @@ typedef struct {
 
 typedef listof(llvm_static_variable_t, variables) llvm_static_variables_t;
 
+typedef struct {
+    LLVMValueRef memcpy;
+    LLVMValueRef memset;
+    LLVMValueRef stacksave;
+    LLVMValueRef stackrestore;
+    LLVMValueRef va_start;
+    LLVMValueRef va_end;
+    LLVMValueRef va_copy;
+} llvm_intrinsics_t;
+
+typedef struct {
+    LLVMBasicBlockRef on_fail_block;
+    LLVMValueRef line_phi;
+    LLVMValueRef column_phi;
+    LLVMValueRef failure_message_bytes;
+} llvm_null_check_t;
+
+typedef struct {
+    LLVMBasicBlockRef init_routine;
+    LLVMBasicBlockRef init_post;
+    LLVMValueRef deinit_function;
+} llvm_static_variable_info_t;
+
 // ---------------- llvm_context_t ----------------
 // A general container for the LLVM exporting context
 typedef struct {
@@ -62,31 +85,18 @@ typedef struct {
     LLVMValueRef *global_variables;
     LLVMValueRef *anon_global_variables;
     LLVMTargetDataRef data_layout;
-    LLVMValueRef memcpy_intrinsic;
-    LLVMValueRef memset_intrinsic;
-    LLVMValueRef stacksave_intrinsic;
-    LLVMValueRef stackrestore_intrinsic;
-    LLVMValueRef va_start_intrinsic;
-    LLVMValueRef va_end_intrinsic;
-    LLVMValueRef va_copy_intrinsic;
+    llvm_intrinsics_t intrinsics;
     compiler_t *compiler;
     object_t *object;
 
     // Variables only used for compilation with null checks
-    LLVMBasicBlockRef null_check_on_fail_block;
-    LLVMValueRef line_phi;
-    LLVMValueRef column_phi;
-    LLVMValueRef null_check_failure_message_bytes;
-    bool has_null_check_failure_message_bytes;
+    llvm_null_check_t null_check;
 
     llvm_string_table_t string_table;
     llvm_phi2_relocation_list_t relocation_list;
 
     llvm_static_variables_t static_variables;
-    LLVMBasicBlockRef static_variables_initialization_routine;
-    LLVMBasicBlockRef static_variables_initialization_post;
-    LLVMValueRef static_variables_deinitialization_function;
-    LLVMBasicBlockRef boot;
+    llvm_static_variable_info_t static_variable_info;
 
     LLVMTypeRef i64_type;
     LLVMTypeRef f64_type;
@@ -110,12 +120,12 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object);
 
 // ---------------- ir_to_llvm_instructions ----------------
 // Generates LLVM instructions from IR instructions
-errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instr_t **instructions, length_t instructions_length, length_t basicblock_id,
+errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructions, length_t basicblock_id,
         length_t f, LLVMBasicBlockRef *llvm_blocks, LLVMBasicBlockRef *llvm_exit_blocks);
 
 // ---------------- ir_to_llvm_basicblocks ----------------
 // Generates LLVM basicblocks and instructions from IR basicblocks and instructions
-errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblock_t *basicblocks, length_t basicblocks_length, LLVMValueRef func_skeleton,
+errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblocks_t basicblocks, LLVMValueRef func_skeleton,
         ir_func_t *module_func, LLVMBasicBlockRef *llvm_blocks, LLVMBasicBlockRef *llvm_exit_blocks, length_t f);
 
 // ---------------- ir_to_llvm_allocate_stack_variables ----------------
@@ -158,7 +168,7 @@ LLVMValueRef llvm_create_static_variable(llvm_context_t *llvm, ir_type_t *type, 
 // ---------------- value_catalog_prepare ----------------
 // Creates a value_catalog_t cabable of holding value results
 // for a list of basicblocks
-void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblock_t *basicblocks, length_t basicblocks_length);
+void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblocks_t basicblocks);
 
 // ---------------- value_catalog_free ----------------
 // Frees memory allocated by a value_catalog_t

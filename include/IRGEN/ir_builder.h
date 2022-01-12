@@ -21,9 +21,7 @@
 // Container for storing general information
 // about the building state
 typedef struct ir_builder {
-    ir_basicblock_t *basicblocks;
-    length_t basicblocks_length;
-    length_t basicblocks_capacity;
+    ir_basicblocks_t basicblocks;
     ir_basicblock_t *current_block;
     length_t current_block_id;
     length_t break_block_id; // 0 == none
@@ -410,10 +408,10 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
     ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type);
 
-// ---------------- instantiate_polymorphic_func ----------------
+// ---------------- instantiate_poly_func ----------------
 // Instantiates a polymorphic function
 // NOTE: 'instantiation_source' may be NULL_SOURCE
-errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
+errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping);
 
 // ---------------- attempt_autogen___defer__ ----------------

@@ -54,9 +54,9 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->meta_definitions = NULL;
     ast->meta_definitions_length = 0;
     ast->meta_definitions_capacity = 0;
-    ast->polymorphic_funcs = NULL;
-    ast->polymorphic_funcs_length = 0;
-    ast->polymorphic_funcs_capacity = 0;
+    ast->poly_funcs = NULL;
+    ast->poly_funcs_length = 0;
+    ast->poly_funcs_capacity = 0;
     ast->polymorphic_methods = NULL;
     ast->polymorphic_methods_length = 0;
     ast->polymorphic_methods_capacity = 0;
@@ -208,7 +208,7 @@ void ast_free(ast_t *ast){
     }
 
     free(ast->meta_definitions);
-    free(ast->polymorphic_funcs);
+    free(ast->poly_funcs);
     free(ast->polymorphic_methods);
 
     for(i = 0; i != ast->polymorphic_composites_length; i++){
@@ -1120,10 +1120,10 @@ int ast_enums_cmp(const void *a, const void *b){
     return strcmp(((ast_enum_t*) a)->name, ((ast_enum_t*) b)->name);
 }
 
-int ast_polymorphic_funcs_cmp(const void *a, const void *b){
-    int diff = strcmp(((ast_polymorphic_func_t*) a)->name, ((ast_polymorphic_func_t*) b)->name);
+int ast_poly_funcs_cmp(const void *a, const void *b){
+    int diff = strcmp(((ast_poly_func_t*) a)->name, ((ast_poly_func_t*) b)->name);
     if(diff != 0) return diff;
-    return (int) ((ast_polymorphic_func_t*) a)->ast_func_id - (int) ((ast_polymorphic_func_t*) b)->ast_func_id;
+    return (int) ((ast_poly_func_t*) a)->ast_func_id - (int) ((ast_poly_func_t*) b)->ast_func_id;
 }
 
 int ast_globals_cmp(const void *ga, const void *gb){

@@ -634,7 +634,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
         // Revalidate 'ast_func' and 'ir_func'
         pair.ast_func = &builder->object->ast.funcs[pair.ast_func_id];
-        pair.ir_func = &builder->object->ir_module.funcs[pair.ir_func_id];
+        pair.ir_func = &builder->object->ir_module.funcs.funcs[pair.ir_func_id];
 
         // Prepare for potential stack allocation
         ir_value_t *stack_pointer = NULL;
@@ -1456,7 +1456,7 @@ errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, a
     if(ir_builder_get_noop_defer_func(builder, source_on_error, &ir_func_id)) return FAILURE;
 
     ir_module_t *module = &builder->object->ir_module;
-    ir_func_t *ir_func = &module->funcs[ir_func_id];
+    ir_func_t *ir_func = &module->funcs.funcs[ir_func_id];
 
     // Create the no-op IR function pointer type
     ir_type_extra_function_t *noop_extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
@@ -1698,17 +1698,17 @@ errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_valu
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
     // DANGEROUS: Manually storing state of builder
-    length_t basicblocks_length = builder->basicblocks_length;
+    length_t basicblocks_length = builder->basicblocks.length;
     length_t current_block_id = builder->current_block_id;
-    length_t insturctions_length = builder->basicblocks[current_block_id].instructions_length;
+    length_t insturctions_length = builder->basicblocks.blocks[current_block_id].instructions.length;
 
     // Generate the expression to get back it's result type
     if(ir_gen_expr(builder, expr->value, NULL, true, &ast_type)) return FAILURE;
 
     // DANGEROUS: Manually restoring state of builder
-    builder->basicblocks_length = basicblocks_length;
+    builder->basicblocks.length = basicblocks_length;
     build_using_basicblock(builder, builder->current_block_id);
-    builder->basicblocks[current_block_id].instructions_length = insturctions_length;
+    builder->basicblocks.blocks[current_block_id].instructions.length = insturctions_length;
     
     // Restore IR pool from previous snapshot
     ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1867,7 +1867,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     
     // Revalidate 'ast_func' and 'ir_func'
     pair.ast_func = &builder->object->ast.funcs[pair.ast_func_id];
-    pair.ir_func = &builder->object->ir_module.funcs[pair.ir_func_id];
+    pair.ir_func = &builder->object->ir_module.funcs.funcs[pair.ir_func_id];
 
     // Remember arity before variadic argument packing
     length_t unpacked_arity = arity;
@@ -1924,7 +1924,7 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
     }
     else if(ast_type_is_pointer_to_generic_base(subject_type)){
         subject = ((ast_elem_generic_base_t*) subject_type->elements[1])->name;
-        error = ir_gen_find_generic_base_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, expr->source, result);
+        error = ir_gen_find_poly_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, expr->source, result);
     }
     else {
         internalerrorprintf("ir_gen_expr_call_method_find_appropriate_method() - Bad subject type\n");
@@ -2728,7 +2728,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
     if(error){
         // Undo last instruction we attempted to build
         ir_pool_snapshot_restore(builder->pool, &snapshot);
-        builder->current_block->instructions_length--;
+        builder->current_block->instructions.length--;
 
         // Try to use the overload function if it exists
         *ir_value = overload ? handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, math_expr->source, out_expr_type, overload) : NULL;

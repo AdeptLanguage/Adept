@@ -533,10 +533,10 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
 
     // Add function to polymorphic function registry if it's polymorphic
     if(is_polymorphic){
-        expand((void**) &ast->polymorphic_funcs, sizeof(ast_polymorphic_func_t), ast->polymorphic_funcs_length, &ast->polymorphic_funcs_capacity, 1, 4);
+        expand((void**) &ast->poly_funcs, sizeof(ast_poly_func_t), ast->poly_funcs_length, &ast->poly_funcs_capacity, 1, 4);
 
         func->traits |= AST_FUNC_POLYMORPHIC;
-        ast_polymorphic_func_t *poly_func = &ast->polymorphic_funcs[ast->polymorphic_funcs_length++];
+        ast_poly_func_t *poly_func = &ast->poly_funcs[ast->poly_funcs_length++];
         poly_func->name = func->name;
         poly_func->ast_func_id = ast_func_id;
         poly_func->is_beginning_of_group = -1; // Uncalculated

@@ -37,9 +37,12 @@
 #include "UTIL/util.h"
 
 void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, bool static_builder){
-    builder->basicblocks = malloc(sizeof(ir_basicblock_t) * 4);
-    builder->basicblocks_length = 1;
-    builder->basicblocks_capacity = 4;
+    builder->basicblocks = (ir_basicblocks_t){
+        .blocks = malloc(sizeof(ir_basicblock_t) * 4),
+        .length = 1,
+        .capacity = 4,
+    };
+
     builder->pool = &object->ir_module.pool;
     builder->type_map = &object->ir_module.type_map;
     builder->compiler = compiler;
@@ -49,11 +52,16 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     builder->next_var_id = 0;
     builder->has_string_struct = TROOLEAN_UNKNOWN;
 
-    ir_basicblock_t *entry_block = &builder->basicblocks[0];
-    entry_block->instructions = malloc(sizeof(ir_instr_t*) * 16);
-    entry_block->instructions_length = 0;
-    entry_block->instructions_capacity = 16;
-    entry_block->traits = TRAIT_NONE;
+    ir_basicblock_t *entry_block = &builder->basicblocks.blocks[0];
+
+    *entry_block = (ir_basicblock_t){
+        .instructions = (ir_instrs_t){
+            .instructions = malloc(sizeof(ir_instr_t*) * 16),
+            .length = 0,
+            .capacity = 16,
+        },
+        .traits = TRAIT_NONE,
+    };
 
     // Set current block
     builder->current_block = entry_block;
@@ -74,7 +82,7 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     builder->block_stack_capacity = 0;
 
     if(!static_builder){
-        ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
+        ir_func_t *module_func = &object->ir_module.funcs.funcs[ir_func_id];
         module_func->scope = malloc(sizeof(bridge_scope_t));
         bridge_scope_init(module_func->scope, NULL);
         module_func->scope->first_var_id = 0;
@@ -112,46 +120,48 @@ length_t build_basicblock(ir_builder_t *builder){
     // NOTE: All basicblock pointers should be recalculated after calling this function
     //           (Except for 'builder->current_block' which is automatically recalculated if necessary)
 
-    if(builder->basicblocks_length == builder->basicblocks_capacity){
-        builder->basicblocks_capacity *= 2;
-        ir_basicblock_t *new_basicblocks = malloc(sizeof(ir_basicblock_t) * builder->basicblocks_capacity);
-        memcpy(new_basicblocks, builder->basicblocks, sizeof(ir_basicblock_t) * builder->basicblocks_length);
-        free(builder->basicblocks);
-        builder->basicblocks = new_basicblocks;
-        builder->current_block = &builder->basicblocks[builder->current_block_id];
+    if(builder->basicblocks.length == builder->basicblocks.capacity){
+        builder->basicblocks.capacity *= 2;
+        ir_basicblock_t *new_basicblocks = malloc(sizeof(ir_basicblock_t) * builder->basicblocks.capacity);
+        memcpy(new_basicblocks, builder->basicblocks.blocks, sizeof(ir_basicblock_t) * builder->basicblocks.length);
+        free(builder->basicblocks.blocks);
+        builder->basicblocks.blocks = new_basicblocks;
+        builder->current_block = &builder->basicblocks.blocks[builder->current_block_id];
     }
 
-    ir_basicblock_t *block = &builder->basicblocks[builder->basicblocks_length++];
-    block->instructions = malloc(sizeof(ir_instr_t*) * 16);
-    block->instructions_length = 0;
-    block->instructions_capacity = 16;
+    ir_basicblock_t *block = &builder->basicblocks.blocks[builder->basicblocks.length++];
+    block->instructions.instructions = malloc(sizeof(ir_instr_t*) * 16);
+    block->instructions.length = 0;
+    block->instructions.capacity = 16;
     block->traits = TRAIT_NONE;
-    return builder->basicblocks_length - 1;
+    return builder->basicblocks.length - 1;
 }
 
 void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id){
     // NOTE: Sets basicblock that instructions will be inserted into
-    builder->current_block = &builder->basicblocks[basicblock_id];
+    builder->current_block = &builder->basicblocks.blocks[basicblock_id];
     builder->current_block_id = basicblock_id;
 }
 
 ir_instr_t* build_instruction(ir_builder_t *builder, length_t size){
     // NOTE: Generates an instruction of the size 'size'
     ir_basicblock_new_instructions(builder->current_block, 1);
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) ir_pool_alloc(builder->pool, size);
-    return builder->current_block->instructions[builder->current_block->instructions_length - 1];
+    builder->current_block->instructions.instructions[builder->current_block->instructions.length++] = (ir_instr_t*) ir_pool_alloc(builder->pool, size);
+    return builder->current_block->instructions.instructions[builder->current_block->instructions.length - 1];
 }
 
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
     // NOTE: Builds an ir_value_t for the result of the last instruction in the current block
 
+    ir_instrs_t *instrs = &builder->current_block->instructions;
+
     ir_value_result_t *result = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
     result->block_id = builder->current_block_id;
-    result->instruction_id = builder->current_block->instructions_length - 1;
+    result->instruction_id = instrs->length - 1;
 
     ir_value_t *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
     ir_value->value_type = VALUE_TYPE_RESULT;
-    ir_value->type = builder->current_block->instructions[result->instruction_id]->result_type;
+    ir_value->type = instrs->instructions[result->instruction_id]->result_type;
     ir_value->extra = result;
 
     // Little test to make sure ir_value->type is valid
@@ -216,7 +226,6 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_s
     ir_type_t *dereferenced_type = ir_type_dereference(value->type);
     if(dereferenced_type == NULL) return NULL;
 
-    ir_basicblock_new_instructions(builder->current_block, 1);
     ir_instr_load_t *instruction = (ir_instr_load_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
     instruction->id = INSTRUCTION_LOAD;
     instruction->result_type = dereferenced_type;
@@ -228,7 +237,8 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_s
     }
 
     // Otherwise, we just ignore line/column fields
-    builder->current_block->instructions[builder->current_block->instructions_length++] = (ir_instr_t*) instruction;
+    ir_basicblock_new_instructions(builder->current_block, 1);
+    builder->current_block->instructions.instructions[builder->current_block->instructions.length++] = (ir_instr_t*) instruction;
     return build_value_from_prev_instruction(builder);
 }
 
@@ -430,19 +440,20 @@ ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **va
 }
 
 ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
-    expand((void**) &module->anon_globals, sizeof(ir_anon_global_t), module->anon_globals_length, &module->anon_globals_capacity, 1, 4);
-
-    ir_anon_global_t *anon_global = &module->anon_globals[module->anon_globals_length++];
-    anon_global->type = type;
-    anon_global->traits = is_constant ? IR_ANON_GLOBAL_CONSTANT : TRAIT_NONE;
-    anon_global->initializer = NULL;
+    ir_anon_globals_append(&module->anon_globals, (
+        (ir_anon_global_t){
+            .type = type,
+            .traits = is_constant ? IR_ANON_GLOBAL_CONSTANT : TRAIT_NONE,
+            .initializer = NULL,
+        }
+    ));
 
     ir_value_t *reference = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
     reference->value_type = is_constant ? VALUE_TYPE_CONST_ANON_GLOBAL : VALUE_TYPE_ANON_GLOBAL;
     reference->type = ir_type_pointer_to(&module->pool, type);
 
     reference->extra = ir_pool_alloc(&module->pool, sizeof(ir_value_anon_global_t));
-    ((ir_value_anon_global_t*) reference->extra)->anon_global_id = module->anon_globals_length - 1;
+    ((ir_value_anon_global_t*) reference->extra)->anon_global_id = module->anon_globals.length - 1;
     return reference;
 }
 
@@ -453,7 +464,7 @@ void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global,
     }
 
     length_t index = ((ir_value_anon_global_t*) anon_global->extra)->anon_global_id;
-    module->anon_globals[index].initializer = initializer;
+    module->anon_globals.globals[index].initializer = initializer;
 }
 
 ir_type_t* ir_builder_usize(ir_builder_t *builder){
@@ -711,13 +722,14 @@ ir_value_t *build_bool(ir_pool_t *pool, bool value){
 }
 
 errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure){
-    ir_module_t *ir_module = &builder->object->ir_module;
-    expand((void**) &ir_module->rtti_relocations, sizeof(rtti_relocation_t), ir_module->rtti_relocations_length, &ir_module->rtti_relocations_capacity, 1, 4);
+    rtti_relocations_append(&builder->object->ir_module.rtti_relocations, (
+        (rtti_relocation_t){
+            .human_notation = human_notation,
+            .id_ref = id_ref,
+            .source_on_failure = source_on_failure,
+        }
+    ));
 
-    rtti_relocation_t *relocation = &ir_module->rtti_relocations[ir_module->rtti_relocations_length++];
-    relocation->human_notation = human_notation;
-    relocation->id_ref = id_ref;
-    relocation->source_on_failure = source_on_failure;
     return SUCCESS;
 }
 
@@ -854,7 +866,7 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
 
         if(failed){
             // Remove VARPTR instruction
-            deinit_builder->current_block->instructions_length--;
+            deinit_builder->current_block->instructions.length--;
 
             // Revert recent pool allocations
             ir_pool_snapshot_restore(deinit_builder->pool, &snapshot);
@@ -900,7 +912,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
 
         if(failed){
             // Remove GVARPTR instruction
-            builder->current_block->instructions_length--;
+            builder->current_block->instructions.length--;
 
             // Revert recent pool allocations
             ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -940,7 +952,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
 
             // Call __defer__()
             if(pair.has){
-                ir_type_t *result_type = builder->object->ir_module.funcs[pair.value.ir_func_id].return_type;
+                ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;
                 build_call(builder, pair.value.ir_func_id, result_type, arguments, 1, false);
                 return SUCCESS;
             }
@@ -961,7 +973,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             length_t count = ((ast_elem_fixed_array_t*) ast_type->elements[0])->length;
 
             // Take snapshot of instruction count
-            length_t before_modification_instructions_length = builder->current_block->instructions_length;
+            length_t before_modification_instructions_length = builder->current_block->instructions.length;
 
             // Bitcast to '*T' from '*n T'
             // NOTE: Assumes that the IR type of 'mutable_value' is a pointer to a fixed array
@@ -986,7 +998,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
 
                     // Restore basicblock to previous amount of instructions
                     // NOTE: This is only okay because this function 'handle_single_dereference' cannot generate new basicblocks
-                    builder->current_block->instructions_length = before_modification_instructions_length;
+                    builder->current_block->instructions.length = before_modification_instructions_length;
                     return errorcode;
                 }
             }
@@ -1059,7 +1071,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
 
                 if(failed){
                     // Remove VARPTR, LOAD, and MEMBER instruction
-                    builder->current_block->instructions_length -= 3;
+                    builder->current_block->instructions.length -= 3;
 
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1130,7 +1142,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
 
                 if(failed){
                     // Remove VARPTR, LOAD, and MEMBER instruction
-                    builder->current_block->instructions_length -= 3;
+                    builder->current_block->instructions.length -= 3;
 
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1190,7 +1202,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                 }
 
                 if(pair.has){
-                    ir_type_t *result_type = builder->object->ir_module.funcs[pair.value.ir_func_id].return_type;                
+                    ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;                
                     values[i] = build_call(builder, pair.value.ir_func_id, result_type, arguments, 1, true);
                 }
             }
@@ -1245,7 +1257,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
             length_t count = ((ast_elem_fixed_array_t*) ast_type->elements[0])->length;
 
             // Take snapshot of instruction count
-            length_t before_modification_instructions_length = builder->current_block->instructions_length;
+            length_t before_modification_instructions_length = builder->current_block->instructions.length;
 
             // Bitcast to '*T' from '*n T'
             // NOTE: Assumes that the IR type of 'mutable_value' is a pointer to a fixed array
@@ -1269,7 +1281,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
 
                     // Restore basicblock to previous amount of instructions
                     // NOTE: This is only okay because this function 'handle_single_dereference' cannot generate new basicblocks
-                    builder->current_block->instructions_length = before_modification_instructions_length;
+                    builder->current_block->instructions.length = before_modification_instructions_length;
                     return errorcode;
                 }
             }
@@ -1281,7 +1293,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
 
     // Call __pass__()
     if(pass_func.has){
-        ir_type_t *result_type = builder->object->ir_module.funcs[pass_func.value.ir_func_id].return_type;
+        ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pass_func.value.ir_func_id].return_type;
         ir_value_t *passed = build_call(builder, pass_func.value.ir_func_id, result_type, arguments, 1, true);
 
         // Store result back into mutable value
@@ -1380,7 +1392,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 if(failed){
                     // Remove VARPTR and MEMBER instruction
-                    builder->current_block->instructions_length -= 2;
+                    builder->current_block->instructions.length -= 2;
 
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1457,7 +1469,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 if(failed){
                     // Remove VARPTR, LOAD, and MEMBER instruction
-                    builder->current_block->instructions_length -= 3;
+                    builder->current_block->instructions.length -= 3;
 
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1520,7 +1532,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
                 if(failed){
                     // Remove VARPTR and BITCAST and ARRAY_ACCESS instructions
-                    builder->current_block->instructions_length -= 3;
+                    builder->current_block->instructions.length -= 3;
 
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1588,7 +1600,7 @@ errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, a
 
         if(errorcode) goto failure;
     
-        ir_type_t *result_type = builder->object->ir_module.funcs[pair.ir_func_id].return_type;
+        ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
         build_call(builder, pair.ir_func_id, result_type, arguments, 2, false);
         return SUCCESS;
     }
@@ -1623,7 +1635,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
             return NULL;
         }
 
-        ir_type_t *result_type = builder->object->ir_module.funcs[result.value.ir_func_id].return_type;
+        ir_type_t *result_type = builder->object->ir_module.funcs.funcs[result.value.ir_func_id].return_type;
         ir_value_t *returned_value = build_call(builder, result.value.ir_func_id, result_type, arguments, 2, true);
 
         if(out_type != NULL) *out_type = ast_type_clone(&result.value.ast_func->return_type);
@@ -1662,7 +1674,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
         search_error = ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
     } else {
         struct_name = ((ast_elem_generic_base_t*) array_type->elements[0])->name;
-        search_error = ir_gen_find_generic_base_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
+        search_error = ir_gen_find_poly_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
     }
     
     if(search_error
@@ -1676,14 +1688,14 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     ast_type_free(&argument_ast_types[0]);
 
     funcpair_t pair = result.value;
-    ir_type_t *result_type = builder->object->ir_module.funcs[pair.ir_func_id].return_type;
+    ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
     ir_value_t *result_value = build_call(builder, pair.ir_func_id, result_type, arguments, 2, true);
 
     if(out_ptr_to_element_type != NULL) *out_ptr_to_element_type = ast_type_clone(&pair.ast_func->return_type);
     return result_value;
 }
 
-errorcode_t instantiate_polymorphic_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
+errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping){
 
     ast_func_t *poly_func = &object->ast.funcs[ast_poly_func_id];
@@ -2630,7 +2642,7 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
     if(ir_gen_func_template(builder->compiler, builder->object, "__noop_defer__", source_on_error, &ir_func_id)) return FAILURE;
 
     ir_module_t *module = &builder->object->ir_module;
-    ir_func_t *module_func = &module->funcs[ir_func_id];
+    ir_func_t *module_func = &module->funcs.funcs[ir_func_id];
     module_func->argument_types = malloc(sizeof(ir_type_t) * 1);
     module_func->arity = 1;
 
@@ -2638,18 +2650,32 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
     module_func->return_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
     module_func->return_type->kind = TYPE_KIND_VOID;
 
-    module_func->basicblocks = malloc(sizeof(ir_basicblock_t));
-    module_func->basicblocks_length = 1;
+    module_func->basicblocks = (ir_basicblocks_t){
+        .blocks = malloc(sizeof(ir_basicblock_t)),
+        .length = 1,
+        .capacity = 1,
+    };
 
-    module_func->basicblocks[0].instructions = malloc(sizeof(ir_instr_t));
-    module_func->basicblocks[0].instructions_length = 1;
+    ir_basicblock_t *entry_block = &module_func->basicblocks.blocks[0];
+
+    *entry_block = (ir_basicblock_t){
+        .instructions = (ir_instrs_t){
+            .instructions = malloc(sizeof(ir_instr_t)),
+            .length = 1,
+            .capacity = 1,
+        },
+        .traits = TRAIT_NONE,
+    };
 
     ir_instr_ret_t *ret_void = (ir_instr_ret_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_ret_t));
-    ret_void->id = INSTRUCTION_RET;
-    ret_void->result_type = NULL;
-    ret_void->value = NULL;
 
-    module_func->basicblocks[0].instructions[0] = (ir_instr_t*) ret_void;
+    *ret_void = (ir_instr_ret_t){
+        .id = INSTRUCTION_RET,
+        .result_type = NULL,
+        .value = NULL,
+    };
+
+    entry_block->instructions.instructions[0] = (ir_instr_t*) ret_void;
 
     builder->noop_defer_function = ir_func_id;
     builder->has_noop_defer_function = true;
@@ -2660,13 +2686,13 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
 
 void instructions_snapshot_capture(ir_builder_t *builder, instructions_snapshot_t *snapshot){
     snapshot->current_block_id = builder->current_block_id;
-    snapshot->current_basicblock_instructions_length = builder->current_block->instructions_length;
-    snapshot->basicblocks_length = builder->basicblocks_length;
+    snapshot->current_basicblock_instructions_length = builder->current_block->instructions.length;
+    snapshot->basicblocks_length = builder->basicblocks.length;
 }
 
 void instructions_snapshot_restore(ir_builder_t *builder, instructions_snapshot_t *snapshot){
     builder->current_block_id = snapshot->current_block_id;
-    builder->current_block = &builder->basicblocks[builder->current_block_id];
-    builder->current_block->instructions_length = snapshot->current_basicblock_instructions_length;
-    builder->basicblocks_length = snapshot->basicblocks_length;
+    builder->current_block = &builder->basicblocks.blocks[builder->current_block_id];
+    builder->current_block->instructions.length = snapshot->current_basicblock_instructions_length;
+    builder->basicblocks.length = snapshot->basicblocks_length;
 }

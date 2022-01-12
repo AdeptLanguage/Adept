@@ -337,29 +337,19 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMInitializeAllAsmParsers();
     LLVMInitializeAllAsmPrinters();
 
-    ir_module_t *module = &object->ir_module;
+    ir_module_t *ir_module = &object->ir_module;
     weak_cstr_t module_name = filename_name_const(object->filename);
 
-    llvm_context_t llvm;
-    llvm.module = LLVMModuleCreateWithName(module_name);
-    llvm.memcpy_intrinsic = NULL;
-    llvm.memset_intrinsic = NULL;
-    llvm.stacksave_intrinsic = NULL;
-    llvm.stackrestore_intrinsic = NULL;
-    llvm.va_start_intrinsic = NULL;
-    llvm.va_end_intrinsic = NULL;
-    llvm.va_copy_intrinsic = NULL;
-    llvm.compiler = compiler;
-    llvm.object = object;
-
+    LLVMModuleRef llvm_module = LLVMModuleCreateWithName(module_name);
     char *triple = get_triple(compiler);
-    LLVMSetTarget(llvm.module, triple);
 
     LLVMTargetRef target;
     if(get_target_from_triple(triple, &target)){
         LLVMDisposeMessage(triple);
         return FAILURE;
     }
+
+    LLVMSetTarget(llvm_module, triple);
 
     weak_cstr_t cpu = "generic";
     weak_cstr_t features = "";
@@ -369,24 +359,27 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(target, triple, cpu, features, level, reloc, code_model);
 
     LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(target_machine);
-    LLVMSetModuleDataLayout(llvm.module, data_layout);
-    llvm.data_layout = data_layout;
+    LLVMSetModuleDataLayout(llvm_module, data_layout);
 
-    llvm.func_skeletons = malloc(sizeof(LLVMValueRef) * module->funcs_length);
-    llvm.global_variables = malloc(sizeof(LLVMValueRef) * module->globals_length);
-    llvm.anon_global_variables = malloc(sizeof(LLVMValueRef) * module->anon_globals_length);
-    llvm.has_null_check_failure_message_bytes = false;
-    memset(&llvm.string_table, 0, sizeof(llvm_string_table_t));
-
-    llvm.static_variables = (llvm_static_variables_t){0};
-    llvm.static_variables_initialization_routine = NULL;
-    llvm.static_variables_initialization_post = NULL;
-    llvm.static_variables_deinitialization_function = NULL;
-
-    llvm.relocation_list = (llvm_phi2_relocation_list_t){0};
-
-    llvm.i64_type = LLVMInt64Type();
-    llvm.f64_type = LLVMDoubleType();
+    llvm_context_t llvm = (llvm_context_t){
+        .module = llvm_module,
+        .builder = (void*) 0xD3ADB33F,
+        .catalog = (void*) 0xD3ADB33F,
+        .stack = (void*) 0xD3ADB33F,
+        .func_skeletons = malloc(sizeof(LLVMValueRef) * ir_module->funcs.length),
+        .global_variables = malloc(sizeof(LLVMValueRef) * ir_module->globals_length),
+        .anon_global_variables = malloc(sizeof(LLVMValueRef) * ir_module->anon_globals.length),
+        .data_layout = data_layout,
+        .intrinsics = (llvm_intrinsics_t){0},
+        .compiler = compiler,
+        .object = object,
+        .null_check = (llvm_null_check_t){0},
+        .string_table = (llvm_string_table_t){0},
+        .relocation_list = (llvm_phi2_relocation_list_t){0},
+        .static_variable_info = (llvm_static_variable_info_t){0},
+        .i64_type = LLVMInt64Type(),
+        .f64_type = LLVMDoubleType(),
+    };
 
     create_static_variables(&llvm);
 

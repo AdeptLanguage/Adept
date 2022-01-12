@@ -73,16 +73,16 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     }
 
     // Sort various mappings
-    qsort(module->func_mappings, module->func_mappings_length, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
-    qsort(module->methods, module->methods_length, sizeof(ir_method_t), ir_method_cmp);
-    qsort(module->generic_base_methods, module->generic_base_methods_length, sizeof(ir_generic_base_method_t), ir_generic_base_method_cmp);
+    list_qsort(&module->func_mappings, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
+    list_qsort(&module->methods, sizeof(ir_method_t), ir_method_cmp);
+    list_qsort(&module->poly_methods, sizeof(ir_poly_method_t), ir_poly_method_cmp);
 
     if(ir_gen_job_list(object)) return FAILURE;
 
     // Generate function aliases
     trait_t req_traits_mask = AST_FUNC_VARARG | AST_FUNC_VARIADIC;
-    for(length_t ast_func_alias_id = 0; ast_func_alias_id != ast->func_aliases_length; ast_func_alias_id++){
-        ast_func_alias_t *falias = &(*ast_func_aliases)[ast_func_alias_id];
+    for(length_t i = 0; i != ast->func_aliases_length; i++){
+        ast_func_alias_t *falias = &(*ast_func_aliases)[i];
 
         funcpair_t pair;
         errorcode_t error;
@@ -124,15 +124,15 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
 errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, funcid_t *out_ir_func_id){
     ir_module_t *module = &object->ir_module;
 
-    if(module->funcs_length >= MAX_FUNCID){
+    if(module->funcs.length >= MAX_FUNCID){
         compiler_panic(compiler, from_source, "Maximum number of IR functions reached\n");
         return FAILURE;
     }
 
-    expand((void**) &module->funcs, sizeof(ir_func_t), module->funcs_length, &module->funcs_capacity, 1, object->ast.funcs_length);
-    ir_func_t *module_func = &module->funcs[module->funcs_length];
+    expand((void**) &module->funcs, sizeof(ir_func_t), module->funcs.length, &module->funcs.capacity, 1, object->ast.funcs_length);
+    ir_func_t *module_func = &module->funcs.funcs[module->funcs.length];
 
-    *out_ir_func_id = module->funcs_length++;
+    *out_ir_func_id = module->funcs.length++;
 
     module_func->name = name;
     module_func->maybe_filename = NULL;
@@ -143,8 +143,7 @@ errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cs
     module_func->return_type = NULL;
     module_func->argument_types = NULL;
     module_func->arity = 0;
-    module_func->basicblocks = NULL;
-    module_func->basicblocks_length = 0;
+    module_func->basicblocks = (ir_basicblocks_t){0};
     module_func->scope = NULL;
     module_func->variable_count = 0;
     module_func->export_as = NULL;
@@ -159,7 +158,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(ir_gen_func_template(compiler, object, ast_func->name, ast_func->source, &ir_func_id)) return FAILURE;
 
     ir_module_t *module = &object->ir_module;
-    ir_func_t *module_func = &module->funcs[ir_func_id];
+    ir_func_t *module_func = &module->funcs.funcs[ir_func_id];
 
     module_func->export_as = ast_func->export_as;
     module_func->argument_types = malloc(sizeof(ir_type_t*) * (ast_func->traits & AST_FUNC_VARIADIC ? ast_func->arity + 1 : ast_func->arity));
@@ -225,7 +224,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
                     const weak_cstr_t method_name = module_func->name;
                     weak_cstr_t struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
-                    ir_module_insert_method(module, struct_name, method_name, ir_func_id, ast_func_id, preserve_sortedness);
+                    ir_module_insert_method(module, method_name, struct_name, ir_func_id, ast_func_id, preserve_sortedness);
                 }
                 break;
             case AST_ELEM_GENERIC_BASE: {
@@ -242,11 +241,11 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
                         return FAILURE;
                     }
 
-                    ir_module_insert_generic_method(module,
+                    ir_module_insert_poly_method(module,
+                        module_func->name,
                         generic_base->name,
                         generic_base->generics, // NOTE: Memory for function argument types should persist, so this is ok
                         generic_base->generics_length,
-                        module_func->name,
                         ir_func_id,
                         ast_func_id,
                     preserve_sortedness);
@@ -321,7 +320,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     // NOTE: These may be invalidated during statement generation
     ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
-    ir_func_t *module_func = &object->ir_module.funcs[ir_func_id];
+    ir_func_t *module_func = &object->ir_module.funcs.funcs[ir_func_id];
 
     if(ast_func->statements.length == 0 && !(ast_func->traits & AST_FUNC_GENERATED) && compiler->traits & COMPILER_FUSSY){
         if(compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name))
@@ -335,7 +334,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     while(module_func->arity != ast_func->arity){
         if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
             module_func->basicblocks = builder.basicblocks;
-            module_func->basicblocks_length = builder.basicblocks_length;
 
             free(builder.block_stack_labels);
             free(builder.block_stack_break_ids);
@@ -361,7 +359,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         // Initialize all global variables
         if(ir_gen_globals_init(&builder)){
             module_func->basicblocks = builder.basicblocks;
-            module_func->basicblocks_length = builder.basicblocks_length;
 
             free(builder.block_stack_labels);
             free(builder.block_stack_break_ids);
@@ -377,9 +374,8 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     bool terminated;
     if(ir_gen_stmts(&builder, &ast_func->statements, &terminated)){
         // Make sure to update 'module_func' because ir_module.funcs may have been moved
-        module_func = &object->ir_module.funcs[ir_func_id];
+        module_func = &object->ir_module.funcs.funcs[ir_func_id];
         module_func->basicblocks = builder.basicblocks;
-        module_func->basicblocks_length = builder.basicblocks_length;
 
         free(builder.block_stack_labels);
         free(builder.block_stack_break_ids);
@@ -428,7 +424,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         if(!terminated){
             // Ensure function pointers are up-to-date with the latest function locations
             ast_func = &object->ast.funcs[ast_func_id];
-            module_func = &object->ir_module.funcs[ir_func_id];
+            module_func = &object->ir_module.funcs.funcs[ir_func_id];
 
             // Handle auto-return
             if(module_func->return_type->kind == TYPE_KIND_VOID){
@@ -444,7 +440,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
                 free(return_typename);
 
                 module_func->basicblocks = builder.basicblocks;
-                module_func->basicblocks_length = builder.basicblocks_length;
 
                 free(builder.block_stack_labels);
                 free(builder.block_stack_break_ids);
@@ -456,12 +451,11 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     }
 
     // Make sure to update references that may have been invalidated
-    module_func = &object->ir_module.funcs[ir_func_id];
+    module_func = &object->ir_module.funcs.funcs[ir_func_id];
 
     module_func->scope->following_var_id = builder.next_var_id;
     module_func->variable_count = builder.next_var_id;
     module_func->basicblocks = builder.basicblocks;
-    module_func->basicblocks_length = builder.basicblocks_length;
 
     free(builder.block_stack_labels);
     free(builder.block_stack_break_ids);
@@ -472,13 +466,15 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
 errorcode_t ir_gen_job_list(object_t *object){
     ir_job_list_t *job_list = &object->ir_module.job_list;
-    length_t *mappings_length = &object->ir_module.func_mappings_length;
+    length_t mappings_length = object->ir_module.func_mappings.length;
 
-    job_list->jobs = malloc(sizeof(ir_func_mapping_t) * (*mappings_length + 4));
-    job_list->length = *mappings_length;
-    job_list->capacity = *mappings_length + 4;
+    *job_list = (ir_job_list_t){
+        .jobs = malloc(sizeof(ir_func_mapping_t) * (mappings_length + 4)),
+        .length = mappings_length,
+        .capacity = mappings_length + 4,
+    };
 
-    memcpy(job_list->jobs, object->ir_module.func_mappings, sizeof(ir_func_mapping_t) * *mappings_length);
+    memcpy(job_list->jobs, object->ir_module.func_mappings.mappings, sizeof(ir_func_mapping_t) * mappings_length);
     return SUCCESS;
 }
 
@@ -641,16 +637,13 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 }
 
 errorcode_t ir_gen_fill_in_rtti(object_t *object){
-    ir_module_t *ir_module = &object->ir_module;
-
     type_table_t *type_table = object->ast.type_table;
+    rtti_relocations_t *rtti_relocations = &object->ir_module.rtti_relocations;
+
     if(type_table == NULL) return FAILURE;
 
-    rtti_relocation_t *relocations = ir_module->rtti_relocations;
-    length_t relocations_length = ir_module->rtti_relocations_length;
-
-    for(length_t i = 0; i != relocations_length; i++){
-        if(rtti_resolve(type_table, &relocations[i])) return FAILURE;
+    for(length_t i = 0; i != rtti_relocations->length; i++){
+        if(rtti_resolve(type_table, &rtti_relocations->relocations[i])) return FAILURE;
     }
 
     return SUCCESS;
@@ -699,7 +692,7 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
     ir_value_result_t *pass_result = (ir_value_result_t*) ir_values[format_index]->extra;
     
     // Undo result value to get call instruction
-    ir_instr_call_t *call_instr = (ir_instr_call_t*) builder->basicblocks[pass_result->block_id].instructions[pass_result->instruction_id];
+    ir_instr_call_t *call_instr = (ir_instr_call_t*) builder->basicblocks.blocks[pass_result->block_id].instructions.instructions[pass_result->instruction_id];
     ir_value_t *string_literal = call_instr->values[0];
 
     // Don't check if not string literal

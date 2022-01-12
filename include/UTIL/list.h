@@ -36,7 +36,11 @@ extern "C" {
 
 // ---------------- list_append_new_impl ----------------
 // Returns a pointer to a new item
-void *list_append_new_impl(void *generic_list, length_t sizeof_element);
+void *list_append_new_impl(void *list_struct, length_t sizeof_element);
+
+// ---------------- list_qsort ----------------
+// Sort a list
+void list_qsort(void *list_struct, length_t sizeof_element, int (*cmp)(const void*, const void*));
 
 #ifdef __cplusplus
 }

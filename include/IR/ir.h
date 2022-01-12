@@ -411,14 +411,21 @@ typedef struct {
     bool is_stack_align;
 } ir_instr_asm_t;
 
+// ---------------- ir_instrs_t ----------------
+// List of instructions
+typedef listof(ir_instr_t*, instructions) ir_instrs_t;
+
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block
 typedef struct {
-    ir_instr_t **instructions;
-    length_t instructions_length;
-    length_t instructions_capacity;
+    ir_instrs_t instructions;
     trait_t traits;
 } ir_basicblock_t;
+
+// ---------------- ir_basicblocks_t ----------------
+// A list of basicblocks
+typedef listof(ir_basicblock_t, blocks) ir_basicblocks_t;
+void ir_basicblocks_free(ir_basicblocks_t *basicblocks);
 
 // ---------------- ir_func_t ----------------
 // An intermediate representation function
@@ -432,8 +439,7 @@ typedef struct {
     ir_type_t *return_type;
     ir_type_t **argument_types;
     length_t arity;
-    ir_basicblock_t *basicblocks;
-    length_t basicblocks_length;
+    ir_basicblocks_t basicblocks;
     bridge_scope_t *scope;
     length_t variable_count;
     weak_cstr_t export_as;
@@ -467,17 +473,17 @@ typedef struct {
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
 } ir_method_t;
 
-// ---------------- ir_generic_base_method_t ----------------
+// ---------------- ir_poly_method_t ----------------
 // Mapping for a generic base method to an actual function
 typedef struct {
-    weak_cstr_t generic_base;
+    const char *struct_name;
+    const char *name;
     ast_type_t *generics;
     length_t generics_length;
-    weak_cstr_t name;
     funcid_t ir_func_id;
     funcid_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
-} ir_generic_base_method_t;
+} ir_poly_method_t;
 
 // ---------------- ir_job_list_t ----------------
 // List of jobs required during IR generation
@@ -546,6 +552,44 @@ typedef struct {
 // List of static variables
 typedef listof(ir_static_variable_t, variables) ir_static_variables_t;
 #define ir_static_variables_append(LIST, VALUE) list_append((LIST), (VALUE), ir_static_variable_t)
+void ir_static_variables_free(ir_static_variables_t *static_variables);
+
+// ---------------- free_list_t ----------------
+// List of pointers to free
+typedef listof(void*, pointers) free_list_t;
+#define free_list_append(LIST, VALUE) list_append((LIST), (VALUE), void*)
+void free_list_free(free_list_t *list);
+
+// ---------------- rtti_relocation_t ----------------
+// List of RTTI relocations
+typedef listof(rtti_relocation_t, relocations) rtti_relocations_t;
+#define rtti_relocations_append(LIST, VALUE) list_append((LIST), (VALUE), rtti_relocation_t)
+void rtti_relocations_free(rtti_relocations_t *relocations);
+
+// ---------------- ir_anon_globals_append ----------------
+// List of anonymous global variables
+typedef listof(ir_anon_global_t, globals) ir_anon_globals_t;
+#define ir_anon_globals_append(LIST, VALUE) list_append((LIST), (VALUE), ir_anon_global_t)
+
+// ---------------- ir_func_mapping_t ----------------
+// List of function mappings
+typedef listof(ir_func_mapping_t, mappings) ir_func_mappings_t;
+#define ir_func_mappings_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_mapping_t)
+
+// ---------------- ir_funcs_t ----------------
+// List of functions
+typedef listof(ir_func_t, funcs) ir_funcs_t;
+#define ir_funcs_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_t)
+
+// ---------------- ir_methods_t ----------------
+// List of methods
+typedef listof(ir_method_t, methods) ir_methods_t;
+#define ir_methods_append(LIST, VALUE) list_append((LIST), (VALUE), ir_method_t)
+
+// ---------------- ir_poly_methods_t ----------------
+// List of polymorphic methods
+typedef listof(ir_poly_method_t, methods) ir_poly_methods_t;
+#define ir_poly_methods_append(LIST, VALUE) list_append((LIST), (VALUE), ir_poly_method_t)
 
 // ---------------- ir_module_t ----------------
 // An intermediate representation module
@@ -553,34 +597,20 @@ typedef struct {
     ir_shared_common_t common;
     ir_pool_t pool;
     ir_type_map_t type_map;
-    ir_func_t *funcs;
-    length_t funcs_length;
-    length_t funcs_capacity;
-    ir_func_mapping_t *func_mappings;
-    length_t func_mappings_length;
-    length_t func_mappings_capacity;
-    ir_method_t *methods;
-    length_t methods_length;
-    length_t methods_capacity;
-    ir_generic_base_method_t *generic_base_methods;
-    length_t generic_base_methods_length;
-    length_t generic_base_methods_capacity;
+    ir_funcs_t funcs;
+    ir_func_mappings_t func_mappings;
+    ir_methods_t methods;
+    ir_poly_methods_t poly_methods;
     ir_global_t *globals;
     length_t globals_length;
-    ir_anon_global_t *anon_globals;
-    length_t anon_globals_length;
-    length_t anon_globals_capacity;
+    ir_anon_globals_t anon_globals;
     ir_gen_sf_cache_t sf_cache;
-    rtti_relocation_t *rtti_relocations;
-    length_t rtti_relocations_length;
-    length_t rtti_relocations_capacity;
+    rtti_relocations_t rtti_relocations;
     struct ir_builder *init_builder;
     struct ir_builder *deinit_builder;
     ir_static_variables_t static_variables;
     ir_job_list_t job_list;
-    void **defer_free;
-    length_t defer_free_length;
-    length_t defer_free_capacity;
+    free_list_t defer_free;
 } ir_module_t;
 
 // ---------------- ir_value_str ----------------
@@ -603,8 +633,8 @@ void ir_module_dump(ir_module_t *ir_module, const char *filename);
 
 // ---------------- ir_dump_functions (and friends) ----------------
 // Dumps a specific part of an IR module
-void ir_dump_functions(FILE *file, ir_func_t *functions, length_t functions_length);
-void ir_dump_basicsblocks(FILE *file, ir_basicblock_t *basicblocks, length_t basicblocks_length, ir_func_t *functions);
+void ir_dump_functions(FILE *file, ir_funcs_t *funcs);
+void ir_dump_basicsblocks(FILE *file, ir_basicblocks_t basicblocks, ir_func_t *functions);
 void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, const char *instruction_name);
 void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, const char *real_name);
 void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instruction, int i);
@@ -624,7 +654,7 @@ void ir_basicblock_free(ir_basicblock_t *basicblock);
 
 // ---------------- ir_module_free_funcs ----------------
 // Frees data within each IR function in a list
-void ir_module_free_funcs(ir_func_t *funcs, length_t funcs_length);
+void ir_module_free_funcs(ir_funcs_t funcs);
 
 // ---------------- ir_implementation_setup ----------------
 // Preprares for calls to ir_implementation()
@@ -655,37 +685,37 @@ void ir_print_type(ir_type_t *type);
 // Inserts a method into a module's method list
 void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness);
 
-// ---------------- ir_module_insert_generic_method ----------------
+// ---------------- ir_module_insert_poly_method ----------------
 // Inserts a generic method into a module's method list
 // NOTE: Memory for 'weak_generics' should persist at least as long as
 //       the generic method exists
-void ir_module_insert_generic_method(ir_module_t *module, 
-    weak_cstr_t generic_base,
+void ir_module_insert_poly_method(ir_module_t *module, 
+    weak_cstr_t name,
+    weak_cstr_t struct_name,
     ast_type_t *weak_generics,
     length_t generics_length,
-    weak_cstr_t name,
     funcid_t ir_func_id,
     funcid_t ast_func_id,
 bool preserve_sortedness);
 
-// ---------------- ir_module_insert_generic_method ----------------
+// ---------------- ir_module_insert_poly_method ----------------
 // Inserts a new function mapping into a module's function mappings list
 ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness);
 
 // ---------------- ir_module_find_insert_method_position ----------------
 // Finds the position to insert a method into a module's method list
 #define ir_module_find_insert_method_position(module, weak_method_reference) \
-    find_insert_position(module->methods, module->methods_length, ir_method_cmp, weak_method_reference, sizeof(ir_method_t));
+    find_insert_position(module->methods.methods, module->methods.length, ir_method_cmp, weak_method_reference, sizeof(ir_method_t));
 
-// ---------------- ir_module_find_insert_generic_method_position ----------------
+// ---------------- ir_module_find_insert_poly_method_position ----------------
 // Finds the position to insert a method into a module's method list
-#define ir_module_find_insert_generic_method_position(module, weak_method_reference) \
-    find_insert_position(module->generic_base_methods, module->generic_base_methods_length, ir_generic_base_method_cmp, weak_method_reference, sizeof(ir_generic_base_method_t));
+#define ir_module_find_insert_poly_method_position(module, weak_method_reference) \
+    find_insert_position(module->poly_methods.methods, module->poly_methods.length, ir_poly_method_cmp, weak_method_reference, sizeof(ir_poly_method_t));
 
 // ---------------- ir_module_find_insert_mapping_position ----------------
 // Finds the position to insert a mapping into a module's mappings list
 #define ir_module_find_insert_mapping_position(module, weak_mapping_reference) \
-    find_insert_position(module->func_mappings, module->func_mappings_length, ir_func_mapping_cmp, weak_mapping_reference, sizeof(ir_func_mapping_t));
+    find_insert_position(module->func_mappings.mappings, module->func_mappings.length, ir_func_mapping_cmp, weak_mapping_reference, sizeof(ir_func_mapping_t));
 
 // ---------------- ir_func_mapping_cmp ----------------
 // Compares two 'ir_func_mapping_t' structures.
@@ -697,10 +727,10 @@ int ir_func_mapping_cmp(const void *a, const void *b);
 // Used for qsort()
 int ir_method_cmp(const void *a, const void *b);
 
-// ---------------- ir_generic_base_method_cmp ----------------
-// Compares two 'ir_generic_base_method_t' structures.
+// ---------------- ir_poly_method_cmp ----------------
+// Compares two 'ir_poly_method_t' structures.
 // Used for qsort()
-int ir_generic_base_method_cmp(const void *a, const void *b);
+int ir_poly_method_cmp(const void *a, const void *b);
 
 // ---------------- ir_job_list_append ----------------
 // Appends a mapping to an IR job list

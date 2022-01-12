@@ -39,8 +39,8 @@ errorcode_t parse(compiler_t *compiler, object_t *object){
     }
 
     if(ctx.prename) free(ctx.prename);
-    qsort(object->ast.polymorphic_funcs, object->ast.polymorphic_funcs_length, sizeof(ast_polymorphic_func_t), &ast_polymorphic_funcs_cmp);
-    qsort(object->ast.polymorphic_methods, object->ast.polymorphic_methods_length, sizeof(ast_polymorphic_func_t), &ast_polymorphic_funcs_cmp);
+    qsort(object->ast.poly_funcs, object->ast.poly_funcs_length, sizeof(ast_poly_func_t), &ast_poly_funcs_cmp);
+    qsort(object->ast.polymorphic_methods, object->ast.polymorphic_methods_length, sizeof(ast_poly_func_t), &ast_poly_funcs_cmp);
     return SUCCESS;
 }
 
