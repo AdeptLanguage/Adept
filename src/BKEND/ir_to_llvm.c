@@ -222,7 +222,7 @@ static strong_cstr_t create_linker_additional(llvm_context_t *llvm){
             string_builder_append_quoted(&builder, library);
             break;
         default:
-            panic("create_linker_additional() - Unrecognized library kind %d\n", (int) library_kinds[i]);
+            die("create_linker_additional() - Unrecognized library kind %d\n", (int) library_kinds[i]);
         }
 
         if(i + 1 != libraries_length){

@@ -70,7 +70,7 @@ static hash_t ast_elem_hash(ast_elem_t *elem){
         internalwarningprintf("ast_elem_hash() - Cannot hash AST_ELEM_VAR_FIXED_ARRAY element, returning faux hash\n");
         break;
     default:
-        panic("ast_elem_hash() - Unrecognized type element ID\n");
+        die("ast_elem_hash() - Unrecognized type element ID\n");
     }
 
     return id_hash;

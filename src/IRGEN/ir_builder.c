@@ -168,7 +168,7 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
     if(ir_value->type == NULL){
         internalerrorprintf("build_value_from_prev_instruction() tried to create value from instruction without return_type set\n");
         redprintf("Previous instruction id: 0x%08X\n", (int) result->instruction_id);
-        panic("Terminating...\n");
+        die("Terminating...\n");
     }
 
     return ir_value;
@@ -384,7 +384,7 @@ ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t 
     value->type = usize_type;
 
     if(type->kind != TYPE_KIND_STRUCTURE){
-        panic("build_offsetof() - Cannot get offset of field for non-struct type\n");
+        die("build_offsetof() - Cannot get offset of field for non-struct type\n");
     }
 
     ir_value_offsetof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_offsetof_t));
@@ -573,7 +573,7 @@ ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, char *array, len
     return build_literal_cstr_of_length_ex(builder->pool, builder->type_map, array, length);
 }
 
-ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t length){
+ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t size){
     // NOTE: Builds a null-terminated string literal value
 
     ir_value_t *ir_value = ir_pool_alloc(pool, sizeof(ir_value_t));
@@ -581,13 +581,13 @@ ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type
     ir_type_t *ubyte_type;
 
     if(!ir_type_map_find(type_map, "ubyte", &ubyte_type)){
-        panic("build_literal_cstr_of_length_ex() - Failed to find 'ubyte' type mapping\n");
+        die("build_literal_cstr_of_length_ex() - Failed to find 'ubyte' type mapping\n");
     }
 
     ir_value->type = ir_type_pointer_to(pool, ubyte_type);
     ir_value->extra = ir_pool_alloc(pool, sizeof(ir_value_cstr_of_len_t));
     ((ir_value_cstr_of_len_t*) ir_value->extra)->array = array;
-    ((ir_value_cstr_of_len_t*) ir_value->extra)->length = length;
+    ((ir_value_cstr_of_len_t*) ir_value->extra)->size = size;
     return ir_value;
 }
 
@@ -682,10 +682,10 @@ ir_value_t *build_stack_save(ir_builder_t *builder){
 }
 
 void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer){
-    ir_instr_stack_restore_t *instr = (ir_instr_stack_restore_t*) build_instruction(builder, sizeof(ir_instr_stack_restore_t));
+    ir_instr_unary_t *instr = (ir_instr_unary_t*) build_instruction(builder, sizeof(ir_instr_unary_t));
     instr->id = INSTRUCTION_STACK_RESTORE;
     instr->result_type = NULL;
-    instr->stack_pointer = stack_pointer;
+    instr->value = stack_pointer;
 }
 
 ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result){
@@ -797,7 +797,7 @@ void close_scope(ir_builder_t *builder){
     builder->scope = builder->scope->parent;
     
     if(builder->scope == NULL){
-        panic("close_scope() - Cannot close bridge scope with no parent\n");
+        die("close_scope() - Cannot close bridge scope with no parent\n");
     }
 }
 

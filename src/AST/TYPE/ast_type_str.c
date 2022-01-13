@@ -140,7 +140,7 @@ static void ast_elem_str(string_builder_t *builder, ast_elem_t *elem){
         ast_elem_layout_str(builder, (ast_elem_layout_t*) elem);
         break;
     default:
-        panic("ast_type_str() - Unrecognized type element 0x%08X\n", elem->id);
+        die("ast_type_str() - Unrecognized type element 0x%08X\n", elem->id);
     }
 }
 

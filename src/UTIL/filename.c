@@ -205,7 +205,7 @@ strong_cstr_t filename_absolute(const char *filename){
     char *buffer = realpath(filename, NULL);
 
     if(buffer == NULL){
-        panic("filename_absolute() - Could not determine absolute path for '%s'\n", filename);
+        die("filename_absolute() - Could not determine absolute path for '%s'\n", filename);
     }
 
     #ifdef TRACK_MEMORY_USAGE

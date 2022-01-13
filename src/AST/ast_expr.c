@@ -595,7 +595,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         #undef expr_as_declare_constant
         #undef clone_as_declare_constant
     default:
-        panic("ast_expr_clone() - Got unrecognized expression ID 0x%08X\n", expr->id);
+        die("ast_expr_clone() - Got unrecognized expression ID 0x%08X\n", expr->id);
     }
 
     clone->id = expr->id;

@@ -86,7 +86,7 @@ void internalwarningprintf(const char *format, ...){
     va_end(args);
 }
 
-noreturn void panic(const char *format, ...){
+noreturn void die(const char *format, ...){
     va_list args;
     va_start(args, format);
     redprintf("critical-error: ");

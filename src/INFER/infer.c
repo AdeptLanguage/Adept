@@ -92,7 +92,7 @@ errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skele
             if(infer_type(ctx, &bone->type)) return FAILURE;
             break;
         default:
-            panic("infer_layout_skeleton() - Unrecognized bone kind %d\n", (int) bone->kind);
+            die("infer_layout_skeleton() - Unrecognized bone kind %d\n", (int) bone->kind);
         }
     }
 
@@ -1481,6 +1481,6 @@ void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expres
         type_table_give_base(ctx->type_table, "String");
         break;
     default:
-        panic("infer_mention_expression_literal_type() - Unrecognized literal expression ID\n", (int) expression_literal_id);
+        die("infer_mention_expression_literal_type() - Unrecognized literal expression ID\n", (int) expression_literal_id);
     }
 }

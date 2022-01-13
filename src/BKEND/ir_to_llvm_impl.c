@@ -131,7 +131,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
     // Retrieves a literal or previously computed value
 
     if(value == NULL){
-        panic("ir_to_llvm_value() - Received NULL pointer\n");
+        die("ir_to_llvm_value() - Received NULL pointer\n");
     }
 
     switch(value->value_type){
@@ -149,7 +149,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             case TYPE_KIND_DOUBLE: return LLVMConstReal(llvm->f64_type, *((adept_double*) value->extra));
             case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((adept_bool*) value->extra), false);
             default:
-                panic("ir_to_llvm_value() - Unrecognized type kind for literal in ir_to_llvm_value\n");
+                die("ir_to_llvm_value() - Unrecognized type kind for literal in ir_to_llvm_value\n");
             }
         }
     case VALUE_TYPE_RESULT: {
@@ -206,19 +206,19 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
         }
     case VALUE_TYPE_CSTR_OF_LEN: {
             ir_value_cstr_of_len_t *cstr_of_len = value->extra;
-            LLVMValueRef global_data = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->length);
+            LLVMValueRef global_data = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->size);
 
             if(global_data == NULL){
                 // DANGEROUS: TODO: Remove this!!!
                 static int i = 0;
                 char name_buffer[256];
                 sprintf(name_buffer, "S%X", i++);
-                global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->length), name_buffer);
+                global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->size), name_buffer);
                 LLVMSetLinkage(global_data, LLVMInternalLinkage);
                 LLVMSetGlobalConstant(global_data, true);
-                LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->length, true));
+                LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->size, true));
 
-                llvm_string_table_add(&llvm->string_table, cstr_of_len->array, cstr_of_len->length, global_data);
+                llvm_string_table_add(&llvm->string_table, cstr_of_len->array, cstr_of_len->size, global_data);
             }
             
             LLVMValueRef indices[2];
@@ -283,7 +283,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             return LLVMConstAdd(ir_to_llvm_value(llvm, const_add->a), ir_to_llvm_value(llvm, const_add->b));
         }
     default:
-        panic("ir_to_llvm_value() - Unrecognized value type %d\n", (int) value->value_type);
+        die("ir_to_llvm_value() - Unrecognized value type %d\n", (int) value->value_type);
     }
 
     return NULL;
@@ -462,7 +462,7 @@ errorcode_t ir_to_llvm_allocate_stack_variables(llvm_context_t *llvm, varstack_t
         bridge_var_t *var = bridge_scope_find_var_by_id(module_func->scope, i);
 
         if(var == NULL){
-            panic("ir_to_llvm_allocate_stack_variables() - Variable with ID %d could not be found\n", (int) i);
+            die("ir_to_llvm_allocate_stack_variables() - Variable with ID %d could not be found\n", (int) i);
         }
 
         LLVMTypeRef alloca_type = ir_to_llvm_type(llvm, var->ir_type);
@@ -919,7 +919,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 case TYPE_KIND_FUNCPTR:
                 case TYPE_KIND_POINTER: zero = LLVMConstNull(ir_to_llvm_type(llvm, ((ir_instr_cast_t*) instr)->value->type)); break;
                 default:
-                    panic("ir_to_llvm_instructions() - INSTRUCTION_ISxxZERO received unrecognized type kind\n");
+                    die("ir_to_llvm_instructions() - INSTRUCTION_ISxxZERO received unrecognized type kind\n");
                 }
 
                 bool isz = (instr->id == INSTRUCTION_ISZERO);
@@ -1114,7 +1114,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 ir_type_t *target_result_type = alloc->result_type;
 
                 if(target_result_type->kind != TYPE_KIND_POINTER){
-                    panic("ir_to_llvm_instructions() - INSTRUCTION_ALLOC has non-pointer result type\n");
+                    die("ir_to_llvm_instructions() - INSTRUCTION_ALLOC has non-pointer result type\n");
                 }
 
                 catalog->blocks[b].value_references[i] = (alloc->count)
@@ -1148,7 +1148,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 }
 
                 LLVMValueRef args[1];
-                args[0] = ir_to_llvm_value(llvm, ((ir_instr_stack_restore_t*) instr)->stack_pointer);
+                args[0] = ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value);
 
                 LLVMBuildCall(builder, *stackrestore_intrinsic, args, 1, "");
                 catalog->blocks[b].value_references[i] = NULL;
@@ -1226,13 +1226,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
             break;
         case INSTRUCTION_DEINIT_SVARS:
             if(llvm->static_variable_info.deinit_function == NULL){
-                panic("ir_to_llvm_instructions() - INSTRUCTION_DEINIT_SVARS cannot operate since static_variables_deinitialization_function doesn't exist\n");
+                die("ir_to_llvm_instructions() - INSTRUCTION_DEINIT_SVARS cannot operate since static_variables_deinitialization_function doesn't exist\n");
             }
 
             LLVMBuildCall(builder, llvm->static_variable_info.deinit_function, NULL, 0, "");
             break;
         default:
-            panic("ir_to_llvm_instructions() - Unrecognized instruction '%d'\n", (int) instr->id);
+            die("ir_to_llvm_instructions() - Unrecognized instruction '%d'\n", (int) instr->id);
         }
     }
 

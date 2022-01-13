@@ -89,9 +89,9 @@ void internalerrorprintf(const char *format, ...);
 // Version of 'printf' for non-specific internal warnings
 void internalwarningprintf(const char *format, ...);
 
-// ---------------- panic  ----------------
+// ---------------- die ----------------
 // Displays a critical error and then calls exit(-1)
-noreturn void panic(const char *format, ...);
+noreturn void die(const char *format, ...);
 
 #ifdef __cplusplus
 }

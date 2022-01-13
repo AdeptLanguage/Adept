@@ -58,7 +58,7 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *original){
     case AST_ELEM_LAYOUT:
         return ast_elem_layout_clone((ast_elem_layout_t*) original);
     default:
-        panic("ast_elem_clone() - Unrecognized type element ID\n");
+        die("ast_elem_clone() - Unrecognized type element ID\n");
     }
 
     return NULL;

@@ -724,7 +724,7 @@ ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, as
         result->kind = TYPE_KIND_STRUCTURE;
         break;
     default:
-        panic("ast_layout_bone_to_ir_type() - Unrecognized bone kind %d\n", (int) bone->kind);
+        die("ast_layout_bone_to_ir_type() - Unrecognized bone kind %d\n", (int) bone->kind);
     }
     
     result->extra = extra;

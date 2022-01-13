@@ -98,6 +98,7 @@ char *mallocandsprintf(const char *format, ...){
                 size += strlen(va_arg(transverse, char*));
                 break;
             case 'd':
+                va_arg(transverse, int);
                 size += 16; // 16 characters should be enough to hold int under all circumstances
                 break;
             default:

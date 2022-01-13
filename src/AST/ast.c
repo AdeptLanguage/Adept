@@ -299,7 +299,7 @@ void ast_dump(ast_t *ast, const char *filename){
     length_t i;
 
     if(file == NULL){
-        panic("ast_dump() - Failed to open ast dump file\n");
+        die("ast_dump() - Failed to open ast dump file\n");
     }
 
     ast_dump_enums(file, ast->enums, ast->enums_length);
@@ -705,7 +705,7 @@ void ast_dump_composite(FILE *file, ast_composite_t *composite, length_t additio
         fprintf(file, "union ");
         break;
     default:
-        panic("ast_dump_composite() - Unrecognized layout kind %d\n", (int) layout->kind);
+        die("ast_dump_composite() - Unrecognized layout kind %d\n", (int) layout->kind);
     }
 
     // Dump generics "<$K, $V>" if the composite is polymorphic
@@ -779,7 +779,7 @@ void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, a
             fprintf(file, ")\n");
             break;
         default:
-            panic("ast_dump_composite() - Unrecognized bone kind %d\n", (int) bone->kind);
+            die("ast_dump_composite() - Unrecognized bone kind %d\n", (int) bone->kind);
         }
     }
 

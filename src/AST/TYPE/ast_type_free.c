@@ -72,7 +72,7 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length){
             ast_layout_free(&(((ast_elem_layout_t*) elem)->layout));
             break;
         default:
-            panic("ast_elems_free() - Unrecognized type element ID at index %zu\n", i);
+            die("ast_elems_free() - Unrecognized type element ID at index %zu\n", i);
         }
 
         free(elem);

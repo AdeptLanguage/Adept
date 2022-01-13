@@ -141,6 +141,6 @@ bool string_to_int_must_be_uint64(weak_cstr_t string, length_t length, int base)
     if(base == 16) return length != 16 ? length > 16 : strncmp(string, "7FFFFFFFFFFFFFFF", 16) > 0;
     
     // Base Unimplemented
-    panic("string_to_int_must_be_uint64() - Unsupported base %d\n", base);
+    die("string_to_int_must_be_uint64() - Unsupported base %d\n", base);
     return false;
 }

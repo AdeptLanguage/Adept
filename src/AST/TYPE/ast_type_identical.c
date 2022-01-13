@@ -52,7 +52,7 @@ static bool ast_elem_generic_base_identical(ast_elem_t *raw_a, ast_elem_t *raw_b
     ast_elem_generic_base_t *b = (ast_elem_generic_base_t*) raw_b;
 
     if(a->name_is_polymorphic || b->name_is_polymorphic){
-        panic("ast_types_identical() - Polymorphic names feature for generic structs is unimplemented\n");
+        die("ast_types_identical() - Polymorphic names feature for generic structs is unimplemented\n");
     }
 
     if(a->generics_length != b->generics_length) return false;
@@ -142,7 +142,7 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
             printf("    Assuming they are different...\n");
             return false;
         default:
-            panic("ast_types_identical() - Unrecognized element ID %d\n", (int) a_elem->id);
+            die("ast_types_identical() - Unrecognized element ID %d\n", (int) a_elem->id);
         }
     }
 

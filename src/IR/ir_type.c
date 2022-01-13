@@ -7,56 +7,63 @@
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "UTIL/ground.h"
+#include "UTIL/util.h"
+#include "UTIL/string.h"
 
 strong_cstr_t ir_type_str(ir_type_t *type){
-    // NOTE: Returns allocated string of that type
-    // NOTE: This function is recursive
-
-    #define RET_CLONE_STR_MACRO(d, s) { \
-        memory = malloc(s); memcpy(memory, d, s); return memory; \
-    }
-
-    char *memory;
-    char *chained;
-    length_t chained_length;
+    // NOTE: Returns allocated string that represents an IR type
 
     switch(type->kind){
     case TYPE_KIND_NONE:
-        RET_CLONE_STR_MACRO("__nul_type_kind", 16);
-    case TYPE_KIND_POINTER:
-        chained = ir_type_str((ir_type_t*) type->extra);
-        chained_length = strlen(chained);
-        memory = malloc(chained_length + 2);
-        memcpy(memory, "*", 1);
-        memcpy(&memory[1], chained, chained_length + 1);
-        free(chained);
-        return memory;
-    case TYPE_KIND_S8:      RET_CLONE_STR_MACRO("s8", 3);
-    case TYPE_KIND_U8:      RET_CLONE_STR_MACRO("u8", 3);
-    case TYPE_KIND_S16:     RET_CLONE_STR_MACRO("s16", 4);
-    case TYPE_KIND_U16:     RET_CLONE_STR_MACRO("u16", 4);
-    case TYPE_KIND_S32:     RET_CLONE_STR_MACRO("s32", 4);
-    case TYPE_KIND_U32:     RET_CLONE_STR_MACRO("u32", 4);
-    case TYPE_KIND_S64:     RET_CLONE_STR_MACRO("s64", 4);
-    case TYPE_KIND_U64:     RET_CLONE_STR_MACRO("u64", 4);
-    case TYPE_KIND_HALF:    RET_CLONE_STR_MACRO("h", 2);
-    case TYPE_KIND_FLOAT:   RET_CLONE_STR_MACRO("f", 2);
-    case TYPE_KIND_DOUBLE:  RET_CLONE_STR_MACRO("d", 2);
-    case TYPE_KIND_BOOLEAN: RET_CLONE_STR_MACRO("bool", 5);
-    case TYPE_KIND_VOID:    RET_CLONE_STR_MACRO("void", 5);
-    case TYPE_KIND_FUNCPTR: RET_CLONE_STR_MACRO("__funcptr_type_kind", 20);
+        return strclone("none_t");
+    case TYPE_KIND_POINTER: {
+            strong_cstr_t inside = ir_type_str((ir_type_t*) type->extra);
+            strong_cstr_t result = mallocandsprintf("*%s", inside);
+            free(inside);
+            return result;
+        }
+    case TYPE_KIND_S8:
+        return strclone("s8");
+    case TYPE_KIND_U8:
+        return strclone("u8");
+    case TYPE_KIND_S16:
+        return strclone("s16");
+    case TYPE_KIND_U16:
+        return strclone("u16");
+    case TYPE_KIND_S32:
+        return strclone("s32");
+    case TYPE_KIND_U32:
+        return strclone("u32");
+    case TYPE_KIND_S64:
+        return strclone("s64");
+    case TYPE_KIND_U64:
+        return strclone("u64");
+    case TYPE_KIND_HALF:
+        return strclone("h");
+    case TYPE_KIND_FLOAT:
+        return strclone("f");
+    case TYPE_KIND_DOUBLE:
+        return strclone("d");
+    case TYPE_KIND_BOOLEAN:
+        return strclone("bool");
+    case TYPE_KIND_VOID:
+        return strclone("void");
+    case TYPE_KIND_FUNCPTR:
+        return strclone("funcptr_t");
     case TYPE_KIND_FIXED_ARRAY: {
-        ir_type_extra_fixed_array_t *fixed = (ir_type_extra_fixed_array_t*) type->extra;
-        chained = ir_type_str(fixed->subtype);
-        memory = malloc(strlen(chained) + 24);
-        sprintf(memory, "[%d] %s", (int) fixed->length, chained);
-        free(chained);
-        return memory;
+            ir_type_extra_fixed_array_t *fixed = (ir_type_extra_fixed_array_t*) type->extra;
+            strong_cstr_t inside = ir_type_str(fixed->subtype);
+            strong_cstr_t result = mallocandsprintf("[%d] %s", (int) fixed->length, inside);
+            free(inside);
+            return result;
+        }
+    case TYPE_KIND_STRUCTURE:
+        return strclone("struct_t");
+    case TYPE_KIND_UNION:
+        return strclone("union_t");
+    default:
+        return strclone("unknown_t");
     }
-    default: RET_CLONE_STR_MACRO("__unk_type_kind", 16);
-    }
-
-    #undef RET_CLONE_STR_MACRO
 }
 
 bool ir_types_identical(ir_type_t *a, ir_type_t *b){

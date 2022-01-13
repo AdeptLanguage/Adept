@@ -94,14 +94,14 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
         out_path->waypoints[0].index = endpoint.indices[0];
         break;
     default:
-        panic("ast_layout_get_path() - Unrecognized layout type %d\n", (int) layout->kind);
+        die("ast_layout_get_path() - Unrecognized layout type %d\n", (int) layout->kind);
     }
 
     for(length_t i = 0; i < AST_LAYOUT_MAX_DEPTH && endpoint.indices[i] != AST_LAYOUT_ENDPOINT_END_INDEX; i++){
         length_t bone_index = endpoint.indices[i];
 
         if(bone_index >= skeleton->bones_length){
-            panic("ast_layout_skeleton_get_path() - The requested bone is out of bounds\n");
+            die("ast_layout_skeleton_get_path() - The requested bone is out of bounds\n");
         }
 
         ast_layout_bone_t *bone = &skeleton->bones[bone_index];
@@ -129,7 +129,7 @@ successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t end
         }
     }
 
-    panic("ast_layout_skeleton_get_path() - Incomplete endpoint\n");
+    die("ast_layout_skeleton_get_path() - Incomplete endpoint\n");
     return false;
 }
 
@@ -139,7 +139,7 @@ const char *ast_layout_kind_name(ast_layout_kind_t kind){
     case AST_LAYOUT_STRUCT: return "struct";
     }
 
-    panic("ast_layout_kind_name() got unknown layout kind\n");
+    die("ast_layout_kind_name() got unknown layout kind\n");
 }
 
 bool ast_layout_is_simple_struct(ast_layout_t *layout){
@@ -278,7 +278,7 @@ ast_layout_bone_t ast_layout_bone_clone(ast_layout_bone_t *bone){
         clone.children = ast_layout_skeleton_clone(&bone->children);
         break;
     default:
-        panic("ast_layout_bone_clone() - Unrecognized bone kind %d\n", (int) bone->kind);
+        die("ast_layout_bone_clone() - Unrecognized bone kind %d\n", (int) bone->kind);
     }
 
     return clone;
@@ -292,7 +292,7 @@ bool ast_layout_bone_has_polymorph(ast_layout_bone_t *bone){
     case AST_LAYOUT_BONE_KIND_STRUCT:
         return ast_layout_skeleton_has_polymorph(&bone->children);
     default:
-        panic("ast_layout_bone_has_polymorph() - Unrecognized bone kind %d\n", (int) bone->kind);
+        die("ast_layout_bone_has_polymorph() - Unrecognized bone kind %d\n", (int) bone->kind);
     }
 
     return false;
@@ -314,7 +314,7 @@ strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *fiel
                 string_builder_append(&builder, type_str);
                 free(type_str);
             } else {
-                panic("ast_layout_bone_str() - Failed to find name for endpoint\n");
+                die("ast_layout_bone_str() - Failed to find name for endpoint\n");
             }
         }
         break;
@@ -335,7 +335,7 @@ strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *fiel
         }
         break;
     default:
-        panic("ast_layout_str() - Unrecognized layout kind %d\n", (int) bone->kind);
+        die("ast_layout_str() - Unrecognized layout kind %d\n", (int) bone->kind);
     }
 
     return string_builder_finalize(&builder);
@@ -351,7 +351,7 @@ bool ast_layout_bones_identical(ast_layout_bone_t *bone_a, ast_layout_bone_t *bo
     case AST_LAYOUT_BONE_KIND_STRUCT:
         return ast_layout_skeletons_identical(&bone_a->children, &bone_b->children);
     default:
-        panic("ast_layout_bones_identical() - Unrecognized bone kind %d\n", (int) bone_a->kind);
+        die("ast_layout_bones_identical() - Unrecognized bone kind %d\n", (int) bone_a->kind);
     }
 
     return true;
@@ -475,7 +475,7 @@ ast_type_t *ast_layout_skeleton_get_type_at_index(ast_layout_skeleton_t *skeleto
     ast_layout_bone_t *bone = &skeleton->bones[index];
 
     if(bone->kind != AST_LAYOUT_BONE_KIND_TYPE){
-        panic("ast_layout_skeleton_get_type_at_index() - Bone at index is not a type\n");
+        die("ast_layout_skeleton_get_type_at_index() - Bone at index is not a type\n");
     }
 
     return &bone->type;

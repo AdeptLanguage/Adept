@@ -60,7 +60,7 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
             token_print_literal_value(token);
             break;
         default:
-            panic("tokenlist_print() - Unrecognized data format\n");
+            die("tokenlist_print() - Unrecognized data format\n");
         }
     }
 }

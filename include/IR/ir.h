@@ -2,6 +2,10 @@
 #ifndef _ISAAC_IR_H
 #define _ISAAC_IR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
     =================================== ir.h ===================================
     Module for creating and manipulating intermediate representation
@@ -26,92 +30,94 @@
 // =============================================================
 // ---------------- Possible IR instruction IDs ----------------
 // =============================================================
-#define INSTRUCTION_NONE           0x00000000
-#define INSTRUCTION_ADD            0x00000001 // ir_instr_math_t
-#define INSTRUCTION_FADD           0x00000002 // ir_instr_math_t
-#define INSTRUCTION_SUBTRACT       0x00000003 // ir_instr_math_t
-#define INSTRUCTION_FSUBTRACT      0x00000004 // ir_instr_math_t
-#define INSTRUCTION_MULTIPLY       0x00000005 // ir_instr_math_t
-#define INSTRUCTION_FMULTIPLY      0x00000006 // ir_instr_math_t
-#define INSTRUCTION_UDIVIDE        0x00000007 // ir_instr_math_t
-#define INSTRUCTION_SDIVIDE        0x00000008 // ir_instr_math_t
-#define INSTRUCTION_FDIVIDE        0x00000009 // ir_instr_math_t
-#define INSTRUCTION_UMODULUS       0x0000000A // ir_instr_math_t
-#define INSTRUCTION_SMODULUS       0x0000000B // ir_instr_math_t
-#define INSTRUCTION_FMODULUS       0x0000000C // ir_instr_math_t
-#define INSTRUCTION_RET            0x0000000D
-#define INSTRUCTION_CALL           0x0000000E
-#define INSTRUCTION_CALL_ADDRESS   0x0000000F
-#define INSTRUCTION_ALLOC          0x00000010 // ir_instr_alloc_t
-#define INSTRUCTION_MALLOC         0x00000011
-#define INSTRUCTION_FREE           0x00000012
-#define INSTRUCTION_STORE          0x00000013
-#define INSTRUCTION_LOAD           0x00000014
-#define INSTRUCTION_VARPTR         0x00000015
-#define INSTRUCTION_GLOBALVARPTR   0x00000016
-#define INSTRUCTION_BREAK          0x00000017
-#define INSTRUCTION_CONDBREAK      0x00000018
-#define INSTRUCTION_EQUALS         0x00000019 // ir_instr_math_t
-#define INSTRUCTION_FEQUALS        0x0000001A // ir_instr_math_t
-#define INSTRUCTION_NOTEQUALS      0x0000001B // ir_instr_math_t
-#define INSTRUCTION_FNOTEQUALS     0x0000001C // ir_instr_math_t
-#define INSTRUCTION_UGREATER       0x0000001D // ir_instr_math_t
-#define INSTRUCTION_SGREATER       0x0000001E // ir_instr_math_t
-#define INSTRUCTION_FGREATER       0x0000001F // ir_instr_math_t
-#define INSTRUCTION_ULESSER        0x00000020 // ir_instr_math_t
-#define INSTRUCTION_SLESSER        0x00000021 // ir_instr_math_t
-#define INSTRUCTION_FLESSER        0x00000022 // ir_instr_math_t
-#define INSTRUCTION_UGREATEREQ     0x00000023 // ir_instr_math_t
-#define INSTRUCTION_SGREATEREQ     0x00000024 // ir_instr_math_t
-#define INSTRUCTION_FGREATEREQ     0x00000025 // ir_instr_math_t
-#define INSTRUCTION_ULESSEREQ      0x00000026 // ir_instr_math_t
-#define INSTRUCTION_SLESSEREQ      0x00000027 // ir_instr_math_t
-#define INSTRUCTION_FLESSEREQ      0x00000028 // ir_instr_math_t
-#define INSTRUCTION_MEMBER         0x00000029
-#define INSTRUCTION_ARRAY_ACCESS   0x0000002A
-#define INSTRUCTION_FUNC_ADDRESS   0x0000002B // ir_instr_cast_t
-#define INSTRUCTION_BITCAST        0x0000002C // ir_instr_cast_t
-#define INSTRUCTION_ZEXT           0x0000002D // ir_instr_cast_t
-#define INSTRUCTION_SEXT           0x0000002E // ir_instr_cast_t
-#define INSTRUCTION_TRUNC          0x0000002F // ir_instr_cast_t
-#define INSTRUCTION_FEXT           0x00000030 // ir_instr_cast_t
-#define INSTRUCTION_FTRUNC         0x00000031 // ir_instr_cast_t
-#define INSTRUCTION_INTTOPTR       0x00000032 // ir_instr_cast_t
-#define INSTRUCTION_PTRTOINT       0x00000033 // ir_instr_cast_t
-#define INSTRUCTION_FPTOUI         0x00000034 // ir_instr_cast_t
-#define INSTRUCTION_FPTOSI         0x00000035 // ir_instr_cast_t
-#define INSTRUCTION_UITOFP         0x00000036 // ir_instr_cast_t
-#define INSTRUCTION_SITOFP         0x00000037 // ir_instr_cast_t
-#define INSTRUCTION_ISZERO         0x00000038 // ir_unary_t
-#define INSTRUCTION_ISNTZERO       0x00000039 // ir_unary_t
-#define INSTRUCTION_REINTERPRET    0x00000040 // ir_instr_cast_t
-#define INSTRUCTION_AND            0x00000041 // ir_instr_math_t
-#define INSTRUCTION_OR             0x00000042 // ir_instr_math_t
-#define INSTRUCTION_SIZEOF         0x00000043
-#define INSTRUCTION_OFFSETOF       0x00000044
-#define INSTRUCTION_ZEROINIT       0x00000045
-#define INSTRUCTION_MEMCPY         0x00000046
-#define INSTRUCTION_BIT_AND        0x00000047 // ir_instr_math_t
-#define INSTRUCTION_BIT_OR         0x00000048 // ir_instr_math_t
-#define INSTRUCTION_BIT_XOR        0x00000049 // ir_instr_math_t
-#define INSTRUCTION_BIT_COMPLEMENT 0x0000004A // ir_instr_unary_t
-#define INSTRUCTION_BIT_LSHIFT     0x0000004B // ir_instr_math_t
-#define INSTRUCTION_BIT_RSHIFT     0x0000004C // ir_instr_math_t
-#define INSTRUCTION_BIT_LGC_RSHIFT 0x0000004D // ir_instr_math_t
-#define INSTRUCTION_NEGATE         0x0000004E // ir_instr_unary_t
-#define INSTRUCTION_FNEGATE        0x0000004F // ir_instr_unary_t
-#define INSTRUCTION_SELECT         0x00000050
-#define INSTRUCTION_PHI2           0x00000051
-#define INSTRUCTION_SWITCH         0x00000052
-#define INSTRUCTION_STACK_SAVE     0x00000053
-#define INSTRUCTION_STACK_RESTORE  0x00000054 // ir_instr_stack_restore_t
-#define INSTRUCTION_VA_START       0x00000055 // ir_instr_unary_t
-#define INSTRUCTION_VA_END         0x00000056 // ir_instr_unary_t
-#define INSTRUCTION_VA_ARG         0x00000057 // ir_instr_va_arg_t
-#define INSTRUCTION_VA_COPY        0x00000058 // ir_instr_va_copy_t
-#define INSTRUCTION_STATICVARPTR   0x00000059 // ir_instr_varptr_t
-#define INSTRUCTION_ASM            0x0000005A // ir_instr_asm_t
-#define INSTRUCTION_DEINIT_SVARS   0x0000005B // ir_instr_t
+enum {
+    INSTRUCTION_NONE,           
+    INSTRUCTION_ADD,             // ir_instr_math_t
+    INSTRUCTION_FADD,            // ir_instr_math_t
+    INSTRUCTION_SUBTRACT,        // ir_instr_math_t
+    INSTRUCTION_FSUBTRACT,       // ir_instr_math_t
+    INSTRUCTION_MULTIPLY,        // ir_instr_math_t
+    INSTRUCTION_FMULTIPLY,       // ir_instr_math_t
+    INSTRUCTION_UDIVIDE,         // ir_instr_math_t
+    INSTRUCTION_SDIVIDE,         // ir_instr_math_t
+    INSTRUCTION_FDIVIDE,         // ir_instr_math_t
+    INSTRUCTION_UMODULUS,        // ir_instr_math_t
+    INSTRUCTION_SMODULUS,        // ir_instr_math_t
+    INSTRUCTION_FMODULUS,        // ir_instr_math_t
+    INSTRUCTION_RET,            
+    INSTRUCTION_CALL,           
+    INSTRUCTION_CALL_ADDRESS,   
+    INSTRUCTION_ALLOC,           // ir_instr_alloc_t
+    INSTRUCTION_MALLOC,         
+    INSTRUCTION_FREE,           
+    INSTRUCTION_STORE,          
+    INSTRUCTION_LOAD,           
+    INSTRUCTION_VARPTR,          // ir_instr_varptr_t
+    INSTRUCTION_GLOBALVARPTR,    // ir_instr_varptr_t
+    INSTRUCTION_BREAK,          
+    INSTRUCTION_CONDBREAK,      
+    INSTRUCTION_EQUALS,          // ir_instr_math_t
+    INSTRUCTION_FEQUALS,         // ir_instr_math_t
+    INSTRUCTION_NOTEQUALS,       // ir_instr_math_t
+    INSTRUCTION_FNOTEQUALS,      // ir_instr_math_t
+    INSTRUCTION_UGREATER,        // ir_instr_math_t
+    INSTRUCTION_SGREATER,        // ir_instr_math_t
+    INSTRUCTION_FGREATER,        // ir_instr_math_t
+    INSTRUCTION_ULESSER,         // ir_instr_math_t
+    INSTRUCTION_SLESSER,         // ir_instr_math_t
+    INSTRUCTION_FLESSER,         // ir_instr_math_t
+    INSTRUCTION_UGREATEREQ,      // ir_instr_math_t
+    INSTRUCTION_SGREATEREQ,      // ir_instr_math_t
+    INSTRUCTION_FGREATEREQ,      // ir_instr_math_t
+    INSTRUCTION_ULESSEREQ,       // ir_instr_math_t
+    INSTRUCTION_SLESSEREQ,       // ir_instr_math_t
+    INSTRUCTION_FLESSEREQ,       // ir_instr_math_t
+    INSTRUCTION_MEMBER,         
+    INSTRUCTION_ARRAY_ACCESS,   
+    INSTRUCTION_FUNC_ADDRESS,    // ir_instr_cast_t
+    INSTRUCTION_BITCAST,         // ir_instr_cast_t
+    INSTRUCTION_ZEXT,            // ir_instr_cast_t
+    INSTRUCTION_SEXT,            // ir_instr_cast_t
+    INSTRUCTION_TRUNC,           // ir_instr_cast_t
+    INSTRUCTION_FEXT,            // ir_instr_cast_t
+    INSTRUCTION_FTRUNC,          // ir_instr_cast_t
+    INSTRUCTION_INTTOPTR,        // ir_instr_cast_t
+    INSTRUCTION_PTRTOINT,        // ir_instr_cast_t
+    INSTRUCTION_FPTOUI,          // ir_instr_cast_t
+    INSTRUCTION_FPTOSI,          // ir_instr_cast_t
+    INSTRUCTION_UITOFP,          // ir_instr_cast_t
+    INSTRUCTION_SITOFP,          // ir_instr_cast_t
+    INSTRUCTION_ISZERO,          // ir_instr_unary_t
+    INSTRUCTION_ISNTZERO,        // ir_instr_unary_t
+    INSTRUCTION_REINTERPRET,     // ir_instr_cast_t
+    INSTRUCTION_AND,             // ir_instr_math_t
+    INSTRUCTION_OR,              // ir_instr_math_t
+    INSTRUCTION_SIZEOF,         
+    INSTRUCTION_OFFSETOF,       
+    INSTRUCTION_ZEROINIT,       
+    INSTRUCTION_MEMCPY,         
+    INSTRUCTION_BIT_AND,         // ir_instr_math_t
+    INSTRUCTION_BIT_OR,          // ir_instr_math_t
+    INSTRUCTION_BIT_XOR,         // ir_instr_math_t
+    INSTRUCTION_BIT_COMPLEMENT,  // ir_instr_unary_t
+    INSTRUCTION_BIT_LSHIFT,      // ir_instr_math_t
+    INSTRUCTION_BIT_RSHIFT,      // ir_instr_math_t
+    INSTRUCTION_BIT_LGC_RSHIFT,  // ir_instr_math_t
+    INSTRUCTION_NEGATE,          // ir_instr_unary_t
+    INSTRUCTION_FNEGATE,         // ir_instr_unary_t
+    INSTRUCTION_SELECT,         
+    INSTRUCTION_PHI2,           
+    INSTRUCTION_SWITCH,         
+    INSTRUCTION_STACK_SAVE,     
+    INSTRUCTION_STACK_RESTORE,   // ir_instr_unary_t
+    INSTRUCTION_VA_START,        // ir_instr_unary_t
+    INSTRUCTION_VA_END,          // ir_instr_unary_t
+    INSTRUCTION_VA_ARG,          // ir_instr_va_arg_t
+    INSTRUCTION_VA_COPY,         // ir_instr_va_copy_t
+    INSTRUCTION_STATICVARPTR,    // ir_instr_varptr_t
+    INSTRUCTION_ASM,             // ir_instr_asm_t
+    INSTRUCTION_DEINIT_SVARS,    // ir_instr_t
+};
 
 // ---------------- ir_type_mapping_t ----------------
 // Mapping for a name to an IR type
@@ -338,14 +344,6 @@ typedef struct {
     ir_value_t *bytes;
     bool is_volatile;
 } ir_instr_memcpy_t;
-
-// ---------------- ir_instr_stack_restore_t ----------------
-// An IR instruction for restoring the stack pointer
-typedef struct {
-    unsigned int id;
-    ir_type_t *result_type;
-    ir_value_t *stack_pointer;
-} ir_instr_stack_restore_t;
 
 // ---------------- ir_instr_stack_restore_t ----------------
 // An IR instruction for invoking 'va_arg'
@@ -613,11 +611,6 @@ typedef struct {
     free_list_t defer_free;
 } ir_module_t;
 
-// ---------------- ir_value_str ----------------
-// Generates a c-string representation from
-// an intermediate representation value
-strong_cstr_t ir_value_str(ir_value_t *value);
-
 // ---------------- ir_type_map_find ----------------
 // Finds a type inside an IR type map by name
 successful_t ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr);
@@ -625,20 +618,6 @@ successful_t ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **t
 // ---------------- ir_basicblock_new_instructions ----------------
 // Ensures that there is enough room for 'amount' more instructions
 void ir_basicblock_new_instructions(ir_basicblock_t *block, length_t amount);
-
-// ---------------- ir_module_dump ----------------
-// Generates a string representation from an IR
-// module and writes it to a file
-void ir_module_dump(ir_module_t *ir_module, const char *filename);
-
-// ---------------- ir_dump_functions (and friends) ----------------
-// Dumps a specific part of an IR module
-void ir_dump_functions(FILE *file, ir_funcs_t *funcs);
-void ir_dump_basicsblocks(FILE *file, ir_basicblocks_t basicblocks, ir_func_t *functions);
-void ir_dump_math_instruction(FILE *file, ir_instr_math_t *instruction, int i, const char *instruction_name);
-void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, int i, const char *real_name);
-void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instruction, int i);
-void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope);
 
 // ---------------- ir_module_free ----------------
 // Initializes an IR module for use
@@ -745,5 +724,9 @@ void ir_job_list_free(ir_job_list_t *job_list);
 // when an IR module is destroyed.
 // Can be used to preserve data that an IR module weakly references
 void ir_module_defer_free(ir_module_t *module, void *pointer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _ISAAC_IR_H

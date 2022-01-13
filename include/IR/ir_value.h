@@ -87,19 +87,20 @@ typedef struct {
     length_t length;
 } ir_value_struct_literal_t;
 
-// ---------------- ir_value_cstr_of_len_t ----------------
+// ---------------- ir_value_anon_global_t ----------------
 // Structure for 'extra' field of 'ir_value_t' if
 // the value is a reference to an anonymous global variable
 typedef struct {
     length_t anon_global_id;
 } ir_value_anon_global_t;
 
-// ---------------- ir_value_anon_global_t ----------------
+// ---------------- ir_value_cstr_of_len_t ----------------
 // Structure for 'extra' field of 'ir_value_t' if
 // the value is a reference to a literal c-string of a length
+// NOTE: 'size' includes null terminating character
 typedef struct {
     char *array;
-    length_t length;
+    length_t size;
 } ir_value_cstr_of_len_t;
 
 // ---------------- ir_value_struct_construction_t ----------------
