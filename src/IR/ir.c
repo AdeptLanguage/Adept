@@ -304,11 +304,14 @@ bool preserve_sortedness){
 }
 
 ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness){
-    ir_func_mapping_t mapping, *result;
-    mapping.name = name;
-    mapping.ir_func_id = ir_func_id;
-    mapping.ast_func_id = ast_func_id;
-    mapping.is_beginning_of_group = -1;
+    ir_func_mapping_t *result;
+
+    ir_func_mapping_t mapping = (ir_func_mapping_t){
+        .name = cstr_to_lenstr(name),
+        .ir_func_id = ir_func_id,
+        .ast_func_id = ast_func_id,
+        .is_beginning_of_group = -1,
+    };
 
     // Make room for the additional function mapping
     expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings.length, &module->func_mappings.capacity, 1, 32);
@@ -340,7 +343,7 @@ ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_
 }
 
 int ir_func_mapping_cmp(const void *a, const void *b){
-    int diff = strcmp(((ir_func_mapping_t*) a)->name, ((ir_func_mapping_t*) b)->name);
+    int diff = lenstrcmp(((ir_func_mapping_t*) a)->name, ((ir_func_mapping_t*) b)->name);
     if(diff != 0) return diff;
     return (int) ((ir_func_mapping_t*) a)->ast_func_id - (int) ((ir_func_mapping_t*) b)->ast_func_id;
 }

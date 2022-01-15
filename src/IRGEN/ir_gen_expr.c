@@ -1134,6 +1134,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
         // Resolve AST field type to IR field type
         if(ir_gen_resolve_type(compiler, object, &field_type, &out_field_info->ir_type)){
             ast_type_free(&field_type);
+            ast_poly_catalog_free(&catalog);
             return FAILURE;
         }
 
@@ -2658,7 +2659,7 @@ errorcode_t ir_gen_expr_alignof(ir_builder_t *builder, ast_expr_alignof_t *expr,
 }
 
 errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
-        unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, const char *overload, bool result_is_boolean){
+        unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, weak_cstr_t overload, bool result_is_boolean){
 
     // NOTE: If instr3 is INSTRUCTION_NONE then the operation will be differentiated for Integer vs. Float (using instr1 and instr2)
     //       Otherwise, the operation will be differentiated for Unsigned Integer vs. Signed Integer vs. Float (using instr1, instr2 & instr3)

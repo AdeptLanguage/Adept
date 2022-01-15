@@ -315,7 +315,14 @@ void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, 
 // ---------------- build_deinit_svars ----------------
 // Builds an instruction that will handle the deinitialization
 // of all static variables
+// NOTE: Most of the time, 'build_main_deinitialization'
+// should be used instead of this function, since
+// it covers all main-related deinitialization routines
 void build_deinit_svars(ir_builder_t *builder);
+
+// ---------------- build_main_deinitialization ----------------
+// Builds all main-related deinitialization routines
+void build_main_deinitialization(ir_builder_t *builder);
 
 // ---------------- prepare_for_new_label ----------------
 // Ensures there's enough room for another label
@@ -399,7 +406,7 @@ errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, a
 // Handles basic math management function calls
 // NOTE: 'from_source' is used for error messages, and may be NULL_SOURCE
 ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
-    ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, const char *overload_name);
+    ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name);
 
 // ---------------- handle_access_management ----------------
 // Handles '__access__' management function calls for [] operator

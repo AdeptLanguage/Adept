@@ -3,6 +3,7 @@
 #define _ISAAC_IR_POOL_H
 
 #include "UTIL/ground.h"
+#include "UTIL/list.h"
 
 #define POOL_ALLOCATION_ALIGNMENT sizeof(void*)
 
@@ -19,8 +20,8 @@ typedef struct {
 // IR structures for an IR module
 typedef struct {
     ir_pool_fragment_t *fragments; // Blocks of memory in which small allocations stored
-    length_t fragments_length;
-    length_t fragments_capacity;
+    length_t length;
+    length_t capacity;
 } ir_pool_t;
 
 // ---------------- ir_pool_snapshot_t ----------------

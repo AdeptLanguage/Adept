@@ -114,13 +114,13 @@ char *mallocandsprintf(const char *format, ...){
     return destination;
 }
 
-length_t find_insert_position(void *array, length_t length, int(*compare)(const void*, const void*), void *object_reference, length_t object_size){
+length_t find_insert_position(const void *items, length_t length, int (*compare)(const void*, const void*), const void *object, length_t size){
     maybe_index_t first, middle, last, comparison;
     first = 0; last = length - 1;
 
     while(first <= last){
         middle = (first + last) / 2;
-        comparison = compare((char*) array + (middle * object_size), object_reference);
+        comparison = (*compare)((char*) items + (middle * size), object);
         
         if(comparison == 0) return middle;
         else if(comparison > 0) last = middle - 1;

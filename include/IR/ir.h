@@ -451,11 +451,9 @@ typedef struct {
 #define IR_FUNC_POLYMORPHIC TRAIT_5
 
 // ---------------- ir_func_mapping_t ----------------
-// Mapping for a name or id to AST & IR function
-// ('name' is only used for foreign implementations)
-// ('ast_func_id' is used for domestic implementations)
+// Mapping for a name to AST & IR function
 typedef struct {
-    const char *name;
+    weak_lenstr_t name;
     funcid_t ir_func_id;
     funcid_t ast_func_id;
     signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated

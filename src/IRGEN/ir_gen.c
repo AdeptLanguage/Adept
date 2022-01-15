@@ -314,18 +314,27 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
 }
 
 errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id){
-    // ir_gens statements into basicblocks with instructions and sets in 'module_func'
+    // Generates IR instructions from AST statements and then stores them in the IR function with the ID 'ir_func_id' as groups of basicblocks
 
     ir_module_t *ir_module = &object->ir_module;
 
     // NOTE: These may be invalidated during statement generation
     ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
     ir_func_t *module_func = &object->ir_module.funcs.funcs[ir_func_id];
+    
+    bool is_main_like = ast_func->traits & AST_FUNC_MAIN || ast_func->traits & AST_FUNC_WINMAIN;
 
-    if(ast_func->statements.length == 0 && !(ast_func->traits & AST_FUNC_GENERATED) && compiler->traits & COMPILER_FUSSY){
-        if(compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name))
+    bool show_is_empty_warning = ast_func->statements.length == 0
+                              && !(ast_func->traits & AST_FUNC_GENERATED)
+                              && compiler->traits & COMPILER_FUSSY;
+
+    if(show_is_empty_warning){
+        if(compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name)){
             return FAILURE;
+        }
     }
+
+    errorcode_t errorcode = FAILURE;
 
     // Used for constructing array of basicblocks
     ir_builder_t builder;
@@ -333,13 +342,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     while(module_func->arity != ast_func->arity){
         if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
-            module_func->basicblocks = builder.basicblocks;
-
-            free(builder.block_stack_labels);
-            free(builder.block_stack_break_ids);
-            free(builder.block_stack_continue_ids);
-            free(builder.block_stack_scopes);
-            return FAILURE;
+            goto failure;
         }
         
         trait_t arg_traits = BRIDGE_VAR_UNDEF;
@@ -355,16 +358,10 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         module_func->arity++;
     }
 
-    if(ast_func->traits & AST_FUNC_MAIN || ast_func->traits & AST_FUNC_WINMAIN){
+    if(is_main_like){
         // Initialize all global variables
         if(ir_gen_globals_init(&builder)){
-            module_func->basicblocks = builder.basicblocks;
-
-            free(builder.block_stack_labels);
-            free(builder.block_stack_break_ids);
-            free(builder.block_stack_continue_ids);
-            free(builder.block_stack_scopes);
-            return FAILURE;
+            goto failure;
         }
 
         // Refresh 'ast_func' pointer, since function may have moved
@@ -373,95 +370,69 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     bool terminated;
     if(ir_gen_stmts(&builder, &ast_func->statements, &terminated)){
-        // Make sure to update 'module_func' because ir_module.funcs may have been moved
-        module_func = &object->ir_module.funcs.funcs[ir_func_id];
-        module_func->basicblocks = builder.basicblocks;
-
-        free(builder.block_stack_labels);
-        free(builder.block_stack_break_ids);
-        free(builder.block_stack_continue_ids);
-        free(builder.block_stack_scopes);
-        return FAILURE;
+        goto failure;
     }
 
-    // Append return instr for functions that return void
+    if(terminated) goto success;
+
+    handle_deference_for_variables(&builder, &builder.scope->list);
+
+    if(is_main_like){
+        build_main_deinitialization(&builder);
+    }
+
+    // Make sure to again update references that may have been invalidated
+    ast_func = &object->ast.funcs[ast_func_id];
+
+    if(ast_func->traits & AST_FUNC_AUTOGEN){
+        // Auto-generate part of function if requested
+
+        if(ast_func->traits & AST_FUNC_DEFER){
+            if(handle_children_deference(&builder)) goto failure;
+        } else if(ast_func->traits & AST_FUNC_PASS){
+            if(handle_children_pass_root(&builder, false)) goto failure;
+            terminated = true;
+        }
+    }
+
+    // TODO: CLEANUP: Clean this up
+    // We have to recheck whether the function was terminated because of 'handle_children_pass_root(&builder)'
     if(!terminated){
-        handle_deference_for_variables(&builder, &builder.scope->list);
-
-        // Make sure to update references that may have been invalidated
+        // Ensure function pointers are up-to-date with the latest function locations
         ast_func = &object->ast.funcs[ast_func_id];
+        module_func = &object->ir_module.funcs.funcs[ir_func_id];
 
-        if(ast_func->traits & AST_FUNC_MAIN || ast_func->traits & AST_FUNC_WINMAIN){
-            handle_deference_for_globals(&builder);
-            build_deinit_svars(&builder);
-        }
-
-        // Make sure to again update references that may have been invalidated
-        ast_func = &object->ast.funcs[ast_func_id];
-
-        if(ast_func->traits & AST_FUNC_AUTOGEN){
-            bool failed = false;
-
-            if(ast_func->traits & AST_FUNC_DEFER){
-                failed = handle_children_deference(&builder) != SUCCESS;
-            } else if(ast_func->traits & AST_FUNC_PASS){
-                failed = handle_children_pass_root(&builder, false) != SUCCESS;
-                if(!failed) terminated = true;
-            }
-
-            if(failed){
-                // Failed to auto-generate __defer__() or __pass__() calls to children of parent type
-                free(builder.block_stack_labels);
-                free(builder.block_stack_break_ids);
-                free(builder.block_stack_continue_ids);
-                free(builder.block_stack_scopes);
-                return FAILURE;
-            }
-        }
-
-        // TODO: CLEANUP: Clean this up
-        // We have to recheck whether the function was terminated because of 'handle_children_pass_root(&builder)'
-        if(!terminated){
-            // Ensure function pointers are up-to-date with the latest function locations
-            ast_func = &object->ast.funcs[ast_func_id];
-            module_func = &object->ir_module.funcs.funcs[ir_func_id];
-
-            // Handle auto-return
-            if(module_func->return_type->kind == TYPE_KIND_VOID){
-                build_return(&builder, NULL);
-            } else if(ast_func->traits & AST_FUNC_MAIN && module_func->return_type->kind == TYPE_KIND_S32
-                        && ast_type_is_void(&ast_func->return_type)){
-                // Return an int under the hood for 'func main void'
-                build_return(&builder, build_literal_int(builder.pool, 0));
-            } else {
-                source_t where = ast_func->return_type.source;
-                char *return_typename = ast_type_str(&ast_func->return_type);
-                compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func->name);
-                free(return_typename);
-
-                module_func->basicblocks = builder.basicblocks;
-
-                free(builder.block_stack_labels);
-                free(builder.block_stack_break_ids);
-                free(builder.block_stack_continue_ids);
-                free(builder.block_stack_scopes);
-                return FAILURE;
-            }
+        // Handle auto-return
+        if(module_func->return_type->kind == TYPE_KIND_VOID){
+            build_return(&builder, NULL);
+        } else if(ast_func->traits & AST_FUNC_MAIN
+                && module_func->return_type->kind == TYPE_KIND_S32
+                && ast_type_is_void(&ast_func->return_type)){
+            // Return an int under the hood for 'func main() void'
+            build_return(&builder, build_literal_int(builder.pool, 0));
+        } else {
+            source_t where = ast_func->return_type.source;
+            strong_cstr_t return_typename = ast_type_str(&ast_func->return_type);
+            compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func->name);
+            free(return_typename);
+            goto failure;
         }
     }
 
-    // Make sure to update references that may have been invalidated
-    module_func = &object->ir_module.funcs.funcs[ir_func_id];
-
+success:
+    module_func = &object->ir_module.funcs.funcs[ir_func_id]; // (since may have been invalidated)
     module_func->scope->following_var_id = builder.next_var_id;
     module_func->variable_count = builder.next_var_id;
-    module_func->basicblocks = builder.basicblocks;
+    errorcode = SUCCESS;
 
+failure:
+    module_func = &object->ir_module.funcs.funcs[ir_func_id]; // (since may have been invalidated)
+    module_func->basicblocks = builder.basicblocks;
     free(builder.block_stack_labels);
     free(builder.block_stack_break_ids);
     free(builder.block_stack_continue_ids);
     free(builder.block_stack_scopes);
-    return SUCCESS;
+    return errorcode;
 }
 
 errorcode_t ir_gen_job_list(object_t *object){

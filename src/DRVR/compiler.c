@@ -1124,7 +1124,7 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 
 #if !defined(ADEPT_INSIGHT_BUILD) || defined(__EMSCRIPTEN__)
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
-        const char *name, ast_type_t *types, length_t arity, ast_type_t *gives){
+        weak_cstr_t name, ast_type_t *types, length_t arity, ast_type_t *gives){
     
     bool has_potential_candidates = compiler_undeclared_function_possibilities(object, name, false);
 
@@ -1150,7 +1150,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
     compiler_undeclared_function_possibilities(object, name, true);
 }
 
-bool compiler_undeclared_function_possibilities(object_t *object, const char *name, bool should_print){
+bool compiler_undeclared_function_possibilities(object_t *object, weak_cstr_t name, bool should_print){
     #ifdef ADEPT_INSIGHT_BUILD
     return false;
     #else
@@ -1168,7 +1168,7 @@ bool compiler_undeclared_function_possibilities(object_t *object, const char *na
         ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index];
 
         if(mapping->is_beginning_of_group == -1){
-            mapping->is_beginning_of_group = index == 0 ? 1 : !streq(mapping->name, ir_module->func_mappings.mappings[index - 1].name);
+            mapping->is_beginning_of_group = index == 0 ? 1 : !lenstreq(mapping->name, ir_module->func_mappings.mappings[index - 1].name);
         }
         if(mapping->is_beginning_of_group == 1 && index != original_index) break;
 

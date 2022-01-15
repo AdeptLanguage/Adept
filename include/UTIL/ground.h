@@ -90,6 +90,10 @@ typedef long long maybe_index_t;
 // 3-state value
 typedef unsigned char troolean;
 
+#define TROOLEAN_TRUE 1
+#define TROOLEAN_FALSE 0
+#define TROOLEAN_UNKNOWN 2
+
 // ---------------- optional ----------------
 #define optional(TYPE) struct { bool has; TYPE value; }
 
@@ -100,9 +104,21 @@ typedef struct {
     length_t length;
 } lenstr_t, strong_lenstr_t, weak_lenstr_t;
 
-#define TROOLEAN_TRUE 1
-#define TROOLEAN_FALSE 0
-#define TROOLEAN_UNKNOWN 2
+inline bool lenstreq(lenstr_t a, lenstr_t b){
+    return a.length == b.length ? memcmp(a.cstr, b.cstr, a.length) == 0 : false;
+}
+
+inline int lenstrcmp(lenstr_t a, lenstr_t b){
+    if(a.length == b.length){
+        return memcmp(a.cstr, b.cstr, a.length);
+    } else {
+        return (a.length < b.length) ? -1 : 1;
+    }
+}
+
+inline lenstr_t cstr_to_lenstr(char *cstr){
+    return (lenstr_t){ .cstr = cstr, .length = strlen(cstr) };
+}
 
 // ---------------- SOURCE_IS_NULL ----------------
 // Whether or not a 'source_t' is NULL_SOURCE
@@ -119,6 +135,10 @@ typedef struct {
 // Returns whether two null-termianted strings are equal
 // Equivalent to 'strcmp(STRING, VALUE) == 0)'
 #define streq(STRING, VALUE) (strcmp((STRING), (VALUE)) == 0)
+
+// ---------------- bsearch_insertion ----------------
+// Like bsearch, except will return the last checked pivot (or NULL)
+void *bsearch_insertion(const void *key, const void *base, size_t num, size_t size, int (*cmp)(const void *, const void*));
 
 // ---------------- special characters ----------------
 #ifdef __APPLE__

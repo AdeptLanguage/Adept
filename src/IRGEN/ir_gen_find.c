@@ -25,7 +25,7 @@
 #include "UTIL/search.h"
 #include "UTIL/trait.h"
 
-errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
+errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, weak_cstr_t name,
         ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, optional_funcpair_t *result){
     
     ir_module_t *ir_module = &object->ir_module;
@@ -47,7 +47,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
             ast_func = &object->ast.funcs[mapping->ast_func_id];
     
             if(mapping->is_beginning_of_group == -1){
-                mapping->is_beginning_of_group = !streq(mapping->name, ir_module->func_mappings.mappings[index - 1].name);
+                mapping->is_beginning_of_group = !lenstreq(mapping->name, ir_module->func_mappings.mappings[index - 1].name);
             }
     
             if(mapping->is_beginning_of_group == 1) break;
@@ -69,7 +69,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
     return FAILURE; // No function with that definition found
 }
 
-errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result){
+errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, funcpair_t *result){
     ir_module_t *ir_module = &object->ir_module;
 
     maybe_index_t index = find_beginning_of_func_group(&ir_module->func_mappings, name);
@@ -83,21 +83,24 @@ errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out
         if((length_t) index + 1 != ir_module->func_mappings.length){
             ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index + 1];
             if(mapping->is_beginning_of_group == -1){
-                mapping->is_beginning_of_group = index == 0 ? 1 : !streq(mapping->name, ir_module->func_mappings.mappings[index].name);
+                mapping->is_beginning_of_group = index == 0 ? 1 : !lenstreq(mapping->name, ir_module->func_mappings.mappings[index].name);
             }
             if(mapping->is_beginning_of_group == 0) *out_is_unique = false;
         }
     }
 
     ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index];
-    result->ast_func = &object->ast.funcs[mapping->ast_func_id];
-    result->ir_func = &object->ir_module.funcs.funcs[mapping->ir_func_id];
-    result->ast_func_id = mapping->ast_func_id;
-    result->ir_func_id = mapping->ir_func_id;
+    
+    *result = (funcpair_t){
+        .ast_func = &object->ast.funcs[mapping->ast_func_id],
+        .ir_func = &object->ir_module.funcs.funcs[mapping->ir_func_id],
+        .ast_func_id = mapping->ast_func_id,
+        .ir_func_id = mapping->ir_func_id,
+    };
     return SUCCESS;
 }
 
-errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
+errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, weak_cstr_t name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, source_t from_source, optional_funcpair_t *result){
     
     // Do strict argument type conforming rules first
@@ -109,7 +112,7 @@ errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name,
     return ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, from_source, result, loose_mode);
 }
 
-errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
+errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, weak_cstr_t name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode){
     
     ir_module_t *ir_module = &builder->object->ir_module;
@@ -137,7 +140,7 @@ errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *na
             ast_func = &builder->object->ast.funcs[mapping.ast_func_id];
 
             if(mapping.is_beginning_of_group == -1){
-                mapping.is_beginning_of_group = !streq(mapping.name, ir_module->func_mappings.mappings[index - 1].name);
+                mapping.is_beginning_of_group = !lenstreq(mapping.name, ir_module->func_mappings.mappings[index - 1].name);
             }
 
             if(mapping.is_beginning_of_group == 1) break;
@@ -713,24 +716,25 @@ errorcode_t ir_gen_find_poly_method(compiler_t *compiler, object_t *object, cons
     return FAILURE; // No method with that definition found
 }
 
-maybe_index_t find_beginning_of_func_group(ir_func_mappings_t *func_mappings, const char *name){
+maybe_index_t find_beginning_of_func_group(ir_func_mappings_t *func_mappings, char *raw_name){
     // Searches for beginning of function group in a list of mappings
     // If not found returns -1 else returns mapping index
     // (Where a function group is a group of all the functions with the same name)
 
     ir_func_mapping_t *mappings = func_mappings->mappings;
     maybe_index_t first, middle, last, comparison;
+    weak_lenstr_t name = cstr_to_lenstr(raw_name);
     first = 0; last = func_mappings->length - 1;
 
     while(first <= last){
         middle = (first + last) / 2;
-        comparison = strcmp(mappings[middle].name, name);
+        comparison = lenstrcmp(mappings[middle].name, name);
 
         if(comparison == 0){
             while(true){
                 if(mappings[middle].is_beginning_of_group == -1){
                     // It is uncalculated, so we must calculate it
-                    bool prev_different_name = middle == 0 ? true : !streq(mappings[middle - 1].name, name);
+                    bool prev_different_name = middle == 0 ? true : !lenstreq(mappings[middle - 1].name, name);
                     mappings[middle].is_beginning_of_group = prev_different_name;
                 }
                 if(mappings[middle].is_beginning_of_group == 1) return middle;

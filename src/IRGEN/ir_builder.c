@@ -753,6 +753,11 @@ void build_deinit_svars(ir_builder_t *builder){
     instruction->result_type = NULL;
 }
 
+void build_main_deinitialization(ir_builder_t *builder){
+    handle_deference_for_globals(builder);
+    build_deinit_svars(builder);
+}
+
 void prepare_for_new_label(ir_builder_t *builder){
     if(builder->block_stack_capacity == 0){
         builder->block_stack_labels = malloc(sizeof(char*) * 4);
@@ -1613,7 +1618,7 @@ failure:
     return errorcode;
 }
 
-ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, const char *overload_name){
+ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name){
     if(lhs->type->kind != TYPE_KIND_STRUCTURE) return NULL;
 
     if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){

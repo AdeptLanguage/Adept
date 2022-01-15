@@ -621,8 +621,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
 
     // Make '__defer__()' calls for global variables and (anonymous) static variables running out of scope
     if(is_in_main_function || is_in_winmain_function){
-        handle_deference_for_globals(builder);
-        build_deinit_svars(builder);
+        build_main_deinitialization(builder);
     }
 
     // If auto-generation is enabled and this function is eligible,

@@ -21,7 +21,7 @@
 // Finds a function that exactly matches the given
 // name and arguments. Result info stored 'result'
 // NOTE: optional_required_traits can be TRAIT_NONE
-errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char *name,
+errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, weak_cstr_t name,
     ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, optional_funcpair_t *result);
 
 // ---------------- ir_gen_find_func_named ----------------
@@ -29,7 +29,7 @@ errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, const char 
 // Result info stored 'result'
 // Optionally, whether the function has a unique name is
 // stored into 'out_is_unique'
-errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out_is_unique, funcpair_t *result);
+errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, funcpair_t *result);
 
 // ---------------- ir_gen_find_func_conforming ----------------
 // Finds a function that has the given name and conforms
@@ -40,10 +40,10 @@ errorcode_t ir_gen_find_func_named(object_t *object, const char *name, bool *out
 // NOTE: 'gives' may be NULL or have '.elements_length' be zero
 //       to indicate no return matching
 // NOTE: 'from_source' is used for error messages, it may be NULL_SOURCE if not applicable
-errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
+errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, weak_cstr_t name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, source_t from_source, optional_funcpair_t *result);
 
-errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, const char *name, ir_value_t **arg_values,
+errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, weak_cstr_t name, ir_value_t **arg_values,
         ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode);
 
 
@@ -104,7 +104,7 @@ errorcode_t ir_gen_find_poly_method(compiler_t *compiler, object_t *object, cons
 
 // ---------------- find_beginning_of_func_group ----------------
 // Searches for beginning of function group in a list of mappings
-maybe_index_t find_beginning_of_func_group(ir_func_mappings_t *mappings, const char *name);
+maybe_index_t find_beginning_of_func_group(ir_func_mappings_t *mappings, weak_cstr_t name);
 
 // ---------------- find_beginning_of_method_group ----------------
 // Searches for beginning of method group in a list of methods
