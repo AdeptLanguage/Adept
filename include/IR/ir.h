@@ -17,7 +17,9 @@ extern "C" {
 
 #include "AST/ast_type_lean.h"
 #include "BRIDGE/bridge.h"
+#include "IR/ir_func_endpoint.h"
 #include "IR/ir_pool.h"
+#include "IR/ir_proc_map.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
 #include "IRGEN/ir_cache.h"
@@ -450,40 +452,9 @@ typedef struct {
 #define IR_FUNC_STDCALL     TRAIT_4
 #define IR_FUNC_POLYMORPHIC TRAIT_5
 
-// ---------------- ir_func_mapping_t ----------------
-// Mapping for a name to AST & IR function
-typedef struct {
-    weak_lenstr_t name;
-    funcid_t ir_func_id;
-    funcid_t ast_func_id;
-    signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
-} ir_func_mapping_t;
-
-// ---------------- ir_method_t ----------------
-// Mapping for a method to an actual function
-typedef struct {
-    const char *struct_name;
-    const char *name;
-    funcid_t ir_func_id;
-    funcid_t ast_func_id;
-    signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
-} ir_method_t;
-
-// ---------------- ir_poly_method_t ----------------
-// Mapping for a generic base method to an actual function
-typedef struct {
-    const char *struct_name;
-    const char *name;
-    ast_type_t *generics;
-    length_t generics_length;
-    funcid_t ir_func_id;
-    funcid_t ast_func_id;
-    signed char is_beginning_of_group; // 1 == yes, 0 == no, -1 == uncalculated
-} ir_poly_method_t;
-
 // ---------------- ir_job_list_t ----------------
 // List of jobs required during IR generation
-typedef listof(ir_func_mapping_t, jobs) ir_job_list_t;
+typedef listof(ir_func_endpoint_t, jobs) ir_job_list_t;
 
 // ---------------- ir_global_t ----------------
 // An intermediate representation global variable
@@ -567,25 +538,10 @@ void rtti_relocations_free(rtti_relocations_t *relocations);
 typedef listof(ir_anon_global_t, globals) ir_anon_globals_t;
 #define ir_anon_globals_append(LIST, VALUE) list_append((LIST), (VALUE), ir_anon_global_t)
 
-// ---------------- ir_func_mapping_t ----------------
-// List of function mappings
-typedef listof(ir_func_mapping_t, mappings) ir_func_mappings_t;
-#define ir_func_mappings_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_mapping_t)
-
 // ---------------- ir_funcs_t ----------------
 // List of functions
 typedef listof(ir_func_t, funcs) ir_funcs_t;
 #define ir_funcs_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_t)
-
-// ---------------- ir_methods_t ----------------
-// List of methods
-typedef listof(ir_method_t, methods) ir_methods_t;
-#define ir_methods_append(LIST, VALUE) list_append((LIST), (VALUE), ir_method_t)
-
-// ---------------- ir_poly_methods_t ----------------
-// List of polymorphic methods
-typedef listof(ir_poly_method_t, methods) ir_poly_methods_t;
-#define ir_poly_methods_append(LIST, VALUE) list_append((LIST), (VALUE), ir_poly_method_t)
 
 // ---------------- ir_module_t ----------------
 // An intermediate representation module
@@ -594,9 +550,8 @@ typedef struct {
     ir_pool_t pool;
     ir_type_map_t type_map;
     ir_funcs_t funcs;
-    ir_func_mappings_t func_mappings;
-    ir_methods_t methods;
-    ir_poly_methods_t poly_methods;
+    ir_proc_map_t func_map;
+    ir_proc_map_t method_map;
     ir_global_t *globals;
     length_t globals_length;
     ir_anon_globals_t anon_globals;
@@ -619,7 +574,7 @@ void ir_basicblock_new_instructions(ir_basicblock_t *block, length_t amount);
 
 // ---------------- ir_module_free ----------------
 // Initializes an IR module for use
-void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t globals_length, length_t func_mappings_length_guess);
+void ir_module_init(ir_module_t *ir_module, length_t funcs_length, length_t globals_length, length_t number_of_function_names_guess);
 
 // ---------------- ir_module_free ----------------
 // Frees data within an IR module
@@ -658,60 +613,17 @@ void ir_print_value(ir_value_t *value);
 // Prints a type to stdout
 void ir_print_type(ir_type_t *type);
 
-// ---------------- ir_module_insert_method ----------------
-// Inserts a method into a module's method list
-void ir_module_insert_method(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness);
+// ---------------- ir_module_create_func_mapping ----------------
+// Creates a new function mapping
+void ir_module_create_func_mapping(ir_module_t *module, weak_cstr_t function_name, ir_func_endpoint_t endpoint, bool add_to_job_list);
 
-// ---------------- ir_module_insert_poly_method ----------------
-// Inserts a generic method into a module's method list
-// NOTE: Memory for 'weak_generics' should persist at least as long as
-//       the generic method exists
-void ir_module_insert_poly_method(ir_module_t *module, 
-    weak_cstr_t name,
-    weak_cstr_t struct_name,
-    ast_type_t *weak_generics,
-    length_t generics_length,
-    funcid_t ir_func_id,
-    funcid_t ast_func_id,
-bool preserve_sortedness);
-
-// ---------------- ir_module_insert_poly_method ----------------
-// Inserts a new function mapping into a module's function mappings list
-ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness);
-
-// ---------------- ir_module_find_insert_method_position ----------------
-// Finds the position to insert a method into a module's method list
-#define ir_module_find_insert_method_position(module, weak_method_reference) \
-    find_insert_position(module->methods.methods, module->methods.length, ir_method_cmp, weak_method_reference, sizeof(ir_method_t));
-
-// ---------------- ir_module_find_insert_poly_method_position ----------------
-// Finds the position to insert a method into a module's method list
-#define ir_module_find_insert_poly_method_position(module, weak_method_reference) \
-    find_insert_position(module->poly_methods.methods, module->poly_methods.length, ir_poly_method_cmp, weak_method_reference, sizeof(ir_poly_method_t));
-
-// ---------------- ir_module_find_insert_mapping_position ----------------
-// Finds the position to insert a mapping into a module's mappings list
-#define ir_module_find_insert_mapping_position(module, weak_mapping_reference) \
-    find_insert_position(module->func_mappings.mappings, module->func_mappings.length, ir_func_mapping_cmp, weak_mapping_reference, sizeof(ir_func_mapping_t));
-
-// ---------------- ir_func_mapping_cmp ----------------
-// Compares two 'ir_func_mapping_t' structures.
-// Used for qsort()
-int ir_func_mapping_cmp(const void *a, const void *b);
-
-// ---------------- ir_method_cmp ----------------
-// Compares two 'ir_method_t' structures.
-// Used for qsort()
-int ir_method_cmp(const void *a, const void *b);
-
-// ---------------- ir_poly_method_cmp ----------------
-// Compares two 'ir_poly_method_t' structures.
-// Used for qsort()
-int ir_poly_method_cmp(const void *a, const void *b);
+// ---------------- ir_module_create_method_mapping ----------------
+// Create a new method mapping
+void ir_module_create_method_mapping(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, ir_func_endpoint_t endpoint);
 
 // ---------------- ir_job_list_append ----------------
 // Appends a mapping to an IR job list
-#define ir_job_list_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_mapping_t)
+#define ir_job_list_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_endpoint_t)
 
 // ---------------- ir_job_list_free ----------------
 // Frees an IR job list

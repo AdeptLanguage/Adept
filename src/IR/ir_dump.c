@@ -1,9 +1,14 @@
 
 #include "IR/ir_dump.h"
+
+#include <stdlib.h>
+
+#include "BRIDGE/bridge.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
 #include "IR/ir_value_str.h"
 #include "UTIL/color.h"
 #include "UTIL/string.h"
-#include "UTIL/string_builder.h"
 
 void ir_module_dump(ir_module_t *ir_module, const char *filename){
     FILE *file = fopen(filename, "w");

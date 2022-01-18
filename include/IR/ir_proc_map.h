@@ -20,7 +20,7 @@ extern "C" {
 // IR procedure map, used to map a value of a generic 'key'
 // type to a list of possible function endpoints
 typedef struct {
-    void **keys;
+    void *keys;
     ir_func_endpoint_list_t **endpoint_lists;
     length_t length;
     length_t capacity;
@@ -52,14 +52,14 @@ ir_func_endpoint_list_t *ir_proc_map_find(ir_proc_map_t *map, const void *key, l
 
 // ---------------- ir_func_key_t ----------------
 typedef struct {
-    weak_lenstr_t name;
+    weak_cstr_t name;
 } ir_func_key_t;
 
 // ---------------- ir_method_key_t ----------------
 typedef struct {
     // (Methods are grouped ignoring polymorphic parameters)
-    weak_lenstr_t struct_name;
-    weak_lenstr_t name;
+    weak_cstr_t struct_name;
+    weak_cstr_t method_name;
 } ir_method_key_t;
 
 // ---------------- compare_ir_func_key ----------------

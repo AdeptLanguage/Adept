@@ -18,9 +18,10 @@ extern "C" {
 #include "AST/ast_constant.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
-#include "AST/ast_type_lean.h"
+#include "AST/ast_type.h"
 #include "AST/meta_directives.h"
 #include "BRIDGE/type_table.h"
+#include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
 
@@ -272,6 +273,17 @@ void ast_dump_composite(FILE *file, ast_composite_t *composite, length_t additio
 void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, ast_field_map_t *field_map, ast_layout_endpoint_t parent_endpoint, length_t indentation);
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length);
 void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
+
+// ---------------- ast_func_is_method ----------------
+// Returns whether an AST function is method-like
+// (considered so if it has a first parameter name of 'this')
+bool ast_func_is_method(ast_func_t *func);
+
+// ---------------- ast_method_get_subject_typename ----------------
+// Gets the typename of the subject of a method
+// NOTE: Assumes that 'ast_func_is_method(method)' is true
+// NOTE: Returns NULL if subject type is not compatible
+maybe_null_weak_cstr_t ast_method_get_subject_typename(ast_func_t *method);
 
 // ---------------- ast_func_args_str ----------------
 // Create a string of the inside of the parentheses for the

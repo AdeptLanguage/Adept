@@ -250,6 +250,11 @@ bool ast_type_is_polymorph(const ast_type_t *type);
 // Returns whether an AST type is a pointer to a plain polymorphic type
 bool ast_type_is_polymorph_ptr(const ast_type_t *type);
 
+// ---------------- ast_type_is_polymorph_like_ptr ----------------
+// Returns whether an AST type is a pointer to a plain polymorphic type
+// or a polymorphic prerequisite type
+bool ast_type_is_polymorph_like_ptr(const ast_type_t *type);
+
 // ---------------- ast_type_is_generic_base ----------------
 // Returns whether an AST type is a plain generic base type
 bool ast_type_is_generic_base(const ast_type_t *type);

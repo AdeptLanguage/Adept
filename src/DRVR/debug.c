@@ -11,6 +11,7 @@
 #include "DRVR/debug.h"
 #include "DRVR/compiler.h"
 #include "IR/ir.h"
+#include "IR/ir_dump.h"
 #include "IR/ir_lowering.h"
 #include "IRGEN/ir_builder.h"
 

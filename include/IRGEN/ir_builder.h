@@ -9,6 +9,7 @@
 */
 
 #include "IR/ir.h"
+#include "IR/ir_func_endpoint.h"
 #include "AST/ast_type.h"
 #include "AST/ast_poly_catalog.h"
 #include "UTIL/ground.h"
@@ -43,7 +44,6 @@ typedef struct ir_builder {
     funcid_t ir_func_id;
     bridge_scope_t *scope;
     length_t next_var_id;
-    length_t *next_reference_id;
     troolean has_string_struct;
     ir_job_list_t *job_list;
     ast_type_t static_bool;
@@ -53,7 +53,6 @@ typedef struct ir_builder {
     ir_type_t *s8_type;
     ir_type_t *ptr_type;
     type_table_t *type_table;
-    tmpbuf_t *tmpbuf;
     funcid_t noop_defer_function;
     bool has_noop_defer_function;
 } ir_builder_t;
@@ -419,7 +418,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 // Instantiates a polymorphic function
 // NOTE: 'instantiation_source' may be NULL_SOURCE
 errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
-        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping);
+        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_endpoint_t *out_endpoint);
 
 // ---------------- attempt_autogen___defer__ ----------------
 // Attempts to auto-generate __defer__ management method

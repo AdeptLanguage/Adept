@@ -3,8 +3,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h> // IWYU pragma: keep
 #elif defined(__APPLE__)
-#include <unistd.h> // IWYU pragma: keep
 #include <mach-o/dyld.h> // IWYU pragma: keep
+#include <unistd.h> // IWYU pragma: keep
 #endif
 
 #ifdef __linux__
@@ -23,6 +23,7 @@
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
 #include "DRVR/config.h"
@@ -35,10 +36,10 @@
 #include "UTIL/filename.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
-#include "UTIL/tmpbuf.h"
+#include "UTIL/string_builder.h"
+#include "UTIL/string_list.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
-#include "UTIL/string_builder.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "BKEND/backend.h"
@@ -250,8 +251,6 @@ void compiler_init(compiler_t *compiler){
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
-
-    tmpbuf_init(&compiler->tmp);
 }
 
 void compiler_free(compiler_t *compiler){
@@ -269,7 +268,6 @@ void compiler_free(compiler_t *compiler){
     compiler_free_error(compiler);
     compiler_free_warnings(compiler);
     config_free(&compiler->config);
-    tmpbuf_free(&compiler->tmp);
 }
 
 void compiler_free_objects(compiler_t *compiler){
@@ -1124,221 +1122,101 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 
 #if !defined(ADEPT_INSIGHT_BUILD) || defined(__EMSCRIPTEN__)
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
-        weak_cstr_t name, ast_type_t *types, length_t arity, ast_type_t *gives){
+        weak_cstr_t name, ast_type_t *types, length_t arity, ast_type_t *gives, bool is_method){
     
-    bool has_potential_candidates = compiler_undeclared_function_possibilities(object, name, false);
-
-    // Allow for '.elements_length' to be zero
-    // to indicate no return matching
+    // Allow for '.elements_length' to be zero to indicate no return matching
     if(gives && gives->elements_length == 0) gives = NULL;
 
-    if(!has_potential_candidates){
+    ast_t *ast = &object->ast;
+    ast_type_t *type_of_this = is_method ? &types[0] : NULL;
+    funcid_list_t possibilities = compiler_possibilities(compiler, object, name, type_of_this);
+
+    if(possibilities.length == 0){
         // No other function with that name exists
-        compiler_panicf(compiler, source, "Undeclared function '%s'", name);
-        return;
+        if(is_method){
+            ast_type_t dereferenced_view = ast_type_dereferenced_view(type_of_this);
+
+            strong_cstr_t subject = ast_type_str(&dereferenced_view);
+            compiler_panicf(compiler, source, "Undeclared method '%s' for type '%s'", name, subject);
+            free(subject);
+        } else {
+            compiler_panicf(compiler, source, "Undeclared function '%s'", name);
+        }
+        goto success;
     } else {
         // Other functions have the same name
-        char *args_string = make_args_string(types, NULL, arity, TRAIT_NONE);
-        char *gives_string = gives ? ast_type_str(gives) : NULL;
-        compiler_panicf(compiler, source, "Undeclared function %s(%s)%s%s", name, args_string ? args_string : "", gives ? " ~> " : "", gives ? gives_string : "");
+        ast_type_t *arg_types = is_method ? &types[1] : types;
+        strong_cstr_t args_string = strong_cstr_empty_if_null(make_args_string(arg_types, NULL, arity, TRAIT_NONE));
+        strong_cstr_t gives_string = gives ? ast_type_str(gives) : NULL;
+
+        if(is_method){
+            ast_type_t dereferenced_view = ast_type_dereferenced_view(type_of_this);
+
+            strong_cstr_t subject = ast_type_str(&dereferenced_view);
+            compiler_panicf(compiler, source, "Undeclared method %s(%s)%s%s for type %s", name, args_string, gives ? " ~> " : "", gives ? gives_string : "", subject);
+            free(subject);
+
+        } else {
+            compiler_panicf(compiler, source, "Undeclared function %s(%s)%s%s", name, args_string, gives ? " ~> " : "", gives ? gives_string : "");
+        }
+
         free(gives_string);
         free(args_string);
 
-        printf("\nPotential Candidates:\n");
+        printf("Potential Candidates:\n");
     }
 
-    compiler_undeclared_function_possibilities(object, name, true);
+    for(length_t i = 0; i != possibilities.length; i++){
+        print_candidate(&ast->funcs[possibilities.ids[i]]);
+    }
+
+success:
+    funcid_list_free(&possibilities);
 }
 
-bool compiler_undeclared_function_possibilities(object_t *object, weak_cstr_t name, bool should_print){
-    #ifdef ADEPT_INSIGHT_BUILD
-    return false;
-    #else
-    ir_module_t *ir_module = &object->ir_module;
+// TODO: Refactor/move
+// Returns SUCCESS if potential_subject is possible
+// Returns FAILURE if potential_subject is not possible
+// Returns ALT_FAILURE on serious failure
+static errorcode_t method_subject_is_possible(compiler_t *compiler, object_t *object, ast_type_t *subject, ast_type_t *potential_subject){
+    errorcode_t res;
 
-    maybe_index_t original_index = find_beginning_of_func_group(&ir_module->func_mappings, name);
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.poly_funcs, object->ast.poly_funcs_length, name);
-    if(!should_print) goto return_result;
+    if(ast_type_has_polymorph(potential_subject)){
+        ast_poly_catalog_t catalog;
+        ast_poly_catalog_init(&catalog);
+        res = arg_type_polymorphable(compiler, object, potential_subject, subject, &catalog);
+        ast_poly_catalog_free(&catalog);
+    } else {
+        res = ast_types_identical(potential_subject, subject) ? SUCCESS : FAILURE;
+    }
 
-    // TODO: CLEANUP: Clean up this code
-
-    maybe_index_t index = original_index;
-
-    if(index != -1) do {
-        ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index];
-
-        if(mapping->is_beginning_of_group == -1){
-            mapping->is_beginning_of_group = index == 0 ? 1 : !lenstreq(mapping->name, ir_module->func_mappings.mappings[index - 1].name);
-        }
-        if(mapping->is_beginning_of_group == 1 && index != original_index) break;
-
-        print_candidate(&object->ast.funcs[mapping->ast_func_id]);
-    } while((length_t) ++index != ir_module->funcs.length);
-
-    index = poly_index;
-
-    if(index != -1) do {
-        ast_poly_func_t *poly = &object->ast.poly_funcs[index];
-        
-        if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.poly_funcs[index - 1].name);
-        }
-        if(poly->is_beginning_of_group == 1 && index != poly_index) break;
-
-        print_candidate(&object->ast.funcs[poly->ast_func_id]);
-    } while((length_t) ++index != object->ast.poly_funcs_length);
-
-return_result:
-    return original_index != -1 || poly_index != -1;
-    #endif
+    return res;
 }
 
-void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t source,
-        const char *name, ast_type_t *types, length_t method_arity){
-    #if ADEPT_INSIGHT_BUILD
-    return;
-    #else
+funcid_list_t compiler_possibilities(compiler_t *compiler, object_t *object, weak_cstr_t name, ast_type_t *methods_only_type_of_this){
+    ast_t *ast = &object->ast;
+    funcid_list_t list = {0};
 
-    // NOTE: Assuming that types_length == method_arity + 1
-    ast_type_t this_type = types[0];
+    for(length_t id = 0; id != ast->funcs_length; id++){
+        if(streq(ast->funcs[id].name, name)){
+            if(methods_only_type_of_this){
+                if(!ast_func_is_method(&ast->funcs[id])) continue;
 
-    // Ensure the type given for 'this_type' is valid
-    if(this_type.elements_length != 2 || this_type.elements[0]->id != AST_ELEM_POINTER ||
-        !(this_type.elements[1]->id == AST_ELEM_BASE || this_type.elements[1]->id == AST_ELEM_GENERIC_BASE)
-    ){
-        printf("INTERNAL ERROR: compiler_undeclared_method received invalid this_type\n");
-        return;
-    }
-
-    // Modify ast_type_t to remove a pointer element from the front
-    // NOTE: We don't take ownership of 'this_type' or its data
-    // NOTE: This change doesn't propogate to outside this function
-    // NOTE: 'ast_type_dereference' isn't used because 'this_type' doesn't own it's elements
-    // DANGEROUS: Manually removing ast_elem_pointer_t
-    this_type.elements = &this_type.elements[1];
-    this_type.elements_length--; // Reduce length accordingly
-
-    maybe_index_t original_index;
-    ir_module_t *ir_module = &object->ir_module;
-    unsigned int kind = this_type.elements[0]->id;
-    ast_elem_generic_base_t *maybe_generic_base = NULL;
-
-    if(kind == AST_ELEM_BASE){
-        original_index = find_beginning_of_method_group(&ir_module->methods, ((ast_elem_base_t*) this_type.elements[0])->base, name);
-    } else if(kind == AST_ELEM_GENERIC_BASE){
-        maybe_generic_base = (ast_elem_generic_base_t*) this_type.elements[0];
-        original_index = find_beginning_of_poly_method_group(&ir_module->poly_methods, maybe_generic_base->name, name);
-    } else {
-        original_index = -1;
-    }
-
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(object->ast.poly_funcs, object->ast.poly_funcs_length, name);
-
-    if(original_index == -1 && poly_index == -1){
-        // No method with that name exists for that struct
-        char *this_core_typename = ast_type_str(&this_type);
-        compiler_panicf(compiler, source, "Undeclared method '%s' for type '%s'", name, this_core_typename);
-        free(this_core_typename);
-        return;
-    } else {
-        // Other methods for that struct have the same name
-        char *args_string = make_args_string(types, NULL, method_arity + 1, TRAIT_NONE);
-        compiler_panicf(compiler, source, "Undeclared method %s(%s)", name, args_string ? args_string : "");
-        free(args_string);
-
-        printf("\nPotential Candidates:\n");
-    }
-
-    maybe_index_t index = original_index;
-
-    // Print potential candidates for basic struct
-    // TODO: CLEANUP: Clean up this messy code
-    if(index != -1){
-        if(kind == AST_ELEM_BASE) do {
-            ir_method_t *method = &ir_module->methods.methods[index];
-
-            if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = index == 0 ? 1 : (!streq(method->name, ir_module->methods.methods[index - 1].name) || !streq(method->struct_name, ir_module->methods.methods[index - 1].struct_name));
+                errorcode_t errorcode = method_subject_is_possible(compiler, object, methods_only_type_of_this, &ast->funcs[id].arg_types[0]);
+                if(errorcode == ALT_FAILURE) break;
+                if(errorcode == FAILURE) continue;
             }
-            if(method->is_beginning_of_group == 1 && index != original_index) break;
-
-            // Print method candidate for basic struct type
-            print_candidate(&object->ast.funcs[method->ast_func_id]);
-        } while((length_t) ++index != ir_module->methods.length);
-
-        // Print potential candidates for generic struct
-        else if(kind == AST_ELEM_GENERIC_BASE) do {
-            ir_poly_method_t *poly_method = &ir_module->poly_methods.methods[index];
-            
-            if(poly_method->is_beginning_of_group == -1){
-                poly_method->is_beginning_of_group = index == 0 ? 1 : (!streq(poly_method->name, ir_module->poly_methods.methods[index - 1].name) || !streq(poly_method->struct_name, ir_module->poly_methods.methods[index - 1].struct_name));
-            }
-            if(poly_method->is_beginning_of_group == 1 && index != original_index) break;
-
-            // Ensure the generics of the generic base match up
-            bool generics_match_up = maybe_generic_base->generics_length == poly_method->generics_length;
-            if(generics_match_up) for(length_t i = 0; i != maybe_generic_base->generics_length; i++){
-                if(!ast_types_identical(&maybe_generic_base->generics[i], &poly_method->generics[i])){
-                    // && !ast_type_has_polymorph(&poly_method->generics[i])
-                    // is unnecessary because poly_methods my themselves will never contain polymorphic type variables
-                    generics_match_up = false;
-                    break;
-                }
-            }
-
-            // Print method candidate for generic struct type (if the generics match up)
-            if(generics_match_up){
-                print_candidate(&object->ast.funcs[poly_method->ast_func_id]);
-            }
-        } while((length_t) ++index != ir_module->poly_methods.length);
-    }
-
-    index = poly_index;
-
-    if(index != -1) do {
-        ast_poly_func_t *poly = &object->ast.poly_funcs[index];
-
-        if(poly->is_beginning_of_group == -1){
-            poly->is_beginning_of_group = index == 0 ? 1 : !streq(poly->name, object->ast.poly_funcs[index - 1].name);
+            funcid_list_append(&list, id);
         }
-        if(poly->is_beginning_of_group == 1 && index != poly_index) break;
+    }
 
-        ast_func_t *ast_func = &object->ast.funcs[poly->ast_func_id];
-
-        // Ensure this function could possibly a method
-        if(ast_func->arity == 0 || !streq(ast_func->arg_names[0], "this")) continue;
-
-        // Ensure the first type is valid for a method
-        if(ast_func->arity == 0) continue;
-        ast_type_t *first_arg_type = &ast_func->arg_types[0];
-        if(first_arg_type->elements_length != 2 || first_arg_type->elements[0]->id != AST_ELEM_POINTER) continue;
-        unsigned int elem_kind = first_arg_type->elements[1]->id;
-        if(kind != elem_kind && elem_kind != AST_ELEM_POLYMORPH) continue;
-
-        // If it's a pointer-to-generic-struct method, then make sure the generics match
-        if(elem_kind == AST_ELEM_GENERIC_BASE){
-            ast_elem_generic_base_t *first_arg_generic_base = (ast_elem_generic_base_t*) first_arg_type->elements[1];
-
-            // Ensure the generics of the generic base match up
-            bool generics_match_up = maybe_generic_base->generics_length == first_arg_generic_base->generics_length
-                                  && ast_type_lists_identical(maybe_generic_base->generics, first_arg_generic_base->generics, first_arg_generic_base->generics_length)
-                                  && !ast_type_list_has_polymorph(first_arg_generic_base->generics, first_arg_generic_base->generics_length);
-
-            if(!generics_match_up) continue;
-        }
-
-        print_candidate(ast_func);
-    } while((length_t) ++index != object->ast.poly_funcs_length);
-    #endif
+    return list;
 }
 #endif
 
 void print_candidate(ast_func_t *ast_func){
-    // NOTE: If the function is a method, we assume that it was constructed correctly and that
-    // the first type is either a pointer to a base or a pointer to a generic base
-
-    char *return_type_string = ast_type_str(&ast_func->return_type);
-    char *args_string = make_args_string(ast_func->arg_types, ast_func->arg_defaults, ast_func->arity, ast_func->traits);
+    strong_cstr_t return_type_string = ast_type_str(&ast_func->return_type);
+    strong_cstr_t args_string = make_args_string(ast_func->arg_types, ast_func->arg_defaults, ast_func->arity, ast_func->traits);
     printf("    %s(%s) %s\n", ast_func->name, args_string ? args_string : "", return_type_string);
     free(args_string);
     free(return_type_string);

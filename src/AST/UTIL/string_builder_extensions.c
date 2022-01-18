@@ -20,6 +20,10 @@ void string_builder_append_type_list(string_builder_t *builder, ast_type_t *ast_
 
     for(length_t i = 0; i != count; i++){
         string_builder_append_type(builder, &ast_types[i]);
+
+        if(i + 1 != count){
+            string_builder_append(builder, ", ");
+        }
     }
 
     if(include_parentheses){
@@ -40,6 +44,10 @@ void string_builder_append_expr_list(string_builder_t *builder, ast_expr_t **ast
 
     for(length_t i = 0; i != count; i++){
         string_builder_append_expr(builder, ast_exprs[i]);
+
+        if(i + 1 != count){
+            string_builder_append(builder, ", ");
+        }
     }
 
     if(include_parentheses){

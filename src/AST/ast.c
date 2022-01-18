@@ -674,6 +674,15 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 free(assembly);
             }
             break;
+        case EXPR_PREINCREMENT:
+        case EXPR_POSTINCREMENT:
+        case EXPR_PREDECREMENT:
+        case EXPR_POSTDECREMENT: {
+                strong_cstr_t expr_str = ast_expr_str(statements[s]);
+                fprintf(file, "%s\n", expr_str);
+                free(expr_str);
+            }
+            break;
         default:
             fprintf(file, "<unknown statement>\n");
         }
@@ -830,6 +839,25 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length){
 
         fprintf(file, "%s (%s)\n", enum_definition->name, kinds_string ? kinds_string : "");
         free(kinds_string);
+    }
+}
+
+bool ast_func_is_method(ast_func_t *func){
+    return func->arity > 0 && func->arg_names && streq(func->arg_names[0], "this") && !(func->traits & AST_FUNC_FOREIGN);
+}
+
+maybe_null_weak_cstr_t ast_method_get_subject_typename(ast_func_t *method){
+    // Assumes that 'ast_func_is_method(method)' is true
+
+    ast_type_t subject_view = ast_type_dereferenced_view(&method->arg_types[0]);
+    ast_elem_t *elem = subject_view.elements[0];
+
+    if(ast_type_is_base(&subject_view)){
+        return ((ast_elem_base_t*) elem)->base;
+    } else if(ast_type_is_generic_base(&subject_view)){
+        return ((ast_elem_generic_base_t*) elem)->name;
+    } else {
+        return NULL;
     }
 }
 

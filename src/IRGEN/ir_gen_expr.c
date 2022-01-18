@@ -309,8 +309,8 @@ ir_value_t *ir_gen_conforming_expr(ir_builder_t *builder, ast_expr_t *ast_value,
     if(ir_gen_expr(builder, ast_value, &ir_value, false, &ast_type)) return NULL;
 
     if(!ast_types_conform(builder, &ir_value, &ast_type, to_type, conform_mode)){
-        char *a_type_str = ast_type_str(&ast_type);
-        char *b_type_str = ast_type_str(&builder->static_bool);
+        strong_cstr_t a_type_str = ast_type_str(&ast_type);
+        strong_cstr_t b_type_str = ast_type_str(to_type);
         compiler_panicf(builder->compiler, source, error_format, a_type_str, b_type_str);
         free(a_type_str);
         free(b_type_str);
@@ -518,16 +518,15 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
     // Setup for generating call
     ast_t *ast = &builder->object->ast;
-    length_t arity = expr->arity;
-    ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
-    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
+    ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * expr->arity);
+    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * expr->arity);
 
     // Temporary values used to hold type of variable/global-variable
     ast_type_t *tmp_ast_variable_type;
     ir_type_t *tmp_ir_variable_type;
 
     // Generate values for function arguments
-    for(length_t a = 0; a != arity; a++){
+    for(length_t a = 0; a != expr->arity; a++){
         if(ir_gen_expr(builder, expr->args[a], &arg_values[a], false, &arg_types[a])){
             ast_types_free_fully(arg_types, a);
             return FAILURE;
@@ -551,7 +550,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
         if(expr->gives.elements_length != 0){
             compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function variable");
-            ast_types_free_fully(arg_types, arity);
+            ast_types_free_fully(arg_types, expr->arity);
             return FAILURE;
         }
 
@@ -561,7 +560,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
         // Call function pointer value
         errorcode_t error = ir_gen_call_function_value(builder, var->ast_type, expr, arg_values, arg_types, ir_value, out_expr_type);
-        ast_types_free_fully(arg_types, arity);
+        ast_types_free_fully(arg_types, expr->arity);
 
         // Propagate failure if failed to call function pointer value
         if(error == FAILURE) return FAILURE;
@@ -578,11 +577,12 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
     // If there doesn't exist a nearby scoped variable with the same name, look for function
     optional_funcpair_t result;
-    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, arg_values, arg_types, arity, &expr->gives, expr->no_user_casts, expr->source, &result);
+    length_t arg_arity = expr->arity;
+    errorcode_t error = ir_gen_find_func_conforming(builder, expr->name, &arg_values, &arg_types, &arg_arity, &expr->gives, expr->no_user_casts, expr->source, &result);
 
     // Propagate failure if something went wrong during the search
     if(error == ALT_FAILURE){
-        ast_types_free_fully(arg_types, arity);
+        ast_types_free_fully(arg_types, arg_arity);
         return FAILURE;
     }
 
@@ -595,11 +595,11 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
             if(expr->is_tentative){
                 if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
-                ast_types_free_fully(arg_types, expr->arity);
+                ast_types_free_fully(arg_types, arg_arity);
                 return SUCCESS;
             } else {
-                compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives);
-                ast_types_free_fully(arg_types, expr->arity);
+                compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives, false);
+                ast_types_free_fully(arg_types, arg_arity);
                 return FAILURE;
             }
         }
@@ -609,26 +609,15 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         // If requires implicit, fail if conforming function isn't marked as implicit
         if(expr->only_implicit && expr->is_tentative && !(pair.ast_func->traits & AST_FUNC_IMPLICIT)){
             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
-            ast_types_free_fully(arg_types, arity);
+            ast_types_free_fully(arg_types, arg_arity);
             return SUCCESS;
-        }
-
-        // Fill in default arguments
-        ast_type_t *all_expected_arg_types = pair.ast_func->arg_types;
-        if(ir_gen_expr_call_procedure_fill_in_default_arguments(builder, &arg_values, &arg_types, all_expected_arg_types, arity, pair.ast_func->arg_defaults, pair.ast_func->arity, expr->source)){
-            ast_types_free_fully(arg_types, arity);
-            return FAILURE;
         }
 
         // Revalidate our target function
         pair.ast_func = &ast->funcs[pair.ast_func_id];
-
-        // If success, our arity now matches that of the target function,
-        // unless we already specified more than enough arguments
-        arity = arity > pair.ast_func->arity ? arity : pair.ast_func->arity;
         
-        if(ir_gen_expr_call_procedure_handle_pass_management(builder, arity, arg_values, arg_types, pair.ast_func->traits, pair.ast_func->arg_type_traits, pair.ast_func->arity)){
-            ast_types_free_fully(arg_types, arity);
+        if(ir_gen_expr_call_procedure_handle_pass_management(builder, arg_arity, arg_values, arg_types, pair.ast_func->traits, pair.ast_func->arg_type_traits, pair.ast_func->arity)){
+            ast_types_free_fully(arg_types, arg_arity);
             return FAILURE;
         }
 
@@ -640,10 +629,10 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         ir_value_t *stack_pointer = NULL;
 
         // Remember arity before variadic argument packing
-        length_t unpacked_arity = arity;
+        length_t unpacked_arity = arg_arity;
 
         // Handle variadic argument packing if applicable
-        if(ir_gen_expr_call_procedure_handle_variadic_packing(builder, &arg_values, arg_types, &arity, &pair, &stack_pointer, expr->source)){
+        if(ir_gen_expr_call_procedure_handle_variadic_packing(builder, &arg_values, arg_types, &arg_arity, &pair, &stack_pointer, expr->source)){
             ast_types_free_fully(arg_types, unpacked_arity);
             return FAILURE;
         }
@@ -655,9 +644,9 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         ir_type_t *result_type = pair.ir_func->return_type;
 
         if(ir_value){
-            *ir_value = build_call(builder, pair.ir_func_id, result_type, arg_values, arity, true);
+            *ir_value = build_call(builder, pair.ir_func_id, result_type, arg_values, arg_arity, true);
         } else {
-            build_call(builder, pair.ir_func_id, result_type, arg_values, arity, false);
+            build_call(builder, pair.ir_func_id, result_type, arg_values, arg_arity, false);
         }
 
         // Restore the stack if we allocated memory on it
@@ -680,12 +669,12 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
         if(expr->gives.elements_length != 0){
             compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function via global variable");
-            ast_types_free_fully(arg_types, arity);
+            ast_types_free_fully(arg_types, arg_arity);
             return FAILURE;
         }
 
         if(ir_gen_resolve_type(builder->compiler, builder->object, tmp_ast_variable_type, (ir_type_t**) &tmp_ir_variable_type->extra)){
-            ast_types_free_fully(arg_types, expr->arity);
+            ast_types_free_fully(arg_types, arg_arity);
             return FAILURE;
         }
 
@@ -695,14 +684,14 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
             // Ignore failure if the call expression is tentative
             if(expr->is_tentative){
                 if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
-                ast_types_free_fully(arg_types, expr->arity);
+                ast_types_free_fully(arg_types, arg_arity);
                 return SUCCESS;
             }
 
             // Otherwise print error message
             strong_cstr_t s = ast_type_str(tmp_ast_variable_type);
             compiler_panicf(builder->compiler, expr->source, "Can't call value of non function type '%s'", s);
-            ast_types_free_fully(arg_types, expr->arity);
+            ast_types_free_fully(arg_types, arg_arity);
             free(s);
             return FAILURE;
         }
@@ -713,7 +702,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 
         // Call the function pointer value
         errorcode_t error = ir_gen_call_function_value(builder, tmp_ast_variable_type, expr, arg_values, arg_types, ir_value, out_expr_type);
-        ast_types_free_fully(arg_types, expr->arity);
+        ast_types_free_fully(arg_types, arg_arity);
 
         // Propogate failure to call function pointer value
         if(error == FAILURE) return FAILURE;
@@ -733,70 +722,14 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     // If the call expression was tentative, then ignore the failure
     if(expr->is_tentative){
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
-        ast_types_free_fully(arg_types, expr->arity);
+        ast_types_free_fully(arg_types, arg_arity);
         return SUCCESS;
     }
 
     // Otherwise, print an error messsage
-    compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives);
-    ast_types_free_fully(arg_types, expr->arity);
+    compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives, false);
+    ast_types_free_fully(arg_types, arg_arity);
     return FAILURE;
-}
-
-errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types, ast_type_t *all_expected_arg_types,
-        length_t provided_arity, ast_expr_t **target_defaults, length_t target_arity, source_t source_on_failure){
-    
-    // No need to fill in missing arguments if we already have them
-    if(target_defaults == NULL || provided_arity >= target_arity) return SUCCESS;
-
-    // ------------------------------------------------
-    // | 0 | 1 | 2 |                    Supplied
-    // | 0 | 1 | 2 | 3 | 4 |            Required
-    // |   | 1 |   | 3 | 4 |            Defaults
-    // ------------------------------------------------
-    
-    // Allocate memory to hold full version of argument list
-    ir_value_t **new_args = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * target_arity);
-    ast_type_t *new_arg_types = malloc(sizeof(ast_type_t) * target_arity);
-
-    // Copy given argument values into new array
-    memcpy(new_args, *arg_values, sizeof(ir_value_t*) * provided_arity);
-
-    // Copy AST types of given arguments into new array
-    memcpy(new_arg_types, *arg_types, sizeof(ast_type_t) * provided_arity);
-
-    // Attempt to fill in missing values
-    for(length_t i = provided_arity; i < target_arity; i++){
-        // We should have never received a function that can't be completed using its default values
-        if(target_defaults[i] == NULL){
-            compiler_panicf(builder->compiler, source_on_failure, "INTERNAL ERROR: Failed to fill in default value for argument %d", i);
-            ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
-            return FAILURE;
-        }
-        
-        // Generate IR value for given default expression
-        const char *bad_condition_format = "Received type '%s' when conditional expects type '%s'";
-        new_args[i] = ir_gen_conforming_expr(builder, target_defaults[i], &all_expected_arg_types[i], CONFORM_MODE_CALL_ARGUMENTS_LOOSE, source_on_failure, bad_condition_format);
-        if(new_args[i] == NULL){
-            ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
-            return FAILURE;
-        }
-        
-        new_arg_types[i] = ast_type_clone(&all_expected_arg_types[i]);
-    }
-
-    // Swap out partial argument list for full argument list.
-    // NOTE: We are abandoning the memory held by 'arg_values'
-    //       Since it is a part of the pool, it'll just remain stagnant until
-    //       the pool is freed
-    *arg_values = new_args;
-    
-    // Replace argument types array
-    free(*arg_types);
-    *arg_types = new_arg_types;
-
-    // We've successfully filled in the missing arguments
-    return SUCCESS;
 }
 
 errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *final_arg_types,
@@ -1374,7 +1307,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     else {
         optional_funcpair_t result;
 
-        if(ir_gen_find_func(builder->compiler, builder->object, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, &result)
+        if(ir_gen_find_func_regular(builder->compiler, builder->object, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, expr->source, &result)
         || !result.has){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;
@@ -1384,7 +1317,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
                 return ir_gen_expr_func_addr_noop_result_for_defer(builder, &expr->match_args[0], expr->source, ir_value, out_expr_type);
             } else {
                 // Otherwise, we failed to find a function we were expecting to find
-                compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL);
+                compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, expr->match_args, expr->match_args_length, NULL, false);
                 return FAILURE;
             }
         }
@@ -1752,9 +1685,9 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     // Setup for generating method call
     ast_t *ast = &builder->object->ast;
-    length_t arity = expr->arity + 1;
-    ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
-    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
+    length_t arg_arity = expr->arity + 1;
+    ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arg_arity);
+    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arg_arity);
     ir_value_t *stack_pointer = NULL;
     bool used_temporary_subject = false;
 
@@ -1800,10 +1733,10 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
             return SUCCESS;
         }
         
-        strong_cstr_t s = ast_type_str(&arg_types[0]);
-        compiler_panicf(builder->compiler, expr->source, "Can't call methods on type '%s'", s);
+        strong_cstr_t typename = ast_type_str(&arg_types[0]);
+        compiler_panicf(builder->compiler, expr->source, "Can't call methods on type '%s'", typename);
         ast_types_free_fully(arg_types, 1);
-        free(s);
+        free(typename);
         return FAILURE;
     }
 
@@ -1823,11 +1756,11 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     // Find the appropriate method to call
     optional_funcpair_t result;
-    errorcode_t error = ir_gen_expr_call_method_find_appropriate_method(builder, expr, arg_values, arg_types, &expr->gives, &result);
+    errorcode_t error = ir_gen_expr_call_method_find_appropriate_method(builder, expr, &arg_values, &arg_types, &arg_arity, &expr->gives, &result);
     
     // If we couldn't find a suitable method, handle the failure
     if(error != SUCCESS){
-        ast_types_free_fully(arg_types, arity);
+        ast_types_free_fully(arg_types, arg_arity);
         if(error == FAILURE) return FAILURE;
 
         // The method call is tentative, so ignore the failure
@@ -1839,7 +1772,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
         // This method call is a no-op
         instructions_snapshot_restore(builder, &instructions_snapshot);
         ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-        ast_types_free_fully(arg_types, arity);
+        ast_types_free_fully(arg_types, arg_arity);
 
         if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
         return SUCCESS;
@@ -1847,22 +1780,11 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     funcpair_t pair = result.value;
 
-    // Fill in default arguments
-    ast_type_t *all_expected_arg_types = pair.ast_func->arg_types;
-    if(ir_gen_expr_call_procedure_fill_in_default_arguments(builder, &arg_values, &arg_types, all_expected_arg_types, arity, pair.ast_func->arg_defaults, pair.ast_func->arity, expr->source)){
-        ast_types_free_fully(arg_types, arity);
-        return FAILURE;
-    }
-
     // Revalidate our target function
     pair.ast_func = &ast->funcs[pair.ast_func_id];
 
-    // If success, our arity now matches that of the target method,
-    // unless we already specified more than enough arguments
-    arity = arity > pair.ast_func->arity ? arity : pair.ast_func->arity;
-
-    if(ir_gen_expr_call_procedure_handle_pass_management(builder, arity, arg_values, arg_types, pair.ast_func->traits, pair.ast_func->arg_type_traits, pair.ast_func->arity)){
-        ast_types_free_fully(arg_types, arity);
+    if(ir_gen_expr_call_procedure_handle_pass_management(builder, arg_arity, arg_values, arg_types, pair.ast_func->traits, pair.ast_func->arg_type_traits, pair.ast_func->arity)){
+        ast_types_free_fully(arg_types, arg_arity);
         return FAILURE;
     }
     
@@ -1871,11 +1793,11 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     pair.ir_func = &builder->object->ir_module.funcs.funcs[pair.ir_func_id];
 
     // Remember arity before variadic argument packing
-    length_t unpacked_arity = arity;
+    length_t unpacked_arity = arg_arity;
 
     // Handle variadic argument packing if applicable
-    if(ir_gen_expr_call_procedure_handle_variadic_packing(builder, &arg_values, arg_types, &arity, &pair, &stack_pointer, expr->source)){
-        ast_types_free(arg_types, arity);
+    if(ir_gen_expr_call_procedure_handle_variadic_packing(builder, &arg_values, arg_types, &arg_arity, &pair, &stack_pointer, expr->source)){
+        ast_types_free(arg_types, arg_arity);
         return FAILURE;
     }
 
@@ -1884,9 +1806,9 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     // Don't even bother with result unless we care about the it
     if(ir_value){
-        *ir_value = build_call(builder, pair.ir_func_id, pair.ir_func->return_type, arg_values, arity, true);
+        *ir_value = build_call(builder, pair.ir_func_id, pair.ir_func->return_type, arg_values, arg_arity, true);
     } else {
-        build_call(builder, pair.ir_func_id, pair.ir_func->return_type, arg_values, arity, false);
+        build_call(builder, pair.ir_func_id, pair.ir_func->return_type, arg_values, arg_arity, false);
     }
     
     if(used_temporary_subject && !expr->allow_drop){
@@ -1911,31 +1833,26 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values,
-        ast_type_t *arg_types, ast_type_t *gives, optional_funcpair_t *result){
+errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t ***arg_values,
+        ast_type_t **arg_types, length_t *arg_arity, ast_type_t *gives, optional_funcpair_t *result){
     
     weak_cstr_t subject;
-    ast_type_t *subject_type = &arg_types[0];
-    errorcode_t error;
+    ast_type_t *subject_type = &(*arg_types)[0];
     
     // Obtain the name of the subject and find the appropriate method
     if(ast_type_is_pointer_to_base(subject_type)){
         subject = ((ast_elem_base_t*) subject_type->elements[1])->base;
-        error = ir_gen_find_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, expr->source, result);
     }
     else if(ast_type_is_pointer_to_generic_base(subject_type)){
         subject = ((ast_elem_generic_base_t*) subject_type->elements[1])->name;
-        error = ir_gen_find_poly_method_conforming(builder, subject, expr->name, arg_values, arg_types, expr->arity + 1, gives, expr->source, result);
-    }
-    else {
+    } else {
         internalerrorprintf("ir_gen_expr_call_method_find_appropriate_method() - Bad subject type\n");
         return FAILURE;
     }
-    
-    // Failed to find an appropriate method
-    if(error){
+
+    if(ir_gen_find_method_conforming(builder, subject, expr->name, arg_values, arg_types, arg_arity, gives, expr->source, result)){
         if(expr->is_tentative) return ALT_FAILURE;
-        compiler_undeclared_method(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity);
+        compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, *arg_types, expr->arity, NULL, true);
         return FAILURE;
     }
     

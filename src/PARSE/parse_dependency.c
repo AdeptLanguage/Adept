@@ -15,6 +15,7 @@
 #include "UTIL/filename.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
+#include "UTIL/string_list.h"
 #include "UTIL/util.h"
 
 errorcode_t parse_import(parse_ctx_t *ctx){

@@ -21,7 +21,6 @@ extern "C" {
 #include "DRVR/config.h"
 #include "DRVR/object.h"
 #include "UTIL/ground.h"
-#include "UTIL/tmpbuf.h"
 #include "UTIL/trait.h"
 #include "UTIL/string_list.h"
 #include "UTIL/string_builder.h"
@@ -124,7 +123,6 @@ typedef struct compiler {
     adept_warning_t *warnings;
     length_t warnings_length;
     length_t warnings_capacity;
-    tmpbuf_t tmp;
 
     bool show_unused_variables_how_to_disable;
     unsigned int cross_compile_for;
@@ -263,18 +261,18 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 // NOTE: 'gives' can be NULL or 'gives.elements_length' can be zero
 //       to indicate to return matching
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
-    weak_cstr_t name, ast_type_t *types, length_t arity, ast_type_t *gives);
+    weak_cstr_t name, ast_type_t *types, length_t arity, ast_type_t *gives, bool is_method);
 
-// ---------------- compiler_undeclared_function_possible_name ----------------
-// Checks for a single possible name for the function
-// If 'should_print', will print them
-// Returns whether any candidates exist
-bool compiler_undeclared_function_possibilities(object_t *object, weak_cstr_t name, bool should_print);
+typedef listof(funcid_t, ids) funcid_list_t;
+#define funcid_list_append(LIST, VALUE) list_append((LIST), (VALUE), funcid_t)
+#define funcid_list_free(LIST) free((LIST)->ids)
 
-// ---------------- compiler_undeclared_method ----------------
-// Prints an error message for an undeclared method
-void compiler_undeclared_method(compiler_t *compiler, object_t *object, source_t source,
-    const char *name, ast_type_t *types, length_t method_arity);
+// ---------------- compiler_possibilities ----------------
+// Returns a list of IDs of possible AST functions that
+// are similar the supplied parameters
+// NOTE: If 'methods_only_type_of_this' is not NULL, then only
+// methods with a 'this' type of it will be included.
+funcid_list_t compiler_possibilities(compiler_t *compiler, object_t *object, weak_cstr_t name, ast_type_t *methods_only_type_of_this);
 #endif
 
 // ---------------- print_candidate ----------------

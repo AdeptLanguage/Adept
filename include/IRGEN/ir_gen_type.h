@@ -17,20 +17,21 @@
 #include "IRGEN/ir_builder.h"
 
 // Possible type conforming modes
-#define CONFORM_MODE_STANDARD      TRAIT_NONE // Basic conforming rules
-#define CONFORM_MODE_PRIMITIVES    TRAIT_1    // Allow conforming primitives
-#define CONFORM_MODE_INTFLOAT      TRAIT_2    // Allow conforming between integers and floats
-#define CONFORM_MODE_POINTERS      TRAIT_3    // Allow conforming any pointer types
-#define CONFORM_MODE_INTPTR        TRAIT_4    // Allow conforming between integers and pointers
-#define CONFORM_MODE_INTENUM       TRAIT_5    // Allow conforming between integers and enums
-#define CONFORM_MODE_FROM_ANY      TRAIT_6    // Allow conforming from an Any
-#define CONFORM_MODE_PTR_TO_BOOL   TRAIT_7    // Allow conforming from pointer to bool
-#define CONFORM_MODE_POINTERPTR    TRAIT_8    // Allow conforming between pointers and non-specific ptr
-#define CONFORM_MODE_INT_TO_BOOL   TRAIT_9    // Allow conforming from integers to bool
-#define CONFORM_MODE_VARIADIC      TRAIT_A    // Allow conforming for variadic function
-#define CONFORM_MODE_USER_EXPLICIT TRAIT_B    // Allow explicit user-defined conversions via __as__
-#define CONFORM_MODE_USER_IMPLICIT TRAIT_C    // Allow implicit user-defined conversions via __as__
-#define CONFORM_MODE_ALL           TRAIT_ALL  // Allow all conformation methods
+#define CONFORM_MODE_NOT_APPLICABLE TRAIT_NONE // Basic conforming rules
+#define CONFORM_MODE_STANDARD       TRAIT_NONE // Basic conforming rules
+#define CONFORM_MODE_PRIMITIVES     TRAIT_1    // Allow conforming primitives
+#define CONFORM_MODE_INTFLOAT       TRAIT_2    // Allow conforming between integers and floats
+#define CONFORM_MODE_POINTERS       TRAIT_3    // Allow conforming any pointer types
+#define CONFORM_MODE_INTPTR         TRAIT_4    // Allow conforming between integers and pointers
+#define CONFORM_MODE_INTENUM        TRAIT_5    // Allow conforming between integers and enums
+#define CONFORM_MODE_FROM_ANY       TRAIT_6    // Allow conforming from an Any
+#define CONFORM_MODE_PTR_TO_BOOL    TRAIT_7    // Allow conforming from pointer to bool
+#define CONFORM_MODE_POINTERPTR     TRAIT_8    // Allow conforming between pointers and non-specific ptr
+#define CONFORM_MODE_INT_TO_BOOL    TRAIT_9    // Allow conforming from integers to bool
+#define CONFORM_MODE_VARIADIC       TRAIT_A    // Allow conforming for variadic function
+#define CONFORM_MODE_USER_EXPLICIT  TRAIT_B    // Allow explicit user-defined conversions via __as__
+#define CONFORM_MODE_USER_IMPLICIT  TRAIT_C    // Allow implicit user-defined conversions via __as__
+#define CONFORM_MODE_ALL            TRAIT_ALL  // Allow all conformation methods
 
 #define CONFORM_MODE_CALL_ARGUMENTS              CONFORM_MODE_STANDARD
 #define CONFORM_MODE_CALL_ARGUMENTS_LOOSE        CONFORM_MODE_PRIMITIVES | CONFORM_MODE_VARIADIC | CONFORM_MODE_POINTERPTR | CONFORM_MODE_PTR_TO_BOOL | CONFORM_MODE_USER_IMPLICIT

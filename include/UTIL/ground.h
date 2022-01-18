@@ -26,15 +26,16 @@ extern "C" {
 
 #define ADEPT_PACKAGE_MANAGER_SPEC_VERSION 1
 
-#include <stdio.h>
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 #include <io.h>
+
 #define access _access
 #define F_OK 0
 #else
@@ -80,7 +81,8 @@ typedef struct {
 
 // ---------------- funcid_t ----------------
 // Used as an ID to refer to functions
-#define MAX_FUNCID 0xFFFFFFFF
+#define MAX_FUNCID      0xFFFFFFFE
+#define INVALID_FUNC_ID 0xFFFFFFFF
 typedef uint32_t funcid_t;
 
 // ---------------- maybe_index_t ----------------
@@ -112,7 +114,7 @@ inline int lenstrcmp(lenstr_t a, lenstr_t b){
     if(a.length == b.length){
         return memcmp(a.cstr, b.cstr, a.length);
     } else {
-        return (a.length < b.length) ? -1 : 1;
+        return (a.length < b.length) ? 1 : -1;
     }
 }
 

@@ -93,5 +93,10 @@ noreturn void die(const char *format, ...){
     vprintf(format, args);
     va_end(args);
     redprintf("    Exiting with status of -1\n");
-    exit(-1);
+
+    #if ENABLE_DEBUG_FEATURES
+        abort();
+    #else
+        exit(-1);
+    #endif
 }

@@ -7,14 +7,17 @@
 #include "UTIL/levenshtein.h"
 
 void bridge_scope_init(bridge_scope_t *out_scope, bridge_scope_t *parent){
-    out_scope->parent = parent;
-    out_scope->list.variables = NULL;
-    out_scope->list.length = 0;
-    out_scope->list.capacity = 0;
+    *out_scope = (bridge_scope_t){
+        .parent = parent,
+        .list = (bridge_var_list_t){0},
 
-    out_scope->children = NULL;
-    out_scope->children_length = 0;
-    out_scope->children_capacity = 0;
+        .first_var_id = 0,
+        .following_var_id = 0,
+
+        .children = NULL,
+        .children_length = 0,
+        .children_capacity = 0,
+    };
 }
 
 void bridge_scope_free(bridge_scope_t *scope){

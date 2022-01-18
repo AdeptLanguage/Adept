@@ -1,6 +1,5 @@
 
 #include <stdbool.h>
-#include <string.h>
 
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast_type.h"
@@ -92,6 +91,16 @@ bool ast_type_is_polymorph(const ast_type_t *type){
 bool ast_type_is_polymorph_ptr(const ast_type_t *type){
     if(type->elements_length != 2) return false;
     if(type->elements[0]->id != AST_ELEM_POINTER || type->elements[1]->id != AST_ELEM_POLYMORPH) return false;
+    return true;
+}
+
+bool ast_type_is_polymorph_like_ptr(const ast_type_t *type){
+    if(type->elements_length != 2) return false;
+    if(type->elements[0]->id != AST_ELEM_POINTER) return false;
+
+    unsigned int elem_type = type->elements[1]->id;
+    if(elem_type != AST_ELEM_POLYMORPH && elem_type != AST_ELEM_POLYMORPH_PREREQ) return false;
+
     return true;
 }
 

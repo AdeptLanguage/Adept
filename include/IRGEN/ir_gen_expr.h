@@ -107,12 +107,8 @@ typedef struct {
 errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_cstr_t member, source_t source, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info);
 
 // Finds the appropriate method for a 'CALL METHOD' expression to call
-errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **arg_values,
-        ast_type_t *arg_types, ast_type_t *gives, optional_funcpair_t *result);
-
-// Fills in any missing arguments for a 'CALL'/'CALL METHOD' expression
-errorcode_t ir_gen_expr_call_procedure_fill_in_default_arguments(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t **arg_types, ast_type_t *all_expected_arg_types,
-        length_t provided_arity, ast_expr_t **target_defaults, length_t target_arity, source_t source_on_failure);
+errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t ***arg_values,
+        ast_type_t **arg_types, length_t *arg_arity, ast_type_t *gives, optional_funcpair_t *result);
 
 // Calls the pass management function on arguments for 'CALL'/'CALL METHOD' expression
 errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *final_arg_types,

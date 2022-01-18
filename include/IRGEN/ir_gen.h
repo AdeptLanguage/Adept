@@ -10,6 +10,7 @@
 */
 
 #include "IR/ir.h"
+#include "IR/ir_func_endpoint.h"
 #include "AST/ast.h"
 #include "UTIL/ground.h"
 #include "DRVR/compiler.h"
@@ -28,8 +29,8 @@ errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cs
 
 // ---------------- ir_gen_func_head ----------------
 // Generates IR function skeleton for an AST function.
-errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, funcid_t ast_func_id,
-    bool preserve_sortedness, ir_func_mapping_t *optional_out_new_mapping);
+errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func,
+    funcid_t ast_func_id, ir_func_endpoint_t *optional_out_new_endpoint);
 
 // ---------------- ir_gen_functions_body ----------------
 // Generates IR function bodies for AST functions.

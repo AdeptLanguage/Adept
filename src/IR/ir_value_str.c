@@ -1,16 +1,17 @@
 
 #include <stdio.h>
-#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "IR/ir.h"
+#include "IR/ir_type.h"
 #include "IR/ir_value.h"
 #include "IR/ir_value_str.h"
-#include "UTIL/util.h"
 #include "UTIL/color.h"
+#include "UTIL/datatypes.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
-#include "UTIL/datatypes.h"
 #include "UTIL/string_builder.h"
+#include "UTIL/util.h"
 
 static strong_cstr_t literal_to_str(ir_value_t *value, weak_cstr_t typename){
     strong_cstr_t value_part;

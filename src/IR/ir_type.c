@@ -2,13 +2,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "UTIL/ground.h"
-#include "UTIL/util.h"
 #include "UTIL/string.h"
+#include "UTIL/util.h"
 
 strong_cstr_t ir_type_str(ir_type_t *type){
     // NOTE: Returns allocated string that represents an IR type

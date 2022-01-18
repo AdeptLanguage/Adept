@@ -45,6 +45,7 @@ typedef struct {
 // A list for tracking variables within a scope
 // Actual names, ast_types and ir_types aren't owned
 typedef listof(bridge_var_t, variables) bridge_var_list_t;
+#define bridge_var_list_append(LIST, VALUE) list_append((LIST), (VALUE), bridge_var_t)
 
 // ---------------- bridge_scope_t ----------------
 // A variable scope that contains a list of variables

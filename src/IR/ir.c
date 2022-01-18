@@ -1,17 +1,14 @@
 
 #include "IR/ir.h"
 
-#include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "IR/ir_lowering.h"
 #include "IR/ir_value_str.h"
 #include "IRGEN/ir_builder.h"
-#include "UTIL/color.h"
 #include "UTIL/datatypes.h"
-#include "UTIL/string.h"
-#include "UTIL/util.h"
 
 successful_t ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **type_ptr){
     // Does a binary search on the type map to find the requested type by name
@@ -47,7 +44,7 @@ void ir_basicblock_new_instructions(ir_basicblock_t *block, length_t amount){
     }
 }
 
-void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length, length_t func_mappings_length_guess){
+void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length, length_t number_of_function_names_guess){
     ir_pool_init(&ir_module->pool);
 
     ir_module->funcs = (ir_funcs_t){
@@ -56,14 +53,9 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
         .capacity = funcs_capacity,
     };
 
-    ir_module->func_mappings = (ir_func_mappings_t){
-        .mappings = malloc(sizeof(ir_func_mapping_t) * func_mappings_length_guess),
-        .length = 0,
-        .capacity = func_mappings_length_guess,
-    };
+    ir_proc_map_init(&ir_module->func_map, sizeof(ir_func_key_t), number_of_function_names_guess);
+    ir_proc_map_init(&ir_module->method_map, sizeof(ir_method_key_t), 0);
 
-    ir_module->methods = (ir_methods_t){0};
-    ir_module->poly_methods = (ir_poly_methods_t){0};
     ir_module->type_map.mappings = NULL;
     ir_module->globals = malloc(sizeof(ir_global_t) * globals_length);
     ir_module->globals_length = 0;
@@ -103,9 +95,8 @@ void ir_basicblocks_free(ir_basicblocks_t *basicblocks){
 void ir_module_free(ir_module_t *ir_module){
     ir_module_free_funcs(ir_module->funcs);
     free(ir_module->funcs.funcs);
-    free(ir_module->func_mappings.mappings);
-    free(ir_module->methods.methods);
-    free(ir_module->poly_methods.methods);
+    ir_proc_map_free(&ir_module->func_map);
+    ir_proc_map_free(&ir_module->method_map);
     free(ir_module->type_map.mappings);
     free(ir_module->globals);
     free(ir_module->anon_globals.globals);
@@ -229,139 +220,25 @@ void ir_print_type(ir_type_t *type){
     free(s);
 }
 
-void ir_module_insert_method(ir_module_t *module, weak_cstr_t name, weak_cstr_t struct_name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness){
-    ir_method_t method;
-    method.name = name;
-    method.struct_name = struct_name;
-    method.ir_func_id = ir_func_id;
-    method.ast_func_id = ast_func_id;
-    method.is_beginning_of_group = -1;
-
-    // Make room for the additional method
-    expand((void**) &module->methods, sizeof(ir_method_t), module->methods.length, &module->methods.capacity, 1, 4);
-
-    if(preserve_sortedness){
-        // Find where to insert into the method list
-        length_t insert_position = ir_module_find_insert_method_position(module, &method);
-        
-        // Move other methods over
-        memmove(&module->methods.methods[insert_position + 1], &module->methods.methods[insert_position], sizeof(ir_method_t) * (module->methods.length - insert_position));
-
-        // Invalidate whether method after is beginning of group
-        if(insert_position != module->methods.length++)
-            module->methods.methods[insert_position + 1].is_beginning_of_group = -1;
-
-        // New method available
-        memcpy(&module->methods.methods[insert_position], &method, sizeof(ir_method_t));
-    } else {
-        // New method available
-        memcpy(&module->methods.methods[module->methods.length++], &method, sizeof(ir_method_t));
-    }
-}
-
-void ir_module_insert_poly_method(ir_module_t *module, 
-    weak_cstr_t name,
-    weak_cstr_t struct_name,
-    ast_type_t *weak_generics,
-    length_t generics_length,
-    funcid_t ir_func_id,
-    funcid_t ast_func_id,
-bool preserve_sortedness){
-    
-    ir_poly_method_t method;
-    method.struct_name = struct_name;
-    method.name = name;
-    method.generics = weak_generics;
-    method.generics_length = generics_length;
-    method.ir_func_id = ir_func_id;
-    method.ast_func_id = ast_func_id;
-    method.is_beginning_of_group = -1;
-
-    // Make room for the additional method
-    expand((void**) &module->poly_methods, sizeof(ir_poly_method_t), module->poly_methods.length, &module->poly_methods.capacity, 1, 4);
-
-    if(preserve_sortedness){
-        // Find where to insert into the method list
-        length_t insert_position = ir_module_find_insert_poly_method_position(module, &method);
-        
-        // Move other methods over
-        memmove(
-            &module->poly_methods.methods[insert_position + 1],
-            &module->poly_methods.methods[insert_position],
-            sizeof(ir_poly_method_t) * (module->poly_methods.length - insert_position)    
-        );
-
-        // Invalidate whether method after is beginning of group
-        if(insert_position != module->poly_methods.length++)
-            module->poly_methods.methods[insert_position + 1].is_beginning_of_group = -1;
-
-        // New method available
-        memcpy(&module->poly_methods.methods[insert_position], &method, sizeof(ir_poly_method_t));
-    } else {
-        // New method available
-        memcpy(&module->poly_methods.methods[module->poly_methods.length++], &method, sizeof(ir_poly_method_t));
-    }
-}
-
-ir_func_mapping_t *ir_module_insert_func_mapping(ir_module_t *module, weak_cstr_t name, funcid_t ir_func_id, funcid_t ast_func_id, bool preserve_sortedness){
-    ir_func_mapping_t *result;
-
-    ir_func_mapping_t mapping = (ir_func_mapping_t){
-        .name = cstr_to_lenstr(name),
-        .ir_func_id = ir_func_id,
-        .ast_func_id = ast_func_id,
-        .is_beginning_of_group = -1,
+void ir_module_create_func_mapping(ir_module_t *module, weak_cstr_t function_name, ir_func_endpoint_t endpoint, bool add_to_job_list){
+    ir_func_key_t key = (ir_func_key_t){
+        .name = function_name,
     };
 
-    // Make room for the additional function mapping
-    expand((void**) &module->func_mappings, sizeof(ir_func_mapping_t), module->func_mappings.length, &module->func_mappings.capacity, 1, 32);
+    ir_proc_map_insert(&module->func_map, &key, sizeof key, endpoint, &compare_ir_func_key);
 
-    if(preserve_sortedness){
-        // Find where to insert into the mappings list
-        length_t insert_position = ir_module_find_insert_mapping_position(module, &mapping);
-        
-        // Move other mappings over
-        memmove(
-            &module->func_mappings.mappings[insert_position + 1],
-            &module->func_mappings.mappings[insert_position],
-            sizeof(ir_func_mapping_t) * (module->func_mappings.length - insert_position)    
-        );
-        
-        // Invalidate whether mapping after is beginning of group
-        if(insert_position != module->func_mappings.length++)
-            module->func_mappings.mappings[insert_position + 1].is_beginning_of_group = -1;
-        
-        // New mapping available
-        result = &module->func_mappings.mappings[insert_position];
-    } else {
-        // New mapping available
-        result = &module->func_mappings.mappings[module->func_mappings.length++];
+    if(add_to_job_list){
+        ir_job_list_append(&module->job_list, endpoint);
     }
-
-    memcpy(result, &mapping, sizeof(ir_func_mapping_t));
-    return result;
 }
 
-int ir_func_mapping_cmp(const void *a, const void *b){
-    int diff = lenstrcmp(((ir_func_mapping_t*) a)->name, ((ir_func_mapping_t*) b)->name);
-    if(diff != 0) return diff;
-    return (int) ((ir_func_mapping_t*) a)->ast_func_id - (int) ((ir_func_mapping_t*) b)->ast_func_id;
-}
+void ir_module_create_method_mapping(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, ir_func_endpoint_t endpoint){
+    ir_method_key_t key = (ir_method_key_t){
+        .method_name = method_name,
+        .struct_name = struct_name,
+    };
 
-int ir_method_cmp(const void *a, const void *b){
-    int diff = strcmp(((ir_method_t*) a)->struct_name, ((ir_method_t*) b)->struct_name);
-    if(diff != 0) return diff;
-    diff = strcmp(((ir_method_t*) a)->name, ((ir_method_t*) b)->name);
-    if(diff != 0) return diff;
-    return (int) ((ir_method_t*) a)->ast_func_id - (int) ((ir_method_t*) b)->ast_func_id;
-}
-
-int ir_poly_method_cmp(const void *a, const void *b){
-    int diff = strcmp(((ir_poly_method_t*) a)->struct_name, ((ir_poly_method_t*) b)->struct_name);
-    if(diff != 0) return diff;
-    diff = strcmp(((ir_poly_method_t*) a)->name, ((ir_poly_method_t*) b)->name);
-    if(diff != 0) return diff;
-    return (int) ((ir_poly_method_t*) a)->ast_func_id - (int) ((ir_poly_method_t*) b)->ast_func_id;
+    ir_proc_map_insert(&module->method_map, &key, sizeof key, endpoint, &compare_ir_method_key);
 }
 
 void ir_job_list_free(ir_job_list_t *job_list){

@@ -18,6 +18,7 @@
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
+#include "IR/ir_func_endpoint.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
@@ -110,7 +111,6 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     builder->stack_pointer_type = NULL;
     builder->ptr_type = ir_type_pointer_to(builder->pool, builder->s8_type);
     builder->type_table = object->ast.type_table;
-    builder->tmpbuf = &compiler->tmp;
     builder->has_noop_defer_function = false;
     builder->noop_defer_function = 0;
 }
@@ -821,28 +821,31 @@ void pop_loop_label(ir_builder_t *builder){
 
 void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
-    expand((void**) &list->variables, sizeof(bridge_var_t), list->length, &list->capacity, 1, 4);
-    list->variables[list->length].name = name;
-    list->variables[list->length].ast_type = ast_type;
-    list->variables[list->length].traits = traits;
-    list->variables[list->length].ir_type = ir_type;
+
+    length_t id = -1;
+    length_t static_id = -1;
 
     if(traits & BRIDGE_VAR_STATIC){
         ir_static_variables_t *static_variables = &builder->object->ir_module.static_variables;
 
-        list->variables[list->length].static_id = static_variables->length;
-        list->variables[list->length].id = -1;
+        static_id = static_variables->length;
 
         // Create ir_static_variable_t
         ir_static_variables_append(static_variables, ((ir_static_variable_t){
             .type = ir_type,
         }));
     } else {
-        list->variables[list->length].static_id = -1;
-        list->variables[list->length].id = builder->next_var_id++;
+        id = builder->next_var_id++;
     }
 
-    list->length++;
+    bridge_var_list_append(list, ((bridge_var_t){
+        .name = name,
+        .ast_type = ast_type,
+        .traits = traits,
+        .ir_type = ir_type,
+        .id = id,
+        .static_id = static_id,
+    }));
 }
 
 errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_list_t *list){
@@ -1633,7 +1636,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
         ast_type_t types[2] = {*lhs_type, *rhs_type};
 
-        if(ir_gen_find_func_conforming(builder, overload_name, arguments, types, 2, NULL, false, from_source, &result)
+        if(ir_gen_find_func_conforming_without_defaults(builder, overload_name, arguments, types, 2, NULL, false, from_source, &result)
         || !result.has
         || handle_pass_management(builder, arguments, types, result.value.ast_func->arg_type_traits, 2)){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -1674,16 +1677,16 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     errorcode_t search_error;
     weak_cstr_t struct_name;
 
+    // TODO: CLEANUP: CLeanup this code
     if(array_type->elements[0]->id == AST_ELEM_BASE){
         struct_name = ((ast_elem_base_t*) array_type->elements[0])->base;
-        search_error = ir_gen_find_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
     } else {
         struct_name = ((ast_elem_generic_base_t*) array_type->elements[0])->name;
-        search_error = ir_gen_find_poly_method_conforming(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
     }
     
-    if(search_error
-    || !result.has
+    search_error = ir_gen_find_method_conforming_without_defaults(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
+    
+    if(search_error || !result.has
     || handle_pass_management(builder, arguments, argument_ast_types, result.value.ast_func->arg_type_traits, 2)){
         ir_pool_snapshot_restore(builder->pool, &snapshot);
         ast_type_free(&argument_ast_types[0]);
@@ -1701,7 +1704,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 }
 
 errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
-        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_mapping_t *out_mapping){
+        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_endpoint_t *out_endpoint){
 
     ast_func_t *poly_func = &object->ast.funcs[ast_poly_func_id];
     length_t required_arity = poly_func->arity;
@@ -1799,7 +1802,11 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
             return FAILURE;
         }
 
-        func->arg_types[i] = use_provided_type ? ast_type_clone(&types[i]) : ast_type_clone(template_ast_type);
+        if(use_provided_type){
+            func->arg_types[i] = ast_type_clone(&types[i]);
+        } else {
+            func->arg_types[i] = ast_type_clone(template_ast_type);
+        }
     }
 
     memcpy(func->arg_sources, poly_func->arg_sources, sizeof(source_t) * poly_func->arity);
@@ -1807,27 +1814,21 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     memcpy(func->arg_type_traits, poly_func->arg_type_traits, sizeof(trait_t) * poly_func->arity);
 
     func->arity = poly_func->arity;
-    if(resolve_type_polymorphics(compiler, object->ast.type_table, catalog, &poly_func->return_type, &func->return_type)){
-        func->return_type.elements = NULL;
-        func->return_type.elements_length = 0;
-        func->return_type.source = NULL_SOURCE;
-        goto failure;
-    }
+    func->return_type = (ast_type_t){0};
     
     func->statements = ast_expr_list_clone(&poly_func->statements);
 
-    if(resolve_expr_list_polymorphics(compiler, object->ast.type_table, catalog, &func->statements)){
+    if(resolve_expr_list_polymorphics(compiler, object->ast.type_table, catalog, &func->statements)
+    || resolve_type_polymorphics(compiler, object->ast.type_table, catalog, &poly_func->return_type, &func->return_type)){
         goto failure;
     }
 
-    ir_func_mapping_t newest_mapping;
-    if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
+    ir_func_endpoint_t newest_endpoint;
+    if(ir_gen_func_head(compiler, object, func, ast_func_id, &newest_endpoint)){
         goto failure;
     }
 
-    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
-
-    if(out_mapping) *out_mapping = newest_mapping;
+    if(out_endpoint) *out_endpoint = newest_endpoint;
     return SUCCESS;
 
 failure:
@@ -1962,20 +1963,18 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     ast_type_make_base(&func->return_type, strclone("void"));
 
     // Create IR function
-    ir_func_mapping_t newest_mapping;
-    if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
+    ir_func_endpoint_t newest_endpoint;
+    if(ir_gen_func_head(compiler, object, func, ast_func_id, &newest_endpoint)){
         return FAILURE;
     }
-
-    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
 
     // Cache result
     entry->has_defer = TROOLEAN_TRUE;
     entry->defer_ast_func_id = ast_func_id;
-    entry->defer_ir_func_id = newest_mapping.ir_func_id;
+    entry->defer_ir_func_id = newest_endpoint.ir_func_id;
 
     // Return result
-    optional_funcpair_set(result, true, ast_func_id, newest_mapping.ir_func_id, object);
+    optional_funcpair_set(result, true, ast_func_id, newest_endpoint.ir_func_id, object);
     return SUCCESS;
 }
 
@@ -2061,14 +2060,12 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
     // be taken care of inside __defer__ function during IR generation
     // of the auto-generated function
 
-    ir_func_mapping_t newest_mapping;
-    if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
+    ir_func_endpoint_t newest_endpoint;
+    if(ir_gen_func_head(compiler, object, func, ast_func_id, &newest_endpoint)){
         return FAILURE;
     }
 
-    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
-
-    optional_funcpair_set(result, true, ast_func_id, newest_mapping.ir_func_id, object);
+    optional_funcpair_set(result, true, ast_func_id, newest_endpoint.ir_func_id, object);
     return SUCCESS;
 }
 
@@ -2228,20 +2225,18 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     }
 
     // Create IR function
-    ir_func_mapping_t newest_mapping;
-    if(ir_gen_func_head(compiler, object, func, ast_func_id, true, &newest_mapping)){
+    ir_func_endpoint_t newest_endpoint;
+    if(ir_gen_func_head(compiler, object, func, ast_func_id, &newest_endpoint)){
         return FAILURE;
     }
-
-    ir_job_list_append(&object->ir_module.job_list, newest_mapping);
 
     // Cache result
     entry->has_assign = TROOLEAN_TRUE;
     entry->assign_ast_func_id = ast_func_id;
-    entry->assign_ir_func_id = newest_mapping.ir_func_id;
+    entry->assign_ir_func_id = newest_endpoint.ir_func_id;
 
     // Return result
-    optional_funcpair_set(result, true, ast_func_id, newest_mapping.ir_func_id, object);
+    optional_funcpair_set(result, true, ast_func_id, newest_endpoint.ir_func_id, object);
     return SUCCESS;
 }
 

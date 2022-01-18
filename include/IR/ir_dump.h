@@ -13,7 +13,9 @@ extern "C" {
 */
 
 #include <stdio.h>
+
 #include "IR/ir.h"
+#include "UTIL/ground.h"
 
 // ---------------- ir_module_dump ----------------
 // Generates a string representation from an IR

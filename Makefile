@@ -150,8 +150,8 @@ ESSENTIAL_SOURCES= \
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_llvm.c src/BKEND/ir_to_llvm_impl.c src/BRIDGE/any.c \
 	src/BRIDGE/bridge.c src/BRIDGE/funcpair.c src/BRIDGE/type_table.c src/BRIDGE/rtti.c src/DRVR/compiler.c \
 	src/DRVR/config.c src/DRVR/object.c src/DRVR/repl.c src/INFER/infer.c \
-	src/IR/ir_pool.c src/IR/ir_proc_map.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir_value_str.c \
-	src/IR/ir.c src/IR/ir_dump.c src/IR/ir_lowering.c \
+	src/IR/ir_pool.c src/IR/ir_proc_map.c src/IR/ir_proc_query.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir_value_str.c \
+	src/IR/ir.c src/IR/ir_dump.c src/IR/ir_func_endpoint.c src/IR/ir_lowering.c \
 	src/IRGEN/ir_builder.c src/IRGEN/ir_cache.c src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find.c \
 	src/IRGEN/ir_gen_rtti.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c \
 	src/LEX/lex.c src/LEX/pkg.c src/LEX/token.c src/PARSE/parse_alias.c src/PARSE/parse_ctx.c \
@@ -161,7 +161,7 @@ ESSENTIAL_SOURCES= \
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/UTIL/download.c \
 	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/ground.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c \
 	src/UTIL/list.c src/UTIL/memory.c src/UTIL/search.c src/UTIL/stash.c src/UTIL/string_builder.c \
-	src/UTIL/string_list.c src/UTIL/string.c src/UTIL/tmpbuf.c src/UTIL/util.c
+	src/UTIL/string_list.c src/UTIL/string.c src/UTIL/util.c
 SOURCES= $(ESSENTIAL_SOURCES) src/DRVR/main.c
 ADDITIONAL_DEBUG_SOURCES=src/DRVR/debug.c
 SRCDIR=src
@@ -262,7 +262,6 @@ insight: $(SOURCES)
 	@cp include/UTIL/trait.h $(INSIGHT_OUT_DIR)/include/UTIL/trait.h
 	@cp include/UTIL/string_builder.h $(INSIGHT_OUT_DIR)/include/UTIL/string_builder.h
 	@cp include/UTIL/string_list.h $(INSIGHT_OUT_DIR)/include/UTIL/string_list.h
-	@cp include/UTIL/tmpbuf.h $(INSIGHT_OUT_DIR)/include/UTIL/tmpbuf.h
 	@cp include/UTIL/util.h $(INSIGHT_OUT_DIR)/include/UTIL/util.h
 	
 #   Insight - Required Source Code Files
@@ -320,7 +319,6 @@ insight: $(SOURCES)
 	@cp src/UTIL/search.c $(INSIGHT_OUT_DIR)/src/UTIL/search.c
 	@cp src/UTIL/string.c $(INSIGHT_OUT_DIR)/src/UTIL/string.c
 	@cp src/UTIL/string_builder.c $(INSIGHT_OUT_DIR)/src/UTIL/string_builder.c
-	@cp src/UTIL/tmpbuf.c $(INSIGHT_OUT_DIR)/src/UTIL/tmpbuf.c
 	@cp src/UTIL/util.c $(INSIGHT_OUT_DIR)/src/UTIL/util.c
 
 	@cp include/UTIL/__insight.h $(INSIGHT_OUT_DIR)/insight.h

@@ -13,10 +13,14 @@
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
+#include "IR/ir_func_endpoint.h"
 #include "IR/ir_pool.h"
+#include "IR/ir_proc_map.h"
+#include "IR/ir_proc_query.h"
 #include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_cache.h"
+#include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
@@ -25,180 +29,454 @@
 #include "UTIL/search.h"
 #include "UTIL/trait.h"
 
-errorcode_t ir_gen_find_func(compiler_t *compiler, object_t *object, weak_cstr_t name,
-        ast_type_t *arg_types, length_t arg_types_length, trait_t mask, trait_t req_traits, optional_funcpair_t *result){
-    
-    ir_module_t *ir_module = &object->ir_module;
-    maybe_index_t index = find_beginning_of_func_group(&ir_module->func_mappings, name);
+static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, optional_funcpair_t *result);
+static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_funcpair_t *result, unsigned int conform_mode_if_applicable);
 
-    if(index != -1){
-        ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index];
-        ast_func_t *ast_func = &object->ast.funcs[mapping->ast_func_id];
-    
-        while(true){
-            if((ast_func->traits & mask) == req_traits && func_args_match(ast_func, arg_types, arg_types_length)){
-                optional_funcpair_set(result, true, mapping->ast_func_id, mapping->ir_func_id, object);
-                return SUCCESS;
-            }
-    
-            if((length_t) ++index >= ir_module->func_mappings.length) break;
-    
-            mapping = &ir_module->func_mappings.mappings[index];
-            ast_func = &object->ast.funcs[mapping->ast_func_id];
-    
-            if(mapping->is_beginning_of_group == -1){
-                mapping->is_beginning_of_group = !lenstreq(mapping->name, ir_module->func_mappings.mappings[index - 1].name);
-            }
-    
-            if(mapping->is_beginning_of_group == 1) break;
-        }
+errorcode_t ir_gen_find_proc(ir_proc_query_t *query, optional_funcpair_t *result){
+    // Allow using empty type for 'optional_gives' instead of NULL
+    if(query->optional_gives && query->optional_gives->elements_length == 0){
+        query->optional_gives = NULL;
     }
 
-    if(streq(name, "__pass__")){
-        return attempt_autogen___pass__(compiler, object, arg_types, arg_types_length, result);
-    }
+    if(query->conform){
+        const unsigned int strict_mode = CONFORM_MODE_CALL_ARGUMENTS;
+        const unsigned int loose_mode = query->conform_params.no_user_casts ? CONFORM_MODE_CALL_ARGUMENTS_LOOSE_NOUSER : CONFORM_MODE_CALL_ARGUMENTS_LOOSE;
 
-    if(streq(name, "__defer__")){
-        return attempt_autogen___defer__(compiler, object, arg_types, arg_types_length, result);
-    }
+        errorcode_t res = ir_gen_find_proc_sweep(query, result, strict_mode);
+        if(res != FAILURE) return res;
 
-    if(streq(name, "__assign__")){
-        return attempt_autogen___assign__(compiler, object, arg_types, arg_types_length, result);
+        return ir_gen_find_proc_sweep(query, result, loose_mode);
+    } else {
+        return ir_gen_find_proc_sweep(query, result, CONFORM_MODE_NOT_APPLICABLE);
     }
-
-    return FAILURE; // No function with that definition found
 }
 
-errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, funcpair_t *result){
-    ir_module_t *ir_module = &object->ir_module;
+static errorcode_t ir_gen_fill_in_default_arguments(ir_proc_query_t *query, ast_func_t *ast_func, ast_poly_catalog_t *optional_catalog){
+    // Don't fill in default values if not allowed or don't have enough information
+    if(!query->conform || !query->allow_default_values) return SUCCESS;
+    
+    ast_expr_t **target_defaults = ast_func->arg_defaults;
+    length_t target_arity = ast_func->arity;
+    length_t provided_arity = *query->with_defaults.inout_length;
+    
+    // No need to fill in missing arguments if we already have them
+    if(target_defaults == NULL || provided_arity >= target_arity) return SUCCESS;
 
-    maybe_index_t index = find_beginning_of_func_group(&ir_module->func_mappings, name);
-    if(index == -1) return FAILURE;
+    ir_builder_t *builder = query->conform_params.builder;
+    ir_value_t ***arg_values = query->with_defaults.inout_arg_values;
+    ast_type_t **arg_types = query->with_defaults.inout_arg_types;
+    ast_type_t *all_expected_arg_types = ast_func->arg_types;
 
-    // TODO: CLEANUP: Cleanup this code
+    // ------------------------------------------------
+    // | 0 | 1 | 2 |                    Supplied
+    // | 0 | 1 | 2 | 3 | 4 |            Required
+    // |   | 1 |   | 3 | 4 |            Defaults
+    // ------------------------------------------------
+    
+    // Allocate memory to hold full version of argument list
+    ir_value_t **new_args = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * target_arity);
+    ast_type_t *new_arg_types = malloc(sizeof(ast_type_t) * target_arity);
 
-    if(out_is_unique){
-        *out_is_unique = true;
+    // Copy given argument values into new array
+    memcpy(new_args, *arg_values, sizeof(ir_value_t*) * provided_arity);
 
-        if((length_t) index + 1 != ir_module->func_mappings.length){
-            ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index + 1];
-            if(mapping->is_beginning_of_group == -1){
-                mapping->is_beginning_of_group = index == 0 ? 1 : !lenstreq(mapping->name, ir_module->func_mappings.mappings[index].name);
-            }
-            if(mapping->is_beginning_of_group == 0) *out_is_unique = false;
+    // Copy AST types of given arguments into new array
+    memcpy(new_arg_types, *arg_types, sizeof(ast_type_t) * provided_arity);
+
+    // Attempt to fill in missing values
+    for(length_t i = provided_arity; i < target_arity; i++){
+        // We should have never received a function that can't be completed using its default values
+        if(target_defaults[i] == NULL){
+            compiler_panicf(builder->compiler, ast_func->source, "INTERNAL ERROR: Failed to fill in default value for argument %d", i);
+            ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
+            return ALT_FAILURE;
         }
+        
+        // Generate IR value for given default expression
+        ast_type_t *expected_type = &all_expected_arg_types[i];
+
+        ir_value_t *ir_value;
+        ast_type_t ast_type;
+        if(ir_gen_expr(builder, target_defaults[i], &ir_value, false, &ast_type)){
+            ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
+            return ALT_FAILURE;
+        }
+
+        // If polymorphism and compatible, don't conform
+        if(optional_catalog && ast_type_has_polymorph(expected_type)){
+            compiler_t *compiler = ir_proc_query_getter_compiler(query);
+            object_t *object = ir_proc_query_getter_object(query);
+
+            // Polymorphism for argument
+            errorcode_t res = arg_type_polymorphable(compiler, object, expected_type, &ast_type, optional_catalog);
+            if(res == ALT_FAILURE){
+                ast_type_free(&ast_type);
+                ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
+                return ALT_FAILURE;
+            }
+
+            if(res == FAILURE){
+                strong_cstr_t a_type_str = ast_type_str(&ast_type);
+                strong_cstr_t b_type_str = ast_type_str(expected_type);
+                const char *error_format = "Received value of type '%s' for default argument which expects type '%s'";
+                compiler_panicf(builder->compiler, expected_type->source, error_format, a_type_str, b_type_str);
+                free(a_type_str);
+                free(b_type_str);
+                ast_type_free(&ast_type);
+                ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
+                return ALT_FAILURE;
+            }
+
+            new_arg_types[i] = ast_type;
+        } else {
+            // No polymorphism for argument
+
+            if(!ast_types_conform(builder, &ir_value, &ast_type, expected_type, CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
+                strong_cstr_t a_type_str = ast_type_str(&ast_type);
+                strong_cstr_t b_type_str = ast_type_str(expected_type);
+                const char *error_format = "Received value of type '%s' for default argument which expects type '%s'";
+                compiler_panicf(builder->compiler, expected_type->source, error_format, a_type_str, b_type_str);
+                free(a_type_str);
+                free(b_type_str);
+                ast_type_free(&ast_type);
+                ast_types_free(&new_arg_types[provided_arity], i - provided_arity);
+                return ALT_FAILURE;
+            }
+
+            new_arg_types[i] = ast_type_clone(&all_expected_arg_types[i]);
+            ast_type_free(&ast_type);
+        }
+
+        new_args[i] = ir_value;
     }
 
-    ir_func_mapping_t *mapping = &ir_module->func_mappings.mappings[index];
+    // Swap out partial argument list for full argument list.
+    // NOTE: We are abandoning the memory held by 'arg_values'
+    //       Since it is a part of the pool, it'll just remain stagnant until
+    //       the pool is freed
+    *arg_values = new_args;
     
-    *result = (funcpair_t){
-        .ast_func = &object->ast.funcs[mapping->ast_func_id],
-        .ir_func = &object->ir_module.funcs.funcs[mapping->ir_func_id],
-        .ast_func_id = mapping->ast_func_id,
-        .ir_func_id = mapping->ir_func_id,
-    };
+    // Replace argument types array
+    free(*arg_types);
+    *arg_types = new_arg_types;
+
+    // Update arity
+    *query->with_defaults.inout_length = target_arity;
+
+    // We've successfully filled in the missing arguments
     return SUCCESS;
 }
 
-errorcode_t ir_gen_find_func_conforming(ir_builder_t *builder, weak_cstr_t name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, bool no_user_casts, source_t from_source, optional_funcpair_t *result){
-    
-    // Do strict argument type conforming rules first
-    errorcode_t strict_errorcode = ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, from_source, result, CONFORM_MODE_CALL_ARGUMENTS);
-    if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
+static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, optional_funcpair_t *result, unsigned int conform_mode_if_applicable, ir_func_endpoint_t endpoint){
+    compiler_t *compiler = ir_proc_query_getter_compiler(query);
+    object_t *object = ir_proc_query_getter_object(query);
+    ast_func_t *ast_func = &object->ast.funcs[endpoint.ast_func_id];
 
-    // If no strict match was found, try a looser match
-    unsigned int loose_mode = no_user_casts ? CONFORM_MODE_CALL_ARGUMENTS_LOOSE_NOUSER : CONFORM_MODE_CALL_ARGUMENTS_LOOSE; 
-    return ir_gen_find_func_conforming_to(builder, name, arg_values, arg_types, type_list_length, gives, from_source, result, loose_mode);
+    // Do function trait restrictions
+    if((ast_func->traits & query->traits_mask) != query->traits_match){
+        return FAILURE;
+    }
+
+    // If we are looking for a method and the potential match is not a method,
+    // then don't match against it
+    if(ir_proc_query_is_method(query) && !ast_func_is_method(ast_func)){
+        return FAILURE;
+    }
+
+    ir_value_t **arg_values = ir_proc_query_getter_arg_values(query);
+    ast_type_t *arg_types = ir_proc_query_getter_arg_types(query);
+    length_t arg_types_length = ir_proc_query_getter_length(query);
+
+    if(ast_func->traits & AST_FUNC_POLYMORPHIC){
+        // Polymorphism
+
+        // Catalog to remember polymophic parameter solution
+        // 'func_args_polymorphable' will set this to the chosen solution on SUCCESS
+        ast_poly_catalog_t catalog; 
+
+        errorcode_t res;
+
+        if(query->conform){
+            res = func_args_polymorphable(query->conform_params.builder, ast_func, arg_values, arg_types, arg_types_length, &catalog, query->optional_gives, conform_mode_if_applicable);
+        } else {
+            res = func_args_polymorphable_no_conform(compiler, object, ast_func, arg_types, arg_types_length, &catalog);
+        }
+
+        if(res == SUCCESS){
+            // (NOTE: invalidates pointer 'ast_func' and a lot of other stuff)
+            if(ir_gen_fill_in_default_arguments(query, ast_func, &catalog)){
+                return ALT_FAILURE;
+            }
+
+            ast_type_t *arg_types = ir_proc_query_getter_arg_types(query);
+            length_t arg_types_length = ir_proc_query_getter_length(query);
+            
+            ir_func_endpoint_t instance;
+            if(instantiate_poly_func(compiler, object, query->from_source, endpoint.ast_func_id, arg_types, arg_types_length, &catalog, &instance)){
+                ast_poly_catalog_free(&catalog);
+                return ALT_FAILURE;
+            }
+
+            ast_poly_catalog_free(&catalog);
+            optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, object);
+            return SUCCESS;
+        } else if(res == ALT_FAILURE){
+            return res;
+        }
+    } else {
+        // No polymorphism
+
+        successful_t was_successful;
+
+        if(query->conform){
+            was_successful = func_args_conform(query->conform_params.builder, ast_func, arg_values, arg_types, arg_types_length, query->optional_gives, conform_mode_if_applicable);
+        } else {
+            was_successful = func_args_match(ast_func, arg_types, arg_types_length);
+        }
+
+        if(was_successful){
+            // (NOTE: invalidates pointer 'ast_func' and a lot of other stuff)
+            if(ir_gen_fill_in_default_arguments(query, ast_func, NULL)){
+                return ALT_FAILURE;
+            }
+
+            optional_funcpair_set(result, true, endpoint.ast_func_id, endpoint.ir_func_id, object);
+            return SUCCESS;
+        }
+    }
+
+    return FAILURE;
 }
 
-errorcode_t ir_gen_find_func_conforming_to(ir_builder_t *builder, weak_cstr_t name, ir_value_t **arg_values,
-        ast_type_t *arg_types, length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode){
+static errorcode_t ir_gen_find_proc_sweep_endpoint_list(
+    ir_proc_query_t *query,
+    optional_funcpair_t *result,
+    unsigned int conform_mode_if_applicable,
+    ir_func_endpoint_list_t *endpoint_list
+){
+    if(endpoint_list == NULL) return FAILURE;
+
+    for(length_t i = 0; i != endpoint_list->length; i++){
+        ir_func_endpoint_t endpoint = endpoint_list->endpoints[i];
+
+        errorcode_t res = ir_gen_find_proc_sweep_partial(query, result, conform_mode_if_applicable, endpoint);
+        if(res != FAILURE) return res;
+    }
+
+    return FAILURE;
+}
+
+static errorcode_t ir_gen_find_proc_sweep_proc_map(
+    ir_proc_query_t *query,
+    optional_funcpair_t *result,
+    unsigned int conform_mode_if_applicable,
+    ir_proc_map_t *proc_map,
+    void *key,
+    length_t sizeof_key,
+    int (*compare)(const void*, const void*)
+){
+    ir_func_endpoint_list_t *endpoint_list = ir_proc_map_find(proc_map, key, sizeof_key, compare);
     
-    ir_module_t *ir_module = &builder->object->ir_module;
-    maybe_index_t index = find_beginning_of_func_group(&ir_module->func_mappings, name);
+    return ir_gen_find_proc_sweep_endpoint_list(query, result, conform_mode_if_applicable, endpoint_list);
+}
 
-    // Allow for '.elements_length' to be zero to indicate no return matching
-    if(gives && gives->elements_length == 0) gives = NULL;
+static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_funcpair_t *result, unsigned int conform_mode_if_applicable){
+    errorcode_t res;
+    ir_module_t *ir_module = &ir_proc_query_getter_object(query)->ir_module;
 
-    if(index != -1){
-        // DANGEROUS: We must not store a pointer to 'ir_module->func_mappings', since the mappings may be relocated/adjusted
-        // by 'funcs_arg_conform'
-        // By copying it onto the stack, we avoid having to constantly refresh the pointer to the mapping (or forgetting to do so)
-        ir_func_mapping_t mapping = ir_module->func_mappings.mappings[index];
-        ast_func_t *ast_func = &builder->object->ast.funcs[mapping.ast_func_id];
+    if(ir_proc_query_is_method(query)){
+        // If we are trying to find a method, then search
+        // the method procedure map first.
 
-        while(true){
-            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-                optional_funcpair_set(result, true, mapping.ast_func_id, mapping.ir_func_id, builder->object);
-                return SUCCESS;
-            }
+        res = ir_gen_find_proc_sweep_proc_map(
+            query,
+            result,
+            conform_mode_if_applicable,
+            &ir_module->method_map,
+            &(ir_method_key_t){
+                .method_name = query->proc_name,
+                .struct_name = query->struct_name,
+            },
+            sizeof(ir_method_key_t),
+            &compare_ir_method_key
+        );
 
-            if((length_t) ++index >= ir_module->func_mappings.length) break;
+        if(res != FAILURE) return res;
 
-            mapping = ir_module->func_mappings.mappings[index];
-            ast_func = &builder->object->ast.funcs[mapping.ast_func_id];
+        // It doesn't exist in the methods procedure map,
+        // so that means that the subject type
+        // of the method is unconventional, which
+        // requires us to search for the method
+        // in the full list of functions.
+        // ...
+    }
 
-            if(mapping.is_beginning_of_group == -1){
-                mapping.is_beginning_of_group = !lenstreq(mapping.name, ir_module->func_mappings.mappings[index - 1].name);
-            }
+    // Search the function procedure map
+    res = ir_gen_find_proc_sweep_proc_map(
+        query,
+        result,
+        conform_mode_if_applicable,
+        &ir_module->func_map,
+        &(ir_func_key_t){
+            .name = query->proc_name
+        },
+        sizeof(ir_func_key_t),
+        &compare_ir_func_key
+    );
 
-            if(mapping.is_beginning_of_group == 1) break;
+    if(res != FAILURE) return res;
+
+    return try_to_autogen_proc_to_fill_query(query, result);
+}
+
+static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, optional_funcpair_t *result){
+    // Attempt to auto-generate a procedure in order to fill a query
+
+    ast_type_t *types = ir_proc_query_getter_arg_types(query);
+    length_t length = ir_proc_query_getter_length(query);
+
+    // Get query-agnostic handles to required compiler components
+    compiler_t *compiler = ir_proc_query_getter_compiler(query);
+    object_t *object = ir_proc_query_getter_object(query);
+
+    if(streq(query->proc_name, "__defer__")){
+        return attempt_autogen___defer__(compiler, object, types, length, result);
+    }
+
+    if(streq(query->proc_name, "__assign__")){
+        return attempt_autogen___assign__(compiler, object, types, length, result);
+    }
+
+    if(streq(query->proc_name, "__pass__") && ir_proc_query_is_function(query)){
+        return attempt_autogen___pass__(compiler, object, types, length, result);
+    }
+
+    return FAILURE;
+}
+
+errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, funcpair_t *result){
+    // Find list of function endpoints for the given name
+    ir_func_endpoint_list_t *endpoint_list = ir_proc_map_find(
+        &object->ir_module.func_map,
+        &(ir_func_key_t){ .name = name },
+        sizeof(ir_func_key_t),
+        &compare_ir_func_key
+    );
+
+    // Return the first of them if it exists
+    if(endpoint_list){
+        ir_func_endpoint_t endpoint = endpoint_list->endpoints[0];
+
+        *result = (funcpair_t){
+            .ast_func = &object->ast.funcs[endpoint.ast_func_id],
+            .ir_func = &object->ir_module.funcs.funcs[endpoint.ir_func_id],
+            .ast_func_id = endpoint.ast_func_id,
+            .ir_func_id = endpoint.ir_func_id,
+        };
+
+        if(out_is_unique){
+            *out_is_unique = endpoint_list->length == 1;
         }
+
+        return SUCCESS;
+    } else {
+        return FAILURE;
     }
+}
 
-    // Attempt to create a conforming function from available polymorphic functions
-    ast_t *ast = &builder->object->ast;
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(ast->poly_funcs, ast->poly_funcs_length, name);
+errorcode_t ir_gen_find_func_regular(
+    compiler_t *compiler,
+    object_t *object,
+    weak_cstr_t function_name,
+    ast_type_t *arg_types,
+    length_t arg_types_length,
+    trait_t traits_mask,
+    trait_t traits_match,
+    source_t from_source,
+    optional_funcpair_t *out_result
+){
+    ir_proc_query_t query;
+    ir_proc_query_init_find_func_regular(&query, compiler, object, function_name, arg_types, arg_types_length, traits_mask, traits_match, from_source);
+    return ir_gen_find_proc(&query, out_result);
+}
 
-    if(poly_index != -1){
-        ast_poly_func_t *poly_func = &ast->poly_funcs[poly_index];
-        ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
-        ast_poly_catalog_t using_catalog;
+errorcode_t ir_gen_find_func_conforming(
+    ir_builder_t *builder,
+    weak_cstr_t function_name,
+    ir_value_t ***inout_arg_values,
+    ast_type_t **inout_arg_types,
+    length_t *inout_length,
+    ast_type_t *optional_gives,
+    bool no_user_casts,
+    source_t from_source,
+    optional_funcpair_t *out_result
+){
+    ir_proc_query_t query;
+    ir_proc_query_init_find_func_conforming(&query, builder, function_name, inout_arg_values, inout_arg_types, inout_length, optional_gives, no_user_casts, from_source);
+    return ir_gen_find_proc(&query, out_result);
+}
 
-        while(true){
-            errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
-            if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
+errorcode_t ir_gen_find_func_conforming_without_defaults(
+    ir_builder_t *builder,
+    weak_cstr_t function_name,
+    ir_value_t **arg_values,
+    ast_type_t *arg_types,
+    length_t length,
+    ast_type_t *optional_gives,
+    bool no_user_casts,
+    source_t from_source,
+    optional_funcpair_t *out_result
+){
+    ir_proc_query_t query;
+    ir_proc_query_init_find_func_conforming_without_defaults(&query, builder, function_name, arg_values, arg_types, length, optional_gives, no_user_casts, from_source);
+    return ir_gen_find_proc(&query, out_result);
+}
 
-            if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS){
-                ir_func_mapping_t instance;
-                
-                if(instantiate_poly_func(builder->compiler, builder->object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
-                    ast_poly_catalog_free(&using_catalog);
-                    return ALT_FAILURE;
-                }
+errorcode_t ir_gen_find_method(
+    compiler_t *compiler,
+    object_t *object,
+    weak_cstr_t struct_name, 
+    weak_cstr_t method_name,
+    ast_type_t *arg_types,
+    length_t arg_types_length,
+    source_t from_source,
+    optional_funcpair_t *out_result
+){
+    ir_proc_query_t query;
+    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, from_source);
+    return ir_gen_find_proc(&query, out_result);
+}
 
-                ast_poly_catalog_free(&using_catalog);
-                optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, builder->object);
-                return SUCCESS;
-            }
+errorcode_t ir_gen_find_method_conforming(
+    ir_builder_t *builder,
+    weak_cstr_t struct_name,
+    weak_cstr_t name,
+    ir_value_t ***inout_arg_values,
+    ast_type_t **inout_arg_types,
+    length_t *inout_length,
+    ast_type_t *gives,
+    source_t from_source,
+    optional_funcpair_t *out_result
+){
+    ir_proc_query_t query;
+    ir_proc_query_init_find_method_conforming(&query, builder, struct_name, name, inout_arg_values, inout_arg_types, inout_length, gives, from_source);
+    return ir_gen_find_proc(&query, out_result);
+}
 
-            if((length_t) ++poly_index >= ast->poly_funcs_length) break;
-
-            poly_func = &ast->poly_funcs[poly_index];
-            poly_template = &ast->funcs[poly_func->ast_func_id];
-
-            if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = !streq(poly_func->name, ast->poly_funcs[poly_index - 1].name);
-            }
-
-            if(poly_func->is_beginning_of_group == 1) break;
-        }
-    }
-
-    if(streq(name, "__pass__")){
-        return attempt_autogen___pass__(builder->compiler, builder->object, arg_types, type_list_length, result);
-    }
-
-    if(streq(name, "__defer__")){
-        return attempt_autogen___defer__(builder->compiler, builder->object, arg_types, type_list_length, result);
-    }
-
-    if(streq(name, "__assign__")){
-        return attempt_autogen___assign__(builder->compiler, builder->object, arg_types, type_list_length, result);
-    }
-
-    return FAILURE; // No function with that definition found
+errorcode_t ir_gen_find_method_conforming_without_defaults(
+    ir_builder_t *builder,
+    weak_cstr_t struct_name,
+    weak_cstr_t name,
+    ir_value_t **arg_values,
+    ast_type_t *arg_types,
+    length_t length,
+    ast_type_t *gives,
+    source_t from_source,
+    optional_funcpair_t *out_result
+){
+    ir_proc_query_t query;
+    ir_proc_query_init_find_method_conforming_without_defaults(&query, builder, struct_name, name, arg_values, arg_types, length, gives, from_source);
+    return ir_gen_find_proc(&query, out_result);
 }
 
 errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, optional_funcpair_t *result){
@@ -210,12 +488,7 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
     ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&builder->object->ir_module.sf_cache, arg_type);
 
     if(cache_entry->has_pass == TROOLEAN_TRUE){
-        funcpair_t *out_result = &result->value;
-        out_result->ir_func_id = cache_entry->pass_ir_func_id;
-        out_result->ast_func_id = cache_entry->pass_ast_func_id;
-        out_result->ir_func = &builder->object->ir_module.funcs.funcs[out_result->ir_func_id];
-        out_result->ast_func = &builder->object->ast.funcs[out_result->ast_func_id];
-        result->has = true;
+        optional_funcpair_set(result, true, cache_entry->pass_ast_func_id, cache_entry->pass_ir_func_id, builder->object);
         return SUCCESS;
     } else if(cache_entry->has_pass == TROOLEAN_FALSE){
         result->has = false;
@@ -223,7 +496,7 @@ errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, 
     }
 
     // Whether we have a __pass__ function is unknown, so lets try to see if we have one
-    return ir_gen_find_func_conforming(builder, "__pass__", argument, arg_type, 1, NULL, true, NULL_SOURCE, result);
+    return ir_gen_find_func_conforming_without_defaults(builder, "__pass__", argument, arg_type, 1, NULL, true, NULL_SOURCE, result);
 }
 
 errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_funcpair_t *result){
@@ -255,20 +528,25 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_t
     ast_type_ptr.elements_length = 2;
     ast_type_ptr.source = arg_type->source;
 
-    // Try to find '__defer__' method
-    errorcode_t errorcode;
     weak_cstr_t struct_name;
 
     switch(arg_type->elements[0]->id){
     case AST_ELEM_BASE:
         struct_name = ((ast_elem_base_t*) arg_type->elements[0])->base;
-        errorcode = ir_gen_find_method(compiler, object, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
         break;
     case AST_ELEM_GENERIC_BASE:
         struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
-        errorcode = ir_gen_find_poly_method(compiler, object, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
         break;
     default:
+        struct_name = NULL;
+    }
+
+    // Try to find '__defer__' method
+    errorcode_t errorcode;
+
+    if(struct_name){
+        errorcode = ir_gen_find_method(compiler, object, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
+    } else {
         errorcode = FAILURE;
     }
 
@@ -328,7 +606,7 @@ errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_
         break;
     case AST_ELEM_GENERIC_BASE:
         struct_name = ((ast_elem_generic_base_t*) arg_type->elements[0])->name;
-        errorcode = ir_gen_find_poly_method(compiler, object, struct_name, "__assign__", args, 2, NULL_SOURCE, result);
+        errorcode = ir_gen_find_method(compiler, object, struct_name, "__assign__", args, 2, NULL_SOURCE, result);
         break;
     default:
         errorcode = FAILURE;
@@ -346,547 +624,17 @@ errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_
     return errorcode;
 }
 
-errorcode_t ir_gen_find_method_conforming(ir_builder_t *builder, const char *struct_name,
-        const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-        length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result){
-    
-    // Do strict argument type conforming rules first
-    errorcode_t strict_errorcode = ir_gen_find_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, gives, from_source, result, CONFORM_MODE_CALL_ARGUMENTS);
-    if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
-
-    // If no strict match was found, try a looser match
-    return ir_gen_find_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, gives, from_source, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
-}
-
-errorcode_t ir_gen_find_method_conforming_to(ir_builder_t *builder, const char *struct_name,
-        const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-        length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode){
-
-    // NOTE: arg_values, arg_types, etc. must contain an additional beginning
-    //           argument for the object being called on
-    ir_module_t *ir_module = &builder->object->ir_module;
-
-    // Allow for '.elements_length' to be zero to indicate no return matching
-    if(gives && gives->elements_length == 0) gives = NULL;
-
-    maybe_index_t index = find_beginning_of_method_group(&ir_module->methods, struct_name, name);
-
-    if(index != -1){
-        ir_method_t *method = &ir_module->methods.methods[index];
-        ast_func_t *ast_func = &builder->object->ast.funcs[method->ast_func_id];
-
-        while(true){
-            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-                optional_funcpair_set(result, true, method->ast_func_id, method->ir_func_id, builder->object);
-                return SUCCESS;
-            }
-
-            if((length_t) ++index >= ir_module->methods.length) break;
-
-            method = &ir_module->methods.methods[index];
-            ast_func = &builder->object->ast.funcs[method->ast_func_id];
-
-            if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = !streq(method->name, ir_module->methods.methods[index - 1].name) || !streq(method->struct_name, ir_module->methods.methods[index - 1].struct_name);
-            }
-
-            if(method->is_beginning_of_group == 1) break;
-        }
-    }
-
-    // Attempt to create a conforming function from available polymorphic functions
-    ast_t *ast = &builder->object->ast;
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(ast->polymorphic_methods, ast->polymorphic_methods_length, name);
-
-    if(poly_index != -1){
-        ast_poly_func_t *poly_func = &ast->polymorphic_methods[poly_index];
-        ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
-        ast_poly_catalog_t using_catalog;
-
-        while(true){
-            errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
-            if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
-
-            if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && streq(poly_template->arg_names[0], "this")){
-                ir_func_mapping_t instance;
-    
-                if(instantiate_poly_func(builder->compiler, builder->object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
-                    ast_poly_catalog_free(&using_catalog);
-                    return ALT_FAILURE;
-                }
-
-                ast_poly_catalog_free(&using_catalog);
-    
-                optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, builder->object);
-                return SUCCESS;
-            }
-
-            if((length_t) ++poly_index >= ast->polymorphic_methods_length) break;
-
-            poly_func = &ast->polymorphic_methods[poly_index];
-            poly_template = &ast->funcs[poly_func->ast_func_id];
-
-            if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = !streq(poly_func->name, ast->polymorphic_methods[poly_index - 1].name);
-            }
-
-            if(poly_func->is_beginning_of_group == 1) break;
-        }
-    }
-
-    if(streq(name, "__defer__")){
-        return attempt_autogen___defer__(builder->compiler, builder->object, arg_types, type_list_length, result);
-    }
-    
-    if(streq(name, "__assign__")){
-        return attempt_autogen___assign__(builder->compiler, builder->object, arg_types, type_list_length, result);
-    }
-
-    return FAILURE; // No method with that definition found
-}
-
-errorcode_t ir_gen_find_poly_method_conforming(ir_builder_t *builder, const char *struct_name,
-    const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result){
-    
-    // Do strict argument type conforming rules first
-    errorcode_t strict_errorcode = ir_gen_find_poly_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, gives, from_source, result, CONFORM_MODE_CALL_ARGUMENTS);
-    if(strict_errorcode == SUCCESS || strict_errorcode == ALT_FAILURE) return strict_errorcode;
-
-    // If no strict match was found, try a looser match
-    return ir_gen_find_poly_method_conforming_to(builder, struct_name, name, arg_values, arg_types, type_list_length, gives, from_source, result, CONFORM_MODE_CALL_ARGUMENTS_LOOSE);
-}
-
-errorcode_t ir_gen_find_poly_method_conforming_to(ir_builder_t *builder, const char *struct_name,
-    const char *name, ir_value_t **arg_values, ast_type_t *arg_types,
-    length_t type_list_length, ast_type_t *gives, source_t from_source, optional_funcpair_t *result, trait_t conform_mode){
-    
-    // NOTE: arg_values, arg_types, etc. must contain an additional beginning
-    //           argument for the object being called on
-    ir_module_t *ir_module = &builder->object->ir_module;
-
-    // Allow for '.elements_length' to be zero to indicate no return matching
-    if(gives && gives->elements_length == 0) gives = NULL;
-
-    // TODO: CLEANUP: Cleanup this code
-
-    maybe_index_t index = find_beginning_of_poly_method_group(&ir_module->poly_methods, struct_name, name);
-
-    if(index != -1){
-        ir_poly_method_t *method = &ir_module->poly_methods.methods[index];
-        ast_func_t *ast_func = &builder->object->ast.funcs[method->ast_func_id];
-
-        while(true){
-            if(func_args_conform(builder, ast_func, arg_values, arg_types, type_list_length, gives, conform_mode)){
-                optional_funcpair_set(result, true, method->ast_func_id, method->ir_func_id, builder->object);
-                return SUCCESS;
-            }
-
-            if((length_t) ++index >= ir_module->poly_methods.length) break;
-
-            method = &ir_module->poly_methods.methods[index];
-            ast_func = &builder->object->ast.funcs[method->ast_func_id];
-
-            if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = index == 0 ? 1 : (!streq(method->name, ir_module->poly_methods.methods[index - 1].name) || !streq(method->struct_name, ir_module->poly_methods.methods[index - 1].struct_name));
-            }
-
-            if(method->is_beginning_of_group == 1) break;
-        }
-    }
-    
-    // Attempt to create a conforming function from available polymorphic functions
-    ast_t *ast = &builder->object->ast;
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(ast->polymorphic_methods, ast->polymorphic_methods_length, name);
-
-    if(poly_index != -1){
-        ast_poly_func_t *poly_func = &ast->polymorphic_methods[poly_index];
-        ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
-        ast_poly_catalog_t using_catalog;
-
-        while(true){
-            errorcode_t res = func_args_polymorphable(builder, poly_template, arg_values, arg_types, type_list_length, &using_catalog, gives, conform_mode);
-            if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
-
-            if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && streq(poly_template->arg_names[0], "this")){
-                ir_func_mapping_t instance;
-    
-                if(instantiate_poly_func(builder->compiler, builder->object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
-                    ast_poly_catalog_free(&using_catalog);
-                    return ALT_FAILURE;
-                }
-                
-                ast_poly_catalog_free(&using_catalog);
-    
-                optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, builder->object);
-                return SUCCESS;
-            }
-            
-            if((length_t) ++poly_index >= ast->polymorphic_methods_length) break;
-
-            poly_func = &ast->polymorphic_methods[poly_index];
-            poly_template = &ast->funcs[poly_func->ast_func_id];
-
-            if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = poly_index == 0 ? 1 : !streq(poly_func->name, ast->polymorphic_methods[poly_index - 1].name);
-            }
-
-            if(poly_func->is_beginning_of_group == 1) break;
-        }
-    }
-
-    if(streq(name, "__defer__")){
-        return attempt_autogen___defer__(builder->compiler, builder->object, arg_types, type_list_length, result);
-    }
-
-    if(streq(name, "__assign__")){
-        return attempt_autogen___assign__(builder->compiler, builder->object, arg_types, type_list_length, result);
-    }
-
-    return FAILURE; // No method with that definition found
-}
-
-errorcode_t ir_gen_find_method(compiler_t *compiler, object_t *object, const char *struct_name, 
-        const char *name, ast_type_t *arg_types, length_t type_list_length,
-        source_t from_source, optional_funcpair_t *result){
-
-    // NOTE: arg_values, arg_types, etc. must contain an additional beginning
-    //           argument for the object being called on
-    ir_module_t *ir_module = &object->ir_module;
-
-    maybe_index_t index = find_beginning_of_method_group(&ir_module->methods, struct_name, name);
-
-    if(index != -1){
-        ir_method_t *method = &ir_module->methods.methods[index];
-        ast_func_t *ast_func = &object->ast.funcs[method->ast_func_id];
-
-        while(true){
-            if(func_args_match(ast_func, arg_types, type_list_length)){
-                funcpair_t *out_result = &result->value;
-                out_result->ast_func = ast_func;
-                out_result->ir_func = &object->ir_module.funcs.funcs[method->ir_func_id];
-                out_result->ast_func_id = method->ast_func_id;
-                out_result->ir_func_id = method->ir_func_id;
-                result->has = true;
-                return SUCCESS;
-            }
-
-            if(((length_t) ++index >= ir_module->methods.length)) break;
-
-            method = &ir_module->methods.methods[index];
-            ast_func = &object->ast.funcs[method->ast_func_id];
-
-            if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = index == 0 ? 1 : (!streq(method->name, ir_module->methods.methods[index - 1].name) || !streq(method->struct_name, ir_module->methods.methods[index - 1].struct_name));
-            }
-
-            if(method->is_beginning_of_group == 1) break;
-        }
-    }
-
-    // Attempt to create a conforming function from available polymorphic functions
-    ast_t *ast = &object->ast;
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(ast->polymorphic_methods, ast->polymorphic_methods_length, name);
-
-    if(poly_index != -1){
-        ast_poly_func_t *poly_func = &ast->polymorphic_methods[poly_index];
-        ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
-        ast_poly_catalog_t using_catalog;
-
-        while(true){
-            errorcode_t res = func_args_polymorphable_no_conform(compiler, object, poly_template, arg_types, type_list_length, &using_catalog);
-            if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
-
-            if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && streq(poly_template->arg_names[0], "this")){
-                ir_func_mapping_t instance;
-
-                if(instantiate_poly_func(compiler, object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)) return ALT_FAILURE;
-                ast_poly_catalog_free(&using_catalog);
-
-                optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, object); 
-                return SUCCESS;
-            }
-
-            if((length_t) ++poly_index >= ast->polymorphic_methods_length) break;
-
-            poly_func = &ast->polymorphic_methods[poly_index];
-            poly_template = &ast->funcs[poly_func->ast_func_id];
-
-            if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = !streq(poly_func->name, ast->polymorphic_methods[poly_index - 1].name);
-            }
-
-            if(poly_func->is_beginning_of_group == 1) break;
-        }
-    }
-
-    if(streq(name, "__defer__")){
-        return attempt_autogen___defer__(compiler, object, arg_types, type_list_length, result);
-    }
-
-    if(streq(name, "__assign__")){
-        return attempt_autogen___assign__(compiler, object, arg_types, type_list_length, result);
-    }
-
-    return FAILURE; // No method with that definition found
-}
-
-errorcode_t ir_gen_find_poly_method(compiler_t *compiler, object_t *object, const char *struct_name,
-    const char *name, ast_type_t *arg_types,
-    length_t type_list_length, source_t from_source, optional_funcpair_t *result){
-    
-    // NOTE: arg_values, arg_types, etc. must contain an additional beginning
-    //           argument for the object being called on
-    ir_module_t *ir_module = &object->ir_module;
-
-    // TODO: CLEANUP: Cleanup this messy code
-
-    maybe_index_t index = find_beginning_of_poly_method_group(&ir_module->poly_methods, struct_name, name);
-
-    if(index != -1){
-        ir_poly_method_t *method = &ir_module->poly_methods.methods[index];
-        ast_func_t *ast_func = &object->ast.funcs[method->ast_func_id];
-
-        while(true){
-            if(func_args_match(ast_func, arg_types, type_list_length)){
-                optional_funcpair_set(result, true, method->ast_func_id, method->ir_func_id, object);
-                return SUCCESS;
-            }
-
-            if((length_t) ++index >= ir_module->poly_methods.length) break;
-            
-            method = &ir_module->poly_methods.methods[index];
-            ast_func = &object->ast.funcs[method->ast_func_id];
-
-            if(method->is_beginning_of_group == -1){
-                method->is_beginning_of_group = !streq(method->name, ir_module->poly_methods.methods[index - 1].name) || !streq(method->struct_name, ir_module->poly_methods.methods[index - 1].struct_name);
-            }
-
-            if(method->is_beginning_of_group == 1) break;
-        }
-    }
-    
-    // Attempt to create a conforming function from available polymorphic functions
-    ast_t *ast = &object->ast;
-    maybe_index_t poly_index = find_beginning_of_poly_func_group(ast->polymorphic_methods, ast->polymorphic_methods_length, name);
-
-    if(poly_index != -1){
-        ast_poly_func_t *poly_func = &ast->polymorphic_methods[poly_index];
-        ast_func_t *poly_template = &ast->funcs[poly_func->ast_func_id];
-        ast_poly_catalog_t using_catalog;
-
-        while(true){
-            errorcode_t res = func_args_polymorphable_no_conform(compiler, object, poly_template, arg_types, type_list_length, &using_catalog);
-            if(res == ALT_FAILURE) return ALT_FAILURE; // An error occurred
-
-            if(poly_template->traits & AST_FUNC_POLYMORPHIC && res == SUCCESS && poly_template->arity != 0 && streq(poly_template->arg_names[0], "this")){
-                ir_func_mapping_t instance;
-    
-                if(instantiate_poly_func(compiler, object, from_source, poly_func->ast_func_id, arg_types, type_list_length, &using_catalog, &instance)){
-                    ast_poly_catalog_free(&using_catalog);
-                    return ALT_FAILURE;
-                }
-
-                ast_poly_catalog_free(&using_catalog);
-                optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, object);
-                return SUCCESS;
-            }
-            
-            if((length_t) ++poly_index >= ast->polymorphic_methods_length) break;
-
-            poly_func = &ast->polymorphic_methods[poly_index];
-            poly_template = &ast->funcs[poly_func->ast_func_id];
-
-            if(poly_func->is_beginning_of_group == -1){
-                poly_func->is_beginning_of_group = !streq(poly_func->name, ast->polymorphic_methods[poly_index - 1].name);
-            }
-
-            if(poly_func->is_beginning_of_group == 1) break;
-        }
-    }
-
-    if(streq(name, "__defer__")){
-        return attempt_autogen___defer__(compiler, object, arg_types, type_list_length, result);
-    }
-
-    if(streq(name, "__assign__")){
-        return attempt_autogen___assign__(compiler, object, arg_types, type_list_length, result);
-    }
-
-    return FAILURE; // No method with that definition found
-}
-
-maybe_index_t find_beginning_of_func_group(ir_func_mappings_t *func_mappings, char *raw_name){
-    // Searches for beginning of function group in a list of mappings
-    // If not found returns -1 else returns mapping index
-    // (Where a function group is a group of all the functions with the same name)
-
-    ir_func_mapping_t *mappings = func_mappings->mappings;
-    maybe_index_t first, middle, last, comparison;
-    weak_lenstr_t name = cstr_to_lenstr(raw_name);
-    first = 0; last = func_mappings->length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = lenstrcmp(mappings[middle].name, name);
-
-        if(comparison == 0){
-            while(true){
-                if(mappings[middle].is_beginning_of_group == -1){
-                    // It is uncalculated, so we must calculate it
-                    bool prev_different_name = middle == 0 ? true : !lenstreq(mappings[middle - 1].name, name);
-                    mappings[middle].is_beginning_of_group = prev_different_name;
-                }
-                if(mappings[middle].is_beginning_of_group == 1) return middle;
-                // Not the beginning of the group, check the previous if it is
-                middle--; // DANGEROUS: Potential for negative index
-            }
-
-            return middle;
-        }
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return -1;
-}
-
-maybe_index_t find_beginning_of_method_group(ir_methods_t *ir_methods, const char *struct_name, const char *name){
-    // Searches for beginning of method group in a list of methods
-    // If not found returns -1 else returns mapping index
-    // (Where a function group is a group of all the functions with the same name)
-
-    // TODO: CLEANUP: Cleanup this code
-
-    ir_method_t *methods = ir_methods->methods;
-    maybe_index_t first, middle, last, comparison;
-    first = 0; last = ir_methods->length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = strcmp(methods[middle].struct_name, struct_name);
-
-        if(comparison == 0){
-            comparison = strcmp(methods[middle].name, name);
-
-            if(comparison == 0){
-                while(true){
-                    if(methods[middle].is_beginning_of_group == -1){
-                        // It is uncalculated, so we must calculate it
-                        bool prev_different_name = middle == 0 ? true : !streq(methods[middle - 1].name, name) || !streq(methods[middle - 1].struct_name, struct_name);
-                        methods[middle].is_beginning_of_group = prev_different_name;
-                    }
-                    if(methods[middle].is_beginning_of_group == 1){
-                        return middle;
-                    }
-                    // Not the beginning of the group, check the previous if it is
-                    middle--; // DANGEROUS: Potential for negative index
-                }
-
-                return middle;
-            }
-            else if(comparison > 0) last = middle - 1;
-            else first = middle + 1;
-        }
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return -1;
-}
-
-maybe_index_t find_beginning_of_poly_method_group(ir_poly_methods_t *ir_methods, const char *generic_base, const char *name){
-    // Searches for beginning of method group in a list of methods
-    // If not found returns -1 else returns mapping index
-    // (Where a function group is a group of all the functions with the same name)
-
-    // TODO: CLEANUP: Cleanup this code
-
-    ir_poly_method_t *methods = ir_methods->methods;
-    maybe_index_t first, middle, last, comparison;
-    first = 0; last = ir_methods->length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = strcmp(methods[middle].struct_name, generic_base);
-
-        if(comparison == 0){
-            comparison = strcmp(methods[middle].name, name);
-
-            if(comparison == 0){
-                while(true){
-                    if(methods[middle].is_beginning_of_group == -1){
-                        // It is uncalculated, so we must calculate it
-                        bool prev_different_name = middle == 0 ? true : !streq(methods[middle - 1].name, name) || !streq(methods[middle - 1].struct_name, generic_base);
-                        methods[middle].is_beginning_of_group = prev_different_name;
-                    }
-                    if(methods[middle].is_beginning_of_group == 1){
-                        return middle;
-                    }
-                    // Not the beginning of the group, check the previous if it is
-                    middle--; // DANGEROUS: Potential for negative index
-                }
-
-                return middle;
-            }
-            else if(comparison > 0) last = middle - 1;
-            else first = middle + 1;
-        }
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return -1;
-}
-
-maybe_index_t find_beginning_of_poly_func_group(ast_poly_func_t *poly_funcs, length_t poly_funcs_length, const char *name){
-    // Searches for beginning of function group in a list of polymorphic function mappings
-    // If not found returns -1 else returns mapping index
-    // (Where a function group is a group of all the functions with the same name)
-
-    maybe_index_t first, middle, last, comparison;
-    first = 0; last = poly_funcs_length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = strcmp(poly_funcs[middle].name, name);
-
-        if(comparison == 0){
-            while(true){
-                if(poly_funcs[middle].is_beginning_of_group == -1){
-                    // It is uncalculated, so we must calculate it
-                    bool prev_different_name = middle == 0 ? true : !streq(poly_funcs[middle - 1].name, name);
-                    poly_funcs[middle].is_beginning_of_group = prev_different_name;
-                }
-                if(poly_funcs[middle].is_beginning_of_group == 1) return middle;
-                // Not the beginning of the group, check the previous if it is
-                middle--; // DANGEROUS: Potential for negative index
-            }
-
-            return middle;
-        }
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return -1;
-}
-
 successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t type_list_length){
     ast_type_t *arg_types = func->arg_types;
     length_t arity = func->arity;
 
     if(func->traits & AST_FUNC_VARARG){
-        if(func->arity > type_list_length) return false;
+        if(type_list_length < arity) return false;
     } else {
-        if(arity != type_list_length) return false;
+        if(type_list_length != arity) return false;
     }
 
-    for(length_t a = 0; a != arity; a++){
-        if(!ast_types_identical(&arg_types[a], &type_list[a])) return false;
-    }
-
-    return true;
+    return ast_type_lists_identical(arg_types, type_list, arity);
 }
 
 successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
@@ -973,7 +721,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     if(requires_use_of_defaults){
         // Check to make sure that we have the necessary default values available to later
         // fill in the missing arguments
-        
+
         ast_expr_t **arg_defaults = poly_template->arg_defaults;
 
         // No default arguments are available to use to attempt to meet the arity requirement
@@ -999,14 +747,19 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
     memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
 
+    // We will make weak copy of fields of 'poly_template' we will need to access,
+    // since it the location of the function in memory may move during conformation process
+    ast_type_t poly_template_return_type = poly_template->return_type;
+    ast_type_t *poly_template_arg_types = poly_template->arg_types;
+
     // Number of polymorphic paramater types that have been processed (used for cleanup)
     length_t i;
 
     for(i = 0; i != type_list_length; i++){
-        if(ast_type_has_polymorph(&poly_template->arg_types[i]))
-            res = arg_type_polymorphable(builder->compiler, builder->object, &poly_template->arg_types[i], &arg_types[i], &catalog);
+        if(ast_type_has_polymorph(&poly_template_arg_types[i]))
+            res = arg_type_polymorphable(builder->compiler, builder->object, &poly_template_arg_types[i], &arg_types[i], &catalog);
         else
-            res = ast_types_conform(builder, &arg_value_list[i], &arg_types[i], &poly_template->arg_types[i], conform_mode) ? SUCCESS : FAILURE;
+            res = ast_types_conform(builder, &arg_value_list[i], &arg_types[i], &poly_template_arg_types[i], conform_mode) ? SUCCESS : FAILURE;
 
         if(res != SUCCESS){
             i++;
@@ -1016,14 +769,14 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 
     // Ensure return type matches if provided
     if(gives && gives->elements_length != 0){
-        res = arg_type_polymorphable(builder->compiler, builder->object, &poly_template->return_type, gives, &catalog);
+        res = arg_type_polymorphable(builder->compiler, builder->object, &poly_template_return_type, gives, &catalog);
 
         if(res != SUCCESS){
             goto polymorphic_failure;
         }
 
         ast_type_t concrete_return_type;
-        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &poly_template->return_type, &concrete_return_type)){
+        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &poly_template_return_type, &concrete_return_type)){
             res = FAILURE;
             goto polymorphic_failure;
         }
@@ -1401,8 +1154,9 @@ errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *ob
     // Returns FAILURE if not found
     // Returns ALT_FAILURE if something went wrong
 
-    funcpair_t result;
     bool is_unique;
+    funcpair_t result;
+
     if(ir_gen_find_func_named(object, func_name, &is_unique, &result) == SUCCESS){
         // Found special function
         

@@ -16,6 +16,7 @@
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
+#include "IR/ir_func_endpoint.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
@@ -55,29 +56,46 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     // NOTE: Only ir_gens function skeletons
 
     ast_t *ast = &object->ast;
-    ir_module_t *module = &object->ir_module;
+    ir_module_t *ir_module = &object->ir_module;
     ast_func_t **ast_funcs = &ast->funcs;
     ast_func_alias_t **ast_func_aliases = &ast->func_aliases;
 
     // Setup IR variadic array type if it exists
     if(ast->common.ast_variadic_array){
         // Resolve ast_variadic_array type
-        if(ir_gen_resolve_type(compiler, object, ast->common.ast_variadic_array, &module->common.ir_variadic_array)) return FAILURE;
+        if(ir_gen_resolve_type(compiler, object, ast->common.ast_variadic_array, &ir_module->common.ir_variadic_array)) return FAILURE;
     }
 
     // Generate function skeletons
     for(length_t ast_func_id = 0; ast_func_id != ast->funcs_length; ast_func_id++){
         ast_func_t *ast_func = &(*ast_funcs)[ast_func_id];
-        if(ast_func->traits & AST_FUNC_POLYMORPHIC) continue;
-        if(ir_gen_func_head(compiler, object, ast_func, ast_func_id, false, NULL)) return FAILURE;
+
+        if(ast_func->traits & AST_FUNC_POLYMORPHIC){
+            ir_func_endpoint_t endpoint = (ir_func_endpoint_t){
+                .ast_func_id = ast_func_id,
+                .ir_func_id = INVALID_FUNC_ID,
+            };
+
+            ir_module_create_func_mapping(ir_module, ast_func->name, endpoint, false);
+
+            if(ast_func_is_method(ast_func)){
+                maybe_null_weak_cstr_t subject_typename = ast_method_get_subject_typename(ast_func);
+
+                if(subject_typename){
+                    ir_module_create_method_mapping(ir_module, subject_typename, ast_func->name, endpoint);
+                } else if(!ast_type_is_polymorph_like_ptr(&ast_func->arg_types[0])){
+                    // If not valid subject type and not polymorph, then invalid method
+                    ast_type_t dereferenced_view = ast_type_dereferenced_view(&ast_func->arg_types[0]);
+                    strong_cstr_t typename = ast_type_str(&dereferenced_view);
+                    compiler_panicf(compiler, dereferenced_view.source, "Subject type '%s' is not allowed for methods", typename);
+                    free(typename);
+                    return FAILURE;
+                }
+            }
+        } else if(ir_gen_func_head(compiler, object, ast_func, ast_func_id, NULL)){
+            return FAILURE;
+        }
     }
-
-    // Sort various mappings
-    list_qsort(&module->func_mappings, sizeof(ir_func_mapping_t), ir_func_mapping_cmp);
-    list_qsort(&module->methods, sizeof(ir_method_t), ir_method_cmp);
-    list_qsort(&module->poly_methods, sizeof(ir_poly_method_t), ir_poly_method_cmp);
-
-    if(ir_gen_job_list(object)) return FAILURE;
 
     // Generate function aliases
     trait_t req_traits_mask = AST_FUNC_VARARG | AST_FUNC_VARIADIC;
@@ -92,7 +110,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
             error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
         } else {
             optional_funcpair_t result;
-            error = ir_gen_find_func(compiler, object, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, &result);
+            error = ir_gen_find_func_regular(compiler, object, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, falias->source, &result);
 
             if(error == SUCCESS){
                 if(!result.has) continue;
@@ -108,14 +126,19 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         if(!is_unique && compiler_warnf(compiler, falias->source, "Multiple functions named '%s', using the first of them", falias->to)){
             return FAILURE;
         }
+
+        ir_func_endpoint_t endpoint = (ir_func_endpoint_t){
+            .ast_func_id = pair.ast_func_id,
+            .ir_func_id = pair.ir_func_id,
+        };
         
-        ir_module_insert_func_mapping(module, falias->from, pair.ir_func_id, pair.ast_func_id, true);
+        ir_module_create_func_mapping(ir_module, falias->from, endpoint, true);
     }
 
     errorcode_t error;
 
     // Find __variadic_array__ (if it exists)
-    error = ir_gen_find_singular_special_func(compiler, object, "__variadic_array__", &module->common.variadic_ir_func_id);
+    error = ir_gen_find_singular_special_func(compiler, object, "__variadic_array__", &ir_module->common.variadic_ir_func_id);
     if(error == ALT_FAILURE) return FAILURE;
     
     return SUCCESS;
@@ -151,8 +174,8 @@ errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cs
     return SUCCESS;
 }
 
-errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func, funcid_t ast_func_id,
-        bool preserve_sortedness, ir_func_mapping_t *optional_out_new_mapping){
+errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func,
+        funcid_t ast_func_id, ir_func_endpoint_t *optional_out_new_endpoint){
 
     funcid_t ir_func_id;
     if(ir_gen_func_template(compiler, object, ast_func->name, ast_func->source, &ir_func_id)) return FAILURE;
@@ -162,10 +185,6 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
     module_func->export_as = ast_func->export_as;
     module_func->argument_types = malloc(sizeof(ir_type_t*) * (ast_func->traits & AST_FUNC_VARIADIC ? ast_func->arity + 1 : ast_func->arity));
-
-    if(ast_func->traits & AST_FUNC_VARIADIC){
-        module_func->argument_types[ast_func->arity] = module->common.ir_variadic_array;
-    }
 
     if(compiler->checks & COMPILER_NULL_CHECKS){
         module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);        
@@ -191,78 +210,82 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
     #endif
 
-    ir_func_mapping_t *new_mapping = ir_module_insert_func_mapping(module, ast_func->name, ir_func_id, ast_func_id, preserve_sortedness);
-    if(optional_out_new_mapping) *optional_out_new_mapping = *new_mapping;
+    ir_func_endpoint_t new_endpoint = (ir_func_endpoint_t){
+        .ast_func_id = ast_func_id,
+        .ir_func_id = ir_func_id,
+    };
+    
+    ir_module_create_func_mapping(module, ast_func->name, new_endpoint, true);
 
-    if(!(ast_func->traits & AST_FUNC_FOREIGN)){
-        if(ast_func->arity > 0 && streq(ast_func->arg_names[0], "this")){
-            // This is a struct method, attach a reference to the struct
-            ast_type_t *this_type = &ast_func->arg_types[0];
+    if(optional_out_new_endpoint){
+        *optional_out_new_endpoint = new_endpoint;
+    }
 
-            // Do basic checking to make sure the type is in the format: *Structure
-            if(this_type->elements_length != 2 || this_type->elements[0]->id != AST_ELEM_POINTER){
-                compiler_panic(compiler, this_type->source, "Type of 'this' parameter must be a pointer to a struct");
-                return FAILURE; 
-            }
+    if(ast_func_is_method(ast_func)){
+        // This is a struct method, attach a reference to the struct
+        ast_type_t *this_type = &ast_func->arg_types[0];
 
-            switch(this_type->elements[1]->id){
-            case AST_ELEM_BASE: {
-                    // Check that the base isn't a primitive
-                    char *base = ((ast_elem_base_t*) this_type->elements[1])->base;
-                    if(typename_is_extended_builtin_type(base)){
-                        compiler_panicf(compiler, this_type->source, "Type of 'this' parameter must be a pointer to a struct (%s is a primitive)", base);
-                        return FAILURE;
-                    }
-
-                    // Find the target structure
-                    ast_composite_t *target = ast_composite_find_exact(&object->ast, ((ast_elem_base_t*) this_type->elements[1])->base);
-
-                    if(target == NULL){
-                        compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
-                        return FAILURE;
-                    }
-
-                    const weak_cstr_t method_name = module_func->name;
-                    weak_cstr_t struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
-                    ir_module_insert_method(module, method_name, struct_name, ir_func_id, ast_func_id, preserve_sortedness);
-                }
-                break;
-            case AST_ELEM_GENERIC_BASE: {
-                    ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
-                    ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, generic_base->name);
-                    
-                    if(template == NULL){
-                        compiler_panicf(compiler, this_type->source, "Undeclared polymorphic struct '%s'", generic_base->name);
-                        return FAILURE;
-                    }
-
-                    if(template->generics_length != generic_base->generics_length){
-                        compiler_panic(compiler, this_type->source, "INTERNAL ERROR: ir_gen_func_head got method with incorrect number of type parameters for generic struct type for 'this'");
-                        return FAILURE;
-                    }
-
-                    ir_module_insert_poly_method(module,
-                        module_func->name,
-                        generic_base->name,
-                        generic_base->generics, // NOTE: Memory for function argument types should persist, so this is ok
-                        generic_base->generics_length,
-                        ir_func_id,
-                        ast_func_id,
-                    preserve_sortedness);
-                }
-                break;
-            default:
-                compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
-                return FAILURE;
-            }
+        // Do basic checking to make sure the type is in the format: *Structure
+        if(!ast_type_is_pointer_to_base_like(this_type)){
+            compiler_panic(compiler, this_type->source, "Type of 'this' parameter must be a pointer to a struct");
+            return FAILURE; 
         }
-    } else {
-        // If 'foreign' function, we don't ever process the statements, which is where we generate the IR argument types here instead
 
-        while(module_func->arity != ast_func->arity){
-            if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
-            module_func->arity++;
+        // TODO: CLEANUP: Clean up this code
+        switch(this_type->elements[1]->id){
+        case AST_ELEM_BASE: {
+                // Check that the base isn't a primitive
+                weak_cstr_t base = ((ast_elem_base_t*) this_type->elements[1])->base;
+                if(typename_is_extended_builtin_type(base)){
+                    compiler_panicf(compiler, this_type->source, "Type of 'this' parameter must be a pointer to a struct (%s is a primitive)", base);
+                    return FAILURE;
+                }
+
+                // Find the target structure
+                ast_composite_t *target = ast_composite_find_exact(&object->ast, ((ast_elem_base_t*) this_type->elements[1])->base);
+
+                if(target == NULL){
+                    compiler_panicf(compiler, this_type->source, "Undeclared struct '%s'", ((ast_elem_base_t*) this_type->elements[1])->base, NULL);
+                    return FAILURE;
+                }
+
+                const weak_cstr_t method_name = module_func->name;
+                weak_cstr_t struct_name = ((ast_elem_base_t*) this_type->elements[1])->base;
+
+                ir_module_create_method_mapping(module, struct_name, method_name, new_endpoint);
+            }
+            break;
+        case AST_ELEM_GENERIC_BASE: {
+                ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
+                ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, generic_base->name);
+                
+                if(template == NULL){
+                    compiler_panicf(compiler, this_type->source, "Undeclared polymorphic struct '%s'", generic_base->name);
+                    return FAILURE;
+                }
+
+                if(template->generics_length != generic_base->generics_length){
+                    compiler_panic(compiler, this_type->source, "INTERNAL ERROR: ir_gen_func_head got method with incorrect number of type parameters for generic struct type for 'this'");
+                    return FAILURE;
+                }
+
+                ir_module_create_method_mapping(module, generic_base->name, module_func->name, new_endpoint);
+            }
+            break;
+        default:
+            compiler_panic(compiler, this_type->source, "Type of 'this' must be a pointer to a struct");
+            return FAILURE;
         }
+    }
+
+    while(module_func->arity != ast_func->arity){
+        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])) return FAILURE;
+        module_func->arity++;
+    }
+
+    if(ast_func->traits & AST_FUNC_VARIADIC){
+        module_func->argument_types[ast_func->arity] = module->common.ir_variadic_array;
+        module_func->arity++;
     }
 
     if(ast_func->traits & AST_FUNC_MAIN){
@@ -302,8 +325,10 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
     ir_builder_init(object->ir_module.deinit_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
 
     while(job_list->length != 0){
-        ir_func_mapping_t *job = &job_list->jobs[--job_list->length];
-        if((*ast_funcs)[job->ast_func_id].traits & AST_FUNC_FOREIGN) continue;
+        ir_func_endpoint_t *job = &job_list->jobs[--job_list->length];
+        trait_t traits = (*ast_funcs)[job->ast_func_id].traits;
+
+        if(traits & AST_FUNC_FOREIGN) continue;
 
         if(ir_gen_functions_body_statements(compiler, object, job->ast_func_id, job->ir_func_id)){
             return FAILURE;
@@ -316,63 +341,54 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
 errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id){
     // Generates IR instructions from AST statements and then stores them in the IR function with the ID 'ir_func_id' as groups of basicblocks
 
-    ir_module_t *ir_module = &object->ir_module;
-
-    // NOTE: These may be invalidated during statement generation
-    ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
-    ir_func_t *module_func = &object->ir_module.funcs.funcs[ir_func_id];
+    // Since the location of the AST function may shift around
+    // during this procedure, we will read/write to a local copy
+    ast_func_t ast_func = object->ast.funcs[ast_func_id];
     
-    bool is_main_like = ast_func->traits & AST_FUNC_MAIN || ast_func->traits & AST_FUNC_WINMAIN;
+    // We also won't retain a pointer to the actual IR function
+    // we are working with, since that too may shift around.
+    // Instead we'll retain a reference to its container
+    ir_funcs_t *ir_funcs = &object->ir_module.funcs;
+    
+    bool is_main_like = ast_func.traits & AST_FUNC_MAIN || ast_func.traits & AST_FUNC_WINMAIN;
 
-    bool show_is_empty_warning = ast_func->statements.length == 0
-                              && !(ast_func->traits & AST_FUNC_GENERATED)
+    bool show_is_empty_warning = ast_func.statements.length == 0
+                              && !(ast_func.traits & AST_FUNC_GENERATED)
                               && compiler->traits & COMPILER_FUSSY;
 
     if(show_is_empty_warning){
-        if(compiler_warnf(compiler, ast_func->source, "Function '%s' is empty", ast_func->name)){
+        if(compiler_warnf(compiler, ast_func.source, "Function '%s' is empty", ast_func.name)){
             return FAILURE;
         }
     }
 
+    bool terminated;
     errorcode_t errorcode = FAILURE;
 
     // Used for constructing array of basicblocks
     ir_builder_t builder;
     ir_builder_init(&builder, compiler, object, ast_func_id, ir_func_id, false);
 
-    while(module_func->arity != ast_func->arity){
-        if(ir_gen_resolve_type(compiler, object, &ast_func->arg_types[module_func->arity], &module_func->argument_types[module_func->arity])){
-            goto failure;
-        }
-        
+    for(length_t i = 0; i != ast_func.arity; i++){
         trait_t arg_traits = BRIDGE_VAR_UNDEF;
-        if(ast_func->arg_type_traits[module_func->arity] & AST_FUNC_ARG_TYPE_TRAIT_POD) arg_traits |= BRIDGE_VAR_POD;
-        add_variable(&builder, ast_func->arg_names[module_func->arity], &ast_func->arg_types[module_func->arity], module_func->argument_types[module_func->arity], arg_traits);
-        module_func->arity++;
+
+        if(ast_func.arg_type_traits[i] & AST_FUNC_ARG_TYPE_TRAIT_POD){
+            arg_traits |= BRIDGE_VAR_POD;
+        }
+
+        add_variable(&builder, ast_func.arg_names[i], &ast_func.arg_types[i], ir_funcs->funcs[ir_func_id].argument_types[i], arg_traits);
     }
 
     // Append variadic array argument for variadic functions
-    if(ast_func->traits & AST_FUNC_VARIADIC){
+    if(ast_func.traits & AST_FUNC_VARIADIC){
         // AST variadic type is already guaranteed to exist
-        add_variable(&builder, ast_func->variadic_arg_name, object->ast.common.ast_variadic_array, ir_module->common.ir_variadic_array, TRAIT_NONE);
-        module_func->arity++;
+        add_variable(&builder, ast_func.variadic_arg_name, object->ast.common.ast_variadic_array, object->ir_module.common.ir_variadic_array, TRAIT_NONE);
     }
 
-    if(is_main_like){
-        // Initialize all global variables
-        if(ir_gen_globals_init(&builder)){
-            goto failure;
-        }
+    // Initialize all global variables
+    if(is_main_like && ir_gen_globals_init(&builder)) goto failure;
 
-        // Refresh 'ast_func' pointer, since function may have moved
-        ast_func = &object->ast.funcs[ast_func_id];
-    }
-
-    bool terminated;
-    if(ir_gen_stmts(&builder, &ast_func->statements, &terminated)){
-        goto failure;
-    }
-
+    if(ir_gen_stmts(&builder, &ast_func.statements, &terminated)) goto failure;
     if(terminated) goto success;
 
     handle_deference_for_variables(&builder, &builder.scope->list);
@@ -381,53 +397,48 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         build_main_deinitialization(&builder);
     }
 
-    // Make sure to again update references that may have been invalidated
-    ast_func = &object->ast.funcs[ast_func_id];
-
-    if(ast_func->traits & AST_FUNC_AUTOGEN){
+    if(ast_func.traits & AST_FUNC_AUTOGEN){
         // Auto-generate part of function if requested
 
-        if(ast_func->traits & AST_FUNC_DEFER){
+        if(ast_func.traits & AST_FUNC_DEFER){
             if(handle_children_deference(&builder)) goto failure;
-        } else if(ast_func->traits & AST_FUNC_PASS){
+        }
+        else if(ast_func.traits & AST_FUNC_PASS){
             if(handle_children_pass_root(&builder, false)) goto failure;
             terminated = true;
         }
     }
 
     // TODO: CLEANUP: Clean this up
-    // We have to recheck whether the function was terminated because of 'handle_children_pass_root(&builder)'
+    // NOTE: We have to recheck if the function was terminated because of 'handle_children_pass_root(&builder)'
     if(!terminated){
-        // Ensure function pointers are up-to-date with the latest function locations
-        ast_func = &object->ast.funcs[ast_func_id];
-        module_func = &object->ir_module.funcs.funcs[ir_func_id];
+        ir_type_t *ir_return_type = ir_funcs->funcs[ir_func_id].return_type;
 
         // Handle auto-return
-        if(module_func->return_type->kind == TYPE_KIND_VOID){
+        if(ir_return_type->kind == TYPE_KIND_VOID){
             build_return(&builder, NULL);
-        } else if(ast_func->traits & AST_FUNC_MAIN
-                && module_func->return_type->kind == TYPE_KIND_S32
-                && ast_type_is_void(&ast_func->return_type)){
+        } else if(ast_func.traits & AST_FUNC_MAIN
+                && ir_return_type->kind == TYPE_KIND_S32
+                && ast_type_is_void(&ast_func.return_type)){
             // Return an int under the hood for 'func main() void'
             build_return(&builder, build_literal_int(builder.pool, 0));
         } else {
-            source_t where = ast_func->return_type.source;
-            strong_cstr_t return_typename = ast_type_str(&ast_func->return_type);
-            compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func->name);
+            source_t where = ast_func.return_type.source;
+            strong_cstr_t return_typename = ast_type_str(&ast_func.return_type);
+            compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func.name);
             free(return_typename);
             goto failure;
         }
     }
 
 success:
-    module_func = &object->ir_module.funcs.funcs[ir_func_id]; // (since may have been invalidated)
-    module_func->scope->following_var_id = builder.next_var_id;
-    module_func->variable_count = builder.next_var_id;
+    ir_funcs->funcs[ir_func_id].scope->following_var_id = builder.next_var_id;
+    ir_funcs->funcs[ir_func_id].variable_count = builder.next_var_id;
     errorcode = SUCCESS;
 
 failure:
-    module_func = &object->ir_module.funcs.funcs[ir_func_id]; // (since may have been invalidated)
-    module_func->basicblocks = builder.basicblocks;
+    ir_funcs->funcs[ir_func_id].basicblocks = builder.basicblocks;
+    object->ast.funcs[ast_func_id] = ast_func;
     free(builder.block_stack_labels);
     free(builder.block_stack_break_ids);
     free(builder.block_stack_continue_ids);
@@ -435,38 +446,28 @@ failure:
     return errorcode;
 }
 
-errorcode_t ir_gen_job_list(object_t *object){
-    ir_job_list_t *job_list = &object->ir_module.job_list;
-    length_t mappings_length = object->ir_module.func_mappings.length;
-
-    *job_list = (ir_job_list_t){
-        .jobs = malloc(sizeof(ir_func_mapping_t) * (mappings_length + 4)),
-        .length = mappings_length,
-        .capacity = mappings_length + 4,
-    };
-
-    memcpy(job_list->jobs, object->ir_module.func_mappings.mappings, sizeof(ir_func_mapping_t) * mappings_length);
-    return SUCCESS;
-}
-
 errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
 
     for(length_t g = 0; g != ast->globals_length; g++){
-        ir_global_t *global = &module->globals[g];
+        ast_global_t *ast_global = &ast->globals[g];
 
-        global->name = ast->globals[g].name;
-        global->traits = TRAIT_NONE;
+        trait_t traits = TRAIT_NONE;
+        if(ast_global->traits & AST_GLOBAL_EXTERNAL)     traits |= IR_GLOBAL_EXTERNAL;
+        if(ast_global->traits & AST_GLOBAL_THREAD_LOCAL) traits |= IR_GLOBAL_THREAD_LOCAL;
 
-        if(ast->globals[g].traits & AST_GLOBAL_EXTERNAL) global->traits |= IR_GLOBAL_EXTERNAL;
-        if(ast->globals[g].traits & AST_GLOBAL_THREAD_LOCAL) global->traits |= IR_GLOBAL_THREAD_LOCAL;
-        
-        global->trusted_static_initializer = NULL;
-
-        if(ir_gen_resolve_type(compiler, object, &ast->globals[g].type, &global->type)){
+        ir_type_t *ir_type;
+        if(ir_gen_resolve_type(compiler, object, &ast_global->type, &ir_type)){
             return FAILURE;
         }
+
+        module->globals[g] = (ir_global_t){
+            .name = ast_global->name,
+            .traits = traits,
+            .trusted_static_initializer = NULL,
+            .type = ir_type,
+        };
 
         module->globals_length++;
     }

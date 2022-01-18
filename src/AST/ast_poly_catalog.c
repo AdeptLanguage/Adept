@@ -4,7 +4,6 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "UTIL/ground.h"
-#include "UTIL/util.h"
 
 void ast_poly_catalog_init(ast_poly_catalog_t *catalog){
     *catalog = (ast_poly_catalog_t){
