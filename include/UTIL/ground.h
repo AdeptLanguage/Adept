@@ -142,6 +142,9 @@ inline lenstr_t cstr_to_lenstr(char *cstr){
 // Like bsearch, except will return the last checked pivot (or NULL)
 void *bsearch_insertion(const void *key, const void *base, size_t num, size_t size, int (*cmp)(const void *, const void*));
 
+// ---------------- NUM_ITEMS ----------------
+#define NUM_ITEMS(array) (sizeof (array) / sizeof *(array))
+
 // ---------------- special characters ----------------
 #ifdef __APPLE__
 #define USE_UTF8_INSTEAD_OF_EXTENDED_ASCII_FOR_SPECIAL_CHARACTERS

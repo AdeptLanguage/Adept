@@ -48,7 +48,7 @@
 #include "INFER/infer.h"
 #include "IR/ir.h"
 #include "IRGEN/ir_gen.h"
-#include "IRGEN/ir_gen_find.h"
+#include "IRGEN/ir_gen_polymorphable.h"
 #endif
 
 #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
@@ -1179,18 +1179,19 @@ success:
 // Returns FAILURE if potential_subject is not possible
 // Returns ALT_FAILURE on serious failure
 static errorcode_t method_subject_is_possible(compiler_t *compiler, object_t *object, ast_type_t *subject, ast_type_t *potential_subject){
-    errorcode_t res;
-
     if(ast_type_has_polymorph(potential_subject)){
-        ast_poly_catalog_t catalog;
-        ast_poly_catalog_init(&catalog);
-        res = arg_type_polymorphable(compiler, object, potential_subject, subject, &catalog);
-        ast_poly_catalog_free(&catalog);
-    } else {
-        res = ast_types_identical(potential_subject, subject) ? SUCCESS : FAILURE;
+        #ifdef ADEPT_INSIGHT_BUILD
+            return SUCCESS;
+        #else
+            ast_poly_catalog_t catalog;
+            ast_poly_catalog_init(&catalog);
+            errorcode_t res = ir_gen_polymorphable(compiler, object, potential_subject, subject, &catalog);
+            ast_poly_catalog_free(&catalog);
+            return res;
+        #endif
     }
 
-    return res;
+    return ast_types_identical(potential_subject, subject) ? SUCCESS : FAILURE;
 }
 
 funcid_list_t compiler_possibilities(compiler_t *compiler, object_t *object, weak_cstr_t name, ast_type_t *methods_only_type_of_this){

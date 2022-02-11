@@ -145,6 +145,7 @@ compile polycount || exit $?
 compile polymorphic_functions || exit $?
 compile polymorphic_inner || exit $?
 compile polymorphic_methods || exit $?
+compile polymorphic_prereqs || exit $?
 compile polymorphic_structs || exit $?
 compile pragma || exit $?
 compile primitives || exit $?

@@ -453,10 +453,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
 errorcode_t resolve_exprs_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t **exprs, length_t count);
 errorcode_t resolve_expr_list_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_list_t *statements);
 
-// ---------------- is_allowed_auto_conversion ----------------
+// ---------------- is_allowed_builtin_auto_conversion ----------------
 // Returns whether a builtin auto conversion is allowed
 // (For integers / floats)
-bool is_allowed_auto_conversion(compiler_t *compiler, object_t *object, const ast_type_t *a_type, const ast_type_t *b_type);
+bool is_allowed_builtin_auto_conversion(compiler_t *compiler, object_t *object, const ast_type_t *a_type, const ast_type_t *b_type);
 
 // ---------------- ir_builder_get_loop_label_info ----------------
 // Gets information associated with a loop label

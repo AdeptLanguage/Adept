@@ -134,7 +134,7 @@ typedef struct {
 
 // ---------------- struct ir_proc_query ----------------
 // Implementation of a procedure search query
-// Never create without using one of the ir_proc_query_init_* function
+// Never create without using one of the ir_proc_query_init_* functions
 struct ir_proc_query {
     bool conform;
     union {

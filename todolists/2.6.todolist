@@ -26,6 +26,7 @@ MEDIUM-PRIORITY:
 * better error propagation mechanism
 * better enums
 * module system
+* Self type
 
 LOW-PRIORITY:
 * Finish 'Any'

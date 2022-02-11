@@ -119,59 +119,6 @@ errorcode_t ir_gen_find_method_conforming_without_defaults(
     optional_funcpair_t *out_result
 );
 
-// ---------------- ir_gen_find_pass_func ----------------
-// Finds the correct __pass__ function for a type
-// NOTE: Returns SUCCESS when a function was found,
-//               FAILURE when a function wasn't found and
-//               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, optional_funcpair_t *result);
-
-// ---------------- ir_gen_find_defer_func ----------------
-// Finds the correct __defer__ function for a type
-// NOTE: Returns SUCCESS when a function was found,
-//               FAILURE when a function wasn't found and
-//               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_funcpair_t *result);
-
-// ---------------- ir_gen_find_assign_func ----------------
-// Finds the correct __assign__ function for a type
-// NOTE: Returns SUCCESS when a function was found,
-//               FAILURE when a function wasn't found and
-//               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_funcpair_t *result);
-
-// ---------------- func_args_match ----------------
-// Returns whether a function's arguments match
-// the arguments supplied.
-successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t type_list_length);
-
-// ---------------- func_args_conform ----------------
-// Returns whether a function's arguments conform
-// to the arguments supplied.
-// NOTE: Just because this function returns true, does NOT mean that
-//       the arity supplied meets the function's arity requirement
-// NOTE: 'gives' may be NULL
-successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value_t **arg_value_list,
-        ast_type_t *arg_type_list, length_t type_list_length, ast_type_t *gives, trait_t conform_mode);
-
-// ---------------- func_args_polymorphable ----------------
-// Returns whether the given types work with a polymorphic function template
-// NOTE: 'out_catalog' is only returned if the function is polymorphable
-// NOTE: 'out_catalog' may be NULL
-// NOTE: Returns SUCCESS if true
-// NOTE: Returns ALT_FAILURE if false
-// NOTE: Returns FAILURE if couldn't fully resolve
-// NOTE: 'gives' may be NULL
-errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_template, ir_value_t **arg_value_list, ast_type_t *arg_types, length_t type_length, ast_poly_catalog_t *out_catalog, ast_type_t *gives, trait_t conform_mode);
-errorcode_t func_args_polymorphable_no_conform(compiler_t *compiler, object_t *object, ast_func_t *poly_template, ast_type_t *arg_types, length_t type_list_length, ast_poly_catalog_t *out_catalog);
-
-// ---------------- ast_type_has_polymorph ----------------
-// Finds whether a concrete AST type is valid for a given polymorphic type
-// NOTE: Returns SUCCESS if true
-// NOTE: Returns FAILURE if false
-// NOTE: Returns ALT_FAILURE if couldn't fully resolve
-errorcode_t arg_type_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
-
 // ---------------- ir_gen_find_singular_special_func ----------------
 // Finds a special function (such as __variadic_array__)
 // Sets 'out_ir_func_id' ONLY IF the IR function was found.

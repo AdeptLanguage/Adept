@@ -27,6 +27,7 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
+#include "IRGEN/ir_gen_find_sf.h"
 #include "IRGEN/ir_gen_type.h"
 #include "LEX/lex.h"
 #include "UTIL/builtin_type.h"
@@ -2589,10 +2590,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
     return SUCCESS;
 }
 
-// ---------------- is_allowed_auto_conversion ----------------
+// ---------------- is_allowed_builtin_auto_conversion ----------------
 // Returns whether a builtin auto conversion is allowed
 // (For integers / floats)
-bool is_allowed_auto_conversion(compiler_t *compiler, object_t *object, const ast_type_t *a_type, const ast_type_t *b_type){
+bool is_allowed_builtin_auto_conversion(compiler_t *compiler, object_t *object, const ast_type_t *a_type, const ast_type_t *b_type){
     if(!ast_type_is_base(a_type) || !ast_type_is_base(b_type)) return false;
     if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return false;
     if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return false;

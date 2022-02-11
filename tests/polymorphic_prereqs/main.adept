@@ -1,0 +1,54 @@
+
+import basics
+
+packed struct DummyWithAssignOverload (_unused 17 ubyte) {
+    func __assign__(_other POD DummyWithAssignOverload) {
+        print("(15) Overloaded assignment")
+    }
+}
+
+func main {
+    print(add(1, 2), add(2.0, 3.0), add(3.0, 4.0f), add(4uz, 5si))
+
+    value1 int = 11
+    value2 float = 13.0f
+    indirect_print(&value1)
+    indirect_print(&value2)
+
+    dummy DummyWithAssignOverload
+    assign_overridden_distinction(&dummy)
+    assign_overridden_distinction(&value1)
+
+    indirect_print(&dummy)
+
+    print_int_signness(19si)
+    print_int_signness(21ui)
+}
+
+func add(a, b $T~__number__) $T {
+    return a + b
+}
+
+func indirect_print(primitive_value_pointer *$T~__primitive__) {
+    print(*primitive_value_pointer)
+}
+
+func indirect_print(_unused_non_primitive *$T~__struct__) {
+    printf("struct %s with a size of %zu\n", typenameof $T, sizeof $T)
+}
+
+func assign_overridden_distinction(with_assign_overridden_distinction *$T~__assign__) {
+    *with_assign_overridden_distinction = *with_assign_overridden_distinction
+}
+
+func assign_overridden_distinction(no_assign_overridden_distinction *$T~__pod__) {
+    *no_assign_overridden_distinction = *no_assign_overridden_distinction
+}
+
+func print_int_signness(integer $T~__unsigned__) {
+    print("unsigned integer " + integer)
+}
+
+func print_int_signness(integer $T~__signed__) {
+    print("signed integer " + integer)
+}
