@@ -42,7 +42,7 @@ errorcode_t jsmnh_obj_ctx_easy_init(jsmnh_obj_ctx_t *ctx, char *raw_buffer, leng
     jsmn_init(&parser);
 
     // Try to precompute number of tokens needed
-    length_t required_tokens = jsmn_parse(&parser, raw_buffer, raw_buffer_length, NULL, 0);
+    int required_tokens = jsmn_parse(&parser, raw_buffer, raw_buffer_length, NULL, 0);
     if(required_tokens < 0) return FAILURE;
 
     // Preallocate enough space for tokens
@@ -60,7 +60,7 @@ errorcode_t jsmnh_obj_ctx_easy_init(jsmnh_obj_ctx_t *ctx, char *raw_buffer, leng
     };
 
     if(parse_error < 0
-    || (int) required_tokens != parse_error
+    || required_tokens != parse_error
     || !jsmnh_get_object(raw_buffer, tokens, 0)){
         return FAILURE;
     }

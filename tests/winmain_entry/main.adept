@@ -1,4 +1,5 @@
 pragma windows_only
+pragma ignore_unused
 
 import 'sys/cstdio.adept'
 
@@ -17,6 +18,8 @@ bomb Bomb = Bomb('Hello World')
 external stdcall func WinMain(hInstance, hPrevInstance HINSTANCE, lpCmdLine LPSTR, nCmdShow int) int {
     // The initialization of 'bomb' and its automatic '__defer__' call should
     // happen here implicitly
+
+    return 0
 }
 
 /*

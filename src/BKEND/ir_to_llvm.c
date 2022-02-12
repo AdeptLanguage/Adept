@@ -237,11 +237,11 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
 	#ifdef _WIN32
     // Windows -> ???
 
-    if(compiler->cross_compile_for == CROSS_COMPILE_MACOS){
+    if(llvm->compiler->cross_compile_for == CROSS_COMPILE_MACOS){
         // Windows -> MacOS
         // Even though we can't link it,
         // we will give the user the link command needed to link it on a MacOS machine.
-        return create_unix_link_command(compiler, "gcc", objfile_filename, linker_additional);
+        return create_unix_link_command(llvm->compiler, "gcc", objfile_filename, linker_additional);
     }
 
     // Windows -> Windows

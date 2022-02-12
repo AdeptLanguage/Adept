@@ -33,7 +33,7 @@ UNIX_LLVM_BUILD_INCLUDE=
 UNIX_LIBCURL_LIB=/opt/homebrew/opt/curl/lib
 UNIX_LIBCURL_INCLUDE=/opt/homebrew/opt/curl/lib
 UNIX_LIBCURL_BUILD_INCLUDE=
-DEBUG_ADDRESS_SANITIZE=true
+DEBUG_ADDRESS_SANITIZE=false
 DEBUG_LEAK_SANITIZE=false
 #UNIX_CC=gcc
 #UNIX_CXX=g++
@@ -120,7 +120,7 @@ LLVM_INCLUDE_FLAGS=$(LLVM_INCLUDE_DIRS) -DNDEBUG -DLLVM_BUILD_GLOBAL_ISEL -D__ST
 # -lgtest_main -lgtest -lLLVMTestingSupport
 
 # -static-libgcc -static-libstdc++ -static
-CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=c11 -pedantic-errors -O0 -DNDEBUG -Werror -ferror-limit=1 # -fmax-errors=1 -Werror
+CFLAGS=-c -Wall -Wextra -I"include" $(LLVM_INCLUDE_FLAGS) $(LIBCURL_INCLUDE_FLAGS) -std=gnu11 -pedantic-errors -O0 -DNDEBUG # -Werror -ferror-limit=1 # -fmax-errors=1 -Werror
 ADDITIONAL_DEBUG_CFLAGS=-DENABLE_DEBUG_FEATURES -g
 
 ifeq ($(ENABLE_ADEPT_PACKAGE_MANAGER),true)
@@ -137,6 +137,10 @@ endif
 ifeq ($(DEBUG_LEAK_SANITIZE),true)
 	CFLAGS+= -fsanitize=leak
 	LDFLAGS+= -fsanitize=leak
+endif
+
+ifeq ($(OS), Windows_NT)
+	CFLAGS+= -D__USE_MINGW_ANSI_STDIO 
 endif
 
 ESSENTIAL_SOURCES= \
@@ -347,6 +351,7 @@ endif
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
 ifeq ($(OS), Windows_NT)
 	@if not exist obj mkdir obj
+	@if not exist obj\AST mkdir obj\AST
 	@if not exist obj\debug mkdir obj\debug
 	@if not exist "$(@D)" mkdir "$(@D)"
 else
