@@ -167,9 +167,9 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             // If polymorph tokens starts with tilde, then we allow auto conversion
             if(name[0] == '~'){
                 allow_auto_conversion = true;
-                memmove(name, &name[1], strlen(name) /* - 1 + 1*/);
+                memmove(name, &name[1], strlen(name)); // (includes '\0')
             }
-            
+
             if(tokens[*i].id == TOKEN_BIT_COMPLEMENT){
                 if(!ctx->allow_polymorphic_prereqs){
                     free(name);

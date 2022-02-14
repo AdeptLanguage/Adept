@@ -108,11 +108,15 @@ typedef struct {
 
 // ---------------- ast_elem_polymorph_t ----------------
 // Type element for a polymorphic type variable
+#define DERIVE_ELEM_POLYMORPH struct { \
+    unsigned int id; \
+    source_t source; \
+    strong_cstr_t name; \
+    bool allow_auto_conversion; \
+}
+
 typedef struct {
-    unsigned int id;
-    source_t source;
-    strong_cstr_t name;
-    bool allow_auto_conversion;
+    DERIVE_ELEM_POLYMORPH;
 } ast_elem_polymorph_t;
 
 // ---------------- ast_elem_polycount_t ----------------
@@ -126,13 +130,10 @@ typedef struct {
 // ---------------- ast_elem_polymorph_prereq_t ----------------
 // Type element for a polymorphic type variable which only fits
 // for structs that match the similarity prerequisite
-// NOTE: Must overlap with 'ast_elem_polymorph_t'
+// NOTE: Guaranteed to overlap with 'ast_elem_polymorph_t'
 typedef struct {
-    unsigned int id;
-    source_t source;
-    strong_cstr_t name;
-    bool allow_auto_conversion;
-    // ----------------------------
+    DERIVE_ELEM_POLYMORPH;
+
     strong_cstr_t similarity_prerequisite;
 } ast_elem_polymorph_prereq_t;
 

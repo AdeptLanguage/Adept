@@ -107,7 +107,7 @@ typedef struct {
 } lenstr_t, strong_lenstr_t, weak_lenstr_t;
 
 inline bool lenstreq(lenstr_t a, lenstr_t b){
-    return a.length == b.length ? memcmp(a.cstr, b.cstr, a.length) == 0 : false;
+    return a.length == b.length && memcmp(a.cstr, b.cstr, a.length) == 0;
 }
 
 inline int lenstrcmp(lenstr_t a, lenstr_t b){

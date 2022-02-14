@@ -16,6 +16,32 @@
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 
+static errorcode_t enforce_polymorph(
+    compiler_t *compiler,
+    object_t *object,
+    ast_poly_catalog_t *catalog,
+    ast_elem_polymorph_t *polymorph_elem,
+    ast_poly_catalog_type_t *type_var,
+    ast_type_t *concrete_replacement
+){
+    if(type_var == NULL){
+        // No existing type variable was found, so add to it to the catalog
+        ast_poly_catalog_add_type(catalog, polymorph_elem->name, concrete_replacement);
+        return SUCCESS;
+    }
+
+    if(!ast_types_identical(concrete_replacement, &type_var->binding)){
+        // Allow built-in auto conversion regardless of 'polymorph_elem->allow_auto_conversion' flag from before v2.6
+
+        if(!is_allowed_builtin_auto_conversion(compiler, object, concrete_replacement, &type_var->binding)){
+            // Given arguments don't meet consistency requirements of type variables
+            return FAILURE;
+        }
+    }
+
+    return SUCCESS;
+}
+
 static errorcode_t enforce_prereq(
     compiler_t *compiler,
     object_t *object,
@@ -50,7 +76,7 @@ static errorcode_t enforce_prereq(
         ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, prereq->name);
 
         // Determine special allowed auto conversions
-        if(type_var ? is_allowed_builtin_auto_conversion(compiler, object, &type_var->binding, concrete_type) : false){
+        if(type_var && is_allowed_builtin_auto_conversion(compiler, object, &type_var->binding, concrete_type)){
             return SUCCESS;
         }
     }
@@ -139,32 +165,24 @@ static errorcode_t ir_gen_polymorphable_elem_prereq(
     }
 
     if(enforce_prereq(compiler, object, polymorphic_type, concrete_type, catalog, index)) return FAILURE;
-    
-    // DANGEROUS: Manually managed AST type with semi-ownership
-    // DANGEROUS: Potentially bad memory tricks
-    ast_type_t replacement;
-    replacement.elements_length = concrete_type->elements_length - index;
-    replacement.elements = malloc(sizeof(ast_elem_t*) * replacement.elements_length);
-    memcpy(replacement.elements, &concrete_type->elements[index], sizeof(ast_elem_t*) * replacement.elements_length);
-    replacement.source = replacement.elements[0]->source;
+
+    // DANGEROUS: AST type with semi-ownership
+    length_t replacement_length = concrete_type->elements_length - index;
+
+    ast_type_t replacement = (ast_type_t){
+        .elements = memclone((void*) &concrete_type->elements[index], sizeof(ast_elem_t*) * replacement_length),
+        .elements_length = replacement_length,
+        .source = concrete_type->elements[index]->source,
+    };
 
     // Ensure consistency with catalog
     ast_elem_polymorph_prereq_t *prereq = (ast_elem_polymorph_prereq_t*) polymorphic_type->elements[index];
     ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, prereq->name);
 
-    if(type_var){
-        if(!ast_types_identical(&replacement, &type_var->binding)){
-            // Given arguments don't meet consistency requirements of type variables
-            free(replacement.elements);
-            return FAILURE;
-        }
-    } else {
-        // Add to catalog since it's not already present
-        ast_poly_catalog_add_type(catalog, prereq->name, &replacement);
-    }
-
+    // Ok since 'ast_elem_polymorph_t' is guaranteed to overlap with 'ast_elem_polymorph_t'
+    errorcode_t res = enforce_polymorph(compiler, object, catalog, (ast_elem_polymorph_t*) prereq, type_var, &replacement);
     free(replacement.elements);
-    return SUCCESS;
+    return res;
 }
 
 errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog){
@@ -232,29 +250,22 @@ errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_typ
                     return ALT_FAILURE;
                 }
 
-                // DANGEROUS: Manually managed AST type with semi-ownership
-                // DANGEROUS: Potentially bad memory tricks
-                ast_type_t replacement;
-                replacement.elements_length = concrete_type->elements_length - i;
-                replacement.elements = malloc(sizeof(ast_elem_t*) * replacement.elements_length);
-                memcpy(replacement.elements, &concrete_type->elements[i], sizeof(ast_elem_t*) * replacement.elements_length);
-                replacement.source = replacement.elements[0]->source;
+                // DANGEROUS: AST type with semi-ownership
+                length_t replacement_length = concrete_type->elements_length - i;
+
+                ast_type_t replacement = (ast_type_t){
+                    .elements = memclone(&concrete_type->elements[i], sizeof(ast_elem_t*) * replacement_length),
+                    .elements_length = replacement_length,
+                    .source = concrete_type->elements[i]->source,
+                };
 
                 // Ensure consistency with catalog
                 ast_elem_polymorph_t *polymorphic_elem = (ast_elem_polymorph_t*) polymorphic_type->elements[i];
                 ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, polymorphic_elem->name);
 
-                if(type_var){
-                    if(!ast_types_identical(&replacement, &type_var->binding)){
-                        if(!polymorphic_elem->allow_auto_conversion || !is_allowed_builtin_auto_conversion(compiler, object, &replacement, &type_var->binding)){
-                            // Given arguments don't meet consistency requirements of type variables
-                            free(replacement.elements);
-                            return FAILURE;
-                        }
-                    }
-                } else {
-                    // Add to catalog since it's not already present
-                    ast_poly_catalog_add_type(catalog, polymorphic_elem->name, &replacement);
+                if(enforce_polymorph(compiler, object, catalog, polymorphic_elem, type_var, &replacement)){
+                    free(replacement.elements);
+                    return FAILURE;
                 }
 
                 i = concrete_type->elements_length - 1;

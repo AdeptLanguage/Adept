@@ -35,7 +35,7 @@ static ast_elem_base_t *try_ast_elem_base(ast_elem_t *elem){
 
 static errorcode_t ir_gen_check_prereq_number(ast_elem_t *concrete_elem, bool *out_meets){
     ast_elem_base_t *base_elem = try_ast_elem_base(concrete_elem);
-    *out_meets = base_elem ? typename_builtin_type(base_elem->base) != BUILTIN_TYPE_NONE : false;
+    *out_meets = base_elem && typename_builtin_type(base_elem->base) != BUILTIN_TYPE_NONE;
     return SUCCESS;
 }
 
@@ -49,7 +49,7 @@ static errorcode_t ir_gen_check_prereq_pod(compiler_t *compiler, object_t *objec
 
 static errorcode_t ir_gen_check_prereq_primitive(ast_elem_t *concrete_elem, bool *out_meets){
     ast_elem_base_t *base_elem = try_ast_elem_base(concrete_elem);
-    *out_meets = base_elem ? typename_is_extended_builtin_type(base_elem->base) : false;
+    *out_meets = base_elem && typename_is_extended_builtin_type(base_elem->base);
     return SUCCESS;
 }
 

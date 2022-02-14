@@ -53,7 +53,7 @@ LOW-PRIORITY:
         #end
     }
     ```
-* fix issues with __assign__ auto-generation broken in b32ccdb5d397d645a0f4c65de0bfbc0eff38c61e
+* make call to functions like `max($T, $T) $T` allow built-in auto conversions between primitives for arguments
 
 v2.4 COMPLETED:
 + Standard Library Imports
