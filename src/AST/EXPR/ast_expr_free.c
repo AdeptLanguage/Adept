@@ -326,5 +326,8 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_DECLARE_CONSTANT:
         ast_expr_declare_constant_free((ast_expr_declare_constant_t*) expr);
         break;
+    case EXPR_CONDITIONLESS_BLOCK:
+        ast_expr_list_free(&((ast_expr_conditionless_block_t*) expr)->statements);
+        break;
     }
 }

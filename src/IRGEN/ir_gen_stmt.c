@@ -530,6 +530,23 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
                     asm_expr->has_side_effects, asm_expr->is_stack_align);
             }
             break;
+        case EXPR_CONDITIONLESS_BLOCK: {
+                ast_expr_conditionless_block_t *block_expr = (ast_expr_conditionless_block_t*) stmt;
+
+                open_scope(builder);
+
+                if(ir_gen_stmts(builder, &block_expr->statements, out_is_terminated)){
+                    close_scope(builder);
+                    return FAILURE;
+                }
+
+                close_scope(builder);
+
+                if(*out_is_terminated){
+                    return SUCCESS;
+                }
+            }
+            break;
         default:
             compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_stmts()");
             return FAILURE;

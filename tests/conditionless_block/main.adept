@@ -1,0 +1,14 @@
+
+import basics
+
+func main {
+    defer print("4")
+
+    {
+        defer print("2")
+        
+        print("1")
+    }
+
+    print("3")
+}

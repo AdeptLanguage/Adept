@@ -731,6 +731,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_LLVM_ASM:
             if(parse_llvm_asm(ctx, stmt_list)) return FAILURE;
             break;
+        case TOKEN_BEGIN:
+            if(parse_conditionless_block(ctx, stmt_list, defer_scope)) return FAILURE;
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
             return FAILURE;
@@ -1010,6 +1013,36 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
 
     // Append the created switch statement
     stmt_list->statements[stmt_list->length++] = (ast_expr_t*) switch_expr;
+    return SUCCESS;
+}
+
+errorcode_t parse_conditionless_block(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope){
+    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    ast_expr_list_t block_stmt_list;
+    ast_expr_list_init(&block_stmt_list, 4);
+
+    defer_scope_t block_defer_scope;
+    defer_scope_init(&block_defer_scope, defer_scope, NULL, TRAIT_NONE);
+
+    if(parse_stmts(ctx, &block_stmt_list, &block_defer_scope, PARSE_STMTS_STANDARD)
+    || parse_eat(ctx, TOKEN_END, "Expected '}' to close condition-less block")){
+        ast_expr_list_free(&block_stmt_list);
+        defer_scope_free(&block_defer_scope);
+        return FAILURE;
+    }
+
+    defer_scope_free(&block_defer_scope);
+
+    ast_expr_conditionless_block_t *stmt = malloc(sizeof(ast_expr_conditionless_block_t));
+
+    *stmt = (ast_expr_conditionless_block_t){
+        .id = EXPR_CONDITIONLESS_BLOCK,
+        .source = source,
+        .statements = block_stmt_list,
+    };
+
+    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
     return SUCCESS;
 }
 

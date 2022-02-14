@@ -41,6 +41,7 @@ compile circular_pointers || exit $?
 compile colons_alternative_syntax || exit $?
 compile complement || exit $?
 compile complex_composite_rtti || exit $?
+compile conditionless_block || exit $?
 compile conditionless_break_label || exit $?
 compile const_variables || exit $?
 compile constants || exit $?

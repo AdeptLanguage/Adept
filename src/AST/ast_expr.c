@@ -594,6 +594,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_declare_constant
         #undef clone_as_declare_constant
+    case EXPR_CONDITIONLESS_BLOCK:
+        #define expr_as_block ((ast_expr_conditionless_block_t*) expr)
+        #define clone_as_block ((ast_expr_conditionless_block_t*) clone)
+
+        clone = malloc(sizeof(ast_expr_conditionless_block_t));
+        clone_as_block->statements = ast_expr_list_clone(&expr_as_block->statements);
+        break;
+        
+        #undef expr_as_conditionless_block
+        #undef clone_as_conditionless_block
     default:
         die("ast_expr_clone() - Got unrecognized expression ID 0x%08X\n", expr->id);
     }

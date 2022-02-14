@@ -65,6 +65,8 @@ call :compile complement
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile complex_composite_rtti
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile conditionless_block
+if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile conditionless_break_label
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile const_variables

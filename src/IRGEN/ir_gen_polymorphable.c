@@ -179,7 +179,7 @@ static errorcode_t ir_gen_polymorphable_elem_prereq(
     ast_elem_polymorph_prereq_t *prereq = (ast_elem_polymorph_prereq_t*) polymorphic_type->elements[index];
     ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, prereq->name);
 
-    // Ok since 'ast_elem_polymorph_t' is guaranteed to overlap with 'ast_elem_polymorph_t'
+    // Ok since 'ast_elem_polymorph_prereq_t' is guaranteed to overlap with 'ast_elem_polymorph_t'
     errorcode_t res = enforce_polymorph(compiler, object, catalog, (ast_elem_polymorph_t*) prereq, type_var, &replacement);
     free(replacement.elements);
     return res;
