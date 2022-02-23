@@ -580,6 +580,6 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 
 
 
-#### Thank you for sponsering Adept: ❤️
+#### Thank you for sponsoring Adept: ❤️
 
 - Fernando Dantas

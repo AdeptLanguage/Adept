@@ -259,7 +259,8 @@ failure:
                     config->show_new_compiler_available
                 ){
                     blueprintf("\nNEWS: A newer version of Adept is available!\n");
-                    printf("    (Visit https://github.com/AdeptLanguage/Adept for more information)\n\n");
+                    printf("    Visit https://github.com/AdeptLanguage/Adept for more information!\n");
+                    printf("    You can disable update checks in your 'adept.config'\n\n");
                     goto success;
                 } else if(config->show_checking_for_updates_message){
                     blueprintf(" -> Already up to date!\n");
