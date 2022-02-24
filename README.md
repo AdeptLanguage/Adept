@@ -2,26 +2,26 @@
 
 A blazing fast language for general purpose programming.
 
-[Download Adept v2.5 for Windows](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.6 for Windows](https://github.com/IsaacShelton/Adept/releases)
 
-[Download Adept v2.5 for MacOS](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.6 for MacOS](https://github.com/IsaacShelton/Adept/releases)
 
-[Download Adept v2.5 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
+[Download Adept v2.6 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
 
 ## Resources
-[Adept v2.5 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
+[Adept v2.6 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
 
-[Adept v2.5 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
+[Adept v2.6 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
 
-[Adept v2.5 VS-Code Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
+[Adept v2.6 VS-Code Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
 
-[Adept v2.5 VS-Code Basic Syntax Checking](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
+[Adept v2.6 VS-Code Basic Syntax Checking](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
 
-[Adept v2.5 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
+[Adept v2.6 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
 
-[Adept v2.5 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
+[Adept v2.6 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
 
-[Adept v2.5 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
+[Adept v2.6 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
 
 ## Command-Line Usage
 
@@ -30,7 +30,7 @@ A blazing fast language for general purpose programming.
 - filename - default is 'main.adept'
 - options - secondary compiler options
 
-You can optionally use `adept2-5` instead of `adept` if you have multiple versions installed.
+You can optionally use `adept2-6` instead of `adept` if you have multiple versions installed.
 
 ## Basic Functionality
 
@@ -560,6 +560,7 @@ func maybeGetAlphaChannel(color int, out a *int) void {
 - [(2.2) A* Path Finding](https://github.com/IsaacShelton/AdeptPathFinding)
 - [(2.3) Creature Gathering Game](https://github.com/IsaacShelton/Tadpole)
 - [(2.4) Card Game](https://github.com/IsaacShelton/GenericCardGame)
+- [(2.5) MiniBox Multiplayer Gamepad](https://github.com/IsaacShelton/MiniBox)
 
 # Popular Library Ports
 - [(2.5) Box2D](https://github.com/IsaacShelton/Box2D)
