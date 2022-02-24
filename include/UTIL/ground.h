@@ -13,16 +13,16 @@ extern "C" {
 */
 
 // Release information
-#define ADEPT_VERSION_STRING    "2.6"
-#define ADEPT_VERSION_NUMBER    2.6
+#define ADEPT_VERSION_STRING    "2.7"
+#define ADEPT_VERSION_NUMBER    2.7
 #define ADEPT_VERSION_MAJOR     2
-#define ADEPT_VERSION_MINOR     6
+#define ADEPT_VERSION_MINOR     7
 #define ADEPT_VERSION_RELEASE   0
 #define ADEPT_VERSION_QUALIFIER ""
 
 // Previous stable version string
 // (only used by preview builds to ignore "new update" false positives)
-#define ADEPT_PREVIOUS_STABLE_VERSION_STRING "2.5"
+#define ADEPT_PREVIOUS_STABLE_VERSION_STRING "2.6"
 
 #define ADEPT_PACKAGE_MANAGER_SPEC_VERSION 1
 
