@@ -324,6 +324,7 @@ insight: $(SOURCES)
 	@cp src/UTIL/search.c $(INSIGHT_OUT_DIR)/src/UTIL/search.c
 	@cp src/UTIL/string.c $(INSIGHT_OUT_DIR)/src/UTIL/string.c
 	@cp src/UTIL/string_builder.c $(INSIGHT_OUT_DIR)/src/UTIL/string_builder.c
+	@cp src/UTIL/string_list.c $(INSIGHT_OUT_DIR)/src/UTIL/string_list.c
 	@cp src/UTIL/util.c $(INSIGHT_OUT_DIR)/src/UTIL/util.c
 
 	@cp include/UTIL/__insight.h $(INSIGHT_OUT_DIR)/insight.h
