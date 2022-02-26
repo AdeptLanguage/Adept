@@ -172,6 +172,9 @@ typedef struct {
 
     // Don't allow for implicit user casts
     bool no_user_casts : 1;
+
+    // Throw an error when trying to use functions marked as "no discard"
+    bool no_discard : 1;
 } ast_expr_call_t;
 
 // ---------------- ast_expr_variable_t ----------------
@@ -256,6 +259,9 @@ typedef struct {
 
     // Whether __defer__ should not be called on dropped temporary values
     bool allow_drop : 1;
+
+    // Throw an error when trying to use functions marked as "no discard"
+    bool no_discard : 1;
 } ast_expr_call_method_t;
 
 // ---------------- ast_expr_va_arg_t ----------------

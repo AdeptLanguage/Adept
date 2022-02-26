@@ -244,6 +244,8 @@ call :compile new_undef
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile newline_tolerance
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile no_discard
+if %errorlevel% neq 1 popd & exit /b %errorlevel% REM Expect failure
 call :compile not
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile null

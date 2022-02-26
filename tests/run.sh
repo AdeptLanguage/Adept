@@ -132,6 +132,7 @@ compile new_delete || exit $?
 compile new_dynamic || exit $?
 compile new_undef || exit $?
 compile newline_tolerance || exit $?
+! compile no_discard || exit $? # Expect failure
 compile not || exit $?
 compile null || exit $?
 compile null_checks --null-checks || exit $?

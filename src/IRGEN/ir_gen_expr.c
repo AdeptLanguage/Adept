@@ -37,6 +37,17 @@
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
+static errorcode_t ensure_not_violating_no_discard(compiler_t *compiler, bool no_discard_active, source_t call_source, ast_func_t *callee_ast_func){
+    if(no_discard_active && callee_ast_func->traits & AST_FUNC_NO_DISCARD){
+        strong_cstr_t display = ast_func_head_str(callee_ast_func);
+        compiler_panicf(compiler, call_source, "Not allowed to discard value returned from '%s'", display);
+        free(display);
+        return ALT_FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
     // NOTE: Generates an ir_value_t from an ast_expr_t
     // NOTE: Will write determined ast_type_t to 'out_expr_type' (Can use NULL to ignore)
@@ -611,6 +622,11 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
             if(out_expr_type != NULL) ast_type_make_base(out_expr_type, strclone("void"));
             ast_types_free_fully(arg_types, arg_arity);
             return SUCCESS;
+        }
+
+        if(ensure_not_violating_no_discard(builder->compiler, expr->no_discard, expr->source, pair.ast_func)){
+            ast_types_free_fully(arg_types, arg_arity);
+            return ALT_FAILURE;
         }
 
         // Revalidate our target function
@@ -1779,6 +1795,11 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     }
 
     funcpair_t pair = result.value;
+
+    if(ensure_not_violating_no_discard(builder->compiler, expr->no_discard, expr->source, pair.ast_func)){
+        ast_types_free_fully(arg_types, arg_arity);
+        return ALT_FAILURE;
+    }
 
     // Revalidate our target function
     pair.ast_func = &ast->funcs[pair.ast_func_id];

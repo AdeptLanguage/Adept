@@ -1,4 +1,4 @@
-# Overall Things for Adept 2.6
+# Overall Things for Adept 2.7
 
 HIGH-PRIORITY:
 
@@ -11,7 +11,6 @@ MEDIUM-PRIORITY:
     }
     ```
 * 'break default' to break to default condition of switch statement
-* nodiscard / must_use
 * __return__ and return POD
 * easy and consistent constructors
 * switch over enums without enums name for each entry: idea: exhaustive switch kind using CardKind { ... }
@@ -88,3 +87,6 @@ v2.6 COMPLETED:
 + optional parameter names for foreign functions
 + changed '$T' polymorphs to always allow built-in auto conversions (equivalent to '$~T' in previous versions) 
 + conditionless blocks
+
+v2.7 COMPLETED:
++ "exhaustive" marked return types (aka nodiscard / must_use)

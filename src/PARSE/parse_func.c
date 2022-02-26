@@ -62,6 +62,11 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     tokenid_t beginning_token_id = tokens[*ctx->i].id;
 
+    if(beginning_token_id == TOKEN_EXHAUSTIVE){
+        func->traits |= AST_FUNC_NO_DISCARD;
+        beginning_token_id = tokens[++(*ctx->i)].id;
+    }
+
     if(!func_head.is_foreign && (beginning_token_id == TOKEN_BEGIN || beginning_token_id == TOKEN_ASSIGN)){
         ast_type_make_base(&func->return_type, strclone("void"));
     } else {

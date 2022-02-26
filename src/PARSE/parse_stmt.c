@@ -765,6 +765,21 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         defer_scope_fulfill(defer_scope, stmt_list);
     }
 
+    // Mark all top-level calls to not allow discarding values that come
+    // from functions that are marked as "no discard"
+    for(length_t i = 0; i < stmt_list->length; i++){
+        ast_expr_t *stmt = stmt_list->statements[i];
+
+        switch(stmt->id){
+        case EXPR_CALL:
+            ((ast_expr_call_t*) stmt)->no_discard = true;
+            break;
+        case EXPR_CALL_METHOD:
+            ((ast_expr_call_method_t*) stmt)->no_discard = true;
+            break;
+        }
+    }
+
     return SUCCESS; // '}' was reached
 }
 
@@ -786,7 +801,7 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
         if(errorcode != SUCCESS){
             ast_expr_free_fully(out_expr);
         }
-
+        
         if(out_expr->id != EXPR_CALL && out_expr->id != EXPR_CALL_METHOD){
             compiler_panicf(ctx->compiler, out_expr->source, "Expression is not a statement");
             ast_expr_free_fully(out_expr);

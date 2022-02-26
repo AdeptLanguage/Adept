@@ -78,6 +78,7 @@ typedef struct {
 #define AST_FUNC_VARIADIC    TRAIT_A
 #define AST_FUNC_IMPLICIT    TRAIT_B
 #define AST_FUNC_WINMAIN     TRAIT_C
+#define AST_FUNC_NO_DISCARD  TRAIT_D
 
 // Additional AST function traits for builtin uses
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
@@ -289,6 +290,11 @@ maybe_null_weak_cstr_t ast_method_get_subject_typename(ast_func_t *method);
 // Create a string of the inside of the parentheses for the
 // arguments of a function declaration
 strong_cstr_t ast_func_args_str(ast_func_t *func);
+
+// ---------------- ast_func_head_str ----------------
+// Creates a string for displaying the signature
+// of the head of a function
+strong_cstr_t ast_func_head_str(ast_func_t *func);
 
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function

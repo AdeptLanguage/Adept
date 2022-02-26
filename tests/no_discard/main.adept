@@ -1,0 +1,40 @@
+
+// These values can be changed to simulate
+// different scenerios where exhuastive return values
+// are allowed or disallowed
+#default methods true
+#default neglect true
+
+import basics
+
+func main {
+    #if methods
+        thing Thing
+
+        #if neglect
+            // Will cause a compile-time error, since
+            // we are not allowed to ignore an "exhaustive" return value
+            thing.getMessage()
+        #else
+            print(thing.getMessage())
+        #end
+    #else
+        #if neglect
+            // Will cause a compile-time error, since
+            // we are not allowed to ignore an "exhaustive" return value
+            getMessage()
+        #else
+            print(getMessage())
+        #end
+    #end
+}
+
+struct Thing ()
+
+func getMessage() exhaustive String {
+    return "Hello World"
+}
+
+func getMessage(this *Thing) exhaustive String {
+    return "Hello World"
+}
