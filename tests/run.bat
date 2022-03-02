@@ -93,6 +93,8 @@ call :compile deprecated
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
+call :compile disallow
+if %errorlevel% neq 1 popd & exit /b %errorlevel% REM Expect failure
 call :compile dropped_values
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile each_in

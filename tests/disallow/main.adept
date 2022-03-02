@@ -1,0 +1,23 @@
+
+pragma ignore_unused
+
+import basics
+
+struct Thing () {
+    func print(value String) {
+        print(value)
+    }
+
+    func print(value int) void = delete {
+        print(value)
+    }
+
+    func print(value double) void = delete
+}
+
+func main {
+    thing Thing
+    thing.print("Hello World")
+    thing.print(1234)
+    thing.print(3.14159)
+}

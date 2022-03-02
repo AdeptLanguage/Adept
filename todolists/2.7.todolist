@@ -14,8 +14,6 @@ MEDIUM-PRIORITY:
 * __return__ and return POD
 * easy and consistent constructors
 * switch over enums without enums name for each entry: idea: exhaustive switch kind using CardKind { ... }
-* @must
-* @disallow
 * @incognito
 * traits/interfaces and 'derive Thingable1, Thingable2, Thingable3 for Thing'
 * built-in meta functions like supports()
@@ -90,3 +88,4 @@ v2.6 COMPLETED:
 
 v2.7 COMPLETED:
 + "exhaustive" marked return types (aka nodiscard / must_use)
++ "= delete" functions/methods (aka disallow)

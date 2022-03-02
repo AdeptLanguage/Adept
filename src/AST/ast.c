@@ -386,20 +386,20 @@ strong_cstr_t ast_func_head_str(ast_func_t *func){
     strong_cstr_t args_string = ast_func_args_str(func);
     strong_cstr_t return_type_string = ast_type_str(&func->return_type);
     weak_cstr_t no_discard = func->traits & AST_FUNC_NO_DISCARD ? " exhaustive" : "";
+    weak_cstr_t disallow = func->traits & AST_FUNC_DISALLOW ? " = delete" : "";
 
     strong_cstr_t result;
 
     if(func->traits & AST_FUNC_FOREIGN){
-        result = mallocandsprintf("foreign %s(%s)%s %s", func->name, args_string ? args_string : "", no_discard, return_type_string);
+        result = mallocandsprintf("foreign %s(%s)%s %s%s", func->name, args_string ? args_string : "", no_discard, return_type_string, disallow);
     } else {
-        result = mallocandsprintf("func %s(%s)%s %s", func->name, args_string ? args_string : "", no_discard, return_type_string);
+        result = mallocandsprintf("func %s(%s)%s %s%s", func->name, args_string ? args_string : "", no_discard, return_type_string, disallow);
     }
 
     free(args_string);
     free(return_type_string);
     return result;
 }
-
 
 void ast_dump_statement_list(FILE *file, ast_expr_list_t *statements, length_t indentation){
     ast_dump_statements(file, statements->statements, statements->length, indentation);

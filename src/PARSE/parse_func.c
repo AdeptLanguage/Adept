@@ -77,6 +77,13 @@ errorcode_t parse_func(parse_ctx_t *ctx){
             return FAILURE;
         }
     }
+
+    // TODO: CLEANUP: This is a little ugly
+    if(ctx->tokenlist->tokens[*ctx->i].id == TOKEN_ASSIGN
+    && ctx->tokenlist->tokens[*ctx->i + 1].id == TOKEN_DELETE){
+        func->traits |= AST_FUNC_DISALLOW;
+        *(ctx->i) += 2;
+    }
     
     // enforce specific arguments for special functions & methods
     if(func->traits == AST_FUNC_DEFER && (
@@ -348,6 +355,15 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
         ast_expr_list_init(&stmts, 1);
         ast_expr_create_return(&stmts.statements[stmts.length++], return_expression->source, return_expression, (ast_expr_list_t){0});
         goto success;
+    }
+
+    // TODO: CLEANUP: Cleanup?
+    if(func->traits & AST_FUNC_DISALLOW && ctx->tokenlist->tokens[*ctx->i].id != TOKEN_BEGIN){
+        // HACK:
+        // Since we are expected to end on the last token we processed
+        // we will need to go back a token
+        (*ctx->i)--;
+        return SUCCESS;
     }
 
     if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return FAILURE;
