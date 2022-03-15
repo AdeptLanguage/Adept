@@ -204,15 +204,16 @@ func toString(invite Invitation) String {
 
 ### Ownership
 
-```import basics
-
+```
 /*
     For values that use ownership based memory management
     e.g. String, List, Grid
 
     We must transfer ownership if we want to keep them
-    alive for longer then their owner's scope
+    alive for longer than their owner's scope
 */
+
+import basics
 
 func main {
     everyone <String> List = getEveryoneAttending()
@@ -399,7 +400,7 @@ func main {
         doCalculation = func &mul
     }
 
-    print("Result of 8 and 13 is %" % doCalculation(8, 13))
+    print("Result of 8 and 13 is " + doCalculation(8, 13))
 }
 ```
 

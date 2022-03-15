@@ -1,6 +1,8 @@
 # Overall Things for Adept 2.7
 
 HIGH-PRIORITY:
+* update README.md examples
+* documentation for Adept 2.6
 
 MEDIUM-PRIORITY:
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
@@ -24,6 +26,12 @@ MEDIUM-PRIORITY:
 * better enums
 * module system
 * Self type
+* change 'scanInt' and friends to consume entire input line unlike 'skimInt'
+* add variants of 'toInt' and friends that can fail on invalid input
+* change 'scan(String, *int)' and friends to fail on invalid input
+* add 'scanLong' and other variants
+* add support for 'using my_idx_variable_name' in 'each-in' loops
+* add support for using 'const' on global variables
 
 LOW-PRIORITY:
 * Finish 'Any'

@@ -1,6 +1,5 @@
 
 pragma ignore_unused
-
 import basics
 
 struct Thing () {
