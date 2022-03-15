@@ -50,8 +50,13 @@ func main {
 import basics
 
 func main {
-    name String = "Isaac"
-    print("My name is " + name)
+    name String = "Alan"
+    age int = 36
+    height uint = 189
+    
+    print("Name is " + name)
+    print("Age is " + age)
+    print("Height is " + height + " cm")
 }
 ```
 
@@ -61,35 +66,55 @@ func main {
 import basics
 
 func main {
-    greet("Isaac")
+    greet("Alice")
 }
 
 func greet(name String) {
-    print("Welcome " + name)
+    print("Hello " + name)
 }
 ```
 
-### Structures
+### Records
 
 ```
 import basics
 
-struct Person (name String, age int)
+record Person (name String, age int) {
+    func print {
+        print(this.name + " is " + this.age + " years old")
+    }
+}
 
 func main {
-    john_smith Person = person("John Smith", 36)
-    john_smith.print()
+    Person("John Smith", 36).print()
+}
+```
+
+### Structs
+
+```
+import basics
+
+struct Configuration (
+    filename String,
+    numBatteries int,
+    numPorts int,
+)
+
+func Configuration(filename String) Configuration {
+    config POD Configuration = undef
+    config.filename = filename
+    config.numBatteries = 4
+    config.numPorts = 10
+    return config
 }
 
-func person(name String, age int) Person {
-    person POD Person
-    person.name = name.commit()
-    person.age = age
-    return person
+func toString(config Configuration) String {
+    return config.filename + ":" + config.numBatteries + ":" + config.numPorts
 }
 
-func print(this *Person) {
-    print("% is % years old" % this.name % this.age)
+func main {
+    print(Configuration("settings.config"))
 }
 ```
 
@@ -99,36 +124,43 @@ func print(this *Person) {
 import basics
 
 func main {
-    width, height int
-    getWidthAndHeight(&width, &height)
-    print("Width = %, Height = %" % width % height)
+    x, y int = 0
+
+    x++
+    y++
+    addOneTo(&x)
+
+    print("x = " + x)
+    print("y = " + y)
 }
 
-func getWidthAndHeight(out width, height *int) {
-    *width = 640
-    *height = 480
+func addOneTo(pointerToNumber *$T~__number__) {
+    (*pointerToNumber)++
 }
 ```
 
-### Conditionals
+### Conditionals and Loops
 
 ```
 import basics
 
 func main {
     name String = scan("What is your name? ")
-    age int = skimInt("How old are you? ")
+    age int = scanInt("How old are you? ")
     
+    // If conditional
     if name == "Isaac" {
         print("Hello Isaac :)")
     } else {
         print("Nice to meet you " + name)
     }
     
+    // Unless conditional
     unless age > 21 {
         print("You are too young to drink")
     }
     
+    // While loops
     while age < 18 {
         print("**birthday**")
         age += 1
@@ -136,6 +168,7 @@ func main {
     
     print("You are now old enough to smoke")
     
+    // Until loops
     until age >= 21 {
         print("**birthday**")
         age += 1
@@ -150,21 +183,22 @@ func main {
 ```
 import basics
 
+record Invitation (to, from String, priority int)
+
 func main {
     invites <Invitation> List
-    invites.add(invitation("Isaac", "Peter", 4))
-    invites.add(invitation("Mr. Smith", "Mrs. Smith", 12))
-    invites.add(invitation("James", "Paul", 3))
+    invites.add(Invitation("Isaac", "Peter", 4))
+    invites.add(Invitation("Mr. Smith", "Mrs. Smith", 12))
+    invites.add(Invitation("James", "Paul", 3))
+
+    each Invitation in invites {
+        place("invites[" + idx + "] = ")
+        print(it)
+    }
 }
 
-struct Invitation (to, from String, priority int)
-
-func invitation(to, from String, priority int) Invitation {
-    invitation POD Invitation
-    invitation.to = to.commit()
-    invitation.from = from.commit()
-    invitation.priority = priority
-    return invitation
+func toString(invite Invitation) String {
+    return invite.to + " invited " + invite.from + " with priority " + invite.priority
 }
 ```
 
