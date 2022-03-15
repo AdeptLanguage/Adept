@@ -101,9 +101,9 @@ struct Configuration (
     numPorts int,
 )
 
-func Configuration(filename String) Configuration {
+func Configuration(filename POD String) Configuration {
     config POD Configuration = undef
-    config.filename = filename
+    config.filename = POD filename
     config.numBatteries = 4
     config.numPorts = 10
     return config
@@ -204,34 +204,52 @@ func toString(invite Invitation) String {
 
 ### Ownership
 
-```
-import basics
+```import basics
 
-list_of_everyone <String> List
+/*
+    For values that use ownership based memory management
+    e.g. String, List, Grid
+
+    We must transfer ownership if we want to keep them
+    alive for longer then their owner's scope
+*/
 
 func main {
-    populateListOfEveryone()
+    everyone <String> List = getEveryoneAttending()
     
-    each String in list_of_everyone {
-        print("=> " + it)
+    each fullname String in everyone {
+        print("=> " + fullname)
     }
 }
 
-func populateListOfEveryone {
-    fullname1 String = getFullnameVersion1("Isaac", "Shelton")
-    fullname2 String = getFullnameVersion2("Isaac", "Shelton")
-    
-    list_of_everyone.add(fullname1.commit())
-    list_of_everyone.add(fullname2.commit())
+func getEveryoneAttending() exhaustive <String> List {
+    everyone <String> List
+
+    person1 String = getFullnameReturnImmediately("Alice", "Golden")
+    person2 String = getFullnameStoreAndThenLaterReturn("Bob", "Johnson")
+
+    // Commit ownership of strings held by 'person1' and 'person2'
+    // to be managed by the list
+    everyone.add(person1.commit())
+    everyone.add(person2.commit())
+
+    // Commit ownership of the list to the caller
+    return everyone.commit()
 }
 
-func getFullnameVersion1(firstname, lastname String) String {
+func getFullnameReturnImmediately(firstname, lastname String) String {
+    // '.commit()' is not necessary here
     return firstname + " " + lastname
 }
 
-func getFullnameVersion2(firstname, lastname String) String {
+func getFullnameStoreAndThenLaterReturn(firstname, lastname String) String {
     fullname String = firstname + " " + lastname
-    // ... other statements ...
+    
+    // Ownership of the string data was taken by 'fullname',
+    // so we must hand over ownership to the caller in order
+    // to keep it alive after this function returns
+
+    // '.commit()' is necessary here
     return fullname.commit()
 }
 ```
@@ -242,59 +260,81 @@ func getFullnameVersion2(firstname, lastname String) String {
 import basics
 
 func main {
-    countdown int = 0
-    prepare(&countdown)
-    launch(&countdown)
+    print(makeNumericSkewer())
+    print(makeAlphabetSkewer())
 }
 
-func prepare(inout countdown *int) {
+func makeNumericSkewer String {
+    // Example output: `0-2-4-6-8-10-13-16-19-22-25-28`
+
+    skewer String
+
     while continue preparing {
-        *countdown += 1
-        if *countdown != 10, continue preparing
+        skewer.append(skewer.length)
+
+        if skewer.length < 30 {
+            skewer.append("-")
+            continue preparing
+        }
     }
+
+    return skewer
 }
 
-func launch(inout countdown *int) {
-    bad_launch bool = false
+func makeAlphabetSkewer String {
+    // Example output: `a-c-e-g-i-k-m-o-q-s-u-w-y`
 
-    until ready_to_launch : *countdown == 0 {
-        *countdown -= 1
-        print("Counting Down... %" % *countdown)
-        if bad_launch, break ready_to_launch
+    skewer String
+
+    while still_making_skewer : skewer.length < 30 {
+        skewer.append('a'ub + skewer.length as ubyte)
+
+        if skewer[skewer.length - 1] == 'y'ub {
+            break still_making_skewer
+        }
+
+        skewer.append("-")
     }
 
-    unless bad_launch, print("Lift Off!")
+    return skewer
 }
 ```
 
-### Constant Values
+### Named Expressions and Global Variables
 
 ```
 import basics
 
-PI == 3.14159265
-TAU == PI * 2
+// Will be re-evaluated with each use
+define GREETING = "Welcome"
+define STRANGER_NAME = "guest"
+define WELCOME_MESSAGE = GREETING + " " + STRANGER_NAME + "!"
+
+// Will only be evaluated once when the program starts
+ARCH_STRING String = #get __arm64__ ? "arm64" : #get __x86_64__ ? "x86_64" : "other"
 
 func main {
-    print("PI is %" % PI)
-    print("TAU is %" % TAU)
+    print(WELCOME_MESSAGE)
+    print("You are using architecture: " + ARCH_STRING)
 }
 ```
 
 ### Dynamic Memory Allocation
 
 ```
-import cstdio
-import cstdlib
-import cstring
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+import 'sys/cstring.adept'
 
-func main(in argc int, in argv **ubyte) int {
-    usingMallocAndFree('Will', 'Johnson')
-    usingNewAndDelete('John', 'Wilson')
+func main int {
+    withMallocAndFree('Will', 'Johnson')
+    withNewAndDelete('John', 'Wilson')
     return 0
 }
 
-func usingMallocAndFree(firstname, lastname *ubyte) void {
+func withMallocAndFree(firstname, lastname *ubyte) void {
+    // Manual C-String manipulation using malloc, free, and sprintf
+    
     fullname *ubyte = malloc(strlen(firstname) + strlen(lastname) + 2)
     defer free(fullname)
 
@@ -302,7 +342,9 @@ func usingMallocAndFree(firstname, lastname *ubyte) void {
     printf('Fullname is: %s\n', fullname)
 }
 
-func usingNewAndDelete(firstname, lastname *ubyte) void {
+func withNewAndDelete(firstname, lastname *ubyte) void {
+    // Manual C-String manipulation using new, delete, and sprintf
+    
     fullname *ubyte = new ubyte * (strlen(firstname) + strlen(lastname) + 2)
     defer delete fullname
 
@@ -311,16 +353,53 @@ func usingNewAndDelete(firstname, lastname *ubyte) void {
 }
 ```
 
+### Command-Line Arguments
+```
+import basics
+
+func main(argc int, argv **ubyte) {
+    // C-Style
+    // Print out each argument specified
+    each *ubyte in [argv, argc] {
+        printf("args[%zu] = %s\n", idx, argv[idx])
+    }
+
+    // Collect arguments into string list
+    args <String> List = array(argv, argc).map(func &stringConstant)
+
+    // Adept-style
+    // Print out arguments again, except in cleaner way
+    each String in args {
+        printf("args[%zu] = %S\n", idx, it)
+    }
+
+    if args.contains("-h") || args.contains("--help") {
+        print("You asked for help, but I have no help to show you")
+    }
+}
+```
+
 ### Function Pointers
 
 ```
 import basics
+import random
 
 func sum(a, b int) int = a + b
+func mul(a, b int) int = a * b
 
 func main {
-    calculate func(int, int) int = func &sum
-    print("calculate(8, 13) = %" % calculate(8, 13))
+    randomize()
+
+    doCalculation func(int, int) int = null
+    
+    if normalizedRandom() < 0.5 {
+        doCalculation = func &sum
+    } else {
+        doCalculation = func &mul
+    }
+
+    print("Result of 8 and 13 is %" % doCalculation(8, 13))
 }
 ```
 
@@ -340,9 +419,9 @@ func main {
 ### Undef Keyword
 
 ```
-import cstdio
+import 'sys/cstdio.adept'
 
-func main(in argc int, in argv **ubyte) int {
+func main(argc int, argv **ubyte) int {
     // Will be initialized to 0
     zero_value int
 
@@ -362,8 +441,8 @@ func main(in argc int, in argv **ubyte) int {
 ### Pragma Directives
 
 ```
-pragma compiler_version '2.5'
-pragma project_name 'pragma_directives_example'
+pragma compiler_version '2.6'
+pragma project_name 'my_cool_project'
 pragma optimization aggressive
 
 import basics
@@ -376,9 +455,7 @@ func main {
 ### Primitive Types
 
 ```
-import cstdio
-
-func main(in argc int, in argv **ubyte) int {
+func main {
     // 8-bit Types
     a_bool   bool   = false
     a_byte   byte   = 0sb
@@ -414,6 +491,8 @@ import basics
 
 func main {
     value int = 1234
+    
+    // x as Type   is equivalent to   cast Type x
     
     // Primitive value casting
     result1 double = value as double
@@ -487,11 +566,11 @@ import basics
 func sum(a, b $T) $T = a + b
 
 func main {
-    print("%" % sum(8, 13))
-    print("%" % sum(3.14159, 0.57721))
-    print("%" % sum(' 'ub, '!'ub))
-    print("%" % sum(true, false))
-    print("%" % sum("Hello", "World"))
+    print(sum(8, 13))
+    print(sum(3.14159, 0.57721))
+    print(sum(' 'ub, '!'ub))
+    print(sum(true, false))
+    print(sum("Hello", " World"))
 }
 ```
 
@@ -500,12 +579,27 @@ func main {
 ```
 import basics
 
-struct <$T> Couple (first, second $T)
+record <$T> Couple (first, second $T)
 
 func main {
-    socks <String> Couple
-    socks.first = "Left Sock"
-    socks.second = "Right Sock"
+    coord <int> Couple
+    coord.first = 3
+    coord.second = 4
+    print(coord)
+    print("Distance is: " + coord.distance())
+    
+    socks <String> Couple = Couple("Left Sock", "Right Sock")
+    print(socks)
+}
+
+func toString(couple <$T> Couple) String {
+    return toString(couple.first) + " " + toString(couple.second)
+}
+
+func distance(this *<$T~__number__> Couple) $T {
+    const x double = cast double this.first
+    const y double = cast double this.second
+    return sqrt(x * x + y * y) as $T
 }
 ```
 
@@ -514,21 +608,21 @@ func main {
 ```
 import basics
 
-struct Unit (health int) {
-    func damage(amount int) {
-        this.health -= amount
+record Unit (hp int) {
+    func damage(atk int) {
+        this.hp -= atk
     }
 }
 
-func heal(this *Unit, amount int) {
-    this.health += amount
+func heal(this *Unit, pts int) {
+    this.hp += pts
 }
 
 func main {
-    unit Unit
-    unit.health = 10
+    unit Unit = Unit(10)
     unit.damage(7)
     unit.heal(4)
+    print("Remaining HP: " + unit.hp)
 }
 ```
 
@@ -548,7 +642,7 @@ func main {
     
     // Print each number
     each int in my_integers {
-        print("my_integers[%] = %" % idx % it)
+        printf("my_integers[%zu] = %d\n", idx, it)
     }
 }
 ```
@@ -565,11 +659,11 @@ func main {
     
     color int = 0x112233FF
     getColorComponents(color, undef r int, undef g int, undef b int)
-    print("Color Components: % % %" % r % g % b)
+    printf("Color Components: %d %d %d\n", r, g, b)
     
     randomize()
     maybeGetAlphaChannel(color, def a int)
-    print("Alpha Channel: %" % a)
+    printf("Alpha Channel: %d\n", a)
 }
 
 func getColorComponents(color int, out r, g, b *int) void {
