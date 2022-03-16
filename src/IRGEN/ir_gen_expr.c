@@ -635,8 +635,8 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
             return SUCCESS;
         }
 
-        if(ensure_not_violating_no_discard(builder->compiler, expr->no_discard, expr->source, pair.ast_func)
-        || ensure_not_violating_disallow(builder->compiler, expr->source, pair.ast_func)){
+        if(ensure_not_violating_disallow(builder->compiler, expr->source, pair.ast_func)
+        || ensure_not_violating_no_discard(builder->compiler, expr->no_discard, expr->source, pair.ast_func)){
             ast_types_free_fully(arg_types, arg_arity);
             return ALT_FAILURE;
         }
@@ -1808,8 +1808,8 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     funcpair_t pair = result.value;
 
-    if(ensure_not_violating_no_discard(builder->compiler, expr->no_discard, expr->source, pair.ast_func)
-    || ensure_not_violating_disallow(builder->compiler, expr->source, pair.ast_func)){
+    if(ensure_not_violating_disallow(builder->compiler, expr->source, pair.ast_func)
+    || ensure_not_violating_no_discard(builder->compiler, expr->no_discard, expr->source, pair.ast_func)){
         ast_types_free_fully(arg_types, arg_arity);
         return ALT_FAILURE;
     }

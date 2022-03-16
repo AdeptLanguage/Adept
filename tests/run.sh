@@ -56,6 +56,7 @@ compile defer_global || exit $?
 compile deprecated || exit $?
 compile dereference || exit $?
 ! compile disallow || exit $? # Expect failure
+! compile disallow_poly || exit $? # Expect failure
 compile dropped_values || exit $?
 compile each_in || exit $?
 compile each_in_fixed || exit $?

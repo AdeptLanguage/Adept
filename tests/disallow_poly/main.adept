@@ -1,0 +1,14 @@
+
+pragma ignore_unused
+import basics
+
+func main {
+    testWithoutBody(10)
+    testWithBody(10)
+}
+
+func testWithoutBody(value $T) = delete
+
+func testWithBody(value $T) = delete {
+    print(value)
+}

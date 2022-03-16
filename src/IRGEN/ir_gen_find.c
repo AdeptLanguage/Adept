@@ -163,6 +163,57 @@ static errorcode_t ir_gen_fill_in_default_arguments(ir_proc_query_t *query, ast_
     return SUCCESS;
 }
 
+static errorcode_t actualize_suitable_polymorphic(ir_proc_query_t *query, optional_funcpair_t *result, ast_poly_catalog_t *catalog, ir_func_endpoint_t endpoint){
+    const funcid_t ast_func_id = endpoint.ast_func_id;
+
+    compiler_t *compiler = ir_proc_query_getter_compiler(query);
+    object_t *object = ir_proc_query_getter_object(query);
+
+    // Validate and fill in argument gaps
+    {
+        ast_func_t *ast_func = &object->ast.funcs[ast_func_id];
+
+        if(ast_func->traits & AST_FUNC_DISALLOW){
+            strong_cstr_t display = ast_func_head_str(ast_func);
+            compiler_panicf(compiler, query->from_source, "Cannot call disallowed '%s'", display);
+            free(display);
+            return ALT_FAILURE;
+        }
+
+        // DANGEROUS: invalidates pointer 'ast_func'
+        if(ir_gen_fill_in_default_arguments(query, ast_func, catalog)){
+            return ALT_FAILURE;
+        }
+    }
+
+    // Instantiate polymorphic function
+    ir_func_endpoint_t instance;
+
+    ast_type_t *arg_types = ir_proc_query_getter_arg_types(query);
+    length_t arg_types_length = ir_proc_query_getter_length(query);
+
+    if(instantiate_poly_func(compiler, object, query->from_source, endpoint.ast_func_id, arg_types, arg_types_length, catalog, &instance)){
+        strong_cstr_t display = ast_func_head_str(&object->ast.funcs[ast_func_id]);
+        compiler_panicf(compiler, query->from_source, "Failed to instantiate '%s'", display);
+        free(display);
+        return ALT_FAILURE;
+    }
+
+    optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, object);
+    return SUCCESS;
+}
+
+static errorcode_t actualize_suitable_nonpolymorphic(ir_proc_query_t *query, optional_funcpair_t *result, ir_func_endpoint_t endpoint){
+    object_t *object = ir_proc_query_getter_object(query);
+
+    if(ir_gen_fill_in_default_arguments(query, &object->ast.funcs[endpoint.ast_func_id], NULL)){
+        return ALT_FAILURE;
+    }
+
+    optional_funcpair_set(result, true, endpoint.ast_func_id, endpoint.ir_func_id, object);
+    return SUCCESS;
+}
+
 static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, optional_funcpair_t *result, unsigned int conform_mode_if_applicable, ir_func_endpoint_t endpoint){
     compiler_t *compiler = ir_proc_query_getter_compiler(query);
     object_t *object = ir_proc_query_getter_object(query);
@@ -199,23 +250,9 @@ static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, option
         }
 
         if(res == SUCCESS){
-            // (NOTE: invalidates pointer 'ast_func' and a lot of other stuff)
-            if(ir_gen_fill_in_default_arguments(query, ast_func, &catalog)){
-                return ALT_FAILURE;
-            }
-
-            ast_type_t *arg_types = ir_proc_query_getter_arg_types(query);
-            length_t arg_types_length = ir_proc_query_getter_length(query);
-            
-            ir_func_endpoint_t instance;
-            if(instantiate_poly_func(compiler, object, query->from_source, endpoint.ast_func_id, arg_types, arg_types_length, &catalog, &instance)){
-                ast_poly_catalog_free(&catalog);
-                return ALT_FAILURE;
-            }
-
+            res = actualize_suitable_polymorphic(query, result, &catalog, endpoint);
             ast_poly_catalog_free(&catalog);
-            optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, object);
-            return SUCCESS;
+            return res;
         } else if(res == ALT_FAILURE){
             return res;
         }
@@ -231,13 +268,7 @@ static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, option
         }
 
         if(was_successful){
-            // (NOTE: invalidates pointer 'ast_func' and a lot of other stuff)
-            if(ir_gen_fill_in_default_arguments(query, ast_func, NULL)){
-                return ALT_FAILURE;
-            }
-
-            optional_funcpair_set(result, true, endpoint.ast_func_id, endpoint.ir_func_id, object);
-            return SUCCESS;
+            return actualize_suitable_nonpolymorphic(query, result, endpoint);
         }
     }
 

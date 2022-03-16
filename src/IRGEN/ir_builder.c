@@ -1710,6 +1710,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     ast_func_t *poly_func = &object->ast.funcs[ast_poly_func_id];
     length_t required_arity = poly_func->arity;
 
+    // Require compatible arity
     if(
         required_arity < types_list_length &&
         !(poly_func->traits & AST_FUNC_VARARG) &&
@@ -1717,6 +1718,9 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     ){
         return FAILURE;
     }
+    
+    // Require not disallowed
+    if(poly_func->traits & AST_FUNC_DISALLOW) return FAILURE;
     
     // Determine whether we are missing arguments
     bool requires_use_of_defaults = required_arity > types_list_length;

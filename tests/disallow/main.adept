@@ -7,11 +7,11 @@ struct Thing () {
         print(value)
     }
 
-    func print(value int) void = delete {
+    func print(value int) = delete {
         print(value)
     }
 
-    func print(value double) void = delete
+    func print(value double) = delete
 }
 
 func main {

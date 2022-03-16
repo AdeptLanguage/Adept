@@ -1,7 +1,6 @@
 # Overall Things for Adept 2.7
 
 HIGH-PRIORITY:
-* update README.md examples
 * documentation for Adept 2.6
 
 MEDIUM-PRIORITY:
@@ -32,6 +31,7 @@ MEDIUM-PRIORITY:
 * add 'scanLong' and other variants
 * add support for 'using my_idx_variable_name' in 'each-in' loops
 * add support for using 'const' on global variables
+* better IDE insight
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -97,3 +97,4 @@ v2.6 COMPLETED:
 v2.7 COMPLETED:
 + "exhaustive" marked return types (aka nodiscard / must_use)
 + "= delete" functions/methods (aka disallow)
++ update README.md examples
