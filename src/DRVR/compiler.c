@@ -44,7 +44,6 @@
 #ifndef ADEPT_INSIGHT_BUILD
 #include "BKEND/backend.h"
 #include "DRVR/debug.h"
-#include "DRVR/repl.h"
 #include "INFER/infer.h"
 #include "IR/ir.h"
 #include "IRGEN/ir_gen.h"
@@ -137,11 +136,6 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     #ifndef ADEPT_INSIGHT_BUILD
     debug_signal(compiler, DEBUG_SIGNAL_AT_STAGE_ARGS_AND_LEX, NULL);
     #endif
-
-    if(compiler->traits & COMPILER_REPL){
-        if(compiler_repl(compiler)) compiler->result_flags |= COMPILER_RESULT_SUCCESS;
-        return;
-    }
 
     // Compile / Package the code
     if(compiler_read_file(compiler, object)) return;
@@ -362,38 +356,6 @@ void compiler_final_words(compiler_t *compiler){
     #endif
 }
 
-errorcode_t compiler_repl(compiler_t *compiler){
-    #ifndef ADEPT_INSIGHT_BUILD
-    repl_t repl;
-    repl_init(&repl, compiler);
-
-    printf("Adept %s REPL\n", ADEPT_VERSION_STRING);
-    printf("Type '#halt' to exit, '#reset' to reset, or '#clear' to clear\n");
-
-    length_t input_buffer_size = 2048;
-    strong_cstr_t input_buffer = malloc(input_buffer_size);
-
-    while(true){
-        printf("> ");
-        fflush(stdout);
-
-        // Read buffer
-        weak_cstr_t buffer = fgets(input_buffer, input_buffer_size - 1, stdin);
-        if(buffer == NULL) continue;
-
-        // Sanitize buffer
-        repl_helper_sanitize(buffer);
-
-        // Execute
-        if(repl_execute(&repl, buffer)) break;
-    }
-    
-    free(input_buffer);
-    repl_free(&repl);
-    #endif
-    return SUCCESS;
-}
-
 errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){
     int arg_index = 1;
 
@@ -518,8 +480,6 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                     return FAILURE;
                 }
                 compiler->entry_point = argv[++arg_index];
-            } else if(streq(argv[arg_index], "--repl")){
-                compiler->traits |= COMPILER_REPL;
             } else if(streq(argv[arg_index], "--windows")){
                 #ifndef _WIN32
                 printf("[-] Cross compiling for Windows x86_64\n");
@@ -606,7 +566,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
         arg_index++;
     }
 
-    if(object->filename == NULL && !(compiler->traits & COMPILER_REPL)){
+    if(object->filename == NULL){
         if(access("main.adept", F_OK) != -1) {
             // If no file was specified and the file 'main.adept' exists,
             // then assume we want to compile 'main.adept'

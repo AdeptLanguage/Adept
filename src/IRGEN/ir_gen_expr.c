@@ -27,6 +27,7 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
+#include "IRGEN/ir_gen_qualifiers.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
@@ -36,28 +37,6 @@
 #include "UTIL/string.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
-
-static errorcode_t ensure_not_violating_no_discard(compiler_t *compiler, bool no_discard_active, source_t call_source, ast_func_t *callee_ast_func){
-    if(no_discard_active && callee_ast_func->traits & AST_FUNC_NO_DISCARD){
-        strong_cstr_t display = ast_func_head_str(callee_ast_func);
-        compiler_panicf(compiler, call_source, "Not allowed to discard value returned from '%s'", display);
-        free(display);
-        return ALT_FAILURE;
-    }
-
-    return SUCCESS;
-}
-
-static errorcode_t ensure_not_violating_disallow(compiler_t *compiler, source_t call_source, ast_func_t *callee_ast_func){
-    if(callee_ast_func->traits & AST_FUNC_DISALLOW){
-        strong_cstr_t display = ast_func_head_str(callee_ast_func);
-        compiler_panicf(compiler, call_source, "Cannot call disallowed '%s'", display);
-        free(display);
-        return ALT_FAILURE;
-    }
-
-    return SUCCESS;
-}
 
 errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
     // NOTE: Generates an ir_value_t from an ast_expr_t
@@ -1324,6 +1303,11 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
             compiler_panicf(builder->compiler, expr->source, "Undeclared function '%s'", expr->name);
             return FAILURE;
         }
+
+        // Ensure found function is not disallowed
+        if(ensure_not_violating_disallow(builder->compiler, expr->source, &builder->object->ast.funcs[pair.ast_func_id])){
+            return FAILURE;
+        }
         
         // Warn of multiple possibilities if the resulting function isn't unique in its name
         if(!is_unique && compiler_warnf(builder->compiler, expr->source, "Multiple functions named '%s', using the first of them", expr->name)){
@@ -1351,6 +1335,11 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
         }
 
         pair = result.value;
+
+        // Ensure found function is not disallowed
+        if(ensure_not_violating_disallow(builder->compiler, expr->source, &builder->object->ast.funcs[pair.ast_func_id])){
+            return FAILURE;
+        }
     }
 
     // Create the IR function pointer type

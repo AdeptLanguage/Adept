@@ -1,0 +1,13 @@
+
+pragma ignore_unused
+import basics
+
+func main {
+    function_pointer func(int) int = func &disallowedFunction
+    print(function_pointer)
+    print(function_pointer(10))
+}
+
+func disallowedFunction(value int) int = delete {
+    return value * value
+}

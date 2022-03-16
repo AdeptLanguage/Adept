@@ -39,13 +39,12 @@ extern "C" {
 #define COMPILER_UNSAFE_NEW       TRAIT_C
 #define COMPILER_FUSSY            TRAIT_D
 #define COMPILER_FORCE_STDLIB     TRAIT_E
-#define COMPILER_REPL             TRAIT_F
-#define COMPILER_WARN_AS_ERROR    TRAIT_G
-#define COMPILER_SHORT_WARNINGS   TRAIT_2_1
-#define COMPILER_EMIT_OBJECT      TRAIT_2_2
-#define COMPILER_COLON_COLON      TRAIT_2_3
-#define COMPILER_TYPE_COLON       TRAIT_2_4
-#define COMPILER_WINDOWED         TRAIT_2_5
+#define COMPILER_WARN_AS_ERROR    TRAIT_F
+#define COMPILER_SHORT_WARNINGS   TRAIT_G
+#define COMPILER_EMIT_OBJECT      TRAIT_2_1
+#define COMPILER_COLON_COLON      TRAIT_2_2
+#define COMPILER_TYPE_COLON       TRAIT_2_3
+#define COMPILER_WINDOWED         TRAIT_2_4
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
@@ -178,10 +177,6 @@ object_t* compiler_new_object(compiler_t *compiler);
 // ---------------- compiler_final_words ----------------
 // Says any final notes the compiler has
 void compiler_final_words(compiler_t *compiler);
-
-// ---------------- compiler_repl ----------------
-// Launch REPL
-errorcode_t compiler_repl(compiler_t *compiler);
 
 // ---------------- parse_arguments ----------------
 // Configures a compiler based on program arguments.
