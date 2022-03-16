@@ -32,6 +32,10 @@ MEDIUM-PRIORITY:
 * add support for 'using my_idx_variable_name' in 'each-in' loops
 * add support for using 'const' on global variables
 * better IDE insight
+* 'indexOf()', 'find()', and better 'join()' for String
+* 'sub()', 'segment()', 'find()' and 'sort()' for List
+* make StringView into "recognized builtin type" for editors
+* don't show "must return a value" error for when it's unreachable
 
 LOW-PRIORITY:
 * Finish 'Any'

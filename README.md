@@ -648,33 +648,57 @@ func main {
 }
 ```
 
-### Spontaneous Variable Declarations
+### Inline Variable Declarations
 
 ```
 import basics
-import random
 
 func main {
-    //   def variable_name Type   -  Zero-Initialized Spontaneous Variable
-    // undef variable_name Type   -  Undefined Spontaneous Variable
-    
     color int = 0x112233FF
-    getColorComponents(color, undef r int, undef g int, undef b int)
-    printf("Color Components: %d %d %d\n", r, g, b)
+
+    // -------------------------------------------------------------
+    // Inline variable declarations are syntactic sugar that
+    // is most often used in capturing indirect or optional outputs
+    // from functions, e.g.
+    // 
+    // glfwGetFramebufferSize(window, undef width double, undef height double)
+    //                     ... is the same as ...
+    // width, height double = undef
+    // glfwGetFramebufferSize(window, &width, &height)
+    // -------------------------------------------------------------
+
+    // 'undef variable_name Type' -  Inline Variable Declaration (Uninitialized)
+    getColorComponents(color, undef red int, undef green int, undef blue int)
+
+    printf("Color Components: (%d, %d, %d)\n", red, green, blue)
     
-    randomize()
-    maybeGetAlphaChannel(color, def a int)
-    printf("Alpha Channel: %d\n", a)
+    // 'def variable_name Type' -  Inline Variable Declaration (Zero-Initialized)
+    if separateNameIntoParts("Isaac Shelton", def firstname String, def lastname String) {
+        print("First Name: " + firstname)
+        print("Last Name: " + lastname)
+    } else {
+        print("Unable to separate parts of name")
+    }
 }
 
-func getColorComponents(color int, out r, g, b *int) void {
+// "out" data-flow comment is optional - only exists to help the programmer
+func getColorComponents(color int, out r, g, b *int) {
     *r = (color & 0xFF000000) >> 24
     *g = (color & 0x00FF0000) >> 16
     *b = (color & 0x0000FF00) >> 8
 }
 
-func maybeGetAlphaChannel(color int, out a *int) void {
-    if random() < 0.5, *a = (color & 0x000000FF)
+// "out" data-flow comment is optional - only exists to help the programmer
+func separateNameIntoParts(fullname String, out firstname, lastname *String) successful {
+    names <StringView> List = fullname.splitIntoViews(" ")
+
+    if names.length == 2 {
+        *firstname = names[0].clone()
+        *lastname = names[1].clone()
+        return true
+    }
+
+    return false
 }
 ```
 
