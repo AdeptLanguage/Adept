@@ -27,7 +27,8 @@ A blazing fast language for general purpose programming.
 
 `adept [filename] [options]`
 
-The default filename is `main.adept`
+- filename - default is 'main.adept'
+- options - secondary compiler options
 
 You can optionally use `adept2-6` instead of `adept` if you have multiple versions installed.
 
@@ -101,8 +102,8 @@ struct Configuration (
 )
 
 func Configuration(filename POD String) Configuration {
-    config POD Configuration = undef
-    config.filename = POD filename
+    config POD Configuration
+    config.filename = filename
     config.numBatteries = 4
     config.numPorts = 10
     return config
