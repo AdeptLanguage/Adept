@@ -27,8 +27,7 @@ A blazing fast language for general purpose programming.
 
 `adept [filename] [options]`
 
-- filename - default is 'main.adept'
-- options - secondary compiler options
+The default filename is `main.adept`
 
 You can optionally use `adept2-6` instead of `adept` if you have multiple versions installed.
 
@@ -192,8 +191,7 @@ func main {
     invites.add(Invitation("James", "Paul", 3))
 
     each Invitation in invites {
-        place("invites[" + idx + "] = ")
-        print(it)
+        printf("invites[%zu] = %S\n", idx, toString(it))
     }
 }
 
@@ -206,10 +204,10 @@ func toString(invite Invitation) String {
 
 ```
 /*
-    For values that use ownership based memory management
-    e.g. String, List, Grid
-
-    We must transfer ownership if we want to keep them
+    For values that use ownership-based memory management
+    (e.g. String, List, Grid)
+    
+    we must transfer ownership if we want to keep them
     alive for longer than their owner's scope
 */
 
@@ -223,7 +221,7 @@ func main {
     }
 }
 
-func getEveryoneAttending() exhaustive <String> List {
+func getEveryoneAttending() <String> List {
     everyone <String> List
 
     person1 String = getFullnameReturnImmediately("Alice", "Golden")
@@ -246,8 +244,8 @@ func getFullnameReturnImmediately(firstname, lastname String) String {
 func getFullnameStoreAndThenLaterReturn(firstname, lastname String) String {
     fullname String = firstname + " " + lastname
     
-    // Ownership of the string data was taken by 'fullname',
-    // so we must hand over ownership to the caller in order
+    // Ownership of the result is held by 'fullname',
+    // so we must transfer ownership to the caller in order
     // to keep it alive after this function returns
 
     // '.commit()' is necessary here
@@ -320,7 +318,7 @@ func main {
 }
 ```
 
-### Dynamic Memory Allocation
+### Low-Level Dynamic Allocation
 
 ```
 import 'sys/cstdio.adept'
@@ -586,7 +584,6 @@ func main {
     coord <int> Couple
     coord.first = 3
     coord.second = 4
-    print(coord)
     print("Distance is: " + coord.distance())
     
     socks <String> Couple = Couple("Left Sock", "Right Sock")
