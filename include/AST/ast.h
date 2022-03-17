@@ -301,9 +301,9 @@ strong_cstr_t ast_func_head_str(ast_func_t *func);
 // Fills out a blank template for a new function
 void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options);
 
-// ---------------- ast_func_is_polymorphic ----------------
-// Returns whether an AST function has polymorphic arguments
-bool ast_func_is_polymorphic(ast_func_t *func);
+// ---------------- ast_func_has_polymorphic_signature ----------------
+// Returns whether an AST function has polymorphic arguments or return type
+bool ast_func_has_polymorphic_signature(ast_func_t *func);
 
 // ---------------- ast_composite_init ----------------
 // Initializes an AST composite

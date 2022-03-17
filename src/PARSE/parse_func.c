@@ -3,13 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "AST/TYPE/ast_type_identical.h"
 #include "AST/TYPE/ast_type_make.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
 #include "LEX/token.h"
+#include "PARSE/parse_checks.h"
 #include "PARSE/parse_ctx.h"
 #include "PARSE/parse_expr.h"
 #include "PARSE/parse_func.h"
@@ -18,7 +18,6 @@
 #include "PARSE/parse_util.h"
 #include "TOKEN/token_data.h"
 #include "UTIL/ground.h"
-#include "UTIL/search.h"
 #include "UTIL/string.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
@@ -60,20 +59,17 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(parse_func_arguments(ctx, func)) return FAILURE;
     if(parse_ignore_newlines(ctx, "Expected '{' after function head")) return FAILURE;
 
-    tokenid_t beginning_token_id = tokens[*ctx->i].id;
-
-    if(beginning_token_id == TOKEN_EXHAUSTIVE){
+    if(parse_eat(ctx, TOKEN_EXHAUSTIVE, NULL) == SUCCESS){
         func->traits |= AST_FUNC_NO_DISCARD;
-        beginning_token_id = tokens[++(*ctx->i)].id;
     }
+
+    tokenid_t beginning_token_id = tokens[*ctx->i].id;
 
     if(!func_head.is_foreign && (beginning_token_id == TOKEN_BEGIN || beginning_token_id == TOKEN_ASSIGN)){
         ast_type_make_base(&func->return_type, strclone("void"));
     } else {
         if(parse_type(ctx, &func->return_type)){
-            func->return_type.elements = NULL;
-            func->return_type.elements_length = 0;
-            func->return_type.source = NULL_SOURCE;
+            func->return_type = (ast_type_t){0};
             return FAILURE;
         }
     }
@@ -84,172 +80,15 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         func->traits |= AST_FUNC_DISALLOW;
         *(ctx->i) += 2;
     }
-    
-    // enforce specific arguments for special functions & methods
-    if(func->traits == AST_FUNC_DEFER && (
-        !ast_type_is_void(&func->return_type)
-        || func->arity != 1
-        || !streq(func->arg_names[0], "this")
-        || !(  ast_type_is_base_ptr(&func->arg_types[0])
-            || ast_type_is_polymorph_ptr(&func->arg_types[0])
-            || ast_type_is_generic_base_ptr(&func->arg_types[0])
-            )
-        || func->arg_type_traits[0] != TRAIT_NONE
-    )){
-        compiler_panic(ctx->compiler, source, "Management method __defer__ must be declared as 'func __defer__(this *T) void'");
+
+    if(validate_func_requirements(ctx, func, source)){
         return FAILURE;
     }
 
-    if(func->traits == AST_FUNC_PASS && (
-           !(  ast_type_is_base(&func->return_type)
-            || ast_type_is_polymorph(&func->return_type)
-            || ast_type_is_generic_base(&func->return_type)
-            || ast_type_is_fixed_array(&func->return_type)
-            )
-        || func->arity != 1
-        || !ast_types_identical(&func->return_type, &func->arg_types[0])
-        || func->arg_type_traits[0] != AST_FUNC_ARG_TYPE_TRAIT_POD
-    )){
-        compiler_panic(ctx->compiler, source, "Management function __pass__ must be declared as 'func __pass__(value POD T) T'");
-        return FAILURE;
-    }
-
-    if(streq(func->name, "__assign__") && (
-        func->traits != TRAIT_NONE
-        || !ast_type_is_void(&func->return_type)
-        || func->arity != 2
-        || !streq(func->arg_names[0], "this")
-        || !(  ast_type_is_base_ptr(&func->arg_types[0])
-            || ast_type_is_polymorph_ptr(&func->arg_types[0])
-            || ast_type_is_generic_base_ptr(&func->arg_types[0])
-            )
-        || !ast_type_is_pointer_to(&func->arg_types[0], &func->arg_types[1])
-        || func->arg_type_traits[0] != TRAIT_NONE
-    )){
-        compiler_panic(ctx->compiler, source, "Management method __assign__ must be declared like 'func __assign__(this *T, other T) void'");
-        return FAILURE;
-    }
-
-    if(streq(func->name, "__access__") && (
-        func->traits != TRAIT_NONE
-        || func->arity != 2
-        || !ast_type_is_pointer(&func->arg_types[0])
-        || !ast_type_is_pointer(&func->return_type)
-        || !streq(func->arg_names[0], "this")
-        || func->arg_type_traits[0] != TRAIT_NONE
-    )){
-        compiler_panic(ctx->compiler, source, "Management method __access__ must be declared like '__access__(this *T, index $Key) *$Value'");
-        return FAILURE;
-    }
-
-    if(streq(func->name, "__array__") && (
-        func->traits != TRAIT_NONE
-        || func->arity != 1
-        || !ast_type_is_pointer(&func->arg_types[0])
-        || !ast_type_is_pointer(&func->return_type)
-        || !streq(func->arg_names[0], "this")
-        || func->arg_type_traits[0] != TRAIT_NONE
-    )){
-        compiler_panic(ctx->compiler, source, "Management method __array__ must be declared like '__array__(this *T) *$ArrayElementType'");
-        return FAILURE;
-    }
-
-    if(streq(func->name, "__length__") && (
-        func->traits != TRAIT_NONE
-        || func->arity != 1
-        || !ast_type_is_pointer(&func->arg_types[0])
-        || !ast_type_is_base_of(&func->return_type, "usize")
-        || !streq(func->arg_names[0], "this")
-        || func->arg_type_traits[0] != TRAIT_NONE
-    )){
-        compiler_panic(ctx->compiler, source, "Management method __length__ must be declared like '__length__(this *T) usize'");
-        return FAILURE;
-    }
-
-    if(streq(func->name, "__variadic_array__")){
-        if(ctx->ast->common.ast_variadic_array != NULL){
-            compiler_panic(ctx->compiler, source, "The function __variadic_array__ can only be defined once");
-            compiler_panic(ctx->compiler, ctx->ast->common.ast_variadic_source, "Previous definition");
-            return FAILURE;
-        }
-
-        if(ast_type_is_void(&func->return_type)){
-            compiler_panic(ctx->compiler, source, "The function __variadic_array__ must return a value");
-            return FAILURE;
-        }
-
-        if(func->traits != TRAIT_NONE
-        || func->arity != 4
-        || !ast_type_is_base_of(&func->arg_types[0], "ptr")
-        || !ast_type_is_base_of(&func->arg_types[1], "usize")
-        || !ast_type_is_base_of(&func->arg_types[2], "usize")
-        || !ast_type_is_base_of(&func->arg_types[3], "ptr")
-        || func->arg_type_traits[0] != TRAIT_NONE
-        || func->arg_type_traits[1] != TRAIT_NONE
-        || func->arg_type_traits[2] != TRAIT_NONE
-        || func->arg_type_traits[3] != TRAIT_NONE
-        ){
-            compiler_panic(ctx->compiler, source, "Special function __variadic_array__ must be declared like:\n'__variadic_array__(pointer ptr, bytes usize, length usize, maybe_types ptr) ReturnType'");
-            return FAILURE;
-        }
-
-        if(ctx->ast->common.ast_variadic_array == NULL){
-            ctx->ast->common.ast_variadic_array = malloc(sizeof(ast_type_t));
-            *ctx->ast->common.ast_variadic_array = ast_type_clone(&func->return_type);
-            ctx->ast->common.ast_variadic_source = func->source;
-        }
-    }
-
-    if(streq(func->name, "__initializer_list__")){
-        if(ast_type_is_void(&func->return_type)){
-            compiler_panic(ctx->compiler, source, "The function __initializer_list__ must return a value");
-            return FAILURE;
-        }
-
-        if(func->traits != TRAIT_NONE
-        || func->arity != 2
-        || !ast_type_is_base_of(&func->arg_types[1], "usize")
-        || func->arg_type_traits[0] != TRAIT_NONE
-        || func->arg_type_traits[1] != TRAIT_NONE
-        ){
-            compiler_panic(ctx->compiler, source, "Special function __initializer_list__ must be declared like:\n'__initializer_list__(array *$T, length usize) <$T> ReturnType'");
-            return FAILURE;
-        }
-
-        if(ctx->ast->common.ast_initializer_list == NULL){
-            ctx->ast->common.ast_initializer_list = malloc(sizeof(ast_type_t));
-            *ctx->ast->common.ast_initializer_list = ast_type_clone(&func->return_type);
-            ctx->ast->common.ast_initializer_list_source = func->source;
-        }
-    }
-    
-    static const char *math_management_funcs[] = {
-        "__add__", "__divide__", "__equals__", "__greater_than__",
-        "__greater_than_or_equal__", "__less_than__", "__less_than_or_equal__",
-        "__modulus__", "__multiply__", "__not_equals__", "__subtract__"
-    };
-    static const length_t math_management_funcs_length = sizeof(math_management_funcs) / sizeof(const char*);
-    maybe_index_t math_func_index = binary_string_search(math_management_funcs, math_management_funcs_length, func->name);
-    
-    if(math_func_index != -1){
-        // Enforce math management function prototype
-        // NOTE: The type that's returned is up to the user
-        // NOTE: The first argument cannot be a pointer
-        if(func->arity != 2){
-            compiler_panicf(ctx->compiler, source, "Management method %s must take two arguments", func->name);
-            return FAILURE;
-        }
-
-        if(ast_type_is_pointer(&func->arg_types[0])){
-            compiler_panicf(ctx->compiler, source, "Management method %s cannot have a pointer as the first argument", func->name);
-            return FAILURE;
-        }
-    }
-
-    if(ast_func_is_polymorphic(func)){
+    if(ast_func_has_polymorphic_signature(func)){
         // Ensure this isn't a foreign function
         if(func_head.is_foreign){
-            compiler_panic(ctx->compiler, source, "Cannot declare polymorphic foreign functions");
+            compiler_panic(ctx->compiler, source, "Cannot declare foreign functions as polymorphic");
             return FAILURE;
         }
 

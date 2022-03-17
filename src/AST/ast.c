@@ -817,14 +817,14 @@ void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, a
 void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length){
     for(length_t i = 0; i != globals_length; i++){
         ast_global_t *global = &globals[i];
-        char *global_typename = ast_type_str(&global->type);
+        strong_cstr_t global_typename = ast_type_str(&global->type);
 
         if(global->initial == NULL){
             fprintf(file, "%s %s\n", global->name, global_typename);
         } else {
-            char *value = ast_expr_str(global->initial);
-            fprintf(file, "%s %s = %s\n", global->name, global_typename, value);
-            free(value);
+            strong_cstr_t initial_value = ast_expr_str(global->initial);
+            fprintf(file, "%s %s = %s\n", global->name, global_typename, initial_value);
+            free(initial_value);
         }
 
         free(global_typename);
@@ -854,7 +854,6 @@ void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length){
                 kinds_string_length += 2;
             }
         }
-
 
         fprintf(file, "%s (%s)\n", enum_definition->name, kinds_string ? kinds_string : "");
         free(kinds_string);
@@ -896,7 +895,7 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->traits = TRAIT_NONE;
     func->variadic_arg_name = NULL;
     func->variadic_source = NULL_SOURCE;
-    memset(&func->statements, 0, sizeof(ast_expr_list_t));
+    func->statements = (ast_expr_list_t){0};
     func->source = options->source;
     func->export_as = options->export_name;
 
@@ -917,12 +916,9 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     }
 }
 
-bool ast_func_is_polymorphic(ast_func_t *func){
-    for(length_t i = 0; i != func->arity; i++){
-        if(ast_type_has_polymorph(&func->arg_types[i])) return true;
-    }
-    if(ast_type_has_polymorph(&func->return_type)) return true;
-    return false;
+bool ast_func_has_polymorphic_signature(ast_func_t *func){
+    return ast_type_list_has_polymorph(func->arg_types, func->arity)
+        || ast_type_has_polymorph(&func->return_type);
 }
 
 void ast_composite_init(ast_composite_t *composite, strong_cstr_t name, ast_layout_t layout, source_t source){

@@ -1,5 +1,10 @@
 
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "AST/ast.h"
 #include "DRVR/compiler.h"
+#include "UTIL/ground.h"
 
 errorcode_t ensure_not_violating_no_discard(compiler_t *compiler, bool no_discard_active, source_t call_source, ast_func_t *callee){
     if(no_discard_active && callee->traits & AST_FUNC_NO_DISCARD){

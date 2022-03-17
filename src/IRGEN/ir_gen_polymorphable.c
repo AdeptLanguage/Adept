@@ -1,7 +1,6 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast.h"
@@ -15,6 +14,7 @@
 #include "IRGEN/ir_gen_polymorphable.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
+#include "UTIL/util.h"
 
 static errorcode_t enforce_polymorph(
     compiler_t *compiler,
