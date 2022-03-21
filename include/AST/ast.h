@@ -355,7 +355,7 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
 // NOTE: Requires that 'globals' is sorted
 maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, weak_cstr_t name);
 
-// ---------------- ast_func_end_is_unreachable ----------------
+// ---------------- ast_func_end_is_reachable ----------------
 // Checks whether its possible to execute every statement in a function
 // and still have not returned
 bool ast_func_end_is_reachable(ast_t *ast, funcid_t ast_func_id);

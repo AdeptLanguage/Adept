@@ -1065,7 +1065,7 @@ maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, we
 }
 
 bool ast_func_end_is_reachable_inner(ast_expr_list_t *stmts, unsigned int max_depth, unsigned int depth){
-    if (depth >= max_depth) return false;
+    if (depth >= max_depth) return true;
 
     for(length_t i = 0; i < stmts->length; i++){
         ast_expr_t *stmt = stmts->statements[i];
