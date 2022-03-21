@@ -355,6 +355,12 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
 // NOTE: Requires that 'globals' is sorted
 maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, weak_cstr_t name);
 
+// ---------------- ast_func_end_is_unreachable ----------------
+// Checks whether its possible to execute every statement in a function
+// and still have not returned
+bool ast_func_end_is_reachable(ast_t *ast, funcid_t ast_func_id);
+bool ast_func_end_is_reachable_inner(ast_expr_list_t *stmts, unsigned int max_depth, unsigned int depth);
+
 // ---------------- ast_add_alias ----------------
 // Adds a type alias to the global scope of an AST
 void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait_t traits, source_t source);

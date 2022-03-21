@@ -161,6 +161,7 @@ compile repeat_args || exit $?
 compile repeat_fields || exit $?
 compile repeat_static || exit $?
 compile repeat_using || exit $?
+compile return_every_case || exit $?
 compile return_matching || exit $?
 compile return_ten || exit $?
 compile scientific || exit $?

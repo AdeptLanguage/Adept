@@ -1064,6 +1064,35 @@ maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, we
     return -1;
 }
 
+bool ast_func_end_is_reachable_inner(ast_expr_list_t *stmts, unsigned int max_depth, unsigned int depth){
+    if (depth >= max_depth) return false;
+
+    for(length_t i = 0; i < stmts->length; i++){
+        ast_expr_t *stmt = stmts->statements[i];
+        switch(stmt->id){
+        case EXPR_IFELSE:
+        case EXPR_UNLESSELSE: {
+            ast_expr_conditional_else_t *conditional = (ast_expr_conditional_else_t*) stmt;
+
+            if(!ast_func_end_is_reachable_inner(&conditional->statements, max_depth, depth + 1)
+            && !ast_func_end_is_reachable_inner(&conditional->else_statements, max_depth, depth + 1)){
+                return false;
+            }
+            break;
+        }
+        case EXPR_RETURN:
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool ast_func_end_is_reachable(ast_t *ast, funcid_t ast_func_id){
+    // Ensure that the reference we're working with isn't one that was previously invalidated
+    return ast_func_end_is_reachable_inner(&ast->funcs[ast_func_id].statements, 20, 0);
+}
+
 void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait_t traits, source_t source){
     expand((void**) &ast->aliases, sizeof(ast_alias_t), ast->aliases_length, &ast->aliases_capacity, 1, 8);
 

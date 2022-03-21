@@ -35,7 +35,7 @@ MEDIUM-PRIORITY:
 * 'indexOf()', 'find()', and better 'join()' for String
 * 'sub()', 'segment()', 'find()' and 'sort()' for List
 * make StringView into "recognized builtin type" for editors
-* don't show "must return a value" error for when it's unreachable
+* make `Pair` and friends in standard library into records
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -102,3 +102,4 @@ v2.7 COMPLETED:
 + "exhaustive" marked return types (aka nodiscard / must_use)
 + "= delete" functions/methods (aka disallow)
 + update README.md examples
++ don't show "must return a value" error for when it's unreachable

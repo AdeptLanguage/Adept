@@ -411,7 +411,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     // TODO: CLEANUP: Clean this up
     // NOTE: We have to recheck if the function was terminated because of 'handle_children_pass_root(&builder)'
-    if(!terminated){
+    if(!terminated && ast_func_end_is_reachable(&object->ast, ast_func_id)){
         ir_type_t *ir_return_type = ir_funcs->funcs[ir_func_id].return_type;
 
         // Handle auto-return
