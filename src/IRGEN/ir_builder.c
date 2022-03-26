@@ -1570,7 +1570,14 @@ bool could_have_pass(ast_type_t *ast_type){
     return false;
 }
 
-errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *value_ast_type, ir_value_t *destination, ast_type_t *destination_ast_type){
+errorcode_t handle_assign_management(
+        ir_builder_t *builder,
+        ir_value_t *value,
+        ast_type_t *value_ast_type,
+        ir_value_t *destination,
+        ast_type_t *destination_ast_type,
+        source_t source_on_failure
+){
     // Ensure value is a structure value
     if(value->type->kind != TYPE_KIND_STRUCTURE || value_ast_type->elements_length != 1) return FAILURE;
 
@@ -1594,6 +1601,17 @@ errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, a
     if(errorcode) goto failure;
 
     if(result.has){
+        funcpair_t pair = result.value;
+
+        if(pair.ast_func->traits & AST_FUNC_DISALLOW){
+            strong_cstr_t typename = ast_type_str(value_ast_type);
+            compiler_panicf(builder->compiler, source_on_failure, "Assigning value to type '%s' is disallowed", typename);
+            free(typename);
+
+            errorcode = ALT_FAILURE;
+            goto failure;
+        }
+
         build_zeroinit(builder, destination);
     
         ast_type_t ast_type_ptr = ast_type_clone(destination_ast_type);
@@ -1603,7 +1621,6 @@ errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, a
         arg_types[0] = ast_type_ptr;
         arg_types[1] = *destination_ast_type;
 
-        funcpair_t pair = result.value;
         errorcode = handle_pass_management(builder, arguments, arg_types, pair.ast_func->arg_type_traits, 2);
         ast_type_free(&ast_type_ptr);
 
@@ -2136,6 +2153,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     // See if any of the children will require an __assign__ call,
     // if not, return no function
     bool some_have_assign = false;
+    bool disallowed = false;
 
     for(length_t i = 0; i != field_map.arrows_length; i++){
         weak_cstr_t member = field_map.arrows[i].name;
@@ -2154,6 +2172,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
         if(errorcode == SUCCESS && result.has){
             some_have_assign = true;
+            disallowed |= result.value.ast_func->traits & AST_FUNC_DISALLOW;
             break;
         }
     }
@@ -2183,6 +2202,10 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     });
 
     func->traits |= AST_FUNC_GENERATED;
+
+    if(disallowed){
+        func->traits |= AST_FUNC_DISALLOW;
+    }
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 2);
     func->arg_types = malloc(sizeof(ast_type_t) * 2);

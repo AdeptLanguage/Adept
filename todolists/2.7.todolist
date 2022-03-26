@@ -1,7 +1,6 @@
 # Overall Things for Adept 2.7
 
 HIGH-PRIORITY:
-* documentation for Adept 2.6
 
 MEDIUM-PRIORITY:
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
@@ -35,7 +34,14 @@ MEDIUM-PRIORITY:
 * 'indexOf()', 'find()', and better 'join()' for String
 * 'sub()', 'segment()', 'find()' and 'sort()' for List
 * make StringView into "recognized builtin type" for editors
-* make `Pair` and friends in standard library into records
+* maybe make it so you don't have to return after an exhaustive switch?
+* lambdas
+* nested functions
+* try operator, ?! or something (along with management function __try__(value POD Value) bool)
+* allow blocks/conditionals to be used as expressions and yield values
+* revert $T to being distinct from $~T (but only when not at the top level)
+* make $~T be instantiated as $T when they differ
+* add 'unreachable' IR for unreachable ends of functions
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -49,7 +55,6 @@ LOW-PRIORITY:
 * Specify default value arguments by name (e.g - captLoadTexturesByFieldName(this, assetsFolder: where(), approximateByDefault: true) )
 * 'adept install https://github.com/IsaacShelton/Box2D'
 * match/when statement or something like that
-* support for disallowing/disencouraging assignment for a composite type
 * macro/snippet functions? that expand to be inline and never become an actual function
     ```
     snippet func boundsCheck(this *<$T> Array, index usize) {
@@ -60,6 +65,7 @@ LOW-PRIORITY:
         #end
     }
     ```
+* add higher-level main function signature when taking in arguments
 
 v2.4 COMPLETED:
 + Standard Library Imports
@@ -103,3 +109,6 @@ v2.7 COMPLETED:
 + "= delete" functions/methods (aka disallow)
 + update README.md examples
 + don't show "must return a value" error for when it's unreachable
++ make `Pair` and friends in standard library into records
++ add new-style constructors to standard library types (constructors in the same case as the type name)
++ support for disallowing/disencouraging assignment for a composite type

@@ -1,0 +1,17 @@
+# Ideas for way-in-the-future changes for Adept 3.0 that would be radical or break backwards-compatibility
+
+IDEAS:
+- Make 'delete' call __defer__ by default, and add 'delete POD' to take the place of the current delete
+- Improve meta-programming system
+- Make more types be able to have methods
+- Modules or some kind of way to section off code
+- Change 'String' and 'List' (etc.)
+- Iterators
+- Sum types
+- Overhaul API for RTTI
+- Prefer @attribute syntax for attributes instead of using keywords, for example "@implicit\nfunc ..." instead of "implicit func ..."
+- Rethink inline/spontaneous variable declarations
+- Rethink syntax for constant expressions and named expressions
+- Rethink loop label syntax
+- Unify syntax more
+- Consider allowing methods to take in 'this' by-value

@@ -411,7 +411,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     // TODO: CLEANUP: Clean this up
     // NOTE: We have to recheck if the function was terminated because of 'handle_children_pass_root(&builder)'
-    if(!terminated && ast_func_end_is_reachable(&object->ast, ast_func_id)){
+    if(!terminated){
         ir_type_t *ir_return_type = ir_funcs->funcs[ir_func_id].return_type;
 
         // Handle auto-return
@@ -422,7 +422,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
                 && ast_type_is_void(&ast_func.return_type)){
             // Return an int under the hood for 'func main() void'
             build_return(&builder, build_literal_int(builder.pool, 0));
-        } else {
+        } else if(ast_func_end_is_reachable(&object->ast, ast_func_id)){
             source_t where = ast_func.return_type.source;
             strong_cstr_t return_typename = ast_type_str(&ast_func.return_type);
             compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func.name);

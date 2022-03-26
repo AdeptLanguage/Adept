@@ -56,6 +56,8 @@ compile defer_global || exit $?
 compile deprecated || exit $?
 compile dereference || exit $?
 ! compile disallow || exit $? # Expect failure
+! compile disallow_assignment || exit $? # Expect failure
+! compile disallow_assignment_container || exit $? # Expect failure
 ! compile disallow_funcaddr || exit $? # Expect failure
 ! compile disallow_poly || exit $? # Expect failure
 compile dropped_values || exit $?

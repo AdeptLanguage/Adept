@@ -1,0 +1,12 @@
+
+pragma ignore_unused
+import basics
+
+struct Thing () {
+    func __assign__(other Thing) = delete
+}
+
+func main {
+    a, b Thing
+    a = b
+}

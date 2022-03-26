@@ -399,7 +399,14 @@ bool could_have_pass(ast_type_t *ast_type);
 // NOTE: Returns SUCCESS if value was utilized in deference
 //       Returns FAILURE if value was not utilized in deference
 //       Returns ALT_FAILURE if a compile time error occurred
-errorcode_t handle_assign_management(ir_builder_t *builder, ir_value_t *value, ast_type_t *value_ast_type, ir_value_t *destination, ast_type_t *destination_ast_type);
+errorcode_t handle_assign_management(
+    ir_builder_t *builder,
+    ir_value_t *value,
+    ast_type_t *value_ast_type,
+    ir_value_t *destination,
+    ast_type_t *destination_ast_type,
+    source_t source_on_failure
+);
 
 // ---------------- handle_math_management ----------------
 // Handles basic math management function calls

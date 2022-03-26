@@ -95,6 +95,10 @@ call :compile dereference
 if %errorlevel% neq 0 popd & exit /b %errorlevel%
 call :compile disallow
 if %errorlevel% neq 1 popd & exit /b %errorlevel% REM Expect failure
+call :compile disallow_assignment
+if %errorlevel% neq 1 popd & exit /b %errorlevel% REM Expect failure
+call :compile disallow_assignment_container
+if %errorlevel% neq 1 popd & exit /b %errorlevel% REM Expect failure
 call :compile disallow_funcaddr
 if %errorlevel% neq 1 popd & exit /b %errorlevel% REM Expect failure
 call :compile disallow_poly

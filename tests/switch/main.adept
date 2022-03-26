@@ -80,16 +80,6 @@ func main {
         m.value = 'default bomb'
     }
     #end
-
-    #if stage > 4
-    switch mode {
-    case PARK,    printf('Parked\n')
-    case REVERSE, printf('Driving in reverse\n')
-    case NEUTRAL, printf('In neutral\n')
-    case DRIVE_1 or DRIVE_2 or DRIVE_3
-        printf('Driving\n')
-    }
-    #end
 }
 
 enum Fruit (APPLE, ORANGE, BANANA)

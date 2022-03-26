@@ -2510,7 +2510,7 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         if(is_assign_pod){
             used_assign_function = false;
         } else {
-            errorcode_t errorcode = handle_assign_management(builder, initial, &temporary_type, destination, &def->type);
+            errorcode_t errorcode = handle_assign_management(builder, initial, &temporary_type, destination, &def->type, def->source);
             if(errorcode == ALT_FAILURE) return errorcode;
 
             used_assign_function = errorcode == SUCCESS;

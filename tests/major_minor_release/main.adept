@@ -24,7 +24,7 @@
 #else
     #set version 0 + __compiler__version__
     #set __compiler_major__ 2
-    #set __compiler_minor__ (version - 2.0)
+    #set __compiler_minor__ (version - 2.0) * 10
     #set __compiler_release__ 0
     #set __compiler_qualifier__ ""
 #end
