@@ -119,6 +119,7 @@ enum {
     INSTRUCTION_STATICVARPTR,    // ir_instr_varptr_t
     INSTRUCTION_ASM,             // ir_instr_asm_t
     INSTRUCTION_DEINIT_SVARS,    // ir_instr_t
+    INSTRUCTION_UNREACHABLE,     // ir_instr_t
 };
 
 // ---------------- ir_type_mapping_t ----------------

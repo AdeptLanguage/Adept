@@ -754,6 +754,12 @@ void build_deinit_svars(ir_builder_t *builder){
     instruction->result_type = NULL;
 }
 
+void build_unreachable(ir_builder_t *builder){
+    ir_instr_t *built_instr = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
+    built_instr->id = INSTRUCTION_UNREACHABLE;
+    built_instr->result_type = NULL;
+}
+
 void build_main_deinitialization(ir_builder_t *builder){
     handle_deference_for_globals(builder);
     build_deinit_svars(builder);

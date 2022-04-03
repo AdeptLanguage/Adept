@@ -319,6 +319,10 @@ void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, 
 // it covers all main-related deinitialization routines
 void build_deinit_svars(ir_builder_t *builder);
 
+// ---------------- build_unreachable ----------------
+// Builds an instruction that indicates an unreachable code path
+void build_unreachable(ir_builder_t *builder);
+
 // ---------------- build_main_deinitialization ----------------
 // Builds all main-related deinitialization routines
 void build_main_deinitialization(ir_builder_t *builder);

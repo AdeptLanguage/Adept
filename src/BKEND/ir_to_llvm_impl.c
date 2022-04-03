@@ -1225,6 +1225,9 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
             LLVMBuildCall(builder, llvm->static_variable_info.deinit_function, NULL, 0, "");
             break;
+        case INSTRUCTION_UNREACHABLE:
+            LLVMBuildUnreachable(builder);
+            break;
         default:
             die("ir_to_llvm_instructions() - Unrecognized instruction '%d'\n", (int) instr->id);
         }

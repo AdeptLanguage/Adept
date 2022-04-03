@@ -422,7 +422,9 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
                 && ast_type_is_void(&ast_func.return_type)){
             // Return an int under the hood for 'func main() void'
             build_return(&builder, build_literal_int(builder.pool, 0));
-        } else if(ast_func_end_is_reachable(&object->ast, ast_func_id)){
+        } else if(!ast_func_end_is_reachable(&object->ast, ast_func_id)){
+            build_unreachable(&builder);
+        } else {
             source_t where = ast_func.return_type.source;
             strong_cstr_t return_typename = ast_type_str(&ast_func.return_type);
             compiler_panicf(compiler, where, "Must return a value of type '%s' before exiting function '%s'", return_typename, ast_func.name);

@@ -41,7 +41,6 @@ MEDIUM-PRIORITY:
 * allow blocks/conditionals to be used as expressions and yield values
 * revert $T to being distinct from $~T (but only when not at the top level)
 * make $~T be instantiated as $T when they differ
-* add 'unreachable' IR for unreachable ends of functions
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -112,3 +111,4 @@ v2.7 COMPLETED:
 + make `Pair` and friends in standard library into records
 + add new-style constructors to standard library types (constructors in the same case as the type name)
 + support for disallowing/disencouraging assignment for a composite type
++ add 'unreachable' IR for unreachable ends of functions
