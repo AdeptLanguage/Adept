@@ -532,6 +532,13 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 free(value_str);
             }
             break;
+        case EXPR_CONDITIONLESS_BLOCK: {
+                fprintf(file, "{\n");
+                ast_dump_statement_list(file, &typecast(ast_expr_conditionless_block_t*, statements[s])->statements, indentation + 1);
+                indent(file, indentation);
+                fprintf(file, "}\n");
+            }
+            break;
         case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {
                 ast_expr_t *if_value = ((ast_expr_if_t*) statements[s])->value;
                 strong_cstr_t if_value_str = ast_expr_str(if_value);

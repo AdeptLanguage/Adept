@@ -65,6 +65,8 @@ LOW-PRIORITY:
     }
     ```
 * add higher-level main function signature when taking in arguments
+* maybe? add support for user-defined main signatures (via __main_signature__ for example)
+* add toString for Vector2f and friends
 
 v2.4 COMPLETED:
 + Standard Library Imports

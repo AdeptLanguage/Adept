@@ -532,15 +532,15 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
             break;
         case EXPR_CONDITIONLESS_BLOCK: {
                 ast_expr_conditionless_block_t *block_expr = (ast_expr_conditionless_block_t*) stmt;
-
                 open_scope(builder);
 
-                if(ir_gen_stmts(builder, &block_expr->statements, out_is_terminated)){
-                    close_scope(builder);
-                    return FAILURE;
-                }
+                errorcode_t errorcode = (
+                    ir_gen_stmts(builder, &block_expr->statements, out_is_terminated)
+                    || (!*out_is_terminated && handle_deference_for_variables(builder, &builder->scope->list))
+                );
 
                 close_scope(builder);
+                if(errorcode) return errorcode;
 
                 if(*out_is_terminated){
                     return SUCCESS;

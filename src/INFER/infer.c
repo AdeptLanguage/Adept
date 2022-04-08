@@ -221,6 +221,19 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 if(infer_expr(ctx, func, &assign_stmt->value, EXPR_NONE, false)) return FAILURE;
             }
             break;
+        case EXPR_CONDITIONLESS_BLOCK: {
+                assert(ctx->scope);
+
+                ast_expr_conditionless_block_t *block = (ast_expr_conditionless_block_t*) stmt;
+
+                infer_var_scope_push(&ctx->scope);
+                if(infer_in_stmts(ctx, func, &block->statements)){
+                    infer_var_scope_pop(ctx->compiler, &ctx->scope);
+                    return FAILURE;
+                }
+                infer_var_scope_pop(ctx->compiler, &ctx->scope);
+            }
+            break;
         case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {
                 assert(ctx->scope);
 
