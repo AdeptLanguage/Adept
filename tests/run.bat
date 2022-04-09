@@ -415,7 +415,7 @@ if exist ast.txt   del /F ast.txt
 if exist infer.txt del /F infer.txt
 if exist ir.txt    del /F ir.txt
 
-echo All tests compiled successfully!
+echo All tests passed successfully!
 popd
 exit /b 0
 

@@ -155,9 +155,7 @@ void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, as
 
 // ---------------- infer_var_scope_add_constant ----------------
 // Adds a constant expression mapping to an inference variable scope
-// NOTE: 'new_constant_data' pointer is only read from and not stored,
-//       only the data pointed to is read from and stored
-void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t *new_constant_data);
+void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t strong_new_constant_data);
 
 // ---------------- infer_var_scope_nearest ----------------
 // Finds the nearest variable name to the given variable name

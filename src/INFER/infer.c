@@ -403,8 +403,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
 
                 ast_expr_declare_constant_t *declare_constant_stmt = (ast_expr_declare_constant_t*) stmt;
 
-                infer_var_scope_add_constant(ctx->scope, &declare_constant_stmt->constant);
-                ast_constant_make_empty(&declare_constant_stmt->constant);
+                infer_var_scope_add_constant(ctx->scope, ast_constant_clone(&declare_constant_stmt->constant));
             }
             break;
         case EXPR_PREINCREMENT:
@@ -1339,15 +1338,15 @@ void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, as
     var->is_const = is_const;
 }
 
-void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t *new_constant_data){
+void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t constant){
     expand((void**) &scope->constants, sizeof(ast_constant_t), scope->constants_length, &scope->constants_capacity, 1, 4);
 
-    length_t insert_position = find_insert_position(scope->constants, scope->constants_length, ast_constants_cmp, new_constant_data, sizeof(ast_constant_t));
+    length_t insert_position = find_insert_position(scope->constants, scope->constants_length, ast_constants_cmp, &constant, sizeof(ast_constant_t));
 
     // Move other constants over, so that the list will be sorted
     memmove(&scope->constants[insert_position + 1], &scope->constants[insert_position], sizeof(ast_constant_t) * (scope->constants_length - insert_position));
 
-    scope->constants[insert_position] = *new_constant_data;
+    scope->constants[insert_position] = constant;
     scope->constants_length++;
 }
 

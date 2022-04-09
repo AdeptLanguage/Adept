@@ -226,5 +226,5 @@ rm -f ast.txt
 rm -f infer.txt
 rm -f ir.txt
 
-echo All tests compiled successfully!
+echo All tests passed successfully!
 popd > /dev/null

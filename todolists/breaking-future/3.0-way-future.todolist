@@ -15,3 +15,4 @@ IDEAS:
 - Rethink loop label syntax
 - Unify syntax more
 - Consider allowing methods to take in 'this' by-value
+- Have warning for foot-gun that is ; at end of single line conditional when the indentation seems to indicate the author did not mean to use statement continuation

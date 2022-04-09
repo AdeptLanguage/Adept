@@ -1,6 +1,8 @@
 # Overall Things for Adept 2.7
 
 HIGH-PRIORITY:
+* easy and consistent constructors (prerequisite for classes)
+* classes and virtual functions
 
 MEDIUM-PRIORITY:
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
@@ -12,12 +14,10 @@ MEDIUM-PRIORITY:
     ```
 * 'break default' to break to default condition of switch statement
 * __return__ and return POD
-* easy and consistent constructors
 * switch over enums without enums name for each entry: idea: exhaustive switch kind using CardKind { ... }
 * @incognito
 * traits/interfaces and 'derive Thingable1, Thingable2, Thingable3 for Thing'
 * built-in meta functions like supports()
-* constructor and @undef constructor
 * static asserts
 * compile-time evaluation
 * better error propagation mechanism
@@ -67,6 +67,9 @@ LOW-PRIORITY:
 * add higher-level main function signature when taking in arguments
 * maybe? add support for user-defined main signatures (via __main_signature__ for example)
 * add toString for Vector2f and friends
+* add __equals__ and __not_equals__ and __assign__ for Optional?
+* add toString for Optional?
+* ability to mark individual functions as deprecated
 
 v2.4 COMPLETED:
 + Standard Library Imports
@@ -114,3 +117,8 @@ v2.7 COMPLETED:
 + add new-style constructors to standard library types (constructors in the same case as the type name)
 + support for disallowing/disencouraging assignment for a composite type
 + add 'unreachable' IR for unreachable ends of functions
++ runtime error on usage of donor strings with standard library functions (enabled by default)
++ rename StringOwnership::DONATED to StringOwnership::DONOR
++ runtime donor runtime errors for List (and add .give())
++ runtime donor runtime errors for Grid (and add .give())
++ modernize and remove obsolete functions from '2.7/String.adept', '2.7/List.adept' and '2.7/Grid.adept'

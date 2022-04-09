@@ -713,8 +713,9 @@ func separateNameIntoParts(fullname String, out firstname, lastname *String) suc
 - [(2.4) Card Game](https://github.com/IsaacShelton/GenericCardGame)
 - [(2.5) MiniBox Multiplayer Gamepad](https://github.com/IsaacShelton/MiniBox)
 
-# Popular Library Ports
+# Popular Libraries and Ports
 - [(2.5) Box2D](https://github.com/IsaacShelton/Box2D)
+- [(2.6) SharedPtr](https://github.com/IsaacShelton/AdeptSharedPtr)
 
 # Syntax Examples
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
