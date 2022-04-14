@@ -138,6 +138,7 @@ tokens = [
     Token("case"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "case keyword"                      ),
     Token("cast"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "cast keyword"                      ),
     Token("const"             , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "const keyword"                     ),
+    Token("constructor"       , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "constructor keyword"               ),
     Token("continue"          , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "continue keyword"                  ),
     Token("def"               , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "def keyword"                       ),
     Token("default"           , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "default keyword"                   ),

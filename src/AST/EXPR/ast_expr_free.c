@@ -118,6 +118,10 @@ static void ast_expr_return_free(ast_expr_return_t *expr){
 static void ast_expr_declare_free(ast_expr_declare_t *expr){
     ast_type_free(&expr->type);
     ast_expr_free_fully(expr->value);
+
+    if(expr->inputs.has){
+        ast_expr_list_free(&expr->inputs.value);
+    }
 }
 
 static void ast_expr_assign_free(ast_expr_assign_t *expr){

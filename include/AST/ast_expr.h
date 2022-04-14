@@ -318,6 +318,7 @@ typedef struct {
     ast_type_t type;
     ast_expr_t *value;
     trait_t traits;
+    optional_ast_expr_list_t inputs;
 } ast_expr_declare_t;
 
 // ---------------- ast_expr_inline_declare_t ----------------
@@ -572,7 +573,16 @@ void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source
 // ---------------- ast_expr_create_declaration ----------------
 // Creates a declare expression
 // NOTE: Ownership of 'type' and 'value' will be taken
-void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, trait_t traits, ast_expr_t *value);
+void ast_expr_create_declaration(
+    ast_expr_t **out_expr,
+    unsigned int expr_id,
+    source_t source,
+    weak_cstr_t name,
+    ast_type_t type,
+    trait_t traits,
+    ast_expr_t *value,
+    optional_ast_expr_list_t inputs
+);
 
 // ---------------- ast_expr_create_assignment ----------------
 // Creates an assign expression
@@ -610,6 +620,10 @@ void ast_expr_list_free(ast_expr_list_t *list);
 // ---------------- ast_expr_list_clone ----------------
 // Deep-clones an AST expression list
 ast_expr_list_t ast_expr_list_clone(ast_expr_list_t *list);
+
+// ---------------- optional_ast_expr_list_clone ----------------
+// Clones an optional_ast_expr_list_t
+optional_ast_expr_list_t optional_ast_expr_list_clone(optional_ast_expr_list_t *list);
 
 // ---------------- ast_expr_deduce_to_size ----------------
 // Attempts to collapse an ast_expr_t into an unsigned integer value

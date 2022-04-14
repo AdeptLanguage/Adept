@@ -503,8 +503,16 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
         .capacity = num_stmts,
     };
 
-    trait_t traits = AST_EXPR_DECLARATION_POD | AST_EXPR_DECLARATION_ASSIGN_POD;
-    ast_expr_create_declaration(&func->statements.statements[0], all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE, source, master_variable_name, ast_type_clone(&func->return_type), traits, NULL);
+    ast_expr_create_declaration(
+        &func->statements.statements[0],
+        all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE,
+        source,
+        master_variable_name,
+        ast_type_clone(&func->return_type),
+        AST_EXPR_DECLARATION_POD | AST_EXPR_DECLARATION_ASSIGN_POD,
+        NULL,
+        NO_AST_EXPR_LIST
+    );
 
     for(length_t i = 0; i != func->arity; i++){
         weak_cstr_t field_name = field_map->arrows[i].name;

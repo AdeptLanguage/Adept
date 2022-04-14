@@ -434,6 +434,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_declare->type = ast_type_clone(&expr_as_declare->type);
         clone_as_declare->value = expr_as_declare->value ? ast_expr_clone(expr_as_declare->value) : NULL;
         clone_as_declare->traits = expr_as_declare->traits;
+        clone_as_declare->inputs = optional_ast_expr_list_clone(&expr_as_declare->inputs);
         break;
 
         #undef expr_as_declare
@@ -757,7 +758,16 @@ void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source
     ((ast_expr_embed_t*) *out_expr)->filename = filename;
 }
 
-void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, source_t source, weak_cstr_t name, ast_type_t type, trait_t traits, ast_expr_t *value){
+void ast_expr_create_declaration(
+    ast_expr_t **out_expr,
+    unsigned int expr_id,
+    source_t source,
+    weak_cstr_t name,
+    ast_type_t type,
+    trait_t traits,
+    ast_expr_t *value,
+    optional_ast_expr_list_t inputs
+){
     *out_expr = malloc(sizeof(ast_expr_declare_t));
     ((ast_expr_declare_t*) *out_expr)->id = expr_id;
     ((ast_expr_declare_t*) *out_expr)->source = source;
@@ -765,6 +775,7 @@ void ast_expr_create_declaration(ast_expr_t **out_expr, unsigned int expr_id, so
     ((ast_expr_declare_t*) *out_expr)->traits = traits;
     ((ast_expr_declare_t*) *out_expr)->type = type;
     ((ast_expr_declare_t*) *out_expr)->value = value;
+    ((ast_expr_declare_t*) *out_expr)->inputs = inputs;
 }
 
 void ast_expr_create_assignment(ast_expr_t **out_expr, unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod){
@@ -822,6 +833,19 @@ ast_expr_list_t ast_expr_list_clone(ast_expr_list_t *list){
 
     for(length_t i = 0; i != result.length; i++){
         result.statements[i] = ast_expr_clone(list->statements[i]);
+    }
+
+    return result;
+}
+
+optional_ast_expr_list_t optional_ast_expr_list_clone(optional_ast_expr_list_t *list){
+    optional_ast_expr_list_t result;
+
+    if(list->has){
+        result.has = true;
+        result.value = ast_expr_list_clone(&list->value);
+    } else {
+        result.has = false;
     }
 
     return result;

@@ -960,9 +960,16 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
 errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t *stmt){
     const char *bad_condition_format = "Received type '%s' when conditional expects type '%s'";
 
+    // Open new scope
+    open_scope(builder);
+
     // Generate instructions to get condition value
     ir_value_t *condition = ir_gen_conforming_expr(builder, stmt->value, &builder->static_bool, CONFORM_MODE_CALCULATION, stmt->source, bad_condition_format);
-    if(condition == NULL) return FAILURE;
+
+    if(condition == NULL){
+        close_scope(builder);
+        return FAILURE;
+    }
 
     length_t new_basicblock_id = build_basicblock(builder); // Create block for when the condition is true
     length_t end_basicblock_id = build_basicblock(builder); // Create block for when the condition is false
@@ -973,8 +980,7 @@ errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t 
         build_cond_break(builder, condition, end_basicblock_id, new_basicblock_id);
     }
 
-    // Open block scope and prepare for block statements
-    open_scope(builder);
+    // Prepare for block statements
     build_using_basicblock(builder, new_basicblock_id);
 
     // Generate IR instructions for the statements within the conditional block
@@ -995,9 +1001,16 @@ errorcode_t ir_gen_stmt_simple_conditional(ir_builder_t *builder, ast_expr_if_t 
 errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_t *stmt){
     const char *bad_condition_error_format = "Received type '%s' when conditional expects type '%s'";
 
+    // Create over-arching scope for entire conditional
+    open_scope(builder);
+
     // Generate instructions to get condition value
     ir_value_t *condition = ir_gen_conforming_expr(builder, stmt->value, &builder->static_bool, CONFORM_MODE_CALCULATION, stmt->source, bad_condition_error_format);
-    if(condition == NULL) return FAILURE;
+
+    if(condition == NULL){
+        close_scope(builder);
+        return FAILURE;
+    }
 
     length_t new_basicblock_id  = build_basicblock(builder); // Create block for when the condition is true
     length_t else_basicblock_id = build_basicblock(builder); // Create block for when the condition is false
@@ -1019,6 +1032,7 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
     if(ir_gen_stmts(builder, &stmt->statements, &terminated)
     || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
+        close_scope(builder);
         return FAILURE;
     }
 
@@ -1034,12 +1048,16 @@ errorcode_t ir_gen_stmt_dual_conditional(ir_builder_t *builder, ast_expr_ifelse_
     if(ir_gen_stmts(builder, &stmt->else_statements, &terminated)
     || ir_gen_stmts_auto_terminate(builder, terminated, end_basicblock_id)){
         close_scope(builder);
+        close_scope(builder);
         return FAILURE;
     }
 
     // Close secondary block scope and continue building at the continuation point
     close_scope(builder);
     build_using_basicblock(builder, end_basicblock_id);
+
+    // Close over-arching scope
+    close_scope(builder);
     return SUCCESS;
 }
 
@@ -1067,9 +1085,16 @@ errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stm
     build_break(builder, test_basicblock_id);
     build_using_basicblock(builder, test_basicblock_id);
 
+    // Open scope
+    open_scope(builder);
+
     // Generate IR instructions to get the condition value
     ir_value_t *condition = ir_gen_conforming_expr(builder, stmt->value, &builder->static_bool, CONFORM_MODE_CALCULATION, stmt->source, bad_condition_error_format);
-    if(condition == NULL) return FAILURE;
+
+    if(condition == NULL){
+        close_scope(builder);
+        return FAILURE;
+    }
 
     // Continue/exit depending on condition and conditional kind
     if(stmt->id == EXPR_WHILE){
@@ -1078,8 +1103,7 @@ errorcode_t ir_gen_stmt_simple_loop(ir_builder_t *builder, ast_expr_while_t *stm
         build_cond_break(builder, condition, end_basicblock_id, new_basicblock_id);
     }
 
-    // Open block scope and prepare for block statements
-    open_scope(builder);
+    // Prepare for block statements
     build_using_basicblock(builder, new_basicblock_id);
 
     // Generate IR instructions for the statements within the conditional block

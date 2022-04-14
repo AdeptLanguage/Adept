@@ -67,9 +67,10 @@ LOW-PRIORITY:
 * add higher-level main function signature when taking in arguments
 * maybe? add support for user-defined main signatures (via __main_signature__ for example)
 * add toString for Vector2f and friends
-* add __equals__ and __not_equals__ and __assign__ for Optional?
-* add toString for Optional?
+* add __equals__ and __not_equals__ [will require POD version]
+* add toString for Optional? [will require POD version]
 * ability to mark individual functions as deprecated
+* add way to escape strings in 'String.adept'
 
 v2.4 COMPLETED:
 + Standard Library Imports
@@ -122,3 +123,4 @@ v2.7 COMPLETED:
 + runtime donor runtime errors for List (and add .give())
 + runtime donor runtime errors for Grid (and add .give())
 + modernize and remove obsolete functions from '2.7/String.adept', '2.7/List.adept' and '2.7/Grid.adept'
++ add __assign__ for Optional

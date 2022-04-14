@@ -572,6 +572,9 @@ void ir_dump_instruction(FILE *file, ir_instr_t *instruction, length_t instr_ind
     case INSTRUCTION_DEINIT_SVARS:
         fprintf(file, "deinit_svars\n");
         break;
+    case INSTRUCTION_UNREACHABLE:
+        fprintf(file, "unreachable\n");
+        break;
     default:
         printf("Unknown instruction id 0x%08X when dumping ir module\n", (int) instruction->id);
         fprintf(file, "<unknown instruction>\n");

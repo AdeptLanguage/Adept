@@ -32,7 +32,7 @@ func __initializer_list__(array *$T, length usize) <$T> MyInitializerList {
 }
 
 implicit func __as__(initializer <$T> MyInitializerList) <$T> List {
-    return list(initializer.array, initializer.length, Ownership::REFERENCE)
+    return List(initializer.array, initializer.length, Ownership::REFERENCE)
 }
 
 implicit func __as__(initializer <long> MyInitializerList) <int> List {

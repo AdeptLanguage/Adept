@@ -30,6 +30,12 @@ typedef struct {
 // List structure for holding statements/expressions
 typedef listof(ast_expr_t*, statements) ast_expr_list_t;
 
+// ---------------- optional_ast_expr_list_t ----------------
+typedef optional(ast_expr_list_t) optional_ast_expr_list_t;
+
+// ---------------- NO_AST_EXPR_LIST ----------------
+#define NO_AST_EXPR_LIST (optional_ast_expr_list_t){0}
+
 #ifdef __cplusplus
 }
 #endif

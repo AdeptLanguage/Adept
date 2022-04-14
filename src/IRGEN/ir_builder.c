@@ -2407,8 +2407,8 @@ errorcode_t resolve_exprs_polymorphics(compiler_t *compiler, type_table_t *type_
     return SUCCESS;
 }
 
-errorcode_t resolve_expr_list_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_list_t *statements){
-    return resolve_exprs_polymorphics(compiler, type_table, catalog, statements->statements, statements->length);
+errorcode_t resolve_expr_list_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_list_t *exprs){
+    return resolve_exprs_polymorphics(compiler, type_table, catalog, exprs->statements, exprs->length);
 }
 
 errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t *expr){
@@ -2434,6 +2434,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
 
             if(declare_stmt->value != NULL){
                 if(resolve_expr_polymorphics(compiler, type_table, catalog, declare_stmt->value)) return FAILURE;
+            }
+
+            if(declare_stmt->inputs.has){
+                if(resolve_expr_list_polymorphics(compiler, type_table, catalog, &declare_stmt->inputs.value)) return FAILURE;
             }
         }
         break;

@@ -462,7 +462,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
 // Resolves any polymorphic type variables within an AST expression
 errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t *expr);
 errorcode_t resolve_exprs_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t **exprs, length_t count);
-errorcode_t resolve_expr_list_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_list_t *statements);
+errorcode_t resolve_expr_list_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_list_t *exprs);
 
 // ---------------- is_allowed_builtin_auto_conversion ----------------
 // Returns whether a builtin auto conversion is allowed

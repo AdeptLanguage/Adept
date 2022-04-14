@@ -884,6 +884,7 @@ errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list,
 
     unsigned int declare_stmt_type = EXPR_DECLARE;
     ast_expr_t *initial_value = NULL;
+    optional_ast_expr_list_t inputs = {0};
 
     // Handle initial value assignment
     if(parse_eat(ctx, TOKEN_ASSIGN, NULL) == SUCCESS){
@@ -901,6 +902,13 @@ errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list,
                 goto failure;
             }
         }
+    } else if(parse_eat(ctx, TOKEN_OPEN, NULL) == SUCCESS){
+        if(parse_expr_arguments(ctx, &inputs.value.statements, &inputs.value.length, &inputs.value.capacity)){
+            return FAILURE;
+        }
+
+        inputs.has = true;
+        return FAILURE;
     }
 
     // Create variable declarations
@@ -914,7 +922,7 @@ errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list,
             expand((void**) &stmt_list->statements, sizeof(ast_expr_t*), stmt_list->length, &stmt_list->capacity, 1, 8);
         }
 
-        ast_expr_create_declaration(&stmt_list->statements[stmt_list->length++], declare_stmt_type, source_list[i], names[i], type, traits, value);
+        ast_expr_create_declaration(&stmt_list->statements[stmt_list->length++], declare_stmt_type, source_list[i], names[i], type, traits, value, inputs);
     }
 
     return SUCCESS;

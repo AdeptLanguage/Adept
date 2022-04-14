@@ -124,16 +124,24 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
     *ctx->i += 1;
 
     bool is_foreign = id == TOKEN_FOREIGN;
+    bool is_constructor = id == TOKEN_CONSTRUCTOR;
 
-    if(id != TOKEN_FUNC && !is_foreign){
-        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Expected 'func' or 'foreign' keyword after 'stdcall' keyword");
+    if(id != TOKEN_FUNC && !is_constructor && !is_foreign){
+        compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Expected 'func' or 'foreign' or 'constructor' keyword");
         return FAILURE;
     }
 
     maybe_null_weak_cstr_t custom_export_name = parse_eat_string(ctx, NULL);
     strong_cstr_t name;
 
-    if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
+    if(is_constructor){
+        if(ctx->prename != NULL){
+            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Constructor cannot be named");
+            return FAILURE;
+        }
+
+        name = strclone("__constructor__");
+    } else if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
         name = ctx->prename;
         ctx->prename = NULL;
     } else {
@@ -145,7 +153,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
     }
 
     if(name == NULL) return FAILURE;
-    if(ctx->composite_association == NULL) parse_prepend_namespace(ctx, &name);
+    if(ctx->composite_association == NULL && !is_constructor) parse_prepend_namespace(ctx, &name);
 
     maybe_null_strong_cstr_t export_name = custom_export_name ? custom_export_name : (prefixes.is_external ? strclone(name) : NULL);
     bool is_entry = streq(ctx->compiler->entry_point, name);

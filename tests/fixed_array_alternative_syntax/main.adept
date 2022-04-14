@@ -1,4 +1,5 @@
 
+#pragma default_stdlib '2.5'
 #import <basics>
 
 main :: func {

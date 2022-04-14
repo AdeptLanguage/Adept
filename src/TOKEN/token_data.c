@@ -87,66 +87,67 @@ const char *global_token_name_table[] = {
     "case keyword",                       // 0x00000052
     "cast keyword",                       // 0x00000053
     "const keyword",                      // 0x00000054
-    "continue keyword",                   // 0x00000055
-    "def keyword",                        // 0x00000056
-    "default keyword",                    // 0x00000057
-    "defer keyword",                      // 0x00000058
-    "define keyword",                     // 0x00000059
-    "delete keyword",                     // 0x0000005A
-    "each keyword",                       // 0x0000005B
-    "else keyword",                       // 0x0000005C
-    "embed keyword",                      // 0x0000005D
-    "enum keyword",                       // 0x0000005E
-    "exhaustive keyword",                 // 0x0000005F
-    "external keyword",                   // 0x00000060
-    "fallthrough keyword",                // 0x00000061
-    "false keyword",                      // 0x00000062
-    "for keyword",                        // 0x00000063
-    "foreign keyword",                    // 0x00000064
-    "func keyword",                       // 0x00000065
-    "funcptr keyword",                    // 0x00000066
-    "global keyword",                     // 0x00000067
-    "if keyword",                         // 0x00000068
-    "implicit keyword",                   // 0x00000069
-    "import keyword",                     // 0x0000006A
-    "in keyword",                         // 0x0000006B
-    "inout keyword",                      // 0x0000006C
-    "llvm_asm keyword",                   // 0x0000006D
-    "namespace keyword",                  // 0x0000006E
-    "new keyword",                        // 0x0000006F
-    "null keyword",                       // 0x00000070
-    "or keyword",                         // 0x00000071
-    "out keyword",                        // 0x00000072
-    "packed keyword",                     // 0x00000073
-    "pragma keyword",                     // 0x00000074
-    "private keyword",                    // 0x00000075
-    "public keyword",                     // 0x00000076
-    "record keyword",                     // 0x00000077
-    "repeat keyword",                     // 0x00000078
-    "return keyword",                     // 0x00000079
-    "sizeof keyword",                     // 0x0000007A
-    "static keyword",                     // 0x0000007B
-    "stdcall keyword",                    // 0x0000007C
-    "struct keyword",                     // 0x0000007D
-    "switch keyword",                     // 0x0000007E
-    "thread_local keyword",               // 0x0000007F
-    "true keyword",                       // 0x00000080
-    "typeinfo keyword",                   // 0x00000081
-    "typenameof keyword",                 // 0x00000082
-    "undef keyword",                      // 0x00000083
-    "union keyword",                      // 0x00000084
-    "unless keyword",                     // 0x00000085
-    "until keyword",                      // 0x00000086
-    "using keyword",                      // 0x00000087
-    "va_arg keyword",                     // 0x00000088
-    "va_copy keyword",                    // 0x00000089
-    "va_end keyword",                     // 0x0000008A
-    "va_start keyword",                   // 0x0000008B
-    "verbatim keyword",                   // 0x0000008C
-    "while keyword",                      // 0x0000008D
+    "constructor keyword",                // 0x00000055
+    "continue keyword",                   // 0x00000056
+    "def keyword",                        // 0x00000057
+    "default keyword",                    // 0x00000058
+    "defer keyword",                      // 0x00000059
+    "define keyword",                     // 0x0000005A
+    "delete keyword",                     // 0x0000005B
+    "each keyword",                       // 0x0000005C
+    "else keyword",                       // 0x0000005D
+    "embed keyword",                      // 0x0000005E
+    "enum keyword",                       // 0x0000005F
+    "exhaustive keyword",                 // 0x00000060
+    "external keyword",                   // 0x00000061
+    "fallthrough keyword",                // 0x00000062
+    "false keyword",                      // 0x00000063
+    "for keyword",                        // 0x00000064
+    "foreign keyword",                    // 0x00000065
+    "func keyword",                       // 0x00000066
+    "funcptr keyword",                    // 0x00000067
+    "global keyword",                     // 0x00000068
+    "if keyword",                         // 0x00000069
+    "implicit keyword",                   // 0x0000006A
+    "import keyword",                     // 0x0000006B
+    "in keyword",                         // 0x0000006C
+    "inout keyword",                      // 0x0000006D
+    "llvm_asm keyword",                   // 0x0000006E
+    "namespace keyword",                  // 0x0000006F
+    "new keyword",                        // 0x00000070
+    "null keyword",                       // 0x00000071
+    "or keyword",                         // 0x00000072
+    "out keyword",                        // 0x00000073
+    "packed keyword",                     // 0x00000074
+    "pragma keyword",                     // 0x00000075
+    "private keyword",                    // 0x00000076
+    "public keyword",                     // 0x00000077
+    "record keyword",                     // 0x00000078
+    "repeat keyword",                     // 0x00000079
+    "return keyword",                     // 0x0000007A
+    "sizeof keyword",                     // 0x0000007B
+    "static keyword",                     // 0x0000007C
+    "stdcall keyword",                    // 0x0000007D
+    "struct keyword",                     // 0x0000007E
+    "switch keyword",                     // 0x0000007F
+    "thread_local keyword",               // 0x00000080
+    "true keyword",                       // 0x00000081
+    "typeinfo keyword",                   // 0x00000082
+    "typenameof keyword",                 // 0x00000083
+    "undef keyword",                      // 0x00000084
+    "union keyword",                      // 0x00000085
+    "unless keyword",                     // 0x00000086
+    "until keyword",                      // 0x00000087
+    "using keyword",                      // 0x00000088
+    "va_arg keyword",                     // 0x00000089
+    "va_copy keyword",                    // 0x0000008A
+    "va_end keyword",                     // 0x0000008B
+    "va_start keyword",                   // 0x0000008C
+    "verbatim keyword",                   // 0x0000008D
+    "while keyword",                      // 0x0000008E
 };
 
-const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 const char *global_token_keywords_list[] = {
     "POD",
@@ -159,6 +160,7 @@ const char *global_token_keywords_list[] = {
     "case",
     "cast",
     "const",
+    "constructor",
     "continue",
     "def",
     "default",
@@ -218,4 +220,4 @@ const char *global_token_keywords_list[] = {
     "while",
 };
 
-unsigned long long global_token_keywords_list_length = 67;
+unsigned long long global_token_keywords_list_length = 68;
