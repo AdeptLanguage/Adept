@@ -701,7 +701,7 @@ func separateNameIntoParts(fullname String, out firstname, lastname *String) suc
 }
 ```
 
-# Applications in Adept 2.0
+## Applications in Adept 2.0
 
 - [(2.0) Tic-Tac-Toe](https://github.com/IsaacShelton/AdeptTicTacToe)
 - [(2.0) Neural Network](https://github.com/IsaacShelton/AdeptNeuralNetwork)
@@ -714,26 +714,12 @@ func separateNameIntoParts(fullname String, out firstname, lastname *String) suc
 - [(2.4) Card Game](https://github.com/IsaacShelton/GenericCardGame)
 - [(2.5) MiniBox Multiplayer Gamepad](https://github.com/IsaacShelton/MiniBox)
 
-# Popular Libraries and Ports
+## Popular Libraries and Ports
 - [(2.5) Box2D](https://github.com/IsaacShelton/Box2D)
 - [(2.6) SharedPtr](https://github.com/IsaacShelton/AdeptSharedPtr)
 
-# Syntax Examples
+## Additional Syntax Examples
 [See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
 
-# Differences from Adept 1.1
-
-- Updated and improved syntax
-- Simplified programming structure
-- Type Inference
-- Improved error reporting
-- Faster compilation speeds
-- Newer LLVM Backend
-- Written in C instead of C++
-- Better system to build the compiler
-
-
-
-#### Thank you for sponsoring Adept: ❤️
-
+## Thank you for sponsoring Adept ❤️
 - Fernando Dantas
