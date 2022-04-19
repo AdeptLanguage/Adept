@@ -1,6 +1,6 @@
 # Adept
 
-<img src="https://raw.github.com/IsaacShelton/lyon_tessellation_svg_example/master/svg_output/Circle.svg" width="100" height="100">
+<img src="https://raw.github.com/AdeptLanguage/Adept/master/.github/README_logo.png" width="100" height="100">
 
 A blazing fast language for general purpose programming.
 
