@@ -1,6 +1,6 @@
 # Adept
 
-<img src="https://raw.github.com/AdeptLanguage/Adept/master/.github/README_logo.png" width="275" height="275">
+<img src="https://raw.github.com/AdeptLanguage/Adept/master/.github/README_logo.png" width="275" height="240">
 
 A blazing fast language for general purpose programming.
 
