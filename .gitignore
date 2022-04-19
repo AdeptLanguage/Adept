@@ -23,6 +23,6 @@ counter.py
 build
 tests/*/*.exe
 Makefile_Windows_Backup_5_12_2019.txt
-iwyu.out
 .commit
-misc/dev/remove_include_comments.regex
+dev/iwyu.out
+dev/remove_include_comments.regex
