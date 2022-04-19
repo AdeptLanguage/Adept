@@ -1,7 +1,6 @@
-# Adept
-
 <img src="https://raw.github.com/AdeptLanguage/Adept/master/.github/README_logo.png" width="275" height="240">
 
+## Adept
 A blazing fast language for general purpose programming.
 
 [Download Adept v2.6 for Windows](https://github.com/IsaacShelton/Adept/releases)
