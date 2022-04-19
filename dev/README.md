@@ -1,4 +1,4 @@
-### misc/dev
+### dev/
 
 Configuration files and scripts for optional development tools and helpers
 
