@@ -136,7 +136,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
 
     if(is_constructor){
         if(ctx->prename != NULL){
-            compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i - 1], "Constructor cannot be named");
+            compiler_panic(ctx->compiler, source, "Constructor cannot be named");
             return FAILURE;
         }
 
@@ -153,7 +153,15 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
     }
 
     if(name == NULL) return FAILURE;
-    if(ctx->composite_association == NULL && !is_constructor) parse_prepend_namespace(ctx, &name);
+
+    if(ctx->composite_association == NULL){
+        if(is_constructor){
+            compiler_panic(ctx->compiler, source, "Constructor must be defined inside the domain of a structure");
+            return FAILURE;
+        } else {
+            parse_prepend_namespace(ctx, &name);
+        }
+    }
 
     maybe_null_strong_cstr_t export_name = custom_export_name ? custom_export_name : (prefixes.is_external ? strclone(name) : NULL);
     bool is_entry = streq(ctx->compiler->entry_point, name);

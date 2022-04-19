@@ -728,7 +728,6 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr){
 errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr, bool allow_tentative){
     // NOTE: Assumes name and open token
 
-    // source_t *sources = ctx->tokenlist->sources;
     source_t source = ctx->tokenlist->sources[*ctx->i];
 
     strong_cstr_t name = parse_take_word(ctx, "Expected function name");
@@ -1232,14 +1231,13 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
     trait_t traits = TRAIT_NONE;
 
     unsigned int expr_id = (tokens[*i].id == TOKEN_UNDEF ? EXPR_ILDECLAREUNDEF : EXPR_ILDECLARE);
-    source_t source = sources[(*i)++];;
+    source_t source = sources[(*i)++];
 
     maybe_null_weak_cstr_t name = parse_eat_word(ctx, "Expected variable name for inline declaration");
     if(name == NULL) return FAILURE;
 
-    if(tokens[*i].id == TOKEN_POD){
+    if(parse_eat(ctx, TOKEN_POD, NULL) == SUCCESS){
         traits |= AST_EXPR_DECLARATION_POD;
-        (*i)++;
     }
 
     ast_type_t type;

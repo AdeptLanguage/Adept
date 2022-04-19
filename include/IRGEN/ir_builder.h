@@ -349,7 +349,8 @@ void pop_loop_label(ir_builder_t *builder);
 
 // ---------------- add_variable ----------------
 // Adds a variable to the current bridge_scope_t
-void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
+// Returns a temporary pointer to the constructed variable
+bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
 
 // ---------------- handle_deference_for_variables ----------------
 // Handles deference for variables in a variable list

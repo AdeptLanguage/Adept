@@ -18,6 +18,7 @@
 #include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen_expr.h"
+#include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
@@ -713,12 +714,76 @@ errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt)
     if(ir_gen_resolve_type(builder->compiler, builder->object, &stmt->type, &ir_type)) return FAILURE;
 
     // Add the variable
-    add_variable(builder, stmt->name, &stmt->type, ir_type, traits);
+    bridge_var_t *bridge_variable = add_variable(builder, stmt->name, &stmt->type, ir_type, traits);
+    ir_value_t *variable;
+
+    if(stmt->inputs.has){
+        variable = build_varptr(builder, ir_type_pointer_to(builder->pool, ir_type), bridge_variable);
+    } else {
+        variable = NULL;
+    }
 
     // Initialize variable if applicable
     if(!is_undef && ir_gen_stmt_declare_try_init(builder, stmt, ir_type)) return FAILURE;
 
+    // Construct variable if applicable
+    if(stmt->inputs.has){
+        if(ir_gen_do_construct(builder, variable, &stmt->type, &stmt->inputs.value, stmt->source)){
+            return FAILURE;
+        }
+    }
+
     return SUCCESS;
+}
+
+errorcode_t ir_gen_do_construct(
+    ir_builder_t *builder,
+    ir_value_t *variable,
+    const ast_type_t *ast_type,
+    ast_expr_list_t *inputs,
+    source_t source
+){
+    weak_cstr_t struct_name = ast_type_struct_name(ast_type);
+
+    ir_pool_snapshot_t pool_snapshot;
+    instructions_snapshot_t instructions_snapshot;
+
+    // Take snapshot of construction state,
+    // so that if this call ends up to be a no-op,
+    // we can reset back as if nothing happened
+    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
+    instructions_snapshot_capture(builder, &instructions_snapshot);
+
+    ir_value_t **arg_values;
+    ast_type_t *arg_types;
+    length_t arity = inputs->length;
+
+    if(ir_gen_arguments(builder, inputs->expressions, inputs->length, &arg_values, &arg_types)){
+        return FAILURE;
+    }
+
+    optional_funcpair_t result;
+    errorcode_t search_errorcode = ir_gen_find_method_conforming(builder, struct_name, "__constructor__", &arg_values, &arg_types, &arity, NULL, source, &result);
+
+    if(search_errorcode || !result.has){
+        if(search_errorcode != ALT_FAILURE){
+            compiler_panicf(builder->compiler, source, "Constructor with arguments does not exist");
+        }
+        goto failure;
+    }
+
+    printf("here\n");
+    (void) variable;
+
+    free(arg_values);
+    ast_types_free(arg_types, arity);
+    free(arg_types);
+    return SUCCESS;
+
+failure:
+    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+    instructions_snapshot_restore(builder, &instructions_snapshot);
+    return FAILURE;
 }
 
 errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr_declare_t *stmt, ir_type_t *ir_type){

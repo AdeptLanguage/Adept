@@ -826,7 +826,7 @@ void pop_loop_label(ir_builder_t *builder){
     builder->block_stack_length--;
 }
 
-void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
+bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
 
     length_t id = -1;
@@ -853,6 +853,8 @@ void add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type,
         .id = id,
         .static_id = static_id,
     }));
+
+    return &list->variables[list->length - 1];
 }
 
 errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_list_t *list){
@@ -1698,19 +1700,10 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     ast_type_prepend_ptr(&argument_ast_types[0]);
     argument_ast_types[1] = *index_type;
 
-    errorcode_t search_error;
-    weak_cstr_t struct_name;
-
-    // TODO: CLEANUP: CLeanup this code
-    if(array_type->elements[0]->id == AST_ELEM_BASE){
-        struct_name = ((ast_elem_base_t*) array_type->elements[0])->base;
-    } else {
-        struct_name = ((ast_elem_generic_base_t*) array_type->elements[0])->name;
-    }
+    weak_cstr_t struct_name = ast_type_struct_name(array_type);
+    errorcode_t search_error = ir_gen_find_method_conforming_without_defaults(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
     
-    search_error = ir_gen_find_method_conforming_without_defaults(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
-    
-    if(search_error || !result.has
+    if(search_error || !(result.has)
     || handle_pass_management(builder, arguments, argument_ast_types, result.value.ast_func->arg_type_traits, 2)){
         ir_pool_snapshot_restore(builder->pool, &snapshot);
         ast_type_free(&argument_ast_types[0]);

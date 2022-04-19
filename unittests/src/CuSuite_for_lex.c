@@ -4,6 +4,7 @@
 
 #include "UTIL/ground.h"
 #include "UTIL/util.h"
+#include "UTIL/string.h"
 #include "DRVR/compiler.h"
 #include "LEX/lex.h"
 

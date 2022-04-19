@@ -208,6 +208,12 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                     if(infer_expr(ctx, func, &declare_stmt->value, ast_primitive_from_ast_type(&declare_stmt->type), false)) return FAILURE;
                 }
 
+                if(declare_stmt->inputs.has){
+                    for(length_t i = 0; i != declare_stmt->inputs.value.length; i++){
+                        if(infer_expr(ctx, func, &declare_stmt->inputs.value.statements[i], EXPR_NONE, false)) return FAILURE;
+                    }
+                }
+
                 infer_var_scope_add_variable(ctx->scope, declare_stmt->name, &declare_stmt->type, declare_stmt->source, false, declare_stmt->traits & AST_EXPR_DECLARATION_CONST);
             }
             break;

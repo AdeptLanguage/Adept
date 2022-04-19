@@ -517,28 +517,18 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
     instructions_snapshot_capture(builder, &instructions_snapshot);
 
-    // Setup for generating call
+    ir_value_t **arg_values;
+    ast_type_t *arg_types;
     ast_t *ast = &builder->object->ast;
-    ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * expr->arity);
-    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * expr->arity);
 
+    if(ir_gen_arguments(builder, expr->args, expr->arity, &arg_values, &arg_types)){
+        return FAILURE;
+    }
+
+    // TODO: Clean up this code
     // Temporary values used to hold type of variable/global-variable
     ast_type_t *tmp_ast_variable_type;
     ir_type_t *tmp_ir_variable_type;
-
-    // Generate values for function arguments
-    for(length_t a = 0; a != expr->arity; a++){
-        if(ir_gen_expr(builder, expr->args[a], &arg_values[a], false, &arg_types[a])){
-            ast_types_free_fully(arg_types, a);
-            return FAILURE;
-        }
-
-        if(ast_type_is_void(&arg_types[a])){
-            compiler_panicf(builder->compiler, expr->args[a]->source, "Cannot pass 'void' to function");
-            ast_types_free_fully(arg_types, a);
-            return FAILURE;
-        }
-    }
 
     // Check for variable of name in nearby scope
     bridge_var_t *var = bridge_scope_find_var(builder->scope, expr->name);
@@ -629,7 +619,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         }
 
         // Revalidate 'ast_func' and 'ir_func'
-        pair.ast_func = &builder->object->ast.funcs[pair.ast_func_id];
+        pair.ast_func = &ast->funcs[pair.ast_func_id];
         pair.ir_func = &builder->object->ir_module.funcs.funcs[pair.ir_func_id];
 
         // Prepare for potential stack allocation
@@ -739,9 +729,39 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     return FAILURE;
 }
 
-errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *final_arg_types,
-        trait_t target_traits, trait_t *target_arg_type_traits, length_t arity_without_variadic_arguments){
-    
+errorcode_t ir_gen_arguments(ir_builder_t *builder, ast_expr_t **args, length_t arity, ir_value_t ***out_arg_values, ast_type_t **out_arg_types){
+    // Setup for generating call
+    ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
+    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
+
+    // Generate values for function arguments
+    for(length_t i = 0; i != arity; i++){
+        if(ir_gen_expr(builder, args[i], &arg_values[i], false, &arg_types[i])){
+            ast_types_free_fully(arg_types, i);
+            return FAILURE;
+        }
+
+        if(ast_type_is_void(&arg_types[i])){
+            compiler_panicf(builder->compiler, args[i]->source, "Cannot pass 'void' to function");
+            ast_types_free_fully(arg_types, i);
+            return FAILURE;
+        }
+    }
+
+    *out_arg_values = arg_values;
+    *out_arg_types = arg_types;
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_call_procedure_handle_pass_management(
+    ir_builder_t *builder,
+    length_t arity,
+    ir_value_t **arg_values,
+    ast_type_t *final_arg_types,
+    trait_t target_traits,
+    trait_t *target_arg_type_traits,
+    length_t arity_without_variadic_arguments
+){
     // Handle __pass__ calls for argument values being passed
     length_t extra_argument_count = arity - arity_without_variadic_arguments;
 

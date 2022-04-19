@@ -908,7 +908,6 @@ errorcode_t parse_stmt_mid_declare(parse_ctx_t *ctx, ast_expr_list_t *stmt_list,
         }
 
         inputs.has = true;
-        return FAILURE;
     }
 
     // Create variable declarations

@@ -572,7 +572,7 @@ void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source
 
 // ---------------- ast_expr_create_declaration ----------------
 // Creates a declare expression
-// NOTE: Ownership of 'type' and 'value' will be taken
+// NOTE: Ownership of 'type', 'value', and 'inputs' will be taken
 void ast_expr_create_declaration(
     ast_expr_t **out_expr,
     unsigned int expr_id,

@@ -103,21 +103,28 @@ typedef struct {
     ir_type_t *ir_type;
 } ir_field_info_t;
 
+// ---------------- ir_gen_get_field_info ----------------
 // Gets info about a field of a compsite
 errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_cstr_t member, source_t source, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info);
 
+// ---------------- ir_gen_arguments ----------------
+// Generates expressions for call arguments
+errorcode_t ir_gen_arguments(ir_builder_t *builder, ast_expr_t **args, length_t arity, ir_value_t ***out_arg_values, ast_type_t **out_arg_types);
+
+// ---------------- ir_gen_expr_call_method_find_appropriate_method ----------------
 // Finds the appropriate method for a 'CALL METHOD' expression to call
 errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t ***arg_values,
         ast_type_t **arg_types, length_t *arg_arity, ast_type_t *gives, optional_funcpair_t *result);
 
+// ---------------- ir_gen_expr_call_procedure_handle_pass_management ----------------
 // Calls the pass management function on arguments for 'CALL'/'CALL METHOD' expression
 errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *builder, length_t arity, ir_value_t **arg_values, ast_type_t *final_arg_types,
         trait_t target_traits, trait_t *target_arg_type_traits, length_t arity_without_variadic_arguments);
 
+// ---------------- ir_gen_expr_call_procedure_handle_variadic_packing ----------------
 // Packs variadic arguments into single variadic array argument for 'CALL'/'CALL METHOD' expression if required
 errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t *arg_types,
         length_t *arity, funcpair_t *pair, ir_value_t **stack_pointer, source_t source_on_failure);
-// ----------------------------------------------------------------
 
 // ---------------- ir_gen_math_operands ----------------
 // ir_gens both expression operands of a math expression

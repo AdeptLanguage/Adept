@@ -303,6 +303,10 @@ ast_type_t ast_type_unwrapped_view(ast_type_t *type);
 // NOTE: Frees memory allocated for the fixed-array element
 void ast_type_unwrap_fixed_array(ast_type_t *inout_type);
 
+// ---------------- ast_type_struct_name ----------------
+// Returns the struct name for a type (or NULL if not applicable)
+maybe_null_weak_cstr_t ast_type_struct_name(const ast_type_t *type);
+
 // ---------------- ast_elem_clone ----------------
 // Clones an AST type element, producing a duplicate
 ast_elem_t *ast_elem_clone(const ast_elem_t *element);

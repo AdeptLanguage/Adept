@@ -22,6 +22,7 @@ enum color_h_terminal_color {
     TERMINAL_COLOR_YELLOW,
     TERMINAL_COLOR_WHITE,
     TERMINAL_COLOR_BLUE,
+    TERMINAL_COLOR_LIGHT_BLUE,
 };
 
 // ---------------- terminal_set_color(color) ----------------

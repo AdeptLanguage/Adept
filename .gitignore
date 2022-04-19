@@ -6,6 +6,7 @@ adept_debug.exe
 obj/*
 obj
 bin/*
+bin
 MyMakefile
 OriginalMakefile
 main
@@ -13,9 +14,11 @@ pragma
 *.dep
 tests/native_linking/*.a
 bugs/*
+bugs
 counter.py
 *.DS_Store
 .vscode/*
+.vscode
 *.o
 build
 tests/*/*.exe

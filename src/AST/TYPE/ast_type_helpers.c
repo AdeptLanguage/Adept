@@ -110,3 +110,16 @@ void ast_type_unwrap_fixed_array(ast_type_t *inout_type){
     memmove(inout_type->elements, &inout_type->elements[1], sizeof(ast_elem_t*) * (inout_type->elements_length - 1));
     inout_type->elements_length--; // Reduce length accordingly
 }
+
+maybe_null_weak_cstr_t ast_type_struct_name(const ast_type_t *type){
+    if(type->elements_length == 0) return NULL;
+
+    switch(type->elements[0]->id){
+    case AST_ELEM_BASE:
+        return ((ast_elem_base_t*) type->elements[0])->base;
+    case AST_ELEM_GENERIC_BASE:
+        return ((ast_elem_generic_base_t*) type->elements[0])->name;
+    default:
+        return NULL;
+    }
+}

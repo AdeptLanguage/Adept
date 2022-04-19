@@ -33,6 +33,16 @@ errorcode_t ir_gen_stmt_call_like(ir_builder_t *builder, ast_expr_t *call_like_s
 // Generates IR instructions for a variable declaration statement
 errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt);
 
+// ---------------- ir_gen_do_construct ----------------
+// Generates a .__constructor__() call to construct a value
+errorcode_t ir_gen_do_construct(
+    ir_builder_t *builder,
+    ir_value_t *variable,
+    const ast_type_t *ast_type,
+    ast_expr_list_t *inputs,
+    source_t source
+);
+
 // ---------------- ir_gen_stmt_declare_try_init ----------------
 // Tries to initialize a variable that requires initialization
 // that was recently declared by a declare statement.

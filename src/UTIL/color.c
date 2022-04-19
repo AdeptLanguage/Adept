@@ -24,6 +24,7 @@ void terminal_set_color_win32(enum color_h_terminal_color color){
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         break;
     case TERMINAL_COLOR_BLUE:
+    case TERMINAL_COLOR_LIGHT_BLUE:
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         break;
     }
@@ -48,6 +49,10 @@ void terminal_set_color_posix(enum color_h_terminal_color color){
         break;
     case TERMINAL_COLOR_BLUE:
         fputs("\033[34;1m", stdout);
+        break;
+    case TERMINAL_COLOR_LIGHT_BLUE:
+        // fputs("\033[34;1m", stdout);
+        fputs("\033[38;5;31m", stdout);
         break;
     }
 }

@@ -19,12 +19,6 @@ WINDOWS_LIBCURL_INCLUDE=C:/Users/isaac/Projects/curl-7.79.1_4-win64-mingw/curl-7
 WINDOWS_LIBCURL_BUILD_INCLUDE=
 MACOS_CC=gcc
 MACOS_CXX=g++
-MACOS_LLVM_LIB=/opt/homebrew/opt/llvm/lib
-MACOS_LLVM_INCLUDE=/opt/homebrew/opt/llvm/include
-MACOS_LLVM_BUILD_INCLUDE=
-MACOS_LIBCURL_LIB=/opt/homebrew/opt/curl/lib
-MACOS_LIBCURL_INCLUDE=/opt/homebrew/opt/curl/lib
-MACOS_LIBCURL_BUILD_INCLUDE=
 UNIX_CC=gcc
 UNIX_CXX=g++
 UNIX_LLVM_LIB=/opt/homebrew/opt/llvm/lib
@@ -62,7 +56,7 @@ ifeq ($(OS), Windows_NT)
 	LLVM_INCLUDE_DIRS=-I$(WINDOWS_LLVM_INCLUDE) -I$(WINDOWS_LLVM_BUILD_INCLUDE)
 
 	WIN_ICON=obj/icon.res
-	WIN_ICON_SRC=resource/icon.rc
+	WIN_ICON_SRC=res/icon.rc
 	EXECUTABLE=bin/adept.exe
 	DEBUG_EXECUTABLE=bin/adept_debug.exe
 	UNITTEST_EXECUTABLE=bin/adept_unittest.exe
@@ -179,7 +173,7 @@ SUITE_SOURCES=$(SUITE_NAMES:%.c=unittests/src/%.c)
 SUITE_OBJECTS=$(SUITE_SOURCES:unittests/src/%.c=unittests/obj/%.o)
 
 release: $(SOURCES) $(EXECUTABLE)
-test: $(ESSENTIAL_SOURCES) $(UNITTEST_EXECUTABLE) unittest
+test: clean $(ESSENTIAL_SOURCES) $(UNITTEST_EXECUTABLE) unittest
 
 debug: $(SOURCES) $(ADDITIONAL_DEBUG_SOURCES) $(DEBUG_EXECUTABLE)
 
@@ -371,6 +365,8 @@ unittests/obj/CuTest.o: unittests/CuTest.c unittests/CuTest.h
 $(SUITE_OBJECTS): unittests/obj/%.o : unittests/src/%.c unittests/CuTestExtras.h
 ifeq ($(OS), Windows_NT)
 	@if not exist unittests\obj mkdir unittests\obj
+else
+	@mkdir -p unittests/obj
 endif
 	$(CC) $(CFLAGS) $< -I"unittests" -o $@
 
@@ -397,7 +393,7 @@ endif
 $(WIN_ICON):
 	$(WINDOWS_WINRES) -J rc -O coff -i $(WIN_ICON_SRC) -o $(WIN_ICON)
 
-clean: rm_insight
+clean: rm_insight rm_unittest_objs
 ifeq ($(OS), Windows_NT)
 	@del obj\debug\*.* /Q /S 1> nul 2>&1
 	@del obj\*.* /S /Q 1> nul 2>&1
@@ -419,6 +415,13 @@ endif
 
 unittest:
 	$(UNITTEST_EXECUTABLE)
+
+rm_unittest_objs:
+ifeq ($(OS), Windows_NT)
+	@del unittests\obj\*.o /Q /S 1> nul 2>&1
+else
+	@find unittests/obj -name "*.o" -type f -delete 2> /dev/null
+endif
 
 generate:
 	python3 include/TOKEN/generate_c.py

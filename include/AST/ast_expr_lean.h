@@ -28,7 +28,15 @@ typedef struct {
 
 // ---------------- ast_expr_list_t ----------------
 // List structure for holding statements/expressions
-typedef listof(ast_expr_t*, statements) ast_expr_list_t;
+// (custom structure of list so we can use both .statements and .expressions to refer to same field)
+typedef struct {
+    union {
+        ast_expr_t **statements;
+        ast_expr_t **expressions;
+    };
+    length_t length;
+    length_t capacity;
+} ast_expr_list_t;
 
 // ---------------- optional_ast_expr_list_t ----------------
 typedef optional(ast_expr_list_t) optional_ast_expr_list_t;
