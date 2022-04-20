@@ -715,13 +715,10 @@ errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt)
 
     // Add the variable
     bridge_var_t *bridge_variable = add_variable(builder, stmt->name, &stmt->type, ir_type, traits);
-    ir_value_t *variable;
 
-    if(stmt->inputs.has){
-        variable = build_varptr(builder, ir_type_pointer_to(builder->pool, ir_type), bridge_variable);
-    } else {
-        variable = NULL;
-    }
+    ir_value_t *variable = stmt->inputs.has
+        ? build_varptr(builder, ir_type_pointer_to(builder->pool, ir_type), bridge_variable)
+        : NULL;
 
     // Initialize variable if applicable
     if(!is_undef && ir_gen_stmt_declare_try_init(builder, stmt, ir_type)) return FAILURE;
@@ -738,12 +735,12 @@ errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt)
 
 errorcode_t ir_gen_do_construct(
     ir_builder_t *builder,
-    ir_value_t *variable,
-    const ast_type_t *ast_type,
+    ir_value_t *mutable_value,
+    const ast_type_t *struct_ast_type,
     ast_expr_list_t *inputs,
     source_t source
 ){
-    weak_cstr_t struct_name = ast_type_struct_name(ast_type);
+    weak_cstr_t struct_name = ast_type_struct_name(struct_ast_type);
 
     ir_pool_snapshot_t pool_snapshot;
     instructions_snapshot_t instructions_snapshot;
@@ -754,13 +751,25 @@ errorcode_t ir_gen_do_construct(
     ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
     instructions_snapshot_capture(builder, &instructions_snapshot);
 
-    ir_value_t **arg_values;
-    ast_type_t *arg_types;
-    length_t arity = inputs->length;
+    ir_value_t **raw_arg_values;
+    ast_type_t *raw_arg_types;
+    length_t raw_arity = inputs->length;
 
-    if(ir_gen_arguments(builder, inputs->expressions, inputs->length, &arg_values, &arg_types)){
+    if(ir_gen_arguments(builder, inputs->expressions, raw_arity, &raw_arg_values, &raw_arg_types)){
         return FAILURE;
     }
+
+    length_t arity = raw_arity + 1;
+    ir_value_t **arg_values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * arity);
+    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
+    memcpy(&arg_values[1], raw_arg_values, sizeof(ir_value_t*) * raw_arity);
+    memcpy(&arg_types[1], raw_arg_types, sizeof(ast_type_t) * raw_arity);
+    free(raw_arg_types);
+
+    // Insert subject value
+    arg_values[0] = mutable_value;
+    arg_types[0] = ast_type_clone(struct_ast_type);
+    ast_type_prepend_ptr(&arg_types[0]);
 
     optional_funcpair_t result;
     errorcode_t search_errorcode = ir_gen_find_method_conforming(builder, struct_name, "__constructor__", &arg_values, &arg_types, &arity, NULL, source, &result);
@@ -772,15 +781,15 @@ errorcode_t ir_gen_do_construct(
         goto failure;
     }
 
-    printf("here\n");
-    (void) variable;
+    build_call(builder, result.value.ir_func_id, result.value.ir_func->return_type, arg_values, arity, false);
 
-    free(arg_values);
     ast_types_free(arg_types, arity);
     free(arg_types);
     return SUCCESS;
 
 failure:
+    ast_types_free(arg_types, arity);
+    free(arg_types);
     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
     instructions_snapshot_restore(builder, &instructions_snapshot);
     return FAILURE;

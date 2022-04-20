@@ -51,7 +51,6 @@ void terminal_set_color_posix(enum color_h_terminal_color color){
         fputs("\033[34;1m", stdout);
         break;
     case TERMINAL_COLOR_LIGHT_BLUE:
-        // fputs("\033[34;1m", stdout);
         fputs("\033[38;5;31m", stdout);
         break;
     }

@@ -1,1 +1,3 @@
 leak:cache_t::insert(objc_selector*, void (*)(), objc_object*)
+leak:list_array_tt<method_t, method_list_t, method_list_t_authed_ptr>
+leak:realizeClassWithoutSwift(objc_class*, objc_class*)
