@@ -73,6 +73,7 @@ LOW-PRIORITY:
 * add way to escape strings in 'String.adept'
 * modernize '2.7/JSON.adept'
 * change color printing code on Windows to use posix escape codes (now that they're supported)
+* remove old `.dep` packages
 
 v2.4 COMPLETED:
 + Standard Library Imports
@@ -126,3 +127,4 @@ v2.7 COMPLETED:
 + runtime donor runtime errors for Grid (and add .give())
 + modernize and remove obsolete functions from '2.7/String.adept', '2.7/List.adept' and '2.7/Grid.adept'
 + add __assign__ for Optional
++ completely rewrote lexer

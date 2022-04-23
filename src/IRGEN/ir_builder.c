@@ -2437,8 +2437,8 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
     case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
     case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
     case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
-    case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
-    case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN: {
+    case EXPR_LSHIFT_ASSIGN: case EXPR_RSHIFT_ASSIGN:
+    case EXPR_LGC_LSHIFT_ASSIGN: case EXPR_LGC_RSHIFT_ASSIGN: {
             ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) expr;
 
             if(resolve_expr_polymorphics(compiler, type_table, catalog, assign_stmt->destination)

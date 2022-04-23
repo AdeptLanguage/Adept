@@ -490,10 +490,10 @@ static tokenid_t parse_expr_has_terminating_token(tokenid_t id){
     case TOKEN_BIT_AND_ASSIGN:
     case TOKEN_BIT_OR_ASSIGN:
     case TOKEN_BIT_XOR_ASSIGN:
-    case TOKEN_BIT_LS_ASSIGN:
-    case TOKEN_BIT_RS_ASSIGN:
-    case TOKEN_BIT_LGC_LS_ASSIGN:
-    case TOKEN_BIT_LGC_RS_ASSIGN:
+    case TOKEN_BIT_LSHIFT_ASSIGN:
+    case TOKEN_BIT_RSHIFT_ASSIGN:
+    case TOKEN_BIT_LGC_LSHIFT_ASSIGN:
+    case TOKEN_BIT_LGC_RSHIFT_ASSIGN:
     case TOKEN_TERMINATE_JOIN:
     case TOKEN_COLON:
     case TOKEN_BREAK:

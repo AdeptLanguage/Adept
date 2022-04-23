@@ -477,7 +477,7 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
             break;
         case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN: case EXPR_MULTIPLY_ASSIGN:
         case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN: case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN:
-        case EXPR_XOR_ASSIGN: case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN: case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN:
+        case EXPR_XOR_ASSIGN: case EXPR_LSHIFT_ASSIGN: case EXPR_RSHIFT_ASSIGN: case EXPR_LGC_LSHIFT_ASSIGN: case EXPR_LGC_RSHIFT_ASSIGN:
             {
                 const char *operator = NULL;
                 switch(statements[s]->id){
@@ -508,16 +508,16 @@ void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, l
                 case EXPR_XOR_ASSIGN:
                     operator = "^=";
                     break;
-                case EXPR_LS_ASSIGN:
+                case EXPR_LSHIFT_ASSIGN:
                     operator = "<<=";
                     break;
-                case EXPR_RS_ASSIGN:
+                case EXPR_RSHIFT_ASSIGN:
                     operator = ">>=";
                     break;
-                case EXPR_LGC_LS_ASSIGN:
+                case EXPR_LGC_LSHIFT_ASSIGN:
                     operator = "<<<=";
                     break;
-                case EXPR_LGC_RS_ASSIGN:
+                case EXPR_LGC_RSHIFT_ASSIGN:
                     operator = ">>>=";
                     break;
                 default:

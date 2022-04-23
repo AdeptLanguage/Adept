@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "TOKEN/token_data.h"
+#include "UTIL/string.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
 #include "UTIL/search.h"
@@ -170,8 +171,7 @@ errorcode_t pkg_read(object_t *object){
                 buildup[buildup_length] = read;
                 fread(&read, sizeof(char), 1, file);
             }
-            tokenlist->tokens[t].data = malloc(buildup_length + 1);
-            memcpy(tokenlist->tokens[t].data, buildup, buildup_length);
+            tokenlist->tokens[t].data = memcpy(malloc(buildup_length + 1), buildup, buildup_length);
             ((char*)tokenlist->tokens[t].data)[buildup_length] = '\0';
         }
         else if(id == TOKEN_STRING){
@@ -225,53 +225,40 @@ errorcode_t pkg_read(object_t *object){
 
             switch(id){
             case TOKEN_PKG_WBOOL:
-                tokenlist->tokens[t].data = malloc(5);
-                memcpy(tokenlist->tokens[t].data, "bool", 5);
+                tokenlist->tokens[t].data = strclone("bool");
                 break;
             case TOKEN_PKG_WBYTE:
-                tokenlist->tokens[t].data = malloc(5);
-                memcpy(tokenlist->tokens[t].data, "byte", 5);
+                tokenlist->tokens[t].data = strclone("byte");
                 break;
             case TOKEN_PKG_WUBYTE:
-                tokenlist->tokens[t].data = malloc(6);
-                memcpy(tokenlist->tokens[t].data, "ubyte", 6);
+                tokenlist->tokens[t].data = strclone("ubyte");
                 break;
             case TOKEN_PKG_WSHORT:
-                tokenlist->tokens[t].data = malloc(6);
-                memcpy(tokenlist->tokens[t].data, "short", 6);
+                tokenlist->tokens[t].data = strclone("short");
                 break;
             case TOKEN_PKG_WUSHORT:
-                tokenlist->tokens[t].data = malloc(7);
-                memcpy(tokenlist->tokens[t].data, "ushort", 7);
+                tokenlist->tokens[t].data = strclone("ushort");
                 break;
             case TOKEN_PKG_WINT:
-                tokenlist->tokens[t].data = malloc(4);
-                memcpy(tokenlist->tokens[t].data, "int", 4);
+                tokenlist->tokens[t].data = strclone("int");
                 break;
             case TOKEN_PKG_WUINT:
-                tokenlist->tokens[t].data = malloc(5);
-                memcpy(tokenlist->tokens[t].data, "uint", 5);
+                tokenlist->tokens[t].data = strclone("uint");
                 break;
             case TOKEN_PKG_WLONG:
-                tokenlist->tokens[t].data = malloc(5);
-                memcpy(tokenlist->tokens[t].data, "long", 5);
+                tokenlist->tokens[t].data = strclone("long");
                 break;
             case TOKEN_PKG_WULONG:
-                tokenlist->tokens[t].data = malloc(6);
-                memcpy(tokenlist->tokens[t].data, "ulong", 6);
+                tokenlist->tokens[t].data = strclone("ulong");
                 break;
             case TOKEN_PKG_WFLOAT:
-                tokenlist->tokens[t].data = malloc(6);
-                memcpy(tokenlist->tokens[t].data, "float", 6);
+                tokenlist->tokens[t].data = strclone("float");
                 break;
             case TOKEN_PKG_WDOUBLE:
-                tokenlist->tokens[t].data = malloc(7);
-                memcpy(tokenlist->tokens[t].data, "double", 7);
-                break;
+                tokenlist->tokens[t].data = strclone("double");
                 break;
             case TOKEN_PKG_WUSIZE:
-                tokenlist->tokens[t].data = malloc(6);
-                memcpy(tokenlist->tokens[t].data, "usize", 6);
+                tokenlist->tokens[t].data = strclone("usize");
                 break;
             }
         }

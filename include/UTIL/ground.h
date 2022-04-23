@@ -73,8 +73,8 @@ typedef size_t length_t;
 // ---------------- source_t ----------------
 typedef struct {
     length_t index;
-    length_t object_index;
     length_t stride;
+    length_t object_index;
 } source_t;
 
 #define NULL_SOURCE (source_t){0, 0, 0}

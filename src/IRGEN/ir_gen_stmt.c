@@ -78,10 +78,10 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
         case EXPR_AND_ASSIGN:
         case EXPR_OR_ASSIGN:
         case EXPR_XOR_ASSIGN:
-        case EXPR_LS_ASSIGN:
-        case EXPR_RS_ASSIGN:
-        case EXPR_LGC_LS_ASSIGN:
-        case EXPR_LGC_RS_ASSIGN:
+        case EXPR_LSHIFT_ASSIGN:
+        case EXPR_RSHIFT_ASSIGN:
+        case EXPR_LGC_LSHIFT_ASSIGN:
+        case EXPR_LGC_RSHIFT_ASSIGN:
             if(ir_gen_stmt_assignment_like(builder, (ast_expr_assign_t*) stmt)) return FAILURE;
             break;
         case EXPR_IF:
@@ -997,25 +997,25 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
             return FAILURE;
         }
         break;
-    case EXPR_LS_ASSIGN:
+    case EXPR_LSHIFT_ASSIGN:
         if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
             compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'left shift' on those types");
             return FAILURE;
         }
         break;
-    case EXPR_RS_ASSIGN:
+    case EXPR_RSHIFT_ASSIGN:
         if(u_vs_s_vs_float_instruction(math_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS)){
             compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'right shift' on those types");
             return FAILURE;
         }
         break;
-    case EXPR_LGC_LS_ASSIGN:
+    case EXPR_LGC_LSHIFT_ASSIGN:
         if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
             compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'logical left shift' on those types");
             return FAILURE;
         }
         break;
-    case EXPR_LGC_RS_ASSIGN:
+    case EXPR_LGC_RSHIFT_ASSIGN:
         if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE)){
             compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'logical right shift' on those types");
             return FAILURE;

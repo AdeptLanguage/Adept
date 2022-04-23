@@ -442,8 +442,8 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
     case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
     case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
-    case EXPR_LS_ASSIGN: case EXPR_RS_ASSIGN:
-    case EXPR_LGC_LS_ASSIGN: case EXPR_LGC_RS_ASSIGN:
+    case EXPR_LSHIFT_ASSIGN: case EXPR_RSHIFT_ASSIGN:
+    case EXPR_LGC_LSHIFT_ASSIGN: case EXPR_LGC_RSHIFT_ASSIGN:
         #define expr_as_assign ((ast_expr_assign_t*) expr)
         #define clone_as_assign ((ast_expr_assign_t*) clone)
 
