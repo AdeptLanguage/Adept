@@ -267,7 +267,7 @@ static inline errorcode_t number(lex_ctx_t *ctx, compiler_t *optional_error_comp
         end += 2;
     }
 
-    while(put < 64){
+    while(put < buf_size){
         if(isdigit(*end) || *end == '_'){
             buf[put++] = *(end++);
         } else if(*end == '.' && can_dot){
@@ -292,7 +292,7 @@ static inline errorcode_t number(lex_ctx_t *ctx, compiler_t *optional_error_comp
         if(optional_error_compiler && optional_error_object){
             int line, column;
             lex_get_location(ctx->buffer, ctx->i, &line, &column);
-            redprintf("%s:%d:%d: Number is too long (63 characters max)\n", filename_name_const(optional_error_object->filename), line, column);
+            redprintf("%s:%d:%d: Number is too long (%d characters max)\n", filename_name_const(optional_error_object->filename), line, column, buf_size - 1);
             compiler_print_source(optional_error_compiler, line, (source_t){ctx->i, buf_size - 1, ctx->object_index});
         }
         return FAILURE;
@@ -341,7 +341,7 @@ static inline errorcode_t number(lex_ctx_t *ctx, compiler_t *optional_error_comp
             break;
         default: {
                 int line, column;
-                lex_get_location(ctx->buffer, ctx->i + (beginning - end + 1), &line, &column);
+                lex_get_location(ctx->buffer, ctx->i + (end - beginning + 1), &line, &column);
                 redprintf("%s:%d:%d: Expected valid number suffix after 'u' base suffix\n", filename_name_const(optional_error_object->filename), line, column);
                 return FAILURE;
             }
