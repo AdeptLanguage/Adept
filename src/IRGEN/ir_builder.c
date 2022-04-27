@@ -2566,6 +2566,10 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
     case EXPR_NEW:
         if(resolve_type_polymorphics(compiler, type_table, catalog, &((ast_expr_new_t*) expr)->type, NULL)) return FAILURE;
         if(((ast_expr_new_t*) expr)->amount != NULL && resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_new_t*) expr)->amount)) return FAILURE;
+
+        if(((ast_expr_new_t*) expr)->inputs.has){
+            if(resolve_expr_list_polymorphics(compiler, type_table, catalog, &((ast_expr_new_t*) expr)->inputs.value)) return FAILURE;
+        }
         break;
     case EXPR_NOT:
     case EXPR_BIT_COMPLEMENT:

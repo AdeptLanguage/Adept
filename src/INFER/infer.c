@@ -486,6 +486,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     expand((void**) &undetermined->expressions, sizeof(ast_expr_t*), undetermined->expressions_length,
         &undetermined->expressions_capacity, 1, 2);
 
+    // TODO: CLEANUP: Clean up this code
     switch((*expr)->id){
     case EXPR_NONE: break;
     case EXPR_BYTE:
@@ -671,6 +672,12 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_NEW:
         if(infer_type(ctx, &((ast_expr_new_t*) *expr)->type)) return FAILURE;
         if(((ast_expr_new_t*) *expr)->amount != NULL && infer_expr(ctx, ast_func, &(((ast_expr_new_t*) *expr)->amount), EXPR_NONE, false)) return FAILURE;
+        
+        if(((ast_expr_new_t*) *expr)->inputs.has){
+            for(length_t i = 0; i != ((ast_expr_new_t*) *expr)->inputs.value.length; i++){
+                if(infer_expr(ctx, ast_func, &((ast_expr_new_t*) *expr)->inputs.value.expressions[i], EXPR_NONE, false)) return FAILURE;
+            }
+        }
         break;
     case EXPR_NEW_CSTRING:
     case EXPR_ENUM_VALUE:

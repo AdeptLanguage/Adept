@@ -1103,48 +1103,69 @@ errorcode_t parse_expr_new(parse_ctx_t *ctx, ast_expr_t **out_expr){
     // NOTE: Assumes current token is 'new' keyword
 
     length_t *i = ctx->i;
-    token_t *tokens = ctx->tokenlist->tokens;
-    source_t *sources = ctx->tokenlist->sources;
+    source_t source = ctx->tokenlist->sources[*i];
 
-    if(tokens[*i + 1].id == TOKEN_CSTRING){
+    // Skip over 'new' keyword
+    *i += 1;
+
+    if(parse_ctx_peek(ctx) == TOKEN_CSTRING){
         // This is actually an 'ast_expr_new_cstring_t' expression,
         // instead of a 'ast_expr_new_t' expression
 
         ast_expr_new_cstring_t *new_cstring_expr = malloc(sizeof(ast_expr_new_cstring_t));
-        new_cstring_expr->id = EXPR_NEW_CSTRING;
-        new_cstring_expr->source = sources[(*i)++];
-        new_cstring_expr->value = (char*) tokens[(*i)++].data;
+
+        *new_cstring_expr = (ast_expr_new_cstring_t){
+            .id = EXPR_NEW_CSTRING,
+            .source = source,
+            .value = (char*) parse_ctx_peek_data(ctx),
+        };
+
+        *i += 1;
         *out_expr = (ast_expr_t*) new_cstring_expr;
         return SUCCESS;
     }
 
     ast_expr_new_t *new_expr = malloc(sizeof(ast_expr_new_t));
-    new_expr->id = EXPR_NEW;
-    new_expr->amount = NULL;
-    new_expr->is_undef = false;
-    new_expr->source = sources[*i];
-    if(tokens[++*i].id == TOKEN_UNDEF){
+
+    *new_expr = (ast_expr_new_t){
+        .id = EXPR_NEW,
+        .type = (ast_type_t){0},
+        .amount = NULL,
+        .is_undef = false,
+        .source = source,
+        .inputs = (optional_ast_expr_list_t){0},
+    };
+
+    if(parse_eat(ctx, TOKEN_UNDEF, NULL) == SUCCESS){
         new_expr->is_undef = true;
-        (*i)++;
     }
 
     if(parse_type(ctx, &new_expr->type)){
-        free(new_expr);
-        return FAILURE;
+        goto failure;
     }
 
-    if(tokens[*i].id == TOKEN_MULTIPLY){
-        (*i)++;
-        
+    if(parse_eat(ctx, TOKEN_OPEN, NULL) == SUCCESS){
+        ast_expr_list_t *list = &new_expr->inputs.value;
+
+        if(parse_expr_arguments(ctx, &list->expressions, &list->length, &list->capacity)){
+            goto failure;
+        }
+
+        new_expr->inputs.has = true;
+    }
+
+    if(parse_eat(ctx, TOKEN_MULTIPLY, NULL) == SUCCESS){
         if(parse_primary_expr(ctx, &new_expr->amount)){
-            ast_type_free(&new_expr->type);
-            free(new_expr);
-            return FAILURE;
+            goto failure;
         }
     }
 
     *out_expr = (ast_expr_t*) new_expr;
     return SUCCESS;
+
+failure:
+    ast_expr_free_fully((ast_expr_t*) new_expr);
+    return FAILURE;
 }
 
 errorcode_t parse_expr_static(parse_ctx_t *ctx, ast_expr_t **out_expr){

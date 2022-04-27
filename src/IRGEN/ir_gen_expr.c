@@ -1994,6 +1994,19 @@ errorcode_t ir_gen_expr_new(ir_builder_t *builder, ast_expr_new_t *expr, ir_valu
     // Build heap allocation instruction
     *ir_value = build_malloc(builder, ir_type, amount, expr->is_undef, NULL);
 
+    if(expr->inputs.has){
+        if(expr->amount != NULL){
+            char *typename = ast_type_str(&expr->type);
+            compiler_panicf(builder->compiler, expr->source, "Can't specify count when trying to construct new '%s'", typename);
+            free(typename);
+            return FAILURE;
+        }
+
+        if(ir_gen_do_construct(builder, *ir_value, &expr->type, &expr->inputs.value, expr->source)){
+            return FAILURE;
+        }
+    }
+
     // Result type is pointer to requested type
     if(out_expr_type != NULL){
         *out_expr_type = ast_type_clone(&expr->type);

@@ -97,6 +97,10 @@ static void ast_expr_func_addr_free(ast_expr_func_addr_t *expr){
 static void ast_expr_new_free(ast_expr_new_t *expr){
     ast_type_free(&expr->type);
     ast_expr_free_fully(expr->amount);
+
+    if(expr->inputs.has){
+        ast_exprs_free_fully(expr->inputs.value.expressions, expr->inputs.value.length);
+    }
 }
 
 static void ast_expr_static_data_free(ast_expr_static_data_t *expr){

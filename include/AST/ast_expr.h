@@ -117,6 +117,7 @@ typedef struct {
     ast_type_t type;
     ast_expr_t *amount; // Can be NULL to indicate single element
     bool is_undef;
+    optional_ast_expr_list_t inputs;
 } ast_expr_new_t;
 
 // ---------------- ast_expr_new_cstring_t ----------------
