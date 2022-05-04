@@ -15,7 +15,12 @@ errorcode_t parse_func(parse_ctx_t *ctx);
 
 // ------------------ parse_func_head ------------------
 // Parses the head of a function definition
-errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head);
+
+typedef struct {
+    bool is_constructor : 1;
+} ast_func_head_parse_info_t;
+
+errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head, ast_func_head_parse_info_t *out_info);
 
 // ------------------ parse_func_body ------------------
 // Parses the body of a function
@@ -48,6 +53,10 @@ void parse_func_prefixes(parse_ctx_t *ctx, ast_func_prefixes_t *out_prefixes);
 // ------------------ parse_free_unbackfilled_arguments ------------------
 // Frees function arguments that never got backfilled
 void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill);
+
+// ------------------ parse_func_solidify_constructor ------------------
+// Solidifies a parsed constructor for subject-less use
+void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source_t source);
 
 // ------------------ parse_func_alias ------------------
 // Parses a function alias

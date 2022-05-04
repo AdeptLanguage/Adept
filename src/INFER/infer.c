@@ -141,9 +141,11 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
             }
 
             if(!(function->traits & AST_FUNC_FOREIGN)){
-                const bool force_used = ctx->compiler->ignore & COMPILER_IGNORE_UNUSED
-                        ? true
-                        : function->traits & AST_FUNC_MAIN || (a == 0 && streq(function->arg_names[a], "this"));
+                const bool force_used =
+                    ctx->compiler->ignore & COMPILER_IGNORE_UNUSED
+                    || function->traits & AST_FUNC_MAIN
+                    || function->traits & AST_FUNC_DISALLOW
+                    || (a == 0 && streq(function->arg_names[a], "this"));
                 
                 infer_var_scope_add_variable(ctx->scope, function->arg_names[a], &function->arg_types[a], function->arg_sources[a], force_used, false);
             }

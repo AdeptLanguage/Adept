@@ -1,0 +1,27 @@
+
+import basics
+
+struct Person (name String, age int) {
+    constructor(name String, age int){
+        this.name = name.toOwned()
+        this.age = age
+    }
+}
+
+func main {
+    person1 Person("Isaac Shelton", 100)
+    person2 *Person = new Person("John Smith", 50)
+
+    defer {
+        person2.__defer__()
+        delete person2
+    }
+
+    print(person1)
+    print(*person2)
+    print(Person("Jade Armstrong", 25))
+}
+
+func toString(person Person) String {
+    return sprintf("%S is %d years old", person.name, person.age)
+}

@@ -304,13 +304,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         clone_as_new->type = ast_type_clone(&expr_as_new->type);
         clone_as_new->amount = expr_as_new->amount ? ast_expr_clone(expr_as_new->amount) : NULL;
         clone_as_new->is_undef = expr_as_new->is_undef;
-
-        if(expr_as_new->inputs.has){
-            clone_as_new->inputs.value = ast_expr_list_clone(&expr_as_new->inputs.value);
-            clone_as_new->inputs.has = true;
-        } else {
-            clone_as_new->inputs.has = false;
-        }
+        clone_as_new->inputs = optional_ast_expr_list_clone(&expr_as_new->inputs);
 
         break;
 

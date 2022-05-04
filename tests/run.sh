@@ -47,6 +47,7 @@ compile const_variables || exit $?
 compile constants || exit $?
 compile constants_old_style || exit $?
 compile constants_scoped || exit $?
+compile constructor || exit $?
 compile continue || exit $?
 compile continue_to || exit $?
 compile default_args || exit $?

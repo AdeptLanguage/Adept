@@ -1613,7 +1613,7 @@ errorcode_t handle_assign_management(
 
         if(pair.ast_func->traits & AST_FUNC_DISALLOW){
             strong_cstr_t typename = ast_type_str(value_ast_type);
-            compiler_panicf(builder->compiler, source_on_failure, "Assigning value to type '%s' is disallowed", typename);
+            compiler_panicf(builder->compiler, source_on_failure, "Assignment for type '%s' is not allowed", typename);
             free(typename);
 
             errorcode = ALT_FAILURE;

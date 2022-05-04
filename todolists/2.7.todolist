@@ -1,7 +1,6 @@
 # Overall Things for Adept 2.7
 
 HIGH-PRIORITY:
-* easy and consistent constructors (prerequisite for classes)
 * classes and virtual functions
 
 MEDIUM-PRIORITY:
@@ -41,6 +40,7 @@ MEDIUM-PRIORITY:
 * allow blocks/conditionals to be used as expressions and yield values
 * revert $T to being distinct from $~T (but only when not at the top level)
 * make $~T be instantiated as $T when they differ
+* revise 'unused variable' warning message
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -128,3 +128,4 @@ v2.7 COMPLETED:
 + modernize and remove obsolete functions from '2.7/String.adept', '2.7/List.adept' and '2.7/Grid.adept'
 + add __assign__ for Optional
 + completely rewrote lexer
++ easy and consistent constructors (prerequisite for classes)

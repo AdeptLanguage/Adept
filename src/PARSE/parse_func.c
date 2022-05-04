@@ -38,18 +38,19 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     }
 
     ast_func_head_t func_head;
-    if(parse_func_head(ctx, &func_head)) return FAILURE;
-
-    if(func_head.is_foreign && ctx->composite_association != NULL){
-        compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
-        return FAILURE;
-    }
+    ast_func_head_parse_info_t func_head_parse_info;
+    if(parse_func_head(ctx, &func_head, &func_head_parse_info)) return FAILURE;
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
     funcid_t ast_func_id = (funcid_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, &func_head);
+
+    if(func_head.is_foreign && ctx->composite_association != NULL){
+        compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
+        return FAILURE;
+    }
 
     if(ctx->next_builtin_traits != TRAIT_NONE){
         func->traits |= ctx->next_builtin_traits;
@@ -111,10 +112,89 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     }
 
     if(parse_func_body(ctx, func)) return FAILURE;
+
+    if(func_head_parse_info.is_constructor){
+        parse_func_solidify_constructor(ast, func, source);
+    }
+
     return SUCCESS;
 }
 
-errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
+void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source_t source){
+    // Automatically create subject-less constructor for subject-ful constructor
+    // e.g. `func Person(name POD String, age POD int) Person { ... }`
+    // for  `struct Person (...) { constructor(name String, age int){ ... } }`
+
+    const ast_type_t this_pointee_type_view = ast_type_unwrapped_view(&constructor->arg_types[0]);
+    weak_cstr_t struct_name = ast_type_struct_name(&this_pointee_type_view);
+
+    ast_func_head_t func_head = (ast_func_head_t){
+        .name = strclone(struct_name),
+        .source = source,
+        .is_foreign = false,
+        .is_entry = false,
+        .prefixes = (ast_func_prefixes_t){
+            .is_stdcall = false,
+            .is_verbatim = false,
+            .is_implicit = false,
+            .is_external = false,
+        },
+        .export_name = NULL
+    };
+
+    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+
+    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    ast_func_create_template(func, &func_head);
+
+    length_t arity = constructor->arity - 1;
+
+    func->arg_names = strsclone(&constructor->arg_names[1], arity);
+    func->arg_types = ast_types_clone(&constructor->arg_types[1], arity);
+    func->arg_sources = memclone(&constructor->arg_sources[1], sizeof(source_t) * arity);
+    func->arg_flows = memclone(&constructor->arg_flows[1], sizeof(char) * arity);
+    func->arg_type_traits = memclone(&constructor->arg_type_traits[1], sizeof(trait_t) * arity);
+
+    if(constructor->arg_defaults){
+        func->arg_defaults = memclone(&constructor->arg_defaults[1], sizeof(ast_expr_t*) * arity);
+    } else {
+        func->arg_defaults = NULL;
+    }
+
+    func->arity = arity;
+    func->return_type = ast_type_clone(&this_pointee_type_view);
+    func->statements = (ast_expr_list_t){0};
+
+    // Generate statements to call into subject-ful constructor
+    // and then return the constructed value
+
+    optional_ast_expr_list_t inputs = (optional_ast_expr_list_t){
+        .has = true,
+        .value = (ast_expr_list_t){
+            .expressions = malloc(sizeof(ast_expr_t*) * arity),
+            .length = arity,
+            .capacity = arity,
+        },
+    };
+
+    for(length_t i = 0; i != arity; i++){
+        ast_expr_create_variable(&inputs.value.expressions[i], func->arg_names[i], NULL_SOURCE);
+    }
+
+    ast_expr_t *declare_and_construct_stmt;
+    ast_expr_create_declaration(&declare_and_construct_stmt, EXPR_DECLARE, source, "$", ast_type_clone(&this_pointee_type_view), AST_EXPR_DECLARATION_POD, NULL, inputs);
+
+    ast_expr_t *return_value;
+    ast_expr_create_variable(&return_value, "$", NULL_SOURCE);
+
+    ast_expr_t *return_stmt;
+    ast_expr_create_return(&return_stmt, NULL_SOURCE, return_value, (ast_expr_list_t){0});
+
+    ast_expr_list_append(&func->statements, declare_and_construct_stmt);
+    ast_expr_list_append(&func->statements, return_stmt);
+}
+
+errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head, ast_func_head_parse_info_t *out_info){
     source_t source = parse_ctx_peek_source(ctx);
 
     ast_func_prefixes_t prefixes;
@@ -131,7 +211,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
         return FAILURE;
     }
 
-    maybe_null_weak_cstr_t custom_export_name = parse_eat_string(ctx, NULL);
+    maybe_null_strong_cstr_t custom_export_name = parse_eat_string(ctx, NULL);
     strong_cstr_t name;
 
     if(is_constructor){
@@ -163,7 +243,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
         }
     }
 
-    maybe_null_strong_cstr_t export_name = custom_export_name ? custom_export_name : (prefixes.is_external ? strclone(name) : NULL);
+    maybe_null_strong_cstr_t export_name = custom_export_name ? strclone(custom_export_name) : (prefixes.is_external ? strclone(name) : NULL);
     bool is_entry = streq(ctx->compiler->entry_point, name);
 
     *out_head = (ast_func_head_t){
@@ -175,6 +255,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head){
         .export_name = export_name,
     };
 
+    out_info->is_constructor = is_constructor;
     return SUCCESS;
 }
 
