@@ -41,6 +41,8 @@ MEDIUM-PRIORITY:
 * revert $T to being distinct from $~T (but only when not at the top level)
 * make $~T be instantiated as $T when they differ
 * revise 'unused variable' warning message
+* make records use the newly added "better constructors"
+* prefer used-defined constructor over automatically generated constructor for records
 
 LOW-PRIORITY:
 * Finish 'Any'

@@ -51,7 +51,7 @@ In order to use the standard library, all you have to do is clone the `AdeptImpo
 
 ##### Required Files for Windows when not building with CMake
 
-In order to build executables from Adept on Windows, a few extra helper files are required. Download `Adept-Windows-From-Source-Necessities.zip` from https://github.com/IsaacShelton/Adept/releases. Then extract the archive and place the files in your `bin` folder that contains the built `adept.exe`.
+In order to build executables from Adept on Windows, a few extra helper files are required. Copy the files from `res/necessities/` into your `bin` folder that contains the built `adept.exe`.
 
 ##### Adding adept.config (Recommended)
 
