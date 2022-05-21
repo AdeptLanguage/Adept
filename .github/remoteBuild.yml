@@ -1,0 +1,453 @@
+name: Remote Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      fullName:
+        description: The full name of the release
+        default: Adept 2.7
+        required: true
+        type: string
+      shortVersion:
+        description: The short version number
+        default: "2.7"
+        required: true
+        type: string
+      longVersion:
+        description: The long version number
+        default: "2.7.0"
+        required: true
+        type: string
+      alternativeBinaryName:
+        description: The alternative binary name
+        default: "adept2-7"
+        required: true
+        type: string
+
+env:
+  BUILD_TYPE: Release
+  CTEST_OUTPUT_ON_FAILURE: On
+  IS_GITHUB_WORKFLOW: On
+
+jobs:
+  build:
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    defaults:
+      run:
+        working-directory: ${{github.workspace}}
+    name: ${{ format('Build / {0}', matrix.os) }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get latest CMake and Ninja
+        uses: lukka/get-cmake@latest
+      - name: Configure to use MinGW-w64 (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          export CC=x86_64-w64-mingw32-gcc
+          export CXX=x86_64-w64-mingw32-g++
+      - name: Utilize cached LLVM if available
+        uses: actions/cache@v2
+        id: llvm
+        with:
+          path: ${{github.workspace}}/llvm
+          key: ${{runner.os}}-cache-llvm-13.0.1-${{ hashFiles('llvm/**/*.txt') }}
+      - name: Download LLVM (Unix)
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "13.0.1"
+          directory: ${{github.workspace}}/llvm
+          cached: ${{ steps.llvm.outputs.cache-hit }}
+      # For some god-forsaken reason, there is no prebuilt version of LLVM for developing on Windows.
+      # Every version comes with llvm-config, LLVMConfig.cmake, and other files needed, expect Windows!
+      # Which means we're gonna have to spend an hour or so compiling from scratch (Github willing)
+      # At least we have ninja
+      - name: Download LLVM Source Code (Windows)
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
+        run: curl -o llvm-source-tree.tar.xz -L https://github.com/llvm/llvm-project/releases/download/llvmorg-13.0.1/llvm-13.0.1.src.tar.xz
+      - name: Extract LLVM Source Code (Windows)
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
+        run: |
+          7z x llvm-source-tree.tar.xz
+          tar xf llvm-source-tree.tar
+          mv llvm-13.0.1.src llvm
+      - name: Build LLVM from Source (Windows)
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
+        working-directory: ${{github.workspace}}/llvm
+        shell: bash
+        run: |
+          mkdir build
+          cmake -B build -DCMAKE_BUILD_TYPE="Release" -G Ninja
+          cmake --build build
+      - name: Download and extract libcurl (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: bash
+        run: |
+          curl -o curl.zip -L https://curl.se/windows/dl-7.83.1/curl-7.83.1-win64-mingw.zip
+          unzip curl.zip
+          mv curl-7.83.1-win64-mingw libcurl
+      - name: Install libcurl (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev
+      - name: Configure (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=${{github.workspace}}/llvm/build -DCURL_LIBRARY=curl -DCURL_LIBRARY_DIRS=${{github.workspace}}/libcurl/lib -DCURL_INCLUDE_DIR=libcurl/include -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+        env:
+          LLVM_DIR: ${{github.workspace}}/llvm/build
+      - name: Configure (Unix)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=${{github.workspace}}/llvm -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+        env:
+          LLVM_DIR: ${{github.workspace}}/llvm/lib/cmake
+      - name: Build
+        run: |
+          cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      - name: Archive Build Result
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: c
+          files: build
+          outPath: build-${{ matrix.os }}.tar.gz
+      - name: Archive E2E Infrastructure
+        uses: a7ul/tar-action@v1.1.0
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        with:
+          command: c
+          cwd: tests
+          files: e2e
+          outPath: e2e.tar.gz
+      - name: Archive Support Libraries Infrastructure
+        uses: a7ul/tar-action@v1.1.0
+        if: ${{ matrix.os == 'windows-latest' }}
+        with:
+          command: c
+          files: res
+          outPath: res.tar.gz
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ matrix.os }}-archive
+          path: build-${{ matrix.os }}.tar.gz
+      - name: Upload E2E Testing Infrastructure Artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        with:
+          name: e2e-archive
+          path: e2e.tar.gz
+      - name: Upload Resources Artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.os == 'windows-latest' }}
+        with:
+          name: res
+          path: res.tar.gz
+      - name: Upload LICENSE Artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        with:
+          name: LICENSE
+          path: LICENSE
+  test:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    name: ${{ format('Test / {0}', matrix.os) }}
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v3.1.2
+        with:
+          python-version: '3.x' 
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-${{ matrix.os }}-archive
+      - name: Download E2E Testing Infrastructure Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: e2e-archive
+      - name: Unpack 1/2
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          files: e2e.tar.gz
+      - name: Unpack 2/2
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          files: build-${{ matrix.os }}.tar.gz
+      - name: Unit Test
+        shell: bash
+        run: build/tests/unit/UnitTestRunner
+      - name: E2E Test
+        working-directory: ${{github.workspace}}/e2e
+        run: python3 e2e-runner.py ../build/adept
+  build-windows-installer:
+    name: Installer / windows-latest
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - name: Get workflow dispatch inputs (workflow dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          echo 'fullName=${{github.event.inputs.fullName}}' >> $GITHUB_ENV
+          echo 'shortVersion=${{github.event.inputs.shortVersion}}' >> $GITHUB_ENV
+          echo 'longVersion=${{github.event.inputs.longVersion}}' >> $GITHUB_ENV
+          echo 'alternativeBinaryName=${{github.event.inputs.alternativeBinaryName}}' >> $GITHUB_ENV
+      - name: Get default inputs (push / pr)
+        if: github.event_name != 'workflow_dispatch'
+        shell: bash
+        run: |
+          echo 'fullName=Adept Nightly' >> $GITHUB_ENV
+          echo 'shortVersion=nightly' >> $GITHUB_ENV
+          echo 'longVersion=nightly' >> $GITHUB_ENV
+          echo 'alternativeBinaryName=adept-nightly' >> $GITHUB_ENV
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-windows-latest-archive
+      - name: Download Support Libraries Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: res
+      - name: Download LICENSE Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: LICENSE
+      - name: Unpack Build Artifact
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          files: build-windows-latest.tar.gz
+      - name: Unpack Support Libraries Artifact
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          files: res.tar.gz
+      - name: Checkout Adept Standard Library
+        uses: actions/checkout@v3
+        with:
+          repository: 'AdeptLanguage/AdeptImport'
+          path: 'AdeptImport'
+      - name: Checkout Adept Default Configuration
+        uses: actions/checkout@v3
+        with:
+          repository: 'AdeptLanguage/Config'
+          path: 'AdeptConfig'
+      - name: Checkout Windows Installer Source Code
+        uses: actions/checkout@v3
+        with:
+          repository: 'IsaacShelton/AdeptWindowsInstaller'
+          path: 'AdeptWindowsInstaller'
+      - name: Pre-package
+        shell: bash
+        run: mkdir -p stage
+      - name: Generate GUID
+        shell: bash
+        run: echo -n "::set-output name=guid::" && python3 AdeptWindowsInstaller/generate-guid.py
+        id: guid
+      - name: Perform substitutions
+        shell: bash
+        run: >
+          sed -i AdeptWindowsInstaller/Adept-X.X-installer.iss -e 's/__STAGING_AREA__/..\/stage/g' -e 's/__OUTPUT_DIRECTORY__/./g' -e 's/__FAVICON_DIRECTORY__/..\/res/g' -e 's/adeptX-X/${{env.alternativeBinaryName}}/g' -e 's/X.X/${{env.shortVersion}}/g' -e 's/{7D143E16-9268-4F20-A0FA-8B30D8B14ECA}/${{steps.guid.outputs.guid}}/g'
+      - name: Stage
+        shell: bash
+        run: |
+          mkdir -p stage
+          mv build/adept.exe stage/adept.exe
+          mv res/necessities/windows/* stage/
+          mv AdeptWindowsInstaller/adeptX-X.bat stage/${{env.alternativeBinaryName}}.bat
+          mv AdeptConfig/adept.config stage/adept.config
+          mv AdeptImport stage/import
+          mv LICENSE stage/LICENSE
+      - name: Package as Installer
+        run: iscc AdeptWindowsInstaller/Adept-X.X-installer.iss
+      - name: Upload Windows Installer Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-installer
+          path: AdeptWindowsInstaller/Adept-${{env.shortVersion}}-installer.exe
+  build-macos-installer:
+    name: Installer / macos-latest
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - name: Get workflow dispatch inputs (workflow dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          echo 'fullName=${{github.event.inputs.fullName}}' >> $GITHUB_ENV
+          echo 'shortVersion=${{github.event.inputs.shortVersion}}' >> $GITHUB_ENV
+          echo 'longVersion=${{github.event.inputs.longVersion}}' >> $GITHUB_ENV
+          echo 'alternativeBinaryName=${{github.event.inputs.alternativeBinaryName}}' >> $GITHUB_ENV
+      - name: Get default inputs (push / pr)
+        if: github.event_name != 'workflow_dispatch'
+        shell: bash
+        run: |
+          echo 'fullName=Adept Nightly' >> $GITHUB_ENV
+          echo 'shortVersion=nightly' >> $GITHUB_ENV
+          echo 'longVersion=nightly' >> $GITHUB_ENV
+          echo 'alternativeBinaryName=adept-nightly' >> $GITHUB_ENV
+      - name: Setup Python
+        uses: actions/setup-python@v3.1.2
+        with:
+          python-version: '3.x' 
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-macos-latest-archive
+      - name: Unpack
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          files: build-macos-latest.tar.gz
+      - name: Checkout macOS Installer Builder
+        uses: actions/checkout@v3
+        with:
+          repository: 'IsaacShelton/macOS-installer-builder'
+          ref: 'v1.0.0'
+          path: 'macOS-installer-builder'
+      - name: Checkout Adept Standard Library
+        uses: actions/checkout@v3
+        with:
+          repository: 'AdeptLanguage/AdeptImport'
+          path: 'AdeptImport'
+      - name: Checkout Adept Default Configuration
+        uses: actions/checkout@v3
+        with:
+          repository: 'AdeptLanguage/Config'
+          path: 'AdeptConfig'
+      - name: Download Adept Cross Compilation Support
+        run: wget -O AdeptCrossCompilation.zip https://github.com/IsaacShelton/AdeptCrossCompilation/releases/download/2.4/AdeptCrossCompilation-MacOS-to-Windows.zip
+      - name: Unpack Cross Compilation Support
+        run: unzip AdeptCrossCompilation.zip
+      - name: Stage Application Files
+        working-directory: ${{github.workspace}}/macOS-installer-builder
+        run: |
+          rm -rf stage/application
+          mkdir -p stage/application
+          mv ../AdeptImport stage/application/import
+          mv ../AdeptCrossCompilation-MacOS-to-Windows/cross-compile-windows stage/application/cross-compile-windows
+          mv ../AdeptConfig/adept.config stage/application/adept.config
+          mv ../build/adept stage/application/adept
+      - name: Stage Installer Files
+        working-directory: ${{github.workspace}}/macOS-installer-builder
+        run: |
+          sed -i '' -e 's/Adept 2.6/${{env.fullName}}/g' stage/installer/welcome.html
+          sed -i '' -e 's/Adept 2.6/${{env.fullName}}/g' -e s/adept2-6/${{env.alternativeBinaryName}}/g stage/installer/conclusion.html
+          sed -i '' -e s/adept2-6/${{env.alternativeBinaryName}}/g -e s/2.6.0/${{env.longVersion}}/g stage/installer/postinstall
+      - name: Package as Installer
+        working-directory: ${{github.workspace}}/macOS-installer-builder
+        run: |
+          python3 src/build-installer.py Adept ${{env.longVersion}}
+          mv build/Adept-${{env.longVersion}}-installer.pkg build/Adept-${{env.shortVersion}}-installer.pkg
+      - name: Upload Installer Archive Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-installer
+          path: macOS-installer-builder/build/Adept-${{env.shortVersion}}-installer.pkg
+  deploy:
+    name: Deploy
+    needs: [test, build-windows-installer, build-macos-installer]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get workflow dispatch inputs (workflow dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          echo 'fullName=${{github.event.inputs.fullName}}' >> $GITHUB_ENV
+          echo 'shortVersion=${{github.event.inputs.shortVersion}}' >> $GITHUB_ENV
+          echo 'longVersion=${{github.event.inputs.longVersion}}' >> $GITHUB_ENV
+          echo 'alternativeBinaryName=${{github.event.inputs.alternativeBinaryName}}' >> $GITHUB_ENV
+          echo 'releaseName=${{github.event.inputs.fullName}}' >> $GITHUB_ENV
+          echo 'releaseTagName=v${{github.event.inputs.shortVersion}}' >> $GITHUB_ENV
+      - name: Get default inputs (push / pr)
+        if: github.event_name != 'workflow_dispatch'
+        shell: bash
+        run: |
+          echo 'fullName=Adept Nightly' >> $GITHUB_ENV
+          echo 'shortVersion=nightly' >> $GITHUB_ENV
+          echo 'longVersion=nightly' >> $GITHUB_ENV
+          echo 'alternativeBinaryName=adept-nightly' >> $GITHUB_ENV
+          echo 'releaseName=Nightly' >> $GITHUB_ENV
+          echo 'releaseTagName=Nightly' >> $GITHUB_ENV
+      - name: Download Build Artifact (windows-latest)
+        uses: actions/download-artifact@v3
+        with:
+          name: build-windows-latest-archive
+      - name: Download Build Artifact (macos-latest)
+        uses: actions/download-artifact@v3
+        with:
+          name: build-macos-latest-archive
+      - name: Download Build Artifact (ubuntu-latest)
+        uses: actions/download-artifact@v3
+        with:
+          name: build-ubuntu-latest-archive
+      - name: Download Windows Installer Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-installer
+      - name: Download macOS Installer Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-installer
+      - name: Pre-Unpack
+        run: mkdir windows-latest macos-latest ubuntu-latest
+      - name: Unpack Windows Build
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          cwd: windows-latest
+          files: build-windows-latest.tar.gz
+      - name: Unpack macOS Build
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          cwd: macos-latest
+          files: build-macos-latest.tar.gz
+      - name: Unpack Ubuntu Build
+        uses: a7ul/tar-action@v1.1.0
+        with:
+          command: x
+          cwd: ubuntu-latest
+          files: build-ubuntu-latest.tar.gz
+      - name: Stage
+        run: |
+          mkdir stage
+          mv windows-latest/build/adept.exe stage/x86_64-Windows-adept.exe
+          mv macos-latest/build/adept stage/arm64-MacOS-adept
+          mv ubuntu-latest/build/adept stage/x86_64-Ubuntu-adept
+          mv Adept-${{env.shortVersion}}-installer.pkg stage/Adept-${{env.shortVersion}}-installer.pkg
+          mv Adept-${{env.shortVersion}}-installer.exe stage/Adept-${{env.shortVersion}}-installer.exe
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date '+%B %d %Y%l:%M %p %Z')"
+      - name: Release
+        uses: IsaacShelton/update-existing-release@v1.3.0
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          release: ${{env.releaseName}}
+          body: ${{ format('Built {0} - {1}', steps.date.outputs.date, github.sha) }}
+          tag: ${{env.releaseTagName}}
+          replace: true
+          files: >
+            stage/x86_64-Windows-adept.exe
+            stage/arm64-MacOS-adept
+            stage/x86_64-Ubuntu-adept
+            stage/Adept-${{env.shortVersion}}-installer.pkg
+            stage/Adept-${{env.shortVersion}}-installer.exe

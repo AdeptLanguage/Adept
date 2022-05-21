@@ -11,7 +11,7 @@
 #include "AST/ast_layout.h"
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
-#include "BRIDGE/rtti.h"
+#include "BRIDGEIR/rtti.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"

@@ -43,7 +43,7 @@
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "BKEND/backend.h"
-#include "DRVR/debug.h"
+#include "DBG/debug.h"
 #include "INFER/infer.h"
 #include "IR/ir.h"
 #include "IRGEN/ir_gen.h"
@@ -51,7 +51,7 @@
 #endif
 
 #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
-#include "UTIL/stash.h"
+#include "NET/stash.h"
 #endif
 
 errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv){
@@ -115,6 +115,11 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     #endif
 
     compiler->root = filename_path(compiler->location);
+
+    #ifdef _WIN32
+    free(compiler->config.cainfo_file);
+    compiler->config.cainfo_file = mallocandsprintf("%scurl-ca-bundle.crt", compiler->root);
+    #endif
 
     #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
     {
@@ -212,7 +217,7 @@ void compiler_init(compiler_t *compiler){
     compiler->objects = malloc(sizeof(object_t*) * 4);
     compiler->objects_length = 0;
     compiler->objects_capacity = 4;
-    config_prepare(&compiler->config);
+    config_prepare(&compiler->config, NULL);
     compiler->traits = TRAIT_NONE;
     compiler->ignore = TRAIT_NONE;
     compiler->output_filename = NULL;
@@ -363,10 +368,12 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
         if(argv[arg_index][0] == '-'){
             if(streq(argv[arg_index], "-h") || streq(argv[arg_index], "--help")){
                 show_help(false);
-                return FAILURE;
+                compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+                return ALT_FAILURE;
             } else if(streq(argv[arg_index], "-H") || streq(argv[arg_index], "--help-advanced")){
                 show_help(true);
-                return FAILURE;
+                compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+                return ALT_FAILURE;
             } else if(streq(argv[arg_index], "-p") || streq(argv[arg_index], "--package")){
                 compiler->traits |= COMPILER_MAKE_PACKAGE;
             } else if(streq(argv[arg_index], "-o")){
@@ -584,7 +591,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             }
         } else {
             show_help(false);
-            return FAILURE;
+            compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+            return ALT_FAILURE;
         }
     }
 
@@ -805,7 +813,7 @@ void show_root(compiler_t *compiler){
 }
 
 strong_cstr_t compiler_get_string(){
-    return mallocandsprintf("Adept %s - Build %s %s CDT", ADEPT_VERSION_STRING, __DATE__, __TIME__);
+    return mallocandsprintf("Adept %s - Built %s %s", ADEPT_VERSION_STRING, __DATE__, __TIME__);
 }
 
 void compiler_add_user_linker_option(compiler_t *compiler, weak_cstr_t option){

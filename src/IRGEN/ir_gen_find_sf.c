@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "AST/ast_type.h"
-#include "BRIDGE/funcpair.h"
+#include "BRIDGEIR/funcpair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"

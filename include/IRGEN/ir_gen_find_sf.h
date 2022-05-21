@@ -13,7 +13,7 @@ extern "C" {
 */
 
 #include "AST/ast_type_lean.h"
-#include "BRIDGE/funcpair.h"
+#include "BRIDGEIR/funcpair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir_value.h"

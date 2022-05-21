@@ -14,7 +14,7 @@
 #include "AST/ast.h"
 #include "UTIL/ground.h"
 #include "DRVR/compiler.h"
-#include "BRIDGE/funcpair.h"
+#include "BRIDGEIR/funcpair.h"
 #include "IRGEN/ir_cache.h"
 #include "IRGEN/ir_builder.h"
 

@@ -16,7 +16,7 @@
 #include "DRVR/object.h"
 #include "DRVR/compiler.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGE/funcpair.h"
+#include "BRIDGEIR/funcpair.h"
 
 // ---------------- ir_builder_t ----------------
 // Container for storing general information

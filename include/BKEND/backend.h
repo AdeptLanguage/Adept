@@ -18,6 +18,7 @@
 enum ir_export_backend {
     BACKEND_NONE,
     BACKEND_LLVM,
+    BACKEND_C,
 };
 
 // ---------------- ir_export ----------------

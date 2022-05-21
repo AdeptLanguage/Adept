@@ -13,7 +13,7 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGE/funcpair.h"
+#include "BRIDGEIR/funcpair.h"
 #include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
@@ -1874,7 +1874,15 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
 
     ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &dereferenced_view);
-    assert(entry->has_defer == TROOLEAN_UNKNOWN);
+
+    // Use cached result if available
+    if(entry->has_defer == TROOLEAN_TRUE){
+        optional_funcpair_set(result, true, entry->defer_ast_func_id, entry->defer_ir_func_id, object);
+        return SUCCESS;
+    } else if(entry->has_defer == TROOLEAN_FALSE){
+        result->has = false;
+        return SUCCESS;
+    }
 
     entry->has_defer = TROOLEAN_FALSE;
 
@@ -2010,6 +2018,18 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         return FAILURE; // Require 'Type' or '<...> Type' for 'this' type
     }
 
+    ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
+    ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &arg_types[0]);
+
+    // Use cached result if available
+    if(entry->has_pass == TROOLEAN_TRUE){
+        optional_funcpair_set(result, true, entry->pass_ast_func_id, entry->pass_ir_func_id, object);
+        return SUCCESS;
+    } else if(entry->has_pass == TROOLEAN_FALSE){
+        result->has = false;
+        return SUCCESS;
+    }
+
     ast_t *ast = &object->ast;
 
     if(is_base){
@@ -2085,6 +2105,11 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
     if(ir_gen_func_head(compiler, object, func, ast_func_id, &newest_endpoint)){
         return FAILURE;
     }
+    
+    // Cache result
+    entry->has_pass = TROOLEAN_TRUE;
+    entry->pass_ast_func_id = ast_func_id;
+    entry->pass_ir_func_id = newest_endpoint.ir_func_id;
 
     optional_funcpair_set(result, true, ast_func_id, newest_endpoint.ir_func_id, object);
     return SUCCESS;
@@ -2106,7 +2131,15 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
 
     ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &dereferenced_view);
-    assert(entry->has_assign == TROOLEAN_UNKNOWN);
+
+    // Use cached result if available
+    if(entry->has_assign == TROOLEAN_TRUE){
+        optional_funcpair_set(result, true, entry->assign_ast_func_id, entry->assign_ir_func_id, object);
+        return SUCCESS;
+    } else if(entry->has_assign == TROOLEAN_FALSE){
+        result->has = false;
+        return SUCCESS;
+    }
 
     entry->has_assign = TROOLEAN_FALSE;
 

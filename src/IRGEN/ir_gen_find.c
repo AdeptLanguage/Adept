@@ -7,7 +7,7 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
-#include "BRIDGE/funcpair.h"
+#include "BRIDGEIR/funcpair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"

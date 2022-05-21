@@ -1,0 +1,30 @@
+
+import basics
+
+func main {
+    value int = 3
+    result int = 0
+
+    #if __x86_64__
+        llvm_asm att {
+            "movl $1, $0"
+        } "=*m,r,~{memory}" (&result, value)
+    #else
+        result = value
+    #end
+
+    printf("Result = %d\n", result)
+
+    multiplied int = 0
+
+    #if __x86_64__
+        llvm_asm att {
+            "imull $1, $2"
+            "movl $2, $0"
+        } "=*m,r,r,~{memory}" (&multiplied, value, result)
+    #else
+        multiplied = value * result
+    #end
+
+    printf("Multiplied = %d\n", multiplied)
+}

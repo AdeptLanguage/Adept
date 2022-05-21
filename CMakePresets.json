@@ -11,7 +11,6 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm",
                 "ADEPT_LINK_LLVM_STATIC": false,
-                "EXTRA_REQUIRED_LIBS": "-lldap -lpthread -lz -lcurses",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": true
             }
         },
@@ -24,8 +23,7 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm",
-                "ADEPT_LINK_LLVM_STATIC": false,
-                "EXTRA_REQUIRED_LIBS": "-lldap -lpthread -lz -lcurses"
+                "ADEPT_LINK_LLVM_STATIC": false
             }
         },
         {
@@ -40,7 +38,6 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_PREFIX_PATH": "C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release;C:/Users/isaac/Projects/curl-7.79.1_4-win64-mingw/curl-7.79.1-win64-mingw",
                 "ADEPT_LINK_LLVM_STATIC": true,
-                "EXTRA_REQUIRED_LIBS": "-lz -lpsapi -lshell32 -lole32 -luuid -ladvapi32",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": true
             }
         },
@@ -55,8 +52,7 @@
                 "__comment2": "LLVM for mingw-64 was manually built using mingw-64 and MinGW Makefiles in release mode",
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_PREFIX_PATH": "C:/Users/isaac/Projects/llvm-7.0.0.src/mingw-release;C:/Users/isaac/Projects/curl-7.79.1_4-win64-mingw/curl-7.79.1-win64-mingw",
-                "ADEPT_LINK_LLVM_STATIC": true,
-                "EXTRA_REQUIRED_LIBS": "-lz -lpsapi -lshell32 -lole32 -luuid -ladvapi32"
+                "ADEPT_LINK_LLVM_STATIC": true
             }
         }
     ]

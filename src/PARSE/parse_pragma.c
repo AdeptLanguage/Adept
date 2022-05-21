@@ -202,7 +202,8 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         return SUCCESS;
     case PRAGMA_HELP: // 'help' directive
         show_help(true);
-        return FAILURE;
+        ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+        return ALT_FAILURE;
     case PRAGMA_IGNORE_ALL: // 'ignore_all' directive
         ctx->compiler->ignore |= COMPILER_IGNORE_ALL;
         return SUCCESS;

@@ -1,6 +1,0 @@
-
-foreign 'Cocoa' framework
-
-func main {
-    // This program tests linking to frameworks
-}

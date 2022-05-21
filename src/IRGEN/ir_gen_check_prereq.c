@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "AST/ast_type.h"
-#include "BRIDGE/funcpair.h"
+#include "BRIDGEIR/funcpair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IRGEN/ir_gen_check_prereq.h"
