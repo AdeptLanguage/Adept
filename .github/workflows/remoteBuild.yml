@@ -436,7 +436,7 @@ jobs:
           mv Adept-${{env.shortVersion}}-installer.exe stage/Adept-${{env.shortVersion}}-installer.exe
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date '+%B %d %Y%l:%M %p %Z')"
+        run: echo "::set-output name=date::$(date '+%B %d %Y %l:%M %p %Z')"
       - name: Release
         uses: IsaacShelton/update-existing-release@v1.3.0
         with:
