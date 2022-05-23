@@ -719,7 +719,7 @@ func separateNameIntoParts(fullname String, out firstname, lastname *String) suc
 - [(2.6) SharedPtr](https://github.com/IsaacShelton/AdeptSharedPtr)
 
 ## Additional Syntax Examples
-[See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests)
+[See examples folder](https://github.com/IsaacShelton/Adept/tree/master/tests/e2e/src)
 
 ## Thank you for sponsoring Adept ❤️
 - Fernando Dantas
