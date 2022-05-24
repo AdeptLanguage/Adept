@@ -40,7 +40,9 @@ void terminal_set_color_posix(enum color_h_terminal_color color);
 #define yellowprintf(...) ((void) 0)
 #define whiteprintf(...) ((void) 0)
 #define blueprintf(...) ((void) 0)
+#define lightblueprintf(...) ((void) 0)
 #else
+
 // ---------------- redprintf(...) ----------------
 // Temporarily sets to red for a call to printf
 #define redprintf(...) { \
@@ -72,6 +74,15 @@ void terminal_set_color_posix(enum color_h_terminal_color color);
     printf(__VA_ARGS__); \
     terminal_set_color(TERMINAL_COLOR_DEFAULT); \
 }
+
+// ---------------- lightblueprintf(...) ----------------
+// Temporarily sets to light blue for a call to printf
+#define lightblueprintf(...) { \
+    terminal_set_color(TERMINAL_COLOR_LIGHT_BLUE); \
+    printf(__VA_ARGS__); \
+    terminal_set_color(TERMINAL_COLOR_DEFAULT); \
+}
+
 #endif
 
 // ---------------- errorprintf  ----------------

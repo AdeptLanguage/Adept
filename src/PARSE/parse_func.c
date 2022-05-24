@@ -153,8 +153,8 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
     func->arg_types = ast_types_clone(&constructor->arg_types[1], arity);
     func->arg_sources = memclone(&constructor->arg_sources[1], sizeof(source_t) * arity);
     func->arg_flows = memclone(&constructor->arg_flows[1], sizeof(char) * arity);
-    func->arg_type_traits = memclone(&constructor->arg_type_traits[1], sizeof(trait_t) * arity);
-
+    func->arg_type_traits = malloc(sizeof(trait_t) * arity);
+    
     if(constructor->arg_defaults){
         func->arg_defaults = memclone(&constructor->arg_defaults[1], sizeof(ast_expr_t*) * arity);
     } else {
@@ -179,6 +179,7 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
 
     for(length_t i = 0; i != arity; i++){
         ast_expr_create_variable(&inputs.value.expressions[i], func->arg_names[i], NULL_SOURCE);
+        func->arg_type_traits[i] = AST_FUNC_ARG_TYPE_TRAIT_POD;
     }
 
     ast_expr_t *declare_and_construct_stmt;

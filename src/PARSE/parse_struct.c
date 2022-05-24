@@ -33,10 +33,10 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     }
 
     strong_cstr_t name;
-    bool is_packed, is_record;
+    bool is_packed, is_record, is_class;
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &generics, &generics_length)) return FAILURE;
+    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &is_class, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -104,7 +104,7 @@ bool parse_struct_is_function_like_beginning(tokenid_t token){
     return token == TOKEN_FUNC || token == TOKEN_VERBATIM;
 }
 
-errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, strong_cstr_t **out_generics, length_t *out_generics_length){
+errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, bool *out_is_class, strong_cstr_t **out_generics, length_t *out_generics_length){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
@@ -121,6 +121,9 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
         
         if(tokens[*i].id == TOKEN_RECORD){
             *out_is_record = true;
+            *i += 1;
+        } else if(tokens[*i].id == TOKEN_CLASS){
+            *out_is_class = true;
             *i += 1;
         } else {
             if(parse_eat(ctx, TOKEN_STRUCT, "Expected 'struct' keyword after 'packed' keyword")) return FAILURE;
@@ -216,7 +219,7 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
     ast_layout_endpoint_init_with(&next_endpoint, (uint16_t[]){0}, 1);
 
     while((tokens[*i].id != ctx->struct_closer && !parse_struct_is_function_like_beginning(tokens[*i].id)) || backfill != 0){
-        // Be lenient with unnecessary preceeding commas
+        // Be lenient with unnecessary preceding commas
         if(tokens[*i].id == TOKEN_NEXT){
             (*i)++;
         }

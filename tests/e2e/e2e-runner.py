@@ -44,6 +44,7 @@ def run_all_tests():
     test("cast", [executable, join(src_dir, "cast/main.adept")], compiles)
     test("character_literals", [executable, join(src_dir, "character_literals/main.adept")], compiles)
     test("circular_pointers", [executable, join(src_dir, "circular_pointers/main.adept")], compiles)
+    test("class", [executable, join(src_dir, "class/main.adept")], compiles)
     test("colons_alternative_syntax", [executable, join(src_dir, "colons_alternative_syntax/main.adept")], compiles)
     test("complement", [executable, join(src_dir, "complement/main.adept")], compiles)
     test("complex_composite_rtti", [executable, join(src_dir, "complex_composite_rtti/main.adept")], compiles)

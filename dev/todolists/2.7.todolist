@@ -43,6 +43,7 @@ MEDIUM-PRIORITY:
 * revise 'unused variable' warning message
 * make records use the newly added "better constructors"
 * prefer used-defined constructor over automatically generated constructor for records
+* better struct literals
 
 LOW-PRIORITY:
 * Finish 'Any'

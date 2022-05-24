@@ -65,7 +65,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             }
             if(parse_func(ctx)) return FAILURE;
             break;
-        case TOKEN_STRUCT: case TOKEN_PACKED: case TOKEN_RECORD:
+        case TOKEN_STRUCT: case TOKEN_PACKED: case TOKEN_RECORD: case TOKEN_CLASS:
             if(parse_composite(ctx, false)) return FAILURE;
             break;
         case TOKEN_UNION:

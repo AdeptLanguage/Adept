@@ -17,7 +17,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union);
 // ------------------ parse_composite_head ------------------
 // Parses the head of a composite
 // NOTE: All arguments must be valid pointers
-errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, strong_cstr_t **out_generics, length_t *out_generics_length);
+errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, bool *out_is_class, strong_cstr_t **out_generics, length_t *out_generics_length);
 
 // ------------------ parse_composite_body ------------------
 // Parses the body of a composite

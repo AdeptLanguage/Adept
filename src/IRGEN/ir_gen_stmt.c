@@ -781,6 +781,10 @@ errorcode_t ir_gen_do_construct(
         goto failure;
     }
 
+    if(handle_pass_management(builder, arg_values, arg_types, result.value.ast_func->arg_type_traits, arity)){
+        goto failure;
+    }
+
     build_call(builder, result.value.ir_func_id, result.value.ir_func->return_type, arg_values, arity, false);
 
     ast_types_free(arg_types, arity);

@@ -1,0 +1,27 @@
+
+import basics
+
+class Player (name String, id ulong) {
+    constructor(name String){
+        static next_id ulong = 1
+
+        this.name = name.clone()
+        this.id = next_id++
+    }
+}
+
+func toString(player Player) String {
+    return sprintf("Player(%S - %d)", player.name, player.id)
+}
+
+func main {
+    players <Player> List = {
+        Player("Jonish".clone()),
+        Player("Joshish".clone()),
+        Player("Jimish".clone()),
+    }
+
+    each Player in static players {
+        print(it)
+    }
+}

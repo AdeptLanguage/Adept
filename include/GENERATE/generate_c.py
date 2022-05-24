@@ -137,6 +137,7 @@ tokens = [
     Token("break"                 , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "break keyword"                     ),
     Token("case"                  , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "case keyword"                      ),
     Token("cast"                  , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "cast keyword"                      ),
+    Token("class"                 , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "class keyword"                     ),
     Token("const"                 , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "const keyword"                     ),
     Token("constructor"           , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "constructor keyword"               ),
     Token("continue"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "continue keyword"                  ),
