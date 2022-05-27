@@ -116,7 +116,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
         break;
     }
 
-    if(should_update || true){
+    if(should_update){
         if(config->show_checking_for_updates_message){
             lightblueprintf("Checking for available updates as scheduled in 'adept.config'\n");
         }
