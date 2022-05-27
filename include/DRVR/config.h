@@ -39,6 +39,14 @@ void config_prepare(config_t *config, strong_cstr_t cainfo_file);
 void config_free(config_t *config);
 successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *out_warning);
 
+#ifdef ADEPT_ENABLE_PACKAGE_MANAGER
+    #define JSMN_HEADER
+    #include "UTIL/jsmn.h"
+    #include "UTIL/jsmn_helper.h"
+
+    void try_update_installation(config_t *config, weak_cstr_t filename, jsmnh_buffer_t *optional_config_fulltext, jsmntok_t *optional_last_update);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

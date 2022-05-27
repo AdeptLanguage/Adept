@@ -98,6 +98,7 @@ typedef struct compiler {
 
     // Compiler persistent configuration options
     config_t config;
+    maybe_null_strong_cstr_t config_filename;
 
     // Compiler command-line configuration options
     trait_t traits;            // COMPILER_* options
@@ -221,7 +222,7 @@ errorcode_t compiler_create_package(compiler_t *compiler, object_t *object);
 errorcode_t compiler_read_file(compiler_t *compiler, object_t *object);
 
 // ---------------- compiler_get_stdlib ----------------
-// Returns the current stdlib folder, including the preceeding slash
+// Returns the current stdlib folder, including the preceding slash
 strong_cstr_t compiler_get_stdlib(compiler_t *compiler, object_t *optional_object);
 
 // ---------------- compiler_print_source ----------------

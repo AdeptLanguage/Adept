@@ -62,7 +62,8 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
         goto failure;
     }
 
-    jsmntok_t maybe_last_update;
+    jsmntok_t *optional_last_update = NULL;
+    jsmntok_t last_update_storage;
 
     for(length_t section = 0; section != ctx.total_sections; section++){
         if(jsmnh_obj_ctx_read_key(&ctx)){
@@ -72,10 +73,12 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
 
         if(jsmnh_obj_ctx_eq(&ctx, "adept.config")){
             // Config information
-            if(!config_read_adept_config_value(config, &ctx, &maybe_last_update)){
+            if(!config_read_adept_config_value(config, &ctx, &last_update_storage)){
                 redprintf("Failed to handle value in configuration file\n");
                 goto failure;
             }
+
+            optional_last_update = &last_update_storage;
         } else if(jsmnh_obj_ctx_eq(&ctx, "installs")){
             // Local imports
         } else {
@@ -113,22 +116,12 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
         break;
     }
 
-    if(should_update){
+    if(should_update || true){
         if(config->show_checking_for_updates_message){
-            blueprintf("NOTE: Checking for updates as scheduled in 'adept.config'\n");
+            lightblueprintf("Checking for available updates as scheduled in 'adept.config'\n");
         }
 
-        // Ignore failure to update last updated
-        if(maybe_last_update.type == JSMN_PRIMITIVE)
-            config_update_last_updated(filename, ctx.fulltext, maybe_last_update);
-
-        download_buffer_t dlbuffer;
-        if(download_to_memory(config->stash, &dlbuffer, config->cainfo_file)){
-            update_installation(config, dlbuffer);
-            free(dlbuffer.bytes);
-        } else {
-            blueprintf("NOTE: Failed to check for updates as scheduled in 'adept.config', internet address unreachable\n");
-        }
+        try_update_installation(config, filename, &ctx.fulltext, optional_last_update);
     }
     #endif // ADEPT_ENABLE_PACKAGE_MANAGER
 
@@ -207,6 +200,21 @@ failure:
 }
 
 #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
+    void try_update_installation(config_t *config, weak_cstr_t filename, jsmnh_buffer_t *optional_config_fulltext, jsmntok_t *optional_last_update){
+        // Try to store the last time we updated
+        // Ignore failure to update last updated
+        if(optional_config_fulltext && optional_last_update && optional_last_update->type == JSMN_PRIMITIVE)
+            config_update_last_updated(filename, *optional_config_fulltext, *optional_last_update);
+
+        download_buffer_t dlbuffer;
+        if(download_to_memory(config->stash, &dlbuffer, config->cainfo_file)){
+            update_installation(config, dlbuffer);
+            free(dlbuffer.bytes);
+        } else {
+            lightblueprintf("NOTE: Failed to check for updates as scheduled in 'adept.config', internet address unreachable\n");
+        }
+    }
+
     static successful_t config_update_last_updated(weak_cstr_t filename, jsmnh_buffer_t buffer, jsmntok_t last_update){
         if(last_update.type != JSMN_PRIMITIVE) return false;
     
@@ -259,12 +267,13 @@ failure:
                     !streq(stash_header.latest_compiler_version, ADEPT_PREVIOUS_STABLE_VERSION_STRING) &&
                     config->show_new_compiler_available
                 ){
-                    blueprintf("\nNEWS: A newer version of Adept is available!\n");
+                    printf(" -> Compiler is out of date!!!\n");
+                    lightblueprintf("\nNEWS: A newer version of Adept is available!\n");
                     printf("    Visit https://github.com/AdeptLanguage/Adept for more information!\n");
                     printf("    You can disable update checks in your 'adept.config'\n\n");
                     goto success;
                 } else if(config->show_checking_for_updates_message){
-                    blueprintf(" -> Already up to date!\n");
+                    lightblueprintf(" -> Already up to date!\n");
                 }
     
                 // Free potentially allocated values

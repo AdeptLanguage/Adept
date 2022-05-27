@@ -80,7 +80,7 @@ static errorcode_t get_target_from_triple(char *triple, LLVMTargetRef *out_targe
         internalerrorprintf("ir_to_llvm() - LLVMGetTargetFromTriple() failed with message: %s\n", llvm_error);
 
         if(string_starts_with(triple, "wasm")){
-            blueprintf("NOTICE: If you built this compiler yourself, make sure that the build of LLVM you linked against includes support for the 'wasm64' target!\n");
+            lightblueprintf("NOTICE: If you built this compiler yourself, make sure that the build of LLVM you linked against includes support for the 'wasm64' target!\n");
         }
 
         LLVMDisposeMessage(llvm_error);

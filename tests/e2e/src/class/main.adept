@@ -5,7 +5,7 @@ class Player (name String, id ulong) {
     constructor(name String){
         static next_id ulong = 1
 
-        this.name = name.clone()
+        this.name = name.toOwned()
         this.id = next_id++
     }
 }

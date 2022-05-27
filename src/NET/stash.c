@@ -32,7 +32,7 @@ successful_t adept_install(config_t *config, weak_cstr_t root, weak_cstr_t raw_i
     // Make identifier lowercase
     for(char *p = identifier; *p; p++) *p = tolower(*p);
 
-    blueprintf(" - Locating       ");
+    lightblueprintf(" - Locating       ");
     printf("%s\n", identifier);
 
     download_buffer_t dlbuffer;
@@ -57,7 +57,7 @@ successful_t adept_install(config_t *config, weak_cstr_t root, weak_cstr_t raw_i
         goto failure;
     }
 
-    blueprintf(" - Copying        ");
+    lightblueprintf(" - Copying        ");
     printf("%s\n", identifier);
 
     if(adept_install_stash(config, root, dlbuffer.bytes, dlbuffer.length) == false){
@@ -67,7 +67,7 @@ successful_t adept_install(config_t *config, weak_cstr_t root, weak_cstr_t raw_i
         goto failure;
     }
 
-    blueprintf(" - Installed      ");
+    lightblueprintf(" - Installed      ");
     printf("%s\n", identifier);
 
     free(dlbuffer.bytes);

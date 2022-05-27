@@ -44,6 +44,7 @@ MEDIUM-PRIORITY:
 * make records use the newly added "better constructors"
 * prefer used-defined constructor over automatically generated constructor for records
 * better struct literals
+* assert and/or static assert
 
 LOW-PRIORITY:
 * Finish 'Any'

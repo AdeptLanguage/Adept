@@ -124,14 +124,12 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
     {
         // Read persistent config file
-        strong_cstr_t config_filename = mallocandsprintf("%sadept.config", compiler->root);
+        compiler->config_filename = mallocandsprintf("%sadept.config", compiler->root);
         weak_cstr_t config_warning = NULL;
 
-        if(!config_read(&compiler->config, config_filename, &config_warning) && config_warning){
+        if(!config_read(&compiler->config, compiler->config_filename, &config_warning) && config_warning){
             yellowprintf("%s\n", config_warning);
         }
-
-        free(config_filename);
     }
     #endif
 
@@ -218,6 +216,7 @@ void compiler_init(compiler_t *compiler){
     compiler->objects_length = 0;
     compiler->objects_capacity = 4;
     config_prepare(&compiler->config, NULL);
+    compiler->config_filename = NULL;
     compiler->traits = TRAIT_NONE;
     compiler->ignore = TRAIT_NONE;
     compiler->output_filename = NULL;
@@ -267,6 +266,7 @@ void compiler_free(compiler_t *compiler){
     compiler_free_error(compiler);
     compiler_free_warnings(compiler);
     config_free(&compiler->config);
+    free(compiler->config_filename);
 }
 
 void compiler_free_objects(compiler_t *compiler){
@@ -372,6 +372,10 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 return ALT_FAILURE;
             } else if(streq(argv[arg_index], "-H") || streq(argv[arg_index], "--help-advanced")){
                 show_help(true);
+                compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+                return ALT_FAILURE;
+            } else if(streq(argv[arg_index], "--update")){
+                try_update_installation(&compiler->config, compiler->config_filename, NULL, NULL);
                 compiler->result_flags |= COMPILER_RESULT_SUCCESS;
                 return ALT_FAILURE;
             } else if(streq(argv[arg_index], "-p") || streq(argv[arg_index], "--package")){
