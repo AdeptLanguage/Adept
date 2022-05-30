@@ -1,7 +1,7 @@
 
 #include "BRIDGEIR/funcpair.h"
 
-void optional_funcpair_set(optional_funcpair_t *result, bool has, funcid_t ast_func_id, funcid_t ir_func_id, object_t *object){
+void optional_funcpair_set(optional_funcpair_t *result, bool has, func_id_t ast_func_id, func_id_t ir_func_id, object_t *object){
     result->has = has;
 
     if(has){

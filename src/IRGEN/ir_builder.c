@@ -38,7 +38,7 @@
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
-void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, bool static_builder){
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, func_id_t ast_func_id, func_id_t ir_func_id, bool static_builder){
     builder->basicblocks = (ir_basicblocks_t){
         .blocks = malloc(sizeof(ir_basicblock_t) * 4),
         .length = 1,
@@ -259,7 +259,7 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
     return;
 }
 
-ir_value_t *build_call(ir_builder_t *builder, funcid_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value){
+ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value){
     ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
     instruction->id = INSTRUCTION_CALL;
     instruction->result_type = result_type;
@@ -829,8 +829,8 @@ void pop_loop_label(ir_builder_t *builder){
 bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
 
-    funcid_t id = INVALID_FUNC_ID;
-    funcid_t static_id = INVALID_FUNC_ID;
+    id_t id = INVALID_ID;
+    id_t static_id = INVALID_ID;
 
     if(traits & BRIDGE_VAR_STATIC){
         ir_static_variables_t *static_variables = &builder->object->ir_module.static_variables;
@@ -1104,7 +1104,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             weak_cstr_t template_name = generic_base->name;
 
             // Attempt to call __defer__ on members
-            ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&builder->object->ast, template_name);
+            ast_poly_composite_t *template = ast_poly_composite_find_exact(&builder->object->ast, template_name);
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
@@ -1425,7 +1425,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             weak_cstr_t template_name = generic_base->name;
 
             // Attempt to call __pass__ on members
-            ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&builder->object->ast, template_name);
+            ast_poly_composite_t *template = ast_poly_composite_find_exact(&builder->object->ast, template_name);
 
             // Don't bother with polymorphic structs that don't exist
             if(template == NULL) return FAILURE;
@@ -1720,7 +1720,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
     return result_value;
 }
 
-errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
+errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, func_id_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_endpoint_t *out_endpoint){
 
     ast_func_t *poly_func = &object->ast.funcs[ast_poly_func_id];
@@ -1766,7 +1766,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     // Revalidate poly_func
     poly_func = &object->ast.funcs[ast_poly_func_id];
 
-    funcid_t ast_func_id = (funcid_t) ast->funcs_length;
+    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     bool is_entry = streq(poly_func->name, compiler->entry_point);
 
@@ -1886,7 +1886,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
     entry->has_defer = TROOLEAN_FALSE;
 
-    if(ast->funcs_length >= MAX_FUNCID){
+    if(ast->funcs_length >= MAX_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -1910,7 +1910,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     } else if(is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
         weak_cstr_t struct_name = generic_base->name;
-        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, struct_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, struct_name);
 
         // Require generic structure to exist
         if(template == NULL) return FAILURE;
@@ -2047,7 +2047,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[0];
         weak_cstr_t struct_name = generic_base->name;
         
-        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, struct_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, struct_name);
 
         // Require generic structure to exist
         if(template == NULL) return FAILURE;
@@ -2059,14 +2059,14 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
     }
 
-    if(ast->funcs_length >= MAX_FUNCID){
+    if(ast->funcs_length >= MAX_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    funcid_t ast_func_id = (funcid_t) ast->funcs_length;
+    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     
     ast_func_create_template(func, &(ast_func_head_t){
@@ -2143,7 +2143,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
     entry->has_assign = TROOLEAN_FALSE;
 
-    if(ast->funcs_length >= MAX_FUNCID){
+    if(ast->funcs_length >= MAX_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -2167,7 +2167,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     } else if(subject_is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
         weak_cstr_t struct_name = generic_base->name;
-        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, struct_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, struct_name);
 
         // Require generic structure to exist
         if(template == NULL) return FAILURE;
@@ -2700,13 +2700,13 @@ successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *l
     return false;
 }
 
-errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, funcid_t *out_ir_func_id){
+errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, func_id_t *out_ir_func_id){
     if(builder->has_noop_defer_function){
         *out_ir_func_id = builder->noop_defer_function;
         return SUCCESS;
     }
 
-    funcid_t ir_func_id;
+    func_id_t ir_func_id;
     if(ir_gen_func_template(builder->compiler, builder->object, "__noop_defer__", source_on_error, &ir_func_id)) return FAILURE;
 
     ir_module_t *module = &builder->object->ir_module;

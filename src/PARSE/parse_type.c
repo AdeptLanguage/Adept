@@ -146,7 +146,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             layout_kind = id == TOKEN_UNION ? AST_LAYOUT_UNION : AST_LAYOUT_STRUCT;
             (*i)++;
 
-            if(parse_composite_body(ctx, &field_map, &skeleton)) goto failure;
+            if(parse_composite_body(ctx, &field_map, &skeleton, false)) goto failure;
 
             // Pass over closing ')'
             (*i)++;

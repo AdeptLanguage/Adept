@@ -21,7 +21,7 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
 
 // ------------------ parse_composite_body ------------------
 // Parses the body of a composite
-errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton);
+errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class);
 
 // ------------------ parse_composite_field ------------------
 // Parses a single field of a composite

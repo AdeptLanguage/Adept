@@ -56,7 +56,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_field_map_t field_map;
     ast_layout_skeleton_t skeleton;
 
-    if(parse_composite_body(ctx, &field_map, &skeleton)){
+    if(parse_composite_body(ctx, &field_map, &skeleton, is_class)){
         free(name);
         return FAILURE;
     }
@@ -70,21 +70,20 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_layout_init(&layout, layout_kind, field_map, skeleton, traits);
     
     if(generics){
-        domain = (ast_composite_t*) ast_add_polymorphic_composite(ast, name, layout, source, generics, generics_length);
+        domain = (ast_composite_t*) ast_add_polymorphic_composite(ast, name, layout, source, is_class, generics, generics_length);
     } else {
-        domain = ast_add_composite(ast, name, layout, source);
+        domain = ast_add_composite(ast, name, layout, source, is_class);
     }
 
     // Create constructor function if composite is a record type
     if(is_record){
-
         // NOTE: Ownership of 'return_type' is given away
         if(parse_create_record_constructor(ctx, name, generics, generics_length, &layout, source)) return FAILURE;
     }
 
     // Look for start of struct domain and set it up if it exists
     if(parse_struct_is_function_like_beginning(parse_ctx_peek(ctx))){
-        ctx->composite_association = (ast_polymorphic_composite_t *)domain;
+        ctx->composite_association = (ast_poly_composite_t *)domain;
         *ctx->i -= 1;
     } else {
         length_t scan_i = *ctx->i + 1;
@@ -92,7 +91,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
             scan_i++;
 
         if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
-            ctx->composite_association = (ast_polymorphic_composite_t*) domain;
+            ctx->composite_association = (ast_poly_composite_t*) domain;
             *ctx->i = scan_i;
         }
     }
@@ -110,6 +109,7 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
 
     *out_is_packed = false;
     *out_is_record = false;
+    *out_is_class = false;
 
     if(is_union){
         if(parse_eat(ctx, TOKEN_UNION, "Expected 'union' keyword for union definition")) return FAILURE;
@@ -194,7 +194,7 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
     return SUCCESS;
 }
 
-errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton){
+errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class){
     // Parses root-level composite fields
 
     length_t *i = ctx->i;
@@ -217,6 +217,15 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
     length_t backfill = 0;
     ast_layout_endpoint_t next_endpoint;
     ast_layout_endpoint_init_with(&next_endpoint, (uint16_t[]){0}, 1);
+
+    if(is_class){
+        ast_type_t vtable_ast_type;
+        ast_type_make_base(&vtable_ast_type, strclone("ptr"));
+
+        ast_field_map_add(out_field_map, strclone("__vtable__"), next_endpoint);
+        ast_layout_endpoint_increment(&next_endpoint);
+        ast_layout_skeleton_add_type(out_skeleton, vtable_ast_type);
+    }
 
     while((tokens[*i].id != ctx->struct_closer && !parse_struct_is_function_like_beginning(tokens[*i].id)) || backfill != 0){
         // Be lenient with unnecessary preceding commas
@@ -443,7 +452,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     // Add function
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    funcid_t ast_func_id = (funcid_t) ast->funcs_length;
+    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
 
     ast_func_create_template(func, &(ast_func_head_t){

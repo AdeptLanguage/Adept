@@ -32,7 +32,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return parse_func_alias(ctx);
     }
 
-    if(ctx->ast->funcs_length >= MAX_FUNCID){
+    if(ctx->ast->funcs_length >= MAX_ID){
         compiler_panic(ctx->compiler, source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -43,7 +43,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
 
-    funcid_t ast_func_id = (funcid_t) ast->funcs_length;
+    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
     ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, &func_head);
 
@@ -739,7 +739,7 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
         return FAILURE;
     }
     
-    if(ast->func_aliases_length >= MAX_FUNCID){
+    if(ast->func_aliases_length >= MAX_ID){
         compiler_panic(ctx->compiler, source, "Maximum number of AST function aliases reached\n");
         return FAILURE;
     }

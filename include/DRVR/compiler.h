@@ -259,16 +259,16 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
     weak_cstr_t name, ast_type_t *types, length_t arity, ast_type_t *gives, bool is_method);
 
-typedef listof(funcid_t, ids) funcid_list_t;
-#define funcid_list_append(LIST, VALUE) list_append((LIST), (VALUE), funcid_t)
-#define funcid_list_free(LIST) free((LIST)->ids)
+typedef listof(func_id_t, ids) func_id_list_t;
+#define func_id_list_append(LIST, VALUE) list_append((LIST), (VALUE), func_id_t)
+#define func_id_list_free(LIST) free((LIST)->ids)
 
 // ---------------- compiler_possibilities ----------------
 // Returns a list of IDs of possible AST functions that
 // are similar the supplied parameters
 // NOTE: If 'methods_only_type_of_this' is not NULL, then only
 // methods with a 'this' type of it will be included.
-funcid_list_t compiler_possibilities(compiler_t *compiler, object_t *object, weak_cstr_t name, ast_type_t *methods_only_type_of_this);
+func_id_list_t compiler_possibilities(compiler_t *compiler, object_t *object, weak_cstr_t name, ast_type_t *methods_only_type_of_this);
 #endif
 
 // ---------------- print_candidate ----------------

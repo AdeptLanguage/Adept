@@ -45,7 +45,7 @@ static void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope){
     }
 }
 
-void ir_dump_function(FILE *file, ir_func_t *function, funcid_t ir_func_id, ir_func_t *all_funcs){
+void ir_dump_function(FILE *file, ir_func_t *function, func_id_t ir_func_id, ir_func_t *all_funcs){
     char mangled_name[32];
     ir_implementation(ir_func_id, 'a', mangled_name);
 

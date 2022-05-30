@@ -122,7 +122,7 @@ static errorcode_t enforce_prereq(
         }
 
         weak_cstr_t given_name = generic_base_elem->name;
-        ast_polymorphic_composite_t *given = ast_polymorphic_composite_find_exact(&object->ast, given_name);
+        ast_poly_composite_t *given = ast_poly_composite_find_exact(&object->ast, given_name);
 
         if(given == NULL){
             internalerrorprintf("ir_gen_polymorphable() - Failed to find polymophic struct '%s', which should exist\n", given_name);

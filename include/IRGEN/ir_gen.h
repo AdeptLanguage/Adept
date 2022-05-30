@@ -25,12 +25,12 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object);
 
 // ---------------- ir_gen_func_template ----------------
 // Generates empty template IR function
-errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, funcid_t *out_ir_func_id);
+errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, func_id_t *out_ir_func_id);
 
 // ---------------- ir_gen_func_head ----------------
 // Generates IR function skeleton for an AST function.
 errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func,
-    funcid_t ast_func_id, ir_func_endpoint_t *optional_out_new_endpoint);
+    func_id_t ast_func_id, ir_func_endpoint_t *optional_out_new_endpoint);
 
 // ---------------- ir_gen_functions_body ----------------
 // Generates IR function bodies for AST functions.
@@ -41,7 +41,7 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object);
 // Generates the required intermediate representation for
 // statements inside an AST function. Internally it
 // creates an 'ir_builder_t' and calls 'ir_gen_stmts'
-errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id);
+errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, func_id_t ast_func_id, func_id_t ir_func_id);
 
 // ---------------- ir_gen_job_list ----------------
 // Generates initial IR job list to kickstart the main

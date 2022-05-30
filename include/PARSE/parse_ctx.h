@@ -31,7 +31,7 @@ typedef struct {
     length_t angle_bracket_repeat;
 
     // Used to automatically promote functions into methods
-    ast_polymorphic_composite_t *composite_association;
+    ast_poly_composite_t *composite_association;
 
     // Used for namespace { ... }
     bool has_namespace_scope;

@@ -178,7 +178,7 @@ typedef struct {
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
-    funcid_t ir_func_id;
+    func_id_t ir_func_id;
     ir_value_t **values;
     length_t values_length;
 } ir_instr_call_t;
@@ -301,7 +301,7 @@ typedef struct {
     unsigned int id;
     ir_type_t *result_type;
     const char *name;
-    funcid_t ir_func_id;
+    func_id_t ir_func_id;
 } ir_instr_func_address_t;
 
 // ---------------- ir_instr_cast_t ----------------
@@ -504,10 +504,10 @@ typedef struct {
     length_t rtti_array_index;
     troolean has_rtti_array;
     ir_type_t *ir_variadic_array;         // NOTE: Can be NULL
-    funcid_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
+    func_id_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
     bool has_main;
-    funcid_t ast_main_id;
-    funcid_t ir_main_id;
+    func_id_t ast_main_id;
+    func_id_t ir_main_id;
 } ir_shared_common_t;
 
 // ---------------- ir_static_variable_t ----------------

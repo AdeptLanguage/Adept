@@ -125,6 +125,6 @@ errorcode_t ir_gen_find_method_conforming_without_defaults(
 // Returns SUCCESS if found
 // Returns FAILURE if not found
 // Returns ALT_FAILURE if something went wrong
-errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, funcid_t *out_ir_func_id);
+errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, func_id_t *out_ir_func_id);
 
 #endif // _ISAAC_IR_GEN_FIND_H

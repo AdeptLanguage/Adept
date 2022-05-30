@@ -8,7 +8,7 @@
 #include "UTIL/util.h"
 
 static bool ir_func_endpoint_is_polymorphic(const ir_func_endpoint_t *endpoint){
-    return endpoint->ir_func_id == INVALID_FUNC_ID;
+    return endpoint->ir_func_id == INVALID_ID;
 }
 
 static int compare_ir_func_endpoint(const void *raw_a, const void *raw_b){

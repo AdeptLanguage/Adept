@@ -1109,7 +1109,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
 
     ast_t *ast = &object->ast;
     ast_type_t *type_of_this = is_method ? &types[0] : NULL;
-    funcid_list_t possibilities = compiler_possibilities(compiler, object, name, type_of_this);
+    func_id_list_t possibilities = compiler_possibilities(compiler, object, name, type_of_this);
 
     if(possibilities.length == 0){
         // No other function with that name exists
@@ -1151,7 +1151,7 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
     }
 
 success:
-    funcid_list_free(&possibilities);
+    func_id_list_free(&possibilities);
 }
 
 // TODO: Refactor/move
@@ -1174,9 +1174,9 @@ static errorcode_t method_subject_is_possible(compiler_t *compiler, object_t *ob
     return ast_types_identical(potential_subject, subject) ? SUCCESS : FAILURE;
 }
 
-funcid_list_t compiler_possibilities(compiler_t *compiler, object_t *object, weak_cstr_t name, ast_type_t *methods_only_type_of_this){
+func_id_list_t compiler_possibilities(compiler_t *compiler, object_t *object, weak_cstr_t name, ast_type_t *methods_only_type_of_this){
     ast_t *ast = &object->ast;
-    funcid_list_t list = {0};
+    func_id_list_t list = {0};
 
     for(length_t id = 0; id != ast->funcs_length; id++){
         if(streq(ast->funcs[id].name, name)){
@@ -1187,7 +1187,7 @@ funcid_list_t compiler_possibilities(compiler_t *compiler, object_t *object, wea
                 if(errorcode == ALT_FAILURE) break;
                 if(errorcode == FAILURE) continue;
             }
-            funcid_list_append(&list, id);
+            func_id_list_append(&list, id);
         }
     }
 

@@ -18,8 +18,8 @@ extern "C" {
 // ---------------- ir_func_endpoint_t ----------------
 // Endpoint of a function/method mapping
 typedef struct {
-    funcid_t ast_func_id;
-    funcid_t ir_func_id;
+    func_id_t ast_func_id;
+    func_id_t ir_func_id;
 } ir_func_endpoint_t;
 
 // ---------------- ir_func_endpoint_list_t ----------------

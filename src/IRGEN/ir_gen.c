@@ -73,7 +73,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         if(ast_func->traits & AST_FUNC_POLYMORPHIC){
             ir_func_endpoint_t endpoint = (ir_func_endpoint_t){
                 .ast_func_id = ast_func_id,
-                .ir_func_id = INVALID_FUNC_ID,
+                .ir_func_id = INVALID_ID,
             };
 
             ir_module_create_func_mapping(ir_module, ast_func->name, endpoint, false);
@@ -144,10 +144,10 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     return SUCCESS;
 }
 
-errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, funcid_t *out_ir_func_id){
+errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, func_id_t *out_ir_func_id){
     ir_module_t *module = &object->ir_module;
 
-    if(module->funcs.length >= MAX_FUNCID){
+    if(module->funcs.length >= MAX_ID){
         compiler_panic(compiler, from_source, "Maximum number of IR functions reached\n");
         return FAILURE;
     }
@@ -163,9 +163,9 @@ errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cs
 }
 
 errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t *ast_func,
-        funcid_t ast_func_id, ir_func_endpoint_t *optional_out_new_endpoint){
+        func_id_t ast_func_id, ir_func_endpoint_t *optional_out_new_endpoint){
 
-    funcid_t ir_func_id;
+    func_id_t ir_func_id;
     if(ir_gen_func_template(compiler, object, ast_func->name, ast_func->source, &ir_func_id)) return FAILURE;
 
     ir_module_t *module = &object->ir_module;
@@ -245,7 +245,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
             break;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
-                ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, generic_base->name);
+                ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, generic_base->name);
                 
                 if(template == NULL){
                     compiler_panicf(compiler, this_type->source, "Undeclared polymorphic struct '%s'", generic_base->name);
@@ -326,7 +326,7 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
     return SUCCESS;
 }
 
-errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id){
+errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, func_id_t ast_func_id, func_id_t ir_func_id){
     // Generates IR instructions from AST statements and then stores them in the IR function with the ID 'ir_func_id' as groups of basicblocks
 
     // Since the location of the AST function may shift around

@@ -24,7 +24,7 @@ void ir_module_dump(ir_module_t *ir_module, const char *filename);
 
 // ---------------- ir_dump_functions (and friends) ----------------
 // Dumps a specific part of an IR module
-void ir_dump_function(FILE *file, ir_func_t *function, funcid_t ir_func_id, ir_func_t *all_funcs);
+void ir_dump_function(FILE *file, ir_func_t *function, func_id_t ir_func_id, ir_func_t *all_funcs);
 void ir_dump_functions(FILE *file, ir_funcs_t *funcs);
 void ir_dump_basicsblocks(FILE *file, ir_basicblocks_t basicblocks, ir_func_t *functions);
 void ir_dump_instruction(FILE *file, ir_instr_t *instruction, length_t instr_index, ir_func_t *all_funcs);

@@ -164,7 +164,7 @@ static errorcode_t ir_gen_fill_in_default_arguments(ir_proc_query_t *query, ast_
 }
 
 static errorcode_t actualize_suitable_polymorphic(ir_proc_query_t *query, optional_funcpair_t *result, ast_poly_catalog_t *catalog, ir_func_endpoint_t endpoint){
-    const funcid_t ast_func_id = endpoint.ast_func_id;
+    const func_id_t ast_func_id = endpoint.ast_func_id;
 
     compiler_t *compiler = ir_proc_query_getter_compiler(query);
     object_t *object = ir_proc_query_getter_object(query);
@@ -506,7 +506,7 @@ errorcode_t ir_gen_find_method_conforming_without_defaults(
     return ir_gen_find_proc(&query, out_result);
 }
 
-errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, funcid_t *out_ir_func_id){
+errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *object, weak_cstr_t func_name, func_id_t *out_ir_func_id){
     // Finds a special function (such as __variadic_array__)
     // Sets 'out_ir_func_id' ONLY IF the IR function was found.
     // Returns SUCCESS if found

@@ -40,8 +40,8 @@ typedef struct ir_builder {
     ir_type_map_t *type_map;
     compiler_t *compiler;
     object_t *object;
-    funcid_t ast_func_id;
-    funcid_t ir_func_id;
+    func_id_t ast_func_id;
+    func_id_t ir_func_id;
     bridge_scope_t *scope;
     length_t next_var_id;
     troolean has_string_struct;
@@ -53,13 +53,13 @@ typedef struct ir_builder {
     ir_type_t *s8_type;
     ir_type_t *ptr_type;
     type_table_t *type_table;
-    funcid_t noop_defer_function;
+    func_id_t noop_defer_function;
     bool has_noop_defer_function;
 } ir_builder_t;
 
 // ---------------- ir_builder_init ----------------
 // Initializes an IR builder
-void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, funcid_t ast_func_id, funcid_t ir_func_id, bool static_builder);
+void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, func_id_t ast_func_id, func_id_t ir_func_id, bool static_builder);
 
 // ---------------- build_basicblock ----------------
 // Builds a new basic block in the current function
@@ -115,7 +115,7 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
 // ---------------- build_call ----------------
 // Builds a call instruction
 // NOTE: If 'return_result_value' is false, then NULL will be returned (in an effort to avoid unnecessary allocations)
-ir_value_t *build_call(ir_builder_t *builder, funcid_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value);
+ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value);
 
 // ---------------- build_break ----------------
 // Builds a break instruction
@@ -429,7 +429,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 // ---------------- instantiate_poly_func ----------------
 // Instantiates a polymorphic function
 // NOTE: 'instantiation_source' may be NULL_SOURCE
-errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, funcid_t ast_poly_func_id, ast_type_t *types,
+errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, func_id_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_endpoint_t *out_endpoint);
 
 // ---------------- attempt_autogen___defer__ ----------------
@@ -477,7 +477,7 @@ successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *l
 // ---------------- ir_builder_get_noop_defer_func ----------------
 // Gets no-op defer function
 // Will create if doesn't already exist
-errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, funcid_t *out_ir_func_id);
+errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, func_id_t *out_ir_func_id);
 
 // ---------------- instructions_snapshot_t ----------------
 // Snapshot used to easily reset the forward generation of IR instructions

@@ -1049,7 +1049,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
 
         weak_cstr_t composite_name = generic_base->name;
-        ast_polymorphic_composite_t *template = ast_polymorphic_composite_find_exact(&object->ast, composite_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, composite_name);
 
         // Find the polymorphic structure
         if(template == NULL){
@@ -1423,7 +1423,7 @@ fail_tentatively:
 errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, ast_type_t *match_arg, source_t source_on_error, ir_value_t **ir_value, ast_type_t *out_expr_type){
     // NOTE: CLEANUP: Cleanup this code
 
-    funcid_t ir_func_id;
+    func_id_t ir_func_id;
     if(ir_builder_get_noop_defer_func(builder, source_on_error, &ir_func_id)) return FAILURE;
 
     ir_module_t *module = &builder->object->ir_module;
