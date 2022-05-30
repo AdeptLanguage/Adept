@@ -21,6 +21,10 @@ void expand(void **inout_memory, length_t unit_size, length_t length, length_t *
     // Expands an array in memory to be able to fit more units
 
     if(*inout_capacity == 0 && amount != 0){
+        // Since malloc(0) is technically not guaranteed to return NULL,
+        // we must free existing zero-byte memory
+        free(*inout_memory);
+
         *inout_memory = malloc(unit_size * default_capacity);
         *inout_capacity = default_capacity;
     }
@@ -43,6 +47,11 @@ void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, l
     // Expands an array in memory to be able to fit more units
 
     if(*inout_capacity == 0 && amount != 0){
+        // Since malloc(0) is technically not guaranteed to return NULL,
+        // we must free existing zero-byte memory
+        free(*inout_memory1);
+        free(*inout_memory2);
+
         *inout_memory1 = malloc(unit_size1 * default_capacity);
         *inout_memory2 = malloc(unit_size2 * default_capacity);
         *inout_capacity = default_capacity;
@@ -120,7 +129,7 @@ char *mallocandsprintf(const char *format, ...){
 
 length_t find_insert_position(const void *items, length_t length, int (*compare)(const void*, const void*), const void *object, length_t size){
     maybe_index_t first, middle, last, comparison;
-    first = 0; last = length - 1;
+    first = 0; last = (maybe_index_t) length - 1;
 
     while(first <= last){
         middle = (first + last) / 2;

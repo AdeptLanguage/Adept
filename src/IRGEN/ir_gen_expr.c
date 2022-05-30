@@ -468,7 +468,7 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
     // Found variable in nearby scope
     if(variable){
         if(out_expr_type != NULL) *out_expr_type = ast_type_clone(variable->ast_type);
-        ir_type_t *ir_ptr_type = ir_type_pointer_to(builder->pool, variable->ir_type);
+        ir_type_t *ir_ptr_type = ir_type_make_pointer_to(builder->pool, variable->ir_type);
 
         // Variable-Pointer instruction to get pointer to stack variable
         *ir_value = build_varptr(builder, ir_ptr_type, variable);
@@ -493,7 +493,7 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
 
         // DANGEROUS: Using AST global variable index as IR global variable index
         ir_global_t *ir_global = &ir_module->globals[global_variable_index];
-        *ir_value = build_gvarptr(builder, ir_type_pointer_to(builder->pool, ir_global->type), global_variable_index);
+        *ir_value = build_gvarptr(builder, ir_type_make_pointer_to(builder->pool, ir_global->type), global_variable_index);
         
         // If not requested to leave the expression mutable, dereference it
         if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
@@ -537,7 +537,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     // Found variable of name in nearby scope
     if(is_var_function_like){
         // Get IR type of function from variable
-        tmp_ir_variable_type = ir_type_pointer_to(builder->pool, var->ir_type);
+        tmp_ir_variable_type = ir_type_make_pointer_to(builder->pool, var->ir_type);
 
         if(expr->gives.elements_length != 0){
             compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function variable");
@@ -701,7 +701,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         errorcode_t error = ir_gen_call_function_value(builder, tmp_ast_variable_type, expr, arg_values, arg_types, ir_value, out_expr_type);
         ast_types_free_fully(arg_types, arg_arity);
 
-        // Propogate failure to call function pointer value
+        // Propagate failure to call function pointer value
         if(error == FAILURE) return FAILURE;
 
         // If calling the function pointer value failed, but the call was tentative, then ignore the failure
@@ -723,7 +723,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         return SUCCESS;
     }
 
-    // Otherwise, print an error messsage
+    // Otherwise, print an error message
     compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives, false);
     ast_types_free_fully(arg_types, arg_arity);
     return FAILURE;
@@ -856,7 +856,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
         raw_data_array = build_alloc_array(builder, ubyte_type, bytes);
 
         // Bitcast the value fromm '[n] ubyte' type to '*ubyte' type
-        raw_data_array = build_bitcast(builder, raw_data_array, ir_type_pointer_to(builder->pool, ubyte_type));
+        raw_data_array = build_bitcast(builder, raw_data_array, ir_type_make_pointer_to(builder->pool, ubyte_type));
     } else {
         raw_data_array = build_null_pointer(builder->pool);
     }
@@ -866,7 +866,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
 
     for(length_t i = 0; i < variadic_count; i++){
         ir_value_t *arg = build_array_access(builder, raw_data_array, current_offset, source_on_failure);
-        arg = build_bitcast(builder, arg, ir_type_pointer_to(builder->pool, (*arg_values)[pair->ast_func->arity + i]->type));
+        arg = build_bitcast(builder, arg, ir_type_make_pointer_to(builder->pool, (*arg_values)[pair->ast_func->arity + i]->type));
         build_store(builder, (*arg_values)[pair->ast_func->arity + i], arg, source_on_failure);
 
         // Move iterative offset 'current_offset' along by the size of the type we just wrote
@@ -878,7 +878,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
     // Create raw types array of '*AnyType' values if runtime type info is enabled
     if(pAnyType_ir_type && variadic_count != 0){
         raw_types_array = build_alloc_array(builder, pAnyType_ir_type, build_literal_usize(builder->pool, variadic_count));
-        raw_types_array = build_bitcast(builder, raw_types_array, ir_type_pointer_to(builder->pool, pAnyType_ir_type));
+        raw_types_array = build_bitcast(builder, raw_types_array, ir_type_make_pointer_to(builder->pool, pAnyType_ir_type));
 
         for(length_t i = 0; i < variadic_count; i++){
             ir_value_t *arg_type = build_array_access(builder, raw_types_array, build_literal_usize(builder->pool, i), source_on_failure);
@@ -967,10 +967,10 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
 
         switch(waypoint.kind){
         case AST_LAYOUT_WAYPOINT_BITCAST:
-            *ir_value = build_bitcast(builder, *ir_value, ir_type_pointer_to(builder->pool, field_type));
+            *ir_value = build_bitcast(builder, *ir_value, ir_type_make_pointer_to(builder->pool, field_type));
             break;
         case AST_LAYOUT_WAYPOINT_OFFSET:
-            *ir_value = build_member(builder, *ir_value, waypoint.index, ir_type_pointer_to(builder->pool, field_type), expr->source);
+            *ir_value = build_member(builder, *ir_value, waypoint.index, ir_type_make_pointer_to(builder->pool, field_type), expr->source);
             break;
         default:
             internalerrorprintf("ir_gen_expr_member() - Unrecognized waypoint kind\n");
@@ -988,7 +988,7 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
         // Because of this, we have to bitcast it to the proper type
         // when we access ir via member access
 
-        *ir_value = build_bitcast(builder, *ir_value, ir_type_pointer_to(builder->pool, field_info.ir_type));
+        *ir_value = build_bitcast(builder, *ir_value, ir_type_make_pointer_to(builder->pool, field_info.ir_type));
     }
 
     if(out_expr_type){
@@ -1554,7 +1554,7 @@ errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_acces
         assert(array_type.elements_length != 0);
         array_type.elements[0]->id = AST_ELEM_POINTER;
 
-        ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
+        ir_type_t *casted_ir_type = ir_type_make_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
         array_value = build_bitcast(builder, array_value, casted_ir_type);
     } else if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_STRUCTURE){
         // Keep structure value mutable
@@ -1671,7 +1671,7 @@ errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_valu
     // DANGEROUS: Manually storing state of builder
     length_t basicblocks_length = builder->basicblocks.length;
     length_t current_block_id = builder->current_block_id;
-    length_t insturctions_length = builder->basicblocks.blocks[current_block_id].instructions.length;
+    length_t instructions_length = builder->basicblocks.blocks[current_block_id].instructions.length;
 
     // Generate the expression to get back it's result type
     if(ir_gen_expr(builder, expr->value, NULL, true, &ast_type)) return FAILURE;
@@ -1679,7 +1679,7 @@ errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_valu
     // DANGEROUS: Manually restoring state of builder
     builder->basicblocks.length = basicblocks_length;
     build_using_basicblock(builder, builder->current_block_id);
-    builder->basicblocks.blocks[current_block_id].instructions.length = insturctions_length;
+    builder->basicblocks.blocks[current_block_id].instructions.length = instructions_length;
     
     // Restore IR pool from previous snapshot
     ir_pool_snapshot_restore(builder->pool, &snapshot);
@@ -2032,13 +2032,13 @@ errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_
     ir_value_t *cstring_value = build_literal_cstr(builder, expr->value);
 
     // Generate instruction to copy string constant to allocated heap memory
-    ir_instr_memcpy_t *mempcy_instruction = (ir_instr_memcpy_t*) build_instruction(builder, sizeof(ir_instr_memcpy_t));
-    mempcy_instruction->id = INSTRUCTION_MEMCPY;
-    mempcy_instruction->result_type = NULL;
-    mempcy_instruction->destination = *ir_value;
-    mempcy_instruction->value = cstring_value;
-    mempcy_instruction->bytes = bytes_value;
-    mempcy_instruction->is_volatile = false;
+    ir_instr_memcpy_t *memcpy_instruction = (ir_instr_memcpy_t*) build_instruction(builder, sizeof(ir_instr_memcpy_t));
+    memcpy_instruction->id = INSTRUCTION_MEMCPY;
+    memcpy_instruction->result_type = NULL;
+    memcpy_instruction->destination = *ir_value;
+    memcpy_instruction->value = cstring_value;
+    memcpy_instruction->bytes = bytes_value;
+    memcpy_instruction->is_volatile = false;
 
     // Result type is *ubyte
     if(out_expr_type != NULL) ast_type_make_base_ptr(out_expr_type, strclone("ubyte"));
@@ -2259,7 +2259,7 @@ errorcode_t ir_gen_expr_ternary(ir_builder_t *builder, ast_expr_ternary_t *expr,
     // Ensure the resulting types of the two branches is the same
     if(!ast_types_identical(&if_true_type, &if_false_type)){
         // Try to autocast to larger type of the two if there is one
-        bool conflict_resolved = ir_gen_resolve_ternay_conflict(builder, &if_true, &if_false, &if_true_type, &if_false_type, &when_true_landing, &when_false_landing);
+        bool conflict_resolved = ir_gen_resolve_ternary_conflict(builder, &if_true, &if_false, &if_true_type, &if_false_type, &when_true_landing, &when_false_landing);
         
         if(!conflict_resolved){
             char *if_true_typename = ast_type_str(&if_true_type);
@@ -2511,7 +2511,7 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
     if(ir_gen_resolve_type(builder->compiler, builder->object, &def->type, &ir_decl_type)) return FAILURE;
 
     // Get IR type of mutable declaration value
-    ir_type_t *var_pointer_type = ir_type_pointer_to(builder->pool, ir_decl_type);
+    ir_type_t *var_pointer_type = ir_type_make_pointer_to(builder->pool, ir_decl_type);
 
     // Determine how to create inline variable, and do so
     if(def->value != NULL){
@@ -2735,7 +2735,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
 }
 
 ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    // ir_gen the operends of an expression into instructions and gives back an instruction with unknown id
+    // ir_gen the operands of an expression into instructions and gives back an instruction with unknown id
 
     // NOTE: Returns the generated instruction
     // NOTE: The instruction id still must be specified after this call
@@ -2840,7 +2840,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
     return SUCCESS;
 }
 
-successful_t ir_gen_resolve_ternay_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
+successful_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
         length_t *inout_a_basicblock, length_t *inout_b_basicblock){
     
     if(!ast_type_is_base(a_type) || !ast_type_is_base(b_type)) return UNSUCCESSFUL;

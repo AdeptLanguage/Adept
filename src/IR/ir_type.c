@@ -87,14 +87,23 @@ bool ir_types_identical(ir_type_t *a, ir_type_t *b){
     return true;
 }
 
-ir_type_t* ir_type_pointer_to(ir_pool_t *pool, ir_type_t *base){
+ir_type_t *ir_type_make(ir_pool_t *pool, unsigned int kind, void *extra_data){
+    ir_type_t *type = ir_pool_alloc(pool, sizeof(ir_type_t));
+    *type = (ir_type_t){
+        .kind = kind,
+        .extra = extra_data,
+    };
+    return type;
+}
+
+ir_type_t* ir_type_make_pointer_to(ir_pool_t *pool, ir_type_t *base){
     ir_type_t *ptr_type = ir_pool_alloc(pool, sizeof(ir_type_t));
     ptr_type->kind = TYPE_KIND_POINTER;
     ptr_type->extra = base;
     return ptr_type;
 }
 
-ir_type_t* ir_type_fixed_array_of(ir_pool_t *pool, length_t length, ir_type_t *base){
+ir_type_t* ir_type_make_fixed_array_of(ir_pool_t *pool, length_t length, ir_type_t *base){
     ir_type_extra_fixed_array_t *extra = ir_pool_alloc(pool, sizeof(ir_type_extra_fixed_array_t));
     extra->length = length;
     extra->subtype = base;

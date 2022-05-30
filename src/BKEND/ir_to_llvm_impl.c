@@ -131,17 +131,17 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
     switch(value->value_type){
     case VALUE_TYPE_LITERAL: {
             switch(value->type->kind){
-            case TYPE_KIND_S8: return LLVMConstInt(LLVMInt8Type(), *((adept_byte*) value->extra), true);
-            case TYPE_KIND_U8: return LLVMConstInt(LLVMInt8Type(), *((adept_ubyte*) value->extra), false);
-            case TYPE_KIND_S16: return LLVMConstInt(LLVMInt16Type(), *((adept_short*) value->extra), true);
-            case TYPE_KIND_U16: return LLVMConstInt(LLVMInt16Type(), *((adept_ushort*) value->extra), false);
-            case TYPE_KIND_S32: return LLVMConstInt(LLVMInt32Type(), *((adept_int*) value->extra), true);
-            case TYPE_KIND_U32: return LLVMConstInt(LLVMInt32Type(), *((adept_uint*) value->extra), false);
-            case TYPE_KIND_S64: return LLVMConstInt(llvm->i64_type, *((adept_long *)value->extra), true);
-            case TYPE_KIND_U64: return LLVMConstInt(llvm->i64_type, *((adept_ulong *)value->extra), false);
-            case TYPE_KIND_FLOAT: return LLVMConstReal(LLVMFloatType(), *((adept_float*) value->extra));
-            case TYPE_KIND_DOUBLE: return LLVMConstReal(llvm->f64_type, *((adept_double*) value->extra));
-            case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), *((adept_bool*) value->extra), false);
+            case TYPE_KIND_S8: return LLVMConstInt(LLVMInt8Type(), (unsigned long long) *((adept_byte*) value->extra), true);
+            case TYPE_KIND_U8: return LLVMConstInt(LLVMInt8Type(), (unsigned long long) *((adept_ubyte*) value->extra), false);
+            case TYPE_KIND_S16: return LLVMConstInt(LLVMInt16Type(), (unsigned long long) *((adept_short*) value->extra), true);
+            case TYPE_KIND_U16: return LLVMConstInt(LLVMInt16Type(), (unsigned long long) *((adept_ushort*) value->extra), false);
+            case TYPE_KIND_S32: return LLVMConstInt(LLVMInt32Type(), (unsigned long long) *((adept_int*) value->extra), true);
+            case TYPE_KIND_U32: return LLVMConstInt(LLVMInt32Type(), (unsigned long long) *((adept_uint*) value->extra), false);
+            case TYPE_KIND_S64: return LLVMConstInt(llvm->i64_type, (unsigned long long) *((adept_long *)value->extra), true);
+            case TYPE_KIND_U64: return LLVMConstInt(llvm->i64_type, (unsigned long long) *((adept_ulong *)value->extra), false);
+            case TYPE_KIND_FLOAT: return LLVMConstReal(LLVMFloatType(), (double) *((adept_float*) value->extra));
+            case TYPE_KIND_DOUBLE: return LLVMConstReal(llvm->f64_type, (double) *((adept_double*) value->extra));
+            case TYPE_KIND_BOOLEAN: return LLVMConstInt(LLVMInt1Type(), (double) *((adept_bool*) value->extra), false);
             default:
                 die("ir_to_llvm_value() - Unrecognized type kind for literal in ir_to_llvm_value\n");
             }
@@ -326,7 +326,7 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
         
         // Add nounwind to everything that isn't foreign
         if(!(ir_func->traits & IR_FUNC_FOREIGN))
-            LLVMAddAttributeAtIndex(*skeleton, LLVMAttributeFunctionIndex, nounwind);
+            LLVMAddAttributeAtIndex(*skeleton, (LLVMAttributeIndex) LLVMAttributeFunctionIndex, nounwind);
     }
 
     // Generate function to handle deinitialization of static variables
@@ -1322,7 +1322,7 @@ LLVMValueRef llvm_string_table_find(llvm_string_table_t *table, weak_cstr_t arra
     // If not found returns NULL else returns global variable value
 
     maybe_index_t first, middle, last, comparison;
-    first = 0; last = table->length - 1;
+    first = 0; last = (maybe_index_t) table->length - 1;
 
     llvm_string_table_entry_t target;
     target.data = array;

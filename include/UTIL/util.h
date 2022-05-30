@@ -49,7 +49,7 @@ void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, len
 // NOTE: Only supports using '%s', '%d', and '%%'
 // Allocates enough memory to hold the result
 // of a sprintf() and then runs sprintf() and
-// returns the newly-allocated null-termianted string
+// returns the newly-allocated null-terminated string
 strong_cstr_t mallocandsprintf(const char *format, ...);
 
 // ---------------- find_insert_position ----------------

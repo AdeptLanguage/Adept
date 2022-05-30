@@ -132,7 +132,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
             .ir_func_id = pair.ir_func_id,
         };
         
-        ir_module_create_func_mapping(ir_module, falias->from, endpoint, true);
+        ir_module_create_func_mapping(ir_module, falias->from, endpoint, false);
     }
 
     errorcode_t error;
@@ -157,20 +157,8 @@ errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cs
 
     *out_ir_func_id = module->funcs.length++;
 
+    memset(module_func, 0, sizeof *module_func);
     module_func->name = name;
-    module_func->maybe_filename = NULL;
-    module_func->maybe_definition_string = NULL;
-    module_func->maybe_line_number = 0;
-    module_func->maybe_column_number = 0;
-    module_func->traits = TRAIT_NONE;
-    module_func->return_type = NULL;
-    module_func->argument_types = NULL;
-    module_func->arity = 0;
-    module_func->basicblocks = (ir_basicblocks_t){0};
-    module_func->scope = NULL;
-    module_func->variable_count = 0;
-    module_func->export_as = NULL;
-
     return SUCCESS;
 }
 
@@ -503,7 +491,7 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
 
         ast_type_free(&value_ast_type);
 
-        ir_type_t *ptr_to_type = ir_type_pointer_to(builder->pool, builder->object->ir_module.globals[g].type);
+        ir_type_t *ptr_to_type = ir_type_make_pointer_to(builder->pool, builder->object->ir_module.globals[g].type);
         ir_value_t *destination = build_gvarptr(builder, ptr_to_type, g);
         build_store(builder, value, destination, ast_global->source);
     }
@@ -566,8 +554,8 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         }
 
         // Construct IR Types we need
-        ubyte_ptr_type = ir_type_pointer_to(pool, ubyte_ptr_type);
-        ubyte_ptr_ptr_type = ir_type_pointer_to(pool, ubyte_ptr_type);
+        ubyte_ptr_type = ir_type_make_pointer_to(pool, ubyte_ptr_type);
+        ubyte_ptr_ptr_type = ir_type_make_pointer_to(pool, ubyte_ptr_type);
 
         if(compiler->traits & COMPILER_NO_TYPEINFO){
             ir_global->trusted_static_initializer = build_null_pointer_of_type(pool, ubyte_ptr_ptr_type);
@@ -580,7 +568,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
         ir_value_t *kinds_array_value = ir_pool_alloc(pool, sizeof(ir_value_t));
         kinds_array_value->value_type = VALUE_TYPE_ARRAY_LITERAL;
-        kinds_array_value->type = ir_type_pointer_to(pool, ubyte_ptr_type);
+        kinds_array_value->type = ir_type_make_pointer_to(pool, ubyte_ptr_type);
         kinds_array_value->extra = kinds_array_literal;
         
         ir_value_t **array_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * (MAX_ANY_TYPE_KIND + 1));

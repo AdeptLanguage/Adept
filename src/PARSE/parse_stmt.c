@@ -240,7 +240,8 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 }
                 
                 defer_scope_free(&while_defer_scope);
-                *i += (stmts_mode & PARSE_STMTS_SINGLE) ? -1 : 1;
+                
+                *i += (stmts_mode & PARSE_STMTS_SINGLE) ? (length_t) -1 : 1;
 
                 if(conditional == NULL){
                     // 'while continue' or 'until break' loop

@@ -374,7 +374,7 @@ JSMN_API int jsmn_parse(jsmn_parser *parser, const char *js, const size_t len,
     case ' ':
       break;
     case ':':
-      parser->toksuper = parser->toknext - 1;
+      parser->toksuper = (int) parser->toknext - 1;
       break;
     case ',':
       if (tokens != NULL && parser->toksuper != -1 &&

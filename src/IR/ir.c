@@ -15,7 +15,7 @@ successful_t ir_type_map_find(ir_type_map_t *type_map, char *name, ir_type_t **t
 
     ir_type_mapping_t *mappings = type_map->mappings;
     length_t mappings_length = type_map->mappings_length;
-    int first = 0, middle, last = mappings_length - 1, comparison;
+    long long first = 0, middle, last = (long long) mappings_length - 1, comparison;
 
     while(first <= last){
         middle = (first + last) / 2;
@@ -69,20 +69,18 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->defer_free = (free_list_t){0};
 
     // Initialize common data
-    ir_shared_common_t *common = &ir_module->common;
-    common->ir_ubyte = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-    common->ir_ubyte->kind = TYPE_KIND_U8;
-    common->ir_usize = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-    common->ir_usize->kind = TYPE_KIND_U64;
-    common->ir_usize_ptr = ir_type_pointer_to(&ir_module->pool, common->ir_usize);
-    common->ir_ptr = ir_type_pointer_to(&ir_module->pool, common->ir_ubyte);
-    common->ir_bool = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-    common->ir_bool->kind = TYPE_KIND_BOOLEAN;
-    common->rtti_array_index = 0;
+    ir_pool_t *const pool = &ir_module->pool;
+    ir_shared_common_t *const common = &ir_module->common;
+
+    memset(common, 0, sizeof *common);
+
+    common->ir_ubyte = ir_type_make(pool, TYPE_KIND_U8, NULL);
+    common->ir_usize = ir_type_make(pool, TYPE_KIND_U64, NULL);
+    common->ir_usize_ptr = ir_type_make_pointer_to(&ir_module->pool, common->ir_usize);
+    common->ir_ptr = ir_type_make_pointer_to(pool, common->ir_ubyte);
+    common->ir_bool = ir_type_make(pool, TYPE_KIND_BOOLEAN, NULL);
+
     common->has_rtti_array = TROOLEAN_UNKNOWN;
-    common->has_main = false;
-    common->ast_main_id = 0;
-    common->ir_main_id = 0;
 }
 
 void ir_basicblocks_free(ir_basicblocks_t *basicblocks){
@@ -139,9 +137,9 @@ void free_list_free(free_list_t *list){
     free(list->pointers);
 }
 
-void ir_module_free_funcs(ir_funcs_t funcs){
-    for(length_t f = 0; f != funcs.length; f++){
-        ir_func_t *func = &funcs.funcs[f];
+void ir_module_free_funcs(ir_funcs_t ir_funcs_list){
+    for(length_t f = 0; f != ir_funcs_list.length; f++){
+        ir_func_t *func = &ir_funcs_list.funcs[f];
 
         ir_basicblocks_free(&func->basicblocks);
         free(func->argument_types);

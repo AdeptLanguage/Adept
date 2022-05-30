@@ -30,7 +30,14 @@ void ir_proc_map_init(ir_proc_map_t *map, length_t sizeof_key, length_t estimate
 
 void ir_proc_map_free(ir_proc_map_t *map){
     free(map->keys);
+
+    for(length_t i = 0; i < map->length; i++){
+        ir_func_endpoint_list_free(map->endpoint_lists[i]);
+    }
+
     free(map->endpoint_lists);
+
+    ir_pool_free(&map->endpoint_pool);
 }
 
 void ir_proc_map_insert(ir_proc_map_t *map, const void *key, length_t sizeof_key, ir_func_endpoint_t endpoint, int (*key_compare)(const void*, const void*)){

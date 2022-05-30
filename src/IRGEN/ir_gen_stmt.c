@@ -717,7 +717,7 @@ errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt)
     bridge_var_t *bridge_variable = add_variable(builder, stmt->name, &stmt->type, ir_type, traits);
 
     ir_value_t *variable = stmt->inputs.has
-        ? build_varptr(builder, ir_type_pointer_to(builder->pool, ir_type), bridge_variable)
+        ? build_varptr(builder, ir_type_make_pointer_to(builder->pool, ir_type), bridge_variable)
         : NULL;
 
     // Initialize variable if applicable
@@ -818,7 +818,7 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
         bridge_scope_init(working_builder->scope, NULL);
     }
 
-    ir_type_t *ir_type_ptr = ir_type_pointer_to(primary_builder->pool, ir_type);
+    ir_type_t *ir_type_ptr = ir_type_make_pointer_to(primary_builder->pool, ir_type);
 
     // Get pointer to where the variable is on the stack
     ir_value_t *destination;
@@ -1398,7 +1398,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     // Set 'idx' to initial value of zero
     build_store(builder, build_literal_usize(builder->pool, 0), idx_ptr, stmt->source);
 
-    length_t prep_basicblock_id = -1;
+    length_t prep_basicblock_id = (length_t) -1; // garbage value
 
     if(!stmt->is_static){
         prep_basicblock_id = build_basicblock(builder);
@@ -1451,7 +1451,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
             if(ir_gen_resolve_type(builder->compiler, builder->object, &remaining_type, &item_ir_type))
                 goto failure;
 
-            fixed_array_value = build_bitcast(builder, single_value, ir_type_pointer_to(builder->pool, item_ir_type));
+            fixed_array_value = build_bitcast(builder, single_value, ir_type_make_pointer_to(builder->pool, item_ir_type));
 
             // Get array length from the type signature of the fixed array
             // NOTE: Assumes element->id == AST_ELEM_FIXED_ARRAY because of earlier 'ast_type_is_fixed_array' call should've verified
@@ -1664,7 +1664,7 @@ failure:
 }
 
 errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
-    length_t prep_basicblock_id = -1;
+    length_t prep_basicblock_id = (length_t) -1; // garbage value
     length_t new_basicblock_id  = build_basicblock(builder);
     length_t inc_basicblock_id  = build_basicblock(builder);
     length_t end_basicblock_id  = build_basicblock(builder);

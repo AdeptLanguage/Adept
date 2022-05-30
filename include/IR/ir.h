@@ -590,7 +590,7 @@ void ir_basicblock_free(ir_basicblock_t *basicblock);
 void ir_module_free_funcs(ir_funcs_t funcs);
 
 // ---------------- ir_implementation_setup ----------------
-// Preprares for calls to ir_implementation()
+// Prepares for calls to ir_implementation()
 void ir_implementation_setup();
 
 // ---------------- ir_implementation ----------------

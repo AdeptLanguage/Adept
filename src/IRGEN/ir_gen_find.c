@@ -237,7 +237,7 @@ static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, option
     if(ast_func->traits & AST_FUNC_POLYMORPHIC){
         // Polymorphism
 
-        // Catalog to remember polymophic parameter solution
+        // Catalog to remember polymorphic parameter solution
         // 'func_args_polymorphable' will set this to the chosen solution on SUCCESS
         ast_poly_catalog_t catalog; 
 

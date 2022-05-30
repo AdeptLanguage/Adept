@@ -166,7 +166,7 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base){
 }
 
 bool type_table_locate(type_table_t *table, weak_cstr_t name, int *out_position){
-    int first = 0, middle = 0, last = table->length - 1, comparison = 0;
+    long long first = 0, middle = 0, last = (long long) table->length - 1, comparison = 0;
 
     while(first <= last){
         middle = (first + last) / 2;

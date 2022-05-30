@@ -110,7 +110,7 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     // neglect builder.s8_type->extra
 
     builder->stack_pointer_type = NULL;
-    builder->ptr_type = ir_type_pointer_to(builder->pool, builder->s8_type);
+    builder->ptr_type = ir_type_make_pointer_to(builder->pool, builder->s8_type);
     builder->type_table = object->ast.type_table;
     builder->has_noop_defer_function = false;
     builder->noop_defer_function = 0;
@@ -210,7 +210,7 @@ ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
 ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef, ir_type_t *optional_result_ptr_type){
     ir_instr_malloc_t *instruction = (ir_instr_malloc_t*) build_instruction(builder, sizeof(ir_instr_malloc_t));
     instruction->id = INSTRUCTION_MALLOC;
-    instruction->result_type = optional_result_ptr_type ? optional_result_ptr_type : ir_type_pointer_to(builder->pool, type);
+    instruction->result_type = optional_result_ptr_type ? optional_result_ptr_type : ir_type_make_pointer_to(builder->pool, type);
     instruction->type = type;
     instruction->amount = amount;
     instruction->is_undef = is_undef;
@@ -432,7 +432,7 @@ ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b){
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_ARRAY_LITERAL;
-    value->type = ir_type_pointer_to(pool, type);
+    value->type = ir_type_make_pointer_to(pool, type);
     ir_value_array_literal_t *extra = ir_pool_alloc(pool, sizeof(ir_value_array_literal_t));
     extra->values = values;
     extra->length = length;
@@ -451,7 +451,7 @@ ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_cons
 
     ir_value_t *reference = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
     reference->value_type = is_constant ? VALUE_TYPE_CONST_ANON_GLOBAL : VALUE_TYPE_ANON_GLOBAL;
-    reference->type = ir_type_pointer_to(&module->pool, type);
+    reference->type = ir_type_make_pointer_to(&module->pool, type);
 
     reference->extra = ir_pool_alloc(&module->pool, sizeof(ir_value_anon_global_t));
     ((ir_value_anon_global_t*) reference->extra)->anon_global_id = module->anon_globals.length - 1;
@@ -585,7 +585,7 @@ ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type
         die("build_literal_cstr_of_length_ex() - Failed to find 'ubyte' type mapping\n");
     }
 
-    ir_value->type = ir_type_pointer_to(pool, ubyte_type);
+    ir_value->type = ir_type_make_pointer_to(pool, ubyte_type);
     ir_value->extra = ir_pool_alloc(pool, sizeof(ir_value_cstr_of_len_t));
     ((ir_value_cstr_of_len_t*) ir_value->extra)->array = array;
     ((ir_value_cstr_of_len_t*) ir_value->extra)->size = size;
@@ -641,7 +641,7 @@ ir_value_t *build_const_cast(ir_pool_t *pool, unsigned int cast_value_type, ir_v
 ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
     ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
     instr->id = INSTRUCTION_ALLOC;
-    instr->result_type = ir_type_pointer_to(builder->pool, type);
+    instr->result_type = ir_type_make_pointer_to(builder->pool, type);
     instr->alignment = 0;
     instr->count = NULL;
     return build_value_from_prev_instruction(builder);
@@ -650,7 +650,7 @@ ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
 ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t *count){
     ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
     instr->id = INSTRUCTION_ALLOC;
-    instr->result_type = ir_type_pointer_to(builder->pool, type);
+    instr->result_type = ir_type_make_pointer_to(builder->pool, type);
     instr->alignment = 0;
     instr->count = count;
     return build_value_from_prev_instruction(builder);
@@ -659,7 +659,7 @@ ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t
 ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment){
     ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
     instr->id = INSTRUCTION_ALLOC;
-    instr->result_type = ir_type_pointer_to(builder->pool, type);
+    instr->result_type = ir_type_make_pointer_to(builder->pool, type);
     instr->alignment = alignment;
     instr->count = NULL;
     return build_value_from_prev_instruction(builder);
@@ -829,8 +829,8 @@ void pop_loop_label(ir_builder_t *builder){
 bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
 
-    length_t id = -1;
-    length_t static_id = -1;
+    funcid_t id = INVALID_FUNC_ID;
+    funcid_t static_id = INVALID_FUNC_ID;
 
     if(traits & BRIDGE_VAR_STATIC){
         ir_static_variables_t *static_variables = &builder->object->ir_module.static_variables;
@@ -878,7 +878,7 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         ir_pool_snapshot_t snapshot;
         ir_pool_snapshot_capture(deinit_builder->pool, &snapshot);
 
-        ir_value_t *ir_var_value = build_varptr(deinit_builder, ir_type_pointer_to(deinit_builder->pool, variable->ir_type), variable);
+        ir_value_t *ir_var_value = build_varptr(deinit_builder, ir_type_make_pointer_to(deinit_builder->pool, variable->ir_type), variable);
         errorcode_t failed = handle_single_deference(deinit_builder, variable->ast_type, ir_var_value);
 
         if(failed){
@@ -997,7 +997,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             assert(mutable_value->type->kind == TYPE_KIND_POINTER);
             assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
 
-            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
+            ir_type_t *casted_ir_type = ir_type_make_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
             mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
 
             // TODO: Make this a runtime loop if count is big enough
@@ -1081,9 +1081,9 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     return ALT_FAILURE;
                 }
 
-                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
+                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
-                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
+                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
                 errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value);
 
                 if(failed){
@@ -1093,7 +1093,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
 
-                    // Propogate alternate failure cause
+                    // Propagate alternate failure cause
                     if(failed == ALT_FAILURE) return ALT_FAILURE;
                 }
             }
@@ -1151,9 +1151,9 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     return ALT_FAILURE;
                 }
 
-                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
+                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
-                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
+                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
                 errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value);
                 ast_type_free(&ast_field_type);
 
@@ -1164,7 +1164,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
 
-                    // Propogate alternate failure cause
+                    // Propagate alternate failure cause
                     if(failed == ALT_FAILURE){
                         ast_poly_catalog_free(&catalog);
                         return ALT_FAILURE;
@@ -1281,7 +1281,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
             assert(mutable_value->type->kind == TYPE_KIND_POINTER);
             assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
 
-            ir_type_t *casted_ir_type = ir_type_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
+            ir_type_t *casted_ir_type = ir_type_make_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
             mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
 
             for(length_t i = 0; i != count; i++){
@@ -1338,7 +1338,7 @@ errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_re
         return FAILURE;
     }
 
-    ir_value_t *variable_reference = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+    ir_value_t *variable_reference = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
     ir_value_t *return_value = build_load(builder, variable_reference, passed_ast_type->source);
 
     // Return modified value
@@ -1402,9 +1402,9 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     continue;
                 }
 
-                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
 
-                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type->source);
+                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), ast_field_type->source);
                 errorcode_t failed = handle_single_pass(builder, ast_field_type, ir_field_reference, NULL_SOURCE);
 
                 if(failed){
@@ -1414,7 +1414,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
 
-                    // Propogate alternate failure cause
+                    // Propagate alternate failure cause
                     if(failed == ALT_FAILURE) return ALT_FAILURE;
                 }
             }
@@ -1478,9 +1478,9 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     continue;
                 }
 
-                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
 
-                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_pointer_to(builder->pool, ir_field_type), ast_field_type.source);
+                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), ast_field_type.source);
                 errorcode_t failed = handle_single_pass(builder, &ast_field_type, ir_field_reference, NULL_SOURCE);
                 ast_type_free(&ast_field_type);
 
@@ -1491,7 +1491,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
 
-                    // Propogate alternate failure cause
+                    // Propagate alternate failure cause
                     if(failed == ALT_FAILURE){
                         ast_poly_catalog_free(&catalog);
                         return ALT_FAILURE;
@@ -1535,10 +1535,10 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 }
 
                 // Get type of pointer to element
-                ir_type_t *ir_element_ptr_type = ir_type_pointer_to(builder->pool, ir_element_type);
+                ir_type_t *ir_element_ptr_type = ir_type_make_pointer_to(builder->pool, ir_element_type);
 
                 // Get pointer to elements of fixed array variable
-                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_pointer_to(builder->pool, passed_ir_type), 0);
+                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
                 mutable_passed_ir_value = build_bitcast(builder, mutable_passed_ir_value, ir_element_ptr_type);
 
                 // Access 'e'th element
@@ -1554,7 +1554,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                     // Revert recent pool allocations
                     ir_pool_snapshot_restore(builder->pool, &snapshot);
 
-                    // Propogate alternate failure cause
+                    // Propagate alternate failure cause
                     if(failed == ALT_FAILURE) return ALT_FAILURE;
                 }
             }

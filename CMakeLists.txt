@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.13)
 project(Adept)
 
 option(ADEPT_LINK_LLVM_STATIC "Link against LLVM using static libs" default)
@@ -11,6 +11,12 @@ find_package(CURL REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Found Curl ${CURL_LIBRARIES}")
+
+if (MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -pedantic)
+endif()
 
 set(core_source_files
 	src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c
@@ -53,17 +59,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions( -DENABLE_DEBUG_FEATURES )
 
 	if(ADEPT_ENABLE_ASAN)
-		target_compile_options(adept PRIVATE -fsanitize=address,undefined)
-		target_link_options(adept PRIVATE -fsanitize=address,undefined)
-		target_compile_options(libadept PRIVATE -fsanitize=address,undefined)
-		target_link_options(libadept PRIVATE -fsanitize=address,undefined)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address,undefined,implicit-conversion,bounds")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined,implicit-conversion,bounds")
 	endif()
 
 	if(ADEPT_ENABLE_LSAN)
-		target_compile_options(adept PRIVATE -fsanitize=leak)
-		target_link_options(adept PRIVATE -fsanitize=leak)
-		target_compile_options(libadept PRIVATE -fsanitize=leak)
-		target_link_options(libadept PRIVATE -fsanitize=leak)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak")
 	endif()
 else()
 	message(STATUS "Excluding debug files")
