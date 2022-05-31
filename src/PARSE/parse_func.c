@@ -348,28 +348,25 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
         if(ctx->composite_association->is_polymorphic){
             // Insert 'this *<$A, $B, $C, ...> AssociatedStruct' as first argument to function
 
-            ast_elem_pointer_t *pointer = malloc(sizeof(ast_elem_pointer_t));
-            pointer->id = AST_ELEM_POINTER;
-            pointer->source = NULL_SOURCE;
+            ast_type_t *generics = malloc(sizeof(ast_type_t) * ctx->composite_association->generics_length);
+            length_t generics_length = ctx->composite_association->generics_length;
 
-            ast_elem_generic_base_t *generic_base = malloc(sizeof(ast_elem_generic_base_t));
-            generic_base->id = AST_ELEM_GENERIC_BASE;
-            generic_base->source = NULL_SOURCE;
-            generic_base->name = strclone(ctx->composite_association->name);
-            generic_base->generics = malloc(sizeof(ast_type_t) * ctx->composite_association->generics_length);
-
-            for(length_t i = 0; i != ctx->composite_association->generics_length; i++){
-                ast_type_make_polymorph(&generic_base->generics[i], strclone(ctx->composite_association->generics[i]), false);
+            for(length_t i = 0; i != generics_length; i++){
+                ast_type_make_polymorph(&generics[i], strclone(ctx->composite_association->generics[i]), false);
             }
 
-            generic_base->generics_length = ctx->composite_association->generics_length;
-            generic_base->name_is_polymorphic = false;
-    
-            func->arg_types[0].elements = malloc(sizeof(ast_elem_t*) * 2);
-            func->arg_types[0].elements[0] = (ast_elem_t*) pointer;
-            func->arg_types[0].elements[1] = (ast_elem_t*) generic_base;
-            func->arg_types[0].elements_length = 2;
-            func->arg_types[0].source = NULL_SOURCE;
+            ast_elem_pointer_t *pointer = ast_elem_pointer_make(NULL_SOURCE);
+            ast_elem_generic_base_t *generic_base = ast_elem_generic_base_make(strclone(ctx->composite_association->name), NULL_SOURCE, generics, generics_length);
+
+            ast_elem_t **elements = malloc(sizeof(ast_elem_t*) * 2);
+            elements[0] = (ast_elem_t*) pointer;
+            elements[1] = (ast_elem_t*) generic_base;
+
+            func->arg_types[0] = (ast_type_t){
+                .elements = elements,
+                .elements_length = 2,
+                .source = NULL_SOURCE,
+            };
         } else {
             // Insert 'this *AssociatedStruct' as first argument to function
             ast_type_make_base_ptr(&func->arg_types[0], strclone(ctx->composite_association->name));

@@ -151,6 +151,7 @@ tokens = [
     Token("embed"                 , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "embed keyword"                     ),
     Token("enum"                  , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "enum keyword"                      ),
     Token("exhaustive"            , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "exhaustive keyword"                ),
+    Token("extends"               , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "extends keyword"                   ),
     Token("external"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "external keyword"                  ),
     Token("fallthrough"           , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "fallthrough keyword"               ),
     Token("false"                 , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "false keyword"                     ),

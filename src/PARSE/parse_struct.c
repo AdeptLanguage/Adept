@@ -36,7 +36,9 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     bool is_packed, is_record, is_class;
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &is_class, &generics, &generics_length)) return FAILURE;
+    maybe_null_weak_cstr_t parent_class = NULL;
+    source_t maybe_parent_class_name_source;
+    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &is_class, &parent_class, &maybe_parent_class_name_source, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -56,7 +58,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_field_map_t field_map;
     ast_layout_skeleton_t skeleton;
 
-    if(parse_composite_body(ctx, &field_map, &skeleton, is_class)){
+    if(parse_composite_body(ctx, &field_map, &skeleton, is_class, parent_class, maybe_parent_class_name_source)){
         free(name);
         return FAILURE;
     }
@@ -74,42 +76,63 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     } else {
         domain = ast_add_composite(ast, name, layout, source, is_class);
     }
-
-    // Create constructor function if composite is a record type
+    
     if(is_record){
+        // Create constructor function if composite is a record type
         // NOTE: Ownership of 'return_type' is given away
         if(parse_create_record_constructor(ctx, name, generics, generics_length, &layout, source)) return FAILURE;
     }
 
-    // Look for start of struct domain and set it up if it exists
-    if(parse_struct_is_function_like_beginning(parse_ctx_peek(ctx))){
-        ctx->composite_association = (ast_poly_composite_t *)domain;
-        *ctx->i -= 1;
-    } else {
-        length_t scan_i = *ctx->i + 1;
-        while(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_NEWLINE)
-            scan_i++;
+    if(parse_composite_domain(ctx, domain)) return FAILURE;
+    return SUCCESS;
+}
 
-        if(scan_i < ctx->tokenlist->length && ctx->tokenlist->tokens[scan_i].id == TOKEN_BEGIN){
-            ctx->composite_association = (ast_poly_composite_t*) domain;
-            *ctx->i = scan_i;
-        }
+errorcode_t parse_composite_domain(parse_ctx_t *ctx, ast_composite_t *composite){
+    length_t anchor = *ctx->i;
+
+    if(parse_struct_is_function_like_beginning(parse_ctx_peek(ctx))){
+        ctx->composite_association = (ast_poly_composite_t*) composite;
+        *ctx->i -= 1;
+        return SUCCESS;
     }
 
+    if(parse_eat(ctx, TOKEN_CLOSE, NULL)) goto nothing_found;
+    if(parse_ignore_newlines(ctx, NULL)) goto nothing_found;
+
+    if(parse_ctx_peek(ctx) == TOKEN_BEGIN){
+        ctx->composite_association = (ast_poly_composite_t*) composite;
+        return SUCCESS;
+    }
+
+nothing_found:
+    *ctx->i = anchor;
     return SUCCESS;
 }
 
 bool parse_struct_is_function_like_beginning(tokenid_t token){
-    return token == TOKEN_FUNC || token == TOKEN_VERBATIM;
+    return token == TOKEN_FUNC || token == TOKEN_VERBATIM || token == TOKEN_IMPLICIT;
 }
 
-errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, bool *out_is_class, strong_cstr_t **out_generics, length_t *out_generics_length){
+errorcode_t parse_composite_head(
+    parse_ctx_t *ctx,
+    bool is_union,
+    strong_cstr_t *out_name,
+    bool *out_is_packed,
+    bool *out_is_record,
+    bool *out_is_class,
+    maybe_null_weak_cstr_t *out_parent_class,
+    source_t *out_maybe_parent_class_name_source,
+    strong_cstr_t **out_generics,
+    length_t *out_generics_length
+){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
     *out_is_packed = false;
     *out_is_record = false;
     *out_is_class = false;
+    *out_parent_class = NULL;
+    *out_maybe_parent_class_name_source = NULL_SOURCE;
 
     if(is_union){
         if(parse_eat(ctx, TOKEN_UNION, "Expected 'union' keyword for union definition")) return FAILURE;
@@ -125,8 +148,8 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
         } else if(tokens[*i].id == TOKEN_CLASS){
             *out_is_class = true;
             *i += 1;
-        } else {
-            if(parse_eat(ctx, TOKEN_STRUCT, "Expected 'struct' keyword after 'packed' keyword")) return FAILURE;
+        } else if(parse_eat(ctx, TOKEN_STRUCT, "Expected 'struct' keyword after 'packed' keyword")){
+            return FAILURE;
         } 
     }
 
@@ -134,41 +157,34 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
     length_t generics_length = 0;
     length_t generics_capacity = 0;
 
-    if(tokens[*i].id == TOKEN_LESSTHAN){
-        (*i)++;
-
-        while(tokens[*i].id != TOKEN_GREATERTHAN){
+    if(parse_eat(ctx, TOKEN_LESSTHAN, NULL) == SUCCESS){
+        while(parse_ctx_peek(ctx) != TOKEN_GREATERTHAN){
             expand((void**) &generics, sizeof(strong_cstr_t), generics_length, &generics_capacity, 1, 4);
 
             if(parse_ignore_newlines(ctx, "Expected polymorphic generic type")){
-                free_strings(generics, generics_length);
-                return FAILURE;
+                goto failure;
             }
 
-            if(tokens[*i].id != TOKEN_POLYMORPH){
+            if(parse_ctx_peek(ctx) != TOKEN_POLYMORPH){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type");
-                free_strings(generics, generics_length);
-                return FAILURE;
+                goto failure;
             }
 
             generics[generics_length++] = parse_ctx_peek_data_take(ctx);
             *i += 1;
 
             if(parse_ignore_newlines(ctx, "Expected '>' or ',' after polymorphic generic type")){
-                free_strings(generics, generics_length);
-                return FAILURE;
+                goto failure;
             }
 
-            if(tokens[*i].id == TOKEN_NEXT){
-                if(tokens[++(*i)].id == TOKEN_GREATERTHAN){
+            if(parse_eat(ctx, TOKEN_NEXT, NULL) == SUCCESS){
+                if(parse_ctx_peek(ctx) == TOKEN_GREATERTHAN){
                     compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type after ',' in generics list");
-                    free_strings(generics, generics_length);
-                    return FAILURE;
+                    goto failure;
                 }
-            } else if(tokens[*i].id != TOKEN_GREATERTHAN){
+            } else if(parse_ctx_peek(ctx) != TOKEN_GREATERTHAN){
                 compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after polymorphic generic type");
-                free_strings(generics, generics_length);
-                return FAILURE;
+                goto failure;
             }
         }
 
@@ -180,11 +196,14 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
         ctx->prename = NULL;
     } else {
         *out_name = parse_take_word(ctx, "Expected structure name after 'struct' keyword");
+        if(*out_name == NULL) goto failure;
+    }
 
-        if(*out_name == NULL){
-            free_strings(generics, generics_length);
-            return FAILURE;
-        }
+    if(parse_eat(ctx, TOKEN_EXTENDS, NULL) == SUCCESS){
+        *out_maybe_parent_class_name_source = ctx->tokenlist->sources[*ctx->i];
+
+        *out_parent_class = parse_eat_word(ctx, "Expected parent class name after 'extends' keyword");
+        if(*out_parent_class == NULL) goto failure;
     }
 
     parse_prepend_namespace(ctx, out_name);
@@ -192,9 +211,13 @@ errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t 
     *out_generics = generics;
     *out_generics_length = generics_length;
     return SUCCESS;
+
+failure:
+    free_strings(generics, generics_length);
+    return FAILURE;
 }
 
-errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class){
+errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class, maybe_null_weak_cstr_t parent_class_name, source_t maybe_parent_class_name_source){
     // Parses root-level composite fields
 
     length_t *i = ctx->i;
@@ -219,12 +242,16 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
     ast_layout_endpoint_init_with(&next_endpoint, (uint16_t[]){0}, 1);
 
     if(is_class){
-        ast_type_t vtable_ast_type;
-        ast_type_make_base(&vtable_ast_type, strclone("ptr"));
+        if(parent_class_name){
+            if(parse_composite_integrate_another(ctx, out_field_map, out_skeleton, &next_endpoint, maybe_parent_class_name_source, parent_class_name, true)) goto failure;
+        } else {
+            ast_type_t vtable_ast_type;
+            ast_type_make_base(&vtable_ast_type, strclone("ptr"));
 
-        ast_field_map_add(out_field_map, strclone("__vtable__"), next_endpoint);
-        ast_layout_endpoint_increment(&next_endpoint);
-        ast_layout_skeleton_add_type(out_skeleton, vtable_ast_type);
+            ast_field_map_add(out_field_map, strclone("__vtable__"), next_endpoint);
+            ast_layout_endpoint_increment(&next_endpoint);
+            ast_layout_skeleton_add_type(out_skeleton, vtable_ast_type);
+        }
     }
 
     while((tokens[*i].id != ctx->struct_closer && !parse_struct_is_function_like_beginning(tokens[*i].id)) || backfill != 0){
@@ -288,7 +315,12 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
             return FAILURE;
         }
 
-        return parse_struct_integration_field(ctx, inout_field_map, inout_skeleton, inout_next_endpoint);
+        source_t source_on_error = sources[(*i)++];
+
+        maybe_null_weak_cstr_t inner_struct_name = parse_eat_word(ctx, "Expected struct name for integration");
+        if(inner_struct_name == NULL) return FAILURE;
+
+        return parse_composite_integrate_another(ctx, inout_field_map, inout_skeleton, inout_next_endpoint, source_on_error, inner_struct_name, false);
     }
 
     if(leading_token == TOKEN_PACKED || leading_token == TOKEN_STRUCT || leading_token == TOKEN_UNION){
@@ -330,7 +362,7 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
     return SUCCESS;
 }
 
-errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint){
+errorcode_t parse_composite_integrate_another(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint, source_t source_on_error, weak_cstr_t inner_struct_name, bool require_class){
     // (Inside of composite definition)
     // struct SomeStructure
     //   ^
@@ -338,12 +370,23 @@ errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *in
     length_t *i = ctx->i;
     source_t *sources = ctx->tokenlist->sources;
 
-    maybe_null_weak_cstr_t inner_struct_name = parse_grab_word(ctx, "Expected struct name for integration");
-    if(inner_struct_name == NULL) return FAILURE;
-
     ast_composite_t *inner_composite = ast_composite_find_exact(ctx->ast, inner_struct_name);
+
+    // Class requirements
+    if(require_class && (inner_composite == NULL || !inner_composite->is_class)){
+        const char *message = inner_composite ? "Cannot extend non-class '%s'" : "Cannot extend non-existent class '%s'";
+        compiler_panicf(ctx->compiler, source_on_error, message, inner_struct_name);
+
+        if(inner_composite == NULL){
+            printf("    Please note that parent classes must be defined before their children\n");
+        }
+
+        return FAILURE;
+    }
+
+    // Existence requirements
     if(inner_composite == NULL){
-        compiler_panicf(ctx->compiler, sources[*i], "Struct '%s' must already be declared", inner_struct_name);
+        compiler_panicf(ctx->compiler, source_on_error, "Struct '%s' must already be declared", inner_struct_name);
         return FAILURE;
     }
 
@@ -364,7 +407,6 @@ errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *in
         ast_layout_endpoint_increment(inout_next_endpoint);
     }
 
-    (*i)++;
     return SUCCESS;
 }
 

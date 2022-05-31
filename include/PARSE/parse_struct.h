@@ -14,22 +14,37 @@ extern "C" {
 // Parses a composite
 errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union);
 
+// ------------------ parse_composite_domain ------------------
+// Parses constructs after the fields of a composite definition
+errorcode_t parse_composite_domain(parse_ctx_t *ctx, ast_composite_t *composite);
+
 // ------------------ parse_composite_head ------------------
 // Parses the head of a composite
 // NOTE: All arguments must be valid pointers
-errorcode_t parse_composite_head(parse_ctx_t *ctx, bool is_union, strong_cstr_t *out_name, bool *out_is_packed, bool *out_is_record, bool *out_is_class, strong_cstr_t **out_generics, length_t *out_generics_length);
+errorcode_t parse_composite_head(
+    parse_ctx_t *ctx,
+    bool is_union,
+    strong_cstr_t *out_name,
+    bool *out_is_packed,
+    bool *out_is_record,
+    bool *out_is_class,
+    maybe_null_weak_cstr_t *out_parent_class,
+    source_t *out_maybe_parent_class_name,
+    strong_cstr_t **out_generics,
+    length_t *out_generics_length
+);
 
 // ------------------ parse_composite_body ------------------
 // Parses the body of a composite
-errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class);
+errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class, maybe_null_weak_cstr_t parent_class_name, source_t maybe_parent_class_name_source);
 
 // ------------------ parse_composite_field ------------------
 // Parses a single field of a composite
 errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, length_t *inout_backfill, ast_layout_endpoint_t *inout_next_endpoint);
 
-// ------------------ parse_struct_integration_field ------------------
+// ------------------ parse_composite_integrate_another ------------------
 // Parses a single struct integration field of a composite
-errorcode_t parse_struct_integration_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint);
+errorcode_t parse_composite_integrate_another(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint, source_t source_on_error, weak_cstr_t inner_struct_name, bool require_class);
 
 // ------------------ parse_anonymous_composite ------------------
 // Parses a single anonymous composite field of a composite

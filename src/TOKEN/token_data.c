@@ -100,55 +100,56 @@ const char *global_token_name_table[] = {
     "embed keyword",                      // 0x0000005F
     "enum keyword",                       // 0x00000060
     "exhaustive keyword",                 // 0x00000061
-    "external keyword",                   // 0x00000062
-    "fallthrough keyword",                // 0x00000063
-    "false keyword",                      // 0x00000064
-    "for keyword",                        // 0x00000065
-    "foreign keyword",                    // 0x00000066
-    "func keyword",                       // 0x00000067
-    "funcptr keyword",                    // 0x00000068
-    "global keyword",                     // 0x00000069
-    "if keyword",                         // 0x0000006A
-    "implicit keyword",                   // 0x0000006B
-    "import keyword",                     // 0x0000006C
-    "in keyword",                         // 0x0000006D
-    "inout keyword",                      // 0x0000006E
-    "llvm_asm keyword",                   // 0x0000006F
-    "namespace keyword",                  // 0x00000070
-    "new keyword",                        // 0x00000071
-    "null keyword",                       // 0x00000072
-    "or keyword",                         // 0x00000073
-    "out keyword",                        // 0x00000074
-    "packed keyword",                     // 0x00000075
-    "pragma keyword",                     // 0x00000076
-    "private keyword",                    // 0x00000077
-    "public keyword",                     // 0x00000078
-    "record keyword",                     // 0x00000079
-    "repeat keyword",                     // 0x0000007A
-    "return keyword",                     // 0x0000007B
-    "sizeof keyword",                     // 0x0000007C
-    "static keyword",                     // 0x0000007D
-    "stdcall keyword",                    // 0x0000007E
-    "struct keyword",                     // 0x0000007F
-    "switch keyword",                     // 0x00000080
-    "thread_local keyword",               // 0x00000081
-    "true keyword",                       // 0x00000082
-    "typeinfo keyword",                   // 0x00000083
-    "typenameof keyword",                 // 0x00000084
-    "undef keyword",                      // 0x00000085
-    "union keyword",                      // 0x00000086
-    "unless keyword",                     // 0x00000087
-    "until keyword",                      // 0x00000088
-    "using keyword",                      // 0x00000089
-    "va_arg keyword",                     // 0x0000008A
-    "va_copy keyword",                    // 0x0000008B
-    "va_end keyword",                     // 0x0000008C
-    "va_start keyword",                   // 0x0000008D
-    "verbatim keyword",                   // 0x0000008E
-    "while keyword",                      // 0x0000008F
+    "extends keyword",                    // 0x00000062
+    "external keyword",                   // 0x00000063
+    "fallthrough keyword",                // 0x00000064
+    "false keyword",                      // 0x00000065
+    "for keyword",                        // 0x00000066
+    "foreign keyword",                    // 0x00000067
+    "func keyword",                       // 0x00000068
+    "funcptr keyword",                    // 0x00000069
+    "global keyword",                     // 0x0000006A
+    "if keyword",                         // 0x0000006B
+    "implicit keyword",                   // 0x0000006C
+    "import keyword",                     // 0x0000006D
+    "in keyword",                         // 0x0000006E
+    "inout keyword",                      // 0x0000006F
+    "llvm_asm keyword",                   // 0x00000070
+    "namespace keyword",                  // 0x00000071
+    "new keyword",                        // 0x00000072
+    "null keyword",                       // 0x00000073
+    "or keyword",                         // 0x00000074
+    "out keyword",                        // 0x00000075
+    "packed keyword",                     // 0x00000076
+    "pragma keyword",                     // 0x00000077
+    "private keyword",                    // 0x00000078
+    "public keyword",                     // 0x00000079
+    "record keyword",                     // 0x0000007A
+    "repeat keyword",                     // 0x0000007B
+    "return keyword",                     // 0x0000007C
+    "sizeof keyword",                     // 0x0000007D
+    "static keyword",                     // 0x0000007E
+    "stdcall keyword",                    // 0x0000007F
+    "struct keyword",                     // 0x00000080
+    "switch keyword",                     // 0x00000081
+    "thread_local keyword",               // 0x00000082
+    "true keyword",                       // 0x00000083
+    "typeinfo keyword",                   // 0x00000084
+    "typenameof keyword",                 // 0x00000085
+    "undef keyword",                      // 0x00000086
+    "union keyword",                      // 0x00000087
+    "unless keyword",                     // 0x00000088
+    "until keyword",                      // 0x00000089
+    "using keyword",                      // 0x0000008A
+    "va_arg keyword",                     // 0x0000008B
+    "va_copy keyword",                    // 0x0000008C
+    "va_end keyword",                     // 0x0000008D
+    "va_start keyword",                   // 0x0000008E
+    "verbatim keyword",                   // 0x0000008F
+    "while keyword",                      // 0x00000090
 };
 
-const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const char global_token_extra_format_table[] = "abcbaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 const char *global_token_keywords_list[] = {
     "POD",
@@ -174,6 +175,7 @@ const char *global_token_keywords_list[] = {
     "embed",
     "enum",
     "exhaustive",
+    "extends",
     "external",
     "fallthrough",
     "false",
@@ -222,4 +224,4 @@ const char *global_token_keywords_list[] = {
     "while",
 };
 
-unsigned long long global_token_keywords_list_length = 69;
+unsigned long long global_token_keywords_list_length = 70;
