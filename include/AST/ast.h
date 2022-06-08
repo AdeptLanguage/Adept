@@ -80,6 +80,8 @@ typedef struct {
 #define AST_FUNC_WINMAIN     TRAIT_C
 #define AST_FUNC_NO_DISCARD  TRAIT_D
 #define AST_FUNC_DISALLOW    TRAIT_E
+#define AST_FUNC_VIRTUAL     TRAIT_F
+#define AST_FUNC_OVERRIDE    TRAIT_G
 
 // Additional AST function traits for builtin uses
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
@@ -90,7 +92,9 @@ typedef struct {
     bool is_stdcall  : 1,
          is_verbatim : 1,
          is_implicit : 1,
-         is_external : 1;
+         is_external : 1,
+         is_virtual  : 1,
+         is_override : 1;
 } ast_func_prefixes_t;
 
 // ------------------ ast_func_head_t ------------------

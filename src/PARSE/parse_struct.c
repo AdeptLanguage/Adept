@@ -110,7 +110,16 @@ nothing_found:
 }
 
 bool parse_struct_is_function_like_beginning(tokenid_t token){
-    return token == TOKEN_FUNC || token == TOKEN_VERBATIM || token == TOKEN_IMPLICIT;
+    switch(token){
+    case TOKEN_FUNC:
+    case TOKEN_IMPLICIT:
+    case TOKEN_VERBATIM:
+    case TOKEN_VIRTUAL:
+    case TOKEN_OVERRIDE:
+        return true;
+    default:
+        return false;
+    }
 }
 
 errorcode_t parse_composite_head(

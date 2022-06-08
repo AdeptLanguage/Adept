@@ -829,8 +829,8 @@ void pop_loop_label(ir_builder_t *builder){
 bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
 
-    id_t id = INVALID_ID;
-    id_t static_id = INVALID_ID;
+    index_id_t id = INVALID_INDEX_ID;
+    index_id_t static_id = INVALID_INDEX_ID;
 
     if(traits & BRIDGE_VAR_STATIC){
         ir_static_variables_t *static_variables = &builder->object->ir_module.static_variables;
@@ -1777,6 +1777,8 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
         .is_external = false,
         .is_implicit = poly_func->traits & AST_FUNC_IMPLICIT,
         .is_verbatim = !(poly_func->traits & AST_FUNC_AUTOGEN),
+        .is_virtual = poly_func->traits & AST_FUNC_VIRTUAL,
+        .is_override = poly_func->traits & AST_FUNC_OVERRIDE,
     };
 
     ast_func_create_template(func, &(ast_func_head_t){
@@ -1886,7 +1888,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
     entry->has_defer = TROOLEAN_FALSE;
 
-    if(ast->funcs_length >= MAX_ID){
+    if(ast->funcs_length >= MAX_INDEX_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -2059,7 +2061,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
     }
 
-    if(ast->funcs_length >= MAX_ID){
+    if(ast->funcs_length >= MAX_INDEX_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -2143,7 +2145,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
     entry->has_assign = TROOLEAN_FALSE;
 
-    if(ast->funcs_length >= MAX_ID){
+    if(ast->funcs_length >= MAX_INDEX_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }

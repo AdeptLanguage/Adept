@@ -79,15 +79,15 @@ typedef struct {
 
 #define NULL_SOURCE (source_t){0, 0, 0}
 
-// ---------------- id_t ----------------
+// ---------------- index_id_t ----------------
 // Used as a general-purpose ID
-#define MAX_ID     0xFFFFFFFE
-#define INVALID_ID 0xFFFFFFFF
-typedef uint32_t id_t;
+#define MAX_INDEX_ID     0xFFFFFFFE
+#define INVALID_INDEX_ID 0xFFFFFFFF
+typedef uint32_t index_id_t;
 
 // ---------------- func_id_t ----------------
 // Used as an ID to refer to functions
-typedef id_t func_id_t;
+typedef index_id_t func_id_t;
 
 // ---------------- maybe_index_t ----------------
 typedef long long maybe_index_t;

@@ -32,7 +32,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return parse_func_alias(ctx);
     }
 
-    if(ctx->ast->funcs_length >= MAX_ID){
+    if(ctx->ast->funcs_length >= MAX_INDEX_ID){
         compiler_panic(ctx->compiler, source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -138,6 +138,8 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
             .is_verbatim = false,
             .is_implicit = false,
             .is_external = false,
+            .is_virtual = false,
+            .is_override = false,
         },
         .export_name = NULL
     };
@@ -355,12 +357,12 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
                 ast_type_make_polymorph(&generics[i], strclone(ctx->composite_association->generics[i]), false);
             }
 
-            ast_elem_pointer_t *pointer = ast_elem_pointer_make(NULL_SOURCE);
-            ast_elem_generic_base_t *generic_base = ast_elem_generic_base_make(strclone(ctx->composite_association->name), NULL_SOURCE, generics, generics_length);
+            ast_elem_t *pointer = ast_elem_pointer_make(NULL_SOURCE);
+            ast_elem_t *generic_base = ast_elem_generic_base_make(strclone(ctx->composite_association->name), NULL_SOURCE, generics, generics_length);
 
             ast_elem_t **elements = malloc(sizeof(ast_elem_t*) * 2);
-            elements[0] = (ast_elem_t*) pointer;
-            elements[1] = (ast_elem_t*) generic_base;
+            elements[0] = pointer;
+            elements[1] = generic_base;
 
             func->arg_types[0] = (ast_type_t){
                 .elements = elements,
@@ -678,6 +680,8 @@ void parse_func_prefixes(parse_ctx_t *ctx, ast_func_prefixes_t *out_prefixes){
         case TOKEN_VERBATIM: out_prefixes->is_verbatim = true; break;
         case TOKEN_IMPLICIT: out_prefixes->is_implicit = true; break;
         case TOKEN_EXTERNAL: out_prefixes->is_external = true; break;
+        case TOKEN_VIRTUAL:  out_prefixes->is_virtual = true; break;
+        case TOKEN_OVERRIDE: out_prefixes->is_override = true; break;
         default: return;
         }
 
@@ -736,7 +740,7 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
         return FAILURE;
     }
     
-    if(ast->func_aliases_length >= MAX_ID){
+    if(ast->func_aliases_length >= MAX_INDEX_ID){
         compiler_panic(ctx->compiler, source, "Maximum number of AST function aliases reached\n");
         return FAILURE;
     }

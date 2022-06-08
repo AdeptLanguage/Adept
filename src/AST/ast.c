@@ -915,6 +915,8 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     if(streq(options->name, "__pass__"))  func->traits |= AST_FUNC_PASS  | (options->prefixes.is_verbatim ? TRAIT_NONE : AST_FUNC_AUTOGEN);
     if(options->prefixes.is_stdcall)      func->traits |= AST_FUNC_STDCALL;
     if(options->prefixes.is_implicit)     func->traits |= AST_FUNC_IMPLICIT;
+    if(options->prefixes.is_virtual)      func->traits |= AST_FUNC_VIRTUAL;
+    if(options->prefixes.is_override)     func->traits |= AST_FUNC_OVERRIDE;
     if(options->is_foreign)               func->traits |= AST_FUNC_FOREIGN;
 
     // Handle WinMain

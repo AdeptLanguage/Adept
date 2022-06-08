@@ -49,7 +49,46 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
         || ir_gen_functions(compiler, object)
         || ir_gen_functions_body(compiler, object)
         || ir_gen_special_globals(compiler, object)
-        || ir_gen_fill_in_rtti(object);
+        || ir_gen_fill_in_rtti(object)
+        || ir_gen_vtables(compiler, object);
+}
+
+errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
+    (void) compiler;
+
+    ast_t *ast = &object->ast;
+    ir_module_t *module = &object->ir_module;
+    ir_proc_map_t method_map = module->method_map;
+
+    for(length_t i = 0; i != ast->composites_length; i++){
+        ast_composite_t *composite = &ast->composites[i];
+        if(!composite->is_class) continue;
+
+        const char *class_name = composite->name;
+
+        for(length_t i = 0; i != method_map.length; i++){
+            ir_method_key_t key = ((ir_method_key_t*) method_map.keys)[i];
+
+            if(!streq(key.struct_name, class_name)) continue;
+            
+            ir_func_endpoint_list_t *endpoint_list = method_map.endpoint_lists[i];
+            
+            for(length_t i = 0; i != endpoint_list->length; i++){
+                ir_func_endpoint_t endpoint = endpoint_list->endpoints[i];
+                ast_func_t *func = &ast->funcs[endpoint.ast_func_id];
+
+                if(func->traits & AST_FUNC_VIRTUAL){
+                    // TODO: Use list of virtual methods to construct vtable
+                    // TODO: After incorporate any virtual methods inherited from parents
+                    // printf("%s.%s\n", key.struct_name, key.method_name);
+                    compiler_panic(compiler, func->source, "Virtual methods are not yet implemented!");
+                    return FAILURE;
+                }
+            }
+        }
+    }
+
+    return SUCCESS;
 }
 
 errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
@@ -73,7 +112,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         if(ast_func->traits & AST_FUNC_POLYMORPHIC){
             ir_func_endpoint_t endpoint = (ir_func_endpoint_t){
                 .ast_func_id = ast_func_id,
-                .ir_func_id = INVALID_ID,
+                .ir_func_id = INVALID_INDEX_ID,
             };
 
             ir_module_create_func_mapping(ir_module, ast_func->name, endpoint, false);
@@ -147,7 +186,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
 errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, func_id_t *out_ir_func_id){
     ir_module_t *module = &object->ir_module;
 
-    if(module->funcs.length >= MAX_ID){
+    if(module->funcs.length >= MAX_INDEX_ID){
         compiler_panic(compiler, from_source, "Maximum number of IR functions reached\n");
         return FAILURE;
     }

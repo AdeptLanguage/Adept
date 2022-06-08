@@ -31,8 +31,8 @@ typedef struct {
     weak_cstr_t name;        // name of the variable
     ast_type_t *ast_type;    // AST type of the variable
 
-    id_t id;                 // ID of the variable within the function stack (only applies to non-static variables)
-    id_t static_id;          // ID of the variable as a static variable (only applies to static variables)
+    index_id_t id;                 // ID of the variable within the function stack (only applies to non-static variables)
+    index_id_t static_id;          // ID of the variable as a static variable (only applies to static variables)
     trait_t traits;          // traits of the variable
 
     #ifndef ADEPT_INSIGHT_BUILD

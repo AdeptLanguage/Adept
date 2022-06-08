@@ -19,6 +19,10 @@
 // ---------------- ir_gen_type_mappings ----------------
 errorcode_t ir_gen(compiler_t *compiler, object_t *object);
 
+// ---------------- ir_gen_vtables ----------------
+// Generates vtables for all classes
+errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object);
+
 // ---------------- ir_gen_functions_body ----------------
 // Generates IR function skeletons for AST functions.
 errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object);

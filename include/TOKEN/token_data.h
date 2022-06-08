@@ -4,7 +4,7 @@
 #ifndef _ISAAC_TOKEN_DATA_H
 #define _ISAAC_TOKEN_DATA_H
 
-#define TOKEN_ITERATION_VERSION 0x62965DB3
+#define TOKEN_ITERATION_VERSION 0x6296B11D
 
 #define TOKEN_NONE                  0x00000000
 #define TOKEN_WORD                  0x00000001
@@ -124,36 +124,38 @@
 #define TOKEN_NULL                  0x00000073
 #define TOKEN_OR                    0x00000074
 #define TOKEN_OUT                   0x00000075
-#define TOKEN_PACKED                0x00000076
-#define TOKEN_PRAGMA                0x00000077
-#define TOKEN_PRIVATE               0x00000078
-#define TOKEN_PUBLIC                0x00000079
-#define TOKEN_RECORD                0x0000007A
-#define TOKEN_REPEAT                0x0000007B
-#define TOKEN_RETURN                0x0000007C
-#define TOKEN_SIZEOF                0x0000007D
-#define TOKEN_STATIC                0x0000007E
-#define TOKEN_STDCALL               0x0000007F
-#define TOKEN_STRUCT                0x00000080
-#define TOKEN_SWITCH                0x00000081
-#define TOKEN_THREAD_LOCAL          0x00000082
-#define TOKEN_TRUE                  0x00000083
-#define TOKEN_TYPEINFO              0x00000084
-#define TOKEN_TYPENAMEOF            0x00000085
-#define TOKEN_UNDEF                 0x00000086
-#define TOKEN_UNION                 0x00000087
-#define TOKEN_UNLESS                0x00000088
-#define TOKEN_UNTIL                 0x00000089
-#define TOKEN_USING                 0x0000008A
-#define TOKEN_VA_ARG                0x0000008B
-#define TOKEN_VA_COPY               0x0000008C
-#define TOKEN_VA_END                0x0000008D
-#define TOKEN_VA_START              0x0000008E
-#define TOKEN_VERBATIM              0x0000008F
-#define TOKEN_WHILE                 0x00000090
+#define TOKEN_OVERRIDE              0x00000076
+#define TOKEN_PACKED                0x00000077
+#define TOKEN_PRAGMA                0x00000078
+#define TOKEN_PRIVATE               0x00000079
+#define TOKEN_PUBLIC                0x0000007A
+#define TOKEN_RECORD                0x0000007B
+#define TOKEN_REPEAT                0x0000007C
+#define TOKEN_RETURN                0x0000007D
+#define TOKEN_SIZEOF                0x0000007E
+#define TOKEN_STATIC                0x0000007F
+#define TOKEN_STDCALL               0x00000080
+#define TOKEN_STRUCT                0x00000081
+#define TOKEN_SWITCH                0x00000082
+#define TOKEN_THREAD_LOCAL          0x00000083
+#define TOKEN_TRUE                  0x00000084
+#define TOKEN_TYPEINFO              0x00000085
+#define TOKEN_TYPENAMEOF            0x00000086
+#define TOKEN_UNDEF                 0x00000087
+#define TOKEN_UNION                 0x00000088
+#define TOKEN_UNLESS                0x00000089
+#define TOKEN_UNTIL                 0x0000008A
+#define TOKEN_USING                 0x0000008B
+#define TOKEN_VA_ARG                0x0000008C
+#define TOKEN_VA_COPY               0x0000008D
+#define TOKEN_VA_END                0x0000008E
+#define TOKEN_VA_START              0x0000008F
+#define TOKEN_VERBATIM              0x00000090
+#define TOKEN_VIRTUAL               0x00000091
+#define TOKEN_WHILE                 0x00000092
 #define TOKEN_BIT_AND               0x00000021
 
-#define MAX_LEX_TOKEN 0x00000090
+#define MAX_LEX_TOKEN 0x00000092
 #define BEGINNING_OF_KEYWORD_TOKENS 0x0000004B
 
 #define TOKEN_EXTRA_DATA_FORMAT_ID_ONLY    0x00000061
