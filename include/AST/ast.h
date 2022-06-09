@@ -116,6 +116,7 @@ typedef struct {
     source_t source;
     bool is_polymorphic : 1;
     bool is_class : 1;
+    bool has_constructor : 1;
 } ast_composite_t;
 
 // Possible AST structure traits
@@ -131,6 +132,7 @@ typedef struct {
     source_t source;
     bool is_polymorphic : 1;
     bool is_class : 1;
+    bool has_constructor : 1;
     // ---------------------------
     strong_cstr_t *generics;
     length_t generics_length;

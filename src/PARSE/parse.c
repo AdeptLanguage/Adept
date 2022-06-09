@@ -114,6 +114,13 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
                 ctx->object->current_namespace = NULL;
                 ctx->object->current_namespace_length = 0;
             } else if(ctx->composite_association != NULL){
+                // End of struct domain
+
+                if(ctx->composite_association->is_class && !ctx->composite_association->has_constructor){
+                    compiler_panicf(ctx->compiler, ctx->composite_association->source, "Class is missing constructor");
+                    return FAILURE;
+                }
+
                 ctx->composite_association = NULL;
             } else {
                 compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Unexpected trailing closing brace '}'");

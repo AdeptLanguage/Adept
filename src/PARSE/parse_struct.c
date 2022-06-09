@@ -105,6 +105,11 @@ errorcode_t parse_composite_domain(parse_ctx_t *ctx, ast_composite_t *composite)
     }
 
 nothing_found:
+    if(composite->is_class){
+        compiler_panicf(ctx->compiler, composite->source, "Class is missing constructor");
+        return FAILURE;
+    }
+
     *ctx->i = anchor;
     return SUCCESS;
 }

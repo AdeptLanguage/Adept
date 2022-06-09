@@ -114,6 +114,9 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(parse_func_body(ctx, func)) return FAILURE;
 
     if(func_head_parse_info.is_constructor){
+        assert(ctx->composite_association);
+        ctx->composite_association->has_constructor = true;
+
         parse_func_solidify_constructor(ast, func, source);
     }
 

@@ -1109,6 +1109,7 @@ ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t 
         .source = source,
         .is_polymorphic = false,
         .is_class = is_class,
+        .has_constructor = false,
     };
 
     return composite;
@@ -1125,6 +1126,7 @@ ast_poly_composite_t *ast_add_polymorphic_composite(ast_t *ast, strong_cstr_t na
         .source = source,
         .is_polymorphic = true,
         .is_class = is_class,
+        .has_constructor = false,
         .generics = generics,
         .generics_length = generics_length,
     };
