@@ -82,6 +82,19 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         *(ctx->i) += 2;
     }
 
+    if(func_head_parse_info.is_constructor){
+        assert(ctx->composite_association);
+        
+        // Remember that the associated composite definition has
+        // at least one constructor
+        ctx->composite_association->has_constructor = true;
+
+        // Remember if this function is a constructor of a class
+        if(ctx->composite_association->is_class){
+            func->traits |= AST_FUNC_CLASS_CONSTRUCTOR;
+        }
+    }
+
     if(validate_func_requirements(ctx, func, source)){
         return FAILURE;
     }
@@ -114,9 +127,6 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(parse_func_body(ctx, func)) return FAILURE;
 
     if(func_head_parse_info.is_constructor){
-        assert(ctx->composite_association);
-        ctx->composite_association->has_constructor = true;
-
         parse_func_solidify_constructor(ast, func, source);
     }
 
@@ -242,7 +252,7 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head, ast_fun
 
     if(ctx->composite_association == NULL){
         if(is_constructor){
-            compiler_panic(ctx->compiler, source, "Constructor must be defined inside the domain of a structure");
+            compiler_panic(ctx->compiler, source, "Constructor must be defined inside the domain of a class/structure");
             return FAILURE;
         } else {
             parse_prepend_namespace(ctx, &name);

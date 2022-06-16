@@ -116,6 +116,7 @@ nothing_found:
 
 bool parse_struct_is_function_like_beginning(tokenid_t token){
     switch(token){
+    case TOKEN_CONSTRUCTOR:
     case TOKEN_FUNC:
     case TOKEN_IMPLICIT:
     case TOKEN_VERBATIM:
@@ -267,6 +268,8 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
             ast_layout_skeleton_add_type(out_skeleton, vtable_ast_type);
         }
     }
+
+    if(parse_ignore_newlines(ctx, "Expected name of field")) return FAILURE;
 
     while((tokens[*i].id != ctx->struct_closer && !parse_struct_is_function_like_beginning(tokens[*i].id)) || backfill != 0){
         // Be lenient with unnecessary preceding commas

@@ -381,6 +381,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     bool show_is_empty_warning = ast_func.statements.length == 0
                               && !(ast_func.traits & AST_FUNC_GENERATED)
+                              && !(ast_func.traits & AST_FUNC_CLASS_CONSTRUCTOR)
                               && compiler->traits & COMPILER_FUSSY;
 
     if(show_is_empty_warning){
