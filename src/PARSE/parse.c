@@ -116,7 +116,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             } else if(ctx->composite_association != NULL){
                 // End of struct domain
 
-                if(ctx->composite_association->is_class && !ctx->composite_association->has_constructor){
+                if(ctx->composite_association->is_class && ctx->composite_association->constructor_ast_func_ids.length == 0){
                     compiler_panicf(ctx->compiler, ctx->composite_association->source, "Class is missing constructor");
                     return FAILURE;
                 }

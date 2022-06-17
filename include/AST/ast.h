@@ -24,6 +24,7 @@ extern "C" {
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
+#include "UTIL/index_id_list.h"
 
 struct compiler;
 
@@ -109,31 +110,28 @@ typedef struct {
     maybe_null_strong_cstr_t export_name;
 } ast_func_head_t;
 
+// ---------------- DERIVE_AST_COMPOSITE ----------------
+// Common fields for all ast_composite_*_t derivatives
+#define DERIVE_AST_COMPOSITE struct { \
+    strong_cstr_t name; \
+    ast_layout_t layout; \
+    source_t source; \
+    bool is_polymorphic : 1; \
+    bool is_class : 1; \
+    index_id_list_t constructor_ast_func_ids; \
+}
+
 // ---------------- ast_composite_t ----------------
 // A structure/union within the root AST
 typedef struct {
-    strong_cstr_t name;
-    ast_layout_t layout;
-    source_t source;
-    bool is_polymorphic : 1;
-    bool is_class : 1;
-    bool has_constructor : 1;
+    DERIVE_AST_COMPOSITE;
 } ast_composite_t;
-
-// Possible AST structure traits
-#define AST_STRUCT_POLYMORPHIC  TRAIT_1
-#define AST_UNION_POLYMORPHIC   AST_STRUCT_POLYMORPHIC
 
 // ---------------- ast_poly_composite_t ----------------
 // A polymorphic composite
-// NOTE: Guaranteed to overlap with 'ast_composite_t'
+// Guaranteed to overlap with 'ast_composite_t'
 typedef struct {
-    strong_cstr_t name;
-    ast_layout_t layout;
-    source_t source;
-    bool is_polymorphic : 1;
-    bool is_class : 1;
-    bool has_constructor : 1;
+    DERIVE_AST_COMPOSITE;
     // ---------------------------
     strong_cstr_t *generics;
     length_t generics_length;

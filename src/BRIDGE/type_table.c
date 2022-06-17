@@ -120,39 +120,49 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
 }
 
 void type_table_give_base(type_table_t *table, weak_cstr_t base){
-    type_table_entry_t weak_ast_type_entry;
-    weak_ast_type_entry.name = strclone(base);
+    strong_cstr_t name = strclone(base);
 
     // Static AST type for base
-    ast_elem_base_t static_pointer_element;
-    static_pointer_element.id = AST_ELEM_POINTER;
-    static_pointer_element.source = NULL_SOURCE;
-    ast_elem_base_t static_base_element;
-    static_base_element.id = AST_ELEM_BASE;
-    static_base_element.base = weak_ast_type_entry.name;
-    static_base_element.source = NULL_SOURCE;
-    ast_elem_t *static_elements[2];
-    static_elements[0] = (ast_elem_t*) &static_pointer_element;
-    static_elements[1] = (ast_elem_t*) &static_base_element;
-    weak_ast_type_entry.ast_type.elements = &static_elements[1];
-    weak_ast_type_entry.ast_type.elements_length = 1;
-    weak_ast_type_entry.ast_type.source = NULL_SOURCE;
+    ast_elem_t static_pointer_element = (ast_elem_t){
+        .id = AST_ELEM_POINTER,
+        .source = NULL_SOURCE,
+    };
 
-    #ifndef ADEPT_INSIGHT_BUILD
-    weak_ast_type_entry.ir_type = NULL;
-    #endif
-    weak_ast_type_entry.is_alias = false;
+    ast_elem_base_t static_base_element = (ast_elem_base_t){
+        .id = AST_ELEM_BASE,
+        .base = name,
+        .source = NULL_SOURCE,
+    };
+
+    ast_elem_t *static_elements[2] = {&static_pointer_element, (ast_elem_t*) &static_base_element};
+
+    type_table_entry_t weak_ast_type_entry = (type_table_entry_t){
+        .name = name,
+        .ast_type = (ast_type_t){
+            .elements = &static_elements[1],
+            .elements_length = 1,
+            .source = NULL_SOURCE,
+        },
+        .is_alias = false,
+
+        #ifndef ADEPT_INSIGHT_BUILD
+        .ir_type = NULL,
+        #endif
+    };
 
     bool added = type_table_add(table, weak_ast_type_entry);
 
     // Since we cannot know whether or not '&' is ever used on the type,
     // force another type entry which is a pointer the the type
     // (unless of course the type is void, cause *void is an alias for 'ptr')
-    if(!streq(weak_ast_type_entry.name, "void")){
+    if(!streq(base, "void")){
         // Add *T type table entry
-        weak_ast_type_entry.ast_type.elements = &static_elements[0];
-        weak_ast_type_entry.ast_type.elements_length = 2;
-        weak_ast_type_entry.ast_type.source = NULL_SOURCE;
+        weak_ast_type_entry.ast_type = (ast_type_t){
+            .elements = &static_elements[0],
+            .elements_length = 2,
+            .source = NULL_SOURCE,
+        };
+
         weak_ast_type_entry.name = ast_type_str(&weak_ast_type_entry.ast_type);
         
         if(!type_table_add(table, weak_ast_type_entry)){
@@ -161,7 +171,7 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base){
     }
     
     if(!added){
-        free(static_base_element.base);
+        free(name);
     }
 }
 

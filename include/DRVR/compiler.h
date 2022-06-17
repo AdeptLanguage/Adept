@@ -259,10 +259,6 @@ void compiler_vwarnf(compiler_t *compiler, source_t source, const char *format, 
 void compiler_undeclared_function(compiler_t *compiler, object_t *object, source_t source,
     weak_cstr_t name, ast_type_t *types, length_t arity, ast_type_t *gives, bool is_method);
 
-typedef listof(func_id_t, ids) func_id_list_t;
-#define func_id_list_append(LIST, VALUE) list_append((LIST), (VALUE), func_id_t)
-#define func_id_list_free(LIST) free((LIST)->ids)
-
 // ---------------- compiler_possibilities ----------------
 // Returns a list of IDs of possible AST functions that
 // are similar the supplied parameters

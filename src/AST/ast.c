@@ -258,6 +258,7 @@ void ast_free_composites(ast_composite_t *composites, length_t composites_length
         ast_composite_t *composite = &composites[i];
 
         ast_layout_free(&composite->layout);
+        func_id_list_free(&composite->constructor_ast_func_ids);
         free(composite->name);
     }
 }
@@ -1109,7 +1110,7 @@ ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t 
         .source = source,
         .is_polymorphic = false,
         .is_class = is_class,
-        .has_constructor = false,
+        .constructor_ast_func_ids = {0},
     };
 
     return composite;
@@ -1126,7 +1127,7 @@ ast_poly_composite_t *ast_add_polymorphic_composite(ast_t *ast, strong_cstr_t na
         .source = source,
         .is_polymorphic = true,
         .is_class = is_class,
-        .has_constructor = false,
+        .constructor_ast_func_ids = {0},
         .generics = generics,
         .generics_length = generics_length,
     };

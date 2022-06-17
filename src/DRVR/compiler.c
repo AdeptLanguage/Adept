@@ -324,9 +324,9 @@ void compiler_free_warnings(compiler_t *compiler){
 }
 
 object_t* compiler_new_object(compiler_t *compiler){
-    // NOTE: This process needs to be made thread-safe eventually
-    // NOTE: Returns pointer to object that the compiler will free
+    // NOTE: Returns pointer to object that the compiler itself will free when destroyed
 
+    // Manually manage resizing of objects list
     if(compiler->objects_length == compiler->objects_capacity){
         object_t **new_objects = malloc(sizeof(object_t*) * compiler->objects_length * 2);
         memcpy(new_objects, compiler->objects, sizeof(object_t*) * compiler->objects_length);
@@ -335,24 +335,27 @@ object_t* compiler_new_object(compiler_t *compiler){
         compiler->objects_capacity *= 2;
     }
 
-    object_t **object_reference = &compiler->objects[compiler->objects_length];
-    (*object_reference) = malloc(sizeof(object_t));
-    (*object_reference)->filename = NULL;
-    (*object_reference)->full_filename = NULL;
-    (*object_reference)->compilation_stage = COMPILATION_STAGE_NONE;
-    (*object_reference)->index = compiler->objects_length++;
-    (*object_reference)->traits = OBJECT_NONE;
-    (*object_reference)->default_stdlib = NULL;
-    (*object_reference)->current_namespace = NULL;
-    (*object_reference)->current_namespace_length = 0;
-    return *object_reference;
+    // Allocate object on heap
+    compiler->objects[compiler->objects_length++] = malloc(sizeof(object_t));
+
+    // Fill in some default values
+    object_t *object = compiler->objects[compiler->objects_length - 1];
+    object->filename = NULL;
+    object->full_filename = NULL;
+    object->compilation_stage = COMPILATION_STAGE_NONE;
+    object->index = compiler->objects_length - 1;
+    object->traits = OBJECT_NONE;
+    object->default_stdlib = NULL;
+    object->current_namespace = NULL;
+    object->current_namespace_length = 0;
+    return object;
 }
 
 void compiler_final_words(compiler_t *compiler){
     #ifndef ADEPT_INSIGHT_BUILD
     
     if(compiler->show_unused_variables_how_to_disable){
-        printf("\nTo disable warnings about unused variables, you can:\n");
+        printf("\nIf you'd like to disable unused variables warnings, you can:\n");
         printf("    * Prefix them with '_'\n");
         printf("    * Add 'pragma ignore_unused' to your file\n");
         printf("    * Pass '--ignore-unused' to the compiler\n");

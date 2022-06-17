@@ -104,7 +104,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
             weak_cstr_t name = mappings[i].name;
             object_panicf_plain(object, "Multiple definitions of type '%s'", name);
 
-            // Find every struct with that name
+            // Find every composite with that name
             for(length_t s = 0; s != ast->composites_length; s++){
                 if(streq(ast->composites[s].name, name))
                     compiler_panic(compiler, ast->composites[s].source, "Here");
@@ -260,10 +260,19 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             if(*resolved_type == NULL) return FAILURE;
         }
         break;
+    case AST_ELEM_POLYMORPH:
+    case AST_ELEM_POLYMORPH_PREREQ: {
+            ast_elem_polymorph_t *polymorph = (ast_elem_polymorph_t*) unresolved_type->elements[non_concrete_layers];
+            strong_cstr_t typename = ast_type_str(unresolved_type);
+            compiler_panicf(compiler, unresolved_type->source, "Encountered undetermined polymorphic type '$%s' in type '%s'", polymorph->name, typename);
+            free(typename);
+            return FAILURE;
+        }
+        break;
     default: {
-            char *unresolved_str_rep = ast_type_str(unresolved_type);
-            compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown type element id in type '%s'", unresolved_str_rep);
-            free(unresolved_str_rep);
+            strong_cstr_t unresolved_typename = ast_type_str(unresolved_type);
+            compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown type element id in type '%s'", unresolved_typename);
+            free(unresolved_typename);
             return FAILURE;
         }
     }

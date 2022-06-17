@@ -85,9 +85,8 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(func_head_parse_info.is_constructor){
         assert(ctx->composite_association);
         
-        // Remember that the associated composite definition has
-        // at least one constructor
-        ctx->composite_association->has_constructor = true;
+        // Attach constructor to composite definition
+        func_id_list_append(&ctx->composite_association->constructor_ast_func_ids, ast_func_id);
 
         // Remember if this function is a constructor of a class
         if(ctx->composite_association->is_class){
