@@ -1099,6 +1099,15 @@ void ast_add_enum(ast_t *ast, strong_cstr_t name, weak_cstr_t *kinds, length_t l
     ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
 }
 
+void ast_add_poly_func(ast_t *ast, weak_cstr_t func_name_persistent, func_id_t ast_func_id){
+    expand((void**) &ast->poly_funcs, sizeof(ast_poly_func_t), ast->poly_funcs_length, &ast->poly_funcs_capacity, 1, 4);
+
+    ast_poly_func_t *poly_func = &ast->poly_funcs[ast->poly_funcs_length++];
+    poly_func->name = func_name_persistent;
+    poly_func->ast_func_id = ast_func_id;
+    poly_func->is_beginning_of_group = -1; // Uncalculated
+}
+
 ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, bool is_class){
     expand((void**) &ast->composites, sizeof(ast_composite_t), ast->composites_length, &ast->composites_capacity, 1, 4);
 
@@ -1116,7 +1125,7 @@ ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t 
     return composite;
 }
 
-ast_poly_composite_t *ast_add_polymorphic_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, bool is_class, strong_cstr_t *generics, length_t generics_length){
+ast_poly_composite_t *ast_add_poly_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, bool is_class, strong_cstr_t *generics, length_t generics_length){
     expand((void**) &ast->poly_composites, sizeof(ast_poly_composite_t), ast->poly_composites_length, &ast->poly_composites_capacity, 1, 4);
 
     ast_poly_composite_t *poly_composite = &ast->poly_composites[ast->poly_composites_length++];

@@ -371,9 +371,13 @@ void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t len
 // Adds a composite to the global scope of an AST
 ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, bool is_class);
 
-// ---------------- ast_add_polymorphic_composite ----------------
+// ---------------- ast_add_poly_func ----------------
+// Adds a function to the list of polymorphic functions for an AST
+void ast_add_poly_func(ast_t *ast, weak_cstr_t func_name_persistent, func_id_t ast_func_id);
+
+// ---------------- ast_add_poly_composite ----------------
 // Adds a polymorphic composite to the global scope of an AST
-ast_poly_composite_t *ast_add_polymorphic_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout,
+ast_poly_composite_t *ast_add_poly_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout,
     source_t source, bool is_class, strong_cstr_t *generics, length_t generics_length);
 
 // ---------------- ast_add_global ----------------

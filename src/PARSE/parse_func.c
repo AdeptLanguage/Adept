@@ -107,12 +107,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
         // Remember the function as polymorphic
         func->traits |= AST_FUNC_POLYMORPHIC;
-        expand((void**) &ast->poly_funcs, sizeof(ast_poly_func_t), ast->poly_funcs_length, &ast->poly_funcs_capacity, 1, 4);
-
-        ast_poly_func_t *poly_func = &ast->poly_funcs[ast->poly_funcs_length++];
-        poly_func->name = func->name;
-        poly_func->ast_func_id = ast_func_id;
-        poly_func->is_beginning_of_group = -1; // Uncalculated
+        ast_add_poly_func(ast, func->name, ast_func_id);
 
         if(func->arity != 0 && streq(func->arg_names[0], "this")){
             expand((void**) &ast->polymorphic_methods, sizeof(ast_poly_func_t), ast->polymorphic_methods_length, &ast->polymorphic_methods_capacity, 1, 4);
@@ -157,9 +152,15 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
     };
 
     expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+    func_id_t ast_func_id = ast->funcs_length++;
 
-    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    ast_func_t *func = &ast->funcs[ast_func_id];
     ast_func_create_template(func, &func_head);
+
+    if(ast_func_has_polymorphic_signature(constructor)) {
+        func->traits |= AST_FUNC_POLYMORPHIC;
+        ast_add_poly_func(ast, func->name, ast_func_id);
+    }
 
     length_t arity = constructor->arity - 1;
 

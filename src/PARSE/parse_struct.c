@@ -72,7 +72,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_layout_init(&layout, layout_kind, field_map, skeleton, traits);
     
     if(generics){
-        domain = (ast_composite_t*) ast_add_polymorphic_composite(ast, name, layout, source, is_class, generics, generics_length);
+        domain = (ast_composite_t*) ast_add_poly_composite(ast, name, layout, source, is_class, generics, generics_length);
     } else {
         domain = ast_add_composite(ast, name, layout, source, is_class);
     }
