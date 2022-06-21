@@ -131,7 +131,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_namespace(ctx)) return FAILURE;
             break;
         default:
-            parse_panic_token(ctx, ctx->tokenlist->sources[i], tokens[i].id, "Encountered unexpected token '%s' in global scope");
+            parse_panic_token(ctx, ctx->tokenlist->sources[i], tokens[i].id, ctx->composite_association ? "Unexpected token '%s' in domain of composite" : "Unexpected token '%s' in global scope");
             return FAILURE;
         }
     }

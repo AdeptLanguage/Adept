@@ -45,6 +45,8 @@ MEDIUM-PRIORITY:
 * prefer used-defined constructor over automatically generated constructor for records
 * better struct literals
 * assert and/or static assert
+* throw error if duplicate/overlapping polymorphic composites with same name and arguments exist
+* polymorphic wildcards e.g. <?> List
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -79,7 +81,7 @@ LOW-PRIORITY:
 * change color printing code on Windows to use posix escape codes (now that they're supported)
 * remove old `.dep` packages
 * parse arguments before reading config, and never check for updates when using options such as `--root`, `-h`, and `--help`
-* Include trace back for `Encountered undetermined polymorphic type '$T' in type '$T'` error
+* include trace back for `Encountered undetermined polymorphic type '$T' in type '$T'` error
 
 v2.4 COMPLETED:
 + Standard Library Imports

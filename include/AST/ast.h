@@ -67,26 +67,24 @@ typedef struct {
 #define AST_FUNC_ARG_TYPE_TRAIT_POD TRAIT_1
 
 // Possible AST function traits
-#define AST_FUNC_FOREIGN           TRAIT_1
-#define AST_FUNC_VARARG            TRAIT_2
-#define AST_FUNC_MAIN              TRAIT_3
-#define AST_FUNC_STDCALL           TRAIT_4
-#define AST_FUNC_POLYMORPHIC       TRAIT_5
-#define AST_FUNC_GENERATED         TRAIT_6
-#define AST_FUNC_DEFER             TRAIT_7
-#define AST_FUNC_PASS              TRAIT_8
-#define AST_FUNC_AUTOGEN           TRAIT_9
-#define AST_FUNC_VARIADIC          TRAIT_A
-#define AST_FUNC_IMPLICIT          TRAIT_B
-#define AST_FUNC_WINMAIN           TRAIT_C
-#define AST_FUNC_NO_DISCARD        TRAIT_D
-#define AST_FUNC_DISALLOW          TRAIT_E
-#define AST_FUNC_VIRTUAL           TRAIT_F
-#define AST_FUNC_OVERRIDE          TRAIT_G
-#define AST_FUNC_CLASS_CONSTRUCTOR TRAIT_2_1
-
-// Additional AST function traits for builtin uses
-#define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_1
+#define AST_FUNC_FOREIGN                TRAIT_1
+#define AST_FUNC_VARARG                 TRAIT_2
+#define AST_FUNC_MAIN                   TRAIT_3
+#define AST_FUNC_STDCALL                TRAIT_4
+#define AST_FUNC_POLYMORPHIC            TRAIT_5
+#define AST_FUNC_GENERATED              TRAIT_6
+#define AST_FUNC_DEFER                  TRAIT_7
+#define AST_FUNC_PASS                   TRAIT_8
+#define AST_FUNC_AUTOGEN                TRAIT_9
+#define AST_FUNC_VARIADIC               TRAIT_A
+#define AST_FUNC_IMPLICIT               TRAIT_B
+#define AST_FUNC_WINMAIN                TRAIT_C
+#define AST_FUNC_NO_DISCARD             TRAIT_D
+#define AST_FUNC_DISALLOW               TRAIT_E
+#define AST_FUNC_VIRTUAL                TRAIT_F
+#define AST_FUNC_OVERRIDE               TRAIT_G
+#define AST_FUNC_CLASS_CONSTRUCTOR      TRAIT_2_1
+#define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_2
 
 // ------------------ ast_func_prefixes_t ------------------
 // Information about the keywords that prefix a function

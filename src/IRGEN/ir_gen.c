@@ -397,6 +397,25 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     ir_builder_t builder;
     ir_builder_init(&builder, compiler, object, ast_func_id, ir_func_id, false);
 
+    // Create vtable initialization instruction for this function if it's a class constructor
+    if(ast_func.traits & AST_FUNC_CLASS_CONSTRUCTOR){
+        ast_type_t subject_type = ast_type_dereferenced_view(&ast_func.arg_types[0]);
+        ast_composite_t *the_class = ir_gen_find_class(object, &subject_type);
+
+        if(the_class == NULL){
+            strong_cstr_t typename = ast_type_str(&subject_type);
+            compiler_panicf(compiler, ast_func.source, "Failed to find the associated class for type '%s' for class constructor", typename);
+            free(typename);
+            return FAILURE;
+        }
+
+        // TODO:
+        // We'll need to generate an instruction for
+        // `this.__vtable__ = vtablefor THE_CLASS_UID`
+        // (we'll need to get THE_CLASS_UID from `the_class` that we obtained)
+        (void) the_class;
+    }
+
     for(length_t i = 0; i != ast_func.arity; i++){
         trait_t arg_traits = BRIDGE_VAR_UNDEF;
 

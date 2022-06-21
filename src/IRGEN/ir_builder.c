@@ -1796,7 +1796,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     func->arg_flows = malloc(sizeof(char) * poly_func->arity);
     func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
 
-    if(poly_func->traits & AST_FUNC_VARARG) func->traits |= AST_FUNC_VARARG;
+    func->traits |= poly_func->traits & ~(AST_FUNC_MAIN & AST_FUNC_POLYMORPHIC);
     func->traits |= AST_FUNC_GENERATED;
 
     if(poly_func->arg_defaults) {
