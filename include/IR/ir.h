@@ -120,7 +120,6 @@ enum {
     INSTRUCTION_ASM,             // ir_instr_asm_t
     INSTRUCTION_DEINIT_SVARS,    // ir_instr_t
     INSTRUCTION_UNREACHABLE,     // ir_instr_t
-    INSTRUCTION_VTABLE_FOR,     // ir_instr_vtable_for_t
 };
 
 // ---------------- ir_type_mapping_t ----------------

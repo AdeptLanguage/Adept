@@ -76,7 +76,7 @@ void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id);
 ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
 
 // ---------------- ir_builder_built_instruction ----------------
-// Returns the most recent instruction that was built
+// Returns the most recently built instruction
 ir_instr_t *ir_builder_built_instruction(ir_builder_t *builder);
 
 // ---------------- build_value_from_prev_instruction ----------------

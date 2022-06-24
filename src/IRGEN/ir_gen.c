@@ -429,22 +429,15 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     // Create vtable initialization instruction for this function if it's a class constructor
     if(ast_func.traits & AST_FUNC_CLASS_CONSTRUCTOR){
         ast_type_t subject_type = ast_type_dereferenced_view(&ast_func.arg_types[0]);
-        ast_composite_t *the_class = ir_gen_find_class(object, &subject_type);
-
-        if(the_class == NULL){
-            strong_cstr_t typename = ast_type_str(&subject_type);
-            compiler_panicf(compiler, ast_func.source, "Failed to find the associated class for type '%s' for class constructor", typename);
-            free(typename);
-            return FAILURE;
-        }
         
-        // Get 'this' variable
+        // Find 'this' argument
         bridge_var_t *bridge_var = bridge_scope_find_var(builder.scope, "this");
         assert(bridge_var);
 
+        // Get value of 'this'
         ir_value_t *this_value = build_load(&builder, build_varptr(&builder, bridge_var->ir_type, bridge_var), ast_func.source);
 
-        // // Create 'this.__vtable__' value
+        // Create 'this.__vtable__' value
         ir_type_t *ir_ptr = builder.object->ir_module.common.ir_ptr;
         ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr);
         ir_value_t *destination = build_member(&builder, this_value, /*index of __vtable__ field*/ 0, ir_ptr_ptr, ast_func.source);

@@ -1870,19 +1870,17 @@ failure:
 }
 
 errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
-    
     if(type_list_length != 1) return FAILURE;
 
     bool is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
-    bool is_generic_base_ptr = is_base_ptr ? false : ast_type_is_generic_base_ptr(&arg_types[0]);
+    bool is_generic_base_ptr = ast_type_is_generic_base_ptr(&arg_types[0]);
 
-    if(!(is_base_ptr || is_generic_base_ptr)) return FAILURE;
+    if(!is_base_ptr && !is_generic_base_ptr) return FAILURE;
 
     ast_type_t dereferenced_view = ast_type_dereferenced_view(&arg_types[0]);
 
     ast_t *ast = &object->ast;
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
-
     ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &dereferenced_view);
 
     // Use cached result if available
@@ -1933,6 +1931,9 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
         // Remember weak copy of field map
         field_map = template->layout.field_map;
+    } else {
+        internalerrorprintf("attempt_autogen___defer__() in state that should be unreachable\n");
+        return FAILURE;
     }
 
     // See if any of the children will require a __defer__ call,

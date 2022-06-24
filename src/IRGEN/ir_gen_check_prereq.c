@@ -128,7 +128,12 @@ errorcode_t ir_gen_check_prereq(
         // Ignore -Wswitch for NUM_SPECIAL_PREREQ
     }
 
-    internalerrorprintf("ir_gen_check_prereq() - Unrecognized special polymorphic prerequisite '%s'\n", global_special_prerequisites[special_prereq]);
+    if(special_prereq < NUM_SPECIAL_PREREQ){
+        internalerrorprintf("ir_gen_check_prereq() - Unrecognized special polymorphic prerequisite '%s'\n", global_special_prerequisites[special_prereq]);
+    } else {
+        internalerrorprintf("ir_gen_check_prereq() - Unrecognized special polymorphic prerequisite with id '%d'\n", special_prereq);
+    }
+
     return FAILURE;
 }
 

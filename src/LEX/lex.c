@@ -698,5 +698,5 @@ void lex_get_location(const char *buffer, length_t index, int *line, int *column
     }
 
     *line = 1 + newlines;
-    *column = last_newline ? (int)(&buffer[index] - last_newline) : index + 1;
+    *column = last_newline ? (int)(&buffer[index] - last_newline) : (int) index + 1;
 }
