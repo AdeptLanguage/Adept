@@ -75,6 +75,10 @@ void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id);
 // Builds a new undetermined instruction
 ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
 
+// ---------------- ir_builder_built_instruction ----------------
+// Returns the most recent instruction that was built
+ir_instr_t *ir_builder_built_instruction(ir_builder_t *builder);
+
 // ---------------- build_value_from_prev_instruction ----------------
 // Builds an IR value from the result of the previous instruction
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
@@ -85,15 +89,15 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
 ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, bridge_var_t *var);
 
 // ---------------- build_lvarptr ----------------
-// Builds a localvarptr instruction
+// Builds a local varptr instruction
 ir_value_t *build_lvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
 // ---------------- build_varptr ----------------
-// Builds a globalvarptr instruction
+// Builds a global varptr instruction
 ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
 // ---------------- build_svarptr ----------------
-// Builds a staticvarptr instruction
+// Builds a static varptr instruction
 ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id);
 
 // ---------------- build_malloc ----------------

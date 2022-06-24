@@ -147,8 +147,16 @@ void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id){
 ir_instr_t* build_instruction(ir_builder_t *builder, length_t size){
     // NOTE: Generates an instruction of the size 'size'
     ir_basicblock_new_instructions(builder->current_block, 1);
-    builder->current_block->instructions.instructions[builder->current_block->instructions.length++] = (ir_instr_t*) ir_pool_alloc(builder->pool, size);
-    return builder->current_block->instructions.instructions[builder->current_block->instructions.length - 1];
+
+    ir_instrs_t *instrs = &builder->current_block->instructions;
+
+    instrs->instructions[instrs->length++] = (ir_instr_t*) ir_pool_alloc(builder->pool, size);
+    return instrs->instructions[instrs->length - 1];
+}
+
+ir_instr_t *ir_builder_built_instruction(ir_builder_t *builder){
+    ir_instrs_t *instrs = &builder->current_block->instructions;
+    return instrs->instructions[instrs->length - 1];
 }
 
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){

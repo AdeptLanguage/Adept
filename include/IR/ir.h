@@ -120,6 +120,7 @@ enum {
     INSTRUCTION_ASM,             // ir_instr_asm_t
     INSTRUCTION_DEINIT_SVARS,    // ir_instr_t
     INSTRUCTION_UNREACHABLE,     // ir_instr_t
+    INSTRUCTION_VTABLE_FOR,     // ir_instr_vtable_for_t
 };
 
 // ---------------- ir_type_mapping_t ----------------
@@ -400,6 +401,8 @@ typedef struct {
     ir_value_t *src_value;
 } ir_instr_va_copy_t;
 
+// ---------------- ir_instr_asm_t ----------------
+// An IR instruction for inline assembly
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
@@ -427,6 +430,32 @@ typedef struct {
 // A list of basicblocks
 typedef listof(ir_basicblock_t, blocks) ir_basicblocks_t;
 void ir_basicblocks_free(ir_basicblocks_t *basicblocks);
+
+// ---------------- ir_vtable_init_t ----------------
+// Used to keep track of store instructions that will
+// need their value field filled in with a vtable value
+// which will be generated later during IR generation
+typedef struct {
+    ir_instr_store_t *store_instr;
+    ast_type_t subject_type;
+} ir_vtable_init_t;
+
+// ---------------- ir_vtable_init_free ----------------
+// Frees a vtable initialization
+void ir_vtable_init_free(ir_vtable_init_t *vtable_init);
+
+// ---------------- ir_vtable_init_list_t ----------------
+// A list of required vtable initializations
+typedef listof(ir_vtable_init_t, initializations) ir_vtable_init_list_t;
+
+// ---------------- ir_vtable_init_list_append ----------------
+// Appends a vtable initialization to a vtable initialization list
+#define ir_vtable_init_list_append(LIST, VALUE) list_append((LIST), (VALUE), ir_vtable_init_t)
+
+// ---------------- ir_vtable_init_list_free ----------------
+// Frees the vtable initializations in a vtable initializations list
+// and then the list itself
+void ir_vtable_init_list_free(ir_vtable_init_list_t *vtable_init_list);
 
 // ---------------- ir_func_t ----------------
 // An intermediate representation function
@@ -563,6 +592,7 @@ typedef struct {
     ir_static_variables_t static_variables;
     ir_job_list_t job_list;
     free_list_t defer_free;
+    ir_vtable_init_list_t vtable_init_list;
 } ir_module_t;
 
 // ---------------- ir_type_map_find ----------------

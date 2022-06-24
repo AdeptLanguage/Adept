@@ -1276,7 +1276,7 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
             // (Used for __types__ and __types_length__)
             LLVMSetInitializer(llvm->global_variables[i], ir_to_llvm_value(llvm, globals[i].trusted_static_initializer));
         } else if(!is_external){
-            // In order to prevent the aggressive global elemination we'll perform later
+            // In order to prevent the aggressive global elimination we'll perform later
             // from accidentally removing necessary user-defined global variables,
             // we'll manually mark which ones not to touch
             LLVMSetExternallyInitialized(llvm->global_variables[i], true);

@@ -116,7 +116,7 @@ typedef struct {
     source_t source; \
     bool is_polymorphic : 1; \
     bool is_class : 1; \
-    index_id_list_t constructor_ast_func_ids; \
+    bool has_constructor : 1;\
 }
 
 // ---------------- ast_composite_t ----------------

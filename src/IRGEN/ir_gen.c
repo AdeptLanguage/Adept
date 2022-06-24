@@ -88,6 +88,16 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         }
     }
 
+    // Inject vtable initializations
+    for(length_t i = 0; i < module->vtable_init_list.length; i++){
+        ir_vtable_init_t *vtable_init = &module->vtable_init_list.initializations[i];
+
+        // TODO: Inject real vtable pointers instead of 0x01 pointers
+        ir_value_t *value = build_const_inttoptr(&module->pool, build_literal_int(&module->pool, 1), module->common.ir_ptr);
+
+        vtable_init->store_instr->value = value;
+    }
+
     return SUCCESS;
 }
 
@@ -397,25 +407,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     ir_builder_t builder;
     ir_builder_init(&builder, compiler, object, ast_func_id, ir_func_id, false);
 
-    // Create vtable initialization instruction for this function if it's a class constructor
-    if(ast_func.traits & AST_FUNC_CLASS_CONSTRUCTOR){
-        ast_type_t subject_type = ast_type_dereferenced_view(&ast_func.arg_types[0]);
-        ast_composite_t *the_class = ir_gen_find_class(object, &subject_type);
-
-        if(the_class == NULL){
-            strong_cstr_t typename = ast_type_str(&subject_type);
-            compiler_panicf(compiler, ast_func.source, "Failed to find the associated class for type '%s' for class constructor", typename);
-            free(typename);
-            return FAILURE;
-        }
-
-        // TODO:
-        // We'll need to generate an instruction for
-        // `this.__vtable__ = vtablefor THE_CLASS_UID`
-        // (we'll need to get THE_CLASS_UID from `the_class` that we obtained)
-        (void) the_class;
-    }
-
     for(length_t i = 0; i != ast_func.arity; i++){
         trait_t arg_traits = BRIDGE_VAR_UNDEF;
 
@@ -434,6 +425,46 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     // Initialize all global variables
     if(is_main_like && ir_gen_globals_init(&builder)) goto failure;
+
+    // Create vtable initialization instruction for this function if it's a class constructor
+    if(ast_func.traits & AST_FUNC_CLASS_CONSTRUCTOR){
+        ast_type_t subject_type = ast_type_dereferenced_view(&ast_func.arg_types[0]);
+        ast_composite_t *the_class = ir_gen_find_class(object, &subject_type);
+
+        if(the_class == NULL){
+            strong_cstr_t typename = ast_type_str(&subject_type);
+            compiler_panicf(compiler, ast_func.source, "Failed to find the associated class for type '%s' for class constructor", typename);
+            free(typename);
+            return FAILURE;
+        }
+        
+        // Get 'this' variable
+        bridge_var_t *bridge_var = bridge_scope_find_var(builder.scope, "this");
+        assert(bridge_var);
+
+        ir_value_t *this_value = build_load(&builder, build_varptr(&builder, bridge_var->ir_type, bridge_var), ast_func.source);
+
+        // // Create 'this.__vtable__' value
+        ir_type_t *ir_ptr = builder.object->ir_module.common.ir_ptr;
+        ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr);
+        ir_value_t *destination = build_member(&builder, this_value, /*index of __vtable__ field*/ 0, ir_ptr_ptr, ast_func.source);
+
+        // Create placeholder store instruction,
+        // The value to be stored will be filled in later during vtable resolution
+        build_store(&builder, NULL, destination, ast_func.source);
+
+        // Get persistent pointer to the dummy store instruction
+        ir_instr_store_t *store_instr = (ir_instr_store_t*) ir_builder_built_instruction(&builder);
+        assert(store_instr->id == INSTRUCTION_STORE);
+
+        // Append vtable initialization for later processing
+        ir_vtable_init_t vtable_init = (ir_vtable_init_t){
+            .store_instr = store_instr,
+            .subject_type = ast_type_clone(&subject_type),
+        };
+
+        ir_vtable_init_list_append(&builder.object->ir_module.vtable_init_list, vtable_init);
+    }
 
     if(ir_gen_stmts(&builder, &ast_func.statements, &terminated)) goto failure;
     if(terminated) goto success;

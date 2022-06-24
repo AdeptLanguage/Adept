@@ -67,10 +67,11 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->static_variables = (ir_static_variables_t){0};
     ir_module->job_list = (ir_job_list_t){0};
     ir_module->defer_free = (free_list_t){0};
+    ir_module->vtable_init_list = (ir_vtable_init_list_t){0};
 
     // Initialize common data
-    ir_pool_t *const pool = &ir_module->pool;
-    ir_shared_common_t *const common = &ir_module->common;
+    ir_pool_t *pool = &ir_module->pool;
+    ir_shared_common_t *common = &ir_module->common;
 
     memset(common, 0, sizeof *common);
 
@@ -84,10 +85,21 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
 }
 
 void ir_basicblocks_free(ir_basicblocks_t *basicblocks){
-    for(length_t i = 0; i < basicblocks->length; i++){
+    for(length_t i = 0; i != basicblocks->length; i++){
         ir_basicblock_free(&basicblocks->blocks[i]);
     }
     free(basicblocks->blocks);
+}
+
+void ir_vtable_init_free(ir_vtable_init_t *vtable_init){
+    ast_type_free(&vtable_init->subject_type);
+}
+
+void ir_vtable_init_list_free(ir_vtable_init_list_t *vtable_init_list){
+    for(length_t i = 0; i != vtable_init_list->length; i++){
+        ir_vtable_init_free(&vtable_init_list->initializations[i]);
+    }
+    free(vtable_init_list->initializations);
 }
 
 void ir_module_free(ir_module_t *ir_module){
@@ -117,6 +129,7 @@ void ir_module_free(ir_module_t *ir_module){
     rtti_relocations_free(&ir_module->rtti_relocations);
     ir_job_list_free(&ir_module->job_list);
     free_list_free(&ir_module->defer_free);
+    ir_vtable_init_list_free(&ir_module->vtable_init_list);
 }
 
 void ir_static_variables_free(ir_static_variables_t *static_variables){
