@@ -7,6 +7,7 @@ option(ADEPT_ENABLE_LSAN "Enable runtime leak-sanitization for debug builds (onl
 
 find_package(LLVM REQUIRED)
 find_package(CURL REQUIRED)
+find_package(ZLIB REQUIRED)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -80,7 +81,8 @@ target_sources(adept PRIVATE ${app_source_files})
 target_sources(libadept PRIVATE ${app_source_files})
 
 if(WIN32)
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lz -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
+	target_link_libraries(adept PRIVATE ZLIB::ZLIB)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC On)
