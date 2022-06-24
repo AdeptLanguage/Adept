@@ -81,8 +81,7 @@ target_sources(adept PRIVATE ${app_source_files})
 target_sources(libadept PRIVATE ${app_source_files})
 
 if(WIN32)
-	target_link_libraries(adept PRIVATE ZLIB::ZLIB)
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} ${ZLIB_LIBRARIES} -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC On)
