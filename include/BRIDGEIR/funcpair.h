@@ -12,8 +12,6 @@
 // ---------------- funcpair_t ----------------
 // A container for function results
 typedef struct {
-    ast_func_t *ast_func;
-    ir_func_t *ir_func;
     func_id_t ast_func_id;
     func_id_t ir_func_id;
 } funcpair_t;

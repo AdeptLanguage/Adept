@@ -138,6 +138,10 @@ ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);
 ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source);
 ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type, source_t code_source);
 
+// ---------------- build_func_address ----------------
+// Builds an instruction to get the address of a function
+ir_value_t *build_func_address(ir_builder_t *builder, ir_type_t *result_type, const char *maybe_name, func_id_t ir_func_id);
+
 // ---------------- build_member ----------------
 // Builds a member access instruction
 ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type, source_t code_source);

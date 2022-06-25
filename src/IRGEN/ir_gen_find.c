@@ -395,8 +395,6 @@ errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out
         ir_func_endpoint_t endpoint = endpoint_list->endpoints[0];
 
         *result = (funcpair_t){
-            .ast_func = &object->ast.funcs[endpoint.ast_func_id],
-            .ir_func = &object->ir_module.funcs.funcs[endpoint.ir_func_id],
             .ast_func_id = endpoint.ast_func_id,
             .ir_func_id = endpoint.ir_func_id,
         };
@@ -518,8 +516,10 @@ errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *ob
 
     if(ir_gen_find_func_named(object, func_name, &is_unique, &result) == SUCCESS){
         // Found special function
+
+        source_t source = object->ast.funcs[result.ast_func_id].source;
         
-        if(!is_unique && compiler_warnf(compiler, result.ast_func->source, "Using this definition of %s, but there are multiple possibilities", func_name)){
+        if(!is_unique && compiler_warnf(compiler, source, "Using this definition of %s, but there are multiple possibilities", func_name)){
             return ALT_FAILURE;
         }
 

@@ -21,6 +21,11 @@ void ast_type_prepend_ptr(ast_type_t *type){
     type->elements_length++;
 }
 
+ast_type_t ast_type_pointer_to(ast_type_t type){
+    ast_type_prepend_ptr(&type);
+    return type;
+}
+
 bool ast_type_has_polymorph(const ast_type_t *type){
     for(length_t i = 0; i != type->elements_length; i++){
         switch(type->elements[i]->id){

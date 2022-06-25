@@ -192,6 +192,10 @@ void ast_types_free_fully(ast_type_t *types, length_t length);
 // Prepends a pointer to an AST type
 void ast_type_prepend_ptr(ast_type_t *type);
 
+// ---------------- ast_type_pointer_to ----------------
+// Takes an AST type and returns it will a pointer prepended
+ast_type_t ast_type_pointer_to(ast_type_t type);
+
 // ---------------- ast_type_str ----------------
 // Generates a c-string given an AST type
 strong_cstr_t ast_type_str(const ast_type_t *type);

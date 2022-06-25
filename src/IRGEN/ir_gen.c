@@ -54,8 +54,6 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
 }
 
 errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
-    (void) compiler;
-
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
     ir_proc_map_t method_map = module->method_map;
@@ -87,6 +85,18 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             }
         }
     }
+
+    // typedef struct {
+    //     ast_type_t type;
+    //     func_pair_list_t virtuals;
+    //     func_pair_list_t overrides;
+    //     func_id_list_t virtual_ast_func_ids;
+    //     func_id_list_t virtual_ir_func_ids;
+    //     func_id_list_t overriding_ast_func_ids;
+    //     func_id_list_t overriding_ir_func_ids;
+    // } ir_virtuals_t;
+
+    // TODO: Collect virtuals and overrides
 
     // Inject vtable initializations
     for(length_t i = 0; i < module->vtable_init_list.length; i++){
@@ -715,20 +725,22 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
     // Find index of 'format' argument
     maybe_index_t format_index = -1;
 
-    for(length_t name_index = 0; name_index != pair.ast_func->arity; name_index++){
-        if(streq(pair.ast_func->arg_names[name_index], "format")){
+    ast_func_t *ast_func = &builder->object->ast.funcs[pair.ast_func_id];
+
+    for(length_t name_index = 0; name_index != ast_func->arity; name_index++){
+        if(streq(ast_func->arg_names[name_index], "format")){
             format_index = name_index;
             break;
         }
     }
 
     if(format_index < 0){
-        compiler_panicf(builder->compiler, pair.ast_func->source, "Function marked as __builtin_warn_bad_printf must have an argument named 'format'!\n");
+        compiler_panicf(builder->compiler, ast_func->source, "Function marked as __builtin_warn_bad_printf must have an argument named 'format'!\n");
         return FAILURE;
     }
 
-    if(!ast_type_is_base_of(&pair.ast_func->arg_types[format_index], "String")){
-        compiler_panicf(builder->compiler, pair.ast_func->source, "Function marked as __builtin_warn_bad_printf must have 'format' be a String!\n");
+    if(!ast_type_is_base_of(&ast_func->arg_types[format_index], "String")){
+        compiler_panicf(builder->compiler, ast_func->source, "Function marked as __builtin_warn_bad_printf must have 'format' be a String!\n");
         return FAILURE;
     }
 
@@ -792,7 +804,8 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
             return FAILURE;
         }
 
-        ast_type_t *given_type = &ast_types[pair.ast_func->arity + substitutions_gotten++];
+        ast_func_t *ast_func = &builder->object->ast.funcs[pair.ast_func_id];
+        ast_type_t *given_type = &ast_types[ast_func->arity + substitutions_gotten++];
         weak_cstr_t target = NULL;
 
         switch(*p++){

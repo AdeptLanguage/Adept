@@ -77,8 +77,7 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
     // Also, this may turn out to be beneficial for formulating types that
     // may not have been directly referred to at compile time
     if(!streq(weak_ast_type_entry.name, "void")){
-        ast_type_t with_additional_ptr = ast_type_clone(type);
-        ast_type_prepend_ptr(&with_additional_ptr);
+        ast_type_t with_additional_ptr = ast_type_pointer_to(ast_type_clone(type));
 
         type_table_entry_t strong_ast_type_entry;
         strong_ast_type_entry.name = ast_type_str(&with_additional_ptr);

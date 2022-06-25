@@ -740,6 +740,7 @@ errorcode_t ir_gen_do_construct(
     ast_expr_list_t *inputs,
     source_t source
 ){
+    object_t *object = builder->object;
     weak_cstr_t struct_name = ast_type_struct_name(struct_ast_type);
 
     ir_pool_snapshot_t pool_snapshot;
@@ -781,11 +782,14 @@ errorcode_t ir_gen_do_construct(
         goto failure;
     }
 
-    if(handle_pass_management(builder, arg_values, arg_types, result.value.ast_func->arg_type_traits, arity)){
+    funcpair_t pair = result.value;
+
+    if(handle_pass_management(builder, arg_values, arg_types, object->ast.funcs[pair.ast_func_id].arg_type_traits, arity)){
         goto failure;
     }
 
-    build_call(builder, result.value.ir_func_id, result.value.ir_func->return_type, arg_values, arity, false);
+    ir_type_t *ir_return_type = object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
+    build_call(builder, pair.ir_func_id, ir_return_type, arg_values, arity, false);
 
     ast_types_free(arg_types, arity);
     free(arg_types);

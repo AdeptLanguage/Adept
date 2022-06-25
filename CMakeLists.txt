@@ -93,7 +93,7 @@ if(WIN32)
 endif()
 
 if(APPLE)
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lldap -lpthread -lz -lcurses)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lldap -lpthread ${ZLIB_LIBRARIES} -lcurses)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC Off)
@@ -102,7 +102,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
 	# Linux
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -ldl -lpthread -lz -lcurses -lm)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} -ldl -lpthread ${ZLIB_LIBRARIES} -lcurses -lm)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC Off)

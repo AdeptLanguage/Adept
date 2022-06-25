@@ -329,6 +329,19 @@ ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_v
     return build_value_from_prev_instruction(builder);
 }
 
+ir_value_t *build_func_address(ir_builder_t *builder, ir_type_t *result_type, const char *maybe_name, func_id_t ir_func_id){
+    ir_instr_func_address_t *instruction = (ir_instr_func_address_t*) build_instruction(builder, sizeof(ir_instr_func_address_t));
+    
+    *instruction = (ir_instr_func_address_t){
+        .id = INSTRUCTION_FUNC_ADDRESS,
+        .result_type = result_type,
+        .name = maybe_name,
+        .ir_func_id = ir_func_id,
+    };
+
+    return build_value_from_prev_instruction(builder);
+}
+
 ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type, source_t code_source){
     ir_instr_member_t *built_instr = (ir_instr_member_t*) build_instruction(builder, sizeof(ir_instr_member_t));
     built_instr->id = INSTRUCTION_MEMBER;
@@ -1617,9 +1630,10 @@ errorcode_t handle_assign_management(
     if(errorcode) goto failure;
 
     if(result.has){
+        ast_t *ast = &builder->object->ast;
         funcpair_t pair = result.value;
 
-        if(pair.ast_func->traits & AST_FUNC_DISALLOW){
+        if(ast->funcs[pair.ast_func_id].traits & AST_FUNC_DISALLOW){
             strong_cstr_t typename = ast_type_str(value_ast_type);
             compiler_panicf(builder->compiler, source_on_failure, "Assignment for type '%s' is not allowed", typename);
             free(typename);
@@ -1630,15 +1644,13 @@ errorcode_t handle_assign_management(
 
         build_zeroinit(builder, destination);
     
-        ast_type_t ast_type_ptr = ast_type_clone(destination_ast_type);
-        ast_type_prepend_ptr(&ast_type_ptr);
-    
-        ast_type_t arg_types[2];
-        arg_types[0] = ast_type_ptr;
-        arg_types[1] = *destination_ast_type;
+        ast_type_t arg_types[2] = {
+            ast_type_pointer_to(ast_type_clone(destination_ast_type)),
+            *destination_ast_type,
+        };
 
-        errorcode = handle_pass_management(builder, arguments, arg_types, pair.ast_func->arg_type_traits, 2);
-        ast_type_free(&ast_type_ptr);
+        errorcode = handle_pass_management(builder, arguments, arg_types, ast->funcs[pair.ast_func_id].arg_type_traits, 2);
+        ast_type_free(&arg_types[0]);
 
         if(errorcode) goto failure;
     
@@ -1670,39 +1682,54 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
 
         ast_type_t types[2] = {*lhs_type, *rhs_type};
 
+        ast_t *ast = &builder->object->ast;
+        ir_module_t *module = &builder->object->ir_module;
+
         if(ir_gen_find_func_conforming_without_defaults(builder, overload_name, arguments, types, 2, NULL, false, from_source, &result)
         || !result.has
-        || handle_pass_management(builder, arguments, types, result.value.ast_func->arg_type_traits, 2)){
+        || handle_pass_management(builder, arguments, types, ast->funcs[result.value.ast_func_id].arg_type_traits, 2)){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             return NULL;
         }
 
-        ir_type_t *result_type = builder->object->ir_module.funcs.funcs[result.value.ir_func_id].return_type;
-        ir_value_t *returned_value = build_call(builder, result.value.ir_func_id, result_type, arguments, 2, true);
+        funcpair_t pair = result.value;
+        ir_type_t *result_type = module->funcs.funcs[pair.ir_func_id].return_type;
 
-        if(out_type != NULL) *out_type = ast_type_clone(&result.value.ast_func->return_type);
-        return returned_value;
+        if(out_type != NULL){
+            *out_type = ast_type_clone(&ast->funcs[pair.ast_func_id].return_type);
+        }
+
+        return build_call(builder, pair.ir_func_id, result_type, arguments, 2, true);
     }
 
     return NULL;
 }
 
-ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
+ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, ir_value_t *index_value,
         ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type){
     
-    // Ensure 'array_mutable_struct_value' is of type '*StructureLike'
-    if(array_mutable_struct_value->type->kind != TYPE_KIND_POINTER) return NULL;
-    if(((ir_type_t*) array_mutable_struct_value->type->extra)->kind != TYPE_KIND_STRUCTURE) return NULL;
-    if(!ast_type_is_base_like(array_type)) return NULL;
+    // NOTE: Attempts to use [] operator on a value that doesn't have a built-in version
+    
+    // We can only perform special access management if we're working with a pointer to a mutable struct-like
+    if(
+        value->type->kind != TYPE_KIND_POINTER ||
+        ((ir_type_t*) value->type->extra)->kind != TYPE_KIND_STRUCTURE ||
+        !ast_type_is_base_like(array_type)
+    ){
+        return NULL;
+    }
 
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
     optional_funcpair_t result;
+
+    // Allocate argument list for upcoming __access__ method call
     ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
-    arguments[0] = array_mutable_struct_value;
+    arguments[0] = value;
     arguments[1] = index_value;
 
+    // Allocate argument AST type list for upcoming __access__ method call
     ast_type_t argument_ast_types[2];
     argument_ast_types[0] = ast_type_clone(array_type);
     ast_type_prepend_ptr(&argument_ast_types[0]);
@@ -1710,21 +1737,26 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 
     weak_cstr_t struct_name = ast_type_struct_name(array_type);
     errorcode_t search_error = ir_gen_find_method_conforming_without_defaults(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
+
+    ast_t *ast = &builder->object->ast;
+    trait_t *arg_type_traits = ast->funcs[result.value.ast_func_id].arg_type_traits;
+
+    bool error = search_error || !result.has || handle_pass_management(builder, arguments, argument_ast_types, arg_type_traits, 2);
+    ast_type_free(&argument_ast_types[0]);
     
-    if(search_error || !(result.has)
-    || handle_pass_management(builder, arguments, argument_ast_types, result.value.ast_func->arg_type_traits, 2)){
+    if(error){
         ir_pool_snapshot_restore(builder->pool, &snapshot);
-        ast_type_free(&argument_ast_types[0]);
         return NULL;
     }
-
-    ast_type_free(&argument_ast_types[0]);
 
     funcpair_t pair = result.value;
     ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
     ir_value_t *result_value = build_call(builder, pair.ir_func_id, result_type, arguments, 2, true);
 
-    if(out_ptr_to_element_type != NULL) *out_ptr_to_element_type = ast_type_clone(&pair.ast_func->return_type);
+    if(out_ptr_to_element_type != NULL){
+        *out_ptr_to_element_type = ast_type_clone(&ast->funcs[pair.ast_func_id].return_type);
+    }
+
     return result_value;
 }
 
@@ -2214,8 +2246,10 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         if(errorcode == ALT_FAILURE) return errorcode;
 
         if(errorcode == SUCCESS && result.has){
+            trait_t ast_func_traits = ast->funcs[result.value.ast_func_id].traits;
+
             some_have_assign = true;
-            disallowed |= result.value.ast_func->traits & AST_FUNC_DISALLOW;
+            disallowed |= ast_func_traits & AST_FUNC_DISALLOW;
             break;
         }
     }
