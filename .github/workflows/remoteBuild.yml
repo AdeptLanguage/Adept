@@ -103,12 +103,12 @@ jobs:
       - name: Debug (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-        echo Dlls...
-        where *.dll
-        echo Showing path
-        echo %PATH%
-        echo Attempt to use pacman from cmd
-        pacman -S zlib-devel
+          echo Dlls...
+          where *.dll
+          echo Showing path
+          echo %PATH%
+          echo Attempt to use pacman from cmd
+          pacman -S zlib-devel
       - name: Configure (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
