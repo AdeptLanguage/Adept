@@ -104,7 +104,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           C:\msys64\usr\bin\pacman -S zlib-devel --noconfirm
-          dir C:\msys64\usr\lib
+          del C:\msys64\usr\lib\libz.dll.a
       - name: Configure (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |

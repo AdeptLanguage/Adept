@@ -4,13 +4,16 @@ project(Adept)
 option(ADEPT_LINK_LLVM_STATIC "Link against LLVM using static libs" default)
 option(ADEPT_ENABLE_ASAN "Enable runtime address-santization / undefined behavior sanitization for debug builds (only available for Apple clang and LLVM clang)" Off)
 option(ADEPT_ENABLE_LSAN "Enable runtime leak-sanitization for debug builds (only available for LLVM clang)" Off)
+set(ZLIB_USE_STATIC_LIBS On)
 
 find_package(LLVM REQUIRED)
 find_package(CURL REQUIRED)
+find_package(ZLIB REQUIRED)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Found Curl ${CURL_LIBRARIES}")
+message(STATUS "Found ZLIB ${ZLIB_LIBRARIES}")
 
 if (MSVC)
     add_compile_options(/W4 /WX)
@@ -80,7 +83,7 @@ target_sources(adept PRIVATE ${app_source_files})
 target_sources(libadept PRIVATE ${app_source_files})
 
 if(WIN32)
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lz -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} ${ZLIB_LIBRARIES} -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC On)
@@ -92,7 +95,7 @@ if(WIN32)
 endif()
 
 if(APPLE)
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lldap -lpthread -lz -lcurses)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lldap -lpthread ${ZLIB_LIBRARIES} -lcurses)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC Off)
@@ -101,7 +104,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
 	# Linux
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -ldl -lpthread -lz -lcurses -lm)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} -ldl -lpthread ${ZLIB_LIBRARIES} -lcurses -lm)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC Off)
