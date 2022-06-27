@@ -100,10 +100,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
-      - name: Debug (Windows)
+      - name: Download static zlib libraries (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          C:\msys64\usr\bin\pacman -Sy zlib-devel
+          C:\msys64\usr\bin\pacman -S zlib-devel --noconfirm
           dir C:\msys64\usr\lib
       - name: Configure (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
