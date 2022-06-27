@@ -4,6 +4,7 @@ project(Adept)
 option(ADEPT_LINK_LLVM_STATIC "Link against LLVM using static libs" default)
 option(ADEPT_ENABLE_ASAN "Enable runtime address-santization / undefined behavior sanitization for debug builds (only available for Apple clang and LLVM clang)" Off)
 option(ADEPT_ENABLE_LSAN "Enable runtime leak-sanitization for debug builds (only available for LLVM clang)" Off)
+set(ZLIB_USE_STATIC_LIBS On)
 
 find_package(LLVM REQUIRED)
 find_package(CURL REQUIRED)
@@ -28,10 +29,10 @@ set(core_source_files
 	src/AST/ast_constant.c src/AST/ast_expr.c src/AST/ast_layout.c
 	src/AST/ast_poly_catalog.c src/AST/ast.c
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_c.c src/BKEND/ir_to_llvm.c src/BKEND/ir_to_llvm_impl.c src/BRIDGE/any.c
-	src/BRIDGE/bridge.c src/BRIDGEIR/funcpair.c src/BRIDGE/type_table.c src/BRIDGEIR/rtti.c src/DRVR/compiler.c
+	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGEIR/rtti.c src/DRVR/compiler.c
 	src/DRVR/config.c src/DRVR/object.c src/INFER/infer.c
-	src/IR/ir_pool.c src/IR/ir_proc_map.c src/IR/ir_proc_query.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir_value_str.c
-	src/IR/ir.c src/IR/ir_dump.c src/IR/ir_func_endpoint.c src/IR/ir_lowering.c
+	src/IR/ir_pool.c src/IR/ir_proc_map.c src/IR/ir_type_map.c src/IR/ir_proc_query.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir_value_str.c
+	src/IR/ir.c src/IR/ir_dump.c src/IR/ir_func_endpoint.c src/IR/ir_lowering.c src/IR/ir_module.c
 	src/IRGEN/ir_builder.c src/IRGEN/ir_cache.c src/IRGEN/ir_gen_args.c src/IRGEN/ir_gen_check_prereq.c
 	src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find_sf.c src/IRGEN/ir_gen_find.c
 	src/IRGEN/ir_gen_polymorphable.c src/IRGEN/ir_gen_qualifiers.c src/IRGEN/ir_gen_rtti.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c src/IRGEN/ir_gen.c
@@ -40,7 +41,7 @@ set(core_source_files
 	src/PARSE/parse_global.c src/PARSE/parse_meta.c src/PARSE/parse_namespace.c src/PARSE/parse_pragma.c
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/NET/download.c
-	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/ground.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c
+	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/func_pair.c src/UTIL/ground.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c
 	src/UTIL/list.c src/UTIL/memory.c src/UTIL/search.c src/NET/stash.c src/UTIL/string_builder.c
 	src/UTIL/string_list.c src/UTIL/string.c src/UTIL/util.c)
 

@@ -19,6 +19,7 @@ extern "C" {
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "IR/ir.h"
+#include "IR/ir_module.h"
 #endif
 
 // Possible compilation stages a file can be in.

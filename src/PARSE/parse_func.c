@@ -32,7 +32,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         return parse_func_alias(ctx);
     }
 
-    if(ctx->ast->funcs_length >= MAX_INDEX_ID){
+    if(ctx->ast->funcs_length >= MAX_FUNC_ID){
         compiler_panic(ctx->compiler, source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -67,7 +67,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     tokenid_t beginning_token_id = tokens[*ctx->i].id;
 
     if(!func_head.is_foreign && (beginning_token_id == TOKEN_BEGIN || beginning_token_id == TOKEN_ASSIGN)){
-        ast_type_make_base(&func->return_type, strclone("void"));
+        func->return_type = ast_type_make_base(strclone("void"));
     } else {
         if(parse_type(ctx, &func->return_type)){
             func->return_type = (ast_type_t){0};
@@ -367,7 +367,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
             length_t generics_length = ctx->composite_association->generics_length;
 
             for(length_t i = 0; i != generics_length; i++){
-                ast_type_make_polymorph(&generics[i], strclone(ctx->composite_association->generics[i]), false);
+                generics[i] = ast_type_make_polymorph(strclone(ctx->composite_association->generics[i]), false);
             }
 
             ast_elem_t *pointer = ast_elem_pointer_make(NULL_SOURCE);
@@ -383,8 +383,8 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
                 .source = NULL_SOURCE,
             };
         } else {
-            // Insert 'this *AssociatedStruct' as first argument to function
-            ast_type_make_base_ptr(&func->arg_types[0], strclone(ctx->composite_association->name));
+            // Insert pointer type of 'this' as first argument to function
+            func->arg_types[0] = ast_type_make_base_ptr(strclone(ctx->composite_association->name));
         }
 
         func->arg_names[0] = strclone("this");
@@ -753,7 +753,7 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
         return FAILURE;
     }
     
-    if(ast->func_aliases_length >= MAX_INDEX_ID){
+    if(ast->func_aliases_length >= MAX_FUNC_ID){
         compiler_panic(ctx->compiler, source, "Maximum number of AST function aliases reached\n");
         return FAILURE;
     }

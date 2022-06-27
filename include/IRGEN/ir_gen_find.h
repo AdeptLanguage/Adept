@@ -14,20 +14,20 @@
 #include "AST/ast.h"
 #include "UTIL/ground.h"
 #include "DRVR/compiler.h"
-#include "BRIDGEIR/funcpair.h"
+#include "UTIL/func_pair.h"
 #include "IRGEN/ir_cache.h"
 #include "IRGEN/ir_builder.h"
 
 // ---------------- ir_gen_find_proc ----------------
 // Generic way to find a procedure given a custom query
-errorcode_t ir_gen_find_proc(ir_proc_query_t *query, optional_funcpair_t *result);
+errorcode_t ir_gen_find_proc(ir_proc_query_t *query, optional_func_pair_t *result);
 
 // ---------------- ir_gen_find_func_named ----------------
 // Finds a function that exactly matches the given name.
 // Result info stored 'result'
 // Optionally, whether the function has a unique name is
 // stored into 'out_is_unique'
-errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, funcpair_t *result);
+errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, func_pair_t *result);
 
 // ---------------- ir_gen_find_func_regular ----------------
 // Finds a function that exactly matches the given
@@ -42,7 +42,7 @@ errorcode_t ir_gen_find_func_regular(
     trait_t traits_mask,
     trait_t traits_match,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 );
 
 // ---------------- ir_gen_find_func_conforming ----------------
@@ -63,7 +63,7 @@ errorcode_t ir_gen_find_func_conforming(
     ast_type_t *optional_gives,
     bool no_user_casts,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 );
 
 errorcode_t ir_gen_find_func_conforming_without_defaults(
@@ -75,7 +75,7 @@ errorcode_t ir_gen_find_func_conforming_without_defaults(
     ast_type_t *optional_gives,
     bool no_user_casts,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 );
 
 // ---------------- ir_gen_find_method ----------------
@@ -88,7 +88,7 @@ errorcode_t ir_gen_find_method(
     ast_type_t *arg_types,
     length_t arg_types_length,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 );
 
 // ---------------- ir_gen_find_method_conforming ----------------
@@ -104,7 +104,7 @@ errorcode_t ir_gen_find_method_conforming(
     length_t *inout_length,
     ast_type_t *gives,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 );
 
 errorcode_t ir_gen_find_method_conforming_without_defaults(
@@ -116,7 +116,7 @@ errorcode_t ir_gen_find_method_conforming_without_defaults(
     length_t length,
     ast_type_t *gives,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 );
 
 // ---------------- ir_gen_find_singular_special_func ----------------

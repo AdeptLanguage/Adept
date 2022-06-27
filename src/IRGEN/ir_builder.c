@@ -13,7 +13,7 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGEIR/funcpair.h"
+#include "UTIL/func_pair.h"
 #include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
@@ -114,6 +114,20 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     builder->type_table = object->ast.type_table;
     builder->has_noop_defer_function = false;
     builder->noop_defer_function = 0;
+    builder->virtuals_list = (ir_virtuals_list_t){0};
+}
+
+void ir_builder_free(ir_builder_t *builder){
+    // TODO: Work in progress to make unified ir_builder_free function
+    
+    // The primary builder has
+    free(builder->block_stack_labels);
+    free(builder->block_stack_break_ids);
+    free(builder->block_stack_continue_ids);
+    free(builder->block_stack_scopes);
+
+    // The two init/deinit builders have
+    ir_basicblocks_free(&builder->object->ir_module.init_builder->basicblocks);
 }
 
 length_t build_basicblock(ir_builder_t *builder){
@@ -267,14 +281,23 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
     return;
 }
 
-ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value){
+ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length){
     ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
     instruction->id = INSTRUCTION_CALL;
     instruction->result_type = result_type;
     instruction->values = arguments;
     instruction->values_length = arguments_length;
     instruction->ir_func_id = ir_func_id;
-    return return_result_value ? build_value_from_prev_instruction(builder) : NULL;
+    return build_value_from_prev_instruction(builder);
+}
+
+void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length){
+    ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
+    instruction->id = INSTRUCTION_CALL;
+    instruction->result_type = result_type;
+    instruction->values = arguments;
+    instruction->values_length = arguments_length;
+    instruction->ir_func_id = ir_func_id;
 }
 
 void build_break(ir_builder_t *builder, length_t basicblock_id){
@@ -970,7 +993,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     //       Returns ALT_FAILURE if a compiler time error occurred
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
-    optional_funcpair_t pair;
+    optional_func_pair_t pair;
     ir_pool_snapshot_t pool_snapshot;
     ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
 
@@ -991,7 +1014,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             // Call __defer__()
             if(pair.has){
                 ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;
-                build_call(builder, pair.value.ir_func_id, result_type, arguments, 1, false);
+                build_call_ignore_result(builder, pair.value.ir_func_id, result_type, arguments, 1);
                 return SUCCESS;
             }
         }
@@ -1227,7 +1250,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                 ir_pool_snapshot_t snapshot;
                 ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-                optional_funcpair_t pair;
+                optional_func_pair_t pair;
                 ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
                 arguments[0] = values[i];
 
@@ -1241,7 +1264,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
 
                 if(pair.has){
                     ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;                
-                    values[i] = build_call(builder, pair.value.ir_func_id, result_type, arguments, 1, true);
+                    values[i] = build_call(builder, pair.value.ir_func_id, result_type, arguments, 1);
                 }
             }
         }
@@ -1258,7 +1281,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     //       Returns ALT_FAILURE if a compiler time error occurred
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
-    optional_funcpair_t pass_func;
+    optional_func_pair_t pass_func;
 
     ir_pool_snapshot_t pool_snapshot;
     ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
@@ -1332,7 +1355,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     // Call __pass__()
     if(pass_func.has){
         ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pass_func.value.ir_func_id].return_type;
-        ir_value_t *passed = build_call(builder, pass_func.value.ir_func_id, result_type, arguments, 1, true);
+        ir_value_t *passed = build_call(builder, pass_func.value.ir_func_id, result_type, arguments, 1);
 
         // Store result back into mutable value
         build_store(builder, passed, mutable_value, ast_type->source);
@@ -1614,7 +1637,7 @@ errorcode_t handle_assign_management(
         return FAILURE;
     }
 
-    optional_funcpair_t result;
+    optional_func_pair_t result;
     errorcode_t errorcode;
 
     ir_pool_snapshot_t pool_snapshot;
@@ -1631,7 +1654,7 @@ errorcode_t handle_assign_management(
 
     if(result.has){
         ast_t *ast = &builder->object->ast;
-        funcpair_t pair = result.value;
+        func_pair_t pair = result.value;
 
         if(ast->funcs[pair.ast_func_id].traits & AST_FUNC_DISALLOW){
             strong_cstr_t typename = ast_type_str(value_ast_type);
@@ -1655,7 +1678,7 @@ errorcode_t handle_assign_management(
         if(errorcode) goto failure;
     
         ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
-        build_call(builder, pair.ir_func_id, result_type, arguments, 2, false);
+        build_call_ignore_result(builder, pair.ir_func_id, result_type, arguments, 2);
         return SUCCESS;
     }
 
@@ -1671,7 +1694,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
     if(lhs->type->kind != TYPE_KIND_STRUCTURE) return NULL;
 
     if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
-        optional_funcpair_t result;
+        optional_func_pair_t result;
 
         ir_pool_snapshot_t snapshot;
         ir_pool_snapshot_capture(builder->pool, &snapshot);
@@ -1692,14 +1715,14 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
             return NULL;
         }
 
-        funcpair_t pair = result.value;
+        func_pair_t pair = result.value;
         ir_type_t *result_type = module->funcs.funcs[pair.ir_func_id].return_type;
 
         if(out_type != NULL){
             *out_type = ast_type_clone(&ast->funcs[pair.ast_func_id].return_type);
         }
 
-        return build_call(builder, pair.ir_func_id, result_type, arguments, 2, true);
+        return build_call(builder, pair.ir_func_id, result_type, arguments, 2);
     }
 
     return NULL;
@@ -1722,7 +1745,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, i
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
-    optional_funcpair_t result;
+    optional_func_pair_t result;
 
     // Allocate argument list for upcoming __access__ method call
     ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
@@ -1730,10 +1753,10 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, i
     arguments[1] = index_value;
 
     // Allocate argument AST type list for upcoming __access__ method call
-    ast_type_t argument_ast_types[2];
-    argument_ast_types[0] = ast_type_clone(array_type);
-    ast_type_prepend_ptr(&argument_ast_types[0]);
-    argument_ast_types[1] = *index_type;
+    ast_type_t argument_ast_types[2] = {
+        ast_type_pointer_to(ast_type_clone(array_type)),
+        *index_type,
+    };
 
     weak_cstr_t struct_name = ast_type_struct_name(array_type);
     errorcode_t search_error = ir_gen_find_method_conforming_without_defaults(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
@@ -1749,15 +1772,14 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, i
         return NULL;
     }
 
-    funcpair_t pair = result.value;
-    ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
-    ir_value_t *result_value = build_call(builder, pair.ir_func_id, result_type, arguments, 2, true);
+    func_pair_t pair = result.value;
+    ir_type_t *result_ir_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
 
     if(out_ptr_to_element_type != NULL){
         *out_ptr_to_element_type = ast_type_clone(&ast->funcs[pair.ast_func_id].return_type);
     }
 
-    return result_value;
+    return build_call(builder, pair.ir_func_id, result_ir_type, arguments, 2);
 }
 
 errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, func_id_t ast_poly_func_id, ast_type_t *types,
@@ -1849,26 +1871,28 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     }
 
     for(length_t i = 0; i != poly_func->arity; i++){
-        ast_type_t *template_ast_type = &poly_func->arg_types[i];
+        ast_type_t *template_arg_type = &poly_func->arg_types[i];
+        
+        // Copy name of corresponding parameter
         func->arg_names[i] = strclone(poly_func->arg_names[i]);
-        bool use_provided_type = ast_type_has_polymorph(template_ast_type);
 
-        if(use_provided_type && i >= types_list_length){
-            source_t source = func->arg_defaults && func->arg_defaults[i] ? func->arg_defaults[i]->source : poly_func->source;
-            compiler_panicf(compiler, source, "Cannot instantiate polymorphic function without specifying a non-default value for parameter");
+        // Determine if we should use the type provided instead of the parameter type
+        if(ast_type_has_polymorph(template_arg_type)){
+            if(i >= types_list_length){
+                source_t source = func->arg_defaults && func->arg_defaults[i] ? func->arg_defaults[i]->source : poly_func->source;
+                compiler_panicf(compiler, source, "Cannot instantiate polymorphic function without specifying a non-default value for parameter");
 
-            // Provide information of where the instantiation was triggered
-            if(!SOURCE_IS_NULL(instantiation_source)){
-                compiler_panicf(compiler, instantiation_source, "Requires non-default arguments here");
+                // Provide information of where the instantiation was triggered
+                if(!SOURCE_IS_NULL(instantiation_source)){
+                    compiler_panicf(compiler, instantiation_source, "Requires non-default arguments here");
+                }
+
+                return FAILURE;
             }
 
-            return FAILURE;
-        }
-
-        if(use_provided_type){
             func->arg_types[i] = ast_type_clone(&types[i]);
         } else {
-            func->arg_types[i] = ast_type_clone(template_ast_type);
+            func->arg_types[i] = ast_type_clone(template_arg_type);
         }
     }
 
@@ -1901,7 +1925,7 @@ failure:
     return FAILURE;
 }
 
-errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){
     if(type_list_length != 1) return FAILURE;
 
     bool is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
@@ -1915,21 +1939,16 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
     ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &dereferenced_view);
 
-    // Use cached result if available
-    if(entry->has_defer == TROOLEAN_TRUE){
-        optional_funcpair_set(result, true, entry->defer_ast_func_id, entry->defer_ir_func_id, object);
-        return SUCCESS;
-    } else if(entry->has_defer == TROOLEAN_FALSE){
-        result->has = false;
+    if(ir_gen_sf_cache_read(entry->has_defer, entry->defer, result) == SUCCESS){
         return SUCCESS;
     }
 
-    entry->has_defer = TROOLEAN_FALSE;
-
-    if(ast->funcs_length >= MAX_INDEX_ID){
+    if(ast->funcs_length >= MAX_FUNC_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
+
+    entry->has_defer = TROOLEAN_FALSE;
 
     ast_field_map_t field_map;
 
@@ -1980,7 +1999,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
             return FAILURE;
         }
 
-        optional_funcpair_t result;
+        optional_func_pair_t result;
         errorcode_t errorcode = ir_gen_find_defer_func(compiler, object, &field_info.ast_type, &result);
         ast_type_free(&field_info.ast_type);
 
@@ -1997,7 +2016,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
         // Cache result
         entry->has_defer = TROOLEAN_FALSE;
 
-        optional_funcpair_set(result, false, 0, 0, NULL);
+        optional_func_pair_set(result, false, 0, 0);
         return SUCCESS;
     }
 
@@ -2032,7 +2051,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     func->arity = 1;
 
     memset(&func->statements, 0, sizeof(ast_expr_list_t));
-    ast_type_make_base(&func->return_type, strclone("void"));
+    func->return_type = ast_type_make_base(strclone("void"));
 
     // Create IR function
     ir_func_endpoint_t newest_endpoint;
@@ -2042,15 +2061,18 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
     // Cache result
     entry->has_defer = TROOLEAN_TRUE;
-    entry->defer_ast_func_id = ast_func_id;
-    entry->defer_ir_func_id = newest_endpoint.ir_func_id;
+
+    entry->defer = (func_pair_t){
+        .ast_func_id = ast_func_id,
+        .ir_func_id = newest_endpoint.ir_func_id,
+    };
 
     // Return result
-    optional_funcpair_set(result, true, ast_func_id, newest_endpoint.ir_func_id, object);
+    optional_func_pair_set(result, true, ast_func_id, newest_endpoint.ir_func_id);
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){
     if(type_list_length != 1) return FAILURE;
 
     bool is_base = ast_type_is_base(&arg_types[0]);
@@ -2064,12 +2086,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
     ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &arg_types[0]);
 
-    // Use cached result if available
-    if(entry->has_pass == TROOLEAN_TRUE){
-        optional_funcpair_set(result, true, entry->pass_ast_func_id, entry->pass_ir_func_id, object);
-        return SUCCESS;
-    } else if(entry->has_pass == TROOLEAN_FALSE){
-        result->has = false;
+    if(ir_gen_sf_cache_read(entry->has_pass, entry->pass, result) == SUCCESS){
         return SUCCESS;
     }
 
@@ -2102,7 +2119,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
     }
 
-    if(ast->funcs_length >= MAX_INDEX_ID){
+    if(ast->funcs_length >= MAX_FUNC_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
@@ -2151,14 +2168,17 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
     
     // Cache result
     entry->has_pass = TROOLEAN_TRUE;
-    entry->pass_ast_func_id = ast_func_id;
-    entry->pass_ir_func_id = newest_endpoint.ir_func_id;
 
-    optional_funcpair_set(result, true, ast_func_id, newest_endpoint.ir_func_id, object);
+    entry->pass = (func_pair_t){
+        .ast_func_id = ast_func_id,
+        .ir_func_id = newest_endpoint.ir_func_id,
+    };
+
+    optional_func_pair_set(result, true, ast_func_id, newest_endpoint.ir_func_id);
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result){
+errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){
     if(type_list_length != 2) return FAILURE;
 
     bool subject_is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
@@ -2168,28 +2188,25 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
     ast_type_t dereferenced_view = ast_type_dereferenced_view(&arg_types[0]);
 
-    if(!ast_types_identical(&dereferenced_view, &arg_types[1])) return FAILURE;
+    if(!ast_types_identical(&dereferenced_view, &arg_types[1])){
+        return FAILURE;
+    }
 
     ast_t *ast = &object->ast;
     ir_gen_sf_cache_t *cache = &object->ir_module.sf_cache;
 
     ir_gen_sf_cache_entry_t *entry = ir_gen_sf_cache_locate_or_insert(cache, &dereferenced_view);
 
-    // Use cached result if available
-    if(entry->has_assign == TROOLEAN_TRUE){
-        optional_funcpair_set(result, true, entry->assign_ast_func_id, entry->assign_ir_func_id, object);
-        return SUCCESS;
-    } else if(entry->has_assign == TROOLEAN_FALSE){
-        result->has = false;
+    if(ir_gen_sf_cache_read(entry->has_assign, entry->assign, result) == SUCCESS){
         return SUCCESS;
     }
 
-    entry->has_assign = TROOLEAN_FALSE;
-
-    if(ast->funcs_length >= MAX_INDEX_ID){
+    if(ast->funcs_length >= MAX_FUNC_ID){
         compiler_panic(compiler, arg_types[0].source, "Maximum number of AST functions reached\n");
         return FAILURE;
     }
+
+    entry->has_assign = TROOLEAN_FALSE;
 
     ast_field_map_t field_map;
 
@@ -2200,10 +2217,14 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         ast_composite_t *composite = ast_composite_find_exact(&object->ast, struct_name);
 
         // Require structure to exist
-        if(composite == NULL) return FAILURE;
+        if(composite == NULL){
+            return FAILURE;
+        }
 
         // Don't handle children for complex composite types
-        if(!ast_layout_is_simple_struct(&composite->layout)) return FAILURE;
+        if(!ast_layout_is_simple_struct(&composite->layout)){
+            return FAILURE;
+        }
 
         // Remember weak copy of field map
         field_map = composite->layout.field_map;
@@ -2213,13 +2234,19 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, struct_name);
 
         // Require generic structure to exist
-        if(template == NULL) return FAILURE;
+        if(template == NULL){
+            return FAILURE;
+        }
 
         // Require generics count to match
-        if(template->generics_length != generic_base->generics_length) return FAILURE;
+        if(template->generics_length != generic_base->generics_length){
+            return FAILURE;
+        }
 
         // Don't handle children for complex composite types
-        if(!ast_layout_is_simple_struct(&template->layout)) return FAILURE;
+        if(!ast_layout_is_simple_struct(&template->layout)){
+            return FAILURE;
+        }
 
         // Remember weak copy of field map
         field_map = template->layout.field_map;
@@ -2238,12 +2265,14 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
             return FAILURE;
         }
 
-        optional_funcpair_t result;
+        optional_func_pair_t result;
         errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, &field_info.ast_type, &result);
         
         ast_type_free(&field_info.ast_type);
 
-        if(errorcode == ALT_FAILURE) return errorcode;
+        if(errorcode == ALT_FAILURE){
+            return errorcode;
+        }
 
         if(errorcode == SUCCESS && result.has){
             trait_t ast_func_traits = ast->funcs[result.value.ast_func_id].traits;
@@ -2259,7 +2288,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         // Cache result
         entry->has_assign = TROOLEAN_FALSE;
 
-        optional_funcpair_set(result, false, 0, 0, NULL);
+        optional_func_pair_set(result, false, 0, 0);
         return SUCCESS;
     }
 
@@ -2310,7 +2339,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         .capacity = num_stmts,
     };
 
-    ast_type_make_base(&func->return_type, strclone("void"));
+    func->return_type = ast_type_make_base(strclone("void"));
 
     // Generate assignment statements
     for(length_t i = 0; i != field_map.arrows_length; i++){
@@ -2332,16 +2361,26 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     // Create IR function
     ir_func_endpoint_t newest_endpoint;
     if(ir_gen_func_head(compiler, object, func, ast_func_id, &newest_endpoint)){
+        printf("fail 8\n");
         return FAILURE;
     }
 
     // Cache result
     entry->has_assign = TROOLEAN_TRUE;
-    entry->assign_ast_func_id = ast_func_id;
-    entry->assign_ir_func_id = newest_endpoint.ir_func_id;
+    
+    entry->assign = (func_pair_t){
+        .ast_func_id = ast_func_id,
+        .ir_func_id = newest_endpoint.ir_func_id,
+    };
+
+    {
+        char *s = ast_type_str(&dereferenced_view);
+        printf("attempt_autogen___assign__ SUCCESS %s\n", s);
+        free(s);
+    }
 
     // Return result
-    optional_funcpair_set(result, true, ast_func_id, newest_endpoint.ir_func_id, object);
+    optional_func_pair_set(result, true, ast_func_id, newest_endpoint.ir_func_id);
     return SUCCESS;
 }
 
@@ -2665,16 +2704,17 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
         }
         break;
     case EXPR_TERNARY: {
-            if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_ternary_t*) expr)->condition)) return FAILURE;
-            if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_ternary_t*) expr)->if_true))   return FAILURE;
-            if(resolve_expr_polymorphics(compiler, type_table, catalog, ((ast_expr_ternary_t*) expr)->if_false))  return FAILURE;
+            ast_expr_ternary_t *ternary = (ast_expr_ternary_t*) expr;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, ternary->condition)) return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, ternary->if_true))   return FAILURE;
+            if(resolve_expr_polymorphics(compiler, type_table, catalog, ternary->if_false))  return FAILURE;
         }
         break;
     case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF: {
             ast_expr_inline_declare_t *def = (ast_expr_inline_declare_t*) expr;
 
             if(resolve_type_polymorphics(compiler, type_table, catalog, &def->type, NULL)
-            ||(def->value != NULL && resolve_expr_polymorphics(compiler, type_table, catalog, def->value))){
+            || (def->value != NULL && resolve_expr_polymorphics(compiler, type_table, catalog, def->value))){
                 return FAILURE;
             }
         }
@@ -2690,6 +2730,7 @@ errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_t
 
             // Replace the polymorphic count variable with the determined count
             // DANGEROUS: Assuming that 'sizeof(ast_expr_polycount_t) <= sizeof(ast_expr_usize_t)'
+            static_assert(sizeof(ast_expr_polycount_t) <= sizeof(ast_expr_usize_t), "The following code assumes sizeof(ast_expr_polycount_t) <= sizeof(ast_expr_usize_t)");
             ast_expr_free(expr);
             expr->id = EXPR_USIZE;
             ((ast_expr_usize_t*) expr)->value = count_var->binding;

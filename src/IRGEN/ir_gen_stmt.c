@@ -13,6 +13,7 @@
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
+#include "IR/ir_module.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
@@ -23,6 +24,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
 #include "UTIL/ground.h"
+#include "UTIL/string.h"
 #include "UTIL/trait.h"
 
 errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool *out_is_terminated){
@@ -437,7 +439,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
                 if(for_loop->condition){
                     if(ir_gen_expr(builder, for_loop->condition, &condition_value, false, &temporary_type)) return FAILURE;
                 } else {
-                    ast_type_make_base(&temporary_type, "bool");
+                    temporary_type = ast_type_make_base(strclone("bool"));
                     condition_value = build_bool(builder->pool, true);
                 }
 
@@ -772,7 +774,7 @@ errorcode_t ir_gen_do_construct(
     arg_types[0] = ast_type_clone(struct_ast_type);
     ast_type_prepend_ptr(&arg_types[0]);
 
-    optional_funcpair_t result;
+    optional_func_pair_t result;
     errorcode_t search_errorcode = ir_gen_find_method_conforming(builder, struct_name, "__constructor__", &arg_values, &arg_types, &arity, NULL, source, &result);
 
     if(search_errorcode || !result.has){
@@ -782,14 +784,14 @@ errorcode_t ir_gen_do_construct(
         goto failure;
     }
 
-    funcpair_t pair = result.value;
+    func_pair_t pair = result.value;
 
     if(handle_pass_management(builder, arg_values, arg_types, object->ast.funcs[pair.ast_func_id].arg_type_traits, arity)){
         goto failure;
     }
 
     ir_type_t *ir_return_type = object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
-    build_call(builder, pair.ir_func_id, ir_return_type, arg_values, arity, false);
+    build_call_ignore_result(builder, pair.ir_func_id, ir_return_type, arg_values, arity);
 
     ast_types_free(arg_types, arity);
     free(arg_types);

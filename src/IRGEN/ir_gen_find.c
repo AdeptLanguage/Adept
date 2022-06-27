@@ -7,11 +7,12 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
-#include "BRIDGEIR/funcpair.h"
+#include "UTIL/func_pair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
 #include "IR/ir_func_endpoint.h"
+#include "IR/ir_module.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_proc_map.h"
 #include "IR/ir_proc_query.h"
@@ -25,10 +26,10 @@
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
 
-static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, optional_funcpair_t *result);
-static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_funcpair_t *result, unsigned int conform_mode_if_applicable);
+static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, optional_func_pair_t *result);
+static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_func_pair_t *result, unsigned int conform_mode_if_applicable);
 
-errorcode_t ir_gen_find_proc(ir_proc_query_t *query, optional_funcpair_t *result){
+errorcode_t ir_gen_find_proc(ir_proc_query_t *query, optional_func_pair_t *result){
     // Allow using empty type for 'optional_gives' instead of NULL
     if(query->optional_gives && query->optional_gives->elements_length == 0){
         query->optional_gives = NULL;
@@ -163,7 +164,7 @@ static errorcode_t ir_gen_fill_in_default_arguments(ir_proc_query_t *query, ast_
     return SUCCESS;
 }
 
-static errorcode_t actualize_suitable_polymorphic(ir_proc_query_t *query, optional_funcpair_t *result, ast_poly_catalog_t *catalog, ir_func_endpoint_t endpoint){
+static errorcode_t actualize_suitable_polymorphic(ir_proc_query_t *query, optional_func_pair_t *result, ast_poly_catalog_t *catalog, ir_func_endpoint_t endpoint){
     const func_id_t ast_func_id = endpoint.ast_func_id;
 
     compiler_t *compiler = ir_proc_query_getter_compiler(query);
@@ -199,22 +200,22 @@ static errorcode_t actualize_suitable_polymorphic(ir_proc_query_t *query, option
         return ALT_FAILURE;
     }
 
-    optional_funcpair_set(result, true, instance.ast_func_id, instance.ir_func_id, object);
+    optional_func_pair_set(result, true, instance.ast_func_id, instance.ir_func_id);
     return SUCCESS;
 }
 
-static errorcode_t actualize_suitable_nonpolymorphic(ir_proc_query_t *query, optional_funcpair_t *result, ir_func_endpoint_t endpoint){
+static errorcode_t actualize_suitable_nonpolymorphic(ir_proc_query_t *query, optional_func_pair_t *result, ir_func_endpoint_t endpoint){
     object_t *object = ir_proc_query_getter_object(query);
 
     if(ir_gen_fill_in_default_arguments(query, &object->ast.funcs[endpoint.ast_func_id], NULL)){
         return ALT_FAILURE;
     }
 
-    optional_funcpair_set(result, true, endpoint.ast_func_id, endpoint.ir_func_id, object);
+    optional_func_pair_set(result, true, endpoint.ast_func_id, endpoint.ir_func_id);
     return SUCCESS;
 }
 
-static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, optional_funcpair_t *result, unsigned int conform_mode_if_applicable, ir_func_endpoint_t endpoint){
+static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, optional_func_pair_t *result, unsigned int conform_mode_if_applicable, ir_func_endpoint_t endpoint){
     compiler_t *compiler = ir_proc_query_getter_compiler(query);
     object_t *object = ir_proc_query_getter_object(query);
     ast_func_t *ast_func = &object->ast.funcs[endpoint.ast_func_id];
@@ -277,7 +278,7 @@ static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, option
 
 static errorcode_t ir_gen_find_proc_sweep_endpoint_list(
     ir_proc_query_t *query,
-    optional_funcpair_t *result,
+    optional_func_pair_t *result,
     unsigned int conform_mode_if_applicable,
     ir_func_endpoint_list_t *endpoint_list
 ){
@@ -295,7 +296,7 @@ static errorcode_t ir_gen_find_proc_sweep_endpoint_list(
 
 static errorcode_t ir_gen_find_proc_sweep_proc_map(
     ir_proc_query_t *query,
-    optional_funcpair_t *result,
+    optional_func_pair_t *result,
     unsigned int conform_mode_if_applicable,
     ir_proc_map_t *proc_map,
     void *key,
@@ -307,7 +308,7 @@ static errorcode_t ir_gen_find_proc_sweep_proc_map(
     return ir_gen_find_proc_sweep_endpoint_list(query, result, conform_mode_if_applicable, endpoint_list);
 }
 
-static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_funcpair_t *result, unsigned int conform_mode_if_applicable){
+static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_func_pair_t *result, unsigned int conform_mode_if_applicable){
     errorcode_t res;
     ir_module_t *ir_module = &ir_proc_query_getter_object(query)->ir_module;
 
@@ -356,7 +357,7 @@ static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_funcp
     return try_to_autogen_proc_to_fill_query(query, result);
 }
 
-static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, optional_funcpair_t *result){
+static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, optional_func_pair_t *result){
     // Attempt to auto-generate a procedure in order to fill a query
 
     ast_type_t *types = ir_proc_query_getter_arg_types(query);
@@ -381,7 +382,7 @@ static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, opt
     return FAILURE;
 }
 
-errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, funcpair_t *result){
+errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, func_pair_t *result){
     // Find list of function endpoints for the given name
     ir_func_endpoint_list_t *endpoint_list = ir_proc_map_find(
         &object->ir_module.func_map,
@@ -394,7 +395,7 @@ errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out
     if(endpoint_list){
         ir_func_endpoint_t endpoint = endpoint_list->endpoints[0];
 
-        *result = (funcpair_t){
+        *result = (func_pair_t){
             .ast_func_id = endpoint.ast_func_id,
             .ir_func_id = endpoint.ir_func_id,
         };
@@ -418,7 +419,7 @@ errorcode_t ir_gen_find_func_regular(
     trait_t traits_mask,
     trait_t traits_match,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
     ir_proc_query_init_find_func_regular(&query, compiler, object, function_name, arg_types, arg_types_length, traits_mask, traits_match, from_source);
@@ -434,7 +435,7 @@ errorcode_t ir_gen_find_func_conforming(
     ast_type_t *optional_gives,
     bool no_user_casts,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
     ir_proc_query_init_find_func_conforming(&query, builder, function_name, inout_arg_values, inout_arg_types, inout_length, optional_gives, no_user_casts, from_source);
@@ -450,7 +451,7 @@ errorcode_t ir_gen_find_func_conforming_without_defaults(
     ast_type_t *optional_gives,
     bool no_user_casts,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
     ir_proc_query_init_find_func_conforming_without_defaults(&query, builder, function_name, arg_values, arg_types, length, optional_gives, no_user_casts, from_source);
@@ -465,7 +466,7 @@ errorcode_t ir_gen_find_method(
     ast_type_t *arg_types,
     length_t arg_types_length,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
     ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, from_source);
@@ -481,7 +482,7 @@ errorcode_t ir_gen_find_method_conforming(
     length_t *inout_length,
     ast_type_t *gives,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
     ir_proc_query_init_find_method_conforming(&query, builder, struct_name, name, inout_arg_values, inout_arg_types, inout_length, gives, from_source);
@@ -497,7 +498,7 @@ errorcode_t ir_gen_find_method_conforming_without_defaults(
     length_t length,
     ast_type_t *gives,
     source_t from_source,
-    optional_funcpair_t *out_result
+    optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
     ir_proc_query_init_find_method_conforming_without_defaults(&query, builder, struct_name, name, arg_values, arg_types, length, gives, from_source);
@@ -512,7 +513,7 @@ errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *ob
     // Returns ALT_FAILURE if something went wrong
 
     bool is_unique;
-    funcpair_t result;
+    func_pair_t result;
 
     if(ir_gen_find_func_named(object, func_name, &is_unique, &result) == SUCCESS){
         // Found special function

@@ -10,13 +10,23 @@
 
 #include "IR/ir.h"
 #include "IR/ir_func_endpoint.h"
+#include "IR/ir_type_map.h"
 #include "AST/ast_type.h"
 #include "AST/ast_poly_catalog.h"
 #include "UTIL/ground.h"
-#include "DRVR/object.h"
 #include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGEIR/funcpair.h"
+#include "UTIL/func_pair.h"
+#include "UTIL/list.h"
+
+typedef struct {
+    ast_type_t type;
+    func_pair_list_t virtuals;
+    func_pair_list_t overrides;
+} ir_virtuals_t;
+
+typedef listof(ir_virtuals_t, functions) ir_virtuals_list_t;
 
 // ---------------- ir_builder_t ----------------
 // Container for storing general information
@@ -55,7 +65,10 @@ typedef struct ir_builder {
     type_table_t *type_table;
     func_id_t noop_defer_function;
     bool has_noop_defer_function;
+    ir_virtuals_list_t virtuals_list;
 } ir_builder_t;
+
+#include "IR/ir_module.h"
 
 // ---------------- ir_builder_init ----------------
 // Initializes an IR builder
@@ -118,8 +131,11 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
 
 // ---------------- build_call ----------------
 // Builds a call instruction
-// NOTE: If 'return_result_value' is false, then NULL will be returned (in an effort to avoid unnecessary allocations)
-ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, bool return_result_value);
+ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length);
+
+// ---------------- build_call_ignore_result ----------------
+// Builds a call instruction, but doesn't give back a reference to the result
+void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length);
 
 // ---------------- build_break ----------------
 // Builds a break instruction
@@ -444,20 +460,20 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
 // Attempts to auto-generate __defer__ management method
 // NOTE: Does NOT check for existing suitable __defer__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result);
 
 // ---------------- attempt_autogen___pass__ ----------------
 // Attempts to auto-generate __pass__ management function
 // NOTE: Does NOT check for existing suitable __pass__ functions
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result);
 
 // ---------------- attempt_autogen___assign__ ----------------
 // Attempts to auto-generate __assign__ management method
 // NOTE: Does NOT check for existing suitable __assign__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
 // NOTE: Returns ALT_FAILURE if something went really wrong
-errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_funcpair_t *result);
+errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result);
 
 // ---------------- resolve_type_polymorphics ----------------
 // Resolves any polymorphic type variables within an AST type

@@ -87,6 +87,8 @@ typedef uint32_t index_id_t;
 
 // ---------------- func_id_t ----------------
 // Used as an ID to refer to functions
+#define MAX_FUNC_ID     MAX_INDEX_ID
+#define INVALID_FUNC_ID INVALID_INDEX_ID
 typedef index_id_t func_id_t;
 
 // ---------------- maybe_index_t ----------------

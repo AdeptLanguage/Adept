@@ -15,6 +15,7 @@ extern "C" {
 #include <stdio.h>
 
 #include "IR/ir.h"
+#include "IR/ir_module.h"
 #include "UTIL/ground.h"
 
 // ---------------- ir_module_dump ----------------

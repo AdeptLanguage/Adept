@@ -118,8 +118,7 @@ static void TEST_ast_expr_call_str_6(CuTest *test){
     bool is_tentative = false;
     length_t args_length = 3;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_type_t gives;
-    ast_type_make_base(&gives, strclone("ResultingType"));
+    ast_type_t gives = ast_type_make_base(strclone("ResultingType"));
     ast_expr_create_long(&args[0], 12345, NULL_SOURCE);
     ast_expr_create_long(&args[1], 67890, NULL_SOURCE);
     ast_expr_create_long(&args[2], 246810, NULL_SOURCE);
@@ -142,8 +141,7 @@ static void TEST_ast_expr_call_str_7(CuTest *test){
     bool is_tentative = true;
     length_t args_length = 3;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_type_t gives;
-    ast_type_make_base(&gives, strclone("ResultingType"));
+    ast_type_t gives = ast_type_make_base(strclone("ResultingType"));
     ast_expr_create_long(&args[0], 11111, NULL_SOURCE);
     ast_expr_create_long(&args[1], 22222, NULL_SOURCE);
     ast_expr_create_long(&args[2], 33333, NULL_SOURCE);
@@ -166,8 +164,7 @@ static void TEST_ast_expr_call_str_8(CuTest *test){
     bool is_tentative = true;
     length_t args_length = 1;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_type_t gives;
-    ast_type_make_base(&gives, strclone("Return"));
+    ast_type_t gives = ast_type_make_base(strclone("Return"));
     ast_expr_create_long(&args[0], 13579, NULL_SOURCE);
 
     // Create call expression

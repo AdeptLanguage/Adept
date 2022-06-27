@@ -45,8 +45,8 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->library_kinds = NULL;
     ast->libraries_length = 0;
     ast->libraries_capacity = 0;
-    ast_type_make_base(&ast->common.ast_int_type, strclone("int"));
-    ast_type_make_base(&ast->common.ast_usize_type, strclone("usize"));
+    ast->common.ast_int_type = ast_type_make_base(strclone("int"));
+    ast->common.ast_usize_type = ast_type_make_base(strclone("usize"));
     ast->common.ast_variadic_array = NULL;
     ast->common.ast_initializer_list = NULL;
 
@@ -1147,12 +1147,15 @@ void ast_add_global(ast_t *ast, strong_cstr_t name, ast_type_t type, ast_expr_t 
     expand((void**) &ast->globals, sizeof(ast_global_t), ast->globals_length, &ast->globals_capacity, 1, 8);
 
     ast_global_t *global = &ast->globals[ast->globals_length++];
-    global->name = name;
-    global->name_length = strlen(name);
-    global->type = type;
-    global->initial = initial_value;
-    global->traits = traits;
-    global->source = source;
+
+    *global = (ast_global_t){
+        .name = name,
+        .name_length = strlen(name),
+        .type = type,
+        .initial = initial_value,
+        .traits = traits,
+        .source = source,
+    };
 }
 
 void ast_add_foreign_library(ast_t *ast, strong_cstr_t library, char kind){
@@ -1166,11 +1169,13 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
 
     if(compiler->cross_compile_for == CROSS_COMPILE_NONE && sizeof(va_list) <= 8){
         // Small va_list
-        strong_cstr_t names[1];
-        names[0] = strclone("_opaque");
+        strong_cstr_t names[1] = {
+            strclone("_opaque"),
+        };
 
-        ast_type_t types[1];
-        ast_type_make_base(&types[0], strclone("ptr"));
+        ast_type_t types[1] = {
+            ast_type_make_base(strclone("ptr")),
+        };
 
         ast_layout_init_with_struct_fields(&layout, names, types, 1);
         ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, false);
@@ -1191,11 +1196,12 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
         names[2] = strclone("_opaque3");
         names[3] = strclone("_opaque4");
 
-        ast_type_t types[4];
-        ast_type_make_base(&types[0], strclone("int"));
-        ast_type_make_base(&types[1], strclone("int"));
-        ast_type_make_base(&types[2], strclone("ptr"));
-        ast_type_make_base(&types[3], strclone("ptr"));
+        ast_type_t types[4] = {
+            ast_type_make_base(strclone("int")),
+            ast_type_make_base(strclone("int")),
+            ast_type_make_base(strclone("ptr")),
+            ast_type_make_base(strclone("ptr")),
+        };
         
         ast_layout_init_with_struct_fields(&layout, names, types, 1);
         ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, false);

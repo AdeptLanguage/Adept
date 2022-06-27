@@ -37,13 +37,15 @@ void any_inject_ast_Any(ast_t *ast){
 
     /* struct Any (type *AnyType, placeholder ulong) */
 
-    strong_cstr_t names[2];
-    names[0] = strclone("type");
-    names[1] = strclone("placeholder");
+    strong_cstr_t names[2] = {
+        strclone("type"),
+        strclone("placeholder"),
+    };
 
-    ast_type_t types[2];
-    ast_type_make_base_ptr(&types[0], strclone("AnyType"));
-    ast_type_make_base(&types[1], strclone("ulong"));
+    ast_type_t types[2] = {
+        ast_type_make_base_ptr(strclone("AnyType")),
+        ast_type_make_base(strclone("ulong")),
+    };
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 2);
@@ -54,17 +56,19 @@ void any_inject_ast_AnyType(ast_t *ast){
 
     /* struct AnyType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize) */
 
-    strong_cstr_t names[4];
-    names[0] = strclone("kind");
-    names[1] = strclone("name");
-    names[2] = strclone("is_alias");
-    names[3] = strclone("size");
+    strong_cstr_t names[4] = {
+        strclone("kind"),
+        strclone("name"),
+        strclone("is_alias"),
+        strclone("size"),
+    };
 
-    ast_type_t types[4];
-    ast_type_make_base(&types[0], strclone("AnyTypeKind"));
-    ast_type_make_base_ptr(&types[1], strclone("ubyte"));
-    ast_type_make_base(&types[2], strclone("bool"));
-    ast_type_make_base(&types[3], strclone("usize"));
+    ast_type_t types[4] = {
+        ast_type_make_base(strclone("AnyTypeKind")),
+        ast_type_make_base_ptr(strclone("ubyte")),
+        ast_type_make_base(strclone("bool")),
+        ast_type_make_base(strclone("usize")),
+    };
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 4);
@@ -98,19 +102,21 @@ void any_inject_ast_AnyPtrType(ast_t *ast){
 
     /* struct AnyPtrType(kind AnyTypeKind, name *ubyte, is_alias bool, size usize, subtype *AnyType) */
 
-    strong_cstr_t names[5];
-    names[0] = strclone("kind");
-    names[1] = strclone("name");
-    names[2] = strclone("is_alias");
-    names[3] = strclone("size");
-    names[4] = strclone("subtype");
+    strong_cstr_t names[5] = {
+        strclone("kind"),
+        strclone("name"),
+        strclone("is_alias"),
+        strclone("size"),
+        strclone("subtype"),
+    };
 
-    ast_type_t types[5];
-    ast_type_make_base(&types[0], strclone("AnyTypeKind"));
-    ast_type_make_base_ptr(&types[1], strclone("ubyte"));
-    ast_type_make_base(&types[2], strclone("bool"));
-    ast_type_make_base(&types[3], strclone("usize"));
-    ast_type_make_base_ptr(&types[4], strclone("AnyType"));
+    ast_type_t types[5] = {
+        ast_type_make_base(strclone("AnyTypeKind")),
+        ast_type_make_base_ptr(strclone("ubyte")),
+        ast_type_make_base(strclone("bool")),
+        ast_type_make_base(strclone("usize")),
+        ast_type_make_base_ptr(strclone("AnyType")),
+    };
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 5);
@@ -121,27 +127,29 @@ void any_inject_ast_AnyCompositeType(ast_t *ast){
 
     /* struct AnyCompositeType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **AnyType, length usize, offsets *usize, member_names **ubyte, is_packed bool) */
 
-    strong_cstr_t names[9];
-    names[0] = strclone("kind");
-    names[1] = strclone("name");
-    names[2] = strclone("is_alias");
-    names[3] = strclone("size");
-    names[4] = strclone("members");
-    names[5] = strclone("length");
-    names[6] = strclone("offsets");
-    names[7] = strclone("member_names");
-    names[8] = strclone("is_packed");
+    strong_cstr_t names[9] = {
+        strclone("kind"),
+        strclone("name"),
+        strclone("is_alias"),
+        strclone("size"),
+        strclone("members"),
+        strclone("length"),
+        strclone("offsets"),
+        strclone("member_names"),
+        strclone("is_packed"),
+    };
 
-    ast_type_t types[9];
-    ast_type_make_base(&types[0], strclone("AnyTypeKind"));
-    ast_type_make_base_ptr(&types[1], strclone("ubyte"));
-    ast_type_make_base(&types[2], strclone("bool"));
-    ast_type_make_base(&types[3], strclone("usize"));
-    ast_type_make_base_ptr_ptr(&types[4], strclone("AnyType"));
-    ast_type_make_base(&types[5], strclone("usize"));
-    ast_type_make_base_ptr(&types[6], strclone("usize"));
-    ast_type_make_base_ptr_ptr(&types[7], strclone("ubyte"));
-    ast_type_make_base(&types[8], strclone("bool"));
+    ast_type_t types[9] = {
+        ast_type_make_base(strclone("AnyTypeKind")),
+        ast_type_make_base_ptr(strclone("ubyte")),
+        ast_type_make_base(strclone("bool")),
+        ast_type_make_base(strclone("usize")),
+        ast_type_make_base_ptr_ptr(strclone("AnyType")),
+        ast_type_make_base(strclone("usize")),
+        ast_type_make_base_ptr(strclone("usize")),
+        ast_type_make_base_ptr_ptr(strclone("ubyte")),
+        ast_type_make_base(strclone("bool")),
+    };
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 9);
@@ -154,8 +162,8 @@ void any_inject_ast_AnyStructType(ast_t *ast){
 
     // alias AnyStructType = AnyCompositeType
 
-    ast_type_t strong_type;
-    ast_type_make_base(&strong_type, strclone("AnyCompositeType"));
+    ast_type_t strong_type = ast_type_make_base(strclone("AnyCompositeType"));
+
     ast_add_alias(ast, strclone("AnyStructType"), strong_type, TRAIT_NONE, NULL_SOURCE);
 }
 
@@ -165,8 +173,8 @@ void any_inject_ast_AnyUnionType(ast_t *ast){
 
     // alias AnyUnionType = AnyCompositeType
 
-    ast_type_t strong_type;
-    ast_type_make_base(&strong_type, strclone("AnyCompositeType"));
+    ast_type_t strong_type = ast_type_make_base(strclone("AnyCompositeType"));
+
     ast_add_alias(ast, strclone("AnyUnionType"), strong_type, TRAIT_NONE, NULL_SOURCE);
 }
 
@@ -174,27 +182,29 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast){
     
     /* struct AnyFuncPtrType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, args **AnyType, length usize, return_type *AnyType, is_vararg bool, is_stdcall bool) */
 
-    strong_cstr_t names[9];
-    names[0] = strclone("kind");
-    names[1] = strclone("name");
-    names[2] = strclone("is_alias");
-    names[3] = strclone("size");
-    names[4] = strclone("args");
-    names[5] = strclone("length");
-    names[6] = strclone("return_type");
-    names[7] = strclone("is_vararg");
-    names[8] = strclone("is_stdcall");
+    strong_cstr_t names[9] = {
+        strclone("kind"),
+        strclone("name"),
+        strclone("is_alias"),
+        strclone("size"),
+        strclone("args"),
+        strclone("length"),
+        strclone("return_type"),
+        strclone("is_vararg"),
+        strclone("is_stdcall"),
+    };
 
-    ast_type_t types[9];
-    ast_type_make_base(&types[0], strclone("AnyTypeKind"));
-    ast_type_make_base_ptr(&types[1], strclone("ubyte"));
-    ast_type_make_base(&types[2], strclone("bool"));
-    ast_type_make_base(&types[3], strclone("usize"));
-    ast_type_make_base_ptr_ptr(&types[4], strclone("AnyType"));
-    ast_type_make_base(&types[5], strclone("usize"));
-    ast_type_make_base_ptr(&types[6], strclone("AnyType"));
-    ast_type_make_base(&types[7], strclone("bool"));
-    ast_type_make_base(&types[8], strclone("bool"));
+    ast_type_t types[9] = {
+        ast_type_make_base(strclone("AnyTypeKind")),
+        ast_type_make_base_ptr(strclone("ubyte")),
+        ast_type_make_base(strclone("bool")),
+        ast_type_make_base(strclone("usize")),
+        ast_type_make_base_ptr_ptr(strclone("AnyType")),
+        ast_type_make_base(strclone("usize")),
+        ast_type_make_base_ptr(strclone("AnyType")),
+        ast_type_make_base(strclone("bool")),
+        ast_type_make_base(strclone("bool")),
+    };
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 9);
@@ -205,21 +215,23 @@ void any_inject_ast_AnyFixedArrayType(ast_t *ast){
     
     /* struct AnyFixedArrayType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, subtype *AnyType, length usize) */
 
-    strong_cstr_t names[6];
-    names[0] = strclone("kind");
-    names[1] = strclone("name");
-    names[2] = strclone("is_alias");
-    names[3] = strclone("size");
-    names[4] = strclone("subtype");
-    names[5] = strclone("length");
+    strong_cstr_t names[6] = {
+        strclone("kind"),
+        strclone("name"),
+        strclone("is_alias"),
+        strclone("size"),
+        strclone("subtype"),
+        strclone("length"),
+    };
 
-    ast_type_t types[6];
-    ast_type_make_base(&types[0], strclone("AnyTypeKind"));
-    ast_type_make_base_ptr(&types[1], strclone("ubyte"));
-    ast_type_make_base(&types[2], strclone("bool"));
-    ast_type_make_base(&types[3], strclone("usize"));
-    ast_type_make_base_ptr(&types[4], strclone("AnyType"));
-    ast_type_make_base(&types[5], strclone("usize"));
+    ast_type_t types[6] = {
+        ast_type_make_base(strclone("AnyTypeKind")),
+        ast_type_make_base_ptr(strclone("ubyte")),
+        ast_type_make_base(strclone("bool")),
+        ast_type_make_base(strclone("usize")),
+        ast_type_make_base_ptr(strclone("AnyType")),
+        ast_type_make_base(strclone("usize")),
+    };
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 6);
@@ -230,8 +242,7 @@ void any_inject_ast___types__(ast_t *ast){
 
     /* __types__ **AnyType */
 
-    ast_type_t type;
-    ast_type_make_base_ptr_ptr(&type, strclone("AnyType"));
+    ast_type_t type = ast_type_make_base_ptr_ptr(strclone("AnyType"));
 
     ast_add_global(ast, strclone("__types__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES__, NULL_SOURCE);
 }
@@ -240,8 +251,7 @@ void any_inject_ast___types_length__(ast_t *ast){
 
     /* __types_length__ usize */
 
-    ast_type_t type;
-    ast_type_make_base(&type, strclone("usize"));
+    ast_type_t type = ast_type_make_base(strclone("usize"));
 
     ast_add_global(ast, strclone("__types_length__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPES_LENGTH__, NULL_SOURCE);
 }
@@ -250,8 +260,7 @@ void any_inject_ast___type_kinds__(ast_t *ast){
 
     /* __type_kinds__ **ubyte */
 
-    ast_type_t type;
-    ast_type_make_base_ptr_ptr(&type, strclone("ubyte"));
+    ast_type_t type = ast_type_make_base_ptr_ptr(strclone("ubyte"));
 
     ast_add_global(ast, strclone("__type_kinds__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS__, NULL_SOURCE);
 }
@@ -260,9 +269,7 @@ void any_inject_ast___type_kinds_length__(ast_t *ast){
 
     /* __type_kinds_length__ usize */
 
-    ast_type_t type;
-    ast_type_make_base(&type, strclone("usize"));
+    ast_type_t type = ast_type_make_base(strclone("usize"));
 
     ast_add_global(ast, strclone("__type_kinds_length__"), type, NULL, AST_GLOBAL_SPECIAL | AST_GLOBAL___TYPE_KINDS_LENGTH__, NULL_SOURCE);
-
 }

@@ -166,7 +166,7 @@ int llvm_string_table_entry_cmp(const void *va, const void *vb);
 LLVMValueRef llvm_create_static_variable(llvm_context_t *llvm, ir_type_t *type, ir_value_t *optional_initializer);
 
 // ---------------- value_catalog_prepare ----------------
-// Creates a value_catalog_t cabable of holding value results
+// Creates a value_catalog_t capable of holding value results
 // for a list of basicblocks
 void value_catalog_prepare(value_catalog_t *out_catalog, ir_basicblocks_t basicblocks);
 

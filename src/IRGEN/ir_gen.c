@@ -10,13 +10,14 @@
 #include "AST/ast_type.h"
 #include "BRIDGE/any.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGEIR/funcpair.h"
+#include "UTIL/func_pair.h"
 #include "BRIDGEIR/rtti.h"
 #include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
 #include "IR/ir_func_endpoint.h"
+#include "IR/ir_module.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
@@ -86,16 +87,6 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         }
     }
 
-    // typedef struct {
-    //     ast_type_t type;
-    //     func_pair_list_t virtuals;
-    //     func_pair_list_t overrides;
-    //     func_id_list_t virtual_ast_func_ids;
-    //     func_id_list_t virtual_ir_func_ids;
-    //     func_id_list_t overriding_ast_func_ids;
-    //     func_id_list_t overriding_ir_func_ids;
-    // } ir_virtuals_t;
-
     // TODO: Collect virtuals and overrides
 
     // Inject vtable initializations
@@ -132,7 +123,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         if(ast_func->traits & AST_FUNC_POLYMORPHIC){
             ir_func_endpoint_t endpoint = (ir_func_endpoint_t){
                 .ast_func_id = ast_func_id,
-                .ir_func_id = INVALID_INDEX_ID,
+                .ir_func_id = INVALID_FUNC_ID,
             };
 
             ir_module_create_func_mapping(ir_module, ast_func->name, endpoint, false);
@@ -161,14 +152,14 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
     for(length_t i = 0; i != ast->func_aliases_length; i++){
         ast_func_alias_t *falias = &(*ast_func_aliases)[i];
 
-        funcpair_t pair;
+        func_pair_t pair;
         errorcode_t error;
         bool is_unique = true;
 
         if(falias->match_first_of_name){
             error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
         } else {
-            optional_funcpair_t result;
+            optional_func_pair_t result;
             error = ir_gen_find_func_regular(compiler, object, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, falias->source, &result);
 
             if(error == SUCCESS){
@@ -206,7 +197,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
 errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, func_id_t *out_ir_func_id){
     ir_module_t *module = &object->ir_module;
 
-    if(module->funcs.length >= MAX_INDEX_ID){
+    if(module->funcs.length >= MAX_FUNC_ID){
         compiler_panic(compiler, from_source, "Maximum number of IR functions reached\n");
         return FAILURE;
     }
@@ -595,10 +586,10 @@ errorcode_t ir_gen_special_globals(compiler_t *compiler, object_t *object){
     ast_global_t *globals = object->ast.globals;
     length_t globals_length = object->ast.globals_length;
 
-    for(length_t g = 0; g != globals_length; g++){
-        ast_global_t *ast_global = &globals[g];
+    for(length_t i = 0; i != globals_length; i++){
+        ast_global_t *ast_global = &globals[i];
         if(!(ast_global->traits & AST_GLOBAL_SPECIAL)) continue;
-        if(ir_gen_special_global(compiler, object, ast_global, g)) return FAILURE;
+        if(ir_gen_special_global(compiler, object, ast_global, i)) return FAILURE;
     }
 
     return SUCCESS;
@@ -610,15 +601,6 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
     type_table_t *type_table = object->ast.type_table;
-
-    ir_type_t *ptr_to_type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    ptr_to_type->kind = TYPE_KIND_POINTER;
-    ptr_to_type->extra = NULL;
-
-    if(ir_gen_resolve_type(compiler, object, &ast_global->type, (ir_type_t**) &ptr_to_type->extra)){
-        internalerrorprintf("ir_gen_special_global() - Could not find IR type for special global variable\n");
-        return FAILURE;
-    }
 
     // NOTE: DANGEROUS: 'global_variable_id' is assumed to be the same between AST and IR global variable lists
     ir_global_t *ir_global = &ir_module->globals[global_variable_id];
@@ -721,7 +703,7 @@ weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
     return result;
 }
 
-errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, funcpair_t pair, ast_type_t *ast_types, ir_value_t **ir_values, source_t source, length_t variadic_length){
+errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func_pair_t pair, ast_type_t *ast_types, ir_value_t **ir_values, source_t source, length_t variadic_length){
     // Find index of 'format' argument
     maybe_index_t format_index = -1;
 

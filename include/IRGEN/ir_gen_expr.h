@@ -114,7 +114,7 @@ errorcode_t ir_gen_arguments(ir_builder_t *builder, ast_expr_t **args, length_t 
 // ---------------- ir_gen_expr_call_method_find_appropriate_method ----------------
 // Finds the appropriate method for a 'CALL METHOD' expression to call
 errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t ***arg_values,
-        ast_type_t **arg_types, length_t *arg_arity, ast_type_t *gives, optional_funcpair_t *result);
+        ast_type_t **arg_types, length_t *arg_arity, ast_type_t *gives, optional_func_pair_t *result);
 
 // ---------------- ir_gen_expr_call_procedure_handle_pass_management ----------------
 // Calls the pass management function on arguments for 'CALL'/'CALL METHOD' expression
@@ -124,7 +124,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *buil
 // ---------------- ir_gen_expr_call_procedure_handle_variadic_packing ----------------
 // Packs variadic arguments into single variadic array argument for 'CALL'/'CALL METHOD' expression if required
 errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t *arg_types,
-        length_t *arity, funcpair_t *pair, ir_value_t **stack_pointer, source_t source_on_failure);
+        length_t *arity, func_pair_t *pair, ir_value_t **stack_pointer, source_t source_on_failure);
 
 // ---------------- ir_gen_math_operands ----------------
 // ir_gens both expression operands of a math expression

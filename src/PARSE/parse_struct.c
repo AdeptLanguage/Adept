@@ -260,8 +260,7 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
         if(parent_class_name){
             if(parse_composite_integrate_another(ctx, out_field_map, out_skeleton, &next_endpoint, maybe_parent_class_name_source, parent_class_name, true)) goto failure;
         } else {
-            ast_type_t vtable_ast_type;
-            ast_type_make_base(&vtable_ast_type, strclone("ptr"));
+            ast_type_t vtable_ast_type = ast_type_make_base(strclone("ptr"));
 
             ast_field_map_add(out_field_map, strclone("__vtable__"), next_endpoint);
             ast_layout_endpoint_increment(&next_endpoint);
@@ -530,9 +529,9 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
 
     // Figure out AST type to return for record
     if(generics){
-        ast_type_make_base_with_polymorphs(&func->return_type, strclone(name), generics, generics_length);
+        func->return_type = ast_type_make_base_with_polymorphs(strclone(name), generics, generics_length);
     } else {
-        ast_type_make_base(&func->return_type, strclone(name));
+        func->return_type = ast_type_make_base(strclone(name));
     }
 
     // Track whether or not all fields are primitive builtin types,

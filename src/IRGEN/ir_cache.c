@@ -11,8 +11,8 @@
 #include "UTIL/ground.h"
 #include "UTIL/hash.h"
 
-void ir_gen_sf_cache_init(ir_gen_sf_cache_t *cache){
-    cache->capacity = IR_GEN_SF_CACHE_SIZE;
+void ir_gen_sf_cache_init(ir_gen_sf_cache_t *cache, length_t num_buckets){
+    cache->capacity = num_buckets;
     cache->storage = malloc(sizeof(ir_gen_sf_cache_entry_t) * cache->capacity);
     memset(cache->storage, 0, sizeof(ir_gen_sf_cache_entry_t) * cache->capacity);
 }
@@ -36,6 +36,20 @@ void ir_gen_sf_cache_free(ir_gen_sf_cache_t *cache){
         }
     }
     free(cache->storage);
+}
+
+
+errorcode_t ir_gen_sf_cache_read(troolean has, func_pair_t maybe_pair, optional_func_pair_t *result){
+    switch(has){
+    case TROOLEAN_TRUE:
+        optional_func_pair_set(result, true, maybe_pair.ast_func_id, maybe_pair.ir_func_id);
+        return SUCCESS;
+    case TROOLEAN_FALSE:
+        result->has = false;
+        return SUCCESS;
+    }
+
+    return FAILURE;
 }
 
 ir_gen_sf_cache_entry_t *ir_gen_sf_cache_locate_or_insert(ir_gen_sf_cache_t *cache, ast_type_t *type){

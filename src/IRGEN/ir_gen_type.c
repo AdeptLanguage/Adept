@@ -36,9 +36,8 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize, successful, void
     #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 16
 
-    ir_type_map_t *type_map = &module->type_map;
-    type_map->mappings_length = ast->composites_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
-    ir_type_mapping_t *mappings = malloc(sizeof(ir_type_mapping_t) * type_map->mappings_length);
+    length_t mappings_length = ast->composites_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
+    ir_type_mapping_t *mappings = malloc(sizeof(ir_type_mapping_t) * mappings_length);
 
     mappings[0].name = "byte";
     mappings[0].type.kind = TYPE_KIND_S8;
@@ -75,7 +74,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     mappings[15].type.kind = TYPE_KIND_VOID;
 
     length_t beginning_of_composites = IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
-    length_t beginning_of_enums = type_map->mappings_length - ast->enums_length;
+    length_t beginning_of_enums = mappings_length - ast->enums_length;
 
     for(length_t i = beginning_of_composites; i != beginning_of_enums; i++){
         // Create skeletons for composite type maps
@@ -88,17 +87,21 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
         mappings[i].type.extra = composite;
     }
 
-    for(length_t i = beginning_of_enums; i != type_map->mappings_length; i++){
+    for(length_t i = beginning_of_enums; i != mappings_length; i++){
         ast_enum_t *enum_definition = &ast->enums[i - beginning_of_enums];
         mappings[i].name = enum_definition->name;
         mappings[i].type.kind = TYPE_KIND_U64;
     }
 
-    qsort(mappings, type_map->mappings_length, sizeof(ir_type_mapping_t), ir_type_mapping_cmp);
-    type_map->mappings = mappings;
+    qsort(mappings, mappings_length, sizeof(ir_type_mapping_t), ir_type_mapping_cmp);
+
+    module->type_map = (ir_type_map_t){
+        .mappings = mappings,
+        .mappings_length = mappings_length,
+    };
 
     // EXPERIMENTAL: Make sure each identifier is unique
-    for(length_t i = 1; i < type_map->mappings_length; i++){
+    for(length_t i = 1; i < mappings_length; i++){
         if(streq(mappings[i - 1].name, mappings[i].name)){
             // ERROR: Multiple types with the same name
             weak_cstr_t name = mappings[i].name;
@@ -120,7 +123,7 @@ errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
         }
     }
 
-    for(length_t i = 0; i != type_map->mappings_length; i++){
+    for(length_t i = 0; i != mappings_length; i++){
         // Fill in bodies for struct/composite type maps
         if(mappings[i].type.kind != TYPE_KIND_STRUCTURE) continue;
 
