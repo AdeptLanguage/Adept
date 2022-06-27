@@ -103,8 +103,7 @@ jobs:
       - name: Debug (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          dir C:\msys64\usr\bin
-          C:\msys64\usr\bin\bash.exe -c "/c/msys64/usr/bin/pacman -S zlib-devel"
+          C:\msys64\usr\bin\pacman -Sy zlib-devel
           dir C:\msys64\usr\lib
       - name: Configure (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
