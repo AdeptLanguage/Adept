@@ -4,7 +4,10 @@ project(Adept)
 option(ADEPT_LINK_LLVM_STATIC "Link against LLVM using static libs" default)
 option(ADEPT_ENABLE_ASAN "Enable runtime address-santization / undefined behavior sanitization for debug builds (only available for Apple clang and LLVM clang)" Off)
 option(ADEPT_ENABLE_LSAN "Enable runtime leak-sanitization for debug builds (only available for LLVM clang)" Off)
-set(ZLIB_USE_STATIC_LIBS On)
+
+if (WIN32)
+	set(ZLIB_USE_STATIC_LIBS On) # Only affects CMake 3.24+
+endif()
 
 find_package(LLVM REQUIRED)
 find_package(CURL REQUIRED)
