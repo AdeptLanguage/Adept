@@ -102,9 +102,10 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev
       - name: Debug (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
+        shell: bash
         run: |
           echo Dlls...
-          where *.dll
+          which -a *.dll
           echo Showing path
           echo %PATH%
           echo Attempt to use pacman from cmd
