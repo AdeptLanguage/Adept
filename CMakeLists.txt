@@ -13,6 +13,7 @@ find_package(ZLIB REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Found Curl ${CURL_LIBRARIES}")
+message(STATUS "Found ZLIB ${ZLIB_LIBRARIES}")
 
 if (MSVC)
     add_compile_options(/W4 /WX)
