@@ -176,9 +176,7 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
         for(length_t i = 0; i != arity; i++){
             ast_expr_t *default_value = constructor->arg_defaults[1 + i];
 
-            if(default_value){
-                func->arg_defaults[i] = ast_expr_clone(default_value);
-            }
+            func->arg_defaults[i] = default_value ? ast_expr_clone(default_value) : NULL;
         }
     } else {
         func->arg_defaults = NULL;
