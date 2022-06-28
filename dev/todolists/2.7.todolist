@@ -47,6 +47,7 @@ MEDIUM-PRIORITY:
 * assert and/or static assert
 * throw error if duplicate/overlapping polymorphic composites with same name and arguments exist
 * polymorphic wildcards e.g. <?> List
+* throw warning/error if trying to define __as__ as a method
 
 LOW-PRIORITY:
 * Finish 'Any'
