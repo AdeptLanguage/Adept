@@ -2361,7 +2361,6 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     // Create IR function
     ir_func_endpoint_t newest_endpoint;
     if(ir_gen_func_head(compiler, object, func, ast_func_id, &newest_endpoint)){
-        printf("fail 8\n");
         return FAILURE;
     }
 
@@ -2372,12 +2371,6 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         .ast_func_id = ast_func_id,
         .ir_func_id = newest_endpoint.ir_func_id,
     };
-
-    {
-        char *s = ast_type_str(&dereferenced_view);
-        printf("attempt_autogen___assign__ SUCCESS %s\n", s);
-        free(s);
-    }
 
     // Return result
     optional_func_pair_set(result, true, ast_func_id, newest_endpoint.ir_func_id);
