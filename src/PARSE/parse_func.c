@@ -171,7 +171,11 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
     func->arg_type_traits = malloc(sizeof(trait_t) * arity);
     
     if(constructor->arg_defaults){
-        func->arg_defaults = memclone(&constructor->arg_defaults[1], sizeof(ast_expr_t*) * arity);
+        func->arg_defaults = malloc(sizeof(ast_expr_t*) * arity);
+
+        for(length_t i = 0; i < arity; i++){
+            func->arg_defaults[i] = ast_expr_clone(constructor->arg_defaults[1 + i]);
+        }
     } else {
         func->arg_defaults = NULL;
     }

@@ -1,0 +1,19 @@
+
+import 'sys/cstdio.adept'
+
+struct Thing () {
+    constructor(default_value int = 10) {
+        printf('Value is %d\n', default_value)
+    }
+}
+
+func main {
+    _thing1 Thing()
+    _thing2 Thing(11)
+    _thing3 Thing = Thing()
+    _thing4 Thing = Thing(11)
+    _thing5 *Thing = new Thing()
+    _thing6 *Thing = new Thing(11)
+    delete _thing5
+    delete _thing6
+}

@@ -55,6 +55,7 @@ def run_all_tests():
     test("constants_old_style", [executable, join(src_dir, "constants_old_style/main.adept")], compiles)
     test("constants_scoped", [executable, join(src_dir, "constants_scoped/main.adept")], compiles)
     test("constructor", [executable, join(src_dir, "constructor/main.adept")], compiles)
+    test("constructor_with_defaults", [executable, join(src_dir, "constructor_with_defaults/main.adept")], compiles)
     test("continue", [executable, join(src_dir, "continue/main.adept")], compiles)
     test("continue_to", [executable, join(src_dir, "continue_to/main.adept")], compiles)
     test("default_args", [executable, join(src_dir, "default_args/main.adept")], compiles)
