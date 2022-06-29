@@ -221,7 +221,7 @@ void compiler_init(compiler_t *compiler){
     compiler->traits = TRAIT_NONE;
     compiler->ignore = TRAIT_NONE;
     compiler->output_filename = NULL;
-    compiler->optimization = OPTIMIZATION_NONE;
+    compiler->optimization = OPTIMIZATION_LESS;
     compiler->checks = TRAIT_NONE;
 
     #if __linux__
@@ -415,6 +415,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->traits |= COMPILER_NO_REMOVE_OBJECT;
             } else if(streq(argv[arg_index], "-c")){
                 compiler->traits |= COMPILER_NO_REMOVE_OBJECT | COMPILER_EMIT_OBJECT;
+            } else if(streq(argv[arg_index], "-Onothing")){
+                compiler->optimization = OPTIMIZATION_ABSOLUTELY_NOTHING;
             } else if(streq(argv[arg_index], "-O0")){
                 compiler->optimization = OPTIMIZATION_NONE;
             } else if(streq(argv[arg_index], "-O1")){

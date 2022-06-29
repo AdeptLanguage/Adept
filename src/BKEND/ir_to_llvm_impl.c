@@ -8,6 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Temporary max defintion
+// https://stackoverflow.com/a/3437484
+#define max(a, b) \
+  ({ __typeof__ (a) _a = (a); \
+     __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
 #include "BKEND/ir_to_llvm.h"
 #include "BRIDGE/bridge.h"
 #include "DRVR/compiler.h"
@@ -96,7 +103,7 @@ LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
     case TYPE_KIND_VOID: return LLVMVoidType();
     case TYPE_KIND_FUNCPTR: {
             ir_type_extra_function_t *function = (ir_type_extra_function_t*) ir_type->extra;
-            LLVMTypeRef args[function->arity];
+            LLVMTypeRef args[max(1, function->arity)];
 
             for(length_t i = 0; i != function->arity; i++){
                 args[i] = ir_to_llvm_type(llvm, function->arg_types[i]);
@@ -160,7 +167,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             // Assume that value->type is a pointer to array element type
             LLVMTypeRef type = ir_to_llvm_type(llvm, (ir_type_t*) value->type->extra);
             
-            LLVMValueRef values[array_literal->length];
+            LLVMValueRef values[max(1, array_literal->length)];
 
             for(length_t i = 0; i != array_literal->length; i++){
                 // Assumes ir_value_t values are constants (should have been checked earlier)
@@ -295,7 +302,7 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
 
     for(length_t ir_func_id = 0; ir_func_id != module_funcs_length; ir_func_id++){
         ir_func_t *ir_func = &module_funcs[ir_func_id];
-        LLVMTypeRef parameters[ir_func->arity];
+        LLVMTypeRef parameters[max(1, ir_func->arity)];
 
         for(length_t a = 0; a != ir_func->arity; a++){
             parameters[a] = ir_to_llvm_type(llvm, ir_func->argument_types[a]);
@@ -654,7 +661,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
             catalog->blocks[b].value_references[i] = llvm_result;
             break;
         case INSTRUCTION_CALL: {
-                LLVMValueRef arguments[((ir_instr_call_t*) instr)->values_length];
+                LLVMValueRef arguments[max(1, ((ir_instr_call_t*) instr)->values_length)];
 
                 for(length_t v = 0; v != ((ir_instr_call_t*) instr)->values_length; v++){
                     arguments[v] = ir_to_llvm_value(llvm, ((ir_instr_call_t*) instr)->values[v]);
@@ -1310,7 +1317,12 @@ void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, L
 
 LLVMCodeGenOptLevel ir_to_llvm_config_optlvl(compiler_t *compiler){
     switch(compiler->optimization){
-    case OPTIMIZATION_NONE:       return LLVMCodeGenLevelNone;
+    case OPTIMIZATION_ABSOLUTELY_NOTHING:
+        return LLVMCodeGenLevelNone;
+    case OPTIMIZATION_NONE:
+        yellowprintf("Note: Because of an LLVM fixed array bug, -O1 will be used instead of -O0\n");
+        printf(      "    If you want to forcefully use -O0 anyways, use -Onothing\n");
+        return LLVMCodeGenLevelLess;
     case OPTIMIZATION_LESS:       return LLVMCodeGenLevelLess;
     case OPTIMIZATION_DEFAULT:    return LLVMCodeGenLevelDefault;
     case OPTIMIZATION_AGGRESSIVE: return LLVMCodeGenLevelAggressive;

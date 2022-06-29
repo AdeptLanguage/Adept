@@ -61,10 +61,11 @@ extern "C" {
 #define COMPILER_IGNORE_ALL                     TRAIT_ALL
 
 // Possible optimization levels
-#define OPTIMIZATION_NONE       0x00
-#define OPTIMIZATION_LESS       0x01
-#define OPTIMIZATION_DEFAULT    0x02
-#define OPTIMIZATION_AGGRESSIVE 0x03
+#define OPTIMIZATION_NONE               0x00
+#define OPTIMIZATION_LESS               0x01
+#define OPTIMIZATION_DEFAULT            0x02
+#define OPTIMIZATION_AGGRESSIVE         0x03
+#define OPTIMIZATION_ABSOLUTELY_NOTHING 0x04
 
 // Possible compiler debug trait options
 #ifdef ENABLE_DEBUG_FEATURES

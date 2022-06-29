@@ -2,6 +2,7 @@
 build
 .vscode
 __pycache__
+__ignore__
 tests/e2e/**/main
 tests/e2e/**/*.o
 tests/e2e/**/*.dep
