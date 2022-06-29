@@ -11,6 +11,6 @@ func main {
         {10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
     }
 
-    print(arr1d)    
+    print(arr1d)
     print(arr2d)
 }

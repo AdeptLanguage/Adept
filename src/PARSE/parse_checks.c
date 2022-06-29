@@ -12,7 +12,7 @@
 #include "UTIL/search.h"
 #include "UTIL/trait.h"
 
-#define doesnt_use_forbidden_traits(traits, forbidden) (((traits) & (forbidden)) == TRAIT_NONE)
+#define uses_forbidden_traits(traits, forbidden) (((traits) & (forbidden)) != TRAIT_NONE)
 static bool is_valid_method(ast_func_t *func);
 static bool is_math_func(const char *func_name);
 
@@ -22,7 +22,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
             func->arity == 1
             && is_valid_method(func)
             && ast_type_is_void(&func->return_type)
-            && doesnt_use_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
+            && !uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
         ){
             return SUCCESS;
         } else {
@@ -42,7 +42,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
                 || ast_type_is_generic_base(&func->return_type)
                 || ast_type_is_fixed_array(&func->return_type)
             )
-            && doesnt_use_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
+            && !uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
         ){
             return SUCCESS;
         } else {
@@ -57,7 +57,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
             && ast_type_is_void(&func->return_type)
             && is_valid_method(func)
             && ast_type_is_pointer_to(&func->arg_types[0], &func->arg_types[1])
-            && doesnt_use_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
+            && !uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
         ){
             return SUCCESS;
         } else {
@@ -71,7 +71,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
             func->arity == 2
             && is_valid_method(func)
             && ast_type_is_pointer(&func->return_type)
-            && doesnt_use_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
+            && !uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
         ){
             return SUCCESS;
         } else {
@@ -85,7 +85,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
             func->arity == 1
             && is_valid_method(func)
             && ast_type_is_pointer(&func->return_type)
-            && doesnt_use_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
+            && !uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
         ){
             return SUCCESS;
         } else {
@@ -99,7 +99,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
             func->arity == 1
             && is_valid_method(func)
             && ast_type_is_base_of(&func->return_type, "usize")
-            && doesnt_use_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
+            && !uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
         ){
             return SUCCESS;
         } else {
@@ -173,6 +173,30 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
             compiler_panic(ctx->compiler, source, "Special function __initializer_list__ must be declared like:\n'__initializer_list__(array *$T, length usize) <$T> ReturnType'");
             return FAILURE;
         }
+    }
+
+    if(streq(func->name, "__as__")){
+        if(is_valid_method(func)){
+            compiler_panic(ctx->compiler, source, "Special function __as__ must be a function, but was declared as a method");
+            return FAILURE;
+        }
+
+        if(func->arity != 1){
+            compiler_panicf(ctx->compiler, source, "Special function __as__ should only take 1 parameter, but was declared to take %d", (int) func->arity);
+            return FAILURE;
+        }
+
+        if(ast_type_is_void(&func->return_type)){
+            compiler_panic(ctx->compiler, source, "Special function __as__ is required to have a non-void return type");
+            return FAILURE;
+        }
+
+        if(uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)){
+            compiler_panic(ctx->compiler, source, "Special function __as__ cannot be a foreign function");
+            return FAILURE;
+        }
+
+        return SUCCESS;
     }
     
     if(is_math_func(func->name)){
