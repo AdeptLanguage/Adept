@@ -83,6 +83,12 @@ void indent(FILE *file, length_t indentation_level);
 // Returns whether a string starts with another string
 bool string_starts_with(weak_cstr_t original, weak_cstr_t stub);
 
+// ---------------- length_max ----------------
+// Returns the larger of two length values
+static inline length_t length_max(length_t a, length_t b){
+    return a > b ? a : b;
+}
+
 #ifdef __cplusplus
 }
 #endif
