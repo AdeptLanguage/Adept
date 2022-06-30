@@ -140,9 +140,9 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
 // Generates LLVM globals for IR globals
 errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object);
 
-// ---------------- ir_to_llvm_null_check ----------------
+// ---------------- llvm_create_optional_null_check ----------------
 // Generates LLVM instructions to check for null pointer
-void ir_to_llvm_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock);
+void llvm_create_optional_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock);
 
 // ---------------- ir_to_llvm_config_optlvl ----------------
 // Converts optimization level to LLVM optimization constant
