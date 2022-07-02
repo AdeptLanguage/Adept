@@ -28,23 +28,41 @@ errorcode_t parse_composite_head(
     bool *out_is_packed,
     bool *out_is_record,
     bool *out_is_class,
-    maybe_null_weak_cstr_t *out_parent_class,
-    source_t *out_maybe_parent_class_name,
+    ast_type_t *out_parent_class,
     strong_cstr_t **out_generics,
     length_t *out_generics_length
 );
 
 // ------------------ parse_composite_body ------------------
 // Parses the body of a composite
-errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class, maybe_null_weak_cstr_t parent_class_name, source_t maybe_parent_class_name_source);
+errorcode_t parse_composite_body(
+    parse_ctx_t *ctx,
+    ast_field_map_t *out_field_map,
+    ast_layout_skeleton_t *out_skeleton,
+    bool is_class,
+    const ast_type_t *maybe_parent_class
+);
 
 // ------------------ parse_composite_field ------------------
 // Parses a single field of a composite
-errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, length_t *inout_backfill, ast_layout_endpoint_t *inout_next_endpoint);
+errorcode_t parse_composite_field(
+    parse_ctx_t *ctx,
+    ast_field_map_t *inout_field_map,
+    ast_layout_skeleton_t *inout_skeleton,
+    length_t *inout_backfill,
+    ast_layout_endpoint_t *inout_next_endpoint
+);
 
 // ------------------ parse_composite_integrate_another ------------------
 // Parses a single struct integration field of a composite
-errorcode_t parse_composite_integrate_another(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint, source_t source_on_error, weak_cstr_t inner_struct_name, bool require_class);
+errorcode_t parse_composite_integrate_another(
+    parse_ctx_t *ctx,
+    ast_field_map_t *inout_field_map,
+    ast_layout_skeleton_t *inout_skeleton,
+    ast_layout_endpoint_t *inout_next_endpoint,
+    const ast_type_t *other_type,
+    bool require_class
+);
 
 // ------------------ parse_anonymous_composite ------------------
 // Parses a single anonymous composite field of a composite

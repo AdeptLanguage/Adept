@@ -63,7 +63,7 @@ static LLVMValueRef llvm_get_zero_value(llvm_context_t *llvm, ir_type_t *type){
     case TYPE_KIND_POINTER:
         return LLVMConstNull(ir_to_llvm_type(llvm, type));
     default:
-        die("ir_to_llvm_instructions() - INSTRUCTION_ISxxZERO received unrecognized type kind\n");
+        return NULL;
     }
 }
 
@@ -950,6 +950,10 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
                 LLVMValueRef zero = llvm_get_zero_value(llvm, ir_type);
                 LLVMValueRef value = ir_to_llvm_value(llvm, cast_instr->value);
+
+                if(zero == NULL){
+                    die("ir_to_llvm_instructions() - INSTRUCTION_ISxxZERO received unrecognized type kind\n");
+                }
 
                 catalog->blocks[b].value_references[i] =
                     (ir_type->kind == TYPE_KIND_FLOAT || ir_type->kind == TYPE_KIND_DOUBLE)

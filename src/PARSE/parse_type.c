@@ -78,14 +78,14 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 if(parse_expr(ctx, &length)) goto failure;
 
                 ast_elem_var_fixed_array_t *var_fixed_array = malloc(sizeof(ast_elem_var_fixed_array_t));
-                source_t var_fixed_array_source = sources[*i];
 
-                var_fixed_array->length = length;
+                *var_fixed_array = (ast_elem_var_fixed_array_t){
+                    .id = AST_ELEM_VAR_FIXED_ARRAY,
+                    .source = sources[*i],
+                    .length = length,
+                };
 
-                out_type->elements[out_type->elements_length] = (ast_elem_t*) var_fixed_array;
-                out_type->elements[out_type->elements_length]->id = AST_ELEM_VAR_FIXED_ARRAY;
-                out_type->elements[out_type->elements_length]->source = var_fixed_array_source;
-                out_type->elements_length++;
+                out_type->elements[out_type->elements_length++] = (ast_elem_t*) var_fixed_array;
 
                 if(parse_eat(ctx, TOKEN_BRACKET_CLOSE, "Expected ']' after size of fixed array in type")) goto failure;
                 id = tokens[*i].id;
@@ -146,7 +146,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             layout_kind = id == TOKEN_UNION ? AST_LAYOUT_UNION : AST_LAYOUT_STRUCT;
             (*i)++;
 
-            if(parse_composite_body(ctx, &field_map, &skeleton, false, NULL, NULL_SOURCE)) goto failure;
+            if(parse_composite_body(ctx, &field_map, &skeleton, false, NULL)) goto failure;
 
             // Pass over closing ')'
             (*i)++;

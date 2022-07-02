@@ -36,9 +36,8 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     bool is_packed, is_record, is_class;
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    maybe_null_weak_cstr_t parent_class = NULL;
-    source_t maybe_parent_class_name_source;
-    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &is_class, &parent_class, &maybe_parent_class_name_source, &generics, &generics_length)) return FAILURE;
+    ast_type_t parent_class = {0};
+    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &is_class, &parent_class, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -58,7 +57,7 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_field_map_t field_map;
     ast_layout_skeleton_t skeleton;
 
-    if(parse_composite_body(ctx, &field_map, &skeleton, is_class, parent_class, maybe_parent_class_name_source)){
+    if(parse_composite_body(ctx, &field_map, &skeleton, is_class, parent_class.elements_length ? &parent_class : NULL)){
         free(name);
         return FAILURE;
     }
@@ -135,8 +134,7 @@ errorcode_t parse_composite_head(
     bool *out_is_packed,
     bool *out_is_record,
     bool *out_is_class,
-    maybe_null_weak_cstr_t *out_parent_class,
-    source_t *out_maybe_parent_class_name_source,
+    ast_type_t *out_parent_class,
     strong_cstr_t **out_generics,
     length_t *out_generics_length
 ){
@@ -146,8 +144,7 @@ errorcode_t parse_composite_head(
     *out_is_packed = false;
     *out_is_record = false;
     *out_is_class = false;
-    *out_parent_class = NULL;
-    *out_maybe_parent_class_name_source = NULL_SOURCE;
+    *out_parent_class = (ast_type_t){0};
 
     if(is_union){
         if(parse_eat(ctx, TOKEN_UNION, "Expected 'union' keyword for union definition")) return FAILURE;
@@ -215,10 +212,7 @@ errorcode_t parse_composite_head(
     }
 
     if(parse_eat(ctx, TOKEN_EXTENDS, NULL) == SUCCESS){
-        *out_maybe_parent_class_name_source = ctx->tokenlist->sources[*ctx->i];
-
-        *out_parent_class = parse_eat_word(ctx, "Expected parent class name after 'extends' keyword");
-        if(*out_parent_class == NULL) goto failure;
+        if(parse_type(ctx, out_parent_class)) goto failure;
     }
 
     parse_prepend_namespace(ctx, out_name);
@@ -232,7 +226,7 @@ failure:
     return FAILURE;
 }
 
-errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class, maybe_null_weak_cstr_t parent_class_name, source_t maybe_parent_class_name_source){
+errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class, const ast_type_t *maybe_parent_class){
     // Parses root-level composite fields
 
     length_t *i = ctx->i;
@@ -257,8 +251,8 @@ errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_ma
     ast_layout_endpoint_init_with(&next_endpoint, (uint16_t[]){0}, 1);
 
     if(is_class){
-        if(parent_class_name){
-            if(parse_composite_integrate_another(ctx, out_field_map, out_skeleton, &next_endpoint, maybe_parent_class_name_source, parent_class_name, true)) goto failure;
+        if(maybe_parent_class){
+            if(parse_composite_integrate_another(ctx, out_field_map, out_skeleton, &next_endpoint, maybe_parent_class, true)) goto failure;
         } else {
             ast_type_t vtable_ast_type = ast_type_make_base(strclone("ptr"));
 
@@ -316,14 +310,21 @@ failure:
     return FAILURE;
 }
 
-errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, length_t *inout_backfill, ast_layout_endpoint_t *inout_next_endpoint){
+errorcode_t parse_composite_field(
+    parse_ctx_t *ctx,
+    ast_field_map_t *inout_field_map,
+    ast_layout_skeleton_t *inout_skeleton,
+    length_t *inout_backfill,
+    ast_layout_endpoint_t *inout_next_endpoint
+){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
 
     const tokenid_t leading_token = tokens[*i].id;
 
-    if(leading_token == TOKEN_STRUCT && tokens[*i + 1].id == TOKEN_WORD){
+    // TODO: Cleanup condition
+    if(leading_token == TOKEN_STRUCT && tokens[*i + 1].id != TOKEN_OPEN && tokens[*i + 1].id != TOKEN_BRACKET_OPEN){
         // Struct Integration Field
 
         if(*inout_backfill != 0){
@@ -331,12 +332,13 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
             return FAILURE;
         }
 
-        source_t source_on_error = sources[(*i)++];
+        // Ignore 'struct' keyword
+        *i += 1;
 
-        maybe_null_weak_cstr_t inner_struct_name = parse_eat_word(ctx, "Expected struct name for integration");
-        if(inner_struct_name == NULL) return FAILURE;
+        ast_type_t inner_composite_type;
+        if(parse_type(ctx, &inner_composite_type)) return FAILURE;
 
-        return parse_composite_integrate_another(ctx, inout_field_map, inout_skeleton, inout_next_endpoint, source_on_error, inner_struct_name, false);
+        return parse_composite_integrate_another(ctx, inout_field_map, inout_skeleton, inout_next_endpoint, &inner_composite_type, false);
     }
 
     if(leading_token == TOKEN_PACKED || leading_token == TOKEN_STRUCT || leading_token == TOKEN_UNION){
@@ -378,45 +380,52 @@ errorcode_t parse_composite_field(parse_ctx_t *ctx, ast_field_map_t *inout_field
     return SUCCESS;
 }
 
-errorcode_t parse_composite_integrate_another(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint, source_t source_on_error, weak_cstr_t inner_struct_name, bool require_class){
-    // (Inside of composite definition)
-    // struct SomeStructure
-    //   ^
+errorcode_t parse_composite_integrate_another(
+    parse_ctx_t *ctx,
+    ast_field_map_t *inout_field_map,
+    ast_layout_skeleton_t *inout_skeleton,
+    ast_layout_endpoint_t *inout_next_endpoint,
+    const ast_type_t *other_type,
+    bool require_class
+){
+    ast_composite_t *composite = ast_find_composite(ctx->ast, other_type);
 
-    length_t *i = ctx->i;
-    source_t *sources = ctx->tokenlist->sources;
+    if(composite == NULL){
+        const char *message = require_class ? "Cannot extend non-existent class '%s'" : "Struct '%s' must already be declared";
+        strong_cstr_t typename = ast_type_str(other_type);
+        compiler_panicf(ctx->compiler, other_type->source, message, typename);
+        free(typename);
 
-    ast_composite_t *inner_composite = ast_composite_find_exact(ctx->ast, inner_struct_name);
-
-    // Class requirements
-    if(require_class && (inner_composite == NULL || !inner_composite->is_class)){
-        const char *message = inner_composite ? "Cannot extend non-class '%s'" : "Cannot extend non-existent class '%s'";
-        compiler_panicf(ctx->compiler, source_on_error, message, inner_struct_name);
-
-        if(inner_composite == NULL){
+        if(require_class){
             printf("    Please note that parent classes must be defined before their children\n");
         }
-
         return FAILURE;
     }
 
-    // Existence requirements
-    if(inner_composite == NULL){
-        compiler_panicf(ctx->compiler, source_on_error, "Struct '%s' must already be declared", inner_struct_name);
-        return FAILURE;
+    ast_layout_t *layout = &composite->layout;
+
+    if(composite->is_polymorphic){
+        // TODO: Perform substitutions
     }
 
     // Don't support complex composites for now
-    if(!ast_layout_is_simple_struct(&inner_composite->layout)){
-        compiler_panicf(ctx->compiler, sources[*i], "Cannot integrate complex composite '%s', only simple structs are allowed", inner_struct_name);
+    if(!ast_layout_is_simple_struct(layout)){
+        const char *message =
+            require_class
+                ? "Cannot extend class '%s' which has a complex layout"
+                : "Cannot integrate composite '%s' which has a complex layout";
+        
+        strong_cstr_t typename = ast_type_str(other_type);
+        compiler_panicf(ctx->compiler, other_type->source, message, typename);
+        free(typename);
         return FAILURE;
     }
 
-    length_t field_count = ast_simple_field_map_get_count(&inner_composite->layout.field_map);
+    length_t field_count = ast_simple_field_map_get_count(&layout->field_map);
 
-    for(length_t f = 0; f != field_count; f++){
-        weak_cstr_t field_name = ast_simple_field_map_get_name_at_index(&inner_composite->layout.field_map, f);
-        ast_type_t *field_type = ast_layout_skeleton_get_type_at_index(&inner_composite->layout.skeleton, f);
+    for(length_t i = 0; i != field_count; i++){
+        weak_cstr_t field_name = ast_simple_field_map_get_name_at_index(&layout->field_map, i);
+        ast_type_t *field_type = ast_layout_skeleton_get_type_at_index(&layout->skeleton, i);
 
         ast_field_map_add(inout_field_map, strclone(field_name), *inout_next_endpoint);
         ast_layout_skeleton_add_type(inout_skeleton, ast_type_clone(field_type));

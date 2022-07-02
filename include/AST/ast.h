@@ -326,6 +326,11 @@ ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name);
 // Finds a polymorphic composite by its exact name
 ast_poly_composite_t *ast_poly_composite_find_exact(ast_t *ast, const char *name);
 
+// ---------------- ast_find_composite ----------------
+// Finds a composite (polymorphic or not) using an AST type
+// Returns NULL if no such composite exists
+ast_composite_t *ast_find_composite(ast_t *ast, const ast_type_t *type);
+
 // ---------------- ast_composite_find_exact_field ----------------
 // Finds a field by name within a composite
 successful_t ast_composite_find_exact_field(ast_composite_t *composite, const char *name, ast_layout_endpoint_t *out_endpoint, ast_layout_endpoint_path_t *out_path);

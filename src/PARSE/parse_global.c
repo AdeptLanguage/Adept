@@ -45,8 +45,11 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         break;
     }
     
+    ast_type_t type = {0};
+    ast_expr_t *initial_value = NULL;
     strong_cstr_t name = parse_take_word(ctx, "INTERNAL ERROR: Expected word");
-    if(name == NULL) return FAILURE;
+
+    if(name == NULL) goto failure;
 
     parse_prepend_namespace(ctx, &name);
 
@@ -54,8 +57,7 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         // Handle old style constant '==' syntax
 
         if(parse_old_style_constant_global(ctx, name, source)){
-            free(name);
-            return FAILURE;
+            goto failure;
         }
 
         return SUCCESS;
@@ -66,10 +68,8 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         (*i)++;
     }
     
-    ast_expr_t *initial_value = NULL;
 
-    ast_type_t type;
-    if(parse_type(ctx, &type)) return FAILURE;
+    if(parse_type(ctx, &type)) goto failure;
 
     if(tokens[*i].id == TOKEN_ASSIGN){
         (*i)++;
@@ -77,20 +77,23 @@ errorcode_t parse_global(parse_ctx_t *ctx){
              // 'undef' does nothing for globals, so pretend like this is a plain definition
             (*i)++;
         } else if(parse_expr(ctx, &initial_value)){
-            ast_type_free(&type);
-            return FAILURE;
+            goto failure;
         }
     }
 
     if(tokens[*i].id != TOKEN_NEWLINE){
         compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Expected end-of-line after global variable definition");
-        if(initial_value) ast_expr_free_fully(initial_value);
-        ast_type_free(&type);
-        return FAILURE;
+        goto failure;
     }
 
     ast_add_global(ast, name, type, initial_value, traits, source);
     return SUCCESS;
+
+failure:
+    free(name);
+    ast_type_free(&type);
+    if(initial_value) ast_expr_free_fully(initial_value);
+    return FAILURE;
 }
 
 errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_constant){

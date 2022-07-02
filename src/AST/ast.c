@@ -970,6 +970,42 @@ ast_poly_composite_t *ast_poly_composite_find_exact(ast_t *ast, const char *name
     return NULL;
 }
 
+ast_composite_t *ast_find_composite(ast_t *ast, const ast_type_t *type){
+    if(type->elements_length != 1) return NULL;
+
+    switch(type->elements[0]->id){
+    case AST_ELEM_BASE: {
+            const char *target_name = ((ast_elem_base_t*) type->elements[0])->base;
+
+            for(length_t i = 0; i != ast->composites_length; i++){
+                ast_composite_t *composite = &ast->composites[i];
+
+                if(streq(composite->name, target_name)){
+                    return composite;
+                }
+            }
+        }
+        break;
+    case AST_ELEM_GENERIC_BASE: {
+            ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) type->elements[0];
+
+            const char *target_name = generic_base_elem->name;
+            length_t generics_count = generic_base_elem->generics_length;
+
+            for(length_t i = 0; i != ast->poly_composites_length; i++){
+                ast_poly_composite_t *poly_composite = &ast->poly_composites[i];
+
+                if(streq(poly_composite->name, target_name) && poly_composite->generics_length == generics_count){
+                    return (ast_composite_t*) poly_composite;
+                }
+            }
+        }
+        break;
+    }
+
+    return NULL;
+}
+
 successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t *out_index){
     for(length_t i = 0; i != ast_enum->length; i++){
         if(streq(ast_enum->kinds[i], name)){

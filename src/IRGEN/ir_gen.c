@@ -59,35 +59,34 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ir_proc_map_t method_map = module->method_map;
 
-    for(length_t i = 0; i != ast->composites_length; i++){
-        ast_composite_t *composite = &ast->composites[i];
-        if(!composite->is_class) continue;
+    (void) compiler;
+    (void) object;
 
-        const char *class_name = composite->name;
+    for(length_t i = 0; i != method_map.length; i++){
+        ir_method_key_t key = ((ir_method_key_t*) method_map.keys)[i];
+        ir_func_endpoint_list_t *endpoint_list = method_map.endpoint_lists[i];
+        
+        for(length_t i = 0; i != endpoint_list->length; i++){
+            ir_func_endpoint_t endpoint = endpoint_list->endpoints[i];
+            ast_func_t *func = &ast->funcs[endpoint.ast_func_id];
 
-        for(length_t i = 0; i != method_map.length; i++){
-            ir_method_key_t key = ((ir_method_key_t*) method_map.keys)[i];
+            // TODO: Find/Instantiate missing methods and generate vtables
 
-            if(!streq(key.struct_name, class_name)) continue;
-            
-            ir_func_endpoint_list_t *endpoint_list = method_map.endpoint_lists[i];
-            
-            for(length_t i = 0; i != endpoint_list->length; i++){
-                ir_func_endpoint_t endpoint = endpoint_list->endpoints[i];
-                ast_func_t *func = &ast->funcs[endpoint.ast_func_id];
+            if(func->traits & AST_FUNC_OVERRIDE){
+                compiler_panic(compiler, func->source, "Overriding virtual methods is not yet implemented");
+                return FAILURE;
 
-                if(func->traits & AST_FUNC_VIRTUAL){
-                    // TODO: Use list of virtual methods to construct vtable
-                    // TODO: After incorporate any virtual methods inherited from parents
-                    // printf("%s.%s\n", key.struct_name, key.method_name);
-                    compiler_panic(compiler, func->source, "Virtual methods are not yet implemented!");
-                    return FAILURE;
-                }
+                // TODO: Handle overriden virtual methods
+                printf("(override) %s.%s %d\n", key.struct_name, key.method_name, (int) endpoint.ir_func_id);
+            } else if(func->traits & AST_FUNC_VIRTUAL){
+                compiler_panic(compiler, func->source, "Virtual methods are not yet implemented");
+                return FAILURE;
+
+                // TODO: Handle root virtual methods
+                printf("(virtual) %s.%s %d\n", key.struct_name, key.method_name, (int) endpoint.ir_func_id);
             }
         }
     }
-
-    // TODO: Collect virtuals and overrides
 
     // Inject vtable initializations
     for(length_t i = 0; i < module->vtable_init_list.length; i++){
