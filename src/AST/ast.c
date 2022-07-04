@@ -1143,7 +1143,14 @@ void ast_add_poly_func(ast_t *ast, weak_cstr_t func_name_persistent, func_id_t a
     poly_func->is_beginning_of_group = -1; // Uncalculated
 }
 
-ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, bool is_class){
+ast_composite_t *ast_add_composite(
+    ast_t *ast,
+    strong_cstr_t name,
+    ast_layout_t layout,
+    source_t source,
+    const ast_type_t *maybe_parent,
+    bool is_class
+){
     expand((void**) &ast->composites, sizeof(ast_composite_t), ast->composites_length, &ast->composites_capacity, 1, 4);
 
     ast_composite_t *composite = &ast->composites[ast->composites_length++];
@@ -1152,6 +1159,7 @@ ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t 
         .name = name,
         .layout = layout,
         .source = source,
+        .parent = maybe_parent ? ast_type_clone(maybe_parent) : (ast_type_t){0},
         .is_polymorphic = false,
         .is_class = is_class,
         .has_constructor = false,
@@ -1160,7 +1168,16 @@ ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t 
     return composite;
 }
 
-ast_poly_composite_t *ast_add_poly_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, bool is_class, strong_cstr_t *generics, length_t generics_length){
+ast_poly_composite_t *ast_add_poly_composite(
+    ast_t *ast,
+    strong_cstr_t name,
+    ast_layout_t layout,
+    source_t source,
+    const ast_type_t *maybe_parent,
+    bool is_class,
+    strong_cstr_t *generics,
+    length_t generics_length
+){
     expand((void**) &ast->poly_composites, sizeof(ast_poly_composite_t), ast->poly_composites_length, &ast->poly_composites_capacity, 1, 4);
 
     ast_poly_composite_t *poly_composite = &ast->poly_composites[ast->poly_composites_length++];
@@ -1169,6 +1186,7 @@ ast_poly_composite_t *ast_add_poly_composite(ast_t *ast, strong_cstr_t name, ast
         .name = name,
         .layout = layout,
         .source = source,
+        .parent = maybe_parent ? ast_type_clone(maybe_parent) : (ast_type_t){0},
         .is_polymorphic = true,
         .is_class = is_class,
         .has_constructor = false,
@@ -1214,7 +1232,7 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
         };
 
         ast_layout_init_with_struct_fields(&layout, names, types, 1);
-        ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, false);
+        ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, NULL, false);
     } else {
         // Larger Intel x86_64 va_list
 
@@ -1240,7 +1258,7 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
         };
         
         ast_layout_init_with_struct_fields(&layout, names, types, 1);
-        ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, false);
+        ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, NULL, false);
     }
 }
 

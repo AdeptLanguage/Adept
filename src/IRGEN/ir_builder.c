@@ -1799,7 +1799,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     
     // Require not disallowed
     if(poly_func->traits & AST_FUNC_DISALLOW) return FAILURE;
-    
+
     // Determine whether we are missing arguments
     bool requires_use_of_defaults = required_arity > types_list_length;
 
@@ -1857,8 +1857,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     func->arg_sources = malloc(sizeof(source_t) * poly_func->arity);
     func->arg_flows = malloc(sizeof(char) * poly_func->arity);
     func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
-
-    func->traits |= poly_func->traits & ~(AST_FUNC_MAIN & AST_FUNC_POLYMORPHIC);
+    func->traits |= poly_func->traits & ~(AST_FUNC_MAIN | AST_FUNC_POLYMORPHIC);
     func->traits |= AST_FUNC_GENERATED;
 
     if(poly_func->arg_defaults) {
@@ -2391,33 +2390,24 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
         case AST_ELEM_FUNC: {
                 ast_elem_func_t *func = (ast_elem_func_t*) in_type->elements[i];
                 
-                // DANGEROUS: Manually creating/deleting ast_elem_func_t
-                ast_elem_func_t *resolved = malloc(sizeof(ast_elem_func_t));
-                resolved->id = AST_ELEM_FUNC;
-                resolved->source = func->source;
-                resolved->arg_types = malloc(sizeof(ast_type_t) * func->arity);
-                resolved->arity = func->arity;
-                resolved->return_type = malloc(sizeof(ast_type_t));
-                resolved->traits = func->traits;
-                resolved->ownership = true;
+                ast_type_t *arg_types = malloc(sizeof(ast_type_t) * func->arity);
+                ast_type_t *return_type = malloc(sizeof(ast_type_t));
 
                 for(length_t i = 0; i != func->arity; i++){
-                    if(resolve_type_polymorphics(compiler, type_table, catalog, &func->arg_types[i], &resolved->arg_types[i])){
-                        ast_types_free_fully(resolved->arg_types, i);
-                        free(resolved->return_type);
-                        free(resolved);
+                    if(resolve_type_polymorphics(compiler, type_table, catalog, &func->arg_types[i], &arg_types[i])){
+                        ast_types_free_fully(arg_types, i);
+                        free(return_type);
                         return FAILURE;
                     }
                 }
 
-                if(resolve_type_polymorphics(compiler, type_table, catalog, func->return_type, resolved->return_type)){
-                    ast_types_free_fully(resolved->arg_types, i);
-                    free(resolved->return_type);
-                    free(resolved);
+                if(resolve_type_polymorphics(compiler, type_table, catalog, func->return_type, return_type)){
+                    ast_types_free_fully(arg_types, i);
+                    free(return_type);
                     return FAILURE;
                 }
 
-                elements[length++] = (ast_elem_t*) resolved;
+                elements[length++] = ast_elem_func_make(func->source, arg_types, func->arity, return_type, func->traits, true);
             }
             break;
         case AST_ELEM_GENERIC_BASE: {
@@ -2437,14 +2427,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
                     }
                 }
 
-                ast_elem_generic_base_t *resolved_generic_base = malloc(sizeof(ast_elem_generic_base_t));
-                resolved_generic_base->id = AST_ELEM_GENERIC_BASE;
-                resolved_generic_base->source = generic_base_elem->source;
-                resolved_generic_base->name = strclone(generic_base_elem->name);
-                resolved_generic_base->generics = resolved;
-                resolved_generic_base->generics_length = generic_base_elem->generics_length;
-                resolved_generic_base->name_is_polymorphic = false;
-                elements[length++] = (ast_elem_t*) resolved_generic_base;
+                elements[length++] = ast_elem_generic_base_make(strclone(generic_base_elem->name), generic_base_elem->source, resolved, generic_base_elem->generics_length);
             }
             break;
         case AST_ELEM_POLYMORPH: {
@@ -2459,6 +2442,7 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
 
                 // Replace the polymorphic type variable with the determined type
                 expand((void**) &elements, sizeof(ast_elem_t*), length, &capacity, type_var->binding.elements_length, 4);
+
                 for(length_t j = 0; j != type_var->binding.elements_length; j++){
                     elements[length++] = ast_elem_clone(type_var->binding.elements[j]);
                 }
@@ -2466,20 +2450,16 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
             break;
         case AST_ELEM_POLYCOUNT: {
                 // Find the determined type for the polymorphic count variable
-                ast_elem_polycount_t *polycount_element = (ast_elem_polycount_t*) in_type->elements[i];
-                ast_poly_catalog_count_t *count_var = ast_poly_catalog_find_count(catalog, polycount_element->name);
+                ast_elem_polycount_t *polycount_elem = (ast_elem_polycount_t*) in_type->elements[i];
+                ast_poly_catalog_count_t *count_var = ast_poly_catalog_find_count(catalog, polycount_elem->name);
 
                 if(count_var == NULL){
-                    compiler_panicf(compiler, in_type->source, "Undetermined polymorphic count variable '$#%s'", polycount_element->name);
+                    compiler_panicf(compiler, in_type->source, "Undetermined polymorphic count variable '$#%s'", polycount_elem->name);
                     return FAILURE;
                 }
 
                 // Replace the polymorphic type variable with the determined type
-                ast_elem_fixed_array_t *resolved = malloc(sizeof(ast_elem_fixed_array_t));
-                resolved->id = AST_ELEM_FIXED_ARRAY;
-                resolved->source = polycount_element->source;
-                resolved->length = count_var->binding;
-                elements[length++] = (ast_elem_t*) resolved;
+                elements[length++] = ast_elem_fixed_array_make(polycount_elem->source, count_var->binding);
             }
             break;
         default:
@@ -2492,14 +2472,17 @@ errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_t
     if(out_type == NULL)    out_type = in_type;
     if(out_type == in_type) ast_type_free(in_type);
 
-    out_type->elements = elements;
-    out_type->elements_length = length;
-    out_type->source = in_type->source;
+    *out_type = (ast_type_t){
+        .elements = elements,
+        .elements_length = length,
+        .source = in_type->source,
+    };
 
     // Since we are past the parsing phase, we can check that RTTI isn't disabled
     if(type_table && !(compiler->traits & COMPILER_NO_TYPEINFO)){
         type_table_give(type_table, out_type, NULL);
     }
+
     return SUCCESS;
 }
 

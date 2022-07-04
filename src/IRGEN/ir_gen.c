@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_identical.h"
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
@@ -28,6 +29,7 @@
 #include "IRGEN/ir_gen_rtti.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
+#include "IRGEN/ir_gen_vtree.h"
 #include "LEX/lex.h"
 #include "UTIL/builtin_type.h"
 #include "UTIL/color.h"
@@ -50,8 +52,74 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
         || ir_gen_functions(compiler, object)
         || ir_gen_functions_body(compiler, object)
         || ir_gen_special_globals(compiler, object)
-        || ir_gen_fill_in_rtti(object)
-        || ir_gen_vtables(compiler, object);
+        || ir_gen_vtables(compiler, object)
+        || ir_gen_fill_in_rtti(object);
+}
+
+static errorcode_t translate_polymorphic_parent_class(
+    compiler_t *compiler,
+    object_t *object,
+    ast_poly_composite_t *the_class,
+    const ast_type_t *the_class_concrete_usage, 
+    ast_type_t *out_type
+){
+    assert(the_class->parent.elements_length != 0);
+
+    ast_t *ast = &object->ast;
+
+    {
+        char *s = ast_type_str(the_class_concrete_usage);
+        blueprintf("[debug] Translating parent of %s\n", s);
+        free(s);
+    }
+
+    ast_type_t *poly_extended_type = &the_class->parent;
+    assert(ast_type_is_generic_base(poly_extended_type));
+    assert(ast_type_has_polymorph(poly_extended_type));
+
+    ast_elem_generic_base_t *concrete_generic_base = (ast_elem_generic_base_t*) the_class_concrete_usage->elements[0];
+    assert(the_class->generics_length == concrete_generic_base->generics_length);
+
+    ast_poly_composite_t *parent_composite = (ast_poly_composite_t*) ast_find_composite(ast, poly_extended_type);
+    
+    if(parent_composite == NULL){
+        const char *missing_parent_name = ((ast_elem_generic_base_t*) poly_extended_type->elements[0])->name;
+
+        char *s = ast_type_str(the_class_concrete_usage);
+        compiler_panicf(compiler, the_class->source, "Cannot find parent class '%s' for type '%s'", missing_parent_name, s);
+        free(s);
+        return FAILURE;
+    }
+
+    assert(parent_composite->is_class);
+    assert(parent_composite->is_polymorphic);
+
+    blueprintf("[debug] > Successfully found parent class %s\n", parent_composite->name);
+
+    ast_poly_catalog_t catalog;
+    ast_poly_catalog_init(&catalog);
+
+    for(length_t i = 0; i != the_class->generics_length; i++){
+        ast_poly_catalog_add_type(&catalog, the_class->generics[i], &concrete_generic_base->generics[i]);
+    }
+
+    errorcode_t errorcode = resolve_type_polymorphics(compiler, ast->type_table, &catalog, poly_extended_type, out_type);
+    ast_poly_catalog_free(&catalog);
+
+    if(errorcode){
+        char *s = ast_type_str(poly_extended_type);
+        blueprintf("[debug] > Could not translate %s\n", s);
+        free(s);
+        return FAILURE;
+    }
+
+    {
+        char *s = ast_type_str(out_type);
+        blueprintf("[debug] > Translated parent to %s\n", s);
+        free(s);
+    }
+
+    return SUCCESS;
 }
 
 errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
@@ -59,33 +127,129 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ir_proc_map_t method_map = module->method_map;
 
-    (void) compiler;
-    (void) object;
+    // TODO: This function is an active work in progress!!!
+    // As this will never be run (unless trying to use W.I.P. features),
+    // it does contain debugging logs to reflect the current state of progress.
 
+    // Overview of Steps:
+    // - Create list of trees, with virtual functions at roots
+    // - Link children to parents
+    // - Mark overrides
+    // - Generate missing methods
+    // - Collect tree silhouettes into vtables
+
+    vtree_list_t vtree_list = {0};
+
+    // Collect all concrete virtual methods along with determining root classes
     for(length_t i = 0; i != method_map.length; i++){
-        ir_method_key_t key = ((ir_method_key_t*) method_map.keys)[i];
         ir_func_endpoint_list_t *endpoint_list = method_map.endpoint_lists[i];
         
         for(length_t i = 0; i != endpoint_list->length; i++){
             ir_func_endpoint_t endpoint = endpoint_list->endpoints[i];
             ast_func_t *func = &ast->funcs[endpoint.ast_func_id];
 
-            // TODO: Find/Instantiate missing methods and generate vtables
+            if(func->traits & AST_FUNC_VIRTUAL && endpoint.ir_func_id != INVALID_FUNC_ID){
+                ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
+                vtree_t *vtree = vtree_list_find_or_insert(&vtree_list, &subject_type);
+                vtree_append_virtual(vtree, endpoint);
 
-            if(func->traits & AST_FUNC_OVERRIDE){
-                compiler_panic(compiler, func->source, "Overriding virtual methods is not yet implemented");
-                return FAILURE;
-
-                // TODO: Handle overriden virtual methods
-                printf("(override) %s.%s %d\n", key.struct_name, key.method_name, (int) endpoint.ir_func_id);
-            } else if(func->traits & AST_FUNC_VIRTUAL){
-                compiler_panic(compiler, func->source, "Virtual methods are not yet implemented");
-                return FAILURE;
-
-                // TODO: Handle root virtual methods
-                printf("(virtual) %s.%s %d\n", key.struct_name, key.method_name, (int) endpoint.ir_func_id);
+                char *s = ast_type_str(&subject_type);
+                blueprintf("[debug] Has root class %s\n", s);
+                free(s);
             }
         }
+    }
+
+    // Grab all remaining descendent classes of root classes by examining all existing concrete class constructors
+    for(length_t i = 0; i != ast->funcs_length; i++){
+        ast_func_t *func = &ast->funcs[i];
+
+        if(func->traits & AST_FUNC_CLASS_CONSTRUCTOR && !(func->traits & AST_FUNC_POLYMORPHIC)){
+            ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
+            vtree_list_find_or_insert(&vtree_list, &subject_type);
+
+            char *s = ast_type_str(&subject_type);
+            blueprintf("[debug] Has concrete class %s\n", s);
+            free(s);
+        }
+    }
+
+    // Link up parents
+    for(length_t i = 0; i != vtree_list.length; i++){
+        vtree_t *vtree = vtree_list.vtrees[i];
+
+        ast_composite_t *composite = ast_find_composite(ast, &vtree->signature);
+
+        if(composite == NULL){
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            compiler_warnf(compiler, vtree->signature.source, "Failed to find class '%s'", typename);
+            free(typename);
+            return FAILURE;
+        }
+
+        if(!composite->is_class){
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            compiler_warnf(compiler, vtree->signature.source, "Cannot extend non-class '%s'", typename);
+            free(typename);
+            return FAILURE;
+        }
+
+        if(composite->parent.elements_length == 0){
+            // No parent to link up to
+            char *s = ast_type_str(&vtree->signature);
+            blueprintf("[debug] No parent for %s\n", s);
+            free(s);
+            continue;
+        }
+
+        ast_type_t parent_storage = {0};
+        const ast_type_t *parent;
+
+        if(composite->is_polymorphic){
+            ast_poly_composite_t *poly_composite = (ast_poly_composite_t*) composite;
+
+            if(translate_polymorphic_parent_class(compiler, object, poly_composite, &vtree->signature, &parent_storage)){
+                return FAILURE;
+            }
+
+            parent = &parent_storage;
+        } else {
+            parent = &composite->parent;
+        }
+
+        vtree_t *parent_vtree = NULL;
+
+        for(length_t j = 0; j != vtree_list.length; j++){
+            vtree_t *other_vtree = vtree_list.vtrees[j];
+
+            if(ast_types_identical(parent, &other_vtree->signature)){
+                parent_vtree = other_vtree;
+                break;
+            }
+        }
+
+        if(parent_vtree == NULL){
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            strong_cstr_t parent_typename = ast_type_str(parent);
+            compiler_panicf(compiler, parent->source, "Failed to resolve parent class '%s' for class '%s'", parent_typename, typename);
+            free(parent_typename);
+            free(typename);
+
+            ast_type_free(&parent_storage);
+            return FAILURE;
+        }
+
+        ast_type_free(&parent_storage);
+
+        {
+            char *s1 = ast_type_str(&vtree->signature);
+            char *s2 = ast_type_str(&parent_vtree->signature);
+            blueprintf("[debug] Parent for %s is %s\n", s1, s2);
+            free(s2);
+            free(s1);
+        }
+
+        vtree->parent = parent_vtree;
     }
 
     // Inject vtable initializations

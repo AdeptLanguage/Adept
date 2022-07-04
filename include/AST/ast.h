@@ -114,6 +114,7 @@ typedef struct {
     strong_cstr_t name; \
     ast_layout_t layout; \
     source_t source; \
+    ast_type_t parent; \
     bool is_polymorphic : 1; \
     bool is_class : 1; \
     bool has_constructor : 1;\
@@ -370,18 +371,33 @@ void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait
 // Adds an enum to the global scope of an AST
 void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
 
-// ---------------- ast_add_composite ----------------
-// Adds a composite to the global scope of an AST
-ast_composite_t *ast_add_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout, source_t source, bool is_class);
-
 // ---------------- ast_add_poly_func ----------------
 // Adds a function to the list of polymorphic functions for an AST
 void ast_add_poly_func(ast_t *ast, weak_cstr_t func_name_persistent, func_id_t ast_func_id);
 
+// ---------------- ast_add_composite ----------------
+// Adds a composite to the global scope of an AST
+ast_composite_t *ast_add_composite(
+    ast_t *ast,
+    strong_cstr_t name,
+    ast_layout_t layout,
+    source_t source,
+    const ast_type_t *maybe_parent,
+    bool is_class
+);
+
 // ---------------- ast_add_poly_composite ----------------
 // Adds a polymorphic composite to the global scope of an AST
-ast_poly_composite_t *ast_add_poly_composite(ast_t *ast, strong_cstr_t name, ast_layout_t layout,
-    source_t source, bool is_class, strong_cstr_t *generics, length_t generics_length);
+ast_poly_composite_t *ast_add_poly_composite(
+    ast_t *ast,
+    strong_cstr_t name,
+    ast_layout_t layout,
+    source_t source,
+    const ast_type_t *maybe_parent,
+    bool is_class,
+    strong_cstr_t *generics,
+    length_t generics_length
+);
 
 // ---------------- ast_add_global ----------------
 // Adds a global variable to the global scope of an AST

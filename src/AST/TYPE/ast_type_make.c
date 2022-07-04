@@ -79,6 +79,18 @@ ast_elem_t *ast_elem_func_make(source_t source, ast_type_t *arg_types, length_t 
     return (ast_elem_t*) elem;
 }
 
+ast_elem_t *ast_elem_fixed_array_make(source_t source, length_t count){
+    ast_elem_fixed_array_t *elem = malloc(sizeof *elem);
+
+    *elem = (ast_elem_fixed_array_t){
+        .id = AST_ELEM_FIXED_ARRAY,
+        .source = source,
+        .length = count,
+    };
+
+    return (ast_elem_t*) elem;
+}
+
 // =====================================================================
 // =                            from_*elems                            =
 // =====================================================================

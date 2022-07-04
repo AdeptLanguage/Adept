@@ -479,7 +479,6 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 // Resolves any polymorphic type variables within an AST type
 // NOTE: Will show error messages on failure
 // NOTE: in_type == out_type is allowed
-// NOTE: out_type is same as in_type if out_type == null
 // NOTE: Will also give result to type_table if not NULL and !(compiler->traits & COMPILER_NO_TYPEINFO)
 errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
 

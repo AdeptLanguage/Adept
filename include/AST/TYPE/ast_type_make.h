@@ -89,6 +89,10 @@ ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool al
 // Makes a function element (e.g. func() void, func(ptr, ptr) int, func(double, double) double)
 ast_elem_t *ast_elem_func_make(source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership);
 
+// ---------------- ast_elem_fixed_array_make ----------------
+// Makes a fixed array element (e.g. 10 or [100] or 8)
+ast_elem_t *ast_elem_fixed_array_make(source_t source, length_t count);
+
 // =====================================================================
 // =                              helpers                              =
 // =====================================================================

@@ -57,7 +57,9 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_field_map_t field_map;
     ast_layout_skeleton_t skeleton;
 
-    if(parse_composite_body(ctx, &field_map, &skeleton, is_class, parent_class.elements_length ? &parent_class : NULL)){
+    const ast_type_t *maybe_parent_class = parent_class.elements_length ? &parent_class : NULL;
+
+    if(parse_composite_body(ctx, &field_map, &skeleton, is_class, maybe_parent_class)){
         free(name);
         return FAILURE;
     }
@@ -71,9 +73,9 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_layout_init(&layout, layout_kind, field_map, skeleton, traits);
     
     if(generics){
-        domain = (ast_composite_t*) ast_add_poly_composite(ast, name, layout, source, is_class, generics, generics_length);
+        domain = (ast_composite_t*) ast_add_poly_composite(ast, name, layout, source, maybe_parent_class, is_class, generics, generics_length);
     } else {
-        domain = ast_add_composite(ast, name, layout, source, is_class);
+        domain = ast_add_composite(ast, name, layout, source, maybe_parent_class, is_class);
     }
     
     if(is_record){
@@ -406,6 +408,7 @@ errorcode_t parse_composite_integrate_another(
 
     if(composite->is_polymorphic){
         // TODO: Perform substitutions
+        compiler_warnf(ctx->compiler, other_type->source, "%s polymorphic %s is not yet implemented", require_class ? "Extending" : "Integrating", require_class ? "classes" : "composites");
     }
 
     // Don't support complex composites for now
