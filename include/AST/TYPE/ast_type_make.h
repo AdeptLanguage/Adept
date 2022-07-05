@@ -82,16 +82,24 @@ ast_elem_t *ast_elem_base_make(strong_cstr_t base, source_t source);
 ast_elem_t *ast_elem_generic_base_make(strong_cstr_t base, source_t source, ast_type_t *generics, length_t generics_length);
 
 // ---------------- ast_elem_polymorph_make ----------------
-// Makes a polymorph element (e.g. $T, $K, $V, $InitialierList)
+// Makes a polymorph element (e.g. $T, $K, $V, $InitializerList)
 ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool allow_auto_conversion);
+
+// ---------------- ast_elem_polymorph_prereq_make ----------------
+// Makes a polymorph prerequisite element (e.g. $T~__number__ or $K~__struct__)
+ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, strong_cstr_t similarity_prerequisite);
 
 // ---------------- ast_elem_func_make ----------------
 // Makes a function element (e.g. func() void, func(ptr, ptr) int, func(double, double) double)
 ast_elem_t *ast_elem_func_make(source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership);
 
 // ---------------- ast_elem_fixed_array_make ----------------
-// Makes a fixed array element (e.g. 10 or [100] or 8)
+// Makes a fixed array element (e.g. 10 or 8)
 ast_elem_t *ast_elem_fixed_array_make(source_t source, length_t count);
+
+// ---------------- ast_elem_var_fixed_array_make ----------------
+// Makes a variably-sized fixed array element (e.g. [DEFAULT_CONTAINER_SIZE] or [100] or [#get b2_max_vertices])
+ast_elem_t *ast_elem_var_fixed_array_make(source_t source, ast_expr_t *length);
 
 // =====================================================================
 // =                              helpers                              =

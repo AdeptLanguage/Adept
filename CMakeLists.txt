@@ -26,6 +26,7 @@ endif()
 
 set(core_source_files
 	src/AST/EXPR/ast_expr_free.c src/AST/EXPR/ast_expr_str.c
+	src/AST/POLY/ast_resolve.c
 	src/AST/TYPE/ast_type_clone.c src/AST/TYPE/ast_type_free.c
 	src/AST/TYPE/ast_type_hash.c src/AST/TYPE/ast_type_helpers.c src/AST/TYPE/ast_type_identical.c
 	src/AST/TYPE/ast_type_is.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_str.c

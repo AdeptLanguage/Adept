@@ -475,19 +475,6 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
 // NOTE: Returns ALT_FAILURE if something went really wrong
 errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result);
 
-// ---------------- resolve_type_polymorphics ----------------
-// Resolves any polymorphic type variables within an AST type
-// NOTE: Will show error messages on failure
-// NOTE: in_type == out_type is allowed
-// NOTE: Will also give result to type_table if not NULL and !(compiler->traits & COMPILER_NO_TYPEINFO)
-errorcode_t resolve_type_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type);
-
-// ---------------- resolve_expr_polymorphics ----------------
-// Resolves any polymorphic type variables within an AST expression
-errorcode_t resolve_expr_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t *expr);
-errorcode_t resolve_exprs_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t **exprs, length_t count);
-errorcode_t resolve_expr_list_polymorphics(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_list_t *exprs);
-
 // ---------------- is_allowed_builtin_auto_conversion ----------------
 // Returns whether a builtin auto conversion is allowed
 // (For integers / floats)

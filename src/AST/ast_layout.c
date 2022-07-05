@@ -49,13 +49,12 @@ void ast_layout_free(ast_layout_t *layout){
 }
 
 ast_layout_t ast_layout_clone(const ast_layout_t *layout){
-    ast_layout_t clone;
-
-    clone.kind = layout->kind;
-    clone.field_map = ast_field_map_clone(&layout->field_map);
-    clone.skeleton = ast_layout_skeleton_clone(&layout->skeleton);
-    clone.traits = layout->traits;
-    return clone;
+    return (ast_layout_t){
+        .kind = layout->kind,
+        .field_map = ast_field_map_clone(&layout->field_map),
+        .skeleton = ast_layout_skeleton_clone(&layout->skeleton),
+        .traits = layout->traits,
+    };;
 }
 
 strong_cstr_t ast_layout_str(ast_layout_t *layout, ast_field_map_t *field_map){
@@ -75,11 +74,11 @@ bool ast_layouts_identical(ast_layout_t *layout_a, ast_layout_t *layout_b){
 }
 
 ast_layout_bone_t ast_layout_as_bone(ast_layout_t *layout){
-    ast_layout_bone_t bone;
-    bone.kind = layout->kind == AST_LAYOUT_STRUCT ? AST_LAYOUT_BONE_KIND_STRUCT : AST_LAYOUT_BONE_KIND_UNION;
-    bone.traits = (layout->traits & AST_LAYOUT_PACKED) ? AST_LAYOUT_BONE_PACKED : TRAIT_NONE;
-    bone.children = layout->skeleton;
-    return bone;
+    return (ast_layout_bone_t){
+        .kind = (layout->kind == AST_LAYOUT_STRUCT) ? AST_LAYOUT_BONE_KIND_STRUCT : AST_LAYOUT_BONE_KIND_UNION,
+        .traits = (layout->traits & AST_LAYOUT_PACKED) ? AST_LAYOUT_BONE_PACKED : TRAIT_NONE,
+        .children = layout->skeleton,
+    };
 }
 
 successful_t ast_layout_get_path(ast_layout_t *layout, ast_layout_endpoint_t endpoint, ast_layout_endpoint_path_t *out_path){

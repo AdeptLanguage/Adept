@@ -13,14 +13,14 @@
 // =====================================================================
 
 ast_elem_t *ast_elem_empty_make(unsigned int id, source_t source){
-    ast_elem_pointer_t *elem = malloc(sizeof *elem);
+    ast_elem_t *elem = malloc(sizeof *elem);
 
-    *elem = (ast_elem_pointer_t){
+    *elem = (ast_elem_t){
         .id = id,
         .source = source,
     };
 
-    return (ast_elem_t*) elem;
+    return elem;
 }
 
 ast_elem_t *ast_elem_base_make(strong_cstr_t base, source_t source){
@@ -63,6 +63,20 @@ ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool al
     return (ast_elem_t*) elem;
 }
 
+ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, strong_cstr_t similarity_prerequisite){
+    ast_elem_polymorph_prereq_t *elem = malloc(sizeof *elem);
+
+    *elem = (ast_elem_polymorph_prereq_t){
+        .id = AST_ELEM_POLYMORPH_PREREQ,
+        .name = name,
+        .source = source,
+        .allow_auto_conversion = allow_auto_conversion,
+        .similarity_prerequisite = similarity_prerequisite,
+    };
+
+    return (ast_elem_t*) elem;
+}
+
 ast_elem_t *ast_elem_func_make(source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership){
     ast_elem_func_t *elem = malloc(sizeof *elem);
 
@@ -86,6 +100,18 @@ ast_elem_t *ast_elem_fixed_array_make(source_t source, length_t count){
         .id = AST_ELEM_FIXED_ARRAY,
         .source = source,
         .length = count,
+    };
+
+    return (ast_elem_t*) elem;
+}
+
+ast_elem_t *ast_elem_var_fixed_array_make(source_t source, ast_expr_t *length){
+    ast_elem_var_fixed_array_t *elem = malloc(sizeof *elem);
+
+    *elem = (ast_elem_var_fixed_array_t){
+        .id = AST_ELEM_VAR_FIXED_ARRAY,
+        .source = source,
+        .length = length,
     };
 
     return (ast_elem_t*) elem;

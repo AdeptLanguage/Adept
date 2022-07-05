@@ -135,6 +135,7 @@ def run_all_tests():
     test("initializer_list_fixed", [executable, join(src_dir, "initializer_list_fixed/main.adept")], compiles)
     test("inline_declaration", [executable, join(src_dir, "inline_declaration/main.adept")], compiles)
     test("inner_struct", [executable, join(src_dir, "inner_struct/main.adept")], compiles)
+    test("inner_struct_polymorphic", [executable, join(src_dir, "inner_struct_polymorphic/main.adept")], compiles)
     test("int_ptr_cast", [executable, join(src_dir, "int_ptr_cast/main.adept")], compiles)
     test("internal_deference", [executable, join(src_dir, "internal_deference/main.adept")], compiles)
     test("internal_deference_generic", [executable, join(src_dir, "internal_deference_generic/main.adept")], compiles)

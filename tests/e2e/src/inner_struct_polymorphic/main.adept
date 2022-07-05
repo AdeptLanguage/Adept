@@ -1,0 +1,33 @@
+
+import 'sys/cstdio.adept'
+
+struct <$T> Vector2 (x, y $T)
+struct <$S> Vector3 (struct <$S> Vector2, z $S)
+struct <$K> Vector4 (struct <$K> Vector3, w $K)
+struct Vector4f (struct <float> Vector4)
+
+func main {
+    v2 <int> Vector2
+    v2.x = 1
+    v2.y = 2
+
+    v3 <double> Vector3
+    v3.x = 1.0
+    v3.y = 2.0
+    v3.z = 3.0
+
+    v4 <float> Vector4
+    v4.x = 1.0f
+    v4.y = 2.0f
+    v4.z = 3.0f
+    v4.w = 4.0f
+
+    printf('%f %f %f %f\n', v4.x as double, v4.y as double, v4.z as double, v4.w as double)
+
+    v4f Vector4f
+    v4f.x = 10.0f
+    v4f.y = 11.0f
+    v4f.z = 12.0f
+    v4f.w = 13.0f
+    printf('%f %f %f %f\n', v4f.x as double, v4f.y as double, v4f.z as double, v4f.w as double)
+}

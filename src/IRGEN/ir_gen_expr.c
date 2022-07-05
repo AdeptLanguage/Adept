@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/POLY/ast_resolve.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/TYPE/ast_type_make.h"
 #include "AST/ast.h"
@@ -1139,7 +1140,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
 
         // Get the AST field type of the target field by index and resolve any polymorphs
         ast_type_t field_type;
-        if(resolve_type_polymorphics(compiler, type_table, &catalog, maybe_polymorphic_field_type, &field_type)){
+        if(ast_resolve_type_polymorphs(compiler, type_table, &catalog, maybe_polymorphic_field_type, &field_type)){
             ast_poly_catalog_free(&catalog);
             return FAILURE;
         }

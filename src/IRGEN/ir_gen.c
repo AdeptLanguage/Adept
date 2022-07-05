@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/POLY/ast_resolve.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
@@ -103,7 +104,7 @@ static errorcode_t translate_polymorphic_parent_class(
         ast_poly_catalog_add_type(&catalog, the_class->generics[i], &concrete_generic_base->generics[i]);
     }
 
-    errorcode_t errorcode = resolve_type_polymorphics(compiler, ast->type_table, &catalog, poly_extended_type, out_type);
+    errorcode_t errorcode = ast_resolve_type_polymorphs(compiler, ast->type_table, &catalog, poly_extended_type, out_type);
     ast_poly_catalog_free(&catalog);
 
     if(errorcode){

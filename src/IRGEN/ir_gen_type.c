@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/POLY/ast_resolve.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
@@ -697,7 +698,7 @@ ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, as
         if(optional_catalog){
             ast_type_t resolved_ast_type;
 
-            if(resolve_type_polymorphics(compiler, object->ast.type_table, optional_catalog, &bone->type, &resolved_ast_type)){
+            if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, optional_catalog, &bone->type, &resolved_ast_type)){
                 return NULL;
             }
 

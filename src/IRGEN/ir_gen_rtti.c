@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "AST/POLY/ast_resolve.h"
 #include "AST/ast.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_poly_catalog.h"
@@ -444,7 +445,7 @@ errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_ty
         ast_poly_composite_t *template = (ast_poly_composite_t*) core_composite_info;
 
         if(template->generics_length != maybe_weak_generics_length){
-            internalerrorprintf("ir_gen__types__composite_entry_get_into() - Mismatching type parementer count for polymorphic composite '%s' when generating runtime type table!\n", name);
+            internalerrorprintf("ir_gen__types__composite_entry_get_into() - Mismatching type parameter count for polymorphic composite '%s' when generating runtime type table!\n", name);
             return FAILURE;
         }
 
@@ -494,7 +495,7 @@ ir_value_t *ir_gen__types__composite_entry_members_array(compiler_t *compiler, o
 
         // Resolve any polymorphics in field type
         if(info->core_composite_info->is_polymorphic){
-            if(resolve_type_polymorphics(compiler, type_table, &info->poly_catalog, unprocessed_field_type, &field_type))
+            if(ast_resolve_type_polymorphs(compiler, type_table, &info->poly_catalog, unprocessed_field_type, &field_type))
                 return NULL;
         } else {
             field_type = *unprocessed_field_type;

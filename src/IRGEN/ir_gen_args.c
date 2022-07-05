@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/POLY/ast_resolve.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast.h"
 #include "AST/ast_expr_lean.h"
@@ -171,7 +172,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
         }
 
         ast_type_t concrete_return_type;
-        if(resolve_type_polymorphics(builder->compiler, builder->type_table, &catalog, &poly_template_return_type, &concrete_return_type)){
+        if(ast_resolve_type_polymorphs(builder->compiler, builder->type_table, &catalog, &poly_template_return_type, &concrete_return_type)){
             res = FAILURE;
             goto polymorphic_failure;
         }

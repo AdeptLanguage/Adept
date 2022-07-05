@@ -4,12 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/POLY/ast_resolve.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
+#include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
-#include "AST/TYPE/ast_type_make.h"
 #include "DRVR/compiler.h"
+#include "IRGEN/ir_builder.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
 #include "PARSE/parse_struct.h"
@@ -228,7 +231,13 @@ failure:
     return FAILURE;
 }
 
-errorcode_t parse_composite_body(parse_ctx_t *ctx, ast_field_map_t *out_field_map, ast_layout_skeleton_t *out_skeleton, bool is_class, const ast_type_t *maybe_parent_class){
+errorcode_t parse_composite_body(
+    parse_ctx_t *ctx,
+    ast_field_map_t *out_field_map,
+    ast_layout_skeleton_t *out_skeleton,
+    bool is_class,
+    const ast_type_t *maybe_parent_class
+){
     // Parses root-level composite fields
 
     length_t *i = ctx->i;
@@ -382,6 +391,77 @@ errorcode_t parse_composite_field(
     return SUCCESS;
 }
 
+static errorcode_t resolve_polymorphs_in_integration_for_bone(parse_ctx_t *ctx, source_t source_on_error, ast_poly_catalog_t *catalog, ast_layout_bone_t *bone, int depth_left){
+    if(depth_left <= 0){
+        compiler_panicf(ctx->compiler, source_on_error, "Will not resolve AST polymorphism in composite layout that nests absurdly deep");
+        return FAILURE;
+    }
+
+    switch(bone->kind){
+    case AST_LAYOUT_BONE_KIND_TYPE:
+        if(ast_resolve_type_polymorphs(ctx->compiler, ctx->ast->type_table, catalog, &bone->type, NULL)){
+            return FAILURE;
+        }
+        break;
+    case AST_LAYOUT_BONE_KIND_STRUCT:
+    case AST_LAYOUT_BONE_KIND_UNION: {
+            for(length_t i = 0; i != bone->children.bones_length; i++){
+                if(resolve_polymorphs_in_integration_for_bone(ctx, source_on_error, catalog, &bone->children.bones[i], depth_left - 1)){
+                    return FAILURE;
+                }
+            }
+        }
+        break;
+    default:
+        compiler_panicf(ctx->compiler, source_on_error, "resolve_polymorphs_in_integration_for_bone() got unknown AST layout bone kind '%d'", (int) bone->kind);
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+static errorcode_t resolve_polymorphs_in_integration(
+    parse_ctx_t *ctx,
+    ast_layout_t *poly_layout,
+    const ast_type_t *usage,
+    ast_layout_t *out_layout,
+    weak_cstr_t *generics,
+    length_t generics_length
+){
+    assert(ast_type_is_generic_base(usage));
+
+    ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) usage->elements[0];
+
+    if(generic_base->generics_length != generics_length){
+        compiler_panicf(ctx->compiler, usage->source, "Incorrect number of type parameters specified for type '%s'", generic_base->name);
+        return FAILURE;
+    }
+
+    ast_layout_t layout = ast_layout_clone(poly_layout);
+
+    ast_poly_catalog_t catalog;
+    ast_poly_catalog_init(&catalog);
+
+    for(length_t i = 0; i != generics_length; i++){
+        ast_poly_catalog_add_type(&catalog, generics[i], &generic_base->generics[i]);
+    }
+
+    ast_layout_bone_t root = ast_layout_as_bone(&layout);
+
+    if(resolve_polymorphs_in_integration_for_bone(ctx, usage->source, &catalog, &root, 16)){
+        goto failure;
+    }
+
+    ast_poly_catalog_free(&catalog);
+    *out_layout = layout;
+    return SUCCESS;
+
+failure:
+    ast_poly_catalog_free(&catalog);
+    ast_layout_free(&layout);
+    return FAILURE;
+}
+
 errorcode_t parse_composite_integrate_another(
     parse_ctx_t *ctx,
     ast_field_map_t *inout_field_map,
@@ -404,11 +484,19 @@ errorcode_t parse_composite_integrate_another(
         return FAILURE;
     }
 
-    ast_layout_t *layout = &composite->layout;
+    ast_layout_t layout_storage;
+    ast_layout_t *layout;
 
     if(composite->is_polymorphic){
-        // TODO: Perform substitutions
-        compiler_warnf(ctx->compiler, other_type->source, "%s polymorphic %s is not yet implemented", require_class ? "Extending" : "Integrating", require_class ? "classes" : "composites");
+        ast_poly_composite_t *poly_composite = (ast_poly_composite_t*) composite;
+
+        if(resolve_polymorphs_in_integration(ctx, &composite->layout, other_type, &layout_storage, poly_composite->generics, poly_composite->generics_length)){
+            return FAILURE;
+        }
+
+        layout = &layout_storage;
+    } else {
+        layout = &composite->layout;
     }
 
     // Don't support complex composites for now
@@ -421,6 +509,7 @@ errorcode_t parse_composite_integrate_another(
         strong_cstr_t typename = ast_type_str(other_type);
         compiler_panicf(ctx->compiler, other_type->source, message, typename);
         free(typename);
+        if(layout == &layout_storage) ast_layout_free(&layout_storage);
         return FAILURE;
     }
 
@@ -435,10 +524,16 @@ errorcode_t parse_composite_integrate_another(
         ast_layout_endpoint_increment(inout_next_endpoint);
     }
 
+    if(layout == &layout_storage) ast_layout_free(&layout_storage);
     return SUCCESS;
 }
 
-errorcode_t parse_anonymous_composite(parse_ctx_t *ctx, ast_field_map_t *inout_field_map, ast_layout_skeleton_t *inout_skeleton, ast_layout_endpoint_t *inout_next_endpoint){
+errorcode_t parse_anonymous_composite(
+    parse_ctx_t *ctx,
+    ast_field_map_t *inout_field_map,
+    ast_layout_skeleton_t *inout_skeleton,
+    ast_layout_endpoint_t *inout_next_endpoint
+){
     // (Inside of composite definition)
     // struct (x, y, z float)
     //   ^
