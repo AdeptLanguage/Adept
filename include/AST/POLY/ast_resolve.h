@@ -25,7 +25,7 @@ errorcode_t ast_resolve_type_polymorphs(compiler_t *compiler, type_table_t *type
 // Resolves any polymorphic variables within an AST expression
 errorcode_t ast_resolve_expr_polymorphs(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_expr_t *expr);
 
-// ---------------- ast_resolve_expr_list_polymorphs  ----------------
+// ---------------- ast_resolve_exprs_polymorphs ----------------
 // Resolves any polymorphic variables within a list of AST expressions
 errorcode_t ast_resolve_exprs_polymorphs(
     compiler_t *compiler,
@@ -35,7 +35,7 @@ errorcode_t ast_resolve_exprs_polymorphs(
     length_t count
 );
 
-// ---------------- ast_resolve_expr_list_polymorphs  ----------------
+// ---------------- ast_resolve_expr_list_polymorphs ----------------
 // Resolves any polymorphic variables within an AST expression list
 // NOTE: This function is just a helper for using ast_expr_list_t values for 'ast_resolve_exprs_polymorphs'
 errorcode_t ast_resolve_expr_list_polymorphs(

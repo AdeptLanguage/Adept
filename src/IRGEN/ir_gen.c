@@ -60,67 +60,88 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
 static errorcode_t translate_polymorphic_parent_class(
     compiler_t *compiler,
     object_t *object,
-    ast_poly_composite_t *the_class,
+    ast_composite_t *the_class,
     const ast_type_t *the_class_concrete_usage, 
     ast_type_t *out_type
 ){
-    assert(the_class->parent.elements_length != 0);
+    // Translates a polymorphic parent class type
+    // using contextual information from a specific usage
+
+    // EXAMPLE:
+    // For the concrete type usage:
+    //     point <float> Vector4
+    // The `<$T> Vector3f` in
+    //     class <$T> Vector4 extends <$T> Vector3 (w $T)
+    // will be copied, translated into context (`<float> Vector3f`), and returned.
+    // The resolved type will be stored in `out_type` if successful.
+
+    // USE CASE:
+    // This function is used to help translate compile-time polymorphism
+    // during vtable generation, as required classes are not guaranteed to do any
+    // IR generation.
+    
+    // -----
 
     ast_t *ast = &object->ast;
-
-    {
-        char *s = ast_type_str(the_class_concrete_usage);
-        blueprintf("[debug] Translating parent of %s\n", s);
-        free(s);
-    }
-
     ast_type_t *poly_extended_type = &the_class->parent;
+
+    // Assert that the child class provided has a parent
+    // and the parent type is a generic base that has unresolved compile-time polymorphism
+    assert(the_class->parent.elements_length != 0);
     assert(ast_type_is_generic_base(poly_extended_type));
     assert(ast_type_has_polymorph(poly_extended_type));
 
-    ast_elem_generic_base_t *concrete_generic_base = (ast_elem_generic_base_t*) the_class_concrete_usage->elements[0];
-    assert(the_class->generics_length == concrete_generic_base->generics_length);
+    // Determine what generic type parameters exist and can be used
+    weak_cstr_t *generics;
+    length_t generics_length;
 
+    if(the_class->is_polymorphic){
+        ast_poly_composite_t *polymorphic_the_class = (ast_poly_composite_t*) the_class;
+
+        // If the child class is polymorphic, then we'll be able to use its type parameters
+        // in its "extends" clause
+        generics = polymorphic_the_class->generics;
+        generics_length = polymorphic_the_class->generics_length;
+    } else {
+        // Otherwise, we don't have access to any polymorphic type variables
+        generics = NULL;
+        generics_length = 0;
+    }
+
+    // Assert that the number of generic polymorphic parameters for the "extends" usage and the actual parent class are the same
+    ast_elem_generic_base_t *concrete_generic_base = (ast_elem_generic_base_t*) the_class_concrete_usage->elements[0];
+    assert(generics_length == concrete_generic_base->generics_length);
+
+    // Find parent composite
     ast_poly_composite_t *parent_composite = (ast_poly_composite_t*) ast_find_composite(ast, poly_extended_type);
     
     if(parent_composite == NULL){
         const char *missing_parent_name = ((ast_elem_generic_base_t*) poly_extended_type->elements[0])->name;
 
-        char *s = ast_type_str(the_class_concrete_usage);
-        compiler_panicf(compiler, the_class->source, "Cannot find parent class '%s' for type '%s'", missing_parent_name, s);
-        free(s);
+        strong_cstr_t typename = ast_type_str(the_class_concrete_usage);
+        compiler_panicf(compiler, the_class->source, "Cannot find parent class '%s' for type '%s'", missing_parent_name, typename);
+        free(typename);
         return FAILURE;
     }
 
+    // Assert that the stated parent type is a polymorphic class
     assert(parent_composite->is_class);
     assert(parent_composite->is_polymorphic);
 
-    blueprintf("[debug] > Successfully found parent class %s\n", parent_composite->name);
-
+    // Create polymorph catalog
     ast_poly_catalog_t catalog;
     ast_poly_catalog_init(&catalog);
 
-    for(length_t i = 0; i != the_class->generics_length; i++){
-        ast_poly_catalog_add_type(&catalog, the_class->generics[i], &concrete_generic_base->generics[i]);
+    for(length_t i = 0; i != generics_length; i++){
+        ast_poly_catalog_add_type(&catalog, generics[i], &concrete_generic_base->generics[i]);
     }
 
+    // Resolve polymorphs in the stated parent type
     errorcode_t errorcode = ast_resolve_type_polymorphs(compiler, ast->type_table, &catalog, poly_extended_type, out_type);
+
+    // Clean up and return
     ast_poly_catalog_free(&catalog);
-
-    if(errorcode){
-        char *s = ast_type_str(poly_extended_type);
-        blueprintf("[debug] > Could not translate %s\n", s);
-        free(s);
-        return FAILURE;
-    }
-
-    {
-        char *s = ast_type_str(out_type);
-        blueprintf("[debug] > Translated parent to %s\n", s);
-        free(s);
-    }
-
-    return SUCCESS;
+    return errorcode ? FAILURE : SUCCESS;
 }
 
 errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
@@ -151,12 +172,8 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
 
             if(func->traits & AST_FUNC_VIRTUAL && endpoint.ir_func_id != INVALID_FUNC_ID){
                 ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
-                vtree_t *vtree = vtree_list_find_or_insert(&vtree_list, &subject_type);
+                vtree_t *vtree = vtree_list_find_or_append(&vtree_list, &subject_type);
                 vtree_append_virtual(vtree, endpoint);
-
-                char *s = ast_type_str(&subject_type);
-                blueprintf("[debug] Has root class %s\n", s);
-                free(s);
             }
         }
     }
@@ -167,15 +184,11 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
 
         if(func->traits & AST_FUNC_CLASS_CONSTRUCTOR && !(func->traits & AST_FUNC_POLYMORPHIC)){
             ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
-            vtree_list_find_or_insert(&vtree_list, &subject_type);
-
-            char *s = ast_type_str(&subject_type);
-            blueprintf("[debug] Has concrete class %s\n", s);
-            free(s);
+            vtree_list_find_or_append(&vtree_list, &subject_type);
         }
     }
 
-    // Link up parents
+    // Link up parents and children
     for(length_t i = 0; i != vtree_list.length; i++){
         vtree_t *vtree = vtree_list.vtrees[i];
 
@@ -197,19 +210,14 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
 
         if(composite->parent.elements_length == 0){
             // No parent to link up to
-            char *s = ast_type_str(&vtree->signature);
-            blueprintf("[debug] No parent for %s\n", s);
-            free(s);
             continue;
         }
 
         ast_type_t parent_storage = {0};
         const ast_type_t *parent;
 
-        if(composite->is_polymorphic){
-            ast_poly_composite_t *poly_composite = (ast_poly_composite_t*) composite;
-
-            if(translate_polymorphic_parent_class(compiler, object, poly_composite, &vtree->signature, &parent_storage)){
+        if(ast_type_has_polymorph(&composite->parent)){
+            if(translate_polymorphic_parent_class(compiler, object, composite, &vtree->signature, &parent_storage)){
                 return FAILURE;
             }
 
@@ -218,16 +226,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             parent = &composite->parent;
         }
 
-        vtree_t *parent_vtree = NULL;
-
-        for(length_t j = 0; j != vtree_list.length; j++){
-            vtree_t *other_vtree = vtree_list.vtrees[j];
-
-            if(ast_types_identical(parent, &other_vtree->signature)){
-                parent_vtree = other_vtree;
-                break;
-            }
-        }
+        vtree_t *parent_vtree = vtree_list_find_or_append(&vtree_list, parent);
 
         if(parent_vtree == NULL){
             strong_cstr_t typename = ast_type_str(&vtree->signature);
@@ -242,15 +241,17 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
 
         ast_type_free(&parent_storage);
 
-        {
-            char *s1 = ast_type_str(&vtree->signature);
-            char *s2 = ast_type_str(&parent_vtree->signature);
-            blueprintf("[debug] Parent for %s is %s\n", s1, s2);
-            free(s2);
-            free(s1);
-        }
-
         vtree->parent = parent_vtree;
+        vtree_list_append(&parent_vtree->children, vtree);
+    }
+
+    // Test traversing the generated vtrees
+    for(length_t i = 0; i != vtree_list.length; i++){
+        vtree_t *root = vtree_list.vtrees[i];
+
+        if(root->parent == NULL){
+            vtree_print(root, 0);
+        }
     }
 
     // Inject vtable initializations
@@ -276,8 +277,10 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
 
     // Setup IR variadic array type if it exists
     if(ast->common.ast_variadic_array){
-        // Resolve ast_variadic_array type
-        if(ir_gen_resolve_type(compiler, object, ast->common.ast_variadic_array, &ir_module->common.ir_variadic_array)) return FAILURE;
+        // Resolve variadic array type
+        if(ir_gen_resolve_type(compiler, object, ast->common.ast_variadic_array, &ir_module->common.ir_variadic_array)){
+            return FAILURE;
+        }
     }
 
     // Generate function skeletons
