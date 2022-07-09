@@ -37,20 +37,28 @@ void vtree_append_virtual(vtree_t *vtree, ir_func_endpoint_t endpoint){
     ir_func_endpoint_list_insert(&vtree->virtuals, endpoint);
 }
 
-void vtree_print(vtree_t *root, int indentation){
-    char *s;
-
-    for(int i = 0; i < indentation; i++){
-        if(i + 1 == indentation){
-            printf(" -> ");
-        } else {
-            printf("    ");
-        }
+void vtree_print(vtree_t *root, length_t indentation){
+    for(length_t i = 0; i != indentation; i++){
+        printf(i + 1 == indentation ? " -> " : "    ");
     }
 
-    s = ast_type_str(&root->signature);
+    strong_cstr_t s = ast_type_str(&root->signature);
     printf("%s\n", s);
     free(s);
+
+    for(length_t i = 0; i != root->virtuals.length; i++){
+        for(length_t i = 0; i != indentation; i++){
+            printf("    ");
+        }
+        printf("(virtual) %d\n", (int) root->virtuals.endpoints[i].ast_func_id);
+    }
+
+    for(length_t i = 0; i != root->overrides.length; i++){
+        for(length_t i = 0; i != indentation; i++){
+            printf("    ");
+        }
+        printf("(override) %d\n", (int) root->overrides.endpoints[i].ast_func_id);
+    }
 
     for(length_t i = 0; i != root->children.length; i++){
         vtree_print(root->children.vtrees[i], indentation + 1);

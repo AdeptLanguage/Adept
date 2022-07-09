@@ -37,3 +37,9 @@ void ir_func_endpoint_list_insert(ir_func_endpoint_list_t *endpoint_list, ir_fun
     memmove(&endpoint_list->endpoints[position + 1], &endpoint_list->endpoints[position], sizeof(ir_func_endpoint_t) * (length - position));
     endpoint_list->endpoints[position] = endpoint;
 }
+
+void ir_func_endpoint_list_append_list(ir_func_endpoint_list_t *endpoint_list, ir_func_endpoint_list_t *other){
+    for(length_t i = 0; i != other->length; i++){
+        ir_func_endpoint_list_append(endpoint_list, other->endpoints[i]);
+    }
+}

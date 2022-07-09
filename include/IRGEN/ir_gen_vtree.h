@@ -55,7 +55,7 @@ vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *s
 
 // ---------------- vtree_print ----------------
 // Prints a vtree
-void vtree_print(vtree_t *root, int indentation);
+void vtree_print(vtree_t *root, length_t indentation);
 
 #ifdef __cplusplus
 }

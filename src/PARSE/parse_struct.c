@@ -393,7 +393,7 @@ errorcode_t parse_composite_field(
 
 static errorcode_t resolve_polymorphs_in_integration_for_bone(parse_ctx_t *ctx, source_t source_on_error, ast_poly_catalog_t *catalog, ast_layout_bone_t *bone, int depth_left){
     if(depth_left <= 0){
-        compiler_panicf(ctx->compiler, source_on_error, "Will not resolve AST polymorphism in composite layout that nests absurdly deep");
+        compiler_panicf(ctx->compiler, source_on_error, "Refusing to resolve AST polymorphism in composite layout that nests absurdly deep");
         return FAILURE;
     }
 
@@ -448,7 +448,7 @@ static errorcode_t resolve_polymorphs_in_integration(
 
     ast_layout_bone_t root = ast_layout_as_bone(&layout);
 
-    if(resolve_polymorphs_in_integration_for_bone(ctx, usage->source, &catalog, &root, 16)){
+    if(resolve_polymorphs_in_integration_for_bone(ctx, usage->source, &catalog, &root, 64)){
         goto failure;
     }
 

@@ -6,6 +6,7 @@
 
 #include "AST/POLY/ast_resolve.h"
 #include "AST/TYPE/ast_type_identical.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
 #include "AST/ast_expr.h"
@@ -52,8 +53,9 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
         || ir_gen_globals(compiler, object)
         || ir_gen_functions(compiler, object)
         || ir_gen_functions_body(compiler, object)
-        || ir_gen_special_globals(compiler, object)
         || ir_gen_vtables(compiler, object)
+        || ir_gen_functions_body(compiler, object)
+        || ir_gen_special_globals(compiler, object)
         || ir_gen_fill_in_rtti(object);
 }
 
@@ -144,6 +146,138 @@ static errorcode_t translate_polymorphic_parent_class(
     return errorcode ? FAILURE : SUCCESS;
 }
 
+static errorcode_t search_for_virtual_overrides(compiler_t *compiler, object_t *object, vtree_t *start, int depth_left){
+    // NOTE: Requires that overrides for ancestors have already been
+    // filled in. This will happen naturally, as we will start processing
+    // from the roots
+
+    ast_t *ast = &object->ast;
+
+    if(depth_left <= 0){
+        strong_cstr_t typename = ast_type_str(&start->signature);
+        compiler_panicf(compiler, start->signature.source, "Refusing to search for virtual function overrides in class '%s' with absurdly deeply nested descendents", typename);
+        free(typename);
+        return FAILURE;
+    }
+
+    // Start with existing override structure from parent
+    if(start->parent){
+        ir_func_endpoint_list_append_list(&start->overrides, &start->parent->overrides);
+    }
+
+    // Override existing ancestor methods
+    // (search for all methods that would override for this type, which may mean instantiating new functions)
+    for(length_t i = 0; i != start->overrides.length; i++){
+        func_id_t ast_func_id = start->overrides.endpoints[i].ast_func_id;
+        ast_func_t *ast_func = &ast->funcs[ast_func_id];
+
+        source_t source_on_error = start->signature.source;
+        optional_func_pair_t result;
+
+        assert(ast_func->arity > 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
+
+        ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
+        weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
+
+        ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
+        ast_type_free(&arg_types[0]);
+        arg_types[0] = ast_type_pointer_to(ast_type_clone(&start->signature));
+
+        errorcode_t errorcode = ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
+
+        if(errorcode == ALT_FAILURE){
+            strong_cstr_t typename = ast_type_str(&start->signature);
+            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
+            free(typename);
+
+            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
+            free(arg_types);
+            return FAILURE;
+        }
+
+        free(arg_types);
+
+        if(errorcode == SUCCESS && result.has){
+            start->overrides.endpoints[i].ast_func_id = result.value.ast_func_id;
+            start->overrides.endpoints[i].ir_func_id = result.value.ir_func_id;
+        }
+    }
+
+    // Add new override methods via virtuals
+    // (search for all virtual methods for this type, which may mean instantiating new functions)
+    for(length_t i = 0; i != start->virtuals.length; i++){
+        func_id_t ast_func_id = start->virtuals.endpoints[i].ast_func_id;
+        ast_func_t *ast_func = &ast->funcs[ast_func_id];
+
+        source_t source_on_error = start->signature.source;
+        optional_func_pair_t result;
+
+        assert(ast_func->arity >= 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
+
+        ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
+        weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
+
+        ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
+        ast_type_free(&arg_types[0]);
+        arg_types[0] = ast_type_pointer_to(ast_type_clone(&start->signature));
+
+        if(ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result)){
+            strong_cstr_t typename = ast_type_str(&start->signature);
+            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
+            free(typename);
+
+            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
+            free(arg_types);
+            return FAILURE;
+        }
+
+        free(arg_types);
+
+        if(!result.has){
+            strong_cstr_t typename = ast_type_str(&start->signature);
+            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
+            free(typename);
+
+            compiler_panicf(compiler, source_on_error, "Got empty function result");
+            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
+            return FAILURE;
+        }
+
+        ir_func_endpoint_t endpoint = (ir_func_endpoint_t){
+            .ast_func_id = ast_func_id,
+            .ir_func_id = result.value.ir_func_id,
+        };
+
+        ir_func_endpoint_list_append(&start->overrides, endpoint);
+    }
+
+    // Handle children
+    for(length_t i = 0; i != start->children.length; i++){
+        if(search_for_virtual_overrides(compiler, object, start->children.vtrees[i], depth_left - 1)){
+            return FAILURE;
+        }
+    }
+    
+    // Ensure no new class constructors were instantiated
+    // (They would not have a vtable)
+    // TODO: Merge vtable generation into regular ir_gen_function_bodies() function
+    //       or handle the ability to generate class constructors during vtable
+    //       generation
+    ir_job_list_t *new_job_list = &object->ir_module.job_list;
+
+    for(length_t i = 0; i < new_job_list->length; i++){
+        ir_func_endpoint_t *endpoint = &new_job_list->jobs[i];
+        ast_func_t *ast_func = &ast->funcs[endpoint->ast_func_id];
+
+        if(ast_func->traits & AST_FUNC_CLASS_CONSTRUCTOR || ast_func->traits & AST_FUNC_VIRTUAL){
+            compiler_panicf(compiler, ast_func->source, "A variation of this function was generated during vtable generation, which is not allowed yet");
+            return FAILURE;
+        }
+    }
+
+    return SUCCESS;
+}
+
 errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
@@ -198,14 +332,13 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             strong_cstr_t typename = ast_type_str(&vtree->signature);
             compiler_warnf(compiler, vtree->signature.source, "Failed to find class '%s'", typename);
             free(typename);
-            return FAILURE;
+            goto failure;
         }
 
         if(!composite->is_class){
             strong_cstr_t typename = ast_type_str(&vtree->signature);
             compiler_warnf(compiler, vtree->signature.source, "Cannot extend non-class '%s'", typename);
-            free(typename);
-            return FAILURE;
+            goto failure;
         }
 
         if(composite->parent.elements_length == 0){
@@ -236,13 +369,24 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             free(typename);
 
             ast_type_free(&parent_storage);
-            return FAILURE;
+            goto failure;
         }
 
         ast_type_free(&parent_storage);
 
         vtree->parent = parent_vtree;
         vtree_list_append(&parent_vtree->children, vtree);
+    }
+
+    // Search for overrides for descendent classes
+    for(length_t i = 0; i != vtree_list.length; i++){
+        vtree_t *root = vtree_list.vtrees[i];
+
+        if(root->parent == NULL){
+            if(search_for_virtual_overrides(compiler, object, root, 256)){
+                goto failure;
+            }
+        }
     }
 
     // Test traversing the generated vtrees
@@ -264,7 +408,12 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         vtable_init->store_instr->value = value;
     }
 
+    vtree_list_free(&vtree_list);
     return SUCCESS;
+
+failure:
+    vtree_list_free(&vtree_list);
+    return FAILURE;
 }
 
 errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
