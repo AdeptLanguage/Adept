@@ -39,7 +39,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 // ---------------- ir_gen_functions_body ----------------
 // Generates IR function bodies for AST functions.
 // Assumes IR function skeletons were already generated.
-errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object);
+errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job_list_t *optional_out_completed_jobs);
 
 // ---------------- ir_gen_functions_body_statements ----------------
 // Generates the required intermediate representation for

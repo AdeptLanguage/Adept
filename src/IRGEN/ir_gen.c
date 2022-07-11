@@ -52,9 +52,8 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     return ir_gen_type_mappings(compiler, object)
         || ir_gen_globals(compiler, object)
         || ir_gen_functions(compiler, object)
-        || ir_gen_functions_body(compiler, object)
+        || ir_gen_functions_body(compiler, object, NULL)
         || ir_gen_vtables(compiler, object)
-        || ir_gen_functions_body(compiler, object)
         || ir_gen_special_globals(compiler, object)
         || ir_gen_fill_in_rtti(object);
 }
@@ -257,26 +256,79 @@ static errorcode_t search_for_virtual_overrides(compiler_t *compiler, object_t *
             return FAILURE;
         }
     }
-    
-    // Ensure no new class constructors were instantiated
-    // (They would not have a vtable)
-    // TODO: Merge vtable generation into regular ir_gen_function_bodies() function
-    //       or handle the ability to generate class constructors during vtable
-    //       generation
-    ir_job_list_t *new_job_list = &object->ir_module.job_list;
 
-    for(length_t i = 0; i < new_job_list->length; i++){
-        ir_func_endpoint_t *endpoint = &new_job_list->jobs[i];
-        ast_func_t *ast_func = &ast->funcs[endpoint->ast_func_id];
+    return SUCCESS;
+}
 
-        if(ast_func->traits & AST_FUNC_CLASS_CONSTRUCTOR || ast_func->traits & AST_FUNC_VIRTUAL){
-            compiler_panicf(compiler, ast_func->source, "A variation of this function was generated during vtable generation, which is not allowed yet");
+static errorcode_t link_up_vtrees(compiler_t *compiler, object_t *object, vtree_list_t *vtree_list, length_t start_i){
+    ast_t *ast = &object->ast;
+
+    for(length_t i = start_i; i != vtree_list->length; i++){
+        vtree_t *vtree = vtree_list->vtrees[i];
+
+        ast_composite_t *composite = ast_find_composite(ast, &vtree->signature);
+
+        if(composite == NULL){
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            compiler_warnf(compiler, vtree->signature.source, "Failed to find class '%s'", typename);
+            free(typename);
             return FAILURE;
         }
+
+        if(!composite->is_class){
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            compiler_warnf(compiler, vtree->signature.source, "Cannot extend non-class '%s'", typename);
+            return FAILURE;
+        }
+
+        if(composite->parent.elements_length == 0){
+            // No parent to link up to
+            continue;
+        }
+
+        ast_type_t parent_storage = {0};
+        const ast_type_t *parent;
+
+        if(ast_type_has_polymorph(&composite->parent)){
+            if(translate_polymorphic_parent_class(compiler, object, composite, &vtree->signature, &parent_storage)){
+                return FAILURE;
+            }
+
+            parent = &parent_storage;
+        } else {
+            parent = &composite->parent;
+        }
+
+        vtree_t *parent_vtree = vtree_list_find_or_append(vtree_list, parent);
+
+        if(parent_vtree == NULL){
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            strong_cstr_t parent_typename = ast_type_str(parent);
+            compiler_panicf(compiler, parent->source, "Failed to resolve parent class '%s' for class '%s'", parent_typename, typename);
+            free(parent_typename);
+            free(typename);
+
+            ast_type_free(&parent_storage);
+            return FAILURE;
+        }
+
+        ast_type_free(&parent_storage);
+
+        vtree->parent = parent_vtree;
+        vtree_list_append(&parent_vtree->children, vtree);
     }
 
     return SUCCESS;
 }
+
+typedef struct {
+    vtree_t *vtree;
+    ir_func_endpoint_t endpoint;
+} virtual_addition_t;
+
+typedef listof(virtual_addition_t, additions) virtual_addition_list_t;
+#define virtual_addition_list_append(LIST, VALUE) list_append((LIST), (VALUE), virtual_addition_t);
+#define virtual_addition_list_free(LIST) free((LIST)->additions);
 
 errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
@@ -295,6 +347,8 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     // - Collect tree silhouettes into vtables
 
     vtree_list_t vtree_list = {0};
+    virtual_addition_list_t additions = {0};
+    ir_job_list_t recent_jobs = {0};
 
     // Collect all concrete virtual methods along with determining root classes
     for(length_t i = 0; i != method_map.length; i++){
@@ -323,60 +377,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     }
 
     // Link up parents and children
-    for(length_t i = 0; i != vtree_list.length; i++){
-        vtree_t *vtree = vtree_list.vtrees[i];
-
-        ast_composite_t *composite = ast_find_composite(ast, &vtree->signature);
-
-        if(composite == NULL){
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            compiler_warnf(compiler, vtree->signature.source, "Failed to find class '%s'", typename);
-            free(typename);
-            goto failure;
-        }
-
-        if(!composite->is_class){
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            compiler_warnf(compiler, vtree->signature.source, "Cannot extend non-class '%s'", typename);
-            goto failure;
-        }
-
-        if(composite->parent.elements_length == 0){
-            // No parent to link up to
-            continue;
-        }
-
-        ast_type_t parent_storage = {0};
-        const ast_type_t *parent;
-
-        if(ast_type_has_polymorph(&composite->parent)){
-            if(translate_polymorphic_parent_class(compiler, object, composite, &vtree->signature, &parent_storage)){
-                return FAILURE;
-            }
-
-            parent = &parent_storage;
-        } else {
-            parent = &composite->parent;
-        }
-
-        vtree_t *parent_vtree = vtree_list_find_or_append(&vtree_list, parent);
-
-        if(parent_vtree == NULL){
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            strong_cstr_t parent_typename = ast_type_str(parent);
-            compiler_panicf(compiler, parent->source, "Failed to resolve parent class '%s' for class '%s'", parent_typename, typename);
-            free(parent_typename);
-            free(typename);
-
-            ast_type_free(&parent_storage);
-            goto failure;
-        }
-
-        ast_type_free(&parent_storage);
-
-        vtree->parent = parent_vtree;
-        vtree_list_append(&parent_vtree->children, vtree);
-    }
+    if(link_up_vtrees(compiler, object, &vtree_list, 0)) goto failure;
 
     // Search for overrides for descendent classes
     for(length_t i = 0; i != vtree_list.length; i++){
@@ -387,6 +388,70 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
                 goto failure;
             }
         }
+    }
+
+    length_t max_iters_left = 32000;
+
+    do {
+        // Clear recent jobs list (if it's not already empty)
+        // We will use this list to keep track of which jobs were just processed while
+        // generating the function bodies for the instantiated overrides
+        recent_jobs.length = 0;
+
+        // Instantiate new function bodies
+        if(ir_gen_functions_body(compiler, object, &recent_jobs)){
+            goto failure;
+        }
+
+        length_t start_vtree_i = vtree_list.length;
+
+        // Clear additions list (if it's not already empty)
+        // We will use this list to keep track of new virtual method additions
+        additions.length = 0;
+
+        // Insert new virtuals (may include adding new vtrees)
+        for(length_t i = 0; i != recent_jobs.length; i++){
+            ir_func_endpoint_t endpoint = recent_jobs.jobs[i];
+            ast_func_t *func = &ast->funcs[endpoint.ast_func_id];
+
+            if(ast_func_is_method(func) && func->traits & AST_FUNC_VIRTUAL && endpoint.ir_func_id != INVALID_FUNC_ID){
+                ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
+
+                virtual_addition_t addition = (virtual_addition_t){
+                    .vtree = vtree_list_find_or_append(&vtree_list, &subject_type),
+                    .endpoint = endpoint,
+                };
+
+                virtual_addition_list_append(&additions, addition);
+            }
+        }
+
+        // Link up any newly created vtrees
+        if(link_up_vtrees(compiler, object, &vtree_list, start_vtree_i)) goto failure;
+
+        // Waterfall new virtuals and search for their overrides
+        for(length_t i = 0; i < additions.length; i++){
+            virtual_addition_t *addition = &additions.additions[i];
+
+            length_t insertion_point = addition->vtree->virtuals.length;
+            (void) insertion_point;
+
+            // Add virtual function to owner vtree
+            vtree_append_virtual(addition->vtree, addition->endpoint);
+
+            // Inject overrides for descendants
+            // (todo)
+
+            strong_cstr_t class_name = ast_type_str(&addition->vtree->signature);
+            compiler_panicf(compiler, addition->vtree->signature.source, "Resolving delayed virtual additions is not yet implemented ('%s' uses this feature)", class_name);
+            free(class_name);
+            goto failure;
+        }
+    } while(module->job_list.length != 0 && --max_iters_left != 0);
+
+    if(module->job_list.length > 0){
+        internalerrorprintf("During vtable generation, chained virtual instantiation resolution iterations reached an absurdly high number. Refusing to process further\n");
+        goto failure;
     }
 
     // Test traversing the generated vtrees
@@ -408,10 +473,14 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         vtable_init->store_instr->value = value;
     }
 
+    ir_job_list_free(&recent_jobs);
+    virtual_addition_list_free(&additions);
     vtree_list_free(&vtree_list);
     return SUCCESS;
 
 failure:
+    ir_job_list_free(&recent_jobs);
+    virtual_addition_list_free(&additions);
     vtree_list_free(&vtree_list);
     return FAILURE;
 }
@@ -667,7 +736,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     return SUCCESS;
 }
 
-errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
+errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job_list_t *optional_out_completed_jobs){
     // NOTE: Only ir_gens function body; assumes skeleton already exists
 
     ast_func_t **ast_funcs = &object->ast.funcs;
@@ -686,6 +755,10 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object){
 
         if(ir_gen_functions_body_statements(compiler, object, job->ast_func_id, job->ir_func_id)){
             return FAILURE;
+        }
+
+        if(optional_out_completed_jobs != NULL){
+            ir_job_list_append(optional_out_completed_jobs, *job);
         }
     }
     
