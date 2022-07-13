@@ -145,6 +145,44 @@ static errorcode_t translate_polymorphic_parent_class(
     return errorcode ? FAILURE : SUCCESS;
 }
 
+static errorcode_t search_for_single_override(compiler_t *compiler, object_t *object, vtree_t *vtree, func_id_t ast_func_id, optional_func_pair_t *out_result){
+    ast_t *ast = &object->ast;
+    ast_func_t *ast_func = &ast->funcs[ast_func_id];
+
+    source_t source_on_error = vtree->signature.source;
+    optional_func_pair_t result;
+
+    assert(ast_func->arity > 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
+
+    ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
+    weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
+
+    ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
+    ast_type_free(&arg_types[0]);
+    arg_types[0] = ast_type_pointer_to(ast_type_clone(&vtree->signature));
+
+    errorcode_t errorcode = ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
+
+    switch(errorcode){
+    case ALT_FAILURE: {
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
+            free(typename);
+
+            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
+            ast_types_free(arg_types, ast_func->arity);
+            return FAILURE;
+        }
+    case SUCCESS:
+        *out_result = result;
+    default:
+        out_result->has = false;
+    }
+
+    ast_types_free(arg_types, ast_func->arity);
+    return SUCCESS;
+}
+
 static errorcode_t search_for_virtual_overrides(compiler_t *compiler, object_t *object, vtree_t *start, int depth_left){
     // NOTE: Requires that overrides for ancestors have already been
     // filled in. This will happen naturally, as we will start processing
@@ -168,35 +206,13 @@ static errorcode_t search_for_virtual_overrides(compiler_t *compiler, object_t *
     // (search for all methods that would override for this type, which may mean instantiating new functions)
     for(length_t i = 0; i != start->overrides.length; i++){
         func_id_t ast_func_id = start->overrides.endpoints[i].ast_func_id;
-        ast_func_t *ast_func = &ast->funcs[ast_func_id];
-
-        source_t source_on_error = start->signature.source;
         optional_func_pair_t result;
 
-        assert(ast_func->arity > 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
-
-        ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
-        weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
-
-        ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
-        ast_type_free(&arg_types[0]);
-        arg_types[0] = ast_type_pointer_to(ast_type_clone(&start->signature));
-
-        errorcode_t errorcode = ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
-
-        if(errorcode == ALT_FAILURE){
-            strong_cstr_t typename = ast_type_str(&start->signature);
-            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
-            free(typename);
-
-            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
-            free(arg_types);
+        if(search_for_single_override(compiler, object, start, ast_func_id, &result)){
             return FAILURE;
         }
 
-        free(arg_types);
-
-        if(errorcode == SUCCESS && result.has){
+        if(result.has){
             start->overrides.endpoints[i].ast_func_id = result.value.ast_func_id;
             start->overrides.endpoints[i].ir_func_id = result.value.ir_func_id;
         }
@@ -226,11 +242,11 @@ static errorcode_t search_for_virtual_overrides(compiler_t *compiler, object_t *
             free(typename);
 
             compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
-            free(arg_types);
+            ast_types_free(arg_types, ast_func->arity);
             return FAILURE;
         }
 
-        free(arg_types);
+        ast_types_free(arg_types, ast_func->arity);
 
         if(!result.has){
             strong_cstr_t typename = ast_type_str(&start->signature);
@@ -330,6 +346,36 @@ typedef listof(virtual_addition_t, additions) virtual_addition_list_t;
 #define virtual_addition_list_append(LIST, VALUE) list_append((LIST), (VALUE), virtual_addition_t);
 #define virtual_addition_list_free(LIST) free((LIST)->additions);
 
+static errorcode_t inject_overrides_for_descendants_for_addition(compiler_t *compiler, object_t *object, virtual_addition_t *addition, length_t insertion_point, vtree_t *vtree){
+    for(length_t i = 0; i != vtree->children.length; i++){
+        vtree_t *child = vtree->children.vtrees[i];
+        optional_func_pair_t result;
+
+        if(search_for_single_override(compiler, object, child, addition->endpoint.ast_func_id, &result)){
+            return FAILURE;
+        }
+
+        ir_func_endpoint_t endpoint;
+
+        if(result.has){
+            endpoint = (ir_func_endpoint_t){
+                .ast_func_id = result.value.ast_func_id,
+                .ir_func_id = result.value.ir_func_id,
+            };
+        } else {
+            endpoint = addition->endpoint;
+        }
+
+        ir_func_endpoint_list_insert_at(&child->overrides, endpoint, insertion_point);
+
+        if(inject_overrides_for_descendants_for_addition(compiler, object, addition, insertion_point, child)){
+            return FAILURE;
+        }
+    }
+
+    return SUCCESS;
+}
+
 errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
@@ -409,7 +455,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         // We will use this list to keep track of new virtual method additions
         additions.length = 0;
 
-        // Insert new virtuals (may include adding new vtrees)
+        // Create list of virtual additions (process may include creating new vtrees)
         for(length_t i = 0; i != recent_jobs.length; i++){
             ir_func_endpoint_t endpoint = recent_jobs.jobs[i];
             ast_func_t *func = &ast->funcs[endpoint.ast_func_id];
@@ -434,18 +480,17 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             virtual_addition_t *addition = &additions.additions[i];
 
             length_t insertion_point = addition->vtree->virtuals.length;
-            (void) insertion_point;
-
-            // Add virtual function to owner vtree
+            
+            // Add virtual method
             vtree_append_virtual(addition->vtree, addition->endpoint);
+            
+            // Add self override
+            ir_func_endpoint_list_append(&addition->vtree->overrides, addition->endpoint);
 
             // Inject overrides for descendants
-            // (todo)
-
-            strong_cstr_t class_name = ast_type_str(&addition->vtree->signature);
-            compiler_panicf(compiler, addition->vtree->signature.source, "Resolving delayed virtual additions is not yet implemented ('%s' uses this feature)", class_name);
-            free(class_name);
-            goto failure;
+            if(inject_overrides_for_descendants_for_addition(compiler, object, addition, insertion_point, addition->vtree)){
+                goto failure;
+            }
         }
     } while(module->job_list.length != 0 && --max_iters_left != 0);
 
@@ -748,17 +793,17 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
     ir_builder_init(object->ir_module.deinit_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
 
     while(job_list->length != 0){
-        ir_func_endpoint_t *job = &job_list->jobs[--job_list->length];
-        trait_t traits = (*ast_funcs)[job->ast_func_id].traits;
+        ir_func_endpoint_t job = job_list->jobs[--job_list->length];
+        trait_t traits = (*ast_funcs)[job.ast_func_id].traits;
 
         if(traits & AST_FUNC_FOREIGN) continue;
 
-        if(ir_gen_functions_body_statements(compiler, object, job->ast_func_id, job->ir_func_id)){
+        if(ir_gen_functions_body_statements(compiler, object, job.ast_func_id, job.ir_func_id)){
             return FAILURE;
         }
 
         if(optional_out_completed_jobs != NULL){
-            ir_job_list_append(optional_out_completed_jobs, *job);
+            ir_job_list_append(optional_out_completed_jobs, job);
         }
     }
     

@@ -29,13 +29,18 @@ static int compare_ir_func_endpoint(const void *raw_a, const void *raw_b){
 }
 
 void ir_func_endpoint_list_insert(ir_func_endpoint_list_t *endpoint_list, ir_func_endpoint_t endpoint){
+    length_t insertion_position = find_insert_position(endpoint_list->endpoints, endpoint_list->length, &compare_ir_func_endpoint, &endpoint, sizeof endpoint);
+
+    ir_func_endpoint_list_insert_at(endpoint_list, endpoint, insertion_position);
+}
+
+void ir_func_endpoint_list_insert_at(ir_func_endpoint_list_t *endpoint_list, ir_func_endpoint_t endpoint, length_t index){
     length_t length = endpoint_list->length;
-    length_t position = find_insert_position(endpoint_list->endpoints, length, &compare_ir_func_endpoint, &endpoint, sizeof endpoint);
 
     list_append_new(endpoint_list, ir_func_endpoint_t);
 
-    memmove(&endpoint_list->endpoints[position + 1], &endpoint_list->endpoints[position], sizeof(ir_func_endpoint_t) * (length - position));
-    endpoint_list->endpoints[position] = endpoint;
+    memmove(&endpoint_list->endpoints[index + 1], &endpoint_list->endpoints[index], sizeof(ir_func_endpoint_t) * (length - index));
+    endpoint_list->endpoints[index] = endpoint;
 }
 
 void ir_func_endpoint_list_append_list(ir_func_endpoint_list_t *endpoint_list, ir_func_endpoint_list_t *other){
