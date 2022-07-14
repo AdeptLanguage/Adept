@@ -127,6 +127,8 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         // generating the function bodies for the instantiated overrides
         recent_jobs.length = 0;
 
+        length_t start_ast_func_i = ast->funcs_length;
+
         // Instantiate new function bodies
         if(ir_gen_functions_body(compiler, object, &recent_jobs)){
             goto failure;
@@ -152,6 +154,16 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
                 };
 
                 virtual_addition_list_append(&additions, addition);
+            }
+        }
+
+        // Grab all new concrete classes by looking over new AST functions for any new concrete class constructors
+        for(length_t i = start_ast_func_i; i != ast->funcs_length; i++){
+            ast_func_t *func = &ast->funcs[i];
+
+            if(func->traits & AST_FUNC_CLASS_CONSTRUCTOR && !(func->traits & AST_FUNC_POLYMORPHIC)){
+                ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
+                vtree_list_find_or_append(&vtree_list, &subject_type);
             }
         }
 
