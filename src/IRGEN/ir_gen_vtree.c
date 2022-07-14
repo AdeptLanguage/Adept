@@ -66,10 +66,8 @@ errorcode_t ir_gen_vtree_overrides(
         weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
 
         // Create argument type list for virtual method using concrete subject type
-        // TODO: Handle polymorph consistency in parameters?
-        //       It's not very impactful, but we should probably resolve
-        //       polymorphs using the definitions in the subject class
-        //       when possible. - Isaac Shelton, Jul 13 2022
+        // NOTE: We shouldn't have to worry about any polymorphs in the argument types,
+        //       since we are working with a concrete virtual AST method definition
         ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
         ast_type_free(&arg_types[0]);
         arg_types[0] = ast_type_pointer_to(ast_type_clone(&start->signature));

@@ -1300,13 +1300,15 @@ errorcode_t ir_gen_expr_initlist(ir_builder_t *builder, ast_expr_initlist_t *exp
     }
 
     // Create AST phantom value for memory pointer
-    ast_expr_phantom_t phantom_memory_value;
-    phantom_memory_value.id = EXPR_PHANTOM;
-    phantom_memory_value.ir_value = memory;
-    phantom_memory_value.source = NULL_SOURCE;
-    phantom_memory_value.is_mutable = false;
-    phantom_memory_value.type = master_type;
-    ast_type_prepend_ptr(&phantom_memory_value.type);
+    ast_type_prepend_ptr(&master_type);
+
+    ast_expr_phantom_t phantom_memory_value = (ast_expr_phantom_t){
+        .id = EXPR_PHANTOM,
+        .ir_value = memory,
+        .source = NULL_SOURCE,
+        .is_mutable = false,
+        .type = master_type,
+    };
 
     // Create AST phantom value for memory length
     ast_expr_phantom_t phantom_length_value = (ast_expr_phantom_t){
@@ -1318,9 +1320,10 @@ errorcode_t ir_gen_expr_initlist(ir_builder_t *builder, ast_expr_initlist_t *exp
     };
 
     // Setup AST values to call special function
-    ast_expr_t *args[2];
-    args[0] = (ast_expr_t*) &phantom_memory_value;
-    args[1] = (ast_expr_t*) &phantom_length_value;
+    ast_expr_t *args[2] = {
+        (ast_expr_t*) &phantom_memory_value,
+        (ast_expr_t*) &phantom_length_value,
+    };
 
     // DANGEROUS: Using stack-allocated argument expressions,
     // we must reset 'arity' to zero and 'args' to NULL before
