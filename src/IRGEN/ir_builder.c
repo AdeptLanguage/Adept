@@ -115,7 +115,6 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     builder->type_table = object->ast.type_table;
     builder->has_noop_defer_function = false;
     builder->noop_defer_function = 0;
-    builder->virtuals_list = (ir_virtuals_list_t){0};
 }
 
 void ir_builder_free(ir_builder_t *builder){

@@ -8,54 +8,87 @@ extern "C" {
 
 /*
     ============================== ir_gen_vtree.h ==============================
-    Module for trees used to generate virtual dispatch tables
+    Module used to generate virtual dispatch trees
     ----------------------------------------------------------------------------
 */
 
-#include "AST/ast_type_lean.h"
-#include "IR/ir_func_endpoint.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IRGEN/ir_vtree.h"
+#include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
-#include "UTIL/list.h"
 
-struct vtree;
+// ---------------- virtual_addition_t ----------------
+// Represents a delayed virtual method addition into a vtree structure
+typedef struct {
+    vtree_t *vtree;
+    ir_func_endpoint_t endpoint;
+} virtual_addition_t;
 
-// ---------------- vtree_list_t ----------------
-// List of pointers to heap allocated vtree_t objects.
-// Objects inside the list maybe point to others in the list,
-// even between additions, since they are all separately heap allocated.
-typedef listof(struct vtree*, vtrees) vtree_list_t;
+// ---------------- virtual_addition_list_t ----------------
+// A list of delayed virtual method additions
+typedef listof(virtual_addition_t, additions) virtual_addition_list_t;
 
-// ---------------- vtree_t ----------------
-// Tree used to help generate virtual dispatch tables
-typedef struct vtree {
-    struct vtree *parent;
-    ast_type_t signature;
-    ir_func_endpoint_list_t virtuals;
-    ir_func_endpoint_list_t overrides;
-    vtree_list_t children;
-} vtree_t;
+// ---------------- virtual_addition_list_append ----------------
+// Appends a 'virtual_addition_t' value to a 'virtual_addition_list_t'
+#define virtual_addition_list_append(LIST, VALUE) list_append((LIST), (VALUE), virtual_addition_t);
 
-// ---------------- vtree_append_virtual ----------------
-// Appends a virtual endpoint to a vtree node
-void vtree_append_virtual(vtree_t *vtree, ir_func_endpoint_t endpoint);
+// ---------------- virtual_addition_list_free ----------------
+// Fully frees a 'virtual_addition_list_t'
+#define virtual_addition_list_free(LIST) free((LIST)->additions);
 
-// ---------------- vtree_free_list ----------------
-// Fully frees a vtree_list_t, including heap-allocated elements and the array itself
-void vtree_list_free(vtree_list_t *vtree_list);
+// ---------------- ir_gen_vtree_overrides ----------------
+// Searches for, generates, and fills in any overrides for a child vtree.
+// After that, will fill in default implementation for any of own virtual methods.
+// Will recursively call itself to handle children of child.
+errorcode_t ir_gen_vtree_overrides(
+    compiler_t *compiler,
+    object_t *object,
+    vtree_t *start,
+    int depth_left
+);
 
-// ---------------- vtree_free_list ----------------
-// Appends a heap allocated vtree_t to a vtree_list_t
-#define vtree_list_append(LIST, VALUE) list_append((LIST), (VALUE), vtree_t*)
+// ---------------- ir_gen_vtree_search_for_single_override ----------------
+// Searches for a suitable method to override the method 'ast_func_id' with.
+// Search output will be stored in 'out_result' if successful.
+// Returns SUCCESS even when no suitable override was found.
+// Returns FAILURE if a serious error occurred
+errorcode_t ir_gen_vtree_search_for_single_override(
+    compiler_t *compiler,
+    object_t *object,
+    const ast_type_t *child_subject_type,
+    func_id_t ast_func_id,
+    optional_func_pair_t *out_result
+);
 
-// ---------------- vtree_list_find_or_append ----------------
-// Finds a vtree in a vtree list that has the given signature type,
-// If none exists, a new vtree will be created and inserted.
-// Will always return a vtree with a matching signature.
-vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *signature);
+// ---------------- ir_gen_vtree_link_up_nodes ----------------
+// Fills in 'parent' pointer field for vtrees after/including 'starting_index'
+// in 'vtree_list' using existing vtrees when possible or appending new vtrees when parents aren't
+// the in list yet
+errorcode_t ir_gen_vtree_link_up_nodes(
+    compiler_t *compiler,
+    object_t *object,
+    vtree_list_t *vtree_list,
+    length_t starting_index
+);
 
-// ---------------- vtree_print ----------------
-// Prints a vtree
-void vtree_print(vtree_t *root, length_t indentation);
+// ---------------- ir_gen_vtree_inject_addition_for_descendants ----------------
+// TL;DR - Handles a virtual method addition for descendants of a vtree
+// 
+// Will search for a suitable override for the supplied virtual method addition
+// for each child of the given vtree.
+// Will then inject override into table of child at 'insertion_point' if exists
+// otherwise default implementation 'addition.endpoint'.
+// Will recursively apply to children of children.
+// NOTE: If a child is found to have a suitable override,
+// then their descendant's default implementation will be that override.
+errorcode_t ir_gen_vtree_inject_addition_for_descendants(
+    compiler_t *compiler,
+    object_t *object,
+    virtual_addition_t addition,
+    length_t insertion_point,
+    vtree_t *vtree
+);
 
 #ifdef __cplusplus
 }

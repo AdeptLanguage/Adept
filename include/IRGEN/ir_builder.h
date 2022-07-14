@@ -20,14 +20,6 @@
 #include "UTIL/func_pair.h"
 #include "UTIL/list.h"
 
-typedef struct {
-    ast_type_t type;
-    func_pair_list_t virtuals;
-    func_pair_list_t overrides;
-} ir_virtuals_t;
-
-typedef listof(ir_virtuals_t, functions) ir_virtuals_list_t;
-
 // ---------------- ir_builder_t ----------------
 // Container for storing general information
 // about the building state
@@ -65,7 +57,6 @@ typedef struct ir_builder {
     type_table_t *type_table;
     func_id_t noop_defer_function;
     bool has_noop_defer_function;
-    ir_virtuals_list_t virtuals_list;
 } ir_builder_t;
 
 #include "IR/ir_module.h"

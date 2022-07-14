@@ -32,6 +32,7 @@
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
 #include "IRGEN/ir_gen_vtree.h"
+#include "IRGEN/ir_vtree.h"
 #include "LEX/lex.h"
 #include "UTIL/builtin_type.h"
 #include "UTIL/color.h"
@@ -56,324 +57,6 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
         || ir_gen_vtables(compiler, object)
         || ir_gen_special_globals(compiler, object)
         || ir_gen_fill_in_rtti(object);
-}
-
-static errorcode_t translate_polymorphic_parent_class(
-    compiler_t *compiler,
-    object_t *object,
-    ast_composite_t *the_class,
-    const ast_type_t *the_class_concrete_usage, 
-    ast_type_t *out_type
-){
-    // Translates a polymorphic parent class type
-    // using contextual information from a specific usage
-
-    // EXAMPLE:
-    // For the concrete type usage:
-    //     point <float> Vector4
-    // The `<$T> Vector3f` in
-    //     class <$T> Vector4 extends <$T> Vector3 (w $T)
-    // will be copied, translated into context (`<float> Vector3f`), and returned.
-    // The resolved type will be stored in `out_type` if successful.
-
-    // USE CASE:
-    // This function is used to help translate compile-time polymorphism
-    // during vtable generation, as required classes are not guaranteed to do any
-    // IR generation.
-    
-    // -----
-
-    ast_t *ast = &object->ast;
-    ast_type_t *poly_extended_type = &the_class->parent;
-
-    // Assert that the child class provided has a parent
-    // and the parent type is a generic base that has unresolved compile-time polymorphism
-    assert(the_class->parent.elements_length != 0);
-    assert(ast_type_is_generic_base(poly_extended_type));
-    assert(ast_type_has_polymorph(poly_extended_type));
-
-    // Determine what generic type parameters exist and can be used
-    weak_cstr_t *generics;
-    length_t generics_length;
-
-    if(the_class->is_polymorphic){
-        ast_poly_composite_t *polymorphic_the_class = (ast_poly_composite_t*) the_class;
-
-        // If the child class is polymorphic, then we'll be able to use its type parameters
-        // in its "extends" clause
-        generics = polymorphic_the_class->generics;
-        generics_length = polymorphic_the_class->generics_length;
-    } else {
-        // Otherwise, we don't have access to any polymorphic type variables
-        generics = NULL;
-        generics_length = 0;
-    }
-
-    // Assert that the number of generic polymorphic parameters for the "extends" usage and the actual parent class are the same
-    ast_elem_generic_base_t *concrete_generic_base = (ast_elem_generic_base_t*) the_class_concrete_usage->elements[0];
-    assert(generics_length == concrete_generic_base->generics_length);
-
-    // Find parent composite
-    ast_poly_composite_t *parent_composite = (ast_poly_composite_t*) ast_find_composite(ast, poly_extended_type);
-    
-    if(parent_composite == NULL){
-        const char *missing_parent_name = ((ast_elem_generic_base_t*) poly_extended_type->elements[0])->name;
-
-        strong_cstr_t typename = ast_type_str(the_class_concrete_usage);
-        compiler_panicf(compiler, the_class->source, "Cannot find parent class '%s' for type '%s'", missing_parent_name, typename);
-        free(typename);
-        return FAILURE;
-    }
-
-    // Assert that the stated parent type is a polymorphic class
-    assert(parent_composite->is_class);
-    assert(parent_composite->is_polymorphic);
-
-    // Create polymorph catalog
-    ast_poly_catalog_t catalog;
-    ast_poly_catalog_init(&catalog);
-
-    for(length_t i = 0; i != generics_length; i++){
-        ast_poly_catalog_add_type(&catalog, generics[i], &concrete_generic_base->generics[i]);
-    }
-
-    // Resolve polymorphs in the stated parent type
-    errorcode_t errorcode = ast_resolve_type_polymorphs(compiler, ast->type_table, &catalog, poly_extended_type, out_type);
-
-    // Clean up and return
-    ast_poly_catalog_free(&catalog);
-    return errorcode ? FAILURE : SUCCESS;
-}
-
-static errorcode_t search_for_single_override(compiler_t *compiler, object_t *object, vtree_t *vtree, func_id_t ast_func_id, optional_func_pair_t *out_result){
-    ast_t *ast = &object->ast;
-    ast_func_t *ast_func = &ast->funcs[ast_func_id];
-
-    source_t source_on_error = vtree->signature.source;
-    optional_func_pair_t result;
-
-    assert(ast_func->arity > 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
-
-    ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
-    weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
-
-    ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
-    ast_type_free(&arg_types[0]);
-    arg_types[0] = ast_type_pointer_to(ast_type_clone(&vtree->signature));
-
-    errorcode_t errorcode = ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
-
-    switch(errorcode){
-    case ALT_FAILURE: {
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
-            free(typename);
-
-            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
-            ast_types_free(arg_types, ast_func->arity);
-            return FAILURE;
-        }
-    case SUCCESS:
-        *out_result = result;
-    default:
-        out_result->has = false;
-    }
-
-    ast_types_free(arg_types, ast_func->arity);
-    return SUCCESS;
-}
-
-static errorcode_t search_for_virtual_overrides(compiler_t *compiler, object_t *object, vtree_t *start, int depth_left){
-    // NOTE: Requires that overrides for ancestors have already been
-    // filled in. This will happen naturally, as we will start processing
-    // from the roots
-
-    ast_t *ast = &object->ast;
-
-    if(depth_left <= 0){
-        strong_cstr_t typename = ast_type_str(&start->signature);
-        compiler_panicf(compiler, start->signature.source, "Refusing to search for virtual function overrides in class '%s' with absurdly deeply nested descendents", typename);
-        free(typename);
-        return FAILURE;
-    }
-
-    // Start with existing override structure from parent
-    if(start->parent){
-        ir_func_endpoint_list_append_list(&start->overrides, &start->parent->overrides);
-    }
-
-    // Override existing ancestor methods
-    // (search for all methods that would override for this type, which may mean instantiating new functions)
-    for(length_t i = 0; i != start->overrides.length; i++){
-        func_id_t ast_func_id = start->overrides.endpoints[i].ast_func_id;
-        optional_func_pair_t result;
-
-        if(search_for_single_override(compiler, object, start, ast_func_id, &result)){
-            return FAILURE;
-        }
-
-        if(result.has){
-            start->overrides.endpoints[i].ast_func_id = result.value.ast_func_id;
-            start->overrides.endpoints[i].ir_func_id = result.value.ir_func_id;
-        }
-    }
-
-    // Add new override methods via virtuals
-    // (search for all virtual methods for this type, which may mean instantiating new functions)
-    for(length_t i = 0; i != start->virtuals.length; i++){
-        func_id_t ast_func_id = start->virtuals.endpoints[i].ast_func_id;
-        ast_func_t *ast_func = &ast->funcs[ast_func_id];
-
-        source_t source_on_error = start->signature.source;
-        optional_func_pair_t result;
-
-        assert(ast_func->arity >= 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
-
-        ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
-        weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
-
-        ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
-        ast_type_free(&arg_types[0]);
-        arg_types[0] = ast_type_pointer_to(ast_type_clone(&start->signature));
-
-        if(ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result)){
-            strong_cstr_t typename = ast_type_str(&start->signature);
-            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
-            free(typename);
-
-            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
-            ast_types_free(arg_types, ast_func->arity);
-            return FAILURE;
-        }
-
-        ast_types_free(arg_types, ast_func->arity);
-
-        if(!result.has){
-            strong_cstr_t typename = ast_type_str(&start->signature);
-            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
-            free(typename);
-
-            compiler_panicf(compiler, source_on_error, "Got empty function result");
-            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
-            return FAILURE;
-        }
-
-        ir_func_endpoint_t endpoint = (ir_func_endpoint_t){
-            .ast_func_id = ast_func_id,
-            .ir_func_id = result.value.ir_func_id,
-        };
-
-        ir_func_endpoint_list_append(&start->overrides, endpoint);
-    }
-
-    // Handle children
-    for(length_t i = 0; i != start->children.length; i++){
-        if(search_for_virtual_overrides(compiler, object, start->children.vtrees[i], depth_left - 1)){
-            return FAILURE;
-        }
-    }
-
-    return SUCCESS;
-}
-
-static errorcode_t link_up_vtrees(compiler_t *compiler, object_t *object, vtree_list_t *vtree_list, length_t start_i){
-    ast_t *ast = &object->ast;
-
-    for(length_t i = start_i; i != vtree_list->length; i++){
-        vtree_t *vtree = vtree_list->vtrees[i];
-
-        ast_composite_t *composite = ast_find_composite(ast, &vtree->signature);
-
-        if(composite == NULL){
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            compiler_warnf(compiler, vtree->signature.source, "Failed to find class '%s'", typename);
-            free(typename);
-            return FAILURE;
-        }
-
-        if(!composite->is_class){
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            compiler_warnf(compiler, vtree->signature.source, "Cannot extend non-class '%s'", typename);
-            return FAILURE;
-        }
-
-        if(composite->parent.elements_length == 0){
-            // No parent to link up to
-            continue;
-        }
-
-        ast_type_t parent_storage = {0};
-        const ast_type_t *parent;
-
-        if(ast_type_has_polymorph(&composite->parent)){
-            if(translate_polymorphic_parent_class(compiler, object, composite, &vtree->signature, &parent_storage)){
-                return FAILURE;
-            }
-
-            parent = &parent_storage;
-        } else {
-            parent = &composite->parent;
-        }
-
-        vtree_t *parent_vtree = vtree_list_find_or_append(vtree_list, parent);
-
-        if(parent_vtree == NULL){
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            strong_cstr_t parent_typename = ast_type_str(parent);
-            compiler_panicf(compiler, parent->source, "Failed to resolve parent class '%s' for class '%s'", parent_typename, typename);
-            free(parent_typename);
-            free(typename);
-
-            ast_type_free(&parent_storage);
-            return FAILURE;
-        }
-
-        ast_type_free(&parent_storage);
-
-        vtree->parent = parent_vtree;
-        vtree_list_append(&parent_vtree->children, vtree);
-    }
-
-    return SUCCESS;
-}
-
-typedef struct {
-    vtree_t *vtree;
-    ir_func_endpoint_t endpoint;
-} virtual_addition_t;
-
-typedef listof(virtual_addition_t, additions) virtual_addition_list_t;
-#define virtual_addition_list_append(LIST, VALUE) list_append((LIST), (VALUE), virtual_addition_t);
-#define virtual_addition_list_free(LIST) free((LIST)->additions);
-
-static errorcode_t inject_overrides_for_descendants_for_addition(compiler_t *compiler, object_t *object, virtual_addition_t *addition, length_t insertion_point, vtree_t *vtree){
-    for(length_t i = 0; i != vtree->children.length; i++){
-        vtree_t *child = vtree->children.vtrees[i];
-        optional_func_pair_t result;
-
-        if(search_for_single_override(compiler, object, child, addition->endpoint.ast_func_id, &result)){
-            return FAILURE;
-        }
-
-        ir_func_endpoint_t endpoint;
-
-        if(result.has){
-            endpoint = (ir_func_endpoint_t){
-                .ast_func_id = result.value.ast_func_id,
-                .ir_func_id = result.value.ir_func_id,
-            };
-        } else {
-            endpoint = addition->endpoint;
-        }
-
-        ir_func_endpoint_list_insert_at(&child->overrides, endpoint, insertion_point);
-
-        if(inject_overrides_for_descendants_for_addition(compiler, object, addition, insertion_point, child)){
-            return FAILURE;
-        }
-    }
-
-    return SUCCESS;
 }
 
 errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
@@ -423,14 +106,14 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     }
 
     // Link up parents and children
-    if(link_up_vtrees(compiler, object, &vtree_list, 0)) goto failure;
+    if(ir_gen_vtree_link_up_nodes(compiler, object, &vtree_list, 0)) goto failure;
 
     // Search for overrides for descendent classes
     for(length_t i = 0; i != vtree_list.length; i++){
         vtree_t *root = vtree_list.vtrees[i];
 
         if(root->parent == NULL){
-            if(search_for_virtual_overrides(compiler, object, root, 256)){
+            if(ir_gen_vtree_overrides(compiler, object, root, 256)){
                 goto failure;
             }
         }
@@ -473,7 +156,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         }
 
         // Link up any newly created vtrees
-        if(link_up_vtrees(compiler, object, &vtree_list, start_vtree_i)) goto failure;
+        if(ir_gen_vtree_link_up_nodes(compiler, object, &vtree_list, start_vtree_i)) goto failure;
 
         // Waterfall new virtuals and search for their overrides
         for(length_t i = 0; i < additions.length; i++){
@@ -484,11 +167,11 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             // Add virtual method
             vtree_append_virtual(addition->vtree, addition->endpoint);
             
-            // Add self override
-            ir_func_endpoint_list_append(&addition->vtree->overrides, addition->endpoint);
+            // Add virtual method default endpoint to table
+            ir_func_endpoint_list_append(&addition->vtree->table, addition->endpoint);
 
             // Inject overrides for descendants
-            if(inject_overrides_for_descendants_for_addition(compiler, object, addition, insertion_point, addition->vtree)){
+            if(ir_gen_vtree_inject_addition_for_descendants(compiler, object, *addition, insertion_point, addition->vtree)){
                 goto failure;
             }
         }

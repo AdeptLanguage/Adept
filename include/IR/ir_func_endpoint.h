@@ -34,8 +34,8 @@ typedef listof(ir_func_endpoint_t, endpoints) ir_func_endpoint_list_t;
 // Inserts a function/method endpoint into a sorted list
 void ir_func_endpoint_list_insert(ir_func_endpoint_list_t *endpoint_list, ir_func_endpoint_t endpoint);
 
-// ---------------- ir_func_endpoint_list_insert ----------------
-// Inserts a function/method endpoint at a position
+// ---------------- ir_func_endpoint_list_insert_at ----------------
+// Inserts a function/method endpoint at a position without regard to sorting
 void ir_func_endpoint_list_insert_at(ir_func_endpoint_list_t *endpoint_list, ir_func_endpoint_t endpoint, length_t index);
 
 // ---------------- ir_func_endpoint_list_append ----------------
