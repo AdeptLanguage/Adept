@@ -1445,8 +1445,8 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
     ir_funcptr_type->extra = extra;
 
-    // If the function is only referenced by C-mangled name, remember its name
-    // Otherwise, just get its function address like we normally would
+    // If the function is only referenced by C-mangled name, then get its address by it
+    // Otherwise, just get its function address like normal using its IR function id
     if(ast_func_traits & AST_FUNC_FOREIGN || ast_func_traits & AST_FUNC_MAIN){
         *ir_value = build_func_addr_by_name(builder->pool, ir_funcptr_type, expr->name);
     } else {

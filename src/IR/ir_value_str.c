@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "IR/ir.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
 #include "IR/ir_value_str.h"
@@ -179,6 +180,9 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         break;
     case VALUE_TYPE_FUNC_ADDR:
         result = literal_func_addr_to_str(value);
+        break;
+    case VALUE_TYPE_FUNC_ADDR_BY_NAME:
+        result = literal_func_addr_by_name_to_str(value);
         break;
     case VALUE_TYPE_CONST_SIZEOF:
         result = literal_const_sizeof_to_str(value);

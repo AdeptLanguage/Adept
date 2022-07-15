@@ -273,7 +273,6 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             if(llvm->object->ir_module.funcs.funcs[func_addr->ir_func_id].export_as){
                 return LLVMGetNamedFunction(llvm->module, llvm->object->ir_module.funcs.funcs[func_addr->ir_func_id].export_as);
             } else {
-                // Not a foreign function, so resolve via id
                 char stack_storage[256];
                 ir_implementation(func_addr->ir_func_id, 'a', stack_storage);
                 return LLVMGetNamedFunction(llvm->module, stack_storage);

@@ -208,7 +208,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         vtree_t *vtree = vtree_list.vtrees[i];
 
         if(vtree->table.length > 0){
-            ir_value_t **ir_vtable_entries = ir_pool_alloc(&module->pool, sizeof(ir_value_t) * vtree->table.length);
+            ir_value_t **ir_vtable_entries = ir_pool_alloc(&module->pool, sizeof(ir_value_t*) * vtree->table.length);
 
             for(length_t j = 0; j != vtree->table.length; j++){
                 ir_vtable_entries[j] = build_func_addr(&module->pool, module->common.ir_ptr, vtree->table.endpoints[j].ir_func_id);
@@ -232,7 +232,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             goto failure;
         }
 
-        // Use finalized vtable (or null pointer if empty contents)
+        // Use finalized vtable (or null pointer for empty vtables)
         vtable_init->store_instr->value =
             vtree->finalized_table
                 ? vtree->finalized_table
