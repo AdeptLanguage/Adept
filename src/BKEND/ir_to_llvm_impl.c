@@ -250,7 +250,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
                 // DANGEROUS: TODO: Remove this!!!
                 static int i = 0;
                 char name_buffer[256];
-                sprintf(name_buffer, "S%X", i++);
+                snprintf(name_buffer, sizeof name_buffer, "S%X", i++);
 
                 global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->size), name_buffer);
                 LLVMSetLinkage(global_data, LLVMInternalLinkage);
@@ -266,6 +266,22 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             };
             
             return LLVMConstGEP(global_data, indices, NUM_ITEMS(indices));
+        }
+    case VALUE_TYPE_FUNC_ADDR: {
+            ir_value_func_addr_t *func_addr = value->extra;
+
+            if(llvm->object->ir_module.funcs.funcs[func_addr->ir_func_id].export_as){
+                return LLVMGetNamedFunction(llvm->module, llvm->object->ir_module.funcs.funcs[func_addr->ir_func_id].export_as);
+            } else {
+                // Not a foreign function, so resolve via id
+                char stack_storage[256];
+                ir_implementation(func_addr->ir_func_id, 'a', stack_storage);
+                return LLVMGetNamedFunction(llvm->module, stack_storage);
+            }
+        }
+    case VALUE_TYPE_FUNC_ADDR_BY_NAME: {
+            ir_value_func_addr_by_name_t *func_addr_by_name = value->extra;
+            return LLVMGetNamedFunction(llvm->module, func_addr_by_name->name);
         }
     case VALUE_TYPE_CONST_BITCAST:
             return LLVMConstBitCast(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
@@ -872,26 +888,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     (LLVMIsConstant(foundation) && LLVMIsConstant(gep_indices[0]))
                         ? LLVMConstGEP(foundation, gep_indices, NUM_ITEMS(gep_indices))
                         : LLVMBuildGEP(builder, foundation, gep_indices, NUM_ITEMS(gep_indices), "");
-            }
-            break;
-        case INSTRUCTION_FUNC_ADDRESS: {
-                ir_instr_func_address_t *func_addr_instr = (ir_instr_func_address_t*) instr;
-
-                if(func_addr_instr->name == NULL){
-                    if(llvm->object->ir_module.funcs.funcs[func_addr_instr->ir_func_id].export_as){
-                        llvm_result = LLVMGetNamedFunction(llvm->module, llvm->object->ir_module.funcs.funcs[func_addr_instr->ir_func_id].export_as);
-                    } else {
-                        // Not a foreign function, so resolve via id
-                        char stack_storage[256];
-                        ir_implementation(func_addr_instr->ir_func_id, 'a', stack_storage);
-                        llvm_result = LLVMGetNamedFunction(llvm->module, stack_storage);
-                    }
-                } else {
-                    // Is a foreign function, so get by name
-                    llvm_result = LLVMGetNamedFunction(llvm->module, func_addr_instr->name);
-                }
-
-                catalog->blocks[b].value_references[i] = llvm_result;
             }
             break;
         case INSTRUCTION_BITCAST:

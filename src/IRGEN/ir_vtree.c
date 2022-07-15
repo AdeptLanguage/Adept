@@ -26,11 +26,20 @@ vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *s
         .parent = NULL,
         .virtuals = (ir_func_endpoint_list_t){0},
         .table = (ir_func_endpoint_list_t){0},
-        .children = (vtree_list_t){0}
+        .children = (vtree_list_t){0},
+        .finalized_table = NULL,
     };
 
     vtree_list_append(vtree_list, new_vtree);
     return new_vtree;
+}
+
+vtree_t *vtree_list_find(vtree_list_t *vtree_list, const ast_type_t *signature){
+    for(length_t i = 0; i != vtree_list->length; i++){
+        if(ast_types_identical(&vtree_list->vtrees[i]->signature, signature)){
+            return vtree_list->vtrees[i];
+        }
+    }
 }
 
 void vtree_append_virtual(vtree_t *vtree, ir_func_endpoint_t endpoint){

@@ -90,6 +90,20 @@ static strong_cstr_t literal_cstr_of_len_to_str(ir_value_t *value){
     return result;
 }
 
+static strong_cstr_t literal_func_addr_to_str(ir_value_t *value){
+    ir_value_func_addr_t *func_addr = value->extra;
+
+    char buffer[32];
+    ir_implementation(func_addr->ir_func_id, 0x00, buffer);
+
+    return mallocandsprintf("funcaddr 0x%s", buffer);
+}
+
+static strong_cstr_t literal_func_addr_by_name_to_str(ir_value_t *value){
+    ir_value_func_addr_by_name_t *func_addr_by_name = value->extra;
+    return mallocandsprintf("funcaddr %s", func_addr_by_name->name);
+}
+
 static strong_cstr_t literal_const_sizeof_to_str(ir_value_t *value){
     ir_type_t *type = ((ir_value_const_sizeof_t*) value->extra)->type;
 
@@ -162,6 +176,9 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         break;
     case VALUE_TYPE_CSTR_OF_LEN:
         result = literal_cstr_of_len_to_str(value);
+        break;
+    case VALUE_TYPE_FUNC_ADDR:
+        result = literal_func_addr_to_str(value);
         break;
     case VALUE_TYPE_CONST_SIZEOF:
         result = literal_const_sizeof_to_str(value);

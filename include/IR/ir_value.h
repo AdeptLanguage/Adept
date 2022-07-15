@@ -30,25 +30,28 @@
 #define VALUE_TYPE_STRUCT_LITERAL      0x00000009 // data = pointer to an 'ir_value_struct_literal_t'
 #define VALUE_TYPE_CONST_ANON_GLOBAL   0x0000000A // data = pointer to an 'ir_value_anon_global_t'
 #define VALUE_TYPE_CSTR_OF_LEN         0x0000000B // data = pointer to an 'ir_value_cstr_of_len_t'
-#define VALUE_TYPE_CONST_SIZEOF        0x0000000C // data = pointer to an 'ir_value_const_sizeof_t'
-#define VALUE_TYPE_CONST_ALIGNOF       0x0000000D // data = pointer to an 'ir_value_const_alignof_t'
-#define VALUE_TYPE_CONST_ADD           0x0000000E // data = pointer to an 'ir_value_const_math_t'
-#define VALUE_TYPE_LAST_CONST_NON_CAST VALUE_TYPE_CSTR_OF_LEN
+#define VALUE_TYPE_FUNC_ADDR           0x0000000C // data = pointer to an 'ir_value_func_addr_t'
+#define VALUE_TYPE_FUNC_ADDR_BY_NAME   0x0000000D // data = pointer to an 'ir_value_func_addr_by_name_t'
+#define VALUE_TYPE_LAST_CONST_NON_CAST VALUE_TYPE_FUNC_ADDR
+
+#define VALUE_TYPE_CONST_SIZEOF        0x0000000E // data = pointer to an 'ir_value_const_sizeof_t'
+#define VALUE_TYPE_CONST_ALIGNOF       0x0000000F // data = pointer to an 'ir_value_const_alignof_t'
+#define VALUE_TYPE_CONST_ADD           0x00000010 // data = pointer to an 'ir_value_const_math_t'
 
 // Const cast values
-#define VALUE_TYPE_CONST_BITCAST       0x0000000F // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_ZEXT          0x00000010 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_SEXT          0x00000011 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FEXT          0x00000012 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_TRUNC         0x00000013 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FTRUNC        0x00000014 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_INTTOPTR      0x00000015 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_PTRTOINT      0x00000016 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FPTOUI        0x00000017 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_FPTOSI        0x00000018 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_UITOFP        0x00000019 // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_SITOFP        0x0000001A // data = pointer to an 'ir_value_t'
-#define VALUE_TYPE_CONST_REINTERPRET   0x0000001B // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_BITCAST       0x00000011 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_ZEXT          0x00000012 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_SEXT          0x00000013 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FEXT          0x00000014 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_TRUNC         0x00000015 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FTRUNC        0x00000016 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_INTTOPTR      0x00000017 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_PTRTOINT      0x00000018 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOUI        0x00000019 // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_FPTOSI        0x0000001A // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_UITOFP        0x0000001B // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_SITOFP        0x0000001C // data = pointer to an 'ir_value_t'
+#define VALUE_TYPE_CONST_REINTERPRET   0x0000001D // data = pointer to an 'ir_value_t'
 
 #define VALUE_TYPE_IS_CONSTANT(a)      (a > VALUE_TYPE_LAST_NON_CONST)
 #define VALUE_TYPE_IS_CONSTANT_CAST(a) (a > VALUE_TYPE_LAST_CONST_NON_CAST)
@@ -102,6 +105,18 @@ typedef struct {
     char *array;
     length_t size;
 } ir_value_cstr_of_len_t;
+
+// ---------------- ir_value_func_addr_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if it's a literal function address
+typedef struct {
+    func_id_t ir_func_id;
+} ir_value_func_addr_t;
+
+// ---------------- ir_value_func_addr_t ----------------
+// Structure for 'extra' field of 'ir_value_t' if it's a literal function address by export name
+typedef struct {
+    const char *name;
+} ir_value_func_addr_by_name_t;
 
 // ---------------- ir_value_struct_construction_t ----------------
 // Structure for 'extra' field of 'ir_value_t' if

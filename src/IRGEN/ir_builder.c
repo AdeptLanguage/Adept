@@ -352,19 +352,6 @@ ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_v
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t *build_func_address(ir_builder_t *builder, ir_type_t *result_type, const char *maybe_name, func_id_t ir_func_id){
-    ir_instr_func_address_t *instruction = (ir_instr_func_address_t*) build_instruction(builder, sizeof(ir_instr_func_address_t));
-    
-    *instruction = (ir_instr_func_address_t){
-        .id = INSTRUCTION_FUNC_ADDRESS,
-        .result_type = result_type,
-        .name = maybe_name,
-        .ir_func_id = ir_func_id,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
 ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type, source_t code_source){
     ir_instr_member_t *built_instr = (ir_instr_member_t*) build_instruction(builder, sizeof(ir_instr_member_t));
     built_instr->id = INSTRUCTION_MEMBER;
@@ -473,13 +460,18 @@ ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b){
     return value;
 }
 
-ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
+ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *item_type, ir_value_t **values, length_t length){
     ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
     value->value_type = VALUE_TYPE_ARRAY_LITERAL;
-    value->type = ir_type_make_pointer_to(pool, type);
+    value->type = ir_type_make_pointer_to(pool, item_type);
+
     ir_value_array_literal_t *extra = ir_pool_alloc(pool, sizeof(ir_value_array_literal_t));
-    extra->values = values;
-    extra->length = length;
+    
+    *extra = (ir_value_array_literal_t){
+        .values = values,
+        .length = length,
+    };
+
     value->extra = extra;
     return value;
 }
@@ -655,6 +647,36 @@ ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
     value->value_type = VALUE_TYPE_NULLPTR_OF_TYPE;
     value->type = type;
     // neglect value->extra
+    return value;
+}
+
+ir_value_t *build_func_addr(ir_pool_t *pool, ir_type_t *result_type, func_id_t ir_func_id){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_FUNC_ADDR;
+    value->type = result_type;
+
+    ir_value_func_addr_t *extra = ir_pool_alloc(pool, sizeof(ir_value_func_addr_t));
+
+    *extra = (ir_value_func_addr_t){
+        .ir_func_id = ir_func_id,
+    };
+
+    value->extra = extra;
+    return value;
+}
+
+ir_value_t *build_func_addr_by_name(ir_pool_t *pool, ir_type_t *result_type, const char *name){
+    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
+    value->value_type = VALUE_TYPE_FUNC_ADDR_BY_NAME;
+    value->type = result_type;
+
+    ir_value_func_addr_by_name_t *extra = ir_pool_alloc(pool, sizeof(ir_value_func_addr_by_name_t));
+
+    *extra = (ir_value_func_addr_by_name_t){
+        .name = name,
+    };
+
+    value->extra = extra;
     return value;
 }
 

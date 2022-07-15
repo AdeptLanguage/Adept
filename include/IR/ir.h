@@ -76,7 +76,6 @@ enum {
     INSTRUCTION_FLESSEREQ,       // ir_instr_math_t
     INSTRUCTION_MEMBER,         
     INSTRUCTION_ARRAY_ACCESS,   
-    INSTRUCTION_FUNC_ADDRESS,    // ir_instr_cast_t
     INSTRUCTION_BITCAST,         // ir_instr_cast_t
     INSTRUCTION_ZEXT,            // ir_instr_cast_t
     INSTRUCTION_SEXT,            // ir_instr_cast_t
@@ -279,16 +278,6 @@ typedef struct {
     int maybe_line_number;
     int maybe_column_number;
 } ir_instr_array_access_t;
-
-// ---------------- ir_instr_func_address_t ----------------
-// An IR instruction for getting the address of a function
-// ('name' is only used for foreign implementations)
-typedef struct {
-    unsigned int id;
-    ir_type_t *result_type;
-    const char *name;
-    func_id_t ir_func_id;
-} ir_instr_func_address_t;
 
 // ---------------- ir_instr_cast_t ----------------
 // An IR instruction for casting values to different types

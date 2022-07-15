@@ -161,16 +161,6 @@ static void ir_dump_array_access(FILE *file, ir_instr_array_access_t *instructio
     free(index_str);
 }
 
-static void ir_dump_function_address(FILE *file, ir_instr_func_address_t *instruction){
-    if(instruction->name == NULL){
-        char buffer[32];
-        ir_implementation(instruction->ir_func_id, 0x00, buffer);
-        fprintf(file, "funcaddr 0x%s\n", buffer);
-    } else {
-        fprintf(file, "funcaddr %s\n", instruction->name);
-    }
-}
-
 static void ir_dump_cast_instruction(FILE *file, ir_instr_cast_t *instruction, const char *instr_name){
     strong_cstr_t to_type = ir_type_str(instruction->result_type);
     strong_cstr_t value_str = ir_value_str(instruction->value);
@@ -445,9 +435,6 @@ void ir_dump_instruction(FILE *file, ir_instr_t *instruction, length_t instr_ind
         break;
     case INSTRUCTION_ARRAY_ACCESS:
         ir_dump_array_access(file, (ir_instr_array_access_t*) instruction);
-        break;
-    case INSTRUCTION_FUNC_ADDRESS:
-        ir_dump_function_address(file, (ir_instr_func_address_t*) instruction);
         break;
     case INSTRUCTION_BITCAST:
         ir_dump_cast_instruction(file, (ir_instr_cast_t*) instruction, "bc");

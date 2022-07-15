@@ -14,6 +14,7 @@ extern "C" {
 
 #include "AST/ast_type_lean.h"
 #include "IR/ir_func_endpoint.h"
+#include "IR/ir_value.h"
 #include "UTIL/ground.h"
 #include "UTIL/list.h"
 
@@ -33,6 +34,7 @@ typedef struct vtree {
     ir_func_endpoint_list_t virtuals;
     ir_func_endpoint_list_t table;
     vtree_list_t children;
+    ir_value_t *finalized_table;
 } vtree_t;
 
 // ---------------- vtree_append_virtual ----------------
@@ -52,6 +54,10 @@ void vtree_list_free(vtree_list_t *vtree_list);
 // If none exists, a new vtree will be created and inserted.
 // Will always return a vtree with a matching signature.
 vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *signature);
+
+// ---------------- vtree_list_find ----------------
+// Finds a vtree in a vtree list that has the given signature
+vtree_t *vtree_list_find(vtree_list_t *vtree_list, const ast_type_t *signature);
 
 // ---------------- vtree_print ----------------
 // Prints a vtree

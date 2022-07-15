@@ -203,14 +203,40 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         }
     }
 
+    // Generate finalized vtables
+    for(length_t i = 0; i != vtree_list.length; i++){
+        vtree_t *vtree = vtree_list.vtrees[i];
+
+        if(vtree->table.length > 0){
+            ir_value_t **ir_vtable_entries = ir_pool_alloc(&module->pool, sizeof(ir_value_t) * vtree->table.length);
+
+            for(length_t j = 0; j != vtree->table.length; j++){
+                ir_vtable_entries[j] = build_func_addr(&module->pool, module->common.ir_ptr, vtree->table.endpoints[j].ir_func_id);
+            }
+
+            ir_value_t *vtable = build_static_array(&module->pool, module->common.ir_ptr, ir_vtable_entries, vtree->table.length);
+            vtree->finalized_table = build_const_bitcast(&module->pool, vtable, module->common.ir_ptr);
+        }
+    }
+
     // Inject vtable initializations
     for(length_t i = 0; i < module->vtable_init_list.length; i++){
         ir_vtable_init_t *vtable_init = &module->vtable_init_list.initializations[i];
 
-        // TODO: Inject real vtable pointers instead of 0x01 pointers
-        ir_value_t *value = build_const_inttoptr(&module->pool, build_literal_int(&module->pool, 1), module->common.ir_ptr);
+        vtree_t *vtree = vtree_list_find(&vtree_list, &vtable_init->subject_type);
 
-        vtable_init->store_instr->value = value;
+        if(vtree == NULL){
+            strong_cstr_t typename = ast_type_str(&vtable_init->subject_type);
+            compiler_panicf(compiler, vtable_init->subject_type.source, "Failed to find generated vtable for type '%s'", typename);
+            free(typename);
+            goto failure;
+        }
+
+        // Use finalized vtable (or null pointer if empty contents)
+        vtable_init->store_instr->value =
+            vtree->finalized_table
+                ? vtree->finalized_table
+                : build_null_pointer_of_type(&module->pool, module->common.ir_ptr);
     }
 
     ir_job_list_free(&recent_jobs);
@@ -482,10 +508,15 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
     ast_func_t **ast_funcs = &object->ast.funcs;
     ir_job_list_t *job_list = &object->ir_module.job_list;
     
-    object->ir_module.init_builder = malloc(sizeof(ir_builder_t));
-    object->ir_module.deinit_builder = malloc(sizeof(ir_builder_t));
-    ir_builder_init(object->ir_module.init_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
-    ir_builder_init(object->ir_module.deinit_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
+    if(object->ir_module.init_builder == NULL){
+        object->ir_module.init_builder = malloc(sizeof(ir_builder_t));
+        ir_builder_init(object->ir_module.init_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
+    }
+
+    if(object->ir_module.deinit_builder == NULL){
+        object->ir_module.deinit_builder = malloc(sizeof(ir_builder_t));
+        ir_builder_init(object->ir_module.deinit_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
+    }
 
     while(job_list->length != 0){
         ir_func_endpoint_t job = job_list->jobs[--job_list->length];

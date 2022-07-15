@@ -1446,10 +1446,12 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     ir_funcptr_type->extra = extra;
 
     // If the function is only referenced by C-mangled name, remember its name
-    const char *maybe_name = (ast_func_traits & AST_FUNC_FOREIGN || ast_func_traits & AST_FUNC_MAIN) ? expr->name : NULL;
-
-    // Build 'get function address' instruction
-    *ir_value = build_func_address(builder, ir_funcptr_type, maybe_name, pair.ir_func_id);
+    // Otherwise, just get its function address like we normally would
+    if(ast_func_traits & AST_FUNC_FOREIGN || ast_func_traits & AST_FUNC_MAIN){
+        *ir_value = build_func_addr_by_name(builder->pool, ir_funcptr_type, expr->name);
+    } else {
+        *ir_value = build_func_addr(builder->pool, ir_funcptr_type, pair.ir_func_id);
+    }
 
     // Write resulting type if requested
     if(out_expr_type != NULL){
@@ -1517,17 +1519,12 @@ errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, a
     ir_final_funcptr_type->kind = TYPE_KIND_FUNCPTR;
     ir_final_funcptr_type->extra = final_extra;
 
-    // Create function address instruction
-    ir_instr_func_address_t *instruction = (ir_instr_func_address_t*) build_instruction(builder, sizeof(ir_instr_func_address_t));
-    instruction->id = INSTRUCTION_FUNC_ADDRESS;
-    instruction->result_type = ir_noop_funcptr_type;
-    instruction->name = NULL;
-    instruction->ir_func_id = ir_func_id;
-    *ir_value = build_value_from_prev_instruction(builder);
+    // Get function address
+    *ir_value = build_func_addr(builder->pool, ir_noop_funcptr_type, ir_func_id);
 
     // Cast to proper type
-    *ir_value = build_const_cast(builder->pool, VALUE_TYPE_CONST_BITCAST, *ir_value, module->common.ir_ptr);
-    *ir_value = build_const_cast(builder->pool, VALUE_TYPE_CONST_BITCAST, *ir_value, ir_final_funcptr_type);
+    *ir_value = build_const_bitcast(builder->pool, *ir_value, module->common.ir_ptr);
+    *ir_value = build_const_bitcast(builder->pool, *ir_value, ir_final_funcptr_type);
 
     // Write resulting type if requested
     if(out_expr_type != NULL){

@@ -145,10 +145,6 @@ ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b);
 ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source);
 ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type, source_t code_source);
 
-// ---------------- build_func_address ----------------
-// Builds an instruction to get the address of a function
-ir_value_t *build_func_address(ir_builder_t *builder, ir_type_t *result_type, const char *maybe_name, func_id_t ir_func_id);
-
 // ---------------- build_member ----------------
 // Builds a member access instruction
 ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type, source_t code_source);
@@ -185,7 +181,7 @@ ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b);
 
 // ---------------- build_static_array ----------------
 // Builds a static array
-ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);
+ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *item_type, ir_value_t **values, length_t length);
 
 // ---------------- build_anon_global ----------------
 // Builds an anonymous global variable
@@ -241,6 +237,11 @@ ir_value_t *build_null_pointer(ir_pool_t *pool);
 // ---------------- build_null_pointer_of_type ----------------
 // Builds a literal null pointer value
 ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type);
+
+// ---------------- build_literal_func_addr ----------------
+// Builds a literal function address
+ir_value_t *build_func_addr(ir_pool_t *pool, ir_type_t *result_type, func_id_t ir_func_id);
+ir_value_t *build_func_addr_by_name(ir_pool_t *pool, ir_type_t *result_type, const char *name);
 
 // ---------------- build_cast ----------------
 // Casts an IR value to an IR type
