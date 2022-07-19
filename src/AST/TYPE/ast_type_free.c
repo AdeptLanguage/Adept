@@ -58,9 +58,12 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length){
         case AST_ELEM_POLYMORPH:
             free(((ast_elem_polymorph_t*) elem)->name);
             break;
-        case AST_ELEM_POLYMORPH_PREREQ:
-            free(((ast_elem_polymorph_prereq_t*) elem)->name);
-            free(((ast_elem_polymorph_prereq_t*) elem)->similarity_prerequisite);
+        case AST_ELEM_POLYMORPH_PREREQ: {
+                ast_elem_polymorph_prereq_t *poly_prereq_elem = (ast_elem_polymorph_prereq_t*) elem;
+                free(poly_prereq_elem->name);
+                free(poly_prereq_elem->similarity_prerequisite);
+                ast_type_free(&poly_prereq_elem->extends);
+            }
             break;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) elem;

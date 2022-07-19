@@ -156,8 +156,9 @@ static ast_elem_t *ast_elem_polymorph_prereq_clone(const ast_elem_polymorph_prer
         .id = AST_ELEM_POLYMORPH_PREREQ,
         .source = original->source,
         .name = strclone(original->name),
-        .similarity_prerequisite = strclone(original->similarity_prerequisite),
         .allow_auto_conversion = original->allow_auto_conversion,
+        .similarity_prerequisite = strclone(original->similarity_prerequisite),
+        .extends = original->extends.elements_length == 0 ? (ast_type_t){0} : ast_type_clone(&original->extends),
     };
 
     return (ast_elem_t*) clone;

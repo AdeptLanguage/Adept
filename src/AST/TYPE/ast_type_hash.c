@@ -33,7 +33,9 @@ static hash_t ast_elem_polycount_hash(ast_elem_polycount_t *elem, hash_t working
 
 static hash_t ast_elem_polymorph_prereq_hash(ast_elem_polymorph_prereq_t *elem, hash_t working_hash){
     working_hash = hash_combine(working_hash, hash_data(elem->similarity_prerequisite, strlen(elem->similarity_prerequisite)));
-    return         hash_combine(working_hash, hash_data(elem->name, strlen(elem->name)));
+    working_hash = hash_combine(working_hash, hash_data(elem->name, strlen(elem->name)));
+    working_hash = elem->extends.elements_length != 0 ? hash_combine(working_hash, ast_type_hash(&elem->extends)) : working_hash;
+    return working_hash;
 }
 
 static hash_t ast_elem_generic_base_hash(ast_elem_generic_base_t *elem, hash_t working_hash){

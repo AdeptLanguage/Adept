@@ -137,7 +137,9 @@ errorcode_t ir_gen_check_prereq(
     return FAILURE;
 }
 
-bool is_special_prerequisite(weak_cstr_t prerequisite_name, enum special_prereq *out_special_prerequisite){
+bool is_special_prerequisite(maybe_null_weak_cstr_t prerequisite_name, enum special_prereq *out_special_prerequisite){
+    if(prerequisite_name == NULL) return false;
+
     const char **result = bsearch(&prerequisite_name, global_special_prerequisites, NUM_SPECIAL_PREREQ, sizeof(const char*), &compare_strings);
 
     if(result && out_special_prerequisite != NULL){

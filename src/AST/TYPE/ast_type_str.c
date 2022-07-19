@@ -73,8 +73,19 @@ static void ast_elem_polymorph_prereq_str(string_builder_t *builder, ast_elem_po
     }
 
     string_builder_append(builder, elem->name);
-    string_builder_append_char(builder, '~');
-    string_builder_append(builder, elem->similarity_prerequisite);
+
+    if(elem->similarity_prerequisite){
+        string_builder_append_char(builder, '~');
+        string_builder_append(builder, elem->similarity_prerequisite);
+    }
+
+    if(elem->extends.elements_length > 0){
+        string_builder_append(builder, " extends ");
+
+        strong_cstr_t parent_typename = ast_type_str(&elem->extends);
+        string_builder_append(builder, parent_typename);
+        free(parent_typename);
+    }
 }
 
 static void ast_elem_polycount_str(string_builder_t *builder, ast_elem_polycount_t *elem){

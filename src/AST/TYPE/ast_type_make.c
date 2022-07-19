@@ -63,7 +63,7 @@ ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool al
     return (ast_elem_t*) elem;
 }
 
-ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, strong_cstr_t similarity_prerequisite){
+ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, strong_cstr_t similarity_prerequisite, ast_type_t extends){
     ast_elem_polymorph_prereq_t *elem = malloc(sizeof *elem);
 
     *elem = (ast_elem_polymorph_prereq_t){
@@ -72,6 +72,7 @@ ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, 
         .source = source,
         .allow_auto_conversion = allow_auto_conversion,
         .similarity_prerequisite = similarity_prerequisite,
+        .extends = extends,
     };
 
     return (ast_elem_t*) elem;

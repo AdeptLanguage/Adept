@@ -55,7 +55,8 @@ errorcode_t ir_gen_check_prereq(
 // Returns whether a prerequisite is a "special built-in" prerequisite
 // If so and 'out_special_prerequisite' isn't NULL, the corresponding
 // SPECIAL_PREREQ_* value will be stored in 'out_special_prerequisite'
-bool is_special_prerequisite(weak_cstr_t prerequisite_name, enum special_prereq *out_special_prerequisite);
+// NOTE: Returns false for NULL pointer
+bool is_special_prerequisite(maybe_null_weak_cstr_t prerequisite_name, enum special_prereq *out_special_prerequisite);
 
 #ifdef __cplusplus
 }

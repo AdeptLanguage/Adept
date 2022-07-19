@@ -135,6 +135,7 @@ typedef struct {
     DERIVE_ELEM_POLYMORPH;
 
     strong_cstr_t similarity_prerequisite;
+    ast_type_t extends;
 } ast_elem_polymorph_prereq_t;
 
 // ---------------- ast_elem_generic_base_t ----------------

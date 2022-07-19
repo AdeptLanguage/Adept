@@ -85,62 +85,69 @@ static errorcode_t enforce_prereq(
     if(special_prereq != (enum special_prereq) -1) return FAILURE;
 
     // Handle struct-field prerequisites
-    ast_composite_t *similar = ast_composite_find_exact(&object->ast, prereq->similarity_prerequisite);
+    if(prereq->similarity_prerequisite){
+        ast_composite_t *similar = ast_composite_find_exact(&object->ast, prereq->similarity_prerequisite);
 
-    if(similar == NULL){
-        compiler_panicf(compiler, prereq->source, "Undeclared struct '%s'", prereq->similarity_prerequisite);
-        return ALT_FAILURE;
+        if(similar == NULL){
+            compiler_panicf(compiler, prereq->source, "Undeclared struct '%s'", prereq->similarity_prerequisite);
+            return ALT_FAILURE;
+        }
+
+        if(!ast_layout_is_simple_struct(&similar->layout)){
+            compiler_panicf(compiler, prereq->source, "Cannot use complex composite type '%s' as struct prerequisite", prereq->similarity_prerequisite);
+            return ALT_FAILURE;
+        }
+
+        length_t field_count = ast_simple_field_map_get_count(&similar->layout.field_map);
+
+        ast_field_map_t *field_map;
+        ast_elem_t *concrete_elem = concrete_type->elements[index];
+
+        if(concrete_elem->id == AST_ELEM_BASE){
+            weak_cstr_t given_name = ((ast_elem_base_t*) concrete_elem)->base;
+            ast_composite_t *given = ast_composite_find_exact(&object->ast, given_name);
+
+            if(given == NULL){
+                // Undeclared struct given, no error should be necessary
+                internalerrorprintf("ir_gen_polymorphable() - Failed to find struct '%s', which should exist\n", given_name);
+                return FAILURE;
+            }
+
+            field_map = &given->layout.field_map;
+        } else if(concrete_elem->id != AST_ELEM_GENERIC_BASE){
+            ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) concrete_elem;
+
+            if(generic_base_elem->name_is_polymorphic){
+                internalerrorprintf("ir_gen_polymorphable() - Encountered polymorphic generic struct name in middle of AST type\n");
+                return FAILURE;
+            }
+
+            weak_cstr_t given_name = generic_base_elem->name;
+            ast_poly_composite_t *given = ast_poly_composite_find_exact(&object->ast, given_name);
+
+            if(given == NULL){
+                internalerrorprintf("ir_gen_polymorphable() - Failed to find polymorphic struct '%s', which should exist\n", given_name);
+                return FAILURE;
+            }
+
+            field_map = &given->layout.field_map;
+        } else {
+            return FAILURE;
+        }
+
+        // Ensure polymorphic prerequisite met
+        ast_layout_endpoint_t ignore_endpoint;
+        for(length_t f = 0; f != field_count; f++){
+            weak_cstr_t field_name = ast_simple_field_map_get_name_at_index(&similar->layout.field_map, f);
+
+            // Ensure an endpoint with the same name exists
+            if(!ast_field_map_find(field_map, field_name, &ignore_endpoint)) return FAILURE;
+        }
     }
 
-    if(!ast_layout_is_simple_struct(&similar->layout)){
-        compiler_panicf(compiler, prereq->source, "Cannot use complex composite type '%s' as struct prerequisite", prereq->similarity_prerequisite);
-        return ALT_FAILURE;
-    }
-
-    length_t field_count = ast_simple_field_map_get_count(&similar->layout.field_map);
-
-    ast_field_map_t *field_map;
-    ast_elem_t *concrete_elem = concrete_type->elements[index];
-
-    if(concrete_elem->id == AST_ELEM_BASE){
-        weak_cstr_t given_name = ((ast_elem_base_t*) concrete_elem)->base;
-        ast_composite_t *given = ast_composite_find_exact(&object->ast, given_name);
-
-        if(given == NULL){
-            // Undeclared struct given, no error should be necessary
-            internalerrorprintf("ir_gen_polymorphable() - Failed to find struct '%s', which should exist\n", given_name);
-            return FAILURE;
-        }
-
-        field_map = &given->layout.field_map;
-    } else if(concrete_elem->id != AST_ELEM_GENERIC_BASE){
-        ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) concrete_elem;
-
-        if(generic_base_elem->name_is_polymorphic){
-            internalerrorprintf("ir_gen_polymorphable() - Encountered polymorphic generic struct name in middle of AST type\n");
-            return FAILURE;
-        }
-
-        weak_cstr_t given_name = generic_base_elem->name;
-        ast_poly_composite_t *given = ast_poly_composite_find_exact(&object->ast, given_name);
-
-        if(given == NULL){
-            internalerrorprintf("ir_gen_polymorphable() - Failed to find polymophic struct '%s', which should exist\n", given_name);
-            return FAILURE;
-        }
-
-        field_map = &given->layout.field_map;
-    } else {
+    if(prereq->extends.elements_length != 0){
+        compiler_warnf(compiler, prereq->extends.source, "Polymorph 'extends' prerequisite is not yet implemented (rejected potential type match)");
         return FAILURE;
-    }
-
-    // Ensure polymorphic prerequisite met
-    ast_layout_endpoint_t ignore_endpoint;
-    for(length_t f = 0; f != field_count; f++){
-        weak_cstr_t field_name = ast_simple_field_map_get_name_at_index(&similar->layout.field_map, f);
-
-        // Ensure an endpoint with the same name exists
-        if(!ast_field_map_find(field_map, field_name, &ignore_endpoint)) return FAILURE;
     }
 
     return SUCCESS;

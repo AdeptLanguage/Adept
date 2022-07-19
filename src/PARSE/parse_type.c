@@ -150,6 +150,9 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             source_t source = sources[(*i)++];
             bool allow_auto_conversion = false;
 
+            maybe_null_strong_cstr_t similar = NULL;
+            ast_type_t extends = {0};
+
             // If polymorph tokens starts with tilde, then we allow auto conversion
             if(name[0] == '~'){
                 allow_auto_conversion = true;
@@ -163,17 +166,26 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                     goto failure;
                 }
 
-                maybe_null_strong_cstr_t similar = parse_take_word(ctx, "Expected struct name after '~' in polymorphic prerequisite");
+                similar = parse_take_word(ctx, "Expected struct name after '~' in polymorphic prerequisite");
 
-                if(!similar){
+                if(similar == NULL){
                     free(name);
                     goto failure;
                 }
-
-                out_type->elements[out_type->elements_length] = ast_elem_polymorph_prereq_make(name, source, allow_auto_conversion, similar);
-            } else {
-                out_type->elements[out_type->elements_length] = ast_elem_polymorph_make(name, source, allow_auto_conversion);
             }
+
+            if(parse_eat(ctx, TOKEN_EXTENDS, NULL) == SUCCESS){
+                if(parse_type(ctx, &extends)){
+                    free(name);
+                    free(similar);
+                    goto failure;
+                }
+            }
+
+            out_type->elements[out_type->elements_length] =
+                (similar != NULL || extends.elements_length != 0)
+                    ? ast_elem_polymorph_prereq_make(name, source, allow_auto_conversion, similar, extends)
+                    : ast_elem_polymorph_make(name, source, allow_auto_conversion);
         }
         break;
     case TOKEN_LESSTHAN: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_LGC_LSHIFT: {

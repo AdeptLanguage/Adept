@@ -87,7 +87,10 @@ ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool al
 
 // ---------------- ast_elem_polymorph_prereq_make ----------------
 // Makes a polymorph prerequisite element (e.g. $T~__number__ or $K~__struct__)
-ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, strong_cstr_t similarity_prerequisite);
+// NOTE: `similarity_prerequisite` may be NULL
+// NOTE: `extends` may be zero length to indicate N/A
+// NOTE: Takes ownership of `extends`
+ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, strong_cstr_t similarity_prerequisite, ast_type_t extends);
 
 // ---------------- ast_elem_func_make ----------------
 // Makes a function element (e.g. func() void, func(ptr, ptr) int, func(double, double) double)
