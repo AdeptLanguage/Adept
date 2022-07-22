@@ -84,7 +84,7 @@ static bool ast_elem_polymorph_prereq_identical(ast_elem_t *raw_a, ast_elem_t *r
 
     if(a->allow_auto_conversion != b->allow_auto_conversion)           return false;
     if(!streq(a->similarity_prerequisite, b->similarity_prerequisite)) return false;
-    if(!ast_types_identical(&a->extends, &b->extends))                   return false;
+    if(!ast_types_identical(&a->extends, &b->extends))                 return false;
 
     return streq(a->name, b->name);
 }

@@ -1845,13 +1845,12 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     }
     
     ast_t *ast = &object->ast;
-    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+    func_id_t ast_func_id = ast_new_func(ast);
 
     // Revalidate poly_func
     poly_func = &object->ast.funcs[ast_poly_func_id];
 
-    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
-    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    ast_func_t *func = &ast->funcs[ast_func_id];
     bool is_entry = streq(poly_func->name, compiler->entry_point);
 
     maybe_null_strong_cstr_t export_name = poly_func->export_as ? strclone(poly_func->export_as) : NULL;
@@ -2042,10 +2041,8 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     }
 
     // Create AST function
-    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
-
-    length_t ast_func_id = ast->funcs_length;
-    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    func_id_t ast_func_id = ast_new_func(ast);
+    ast_func_t *func = &ast->funcs[ast_func_id];
 
     ast_func_create_template(func, &(ast_func_head_t){
         .name = strclone("__defer__"),
@@ -2145,10 +2142,8 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         return FAILURE;
     }
 
-    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
-
-    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
-    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    func_id_t ast_func_id = ast_new_func(ast);
+    ast_func_t *func = &ast->funcs[ast_func_id];
     
     ast_func_create_template(func, &(ast_func_head_t){
         .name = strclone("__pass__"),
@@ -2314,10 +2309,8 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     }
 
     // Create AST function
-    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
-
-    length_t ast_func_id = ast->funcs_length;
-    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    func_id_t ast_func_id = ast_new_func(ast);
+    ast_func_t *func = &ast->funcs[ast_func_id];
 
     ast_func_create_template(func, &(ast_func_head_t){
         .name = strclone("__assign__"),

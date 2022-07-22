@@ -40,6 +40,7 @@ vtree_t *vtree_list_find(vtree_list_t *vtree_list, const ast_type_t *signature){
             return vtree_list->vtrees[i];
         }
     }
+    return NULL;
 }
 
 void vtree_append_virtual(vtree_t *vtree, ir_func_endpoint_t endpoint){

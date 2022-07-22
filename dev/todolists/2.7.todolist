@@ -47,6 +47,7 @@ MEDIUM-PRIORITY:
 * assert and/or static assert
 * throw error if duplicate/overlapping polymorphic composites with same name and arguments exist
 * polymorphic wildcards e.g. <?> List
+* allow direct calling of function pointer values (rather than having to first store them in a variable)
 
 LOW-PRIORITY:
 * Finish 'Any'

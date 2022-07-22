@@ -46,6 +46,7 @@ typedef struct {
     ast_expr_list_t statements;
     source_t source;
     maybe_null_strong_cstr_t export_as;
+    func_id_t virtual_dispatcher; // can be INVALID_FUNC_ID
 
     #ifdef ADEPT_INSIGHT_BUILD
     source_t end_source;
@@ -83,8 +84,9 @@ typedef struct {
 #define AST_FUNC_DISALLOW               TRAIT_E
 #define AST_FUNC_VIRTUAL                TRAIT_F
 #define AST_FUNC_OVERRIDE               TRAIT_G
-#define AST_FUNC_CLASS_CONSTRUCTOR      TRAIT_2_1
-#define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_2
+#define AST_FUNC_DISPATCHER             TRAIT_2_1
+#define AST_FUNC_CLASS_CONSTRUCTOR      TRAIT_2_2
+#define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_3
 
 // ------------------ ast_func_prefixes_t ------------------
 // Information about the keywords that prefix a function
@@ -302,6 +304,11 @@ strong_cstr_t ast_func_args_str(ast_func_t *func);
 // Creates a string for displaying the signature
 // of the head of a function
 strong_cstr_t ast_func_head_str(ast_func_t *func);
+
+// ---------------- ast_func_new ----------------
+// Allocates a new uninitialized AST function and
+// returns an id that can be used to access it
+func_id_t ast_new_func(ast_t *ast);
 
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function

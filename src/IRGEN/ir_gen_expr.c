@@ -956,7 +956,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
     variadic_array_function_arguments[3] = build_bitcast(builder, raw_types_array, builder->ptr_type);
     
     // Create variadic array value using the special function '__variadic_array__'
-    length_t ir_func_id = builder->object->ir_module.common.variadic_ir_func_id;
+    func_id_t ir_func_id = builder->object->ir_module.common.variadic_ir_func_id;
     ir_type_t *result_type = builder->object->ir_module.common.ir_variadic_array;
     ir_value_t *returned_value = build_call(builder, ir_func_id, result_type, variadic_array_function_arguments, 4);
 

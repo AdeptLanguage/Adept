@@ -886,6 +886,11 @@ maybe_null_weak_cstr_t ast_method_get_subject_typename(ast_func_t *method){
     }
 }
 
+func_id_t ast_new_func(ast_t *ast){
+    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+    return ast->funcs_length++;
+}
+
 void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->name = options->name;
     func->arg_names = NULL;
@@ -905,6 +910,7 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->statements = (ast_expr_list_t){0};
     func->source = options->source;
     func->export_as = options->export_name;
+    func->virtual_dispatcher = INVALID_FUNC_ID;
 
     #if ADEPT_INSIGHT_BUILD
     func->end_source = options->source;

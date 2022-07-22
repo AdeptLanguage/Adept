@@ -615,10 +615,8 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     weak_cstr_t master_variable_name = "$";
 
     // Add function
-    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
-
-    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
-    ast_func_t *func = &ast->funcs[ast->funcs_length++];
+    func_id_t ast_func_id = ast_new_func(ast);
+    ast_func_t *func = &ast->funcs[ast_func_id];
 
     ast_func_create_template(func, &(ast_func_head_t){
         .name = strclone(name),

@@ -40,6 +40,12 @@ ast_type_t ast_type_make_base_with_polymorphs(strong_cstr_t base, weak_cstr_t *g
 // Makes a polymorphic parameter type (e.g. $T, $K)
 ast_type_t ast_type_make_polymorph(strong_cstr_t name, bool allow_auto_conversion);
 
+// ---------------- ast_type_make_polymorph_prereq ----------------
+// Make a polymorphic parameter type with a prerequisite (e.g. $T~__number__, $This extends Shape)
+// NOTE: 'similarity_prerequisite' may be NULL to indicate no extends requirement
+// NOTE: 'maybe_extends' may be zero length to indicate no extends requirement
+ast_type_t ast_type_make_polymorph_prereq(strong_cstr_t name, bool allow_auto_conversion, maybe_null_strong_cstr_t similarity_prereq, ast_type_t maybe_extends);
+
 // ---------------- ast_type_make_func_ptr ----------------
 // Makes a function pointer type (e.g. func() void, func(ptr, ptr) int)
 ast_type_t ast_type_make_func_ptr(source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership);
@@ -90,7 +96,7 @@ ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool al
 // NOTE: `similarity_prerequisite` may be NULL
 // NOTE: `extends` may be zero length to indicate N/A
 // NOTE: Takes ownership of `extends`
-ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, strong_cstr_t similarity_prerequisite, ast_type_t extends);
+ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, maybe_null_strong_cstr_t similarity_prerequisite, ast_type_t extends);
 
 // ---------------- ast_elem_func_make ----------------
 // Makes a function element (e.g. func() void, func(ptr, ptr) int, func(double, double) double)

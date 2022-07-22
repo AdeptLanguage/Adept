@@ -64,10 +64,6 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     ir_module_t *module = &object->ir_module;
     ir_proc_map_t method_map = module->method_map;
 
-    // TODO: This function is an active work in progress!!!
-    // As this will never be run (unless trying to use W.I.P. features),
-    // it does contain debugging logs to reflect the current state of progress.
-
     // Overview of Steps:
     // - Create list of trees, with virtual functions at roots
     // - Link children to parents

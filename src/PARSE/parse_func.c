@@ -22,6 +22,80 @@
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
+static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_id){
+    // TODO: This function is still a work in progress!
+    // It will be responsible for creating dispatcher functions that will
+    // handle the actual virtual dispatch for virtual methods.
+    // The default/overrides of these will not be accessible with normal calls,
+    // and will only be accessible when we look for them during vtable generation
+    // (special flags will be used to ensure only the right ones get found for the right searches)
+    // The dispatchers will by the user-facing function that actually gets called
+    // by the programmer
+    // In code, they would look something like this:
+    //
+    // func dispatcher(this *$This extends SubjectType, arg1 ArgType1, argn ArgTypeN) ReturnType {
+    //     return (*(this.__vtable__ as **ptr))[secret_vtable_entry_index](arg1, argn)
+    // }
+    //
+    // variadic virtual methods will eventually need special consideration,
+    // old-style vararg virtual methods will probably need to be forbidden.
+
+    ast_t *ast = ctx->ast;
+    func_id_t ast_func_id = ast_new_func(ast);
+    ast_func_t *func = &ast->funcs[ast_func_id];
+    ast_func_t *virtual = &ast->funcs[virtual_ast_func_id];
+
+    source_t source_on_error = virtual->source;
+    length_t arity = virtual->arity;
+
+    ast_func_head_t func_head = (ast_func_head_t){
+        .name = strclone(virtual->name),
+        .source = virtual->source,
+        .is_foreign = false,
+        .is_entry = false,
+        .prefixes = (ast_func_prefixes_t){0},
+        .export_name = NULL,
+    };
+
+    ast_func_create_template(func, &func_head);
+
+    func->traits |= AST_FUNC_DISPATCHER | AST_FUNC_GENERATED | AST_FUNC_POLYMORPHIC;
+    func->arity = arity;
+
+    func->arg_names = strsclone(virtual->arg_names, arity);
+    func->arg_types = ast_types_clone(virtual->arg_types, arity);
+    func->arg_sources = memclone(virtual->arg_sources, sizeof(source_t) * arity);
+    func->arg_flows = memclone(virtual->arg_flows, sizeof(char) * arity);
+    func->arg_type_traits = memclone(virtual->arg_type_traits, sizeof(trait_t) * arity);
+
+    // Ensure subject type is at the very least a pointer to a base or generic base
+    if(!ast_type_is_pointer_to_base_like(&func->arg_types[0])){
+        strong_cstr_t typename = ast_type_str(&func->arg_types[0]);
+        compiler_panicf(ctx->compiler, func->arg_types[0].source, "Cannot define virtual methods for non-class type '%s'", typename);
+        free(typename);
+        return FAILURE;
+    }
+
+    // Change subject type to be a polymorphic parameter that requires a match to extend the original subject class
+    func->arg_types[0] = ast_type_make_polymorph_prereq(strclone("This"), false, NULL, func->arg_types[0]);
+
+    // TODO:
+    // Record that this dispatcher will need to have vtable indexing filled in (aka the actual implementation)
+
+    // TODO: We should probably generate the contents during IR gen
+    // Eventually, the generated implementation will look most or less like this:
+    // `return ((*(this.__vtable__ as **ptr))[index] as func() void)()`
+
+    // Set dispatcher of original virtual function to be this newly generated dispatcher function
+    virtual->virtual_dispatcher = ast_func_id;
+
+    // Register as polymorphic function
+    ast_add_poly_func(ast, func->name, ast_func_id);
+
+    compiler_panicf(ctx->compiler, source_on_error, "Adding virtual dispatchers is not yet implemented");
+    return FAILURE;
+}
+
 errorcode_t parse_func(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
     token_t *tokens = ctx->tokenlist->tokens;
@@ -41,10 +115,9 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     ast_func_head_parse_info_t func_head_parse_info;
     if(parse_func_head(ctx, &func_head, &func_head_parse_info)) return FAILURE;
 
-    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
+    func_id_t ast_func_id = ast_new_func(ast);
+    ast_func_t *func = &ast->funcs[ast_func_id];
 
-    func_id_t ast_func_id = (func_id_t) ast->funcs_length;
-    ast_func_t *func = &ast->funcs[ast->funcs_length++];
     ast_func_create_template(func, &func_head);
 
     if(func_head.is_foreign && ctx->composite_association != NULL){
@@ -118,6 +191,15 @@ errorcode_t parse_func(parse_ctx_t *ctx){
         }
     }
 
+    if(func->traits & AST_FUNC_VIRTUAL){
+        if(!ast_func_is_method(func)){
+            compiler_panicf(ctx->compiler, func->source, "Cannot mark non-method as 'virtual'");
+            return FAILURE;
+        }
+
+        if(add_dispatcher(ctx, ast_func_id)) return FAILURE;
+    }
+
     if(parse_func_body(ctx, func)) return FAILURE;
 
     if(func_head_parse_info.is_constructor){
@@ -151,10 +233,9 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
         .export_name = NULL
     };
 
-    expand((void**) &ast->funcs, sizeof(ast_func_t), ast->funcs_length, &ast->funcs_capacity, 1, 4);
-    func_id_t ast_func_id = ast->funcs_length++;
-
+    func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
+
     ast_func_create_template(func, &func_head);
 
     if(ast_func_has_polymorphic_signature(constructor)) {
