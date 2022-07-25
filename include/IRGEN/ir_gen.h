@@ -47,11 +47,6 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
 // creates an 'ir_builder_t' and calls 'ir_gen_stmts'
 errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *object, func_id_t ast_func_id, func_id_t ir_func_id);
 
-// ---------------- ir_gen_job_list ----------------
-// Generates initial IR job list to kickstart the main
-// IR function bodies generation
-errorcode_t ir_gen_job_list(object_t *object);
-
 // ---------------- ir_gen_globals ----------------
 // Generates IR globals from AST globals
 errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object);

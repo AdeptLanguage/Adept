@@ -91,6 +91,19 @@ errorcode_t ir_gen_find_method(
     optional_func_pair_t *out_result
 );
 
+// ---------------- ir_gen_find_dispatchee ----------------
+// Find dispatchee method without any conforming
+errorcode_t ir_gen_find_dispatchee(
+    compiler_t *compiler,
+    object_t *object,
+    weak_cstr_t struct_name, 
+    weak_cstr_t method_name,
+    ast_type_t *arg_types,
+    length_t arg_types_length,
+    source_t from_source,
+    optional_func_pair_t *out_result
+);
+
 // ---------------- ir_gen_find_method_conforming ----------------
 // Finds a method that has the given name and conforms
 // to the arguments given. Result info stored 'result'

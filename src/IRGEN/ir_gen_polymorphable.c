@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "AST/POLY/ast_translate.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast.h"
 #include "AST/ast_layout.h"
@@ -42,28 +43,95 @@ static errorcode_t enforce_polymorph(
     return SUCCESS;
 }
 
+static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *const subject, ast_type_t *potential_ancestor){
+    // NOTE: This function is still a work in progress!
+    // There will be debug logging while it's under construction!
+    // This is okay as it will never be called unless trying to use work-in-progress features
+
+    if(!ast_type_is_base_like(subject)) return FAILURE;
+
+    ast_t *ast = &object->ast;
+    ast_type_t *parent = potential_ancestor;
+
+    bool subject_is_generic = ast_type_is_generic_base(subject);
+    ast_composite_t *subject_composite = ast_find_composite(ast, subject);
+
+    ast_type_t parent_storage;
+
+    while(true){
+        {
+            char *s = ast_type_str(subject);
+            char *t = ast_type_str(parent);
+            blueprintf("[debug] does_extend() - Trying %s extends %s\n", s, t);
+            free(s);
+            free(t);
+        }
+
+        if(!ast_type_is_base_like(parent)) goto failure;
+
+        bool is_generic = ast_type_is_generic_base(parent);
+        ast_composite_t *parent_composite = ast_find_composite(ast, parent);
+
+        if(!subject_composite->is_class || !parent_composite->is_class) goto failure;
+
+        if(is_generic == subject_is_generic && (is_generic ? ast_types_identical(subject, parent) : subject_composite == parent_composite)){
+            goto success;
+        }
+
+        if(parent_composite->parent.elements_length == 0){
+            char *s = ast_type_str(subject);
+            char *t = ast_type_str(parent);
+            blueprintf("[debug] does_extend() - Out of options %s extends %s\n", s, t);
+            free(s);
+            free(t);
+            break; // No more ancestors to check, did not match
+        }
+
+        ast_type_t next_parent;
+        if(ast_translate_poly_parent_class(compiler, object, parent_composite, parent, &next_parent)){
+            goto failure;
+        }
+
+        if(parent == &parent_storage){
+            ast_type_free(&parent_storage);
+        } else {
+            parent = &parent_storage;
+        }
+
+        parent_storage = next_parent;
+    }
+
+failure:
+    if(parent == &parent_storage) ast_type_free(&parent_storage);
+    return false;
+
+success:
+    if(parent == &parent_storage) ast_type_free(&parent_storage);
+    return true;
+}
+
 static errorcode_t enforce_prereq(
     compiler_t *compiler,
     object_t *object,
     ast_type_t *polymorphic_type,
-    ast_type_t *concrete_type,
+    ast_type_t *whole_concrete_type,
     ast_poly_catalog_t *catalog,
     length_t index
 ){
     ast_elem_polymorph_prereq_t *prereq = (ast_elem_polymorph_prereq_t*) polymorphic_type->elements[index];
     enum special_prereq special_prereq = (enum special_prereq) -1;
 
+    ast_type_t concrete_type = {
+        .elements = &whole_concrete_type->elements[index],
+        .elements_length = whole_concrete_type->elements_length - index,
+        .source = whole_concrete_type->elements[index]->source,
+    };
+
     // Handle special prerequisites
     if(is_special_prerequisite(prereq->similarity_prerequisite, &special_prereq)){
         bool meets_prereq = false;
 
-        ast_type_t concrete_type_view = {
-            .elements = &concrete_type->elements[index],
-            .elements_length = concrete_type->elements_length - index,
-            .source = concrete_type->elements[index]->source,
-        };
-
-        if(ir_gen_check_prereq(compiler, object, &concrete_type_view, special_prereq, &meets_prereq)){
+        if(ir_gen_check_prereq(compiler, object, &concrete_type, special_prereq, &meets_prereq)){
             return FAILURE;
         }
         
@@ -76,7 +144,7 @@ static errorcode_t enforce_prereq(
         ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, prereq->name);
 
         // Determine special allowed auto conversions
-        if(type_var && is_allowed_builtin_auto_conversion(compiler, object, &type_var->binding, concrete_type)){
+        if(type_var && is_allowed_builtin_auto_conversion(compiler, object, &type_var->binding, whole_concrete_type)){
             return SUCCESS;
         }
     }
@@ -101,7 +169,7 @@ static errorcode_t enforce_prereq(
         length_t field_count = ast_simple_field_map_get_count(&similar->layout.field_map);
 
         ast_field_map_t *field_map;
-        ast_elem_t *concrete_elem = concrete_type->elements[index];
+        ast_elem_t *concrete_elem = whole_concrete_type->elements[index];
 
         if(concrete_elem->id == AST_ELEM_BASE){
             weak_cstr_t given_name = ((ast_elem_base_t*) concrete_elem)->base;
@@ -146,8 +214,9 @@ static errorcode_t enforce_prereq(
     }
 
     if(prereq->extends.elements_length != 0){
-        compiler_warnf(compiler, prereq->extends.source, "Polymorph 'extends' prerequisite is not yet implemented (rejected potential type match)");
-        return FAILURE;
+        if(!does_extend(compiler, object, &concrete_type, &prereq->extends)){
+            return FAILURE;
+        }
     }
 
     return SUCCESS;

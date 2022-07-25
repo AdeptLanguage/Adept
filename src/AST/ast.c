@@ -910,7 +910,7 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->statements = (ast_expr_list_t){0};
     func->source = options->source;
     func->export_as = options->export_name;
-    func->virtual_dispatcher = INVALID_FUNC_ID;
+    func->virtual_source = INVALID_FUNC_ID;
 
     #if ADEPT_INSIGHT_BUILD
     func->end_source = options->source;

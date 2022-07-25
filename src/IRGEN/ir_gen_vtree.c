@@ -74,7 +74,7 @@ errorcode_t ir_gen_vtree_overrides(
 
         // Find the default implementation of our own virtual method
         // This will instantiate a polymorphic function if necessary
-        if(ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result)){
+        if(ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result)){
             strong_cstr_t typename = ast_type_str(&start->signature);
             compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
             free(typename);
@@ -130,7 +130,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
     source_t source_on_error = child_subject_type->source;
     optional_func_pair_t result;
 
-    assert(ast_func->arity > 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
+    assert(ast_func->arity > 0 && ast_type_is_pointer(&ast_func->arg_types[0]));
 
     ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
     weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
@@ -139,7 +139,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
     ast_type_free(&arg_types[0]);
     arg_types[0] = ast_type_pointer_to(ast_type_clone(child_subject_type));
 
-    errorcode_t errorcode = ir_gen_find_method(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
+    errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
 
     switch(errorcode){
     case ALT_FAILURE: {
@@ -189,37 +189,27 @@ errorcode_t ir_gen_vtree_link_up_nodes(
         }
 
         if(composite->parent.elements_length == 0){
-            // No parent to link up to
-            continue;
+            continue; // No parent to link up to
         }
 
-        ast_type_t parent_storage = {0};
-        const ast_type_t *parent;
-
-        if(ast_type_has_polymorph(&composite->parent)){
-            if(ast_translate_poly_parent_class(compiler, object, composite, &vtree->signature, &parent_storage)){
-                return FAILURE;
-            }
-
-            parent = &parent_storage;
-        } else {
-            parent = &composite->parent;
-        }
-
-        vtree_t *parent_vtree = vtree_list_find_or_append(vtree_list, parent);
-
-        if(parent_vtree == NULL){
-            strong_cstr_t typename = ast_type_str(&vtree->signature);
-            strong_cstr_t parent_typename = ast_type_str(parent);
-            compiler_panicf(compiler, parent->source, "Failed to resolve parent class '%s' for class '%s'", parent_typename, typename);
-            free(parent_typename);
-            free(typename);
-
-            ast_type_free(&parent_storage);
+        ast_type_t parent;
+        if(ast_translate_poly_parent_class(compiler, object, composite, &vtree->signature, &parent)){
             return FAILURE;
         }
 
-        ast_type_free(&parent_storage);
+        vtree_t *parent_vtree = vtree_list_find_or_append(vtree_list, &parent);
+
+        if(parent_vtree == NULL){
+            strong_cstr_t typename = ast_type_str(&vtree->signature);
+            strong_cstr_t parent_typename = ast_type_str(&parent);
+            compiler_panicf(compiler, parent.source, "Failed to resolve parent class '%s' for class '%s'", parent_typename, typename);
+            free(parent_typename);
+            free(typename);
+            ast_type_free(&parent);
+            return FAILURE;
+        }
+
+        ast_type_free(&parent);
 
         vtree->parent = parent_vtree;
         vtree_list_append(&parent_vtree->children, vtree);

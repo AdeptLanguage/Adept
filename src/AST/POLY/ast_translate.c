@@ -10,14 +10,14 @@ errorcode_t ast_translate_poly_parent_class(
     const ast_type_t *the_child_class_concrete_usage, 
     ast_type_t *out_type
 ){
-    ast_t *ast = &object->ast;
     ast_type_t *poly_extended_type = &the_child_class->parent;
 
-    // Assert that the child class provided has a parent
-    // and the parent type is a generic base that has unresolved compile-time polymorphism
-    assert(the_child_class->parent.elements_length != 0);
-    assert(ast_type_is_generic_base(poly_extended_type));
-    assert(ast_type_has_polymorph(poly_extended_type));
+    assert(poly_extended_type->elements_length != 0);
+
+    if(!ast_type_is_generic_base(poly_extended_type) || !ast_type_has_polymorph(poly_extended_type)){
+        *out_type = ast_type_clone(poly_extended_type);
+        return SUCCESS;
+    }
 
     // Determine what generic type parameters exist and can be used
     weak_cstr_t *generics;
@@ -41,6 +41,7 @@ errorcode_t ast_translate_poly_parent_class(
     assert(generics_length == concrete_generic_base->generics_length);
 
     // Find parent composite
+    ast_t *ast = &object->ast;
     ast_poly_composite_t *parent_composite = (ast_poly_composite_t*) ast_find_composite(ast, poly_extended_type);
     
     if(parent_composite == NULL){

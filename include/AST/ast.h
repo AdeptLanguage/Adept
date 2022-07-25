@@ -46,7 +46,7 @@ typedef struct {
     ast_expr_list_t statements;
     source_t source;
     maybe_null_strong_cstr_t export_as;
-    func_id_t virtual_dispatcher; // can be INVALID_FUNC_ID
+    func_id_t virtual_source; // can be INVALID_FUNC_ID
 
     #ifdef ADEPT_INSIGHT_BUILD
     source_t end_source;

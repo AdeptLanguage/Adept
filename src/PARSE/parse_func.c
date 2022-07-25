@@ -45,7 +45,6 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_i
     ast_func_t *func = &ast->funcs[ast_func_id];
     ast_func_t *virtual = &ast->funcs[virtual_ast_func_id];
 
-    source_t source_on_error = virtual->source;
     length_t arity = virtual->arity;
 
     ast_func_head_t func_head = (ast_func_head_t){
@@ -67,6 +66,7 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_i
     func->arg_sources = memclone(virtual->arg_sources, sizeof(source_t) * arity);
     func->arg_flows = memclone(virtual->arg_flows, sizeof(char) * arity);
     func->arg_type_traits = memclone(virtual->arg_type_traits, sizeof(trait_t) * arity);
+    func->return_type = ast_type_clone(&virtual->return_type);
 
     // Ensure subject type is at the very least a pointer to a base or generic base
     if(!ast_type_is_pointer_to_base_like(&func->arg_types[0])){
@@ -77,23 +77,25 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_i
     }
 
     // Change subject type to be a polymorphic parameter that requires a match to extend the original subject class
-    func->arg_types[0] = ast_type_make_polymorph_prereq(strclone("This"), false, NULL, func->arg_types[0]);
+    // e.g. from
+    //   `*Shape`
+    // to
+    //   `*$This extends Shape`
 
-    // TODO:
-    // Record that this dispatcher will need to have vtable indexing filled in (aka the actual implementation)
+    ast_type_dereference(&func->arg_types[0]);
+    func->arg_types[0] = ast_type_pointer_to(ast_type_make_polymorph_prereq(strclone("This"), false, NULL, func->arg_types[0]));
 
-    // TODO: We should probably generate the contents during IR gen
-    // Eventually, the generated implementation will look most or less like this:
-    // `return ((*(this.__vtable__ as **ptr))[index] as func() void)()`
+    // TODO: We still need to generate the implementation of the function
+    {
+        compiler_warnf(ctx->compiler, func->source, "Feature is not fully implemented yet");
+    }
 
-    // Set dispatcher of original virtual function to be this newly generated dispatcher function
-    virtual->virtual_dispatcher = ast_func_id;
+    // Remember default implementation to use for virtual dispatcher
+    func->virtual_source = virtual_ast_func_id;
 
     // Register as polymorphic function
     ast_add_poly_func(ast, func->name, ast_func_id);
-
-    compiler_panicf(ctx->compiler, source_on_error, "Adding virtual dispatchers is not yet implemented");
-    return FAILURE;
+    return SUCCESS;
 }
 
 errorcode_t parse_func(parse_ctx_t *ctx){

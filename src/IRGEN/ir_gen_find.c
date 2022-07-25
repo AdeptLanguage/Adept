@@ -26,6 +26,8 @@
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
 
+static const trait_t normal_forbidden_traits = AST_FUNC_VIRTUAL | AST_FUNC_OVERRIDE;
+
 static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, optional_func_pair_t *result);
 static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_func_pair_t *result, unsigned int conform_mode_if_applicable);
 
@@ -221,7 +223,7 @@ static errorcode_t ir_gen_find_proc_sweep_partial(ir_proc_query_t *query, option
     ast_func_t *ast_func = &object->ast.funcs[endpoint.ast_func_id];
 
     // Do function trait restrictions
-    if((ast_func->traits & query->traits_mask) != query->traits_match){
+    if((ast_func->traits & query->traits_mask) != query->traits_match || (ast_func->traits & query->forbid_traits)){
         return FAILURE;
     }
 
@@ -422,7 +424,7 @@ errorcode_t ir_gen_find_func_regular(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_func_regular(&query, compiler, object, function_name, arg_types, arg_types_length, traits_mask, traits_match, from_source);
+    ir_proc_query_init_find_func_regular(&query, compiler, object, function_name, arg_types, arg_types_length, traits_mask, traits_match, TRAIT_NONE, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -438,7 +440,7 @@ errorcode_t ir_gen_find_func_conforming(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_func_conforming(&query, builder, function_name, inout_arg_values, inout_arg_types, inout_length, optional_gives, no_user_casts, from_source);
+    ir_proc_query_init_find_func_conforming(&query, builder, function_name, inout_arg_values, inout_arg_types, inout_length, optional_gives, no_user_casts, normal_forbidden_traits, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -454,7 +456,7 @@ errorcode_t ir_gen_find_func_conforming_without_defaults(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_func_conforming_without_defaults(&query, builder, function_name, arg_values, arg_types, length, optional_gives, no_user_casts, from_source);
+    ir_proc_query_init_find_func_conforming_without_defaults(&query, builder, function_name, arg_values, arg_types, length, optional_gives, no_user_casts, normal_forbidden_traits, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -469,7 +471,23 @@ errorcode_t ir_gen_find_method(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, from_source);
+    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, normal_forbidden_traits, from_source);
+    return ir_gen_find_proc(&query, out_result);
+}
+
+errorcode_t ir_gen_find_dispatchee(
+    compiler_t *compiler,
+    object_t *object,
+    weak_cstr_t struct_name, 
+    weak_cstr_t method_name,
+    ast_type_t *arg_types,
+    length_t arg_types_length,
+    source_t from_source,
+    optional_func_pair_t *out_result
+){
+    ir_proc_query_t query;
+    trait_t forbidden = AST_FUNC_DISPATCHER;
+    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, forbidden, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -485,7 +503,7 @@ errorcode_t ir_gen_find_method_conforming(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_method_conforming(&query, builder, struct_name, name, inout_arg_values, inout_arg_types, inout_length, gives, from_source);
+    ir_proc_query_init_find_method_conforming(&query, builder, struct_name, name, inout_arg_values, inout_arg_types, inout_length, gives, normal_forbidden_traits, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -501,7 +519,7 @@ errorcode_t ir_gen_find_method_conforming_without_defaults(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_method_conforming_without_defaults(&query, builder, struct_name, name, arg_values, arg_types, length, gives, from_source);
+    ir_proc_query_init_find_method_conforming_without_defaults(&query, builder, struct_name, name, arg_values, arg_types, length, gives, normal_forbidden_traits, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 

@@ -34,8 +34,9 @@ void ir_proc_query_init_find_func_regular(
     weak_cstr_t name,
     ast_type_t *arg_types,
     length_t length,
-    trait_t mask,
-    trait_t required_traits,
+    trait_t traits_mask,
+    trait_t traits_match,
+    trait_t forbid_traits,
     source_t from_source
 );
 
@@ -47,6 +48,7 @@ void ir_proc_query_init_find_method_regular(
     weak_cstr_t name,
     ast_type_t *arg_types,
     length_t length,
+    trait_t forbid_traits,
     source_t from_source
 );
 
@@ -59,6 +61,7 @@ void ir_proc_query_init_find_func_conforming(
     length_t *inout_length,
     ast_type_t *optional_gives,
     bool no_user_casts,
+    trait_t forbid_traits,
     source_t from_source
 );
 
@@ -71,6 +74,7 @@ void ir_proc_query_init_find_method_conforming(
     ast_type_t **inout_arg_types,
     length_t *inout_length,
     ast_type_t *optional_gives,
+    trait_t forbid_traits,
     source_t from_source
 );
 
@@ -83,6 +87,7 @@ void ir_proc_query_init_find_func_conforming_without_defaults(
     length_t length,
     ast_type_t *optional_gives,
     bool no_user_casts,
+    trait_t forbid_traits,
     source_t from_source
 );
 
@@ -95,6 +100,7 @@ void ir_proc_query_init_find_method_conforming_without_defaults(
     ast_type_t *arg_types,
     length_t length,
     ast_type_t *optional_gives,
+    trait_t forbid_traits,
     source_t from_source
 );
 
@@ -150,8 +156,10 @@ struct ir_proc_query {
     maybe_null_weak_cstr_t struct_name;
     trait_t traits_mask;
     trait_t traits_match;
+    trait_t forbid_traits;
     ast_type_t *optional_gives;
     source_t from_source;
+    bool for_dispatcher;
 };
 
 #ifdef __cplusplus
