@@ -1185,11 +1185,13 @@ func_id_list_t compiler_possibilities(compiler_t *compiler, object_t *object, we
     func_id_list_t list = {0};
 
     for(length_t id = 0; id != ast->funcs_length; id++){
-        if(streq(ast->funcs[id].name, name)){
-            if(methods_only_type_of_this){
-                if(!ast_func_is_method(&ast->funcs[id])) continue;
+        ast_func_t *func = &ast->funcs[id];
 
-                errorcode_t errorcode = method_subject_is_possible(compiler, object, methods_only_type_of_this, &ast->funcs[id].arg_types[0]);
+        if(streq(func->name, name) && (func->traits & (AST_FUNC_VIRTUAL | AST_FUNC_OVERRIDE)) == TRAIT_NONE){
+            if(methods_only_type_of_this){
+                if(!ast_func_is_method(func)) continue;
+
+                errorcode_t errorcode = method_subject_is_possible(compiler, object, methods_only_type_of_this, &func->arg_types[0]);
                 if(errorcode == ALT_FAILURE) break;
                 if(errorcode == FAILURE) continue;
             }

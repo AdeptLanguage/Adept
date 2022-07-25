@@ -43,70 +43,90 @@ static errorcode_t enforce_polymorph(
     return SUCCESS;
 }
 
-static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *const subject, ast_type_t *potential_ancestor){
+static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *subject_usage, ast_type_t *parent, ast_poly_catalog_t *catalog){
     // NOTE: This function is still a work in progress!
     // There will be debug logging while it's under construction!
     // This is okay as it will never be called unless trying to use work-in-progress features
 
-    if(!ast_type_is_base_like(subject)) return FAILURE;
+    if(!ast_type_is_base_like(parent)) return FAILURE;
 
     ast_t *ast = &object->ast;
-    ast_type_t *parent = potential_ancestor;
+    ast_type_t *subject = subject_usage;
+    ast_type_t subject_storage;
 
-    bool subject_is_generic = ast_type_is_generic_base(subject);
-    ast_composite_t *subject_composite = ast_find_composite(ast, subject);
+    bool parent_is_generic = ast_type_is_generic_base(parent);
+    ast_composite_t *parent_composite = ast_find_composite(ast, parent);
 
-    ast_type_t parent_storage;
+    if(!parent_composite->is_class) return FAILURE;
 
     while(true){
         {
             char *s = ast_type_str(subject);
             char *t = ast_type_str(parent);
-            blueprintf("[debug] does_extend() - Trying %s extends %s\n", s, t);
+            blueprintf("[debug] does_extend() - [try] %s extends %s\n", s, t);
             free(s);
             free(t);
         }
 
-        if(!ast_type_is_base_like(parent)) goto failure;
+        if(!ast_type_is_base_like(subject)) goto failure;
 
-        bool is_generic = ast_type_is_generic_base(parent);
-        ast_composite_t *parent_composite = ast_find_composite(ast, parent);
+        bool subject_is_generic = ast_type_is_generic_base(subject);
+        ast_composite_t *subject_composite = ast_find_composite(ast, subject);
 
-        if(!subject_composite->is_class || !parent_composite->is_class) goto failure;
+        if(!subject_composite->is_class) goto failure;
 
-        if(is_generic == subject_is_generic && (is_generic ? ast_types_identical(subject, parent) : subject_composite == parent_composite)){
+        errorcode_t errorcode = ir_gen_polymorphable(compiler, object, parent, subject, catalog);
+        if(errorcode == ALT_FAILURE) goto failure;
+
+        if(subject_is_generic == parent_is_generic && errorcode == SUCCESS){
             goto success;
         }
 
-        if(parent_composite->parent.elements_length == 0){
+        if(subject_composite->parent.elements_length == 0){
             char *s = ast_type_str(subject);
             char *t = ast_type_str(parent);
-            blueprintf("[debug] does_extend() - Out of options %s extends %s\n", s, t);
+            blueprintf("[debug] does_extend() - [out of options] %s extends %s\n", s, t);
             free(s);
             free(t);
             break; // No more ancestors to check, did not match
         }
 
-        ast_type_t next_parent;
-        if(ast_translate_poly_parent_class(compiler, object, parent_composite, parent, &next_parent)){
+        ast_type_t next_subject;
+        if(ast_translate_poly_parent_class(compiler, object, subject_composite, subject, &next_subject)){
             goto failure;
         }
 
-        if(parent == &parent_storage){
-            ast_type_free(&parent_storage);
+        if(subject == &subject_storage){
+            ast_type_free(&subject_storage);
         } else {
-            parent = &parent_storage;
+            subject = &subject_storage;
         }
 
-        parent_storage = next_parent;
+        subject_storage = next_subject;
     }
 
 failure:
-    if(parent == &parent_storage) ast_type_free(&parent_storage);
+    {
+        char *s = ast_type_str(subject);
+        char *t = ast_type_str(parent);
+        blueprintf("[debug] does_extend() - [failure] %s extends %s\n", s, t);
+        free(s);
+        free(t);
+    }
+
+    if(subject == &subject_storage) ast_type_free(&subject_storage);
     return false;
 
 success:
-    if(parent == &parent_storage) ast_type_free(&parent_storage);
+    {
+        char *s = ast_type_str(subject);
+        char *t = ast_type_str(parent);
+        blueprintf("[debug] does_extend() - [found] %s extends %s\n", s, t);
+        free(s);
+        free(t);
+    }
+
+    if(subject == &subject_storage) ast_type_free(&subject_storage);
     return true;
 }
 
@@ -214,7 +234,7 @@ static errorcode_t enforce_prereq(
     }
 
     if(prereq->extends.elements_length != 0){
-        if(!does_extend(compiler, object, &concrete_type, &prereq->extends)){
+        if(!does_extend(compiler, object, &concrete_type, &prereq->extends, catalog)){
             return FAILURE;
         }
     }

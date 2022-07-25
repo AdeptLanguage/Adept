@@ -489,9 +489,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
     if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&ast_func->return_type)){
         // If it's the main function and returns void, return int under the hood
-        module_func->return_type = ir_pool_alloc(&module->pool, sizeof(ir_type_t));
-        module_func->return_type->kind = TYPE_KIND_S32;
-        // neglect 'module_func->return_type->extra'
+        module_func->return_type = ir_type_make(&module->pool, TYPE_KIND_S32, NULL);
     } else {
         if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
     }
@@ -504,7 +502,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
 
         // TODO: TODO: TODO:
 
-        compiler_panicf(compiler, ast_func->source, "cannot");
+        compiler_panicf(compiler, ast_func->source, "Instantiating virtual dispatchers is not yet implemented");
         return ALT_FAILURE;
 
         // ast_elem_polymorph_prereq_t *prereq = (ast_elem_polymorph_prereq_t*) ast_func->arg_types[0].elements[1];
@@ -512,11 +510,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         // assert(prereq->extends.elements_length > 0);
 
         // ast_type_t new_subject = prereq->extends
-
         // ast_func_t *virtual = &object->ast.funcs[ast_func->virtual_source];
-
-
-
         // instantiate_poly_func(compiler, object, instantiation_source, poly_func_id, types, types-length, catalog, my_out_endpoint)
 
         ast_func = NULL;
