@@ -1,10 +1,20 @@
 
 import basics
-import where
 import "other/other.adept"
 
+#default utilize_where __windows__ || __macos__
+
+#if utilize_where
+    import where
+#end
+
 func main {
-    filename *ubyte = (where() + "my_file.txt").cstr()
+    #if utilize_where
+        filename *ubyte = (where() + "my_file.txt").cstr()
+    #else
+        filename *ubyte = strdup('my_file.txt')
+    #end
+
     defer delete filename
 
     file *FILE = fopen(filename, 'r')

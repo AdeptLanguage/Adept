@@ -7,7 +7,7 @@
     struct FILE (_opaque 32 usize)
 #elif __windows__
     #print_error "Windows doesn't have external stdout global"
-    #halt
+    #done
 #else
     // SOME LIBC IMPLEMENTATIONS SUCH AS GLIBC USE
     external stdout *FILE

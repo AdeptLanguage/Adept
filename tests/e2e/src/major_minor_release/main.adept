@@ -7,7 +7,7 @@
 #print "Compiler qualifier: " + __compiler_qualifier__
 #print "Compiler version (now a number): " + __compiler_version__
 #print "Compiler version name: " + __compiler_version_name__
-#halt
+#done
 
 // -----------------------------------------------------------------------
 

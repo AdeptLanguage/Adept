@@ -3,4 +3,11 @@ pragma compiler_version '2.3'
 
 #print "Adept Build:\t" + __compiler__
 #print "Adept Version:\t" + __compiler_version__
-#halt
+
+#if __compiler_version__ >= 2.7
+    // As of v2.7, #halt now exits with status 1
+    // We will use new #done directive to exit with status 0
+    #done
+#else
+    #halt
+#end
