@@ -10,6 +10,7 @@ tests/e2e/**/*.exe
 tests/e2e/src/**/pragma/pragma
 tests/e2e/src/native_linking/*.a
 tests/e2e/unused
+tests/e2e/src/runtime_resource/my_file.txt
 bugs
 dev/counter.py
 dev/iwyu.out

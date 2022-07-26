@@ -17,10 +17,25 @@
 #include "TOKEN/token_data.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
+#include "UTIL/filename.h"
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
 #include "UTIL/string.h"
 #include "UTIL/util.h"
+
+static void dumb_copy_file(weak_cstr_t src_filename, weak_cstr_t dst_filename){
+    // Based on https://stackoverflow.com/a/6807889
+
+    FILE *src = fopen(src_filename, "rb");
+    FILE *dst = fopen(dst_filename, "wb");
+
+    for(int i = getc(src); i != EOF; i = getc(src)){
+        putc(i, dst);
+    }
+
+    fclose(dst);
+    fclose(src);
+}
 
 errorcode_t parse_meta(parse_ctx_t *ctx){
     // NOTE: Assumes (parse_ctx_peek(ctx) == TOKEN_META)
@@ -33,30 +48,31 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
     const char *standard_directives[] = {
         "default", "define", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
-        "pragma", "print", "print_error", "print_warning", "set", "unless", "warning"
+        "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning"
     };
 
-    #define META_DIRECTIVE_DEFAULT        0
-    #define META_DIRECTIVE_DEFINE         1
-    #define META_DIRECTIVE_ELIF           2
-    #define META_DIRECTIVE_ELSE           3
-    #define META_DIRECTIVE_END            4
-    #define META_DIRECTIVE_ERROR          5
-    #define META_DIRECTIVE_GET            6
-    #define META_DIRECTIVE_HALT           7
-    #define META_DIRECTIVE_IF             8
-    #define META_DIRECTIVE_IMPORT         9
-    #define META_DIRECTIVE_INPUT         10
-    #define META_DIRECTIVE_PLACE         11
-    #define META_DIRECTIVE_PLACE_ERROR   12
-    #define META_DIRECTIVE_PLACE_WARNING 13
-    #define META_DIRECTIVE_PRAGMA        14
-    #define META_DIRECTIVE_PRINT         15
-    #define META_DIRECTIVE_PRINT_ERROR   16
-    #define META_DIRECTIVE_PRINT_WARNING 17
-    #define META_DIRECTIVE_SET           18
-    #define META_DIRECTIVE_UNLESS        19
-    #define META_DIRECTIVE_WARNING       20
+    #define META_DIRECTIVE_DEFAULT           0
+    #define META_DIRECTIVE_DEFINE            1
+    #define META_DIRECTIVE_ELIF              2
+    #define META_DIRECTIVE_ELSE              3
+    #define META_DIRECTIVE_END               4
+    #define META_DIRECTIVE_ERROR             5
+    #define META_DIRECTIVE_GET               6
+    #define META_DIRECTIVE_HALT              7
+    #define META_DIRECTIVE_IF                8
+    #define META_DIRECTIVE_IMPORT            9
+    #define META_DIRECTIVE_INPUT            10
+    #define META_DIRECTIVE_PLACE            11
+    #define META_DIRECTIVE_PLACE_ERROR      12
+    #define META_DIRECTIVE_PLACE_WARNING    13
+    #define META_DIRECTIVE_PRAGMA           14
+    #define META_DIRECTIVE_PRINT            15
+    #define META_DIRECTIVE_PRINT_ERROR      16
+    #define META_DIRECTIVE_PRINT_WARNING    17
+    #define META_DIRECTIVE_RUNTIME_RESOURCE 18
+    #define META_DIRECTIVE_SET              19
+    #define META_DIRECTIVE_UNLESS           20
+    #define META_DIRECTIVE_WARNING          21
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -431,6 +447,41 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             char *print_value = meta_expr_str(value);
             yellowprintf("%s\n", print_value);
             free(print_value);
+
+            meta_expr_free_fully(value);
+        }
+        break;
+    case META_DIRECTIVE_RUNTIME_RESOURCE: {
+            (*i)++;
+
+            meta_expr_t *value;
+            if(parse_meta_expr(ctx, &value)) return FAILURE;
+            if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
+
+            #ifndef ADEPT_INSIGHT_BUILD
+            // Will work based on the most recently specified output location
+            weak_cstr_t raw_output_filename = ctx->compiler->output_filename ? ctx->compiler->output_filename : ctx->compiler->objects[0]->filename;
+
+            char *filename = meta_expr_str(value);
+
+            strong_cstr_t to_path = filename_path(raw_output_filename);
+            strong_cstr_t from_path = filename_path(ctx->object->filename);
+
+            strong_cstr_t to_filename = mallocandsprintf("%s%s", to_path, filename);
+            strong_cstr_t from_filename = mallocandsprintf("%s%s", from_path, filename_name_const(filename));
+
+            if(!file_exists(to_filename)){
+                blueprintf("[NOTE] ");
+                printf("Creating a local copy of required runtime resource '%s'\n", filename);
+
+                dumb_copy_file(from_filename, to_filename);
+            }
+
+            free(to_path);
+            free(from_path);
+            free(to_filename);
+            free(from_filename);
+            #endif
 
             meta_expr_free_fully(value);
         }

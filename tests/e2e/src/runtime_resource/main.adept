@@ -1,0 +1,26 @@
+
+import basics
+import where
+import "other/other.adept"
+
+func main {
+    filename *ubyte = (where() + "my_file.txt").cstr()
+    defer delete filename
+
+    file *FILE = fopen(filename, 'r')
+
+    if file == null {
+        printf('failed to read file\n')
+        return
+    }
+
+    defer fclose(file)
+
+    buf 1024 ubyte = undef
+
+    while fgets(buf at 0, sizeof(buf), file) {
+        printf('%s', buf at 0)
+    }
+
+    printf('\n[file complete]\n')
+}

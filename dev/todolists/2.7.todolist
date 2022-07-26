@@ -48,6 +48,7 @@ MEDIUM-PRIORITY:
 * throw error if duplicate/overlapping polymorphic composites with same name and arguments exist
 * polymorphic wildcards e.g. <?> List
 * allow direct calling of function pointer values (rather than having to first store them in a variable)
+* add mechanism to do a clean refresh of runtime required resources
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -139,3 +140,4 @@ v2.7 COMPLETED:
 + completely rewrote lexer
 + easy and consistent constructors (prerequisite for classes)
 + throw warning/error if trying to define __as__ as a method
++ add mechanism "#runtime_resource" to allow copying files to output location that are needed at runtime
