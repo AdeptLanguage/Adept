@@ -75,6 +75,11 @@ bool file_text_contents(weak_cstr_t filename, strong_cstr_t *out_contents, lengt
 // Returns whether successful
 bool file_binary_contents(weak_cstr_t filename, strong_cstr_t *out_contents, length_t *out_length);
 
+// ---------------- file_copy ----------------
+// Copies a file from one place to another
+// Returns FAILURE if unable to copy
+errorcode_t file_copy(weak_cstr_t src_filename, weak_cstr_t dst_filename);
+
 // ---------------- indent ----------------
 // Writes 4-spaces 'indentation_level' times to a stream
 void indent(FILE *file, length_t indentation_level);

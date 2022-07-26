@@ -265,6 +265,32 @@ bool file_binary_contents(weak_cstr_t filename, strong_cstr_t *out_contents, len
     return true;
 }
 
+errorcode_t file_copy(weak_cstr_t src_filename, weak_cstr_t dst_filename){
+    // This is not the best way to copy a file obviously, but it's super simple and portable
+    // Based on https://stackoverflow.com/a/6807889
+
+    FILE *src = fopen(src_filename, "rb");
+
+    if(src == NULL){
+        return FAILURE;
+    }
+
+    FILE *dst = fopen(dst_filename, "wb");
+
+    if(dst == NULL){
+        fclose(src);
+        return FAILURE;
+    }
+
+    for(int i = getc(src); i != EOF; i = getc(src)){
+        putc(i, dst);
+    }
+
+    fclose(dst);
+    fclose(src);
+    return SUCCESS;
+}
+
 void indent(FILE *file, length_t indentation_level){
     for(length_t i = 0; i < indentation_level; i++){
         fprintf(file, "    ");

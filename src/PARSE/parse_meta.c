@@ -23,20 +23,6 @@
 #include "UTIL/string.h"
 #include "UTIL/util.h"
 
-static void dumb_copy_file(weak_cstr_t src_filename, weak_cstr_t dst_filename){
-    // Based on https://stackoverflow.com/a/6807889
-
-    FILE *src = fopen(src_filename, "rb");
-    FILE *dst = fopen(dst_filename, "wb");
-
-    for(int i = getc(src); i != EOF; i = getc(src)){
-        putc(i, dst);
-    }
-
-    fclose(dst);
-    fclose(src);
-}
-
 errorcode_t parse_meta(parse_ctx_t *ctx){
     // NOTE: Assumes (parse_ctx_peek(ctx) == TOKEN_META)
 
@@ -458,35 +444,46 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             (*i)++;
 
             meta_expr_t *value;
+            source_t source_on_error = ctx->tokenlist->sources[*i];
+
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
 
+            errorcode_t res = SUCCESS;
+
             #ifndef ADEPT_INSIGHT_BUILD
-            // Will work based on the most recently specified output location
-            weak_cstr_t raw_output_filename = ctx->compiler->output_filename ? ctx->compiler->output_filename : ctx->compiler->objects[0]->filename;
+            {
+                // Will work based on the most recently specified output location
+                weak_cstr_t raw_output_filename = ctx->compiler->output_filename ? ctx->compiler->output_filename : ctx->compiler->objects[0]->filename;
 
-            char *filename = meta_expr_str(value);
+                char *filename = meta_expr_str(value);
 
-            strong_cstr_t to_path = filename_path(raw_output_filename);
-            strong_cstr_t from_path = filename_path(ctx->object->filename);
+                strong_cstr_t to_path = filename_path(raw_output_filename);
+                strong_cstr_t from_path = filename_path(ctx->object->filename);
 
-            strong_cstr_t to_filename = mallocandsprintf("%s%s", to_path, filename);
-            strong_cstr_t from_filename = mallocandsprintf("%s%s", from_path, filename_name_const(filename));
+                strong_cstr_t to_filename = mallocandsprintf("%s%s", to_path, filename);
+                strong_cstr_t from_filename = mallocandsprintf("%s%s", from_path, filename_name_const(filename));
 
-            if(!file_exists(to_filename)){
-                blueprintf("[NOTE] ");
-                printf("Creating a local copy of required runtime resource '%s'\n", filename);
+                if(!file_exists(to_filename)){
+                    blueprintf("[NOTE] ");
+                    printf("Creating a local copy of required runtime resource '%s'\n", filename);
 
-                dumb_copy_file(from_filename, to_filename);
+                    res = file_copy(from_filename, to_filename);
+
+                    if(res){
+                        compiler_panicf(ctx->compiler, source_on_error, "Unable to copy file '%s' to '%s'", from_filename, to_filename);
+                    }
+                }
+
+                free(to_path);
+                free(from_path);
+                free(to_filename);
+                free(from_filename);
             }
-
-            free(to_path);
-            free(from_path);
-            free(to_filename);
-            free(from_filename);
             #endif
 
             meta_expr_free_fully(value);
+            if(res) return res;
         }
         break;
     case META_DIRECTIVE_SET: case META_DIRECTIVE_DEFINE: { // set, define
