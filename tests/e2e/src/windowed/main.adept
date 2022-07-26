@@ -1,4 +1,11 @@
 
+// For testing purposes, if the target platform isn't supported
+//     then fail with exit code of 0
+#unless __windows__ || __macos__
+    #print "Test doesn't support this platform"
+    #done
+#end
+
 /*
     Sailboat Game Template
     Created by Isaac Shelton, Licensed under the Unlicense
