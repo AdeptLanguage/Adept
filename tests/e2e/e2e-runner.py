@@ -203,6 +203,7 @@ def run_all_tests():
     test("return_every_case", [executable, join(src_dir, "return_every_case/main.adept")], compiles)
     test("return_matching", [executable, join(src_dir, "return_matching/main.adept")], compiles)
     test("return_ten", [executable, join(src_dir, "return_ten/main.adept")], compiles)
+    test("runtime_resource", [executable, join(src_dir, "runtime_resource/main.adept")], compiles)
     test("scientific", [executable, join(src_dir, "scientific/main.adept")], compiles)
     test("scoped_variables", [executable, join(src_dir, "scoped_variables/main.adept")], compiles)
     test("search_path", [executable, join(src_dir, "search_path/main.adept")], compiles)
