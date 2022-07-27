@@ -58,12 +58,18 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
         case TOKEN_FUNC: case TOKEN_STDCALL: case TOKEN_VERBATIM: case TOKEN_IMPLICIT: case TOKEN_CONSTRUCTOR: case TOKEN_VIRTUAL: case TOKEN_OVERRIDE:
             if(parse_func(ctx)) return FAILURE;
             break;
-        case TOKEN_FOREIGN:
-            if(tokens[i + 1].id == TOKEN_STRING || tokens[i + 1].id == TOKEN_CSTRING){
-                if(parse_foreign_library(ctx)) return FAILURE;
-                break;
+        case TOKEN_FOREIGN: {
+                tokenid_t next = tokens[i + 1].id;
+
+                if(next == TOKEN_STRING || next == TOKEN_CSTRING){
+                    if(parse_foreign_library(ctx)) return FAILURE;
+                } else if(next == TOKEN_ENUM){
+                    *ctx->i += 1;
+                    if(parse_enum(ctx, true)) return FAILURE;
+                } else {
+                    if(parse_func(ctx)) return FAILURE;
+                }
             }
-            if(parse_func(ctx)) return FAILURE;
             break;
         case TOKEN_STRUCT: case TOKEN_PACKED: case TOKEN_RECORD: case TOKEN_CLASS:
             if(parse_composite(ctx, false)) return FAILURE;
@@ -101,7 +107,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_pragma(ctx)) return FAILURE;
             break;
         case TOKEN_ENUM:
-            if(parse_enum(ctx)) return FAILURE;
+            if(parse_enum(ctx, false)) return FAILURE;
             break;
         case TOKEN_META:
             if(parse_meta(ctx)) return FAILURE;

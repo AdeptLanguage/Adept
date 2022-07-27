@@ -378,6 +378,10 @@ void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait
 // Adds an enum to the global scope of an AST
 void ast_add_enum(ast_t *ast, weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source);
 
+// ---------------- ast_add_global_constant ----------------
+// Adds a constant named expression to the global scope of an AST
+void ast_add_global_constant(ast_t *ast, ast_constant_t new_constant);
+
 // ---------------- ast_add_poly_func ----------------
 // Adds a function to the list of polymorphic functions for an AST
 void ast_add_poly_func(ast_t *ast, weak_cstr_t func_name_persistent, func_id_t ast_func_id);

@@ -11,7 +11,7 @@ extern "C" {
 
 // ------------------ parse_enum ------------------
 // Parses a enum
-errorcode_t parse_enum(parse_ctx_t *ctx);
+errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign);
 
 // ------------------ parse_enum_body ------------------
 // Parses the body of a enum

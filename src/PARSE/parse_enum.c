@@ -9,9 +9,10 @@
 #include "PARSE/parse_util.h"
 #include "TOKEN/token_data.h"
 #include "UTIL/ground.h"
+#include "UTIL/string.h"
 #include "UTIL/util.h"
 
-errorcode_t parse_enum(parse_ctx_t *ctx){
+errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign){
     char **kinds = NULL;
     length_t length = 0;
     source_t source = parse_ctx_peek_source(ctx);
@@ -40,6 +41,24 @@ errorcode_t parse_enum(parse_ctx_t *ctx){
     if(parse_enum_body(ctx, &kinds, &length)) return FAILURE;
 
     ast_add_enum(ctx->ast, name, kinds, length, source);
+
+    if(is_foreign){
+        // Automatically add defines so using the enum name is optional
+        for(length_t i = 0; i != length; i++){
+            ast_expr_t *value;
+            ast_expr_create_enum_value(&value, name, kinds[i], source);
+
+            ast_constant_t auto_constant = (ast_constant_t){
+                .name = strclone(kinds[i]),
+                .expression = value,
+                .traits = TRAIT_NONE,
+                .source = source,
+            };
+
+            ast_add_global_constant(ctx->ast, auto_constant);
+        }
+    }
+
     return SUCCESS;
 }
 

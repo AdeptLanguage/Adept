@@ -98,6 +98,7 @@ def run_all_tests():
     test("embed", [executable, join(src_dir, "embed/main.adept")], compiles)
     test("entry_point", [executable, join(src_dir, "entry_point/main.adept")], compiles)
     test("enums", [executable, join(src_dir, "enums/main.adept")], compiles)
+    test("enums_foreign", [executable, join(src_dir, "enums_foreign/main.adept")], compiles)
     test("equals_func", [executable, join(src_dir, "equals_func/main.adept")], compiles)
     test("external", [executable, join(src_dir, "external/main.adept")], compiles)
     test("fallthrough", [executable, join(src_dir, "fallthrough/main.adept")], compiles)

@@ -138,10 +138,13 @@ errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_cons
     }
 
     // Construct the new constant value
-    out_constant->name = name;
-    out_constant->expression = value;
-    out_constant->traits = TRAIT_NONE;
-    out_constant->source = source;
+    *out_constant = (ast_constant_t){
+        .name = name,
+        .expression = value,
+        .traits = TRAIT_NONE,
+        .source = source,
+    };
+
     return SUCCESS;
 }
 
@@ -151,9 +154,7 @@ errorcode_t parse_global_constant_definition(parse_ctx_t *ctx){
     ast_constant_t new_constant;
     if(parse_constant_definition(ctx, &new_constant)) return FAILURE;
 
-    // Make room for another constant
-    expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
-    ast->constants[ast->constants_length++] = new_constant;
+    ast_add_global_constant(ast, new_constant);
     return SUCCESS;
 }
 

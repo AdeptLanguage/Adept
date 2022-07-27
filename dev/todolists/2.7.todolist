@@ -49,6 +49,8 @@ MEDIUM-PRIORITY:
 * polymorphic wildcards e.g. <?> List
 * allow direct calling of function pointer values (rather than having to first store them in a variable)
 * add mechanism to do a clean refresh of runtime required resources
+* make enum syntax less strict
+* add a simpler way to get the name of an enum value at runtime
 
 LOW-PRIORITY:
 * Finish 'Any'

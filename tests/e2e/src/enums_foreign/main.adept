@@ -1,0 +1,17 @@
+
+// Enums that are prefixed with 'foreign' will have
+// their values accessible without the EnumName:: prefix
+
+import 'sys/cstdio.adept'
+
+foreign enum Colors (
+    COLOR_RED,
+    COLOR_GREEN,
+    COLOR_BLUE
+)
+
+func main {
+    printf('%d\n', COLOR_RED as int)
+    printf('%d\n', COLOR_GREEN as int)
+    printf('%d\n', COLOR_BLUE as int)
+}

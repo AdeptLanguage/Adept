@@ -1140,6 +1140,12 @@ void ast_add_enum(ast_t *ast, strong_cstr_t name, weak_cstr_t *kinds, length_t l
     ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
 }
 
+void ast_add_global_constant(ast_t *ast, ast_constant_t new_constant){
+    // Make room for another constant
+    expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
+    ast->constants[ast->constants_length++] = new_constant;
+}
+
 void ast_add_poly_func(ast_t *ast, weak_cstr_t func_name_persistent, func_id_t ast_func_id){
     expand((void**) &ast->poly_funcs, sizeof(ast_poly_func_t), ast->poly_funcs_length, &ast->poly_funcs_capacity, 1, 4);
 
