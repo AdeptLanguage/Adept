@@ -1087,7 +1087,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 LLVMValueRef base = ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value);
                 
                 unsigned int bits = global_type_kind_sizes_in_bits_64[type_kind];
-                LLVMValueRef transform = LLVMConstInt(LLVMIntType(bits), ~0, global_type_kind_signs[type_kind]);
+                LLVMValueRef transform = LLVMConstInt(LLVMIntType(bits), (unsigned long long) ~0, global_type_kind_signs[type_kind]);
 
                 llvm_result = LLVMBuildXor(builder, base, transform, "");
                 catalog->blocks[b].value_references[i] = llvm_result;
