@@ -379,7 +379,9 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->result_flags |= COMPILER_RESULT_SUCCESS;
                 return ALT_FAILURE;
             } else if(streq(argv[arg_index], "--update")){
+                #ifndef ADEPT_INSIGHT_BUILD
                 try_update_installation(&compiler->config, compiler->config_filename, NULL, NULL);
+                #endif
                 compiler->result_flags |= COMPILER_RESULT_SUCCESS;
                 return ALT_FAILURE;
             } else if(streq(argv[arg_index], "-p") || streq(argv[arg_index], "--package")){

@@ -3,6 +3,7 @@
 #include "AST/TYPE/ast_type_make.h"
 #include "AST/ast_type.h"
 #include "UTIL/string.h"
+#include "UTIL/util.h"
 
 errorcode_t ast_resolve_type_polymorphs(compiler_t *compiler, type_table_t *type_table, ast_poly_catalog_t *catalog, ast_type_t *in_type, ast_type_t *out_type){
     ast_elem_t **elements = NULL;

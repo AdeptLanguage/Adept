@@ -480,6 +480,8 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 free(to_filename);
                 free(from_filename);
             }
+            #else
+            (void) source_on_error;
             #endif
 
             meta_expr_free_fully(value);

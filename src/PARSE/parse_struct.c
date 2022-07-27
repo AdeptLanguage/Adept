@@ -12,7 +12,6 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
-#include "IRGEN/ir_builder.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
 #include "PARSE/parse_struct.h"
