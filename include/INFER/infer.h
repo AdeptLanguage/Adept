@@ -54,6 +54,7 @@ typedef struct {
     ast_t *ast;
     type_table_t *type_table;
     length_t constants_recursion_depth;
+    length_t aliases_recursion_depth;
     infer_var_scope_t *scope;
 } infer_ctx_t;
 
@@ -124,6 +125,7 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type);
 // ---------------- infer_type ----------------
 // Infers a type (includes aliases and runtime type information things)
 errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type);
+errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t original_source);
 
 // ---------------- infer_var_scope_init ----------------
 // Initializes an inference variable scope

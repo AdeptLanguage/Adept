@@ -31,6 +31,7 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
         .object = object,
         .ast = ast,
         .constants_recursion_depth = 0,
+        .aliases_recursion_depth = 0,
         .scope = NULL,
     };
 
@@ -43,13 +44,6 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     qsort(ast->constants, ast->constants_length, sizeof(ast_constant_t), ast_constants_cmp);
     qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
     qsort(ast->globals, ast->globals_length, sizeof(ast_global_t), ast_globals_cmp);
-
-    for(length_t i = 0; i != ast->aliases_length; i++){
-        if(infer_type(&ctx, &ast->aliases[i].type)) return FAILURE;
-
-        // Ensure we have the alias type info at runtime
-        type_table_give(ctx.type_table, &ast->aliases[i].type, strclone(ast->aliases[i].name));
-    }
 
     for(length_t i = 0; i != ast->composites_length; i++){
         ast_composite_t *composite = &ast->composites[i];
@@ -1156,6 +1150,15 @@ unsigned int ast_primitive_from_ast_type(ast_type_t *type){
 }
 
 errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
+    length_t prev_recursion_depth = ctx->aliases_recursion_depth;
+    ctx->aliases_recursion_depth = 0;
+       
+    errorcode_t res = infer_type_inner(ctx, type, type->source);
+    ctx->aliases_recursion_depth = prev_recursion_depth;
+    return res;
+}
+
+errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t original_source){
     // NOTE: Expands 'type' by resolving any aliases
     
     ast_alias_t *aliases = ctx->ast->aliases;
@@ -1164,7 +1167,6 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
     ast_elem_t **new_elements = NULL;
     length_t length = 0;
     length_t capacity = 0;
-    maybe_null_strong_cstr_t maybe_alias_name = NULL;
 
     for(length_t e = 0; e < type->elements_length; e++){
         ast_elem_t *elem = type->elements[e];
@@ -1176,14 +1178,13 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                 if(streq(base, "void") && type->elements_length > 1 && e != 0 && type->elements[e - 1]->id == AST_ELEM_POINTER){
                     // Substitute '*void' with 'ptr'
 
-                    // Set alias name to be original type
-                    maybe_alias_name = ast_type_str(type);
-
                     // Create replacement element
                     ast_elem_base_t *ptr_elem = malloc(sizeof(ast_elem_base_t));
                     ptr_elem->id = AST_ELEM_BASE;
                     ptr_elem->source = type->elements[e]->source;
                     ptr_elem->base = strclone("ptr");
+
+                    strong_cstr_t typename = ast_type_str(type);
 
                     // Free base type element 'void' that will disappear
                     ast_elem_free(elem);
@@ -1193,6 +1194,14 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
 
                     // Replace previous '*' with 'ptr'
                     new_elements[length - 1] = (ast_elem_t*) ptr_elem;
+
+                    ast_type_t replaced_view = (ast_type_t){
+                        .elements = new_elements,
+                        .elements_length = length,
+                        .source = original_source,
+                    };
+
+                    type_table_give(ctx->type_table, &replaced_view, typename);
                     continue;
                 }
 
@@ -1204,14 +1213,24 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
                     ast_type_t cloned = ast_type_clone(&aliases[alias_index].type);
                     expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, cloned.elements_length, 4);
 
+                    {
+                        if(ctx->aliases_recursion_depth++ >= 100){
+                            compiler_panicf(ctx->compiler, original_source, "Recursion depth of 100 exceeded, most likely a circular definition");
+                            return FAILURE;
+                        }
+
+                        if(infer_type_inner(ctx, &cloned, original_source)) return FAILURE;
+
+                        type_table_give(ctx->type_table, &cloned, strclone(base));
+                        ctx->aliases_recursion_depth--;
+                    }
+
                     // Move all the elements from the cloned type to this type
                     for(length_t m = 0; m != cloned.elements_length; m++){
                         new_elements[length++] = cloned.elements[m];
                     }
 
-                    // DANGEROUS: Manually (partially) deleting ast_elem_base_t
-                    maybe_alias_name = ((ast_elem_base_t*) elem)->base;
-                    free(elem);
+                    ast_elem_free(elem);
 
                     free(cloned.elements);
                     continue; // Don't do normal stuff that follows
@@ -1262,7 +1281,6 @@ errorcode_t infer_type(infer_ctx_t *ctx, ast_type_t *type){
     free(type->elements);
     type->elements = new_elements;
     type->elements_length = length;
-    type_table_give(ctx->type_table, type, maybe_alias_name);
     return SUCCESS;
 }
 
