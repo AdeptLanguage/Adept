@@ -106,35 +106,34 @@ errorcode_t parse_foreign_library(parse_ctx_t *ctx){
     }
 
     // Assume the token we're currently on is 'foreign' keyword
-    maybe_null_weak_cstr_t library = parse_grab_string(ctx, "INTERNAL ERROR: Assumption failed that 'foreign' keyword would be proceeded by a string, will probably crash...");
+    char *library = parse_grab_string(ctx, "INTERNAL ERROR: Assumption failed that 'foreign' keyword would be proceeded by a string, will probably crash...");
+    if(library == NULL) return FAILURE;
+
     char kind = LIBRARY_KIND_NONE;
 
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
 
-    // TODO: CLEANUP: This code isn't very straight forward
     if(tokens[*i + 1].id == TOKEN_WORD){
-        const char *data = tokens[*i + 1].data;
+        const char *data = tokens[++(*i)].data;
 
         if(streq(data, "framework")){
             kind = LIBRARY_KIND_FRAMEWORK;
-
-            // Take ownership of library string
-            tokens[*i].data = NULL;
         } else if(streq(data, "library")){
             kind = LIBRARY_KIND_LIBRARY;
-
-            // Take ownership of library string
-            tokens[*i].data = NULL;
         } else {
-            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i + 1], "Unrecognized foreign library type '%s'", data);
+            compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Unrecognized foreign library type '%s'", data);
+            return FAILURE;
         }
-
-        *i += 1;
     }
 
     // NOTE: 'library' becomes a strong_cstr_t
-    if(kind == LIBRARY_KIND_NONE) library = filename_local(ctx->object->filename, library);
+    if(kind == LIBRARY_KIND_NONE){
+        library = filename_local(ctx->object->filename, library);
+    } else {
+        library = strclone(library);
+    }
+
     ast_add_foreign_library(ctx->ast, library, kind);
     return SUCCESS;
 }

@@ -68,14 +68,11 @@ errorcode_t parse_global(parse_ctx_t *ctx){
         (*i)++;
     }
     
-
     if(parse_type(ctx, &type)) goto failure;
 
-    if(tokens[*i].id == TOKEN_ASSIGN){
-        (*i)++;
-        if(tokens[*i].id == TOKEN_UNDEF){
+    if(parse_eat(ctx, TOKEN_ASSIGN, NULL) == SUCCESS){
+        if(parse_eat(ctx, TOKEN_UNDEF, NULL) == SUCCESS){
              // 'undef' does nothing for globals, so pretend like this is a plain definition
-            (*i)++;
         } else if(parse_expr(ctx, &initial_value)){
             goto failure;
         }

@@ -131,7 +131,7 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
 
     // __unix__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__unix__",
-    #if defined(__unix__) || defined(__unix) || defined(unix)
+    #if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
         cross_compile_for == CROSS_COMPILE_NONE
     #elif defined(__EMSCRIPTEN__)
         EM_ASM_INT({

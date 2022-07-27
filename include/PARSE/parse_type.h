@@ -11,6 +11,9 @@ extern "C" {
 
 // ------------------ parse_type ------------------
 // Parses a type into an abstract syntax tree form.
+// NOTE: Returns SUCCESS on success
+// NOTE: If failed, will set 'out_type' to empty type (all zeros)
+//       This means that calling ast_type_free on 'out_type' after this function fails is optional.
 errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type);
 
 // ------------------ parse_type_func ------------------

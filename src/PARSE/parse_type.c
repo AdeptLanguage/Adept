@@ -257,6 +257,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
 
 failure:
     ast_type_free(out_type);
+    memset(out_type, 0, sizeof(ast_type_t));
     return FAILURE;
 }
 
