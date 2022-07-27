@@ -26,12 +26,13 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
         return ALT_FAILURE;
     }
 
-    infer_ctx_t ctx;
-    ctx.compiler = compiler;
-    ctx.object = object;
-    ctx.ast = ast;
-    ctx.constants_recursion_depth = 0;
-    ctx.scope = NULL;
+    infer_ctx_t ctx = (infer_ctx_t){
+        .compiler = compiler,
+        .object = object,
+        .ast = ast,
+        .constants_recursion_depth = 0,
+        .scope = NULL,
+    };
 
     ast->type_table = malloc(sizeof(type_table_t));
     type_table_init(ast->type_table);
@@ -43,35 +44,31 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
     qsort(ast->globals, ast->globals_length, sizeof(ast_global_t), ast_globals_cmp);
 
-    for(length_t a = 0; a != ast->aliases_length; a++){
-        if(infer_type(&ctx, &ast->aliases[a].type)) return FAILURE;
+    for(length_t i = 0; i != ast->aliases_length; i++){
+        if(infer_type(&ctx, &ast->aliases[i].type)) return FAILURE;
 
         // Ensure we have the alias type info at runtime
-        type_table_give(ctx.type_table, &ast->aliases[a].type, strclone(ast->aliases[a].name));
+        type_table_give(ctx.type_table, &ast->aliases[i].type, strclone(ast->aliases[i].name));
     }
 
-    for(length_t c = 0; c != ast->composites_length; c++){
-        ast_composite_t *composite = &ast->composites[c];
+    for(length_t i = 0; i != ast->composites_length; i++){
+        ast_composite_t *composite = &ast->composites[i];
 
         if(infer_layout_skeleton(&ctx, &composite->layout.skeleton)) return FAILURE;
 
         type_table_give_base(ctx.type_table, composite->name);
     }
 
-    for(length_t g = 0; g != ast->globals_length; g++){
-        if(infer_type(&ctx, &ast->globals[g].type)) return FAILURE;
-        ast_expr_t **global_initial = &ast->globals[g].initial;
+    for(length_t i = 0; i != ast->globals_length; i++){
+        if(infer_type(&ctx, &ast->globals[i].type)) return FAILURE;
+        ast_expr_t **global_initial = &ast->globals[i].initial;
         if(*global_initial != NULL){
-            unsigned int default_primitive = ast_primitive_from_ast_type(&ast->globals[g].type);
+            unsigned int default_primitive = ast_primitive_from_ast_type(&ast->globals[i].type);
             if(infer_expr(&ctx, NULL, global_initial, default_primitive, false)) return FAILURE;
         }
     }
 
     if(infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)) return FAILURE;
-
-    for(length_t c = 0; c != ast->constants_length; c++){
-        if(infer_expr(&ctx, NULL, &ast->constants[c].expression, EXPR_NONE, false)) return FAILURE;
-    }
 
     ast->type_table = ctx.type_table;
 
