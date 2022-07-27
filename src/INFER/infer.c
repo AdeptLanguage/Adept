@@ -69,6 +69,10 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
 
     if(infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)) return FAILURE;
 
+    for(length_t c = 0; c != ast->constants_length; c++){
+        if(infer_expr(&ctx, NULL, &ast->constants[c].expression, EXPR_NONE, false)) return FAILURE;
+    }
+
     ast->type_table = ctx.type_table;
 
     // We had unused variables and have been told to treat them as errors, so exit
