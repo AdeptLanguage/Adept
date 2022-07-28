@@ -258,5 +258,11 @@ def run_all_tests():
     test("while_continue", [executable, join(src_dir, "while_continue/main.adept")], compiles)
     test("windowed", [executable, join(src_dir, "windowed/main.adept")], compiles)
     test("winmain_entry", [executable, join(src_dir, "winmain_entry/main.adept")], compiles, only_on='windows')
+    test("z_curl",
+        [executable,
+        join(src_dir, "z_curl/main.adept"),
+        "-e"],
+        lambda output: b"<html>" in output and b"</html>" in output,
+        expected_exitcode=0)
 
 e2e_framework_run(run_all_tests)

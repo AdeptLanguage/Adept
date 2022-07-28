@@ -1,0 +1,44 @@
+
+#unless __windows__ || __macos__ || __linux__
+    #print "Test not applicable"
+    #done
+#end
+
+import 'sys/cstdio.adept'
+import 'curl/curl.adept'
+
+#if __windows__
+    import String
+    import where
+#end
+ 
+func main {
+    curl *CURL
+    res CURLcode
+
+    curl = curl_easy_init()
+
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, 'https://example.com')
+
+        /* specify certificate bundle (only required for windows) */
+        #if __windows__
+            certificate_bundle *ubyte = (where() + "curl-ca-bundle.crt").cstr()
+            defer delete certificate_bundle
+
+            curl_easy_setopt(curl, CURLOPT_CAINFO, certificate_bundle)
+        #end
+
+        /* example.com is redirected, so we tell libcurl to follow redirection */
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1)
+
+        /* Perform the request, res will get the return code */
+        res = curl_easy_perform(curl)
+
+        /* Check for errors */
+        if(res != CURLE_OK) fprintf(stderr, 'curl_easy_perform() failed: %s\n', curl_easy_strerror(res))
+
+        /* always cleanup */
+        curl_easy_cleanup(curl)
+    }
+}
