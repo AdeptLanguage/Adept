@@ -44,10 +44,6 @@ static errorcode_t enforce_polymorph(
 }
 
 static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *subject_usage, ast_type_t *parent, ast_poly_catalog_t *catalog){
-    // NOTE: This function is still a work in progress!
-    // There will be debug logging while it's under construction!
-    // This is okay as it will never be called unless trying to use work-in-progress features
-
     if(!ast_type_is_base_like(parent)) return FAILURE;
 
     ast_t *ast = &object->ast;
@@ -60,14 +56,6 @@ static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *subj
     if(!parent_composite->is_class) return FAILURE;
 
     while(true){
-        {
-            char *s = ast_type_str(subject);
-            char *t = ast_type_str(parent);
-            blueprintf("[debug] does_extend() - [try] %s extends %s\n", s, t);
-            free(s);
-            free(t);
-        }
-
         if(!ast_type_is_base_like(subject)) goto failure;
 
         bool subject_is_generic = ast_type_is_generic_base(subject);
@@ -83,11 +71,6 @@ static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *subj
         }
 
         if(subject_composite->parent.elements_length == 0){
-            char *s = ast_type_str(subject);
-            char *t = ast_type_str(parent);
-            blueprintf("[debug] does_extend() - [out of options] %s extends %s\n", s, t);
-            free(s);
-            free(t);
             break; // No more ancestors to check, did not match
         }
 
@@ -106,26 +89,10 @@ static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *subj
     }
 
 failure:
-    {
-        char *s = ast_type_str(subject);
-        char *t = ast_type_str(parent);
-        blueprintf("[debug] does_extend() - [failure] %s extends %s\n", s, t);
-        free(s);
-        free(t);
-    }
-
     if(subject == &subject_storage) ast_type_free(&subject_storage);
     return false;
 
 success:
-    {
-        char *s = ast_type_str(subject);
-        char *t = ast_type_str(parent);
-        blueprintf("[debug] does_extend() - [found] %s extends %s\n", s, t);
-        free(s);
-        free(t);
-    }
-
     if(subject == &subject_storage) ast_type_free(&subject_storage);
     return true;
 }

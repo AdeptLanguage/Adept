@@ -186,6 +186,13 @@ def run_all_tests():
     test("pass_func", [executable, join(src_dir, "pass_func/main.adept")], compiles)
     test("permissive_blocks", [executable, join(src_dir, "permissive_blocks/main.adept")], compiles)
     test("poly_default_args", [executable, join(src_dir, "poly_default_args/main.adept")], compiles)
+    test("poly_prereq_extends", [executable, join(src_dir, "poly_prereq_extends/main.adept")], compiles)
+    test("poly_prereq_extends_fail",
+        [executable,
+        join(src_dir, "poly_prereq_extends_fail/main.adept")],
+        lambda output: b"main.adept:28:9: error: Undeclared function do_something(String)\n" in output,
+        expected_exitcode=1
+    )
     test("polycount", [executable, join(src_dir, "polycount/main.adept")], compiles)
     test("polymorphic_functions", [executable, join(src_dir, "polymorphic_functions/main.adept")], compiles)
     test("polymorphic_inner", [executable, join(src_dir, "polymorphic_inner/main.adept")], compiles)

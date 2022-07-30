@@ -191,6 +191,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     }
 
     // Test traversing the generated vtrees
+    #ifdef ENABLE_DEBUG_FEATURES
     for(length_t i = 0; i != vtree_list.length; i++){
         vtree_t *root = vtree_list.vtrees[i];
 
@@ -198,6 +199,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             vtree_print(root, 0);
         }
     }
+    #endif
 
     // Generate finalized vtables
     for(length_t i = 0; i != vtree_list.length; i++){

@@ -1,0 +1,3 @@
+
+#define make_compilation_fail true
+import "../poly_prereq_extends/main.adept"

@@ -1,0 +1,34 @@
+
+#default make_compilation_fail false
+
+import basics
+
+class Shape {
+    constructor {}
+}
+
+class Rectangle extends Shape (w, h float) {
+    constructor {}
+}
+
+class Circle extends Shape (r float) {
+    constructor {}
+}
+
+func main {
+    shape Shape()
+    rectangle Rectangle()
+    circle Circle()
+
+    do_something(shape)
+    do_something(rectangle)
+    do_something(circle)
+
+    #if make_compilation_fail
+        do_something("Hello")
+    #end
+}
+
+func do_something(_shape $T extends Shape) {
+    printf("%s\n", typenameof $T)
+}

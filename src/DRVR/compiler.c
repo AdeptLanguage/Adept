@@ -1189,7 +1189,7 @@ func_id_list_t compiler_possibilities(compiler_t *compiler, object_t *object, we
     for(length_t id = 0; id != ast->funcs_length; id++){
         ast_func_t *func = &ast->funcs[id];
 
-        if(streq(func->name, name) && (func->traits & (AST_FUNC_VIRTUAL | AST_FUNC_OVERRIDE)) == TRAIT_NONE){
+        if(streq(func->name, name) && (func->traits & (AST_FUNC_VIRTUAL | AST_FUNC_OVERRIDE | AST_FUNC_NO_SUGGEST)) == TRAIT_NONE){
             if(methods_only_type_of_this){
                 if(!ast_func_is_method(func)) continue;
 

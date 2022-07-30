@@ -1879,7 +1879,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     func->arg_flows = malloc(sizeof(char) * poly_func->arity);
     func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
     func->traits |= poly_func->traits & ~(AST_FUNC_MAIN | AST_FUNC_POLYMORPHIC);
-    func->traits |= AST_FUNC_GENERATED;
+    func->traits |= AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
 
     if(poly_func->arg_defaults) {
         func->arg_defaults = malloc(sizeof(ast_expr_t *) * poly_func->arity);
@@ -2053,7 +2053,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
         .export_name = NULL,
     });
 
-    func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
+    func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
     func->arg_types = malloc(sizeof(ast_type_t));
@@ -2154,7 +2154,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
         .export_name = NULL,
     });
 
-    func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED;
+    func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
 
     func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
     func->arg_types = malloc(sizeof(ast_type_t));
@@ -2321,7 +2321,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         .export_name = NULL,
     });
 
-    func->traits |= AST_FUNC_GENERATED;
+    func->traits |= AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
 
     if(disallowed){
         func->traits |= AST_FUNC_DISALLOW;
