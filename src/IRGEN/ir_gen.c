@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "AST/POLY/ast_resolve.h"
+#include "AST/POLY/ast_translate.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/TYPE/ast_type_make.h"
 #include "AST/UTIL/string_builder_extensions.h"
@@ -28,6 +29,7 @@
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_find.h"
+#include "IRGEN/ir_gen_polymorphable.h"
 #include "IRGEN/ir_gen_rtti.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
@@ -402,8 +404,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         .ir_func_id = ir_func_id,
     };
     
-    bool add_to_jobs = !(ast_func->traits & AST_FUNC_VIRTUAL);
-    ir_module_create_func_mapping(module, ast_func->name, new_endpoint, add_to_jobs);
+    ir_module_create_func_mapping(module, ast_func->name, new_endpoint, true);
 
     if(optional_out_new_endpoint){
         *optional_out_new_endpoint = new_endpoint;
@@ -494,28 +495,6 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         module_func->return_type = ir_type_make(&module->pool, TYPE_KIND_S32, NULL);
     } else {
         if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
-    }
-
-    if(ast_func->traits & AST_FUNC_DISPATCHER && !ast_type_list_has_polymorph(ast_func->arg_types, ast_func->arity)){
-        assert(ast_func->arity > 0);
-        assert(ast_type_is_pointer_to_base_like(&ast_func->arg_types[0]));
-
-        // With the instantiation of a concrete dispatcher, instantiate the associated default implementation
-
-        // TODO: TODO: TODO:
-
-        compiler_panicf(compiler, ast_func->source, "Instantiating virtual dispatchers is not yet implemented");
-        return ALT_FAILURE;
-
-        // ast_elem_polymorph_prereq_t *prereq = (ast_elem_polymorph_prereq_t*) ast_func->arg_types[0].elements[1];
-        // assert(prereq->id == AST_ELEM_POLYMORPH_PREREQ);
-        // assert(prereq->extends.elements_length > 0);
-
-        // ast_type_t new_subject = prereq->extends
-        // ast_func_t *virtual = &object->ast.funcs[ast_func->virtual_source];
-        // instantiate_poly_func(compiler, object, instantiation_source, poly_func_id, types, types-length, catalog, my_out_endpoint)
-
-        ast_func = NULL;
     }
 
     return SUCCESS;

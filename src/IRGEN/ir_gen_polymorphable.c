@@ -43,7 +43,7 @@ static errorcode_t enforce_polymorph(
     return SUCCESS;
 }
 
-static bool does_extend(compiler_t *compiler, object_t *object, ast_type_t *subject_usage, ast_type_t *parent, ast_poly_catalog_t *catalog){
+bool ir_gen_does_extend(compiler_t *compiler, object_t *object, ast_type_t *subject_usage, ast_type_t *parent, ast_poly_catalog_t *catalog){
     if(!ast_type_is_base_like(parent)) return FAILURE;
 
     ast_t *ast = &object->ast;
@@ -201,7 +201,7 @@ static errorcode_t enforce_prereq(
     }
 
     if(prereq->extends.elements_length != 0){
-        if(!does_extend(compiler, object, &concrete_type, &prereq->extends, catalog)){
+        if(!ir_gen_does_extend(compiler, object, &concrete_type, &prereq->extends, catalog)){
             return FAILURE;
         }
     }

@@ -1880,6 +1880,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
     func->traits |= poly_func->traits & ~(AST_FUNC_MAIN | AST_FUNC_POLYMORPHIC);
     func->traits |= AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
+    func->virtual_source = poly_func->virtual_source;
 
     if(poly_func->arg_defaults) {
         func->arg_defaults = malloc(sizeof(ast_expr_t *) * poly_func->arity);
@@ -1935,6 +1936,12 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
         goto failure;
     }
 
+    if(func->traits & AST_FUNC_DISPATCHER){
+        if(instantiate_default_for_virtual_dispatcher(compiler, object, func, instantiation_source, catalog)){
+            goto failure;
+        }
+    }
+
     if(out_endpoint) *out_endpoint = newest_endpoint;
     return SUCCESS;
 
@@ -1943,6 +1950,72 @@ failure:
     compiler_panicf(compiler, func->source, "During polymorphic instantiation of function");
     compiler_panicf(compiler, instantiation_source, "Failed to instantiate polymorphic function");
     return FAILURE;
+}
+
+errorcode_t instantiate_default_for_virtual_dispatcher(
+    compiler_t *compiler,
+    object_t *object,
+    ast_func_t *dispatcher,
+    source_t instantiation_source,
+    ast_poly_catalog_t *catalog
+){
+    assert(dispatcher->arity > 0);
+    assert(ast_type_is_pointer_to_base_like(&dispatcher->arg_types[0]));
+
+    // With the instantiation of a concrete dispatcher, instantiate the associated default implementation
+
+    func_id_t virtual_ast_id = dispatcher->virtual_source;
+    assert(virtual_ast_id != INVALID_FUNC_ID);
+
+    ast_func_t *originating_virtual = &object->ast.funcs[virtual_ast_id];
+    ast_type_t parent_type = ast_type_unwrapped_view(&originating_virtual->arg_types[0]);
+
+    // Since we already know that the child type extends the parent and that the supplied catalog can be used to resolve any polymorphism
+    // to get there, we can just use the catalog the resolve any polymorphism in the parent type to get the concrete parent type.
+    //
+    // NOTE: Normally, we would have to run `ir_gen_does_extend()` first to ensure that it's the case and to get the right catalog,
+    // but that is already guaranteed by the signature of all polymorphic dispatcher functions since they have a `$This extends OwnerType` clause
+    ast_type_t concrete_parent_type;
+
+    if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, catalog, &parent_type, &concrete_parent_type)){
+        return FAILURE;
+    }
+
+    // No function can be both a dispatcher and virtual origin
+    assert(!(originating_virtual->traits & AST_FUNC_DISPATCHER));
+
+    weak_cstr_t struct_name = ast_type_struct_name(&concrete_parent_type);
+    weak_cstr_t method_name = originating_virtual->name;
+
+    length_t arity = originating_virtual->arity;
+    ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
+
+    for(length_t i = 0; i != arity; i++){
+        if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, catalog, &originating_virtual->arg_types[i], &arg_types[i])){
+            return FAILURE;
+        }
+    }
+
+    // Create virtual function if necessary
+    optional_func_pair_t result;
+    errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, method_name, arg_types, arity, instantiation_source, &result);
+    ast_types_free_fully(arg_types, arity);
+
+    if(errorcode || !result.has){
+        compiler_panicf(compiler, instantiation_source, "Failed to get default implementation for virtual dispatcher");
+        return FAILURE;
+    }
+
+    ast_func_t *default_impl = &object->ast.funcs[result.value.ast_func_id];
+
+    if(!(default_impl->traits & AST_FUNC_VIRTUAL)){
+        strong_cstr_t head_str = ast_func_head_str(default_impl);
+        compiler_panicf(compiler, instantiation_source, "Overlapping contenders for default implementation for virtual function '%s'", head_str);
+        free(head_str);
+        return FAILURE;
+    }
+
+    return SUCCESS;
 }
 
 errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){

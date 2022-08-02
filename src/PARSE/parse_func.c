@@ -58,6 +58,8 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_i
 
     ast_func_create_template(func, &func_head);
 
+    func->virtual_source = virtual_ast_func_id;
+
     func->traits |= AST_FUNC_DISPATCHER | AST_FUNC_GENERATED | AST_FUNC_POLYMORPHIC;
     func->arity = arity;
 

@@ -448,6 +448,17 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mu
 errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, func_id_t ast_poly_func_id, ast_type_t *types,
         length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_endpoint_t *out_endpoint);
 
+// ---------------- instantiate_default_for_virtual_dispatcher ----------------
+// Instantiates (if necessary) a concrete version of the default implementation
+// of a just-instantiated virtual dispatcher.
+errorcode_t instantiate_default_for_virtual_dispatcher(
+    compiler_t *compiler,
+    object_t *object,
+    ast_func_t *dispatcher,
+    source_t instantiation_source,
+    ast_poly_catalog_t *catalog
+);
+
 // ---------------- attempt_autogen___defer__ ----------------
 // Attempts to auto-generate __defer__ management method
 // NOTE: Does NOT check for existing suitable __defer__ methods

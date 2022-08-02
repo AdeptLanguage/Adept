@@ -393,7 +393,10 @@ strong_cstr_t ast_func_head_str(ast_func_t *func){
     if(func->traits & AST_FUNC_FOREIGN){
         result = mallocandsprintf("foreign %s(%s)%s %s%s", func->name, args_string ? args_string : "", no_discard, return_type_string, disallow);
     } else {
-        result = mallocandsprintf("func %s(%s)%s %s%s", func->name, args_string ? args_string : "", no_discard, return_type_string, disallow);
+        weak_cstr_t maybe_dispatcher = func->traits & AST_FUNC_DISPATCHER ? "[[dispatcher]] " : "";
+        weak_cstr_t maybe_virtual = func->traits & AST_FUNC_VIRTUAL ? "virtual " : "";
+        weak_cstr_t maybe_override = func->traits & AST_FUNC_OVERRIDE ? "override " : "";
+        result = mallocandsprintf("%s%s%sfunc %s(%s)%s %s%s", maybe_dispatcher, maybe_virtual, maybe_override, func->name, args_string ? args_string : "", no_discard, return_type_string, disallow);
     }
 
     free(args_string);

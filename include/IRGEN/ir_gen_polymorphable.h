@@ -24,6 +24,14 @@ extern "C" {
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
 errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
 
+// ---------------- ir_gen_does_extend ----------------
+// Returns whether a concrete subject type extends a potential parent type
+// Reads and writes to `catalog`
+// NOTE: If this function returns true and the parent type is polymorphic,
+// then the parent type can be resolved using the `catalog` supplied
+// to get the concrete version of the parent class
+bool ir_gen_does_extend(compiler_t *compiler, object_t *object, ast_type_t *subject_usage, ast_type_t *parent, ast_poly_catalog_t *catalog);
+
 #ifdef __cplusplus
 }
 #endif
