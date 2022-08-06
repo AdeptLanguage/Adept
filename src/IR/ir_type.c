@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "AST/ast.h"
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "UTIL/ground.h"
@@ -112,6 +113,26 @@ ir_type_t* ir_type_make_fixed_array_of(ir_pool_t *pool, length_t length, ir_type
     fixed_array_type->kind = TYPE_KIND_FIXED_ARRAY;
     fixed_array_type->extra = extra;
     return fixed_array_type;
+}
+
+ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool, ir_type_t **arg_types, length_t arity, ir_type_t *return_type, trait_t type_kind_func_traits){
+    ir_type_extra_function_t *extra = ir_pool_alloc(pool, sizeof(ir_type_extra_function_t));
+
+    *extra = (ir_type_extra_function_t){
+        .arg_types = arg_types,
+        .arity = arity,
+        .return_type = return_type,
+        .traits = type_kind_func_traits,
+    };
+
+    return ir_type_make(pool, TYPE_KIND_FUNCPTR, extra);
+}
+
+trait_t ast_func_traits_to_type_kind_func_traits(trait_t ast_func_traits){
+    trait_t type_kind_func_traits = TRAIT_NONE;
+    if(ast_func_traits & AST_FUNC_VARARG)  type_kind_func_traits |= TYPE_KIND_FUNC_VARARG;
+    if(ast_func_traits & AST_FUNC_STDCALL) type_kind_func_traits |= TYPE_KIND_FUNC_STDCALL;
+    return type_kind_func_traits;
 }
 
 ir_type_t* ir_type_dereference(ir_type_t *type){

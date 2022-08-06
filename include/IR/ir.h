@@ -427,9 +427,28 @@ typedef listof(ir_vtable_init_t, initializations) ir_vtable_init_list_t;
 #define ir_vtable_init_list_append(LIST, VALUE) list_append((LIST), (VALUE), ir_vtable_init_t)
 
 // ---------------- ir_vtable_init_list_free ----------------
-// Frees the vtable initializations in a vtable initializations list
+// Frees the vtable initializations in a vtable initialization list
 // and then the list itself
 void ir_vtable_init_list_free(ir_vtable_init_list_t *vtable_init_list);
+
+// ---------------- ir_vtable_dispatch_t ----------------
+// Used to keep track of where vtable index injection will be required
+typedef struct {
+    func_id_t ast_func_id;
+    ir_value_t *index_value;
+} ir_vtable_dispatch_t;
+
+// ---------------- ir_vtable_dispatch_list_t ----------------
+// A list of required vtable dispatches
+typedef listof(ir_vtable_dispatch_t, dispatches) ir_vtable_dispatch_list_t;
+
+// ---------------- ir_vtable_dispatch_list_append ----------------
+// Appends a vtable dispatch to a vtable dispatch list
+#define ir_vtable_dispatch_list_append(LIST, VALUE) list_append((LIST), (VALUE), ir_vtable_dispatch_t)
+
+// ---------------- ir_vtable_dispatch_list_free ----------------
+// Frees a vtable dispatch list
+#define ir_vtable_dispatch_list_free(LIST) free((LIST)->dispatches)
 
 // ---------------- ir_func_t ----------------
 // An intermediate representation function

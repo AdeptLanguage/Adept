@@ -26,6 +26,7 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->job_list = (ir_job_list_t){0};
     ir_module->defer_free = (free_list_t){0};
     ir_module->vtable_init_list = (ir_vtable_init_list_t){0};
+    ir_module->vtable_dispatch_list = (ir_vtable_dispatch_list_t){0};
 
     // Initialize common data
     ir_pool_t *pool = &ir_module->pool;
@@ -69,6 +70,7 @@ void ir_module_free(ir_module_t *ir_module){
     ir_job_list_free(&ir_module->job_list);
     free_list_free(&ir_module->defer_free);
     ir_vtable_init_list_free(&ir_module->vtable_init_list);
+    ir_vtable_dispatch_list_free(&ir_module->vtable_dispatch_list);
 }
 
 void ir_module_create_func_mapping(ir_module_t *module, weak_cstr_t function_name, ir_func_endpoint_t endpoint, bool add_to_job_list){

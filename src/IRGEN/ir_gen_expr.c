@@ -1422,28 +1422,23 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
 
     ast_t *ast = &builder->object->ast;
     ir_module_t *module = &builder->object->ir_module;
+    trait_t ast_func_traits = TRAIT_NONE;
 
     // Create the IR function pointer type
-    ir_type_extra_function_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
-    extra->arg_types = module->funcs.funcs[pair.ir_func_id].argument_types;
-    extra->arity = ast->funcs[pair.ast_func_id].arity;
-    extra->traits = expr->traits;
+    ir_type_t *ir_funcptr_type;
 
-    trait_t ast_func_traits = ast->funcs[pair.ast_func_id].traits;
+    {
+        ast_func_t *ast_func = &ast->funcs[pair.ast_func_id];
+        ir_func_t *ir_func = &module->funcs.funcs[pair.ir_func_id];
 
-    // Force return type of entry point function to be s32
-    if(ast_func_traits & AST_FUNC_MAIN){
-        ir_type_t *i32_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        i32_type->kind = TYPE_KIND_S32;
-        // (neglect i32_type->extra)
-        extra->return_type = i32_type;
-    } else {
-        extra->return_type = module->funcs.funcs[pair.ir_func_id].return_type;
+        ast_func_traits = ast_func->traits;
+
+        length_t arity = ast_func->arity;
+        ir_type_t **arg_types = ir_func->argument_types;
+        ir_type_t *return_type = ast_func->traits & AST_FUNC_MAIN ? ir_type_make(builder->pool, TYPE_KIND_S32, NULL) : ir_func->return_type;
+
+        ir_funcptr_type = ir_type_make_function_pointer(builder->pool, arg_types, arity, return_type, expr->traits);
     }
-
-    ir_type_t *ir_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    ir_funcptr_type->kind = TYPE_KIND_FUNCPTR;
-    ir_funcptr_type->extra = extra;
 
     // If the function is only referenced by C-mangled name, then get its address by it
     // Otherwise, just get its function address like normal using its IR function id
@@ -1492,32 +1487,18 @@ errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, a
     ir_module_t *module = &builder->object->ir_module;
     ir_func_t *ir_func = &module->funcs.funcs[ir_func_id];
 
-    // Create the no-op IR function pointer type
-    ir_type_extra_function_t *noop_extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
-    noop_extra->arg_types = ir_func->argument_types;
-    noop_extra->arity = 1;
-    noop_extra->traits = TRAIT_NONE;
-    noop_extra->return_type = ir_func->return_type;
+    // Get function pointer type for no-op defer function
+    ir_type_t *ir_noop_funcptr_type = ir_type_make_function_pointer(builder->pool, ir_func->argument_types, 1, ir_func->return_type, TRAIT_NONE);
 
-    ir_type_t *ir_noop_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    ir_noop_funcptr_type->kind = TYPE_KIND_FUNCPTR;
-    ir_noop_funcptr_type->extra = noop_extra;
+    // Resolve argument types
+    ir_type_t **arg_types = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
 
-    // Create the final IR function pointer type
-    ir_type_extra_function_t *final_extra = ir_pool_alloc(builder->pool, sizeof(ir_type_extra_function_t));
-    final_extra->arg_types = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-
-    if(ir_gen_resolve_type(builder->compiler, builder->object, match_arg, &final_extra->arg_types[0])){
+    if(ir_gen_resolve_type(builder->compiler, builder->object, match_arg, &arg_types[0])){
         return FAILURE;
     }
 
-    final_extra->arity = 1;
-    final_extra->traits = TRAIT_NONE;
-    final_extra->return_type = ir_func->return_type;
-
-    ir_type_t *ir_final_funcptr_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    ir_final_funcptr_type->kind = TYPE_KIND_FUNCPTR;
-    ir_final_funcptr_type->extra = final_extra;
+    // Get function pointer type
+    ir_type_t *ir_final_funcptr_type = ir_type_make_function_pointer(builder->pool, arg_types, 1, ir_func->return_type, TRAIT_NONE);
 
     // Get function address
     *ir_value = build_func_addr(builder->pool, ir_noop_funcptr_type, ir_func_id);
@@ -2916,13 +2897,8 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
     // Handle __pass__ management for values that need it
     if(handle_pass_management(builder, arg_values, arg_types, NULL, call->arity)) return FAILURE;
 
-    ir_instr_call_address_t *instruction = (ir_instr_call_address_t*) build_instruction(builder, sizeof(ir_instr_call_address_t));
-    instruction->id = INSTRUCTION_CALL_ADDRESS;
-    instruction->result_type = ir_return_type;
-    instruction->address = *inout_ir_value;
-    instruction->values = arg_values;
-    instruction->values_length = call->arity;
-    *inout_ir_value = build_value_from_prev_instruction(builder);
+    // Generate the actual call address instruction
+    *inout_ir_value = build_call_address(builder, ir_return_type, *inout_ir_value, arg_values, call->arity);
 
     if(out_expr_type != NULL) *out_expr_type = ast_type_clone(function_elem->return_type);
     return SUCCESS;

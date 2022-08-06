@@ -192,24 +192,23 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
         break;
     case AST_ELEM_FUNC: {
             ast_elem_func_t *function = (ast_elem_func_t*) unresolved_type->elements[non_concrete_layers];
-            ir_type_extra_function_t *extra = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_function_t));
 
-            *resolved_type = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t));
-            (*resolved_type)->kind = TYPE_KIND_FUNCPTR;
-            (*resolved_type)->extra = extra;
-
-            extra->traits = TRAIT_NONE;
-            if(function->traits & AST_FUNC_VARARG)  extra->traits |= TYPE_KIND_FUNC_VARARG;
-            if(function->traits & AST_FUNC_STDCALL) extra->traits |= TYPE_KIND_FUNC_STDCALL;
-
-            extra->arity = function->arity;
-            extra->arg_types = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t*) * extra->arity);
+            trait_t type_kind_func_traits = ast_func_traits_to_type_kind_func_traits(function->traits);
+            ir_type_t **arg_types = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t*) * function->arity);
 
             for(length_t a = 0; a != function->arity; a++){
-                if(ir_gen_resolve_type(compiler, object, &function->arg_types[a], &extra->arg_types[a])) return FAILURE;
+                if(ir_gen_resolve_type(compiler, object, &function->arg_types[a], &arg_types[a])) return FAILURE;
+            }
+            
+            ir_type_t *return_type = NULL;
+
+            if(function->return_type != NULL){
+                if(ir_gen_resolve_type(compiler, object, function->return_type, &return_type)) return FAILURE;
+            } else {
+                return_type = ir_type_make(&ir_module->pool, TYPE_KIND_VOID, NULL);
             }
 
-            if(ir_gen_resolve_type(compiler, object, function->return_type, &extra->return_type)) return FAILURE;
+            *resolved_type = ir_type_make_function_pointer(&ir_module->pool, arg_types, function->arity, return_type, type_kind_func_traits);
         }
         break;
     case AST_ELEM_GENERIC_BASE: {

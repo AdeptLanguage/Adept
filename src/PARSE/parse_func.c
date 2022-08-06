@@ -22,14 +22,13 @@
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
-static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_id){
-    // TODO: This function is still a work in progress!
-    // It will be responsible for creating dispatcher functions that will
+static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_origin){
+    // This function is responsible for creating dispatcher functions that will
     // handle the actual virtual dispatch for virtual methods.
     // The default/overrides of these will not be accessible with normal calls,
     // and will only be accessible when we look for them during vtable generation
-    // (special flags will be used to ensure only the right ones get found for the right searches)
-    // The dispatchers will by the user-facing function that actually gets called
+    // (via `ir_gen_find_dispatchee`)
+    // The dispatchers will be the user-facing function that actually gets called
     // by the programmer
     // In code, they would look something like this:
     //
@@ -37,13 +36,20 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_i
     //     return (*(this.__vtable__ as **ptr))[secret_vtable_entry_index](arg1, argn)
     // }
     //
-    // variadic virtual methods will eventually need special consideration,
-    // old-style vararg virtual methods will probably need to be forbidden.
+    // Old-style vararg virtual methods are forbidden (for now at least).
 
     ast_t *ast = ctx->ast;
     func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
-    ast_func_t *virtual = &ast->funcs[virtual_ast_func_id];
+    ast_func_t *virtual = &ast->funcs[virtual_origin];
+
+    if(virtual->traits & AST_FUNC_VARARG){
+        compiler_panicf(ctx->compiler, virtual->source, "Virtual dispatcher cannot use old-style variadic arguments");
+        return FAILURE;
+    }
+
+    // Hook up link from virtual func to virtual dispatcher
+    virtual->virtual_dispatcher = ast_func_id;
 
     length_t arity = virtual->arity;
 
@@ -58,8 +64,7 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_i
 
     ast_func_create_template(func, &func_head);
 
-    func->virtual_source = virtual_ast_func_id;
-
+    func->virtual_origin = virtual_origin;
     func->traits |= AST_FUNC_DISPATCHER | AST_FUNC_GENERATED | AST_FUNC_POLYMORPHIC;
     func->arity = arity;
 
@@ -86,14 +91,6 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_ast_func_i
 
     ast_type_dereference(&func->arg_types[0]);
     func->arg_types[0] = ast_type_pointer_to(ast_type_make_polymorph_prereq(strclone("This"), false, NULL, func->arg_types[0]));
-
-    // TODO: We still need to generate the implementation of the function
-    {
-        compiler_warnf(ctx->compiler, func->source, "Feature is not fully implemented yet");
-    }
-
-    // Remember default implementation to use for virtual dispatcher
-    func->virtual_source = virtual_ast_func_id;
 
     // Register as polymorphic function
     ast_add_poly_func(ast, func->name, ast_func_id);

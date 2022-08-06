@@ -300,6 +300,16 @@ void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_ty
     instruction->ir_func_id = ir_func_id;
 }
 
+ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity){
+    ir_instr_call_address_t *instruction = (ir_instr_call_address_t*) build_instruction(builder, sizeof(ir_instr_call_address_t));
+    instruction->id = INSTRUCTION_CALL_ADDRESS;
+    instruction->result_type = return_type;
+    instruction->address = address;
+    instruction->values = arg_values;
+    instruction->values_length = arity;
+    return build_value_from_prev_instruction(builder);
+}
+
 void build_break(ir_builder_t *builder, length_t basicblock_id){
     ir_instr_break_t *built_instr = (ir_instr_break_t*) build_instruction(builder, sizeof(ir_instr_break_t));
     built_instr->id = INSTRUCTION_BREAK;
@@ -1880,7 +1890,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     func->arg_type_traits = malloc(sizeof(trait_t) * poly_func->arity);
     func->traits |= poly_func->traits & ~(AST_FUNC_MAIN | AST_FUNC_POLYMORPHIC);
     func->traits |= AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
-    func->virtual_source = poly_func->virtual_source;
+    func->virtual_origin = poly_func->virtual_origin;
 
     if(poly_func->arg_defaults) {
         func->arg_defaults = malloc(sizeof(ast_expr_t *) * poly_func->arity);
@@ -1937,9 +1947,15 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     }
 
     if(func->traits & AST_FUNC_DISPATCHER){
-        if(instantiate_default_for_virtual_dispatcher(compiler, object, func, instantiation_source, catalog)){
+        func_id_t ast_concrete_virtual_origin;
+
+        if(instantiate_default_for_virtual_dispatcher(compiler, object, ast_func_id, instantiation_source, catalog, &ast_concrete_virtual_origin)){
             goto failure;
         }
+
+        // Change virtual origin to be concrete version
+        func = &ast->funcs[ast_func_id];
+        func->virtual_origin = ast_concrete_virtual_origin;
     }
 
     if(out_endpoint) *out_endpoint = newest_endpoint;
@@ -1955,20 +1971,27 @@ failure:
 errorcode_t instantiate_default_for_virtual_dispatcher(
     compiler_t *compiler,
     object_t *object,
-    ast_func_t *dispatcher,
+    func_id_t dispatcher_id,
     source_t instantiation_source,
-    ast_poly_catalog_t *catalog
+    ast_poly_catalog_t *catalog,
+    func_id_t *out_ast_concrete_virtual_origin
 ){
+    // With the instantiation of a concrete dispatcher, instantiate the associated default implementation
+
+    ast_t *ast = &object->ast;
+    ast_func_t *dispatcher = &ast->funcs[dispatcher_id];
+
     assert(dispatcher->arity > 0);
     assert(ast_type_is_pointer_to_base_like(&dispatcher->arg_types[0]));
 
-    // With the instantiation of a concrete dispatcher, instantiate the associated default implementation
-
-    func_id_t virtual_ast_id = dispatcher->virtual_source;
+    func_id_t virtual_ast_id = dispatcher->virtual_origin;
     assert(virtual_ast_id != INVALID_FUNC_ID);
 
-    ast_func_t *originating_virtual = &object->ast.funcs[virtual_ast_id];
+    ast_func_t *originating_virtual = &ast->funcs[virtual_ast_id];
     ast_type_t parent_type = ast_type_unwrapped_view(&originating_virtual->arg_types[0]);
+
+    // Hook up link from concrete virtual to concrete dispatcher
+    originating_virtual->virtual_dispatcher = dispatcher_id;
 
     // Since we already know that the child type extends the parent and that the supplied catalog can be used to resolve any polymorphism
     // to get there, we can just use the catalog the resolve any polymorphism in the parent type to get the concrete parent type.
@@ -2015,6 +2038,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
         return FAILURE;
     }
 
+    *out_ast_concrete_virtual_origin = result.value.ast_func_id;
     return SUCCESS;
 }
 

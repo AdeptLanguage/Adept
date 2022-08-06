@@ -33,6 +33,7 @@ typedef struct ir_module {
     ir_job_list_t job_list;
     free_list_t defer_free;
     ir_vtable_init_list_t vtable_init_list;
+    ir_vtable_dispatch_list_t vtable_dispatch_list;
 } ir_module_t;
 
 // ---------------- ir_module_free ----------------

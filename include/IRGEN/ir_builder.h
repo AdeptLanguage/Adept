@@ -128,6 +128,10 @@ ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *r
 // Builds a call instruction, but doesn't give back a reference to the result
 void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length);
 
+// ---------------- build_call_address ----------------
+// Builds a call function address instruction
+ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity);
+
 // ---------------- build_break ----------------
 // Builds a break instruction
 void build_break(ir_builder_t *builder, length_t basicblock_id);
@@ -454,9 +458,10 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
 errorcode_t instantiate_default_for_virtual_dispatcher(
     compiler_t *compiler,
     object_t *object,
-    ast_func_t *dispatcher,
+    func_id_t dispatcher_id,
     source_t instantiation_source,
-    ast_poly_catalog_t *catalog
+    ast_poly_catalog_t *catalog,
+    func_id_t *out_ast_concrete_virtual_origin
 );
 
 // ---------------- attempt_autogen___defer__ ----------------

@@ -96,6 +96,14 @@ ir_type_t *ir_type_make_pointer_to(ir_pool_t *pool, ir_type_t *base);
 // Gets the type of a fixed array of a type
 ir_type_t *ir_type_make_fixed_array_of(ir_pool_t *pool, length_t length, ir_type_t *base);
 
+// ---------------- ir_type_make_function_pointer ----------------
+// Gets the type for a function pointer
+ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool, ir_type_t **arg_types, length_t arity, ir_type_t *return_type, trait_t type_kind_func_traits);
+
+// ---------------- ast_func_traits_to_type_kind_func_traits ----------------
+// Converts AST function traits to IR function pointer traits
+trait_t ast_func_traits_to_type_kind_func_traits(trait_t ast_func_traits);
+
 // ---------------- ir_type_dereference ----------------
 // Gets the type pointed to by a pointer type
 ir_type_t *ir_type_dereference(ir_type_t *type);

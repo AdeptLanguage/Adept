@@ -192,17 +192,6 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         goto failure;
     }
 
-    // Test traversing the generated vtrees
-    #ifdef ENABLE_DEBUG_FEATURES
-    for(length_t i = 0; i != vtree_list.length; i++){
-        vtree_t *root = vtree_list.vtrees[i];
-
-        if(root->parent == NULL){
-            vtree_print(root, 0);
-        }
-    }
-    #endif
-
     // Generate finalized vtables
     for(length_t i = 0; i != vtree_list.length; i++){
         vtree_t *vtree = vtree_list.vtrees[i];
@@ -237,6 +226,37 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
             vtree->finalized_table
                 ? vtree->finalized_table
                 : build_null_pointer_of_type(&module->pool, module->common.ir_ptr);
+    }
+
+    // Inject vtable indices for each virtual dispatcher
+    for(length_t i = 0; i != vtree_list.length; i++){
+        vtree_t *vtree = vtree_list.vtrees[i];
+
+        for(length_t j = 0; j != vtree->virtuals.length; j++){
+            ir_func_endpoint_t endpoint = vtree->virtuals.endpoints[j];
+
+            ast_func_t *func = &ast->funcs[endpoint.ast_func_id];
+
+            length_t parent_table_size = vtree->parent ? vtree->parent->table.length : 0;
+            length_t index = parent_table_size + j;
+
+            // Linear search for corresponding index
+            ir_value_t *index_value = NULL;
+
+            for(length_t k = 0; k != module->vtable_dispatch_list.length; k++){
+                ir_vtable_dispatch_t *dispatch = &module->vtable_dispatch_list.dispatches[k];
+
+                if(dispatch->ast_func_id == func->virtual_dispatcher){
+                    index_value = dispatch->index_value;
+                    break;
+                }
+            }
+
+            assert(index_value != NULL);
+
+            adept_usize *literal = (adept_usize*) index_value->extra;
+            *literal = index;
+        }
     }
 
     ir_job_list_free(&recent_jobs);
@@ -618,8 +638,61 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         ir_vtable_init_list_append(&builder.object->ir_module.vtable_init_list, vtable_init);
     }
 
-    if(ir_gen_stmts(&builder, &ast_func.statements, &terminated)) goto failure;
-    if(terminated) goto success;
+    if(ast_func.traits & AST_FUNC_DISPATCHER){
+        // Find 'this' argument
+        bridge_var_t *bridge_var = bridge_scope_find_var(builder.scope, "this");
+        assert(bridge_var);
+
+        // Get value of 'this'
+        ir_value_t *this_value = build_load(&builder, build_varptr(&builder, bridge_var->ir_type, bridge_var), ast_func.source);
+
+        // Create 'this.__vtable__' value
+        ir_type_t *ir_ptr = builder.object->ir_module.common.ir_ptr;
+        ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr);
+        ir_value_t *vtable = build_load(&builder, build_member(&builder, this_value, /*index of __vtable__ field*/ 0, ir_ptr_ptr, ast_func.source), NULL_SOURCE);
+
+        ir_value_t *index = build_literal_usize(builder.pool, 0);
+
+        ir_value_t *table = build_bitcast(&builder, vtable, ir_type_make_pointer_to(builder.pool, object->ir_module.common.ir_ptr));
+        ir_value_t *raw_function_pointer = build_load(&builder, build_array_access(&builder, table, index, NULL_SOURCE), NULL_SOURCE);
+
+        ir_type_t *function_pointer_type;
+        ir_type_t *result_type;
+        length_t arity;
+        ir_value_t **arg_values;
+
+        {
+            ir_func_t *ir_func = &builder.object->ir_module.funcs.funcs[ir_func_id];
+            trait_t funcptr_traits = ast_func_traits_to_type_kind_func_traits(ast_func.traits);
+
+            function_pointer_type = ir_type_make_function_pointer(builder.pool, ir_func->argument_types, ir_func->arity, ir_func->return_type, funcptr_traits);
+            result_type = ir_func->return_type;
+            arity = ir_func->arity;
+
+            arg_values = ir_pool_alloc(builder.pool, sizeof(ir_type_t*) * arity);
+
+            for(length_t i = 0; i != arity; i++){
+                arg_values[i] = build_load(&builder, build_lvarptr(&builder, ir_type_make_pointer_to(builder.pool, ir_func->argument_types[i]), i), NULL_SOURCE);
+            }
+        }
+
+        ir_value_t *function_pointer = build_bitcast(&builder, raw_function_pointer, function_pointer_type);
+
+        ir_value_t *result = build_call_address(&builder, result_type, function_pointer, arg_values, arity);
+
+        build_return(&builder, result_type->kind != TYPE_KIND_VOID ? result : NULL);
+
+        ir_vtable_dispatch_t dispatch = (ir_vtable_dispatch_t){
+            .ast_func_id = ast_func_id,
+            .index_value = index,
+        };
+
+        ir_vtable_dispatch_list_append(&builder.object->ir_module.vtable_dispatch_list, dispatch);
+        goto success;
+    } else {
+        if(ir_gen_stmts(&builder, &ast_func.statements, &terminated)) goto failure;
+        if(terminated) goto success;
+    }
 
     handle_deference_for_variables(&builder, &builder.scope->list);
 
