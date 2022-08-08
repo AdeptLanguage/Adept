@@ -1,0 +1,4 @@
+
+class ThisIsMissingConstructor ()
+
+func main {}

@@ -1,0 +1,34 @@
+
+/*
+    Test basic usage of 'extends' syntax for classes
+*/
+
+import basics
+
+class Animal (name String) {
+    constructor() {}
+}
+
+class Dog extends Animal (age int) {
+    constructor() {}
+}
+
+class GoldenRetriever extends Dog (color String) {
+    constructor() {}
+}
+
+func main {
+    printCompositeLayout(null as *Animal)
+    printCompositeLayout(null as *Dog)
+    printCompositeLayout(null as *GoldenRetriever)
+}
+
+func printCompositeLayout(_unused *$T){
+    ty *AnyCompositeType = typeinfo $T as *AnyCompositeType
+
+    printf("%s:\n", typenameof $T)
+
+    each name *ubyte in [ty.member_names, ty.length] {
+        printf(" - %s\n", name)
+    }
+}

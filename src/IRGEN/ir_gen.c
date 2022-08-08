@@ -689,10 +689,10 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
         ir_vtable_dispatch_list_append(&builder.object->ir_module.vtable_dispatch_list, dispatch);
         goto success;
-    } else {
-        if(ir_gen_stmts(&builder, &ast_func.statements, &terminated)) goto failure;
-        if(terminated) goto success;
     }
+
+    if(ir_gen_stmts(&builder, &ast_func.statements, &terminated)) goto failure;
+    if(terminated) goto success;
 
     handle_deference_for_variables(&builder, &builder.scope->list);
 

@@ -27,7 +27,6 @@ successful_t download(weak_cstr_t url, weak_cstr_t destination, weak_cstr_t cain
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, download_write_data_to_file);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 4);
 
         if(cainfo_file){
             curl_easy_setopt(curl, CURLOPT_CAINFO, cainfo_file);
@@ -60,7 +59,6 @@ successful_t download_to_memory(weak_cstr_t url, download_buffer_t *out_memory, 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, download_write_data_to_memory);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, out_memory);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 4);
 
         if(cainfo_file){
             curl_easy_setopt(curl, CURLOPT_CAINFO, cainfo_file);

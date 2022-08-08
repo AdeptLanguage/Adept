@@ -45,6 +45,14 @@ def run_all_tests():
     test("character_literals", [executable, join(src_dir, "character_literals/main.adept")], compiles)
     test("circular_pointers", [executable, join(src_dir, "circular_pointers/main.adept")], compiles)
     test("class", [executable, join(src_dir, "class/main.adept")], compiles)
+    test("class_extends", [executable, join(src_dir, "class_extends/main.adept")], compiles)
+    test("class_extends check layout", 
+        [join(src_dir, "class_extends/main")], 
+        lambda output: b"Animal:\n - __vtable__\n - name\nDog:\n - __vtable__\n - name\n - age\nGoldenRetriever:\n - __vtable__\n - name\n - age" in output)
+    test("class_missing_constructor",
+        [executable, join(src_dir, "class_missing_constructor/main.adept")],
+        lambda output: b"main.adept:2:1: error: Class is missing constructor\n  2| class ThisIsMissingConstructor ()" in output,
+        expected_exitcode=1)
     test("colons_alternative_syntax", [executable, join(src_dir, "colons_alternative_syntax/main.adept")], compiles)
     test("complement", [executable, join(src_dir, "complement/main.adept")], compiles)
     test("complex_composite_rtti", [executable, join(src_dir, "complex_composite_rtti/main.adept")], compiles)

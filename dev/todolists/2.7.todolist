@@ -52,6 +52,9 @@ MEDIUM-PRIORITY:
 * make enum syntax less strict
 * add a simpler way to get the name of an enum value at runtime
 * add ability to do C style specifying of enum values
+* add error for duplicate field names
+* add runtime error for trying to use unconstructed instance of class
+* add auto conversion between compatible class pointers
 
 LOW-PRIORITY:
 * Finish 'Any'
