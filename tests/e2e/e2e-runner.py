@@ -53,6 +53,12 @@ def run_all_tests():
         [executable, join(src_dir, "class_missing_constructor/main.adept")],
         lambda output: b"main.adept:2:1: error: Class is missing constructor\n  2| class ThisIsMissingConstructor ()" in output,
         expected_exitcode=1)
+    test("class_virtual_methods_1", [executable, join(src_dir, "class_virtual_methods_1/main.adept")], compiles)
+    test("class_virtual_methods_2", [executable, join(src_dir, "class_virtual_methods_2/main.adept")], compiles)
+    test("class_virtual_methods_3_missing_override",
+        [executable, join(src_dir, "class_virtual_methods_3_missing_override/main.adept")],
+        lambda output: b"main.adept:16:5: error: Method is used as virtual dispatchee but is missing 'override' keyword\n  16|     func getName *ubyte {" in output,
+        expected_exitcode=1)
     test("colons_alternative_syntax", [executable, join(src_dir, "colons_alternative_syntax/main.adept")], compiles)
     test("complement", [executable, join(src_dir, "complement/main.adept")], compiles)
     test("complex_composite_rtti", [executable, join(src_dir, "complex_composite_rtti/main.adept")], compiles)

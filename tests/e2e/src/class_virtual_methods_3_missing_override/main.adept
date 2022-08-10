@@ -1,0 +1,29 @@
+
+import 'sys/cstdio.adept'
+
+class Shape () {
+    constructor {}
+
+    virtual func getName *ubyte {
+        return 'shape'
+    }
+}
+
+class Rectangle extends Shape () {
+    constructor {}
+
+    // Missing override keyword is a compile-time error
+    func getName *ubyte {
+        return 'rectangle'
+    }
+}
+
+func main {
+    shape *Shape = new Shape()
+    defer delete shape
+
+    rectangle *Shape = new Rectangle() as *Shape
+    defer delete rectangle
+
+    printf('%s\n%s\n%s\n', shape.getName(), rectangle.getName(), (shape as *Rectangle).getName())
+}

@@ -1,0 +1,29 @@
+
+import 'sys/cstdio.adept'
+
+class Shape () {
+    constructor {}
+
+    virtual func printName {
+        printf('shape\n')
+    }
+}
+
+class Rectangle extends Shape () {
+    constructor {}
+
+    override func printName {
+        printf('rectangle\n')
+    }
+}
+
+func main {
+    shape *Shape = new Shape()
+    defer delete shape
+
+    rectangle *Shape = new Rectangle() as *Shape
+    defer delete rectangle
+
+    shape.printName()
+    rectangle.printName()
+}

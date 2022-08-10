@@ -151,8 +151,20 @@ errorcode_t ir_gen_vtree_search_for_single_override(
             ast_types_free(arg_types, ast_func->arity);
             return FAILURE;
         }
-    case SUCCESS:
-        *out_result = result;
+    case SUCCESS: {
+            ast_func_t *dispatchee = &ast->funcs[result.value.ast_func_id];
+
+            if(result.has && !(dispatchee->traits & AST_FUNC_OVERRIDE)){
+                strong_cstr_t typename = ast_type_str(child_subject_type);
+                compiler_panicf(compiler, dispatchee->source, "Method is used as virtual dispatchee but is missing 'override' keyword");
+                free(typename);
+
+                ast_types_free(arg_types, ast_func->arity);
+                return FAILURE;
+            }
+
+            *out_result = result;
+        }
         break;
     default:
         out_result->has = false;
