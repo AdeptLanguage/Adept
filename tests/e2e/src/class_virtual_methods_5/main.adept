@@ -1,0 +1,48 @@
+
+/*
+    Test to make sure that non-polymorphic classes can extend polymorphic classes and still have the following work:
+    - vtables
+    - virtual methods
+    - method overriding
+    - virtual dispatch
+*/
+
+import 'sys/cstdio.adept'
+
+class <$T> Shape () {
+    constructor {}
+
+    virtual func printName1 {
+        printf('<%s> shape\n', typenameof $T)
+    }
+
+
+    virtual func printName2 {
+        printf('shape of %s\n', typenameof $T)
+    }
+}
+
+class Rectangle extends <int> Shape () {
+    constructor {}
+
+    override func printName1 {
+        printf('<always int> rectangle\n')
+    }
+
+    override func printName2 {
+        printf('rectangle of always int\n')
+    }
+}
+
+func main {
+    shape *<int> Shape = new <int> Shape()
+    defer delete shape
+
+    rectangle *<int> Shape = new Rectangle() as *<int> Shape
+    defer delete rectangle
+
+    shape.printName1()
+    rectangle.printName1()
+    shape.printName2()
+    rectangle.printName2()
+}

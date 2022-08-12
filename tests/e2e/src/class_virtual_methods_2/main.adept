@@ -1,4 +1,8 @@
 
+/*
+    Test to make sure that we can return values from virtual methods
+*/
+
 import 'sys/cstdio.adept'
 
 class Shape () {

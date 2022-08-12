@@ -1,0 +1,43 @@
+
+/*
+    Test to make sure that the following work with polymorphic classes:
+    - basic vtables
+    - basic virtual methods
+    - basic method overriding
+    - basic virtual dispatch
+*/
+
+import 'sys/cstdio.adept'
+
+class <$T> Shape () {
+    constructor {}
+
+    virtual func printName {
+        printf('<%s> shape\n', typenameof $T)
+    }
+}
+
+class <$T> Rectangle extends <$T> Shape () {
+    constructor {}
+
+    override func printName {
+        printf('<%s> rectangle\n', typenameof $T)
+    }
+}
+
+func test(_ *$T) {
+    shape *<$T> Shape = new <$T> Shape()
+    defer delete shape
+
+    rectangle *<$T> Shape = new <$T> Rectangle() as *<$T> Shape
+    defer delete rectangle
+
+    shape.printName()
+    rectangle.printName()
+}
+
+func main {
+    test(null as *int)
+    test(null as *struct (x, y, z float))
+    test(null as *100 float)
+}

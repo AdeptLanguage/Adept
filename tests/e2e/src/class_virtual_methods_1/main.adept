@@ -1,4 +1,12 @@
 
+/*
+    Test to make sure the following work:
+    - basic vtables
+    - basic virtual methods
+    - basic method overriding
+    - basic virtual dispatch
+*/
+
 import 'sys/cstdio.adept'
 
 class Shape () {

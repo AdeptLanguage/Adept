@@ -1,0 +1,37 @@
+
+/*
+    Test to make sure that polymorphic classes can extend non-polymorphic classes and still have the following work:
+    - vtables
+    - virtual methods
+    - method overriding
+    - virtual dispatch
+*/
+
+import 'sys/cstdio.adept'
+
+class RootObject () {
+    constructor {}
+
+    virtual func printName {
+        printf('root object\n')
+    }
+}
+
+class <$T> Container extends RootObject (value $T) {
+    constructor {}
+
+    override func printName {
+        printf('container of %s\n', typenameof $T)
+    }
+}
+
+func main {
+    root *RootObject = new RootObject()
+    defer delete root
+
+    container *RootObject = new <int> Container() as *RootObject
+    defer delete container
+
+    root.printName()
+    container.printName()
+}

@@ -1,4 +1,8 @@
 
+/*
+    Test to make sure that not using the 'override' keyword for virtual method overrides is a compile-time error
+*/
+
 import 'sys/cstdio.adept'
 
 class Shape () {
@@ -25,5 +29,7 @@ func main {
     rectangle *Shape = new Rectangle() as *Shape
     defer delete rectangle
 
-    printf('%s\n%s\n%s\n', shape.getName(), rectangle.getName(), (shape as *Rectangle).getName())
+    printf('%s\n', shape.getName())
+    printf('%s\n', rectangle.getName())
+    printf('%s\n', (shape as *Rectangle).getName())
 }
