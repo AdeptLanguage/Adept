@@ -16,7 +16,6 @@ class <$T> Shape () {
         printf('<%s> shape\n', typenameof $T)
     }
 
-
     virtual func printName2 {
         printf('shape of %s\n', typenameof $T)
     }

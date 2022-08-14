@@ -1962,9 +1962,6 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     return SUCCESS;
 
 failure:
-    func = &ast->funcs[ast_func_id];
-    compiler_panicf(compiler, func->source, "During polymorphic instantiation of function");
-    compiler_panicf(compiler, instantiation_source, "Failed to instantiate polymorphic function");
     return FAILURE;
 }
 

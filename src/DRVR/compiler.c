@@ -1133,8 +1133,15 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
         goto success;
     } else {
         // Other functions have the same name
-        ast_type_t *arg_types = is_method ? &types[1] : types;
-        strong_cstr_t args_string = strong_cstr_empty_if_null(make_args_string(arg_types, NULL, arity, TRAIT_NONE));
+
+        strong_cstr_t args_string;
+        
+        if(is_method){
+            args_string = strong_cstr_empty_if_null(make_args_string(&types[1], NULL, arity - 1, TRAIT_NONE));
+        } else {
+            args_string = strong_cstr_empty_if_null(make_args_string(types, NULL, arity, TRAIT_NONE));
+        }
+
         strong_cstr_t gives_string = gives ? ast_type_str(gives) : NULL;
 
         if(is_method){

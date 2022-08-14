@@ -1,0 +1,15 @@
+
+class Thing () {
+    constructor {}
+}
+
+class OtherThing extends Thing () {
+    constructor {}
+
+    // this should be a compile-time error - trying to override a virtual method that doesn't exist
+    override func myUnusedOverride {
+
+    }
+}
+
+func main {}

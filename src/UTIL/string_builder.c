@@ -14,7 +14,7 @@ void string_builder_init(string_builder_t *builder){
 }
 
 strong_cstr_t string_builder_finalize(string_builder_t *builder){
-    return builder->buffer;
+    return builder->buffer ? builder->buffer : calloc(1, sizeof(char));
 }
 
 strong_lenstr_t string_builder_finalize_with_length(string_builder_t *builder){

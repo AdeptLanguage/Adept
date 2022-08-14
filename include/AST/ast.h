@@ -88,10 +88,11 @@ typedef struct {
 #define AST_FUNC_DISALLOW               TRAIT_E
 #define AST_FUNC_VIRTUAL                TRAIT_F
 #define AST_FUNC_OVERRIDE               TRAIT_G
-#define AST_FUNC_NO_SUGGEST             TRAIT_2_1
-#define AST_FUNC_DISPATCHER             TRAIT_2_2
-#define AST_FUNC_CLASS_CONSTRUCTOR      TRAIT_2_3
-#define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_4
+#define AST_FUNC_USED_OVERRIDE          TRAIT_2_1
+#define AST_FUNC_NO_SUGGEST             TRAIT_2_2
+#define AST_FUNC_DISPATCHER             TRAIT_2_3
+#define AST_FUNC_CLASS_CONSTRUCTOR      TRAIT_2_4
+#define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_5
 
 // ------------------ ast_func_prefixes_t ------------------
 // Information about the keywords that prefix a function

@@ -62,6 +62,14 @@ def run_all_tests():
     test("class_virtual_methods_4", [executable, join(src_dir, "class_virtual_methods_4/main.adept")], compiles)
     test("class_virtual_methods_5", [executable, join(src_dir, "class_virtual_methods_5/main.adept")], compiles)
     test("class_virtual_methods_6", [executable, join(src_dir, "class_virtual_methods_6/main.adept")], compiles)
+    test("class_virtual_methods_7_incorrect_return_type",
+        [executable, join(src_dir, "class_virtual_methods_7_incorrect_return_type/main.adept")],
+        lambda output: b"main.adept:23:27: error: Incorrect return type for method override, expected '*ubyte'\n  23|     override func getName int {\n                                ^^^" in output,
+        expected_exitcode=1)
+    test("class_virtual_methods_8_unused_override",
+        [executable, join(src_dir, "class_virtual_methods_8_unused_override/main.adept")],
+        lambda output: b"main.adept:10:5: error: No virtual method exists to override\n  10|     override func myUnusedOverride {\n          ^^^^^^^^" in output,
+        expected_exitcode=1)
     test("colons_alternative_syntax", [executable, join(src_dir, "colons_alternative_syntax/main.adept")], compiles)
     test("complement", [executable, join(src_dir, "complement/main.adept")], compiles)
     test("complex_composite_rtti", [executable, join(src_dir, "complex_composite_rtti/main.adept")], compiles)

@@ -1,5 +1,6 @@
 
 #include "AST/POLY/ast_translate.h"
+#include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast_poly_catalog.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_vtree.h"
@@ -76,11 +77,8 @@ errorcode_t ir_gen_vtree_overrides(
         // This will instantiate a polymorphic function if necessary
         if(ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result)){
             strong_cstr_t typename = ast_type_str(&start->signature);
-            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
+            errorprintf("Could not generate vtable for class '%s' due to errors\n", typename);
             free(typename);
-
-            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
-            ast_types_free(arg_types, ast_func->arity);
             return FAILURE;
         }
 
@@ -89,7 +87,7 @@ errorcode_t ir_gen_vtree_overrides(
         // Raise an error if we couldn't find the default implementation for our own virtual method
         if(!result.has){
             strong_cstr_t typename = ast_type_str(&start->signature);
-            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
+            errorprintf("Could not generate vtable for class '%s' due to errors\n", typename);
             free(typename);
 
             compiler_panicf(compiler, source_on_error, "Got empty function result");
@@ -141,26 +139,39 @@ errorcode_t ir_gen_vtree_search_for_single_override(
 
     errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
 
+    // TODO: Clean up code so that this revalidation isn't needed
+    // Revalidate AST function
+    ast_func = &ast->funcs[ast_func_id];
+
     switch(errorcode){
     case ALT_FAILURE: {
             strong_cstr_t typename = ast_type_str(child_subject_type);
-            compiler_panicf(compiler, source_on_error, "Failed to generate vtable for '%s'", typename);
+            errorprintf("Could not generate vtable for class '%s' due to errors\n", typename);
             free(typename);
-
-            compiler_undeclared_function(compiler, object, source_on_error, ast_func->name, arg_types, ast_func->arity, NULL, true);
-            ast_types_free(arg_types, ast_func->arity);
             return FAILURE;
         }
     case SUCCESS: {
             ast_func_t *dispatchee = &ast->funcs[result.value.ast_func_id];
 
-            if(result.has && !(dispatchee->traits & AST_FUNC_OVERRIDE)){
-                strong_cstr_t typename = ast_type_str(child_subject_type);
-                compiler_panicf(compiler, dispatchee->source, "Method is used as virtual dispatchee but is missing 'override' keyword");
-                free(typename);
+            if(result.has){
+                if(!(dispatchee->traits & AST_FUNC_OVERRIDE)){
+                    compiler_panicf(compiler, dispatchee->source, "Method is used as virtual dispatchee but is missing 'override' keyword");
+                    ast_types_free(arg_types, ast_func->arity);
+                    return FAILURE;
+                }
 
-                ast_types_free(arg_types, ast_func->arity);
-                return FAILURE;
+                if(!ast_types_identical(&ast_func->return_type, &dispatchee->return_type)){
+                    strong_cstr_t typename = ast_type_str(child_subject_type);
+                    strong_cstr_t should_return = ast_type_str(&ast_func->return_type);
+                    compiler_panicf(compiler, dispatchee->return_type.source, "Incorrect return type for method override, expected '%s'", should_return);
+                    free(should_return);
+                    free(typename);
+
+                    ast_types_free(arg_types, ast_func->arity);
+                    return FAILURE;
+                }
+
+                dispatchee->traits |= AST_FUNC_USED_OVERRIDE;
             }
 
             *out_result = result;

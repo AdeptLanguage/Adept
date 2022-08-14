@@ -259,6 +259,16 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         }
     }
 
+    // Don't allow unused concrete method overrides
+    for(length_t i = 0; i != ast->funcs_length; i++){
+        ast_func_t *func = &ast->funcs[i];
+
+        if(func->traits & AST_FUNC_OVERRIDE && !(func->traits & AST_FUNC_POLYMORPHIC) && !(func->traits & AST_FUNC_USED_OVERRIDE)){
+            compiler_panicf(compiler, func->source, "No virtual method exists to override");
+            goto failure;
+        }
+    }
+
     ir_job_list_free(&recent_jobs);
     virtual_addition_list_free(&additions);
     vtree_list_free(&vtree_list);

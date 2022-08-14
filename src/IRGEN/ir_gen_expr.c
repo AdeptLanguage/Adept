@@ -1948,7 +1948,7 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
 
     if(ir_gen_find_method_conforming(builder, subject, expr->name, arg_values, arg_types, arg_arity, gives, expr->source, result)){
         if(expr->is_tentative) return ALT_FAILURE;
-        compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, *arg_types, expr->arity, NULL, true);
+        compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, *arg_types, arg_arity, NULL, true);
         return FAILURE;
     }
     

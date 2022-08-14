@@ -1,0 +1,36 @@
+
+/*
+    Test to make sure that overrides are not allowed to return a different type
+    from the original virtual method that they override
+*/
+
+import 'sys/cstdio.adept'
+
+class Shape () {
+    constructor {}
+
+    virtual func getName *ubyte {
+        return 'shape'
+    }
+}
+
+import basics
+
+class Rectangle extends Shape () {
+    constructor {}
+
+    // should be a compile time error - trying to have int return type but should be returning *ubyte
+    override func getName int {
+        return 10
+    }
+}
+
+func main {
+    shape *Shape = new Shape()
+    defer delete shape
+
+    rectangle *Shape = new Rectangle() as *Shape
+    defer delete rectangle
+
+    printf('%s\n%s\n', shape.getName(), rectangle.getName())
+}

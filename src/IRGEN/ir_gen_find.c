@@ -196,9 +196,18 @@ static errorcode_t actualize_suitable_polymorphic(ir_proc_query_t *query, option
     length_t arg_types_length = ir_proc_query_getter_length(query);
 
     if(instantiate_poly_func(compiler, object, query->from_source, endpoint.ast_func_id, arg_types, arg_types_length, catalog, &instance)){
-        strong_cstr_t display = ast_func_head_str(&object->ast.funcs[ast_func_id]);
-        compiler_panicf(compiler, query->from_source, "Failed to instantiate '%s'", display);
+        ast_func_t *poly_func = &object->ast.funcs[ast_func_id];
+
+        strong_cstr_t display = ast_func_head_str(poly_func);
+        compiler_panicf(compiler, poly_func->source, "Could not instantiate polymorphic function given supplied argument types", display);
         free(display);
+
+        if(SOURCE_IS_NULL(query->from_source)){
+            errorprintf("Could not instantiate '%s' due to errors\n", display);
+        } else {
+            compiler_panicf(compiler, query->from_source, "Could not instantiate '%s' due to errors", display);
+        }
+
         return ALT_FAILURE;
     }
 
