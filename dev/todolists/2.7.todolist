@@ -1,7 +1,6 @@
 # Overall Things for Adept 2.7
 
 HIGH-PRIORITY:
-* classes and virtual functions
 
 MEDIUM-PRIORITY:
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
@@ -54,7 +53,7 @@ MEDIUM-PRIORITY:
 * add ability to do C style specifying of enum values
 * add error for duplicate field names
 * add runtime error for trying to use unconstructed instance of class
-* add auto conversion between compatible class pointers
+* make better error message for incorrect constructor call
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -147,3 +146,5 @@ v2.7 COMPLETED:
 + easy and consistent constructors (prerequisite for classes)
 + throw warning/error if trying to define __as__ as a method
 + add mechanism "#runtime_resource" to allow copying files to output location that are needed at runtime
++ classes, virtual methods, and virtual dispatch
++ add auto conversion between compatible class pointers

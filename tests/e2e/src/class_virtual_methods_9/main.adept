@@ -1,0 +1,52 @@
+
+/*
+    Test automatic casting for values of compatible class pointers types
+*/
+
+import basics
+
+class Shape () {
+    constructor {}
+
+    virtual func getArea float {
+        return 0.0
+    }
+}
+
+class Circle extends Shape (r float) {
+    constructor(r float) {
+        this.r = r
+    }
+
+    override func getArea float {
+        return 3.14159 * this.r * this.r
+    }
+}
+
+class Rectangle extends Shape (w, h float) {
+    constructor(w, h float) {
+        this.w = w
+        this.h = h
+    }
+
+    override func getArea float {
+        return this.w * this.h
+    }
+}
+
+func main {
+    shape *Shape = new Shape()
+    defer delete shape
+
+    printf('shape.getArea() = %f\n', shape.getArea() as double)
+
+    circle *Shape = new Circle(2.0)
+    defer delete circle
+
+    printf('circle.getArea() = %f\n', circle.getArea() as double)
+
+    rectangle *Shape = new Rectangle(4.0, 5.0)
+    defer delete rectangle
+
+    printf('rectangle.getArea() = %f\n', rectangle.getArea() as double)
+}

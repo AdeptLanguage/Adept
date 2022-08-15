@@ -1938,8 +1938,7 @@ errorcode_t ir_gen_expr_call_method_find_appropriate_method(ir_builder_t *builde
     // Obtain the name of the subject and find the appropriate method
     if(ast_type_is_pointer_to_base(subject_type)){
         subject = ((ast_elem_base_t*) subject_type->elements[1])->base;
-    }
-    else if(ast_type_is_pointer_to_generic_base(subject_type)){
+    } else if(ast_type_is_pointer_to_generic_base(subject_type)){
         subject = ((ast_elem_generic_base_t*) subject_type->elements[1])->name;
     } else {
         internalerrorprintf("ir_gen_expr_call_method_find_appropriate_method() - Bad subject type\n");

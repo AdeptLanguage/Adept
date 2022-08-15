@@ -21,6 +21,7 @@
 #include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen_expr.h"
+#include "IRGEN/ir_gen_polymorphable.h"
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
 #include "UTIL/color.h"
@@ -598,18 +599,37 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
 
     if(ast_types_identical(ast_from_type, ast_to_type)) return true;
 
+    // Handle automatic class pointer casts
+    if((mode & CONFORM_MODE_CLASS_POINTERS) && ast_type_is_pointer_to_base_like(ast_from_type) && ast_type_is_pointer_to_base_like(ast_to_type)){
+        ast_type_t potential_child = ast_type_dereferenced_view(ast_from_type);
+        ast_type_t potential_parent = ast_type_dereferenced_view(ast_to_type);
+
+        ast_poly_catalog_t catalog;
+        ast_poly_catalog_init(&catalog);
+        bool does_extend = ir_gen_does_extend(builder->compiler, builder->object, &potential_child, &potential_parent, &catalog);
+        ast_poly_catalog_free(&catalog);
+
+        if(does_extend){
+            if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+
+            *ir_value = build_bitcast(builder, *ir_value, ir_to_type);
+            return true;
+        }
+    }
+
     // Worst case scenario, we try to use user-defined __as__ method
     if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT)){
         bool can_do = (ast_type_is_base_like(ast_from_type) || ast_type_is_fixed_array(ast_from_type)) &&
                       (ast_type_is_base_like(ast_to_type) || ast_type_is_fixed_array(ast_to_type));
 
         if(can_do){
-            ast_expr_phantom_t phantom_value;
-            phantom_value.id = EXPR_PHANTOM;
-            phantom_value.ir_value = *ir_value;
-            phantom_value.source = NULL_SOURCE;
-            phantom_value.is_mutable = false;
-            phantom_value.type = ast_type_clone(ast_from_type);
+            ast_expr_phantom_t phantom_value = {
+                .id = EXPR_PHANTOM,
+                .ir_value = *ir_value,
+                .source = NULL_SOURCE,
+                .is_mutable = false,
+                .type = ast_type_clone(ast_from_type),
+            };
 
             ast_expr_t *args = (ast_expr_t*) &phantom_value;
 
@@ -638,7 +658,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             as_call.arity = 0;
             as_call.gives.elements_length = 0;
             ast_expr_free((ast_expr_t*) &as_call);
-            
+
             ast_type_free(&phantom_value.type);
 
             // Ensure tentative call was successful

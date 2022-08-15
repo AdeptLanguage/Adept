@@ -70,6 +70,7 @@ def run_all_tests():
         [executable, join(src_dir, "class_virtual_methods_8_unused_override/main.adept")],
         lambda output: b"main.adept:10:5: error: No virtual method exists to override\n  10|     override func myUnusedOverride {\n          ^^^^^^^^" in output,
         expected_exitcode=1)
+    test("class_virtual_methods_9", [executable, join(src_dir, "class_virtual_methods_9/main.adept")], compiles)
     test("colons_alternative_syntax", [executable, join(src_dir, "colons_alternative_syntax/main.adept")], compiles)
     test("complement", [executable, join(src_dir, "complement/main.adept")], compiles)
     test("complex_composite_rtti", [executable, join(src_dir, "complex_composite_rtti/main.adept")], compiles)
