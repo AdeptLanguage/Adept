@@ -44,7 +44,7 @@ static errorcode_t enforce_polymorph(
 }
 
 bool ir_gen_does_extend(compiler_t *compiler, object_t *object, ast_type_t *subject_usage, ast_type_t *parent, ast_poly_catalog_t *catalog){
-    if(!ast_type_is_base_like(parent)) return FAILURE;
+    if(!ast_type_is_base_like(parent)) return false;
 
     ast_t *ast = &object->ast;
     ast_type_t *subject = subject_usage;
@@ -53,7 +53,7 @@ bool ir_gen_does_extend(compiler_t *compiler, object_t *object, ast_type_t *subj
     bool parent_is_generic = ast_type_is_generic_base(parent);
     ast_composite_t *parent_composite = ast_find_composite(ast, parent);
 
-    if(!parent_composite->is_class) return FAILURE;
+    if(parent_composite == NULL || !parent_composite->is_class) return false;
 
     while(true){
         if(!ast_type_is_base_like(subject)) goto failure;
