@@ -456,7 +456,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 // Will work based on the most recently specified output location
                 weak_cstr_t raw_output_filename = ctx->compiler->output_filename ? ctx->compiler->output_filename : ctx->compiler->objects[0]->filename;
 
-                char *filename = meta_expr_str(value);
+                strong_cstr_t filename = meta_expr_str(value);
 
                 strong_cstr_t to_path = filename_path(raw_output_filename);
                 strong_cstr_t from_path = filename_path(ctx->object->filename);
@@ -479,6 +479,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 free(from_path);
                 free(to_filename);
                 free(from_filename);
+                free(filename);
             }
             #else
             (void) source_on_error;

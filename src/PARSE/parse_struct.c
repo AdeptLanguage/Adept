@@ -38,8 +38,8 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     bool is_packed, is_record, is_class;
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    ast_type_t parent_class = {0};
-    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &is_class, &parent_class, &generics, &generics_length)) return FAILURE;
+    ast_type_t maybe_parent_class = AST_TYPE_NONE;
+    if(parse_composite_head(ctx, is_union, &name, &is_packed, &is_record, &is_class, &maybe_parent_class, &generics, &generics_length)) return FAILURE;
 
     const char *invalid_names[] = {
         "Any", "AnyFixedArrayType", "AnyFuncPtrType", "AnyPtrType", "AnyStructType",
@@ -52,18 +52,14 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
 
     if(binary_string_search(invalid_names, invalid_names_length, name) != -1){
         compiler_panicf(ctx->compiler, source, "Reserved type name '%s' can't be used to create a %s", name, is_union ? "union" : "struct");
-        free(name);
-        return FAILURE;
+        goto body_failure;
     }
 
     ast_field_map_t field_map;
     ast_layout_skeleton_t skeleton;
 
-    const ast_type_t *maybe_parent_class = parent_class.elements_length ? &parent_class : NULL;
-
     if(parse_composite_body(ctx, &field_map, &skeleton, is_class, maybe_parent_class)){
-        free(name);
-        return FAILURE;
+        goto body_failure;
     }
 
     ast_composite_t *domain = NULL;
@@ -88,6 +84,11 @@ errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
 
     if(parse_composite_domain(ctx, domain)) return FAILURE;
     return SUCCESS;
+
+body_failure:
+    free(name);
+    ast_type_free(&maybe_parent_class);
+    return FAILURE;
 }
 
 errorcode_t parse_composite_domain(parse_ctx_t *ctx, ast_composite_t *composite){
@@ -235,7 +236,7 @@ errorcode_t parse_composite_body(
     ast_field_map_t *out_field_map,
     ast_layout_skeleton_t *out_skeleton,
     bool is_class,
-    const ast_type_t *maybe_parent_class
+    ast_type_t maybe_parent_class
 ){
     // Parses root-level composite fields
 
@@ -261,8 +262,8 @@ errorcode_t parse_composite_body(
     ast_layout_endpoint_init_with(&next_endpoint, (uint16_t[]){0}, 1);
 
     if(is_class){
-        if(maybe_parent_class){
-            if(parse_composite_integrate_another(ctx, out_field_map, out_skeleton, &next_endpoint, maybe_parent_class, true)) goto failure;
+        if(!AST_TYPE_IS_NONE(maybe_parent_class)){
+            if(parse_composite_integrate_another(ctx, out_field_map, out_skeleton, &next_endpoint, &maybe_parent_class, true)) goto failure;
         } else {
             ast_type_t vtable_ast_type = ast_type_make_base(strclone("ptr"));
 
@@ -348,7 +349,9 @@ errorcode_t parse_composite_field(
         ast_type_t inner_composite_type;
         if(parse_type(ctx, &inner_composite_type)) return FAILURE;
 
-        return parse_composite_integrate_another(ctx, inout_field_map, inout_skeleton, inout_next_endpoint, &inner_composite_type, false);
+        errorcode_t errorcode = parse_composite_integrate_another(ctx, inout_field_map, inout_skeleton, inout_next_endpoint, &inner_composite_type, false);
+        ast_type_free(&inner_composite_type);
+        return errorcode;
     }
 
     if(leading_token == TOKEN_PACKED || leading_token == TOKEN_STRUCT || leading_token == TOKEN_UNION){

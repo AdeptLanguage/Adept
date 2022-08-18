@@ -7,7 +7,7 @@
 
 void vtree_list_free(vtree_list_t *vtree_list){
     for(length_t i = 0; i < vtree_list->length; i++){
-        free(vtree_list->vtrees[i]);
+        vtree_free_fully(vtree_list->vtrees[i]);
     }
     free(vtree_list->vtrees);
 }
@@ -41,6 +41,16 @@ vtree_t *vtree_list_find(vtree_list_t *vtree_list, const ast_type_t *signature){
         }
     }
     return NULL;
+}
+
+void vtree_free_fully(vtree_t *vtree){
+    // Free array of children
+    free(vtree->children.vtrees);
+
+    ast_type_free(&vtree->signature);
+    ir_func_endpoint_list_free(&vtree->virtuals);
+    ir_func_endpoint_list_free(&vtree->table);
+    free(vtree);
 }
 
 void vtree_append_virtual(vtree_t *vtree, ir_func_endpoint_t endpoint){

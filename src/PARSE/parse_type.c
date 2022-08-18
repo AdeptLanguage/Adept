@@ -132,7 +132,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             layout_kind = parse_ctx_peek(ctx) == TOKEN_UNION ? AST_LAYOUT_UNION : AST_LAYOUT_STRUCT;
             (*i)++;
 
-            if(parse_composite_body(ctx, &field_map, &skeleton, false, NULL)) goto failure;
+            if(parse_composite_body(ctx, &field_map, &skeleton, false, AST_TYPE_NONE)) goto failure;
 
             // Pass over closing ')'
             (*i)++;

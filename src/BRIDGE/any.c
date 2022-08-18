@@ -49,7 +49,7 @@ void any_inject_ast_Any(ast_t *ast){
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 2);
-    ast_add_composite(ast, strclone("Any"), layout, NULL_SOURCE, NULL, false);
+    ast_add_composite(ast, strclone("Any"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
 void any_inject_ast_AnyType(ast_t *ast){
@@ -72,7 +72,7 @@ void any_inject_ast_AnyType(ast_t *ast){
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 4);
-    ast_add_composite(ast, strclone("AnyType"), layout, NULL_SOURCE, NULL, false);
+    ast_add_composite(ast, strclone("AnyType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
 void any_inject_ast_AnyTypeKind(ast_t *ast){
@@ -120,7 +120,7 @@ void any_inject_ast_AnyPtrType(ast_t *ast){
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 5);
-    ast_add_composite(ast, strclone("AnyPtrType"), layout, NULL_SOURCE, NULL, false);
+    ast_add_composite(ast, strclone("AnyPtrType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
 void any_inject_ast_AnyCompositeType(ast_t *ast){
@@ -153,7 +153,7 @@ void any_inject_ast_AnyCompositeType(ast_t *ast){
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 9);
-    ast_add_composite(ast, strclone("AnyCompositeType"), layout, NULL_SOURCE, NULL, false);
+    ast_add_composite(ast, strclone("AnyCompositeType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
 void any_inject_ast_AnyStructType(ast_t *ast){
@@ -208,7 +208,7 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast){
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 9);
-    ast_add_composite(ast, strclone("AnyFuncPtrType"), layout, NULL_SOURCE, NULL, false);
+    ast_add_composite(ast, strclone("AnyFuncPtrType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
 void any_inject_ast_AnyFixedArrayType(ast_t *ast){
@@ -235,7 +235,7 @@ void any_inject_ast_AnyFixedArrayType(ast_t *ast){
 
     ast_layout_t layout;
     ast_layout_init_with_struct_fields(&layout, names, types, 6);
-    ast_add_composite(ast, strclone("AnyFixedArrayType"), layout, NULL_SOURCE, NULL, false);
+    ast_add_composite(ast, strclone("AnyFixedArrayType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
 void any_inject_ast___types__(ast_t *ast){

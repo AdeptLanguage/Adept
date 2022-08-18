@@ -50,10 +50,10 @@ MEDIUM-PRIORITY:
 * add mechanism to do a clean refresh of runtime required resources
 * make enum syntax less strict
 * add a simpler way to get the name of an enum value at runtime
-* add ability to do C style specifying of enum values
 * add error for duplicate field names
 * add runtime error for trying to use unconstructed instance of class
 * make better error message for incorrect constructor call
+* add more ability to control the representation for enum values
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -84,7 +84,7 @@ LOW-PRIORITY:
 * add toString for Optional? [will require POD version]
 * ability to mark individual functions as deprecated
 * add way to escape strings in 'String.adept'
-* modernize '2.7/JSON.adept'
+* modernize built-in JSON parsing library
 * change color printing code on Windows to use posix escape codes (now that they're supported)
 * remove old `.dep` packages
 * parse arguments before reading config, and never check for updates when using options such as `--root`, `-h`, and `--help`
@@ -148,3 +148,4 @@ v2.7 COMPLETED:
 + add mechanism "#runtime_resource" to allow copying files to output location that are needed at runtime
 + classes, virtual methods, and virtual dispatch
 + add auto conversion between compatible class pointers
++ add `foreign enum` to allow for enums whose values don't require the `EnumName::` prefix

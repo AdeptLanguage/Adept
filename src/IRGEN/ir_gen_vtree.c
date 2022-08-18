@@ -82,7 +82,7 @@ errorcode_t ir_gen_vtree_overrides(
             return FAILURE;
         }
 
-        ast_types_free(arg_types, ast_func->arity);
+        ast_types_free_fully(arg_types, ast_func->arity);
 
         // Raise an error if we couldn't find the default implementation for our own virtual method
         if(!result.has){
@@ -148,7 +148,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
             strong_cstr_t typename = ast_type_str(child_subject_type);
             errorprintf("Could not generate vtable for class '%s' due to errors\n", typename);
             free(typename);
-            return FAILURE;
+            goto failure;
         }
     case SUCCESS: {
             ast_func_t *dispatchee = &ast->funcs[result.value.ast_func_id];
@@ -156,8 +156,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
             if(result.has){
                 if(!(dispatchee->traits & AST_FUNC_OVERRIDE)){
                     compiler_panicf(compiler, dispatchee->source, "Method is used as virtual dispatchee but is missing 'override' keyword");
-                    ast_types_free(arg_types, ast_func->arity);
-                    return FAILURE;
+                    goto failure;
                 }
 
                 if(!ast_types_identical(&ast_func->return_type, &dispatchee->return_type)){
@@ -166,9 +165,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
                     compiler_panicf(compiler, dispatchee->return_type.source, "Incorrect return type for method override, expected '%s'", should_return);
                     free(should_return);
                     free(typename);
-
-                    ast_types_free(arg_types, ast_func->arity);
-                    return FAILURE;
+                    goto failure;
                 }
 
                 dispatchee->traits |= AST_FUNC_USED_OVERRIDE;
@@ -181,8 +178,12 @@ errorcode_t ir_gen_vtree_search_for_single_override(
         out_result->has = false;
     }
 
-    ast_types_free(arg_types, ast_func->arity);
+    ast_types_free_fully(arg_types, ast_func->arity);
     return SUCCESS;
+
+failure:
+    ast_types_free_fully(arg_types, ast_func->arity);
+    return FAILURE;
 }
 
 errorcode_t ir_gen_vtree_link_up_nodes(

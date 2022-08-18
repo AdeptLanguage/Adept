@@ -1998,7 +1998,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
     ast_type_t concrete_parent_type;
 
     if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, catalog, &parent_type, &concrete_parent_type)){
-        return FAILURE;
+        goto failure;
     }
 
     // No function can be both a dispatcher and virtual origin
@@ -2012,18 +2012,20 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
 
     for(length_t i = 0; i != arity; i++){
         if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, catalog, &originating_virtual->arg_types[i], &arg_types[i])){
-            return FAILURE;
+            ast_types_free_fully(arg_types, arity);
+            goto failure;
         }
     }
 
     // Create virtual function if necessary
     optional_func_pair_t result;
     errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, method_name, arg_types, arity, instantiation_source, &result);
+
     ast_types_free_fully(arg_types, arity);
 
     if(errorcode || !result.has){
         compiler_panicf(compiler, instantiation_source, "Failed to get default implementation for virtual dispatcher");
-        return FAILURE;
+        goto failure;
     }
 
     ast_func_t *default_impl = &object->ast.funcs[result.value.ast_func_id];
@@ -2032,11 +2034,17 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
         strong_cstr_t head_str = ast_func_head_str(default_impl);
         compiler_panicf(compiler, instantiation_source, "Overlapping contenders for default implementation for virtual function '%s'", head_str);
         free(head_str);
-        return FAILURE;
+        goto failure;
     }
 
     *out_ast_concrete_virtual_origin = result.value.ast_func_id;
+
+    ast_type_free(&concrete_parent_type);
     return SUCCESS;
+
+failure:
+    ast_type_free(&concrete_parent_type);
+    return FAILURE;
 }
 
 errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){

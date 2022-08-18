@@ -37,6 +37,11 @@ typedef struct vtree {
     ir_value_t *finalized_table;
 } vtree_t;
 
+
+// ---------------- vtree_free_fully ----------------
+// Frees a vtree, including the heap-allocated memory pointed to by 'vtree'
+void vtree_free_fully(vtree_t *vtree);
+
 // ---------------- vtree_append_virtual ----------------
 // Appends a virtual endpoint to a vtree node
 void vtree_append_virtual(vtree_t *vtree, ir_func_endpoint_t endpoint);

@@ -29,6 +29,11 @@ typedef struct {
     source_t source;
 } ast_type_t;
 
+// ---------------- AST_TYPE_NONE ----------------
+// AST type that represents the absence of a valid type
+#define AST_TYPE_NONE ((ast_type_t){0})
+#define AST_TYPE_IS_NONE(ast_type_val) ((ast_type_val).elements_length == 0)
+
 #ifdef __cplusplus
 }
 #endif

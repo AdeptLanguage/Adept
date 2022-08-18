@@ -35,12 +35,13 @@ errorcode_t parse_composite_head(
 
 // ------------------ parse_composite_body ------------------
 // Parses the body of a composite
+// NOTE: 'maybe_parent_class' may be 'AST_TYPE_NONE'
 errorcode_t parse_composite_body(
     parse_ctx_t *ctx,
     ast_field_map_t *out_field_map,
     ast_layout_skeleton_t *out_skeleton,
     bool is_class,
-    const ast_type_t *maybe_parent_class
+    ast_type_t maybe_parent_class
 );
 
 // ------------------ parse_composite_field ------------------
