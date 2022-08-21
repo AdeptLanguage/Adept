@@ -32,9 +32,8 @@ static errorcode_t enforce_polymorph(
     }
 
     if(!ast_types_identical(concrete_replacement, &type_var->binding)){
-        // Allow built-in auto conversion regardless of 'polymorph_elem->allow_auto_conversion' flag from before v2.6
-
-        if(!is_allowed_builtin_auto_conversion(compiler, object, concrete_replacement, &type_var->binding)){
+        // Allow type mismatch if auto conversion is allowed and valid
+        if(!polymorph_elem->allow_auto_conversion || !is_allowed_builtin_auto_conversion(compiler, object, concrete_replacement, &type_var->binding)){
             // Given arguments don't meet consistency requirements of type variables
             return FAILURE;
         }
