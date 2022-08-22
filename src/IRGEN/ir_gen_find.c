@@ -107,7 +107,7 @@ static errorcode_t ir_gen_fill_in_default_arguments(ir_proc_query_t *query, ast_
             object_t *object = ir_proc_query_getter_object(query);
 
             // Polymorphism for argument
-            errorcode_t res = ir_gen_polymorphable(compiler, object, expected_type, &ast_type, optional_catalog);
+            errorcode_t res = ir_gen_polymorphable(compiler, object, expected_type, &ast_type, optional_catalog, true);
             if(res == ALT_FAILURE){
                 ast_type_free(&ast_type);
                 ast_types_free(&new_arg_types[provided_arity], i - provided_arity);

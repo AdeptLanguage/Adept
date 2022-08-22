@@ -153,7 +153,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 
     for(i = 0; i != type_list_length; i++){
         if(ast_type_has_polymorph(&poly_template_arg_types[i]))
-            res = ir_gen_polymorphable(builder->compiler, builder->object, &poly_template_arg_types[i], &arg_types[i], &catalog);
+            res = ir_gen_polymorphable(builder->compiler, builder->object, &poly_template_arg_types[i], &arg_types[i], &catalog, true);
         else
             res = ast_types_conform(builder, &arg_value_list[i], &arg_types[i], &poly_template_arg_types[i], conform_mode) ? SUCCESS : FAILURE;
 
@@ -165,7 +165,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
 
     // Ensure return type matches if provided
     if(gives && gives->elements_length != 0){
-        res = ir_gen_polymorphable(builder->compiler, builder->object, &poly_template_return_type, gives, &catalog);
+        res = ir_gen_polymorphable(builder->compiler, builder->object, &poly_template_return_type, gives, &catalog, false);
 
         if(res != SUCCESS){
             goto polymorphic_failure;
@@ -212,7 +212,7 @@ errorcode_t func_args_polymorphable_no_conform(compiler_t *compiler, object_t *o
 
     for(length_t i = 0; i != type_list_length; i++){
         if(ast_type_has_polymorph(&poly_template->arg_types[i]))
-            res = ir_gen_polymorphable(compiler, object, &poly_template->arg_types[i], &arg_types[i], &catalog);
+            res = ir_gen_polymorphable(compiler, object, &poly_template->arg_types[i], &arg_types[i], &catalog, false);
         else
             res = ast_types_identical(&arg_types[i], &poly_template->arg_types[i]) ? SUCCESS : FAILURE;
 
