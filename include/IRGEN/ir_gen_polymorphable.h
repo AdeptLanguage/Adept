@@ -19,10 +19,12 @@ extern "C" {
 
 // ---------------- ir_gen_polymorphable ----------------
 // Finds whether a concrete AST type is valid for a given polymorphic type
+// NOTE: If 'permit_similar_primitives' is true, then trying to use a different trivially-convertible primitive type for a top-level simple polymorph type will not raise an error,
+//       regardless of user-specified loose polymorphism
 // NOTE: Returns SUCCESS if true
 // NOTE: Returns FAILURE if false
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
-errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog);
+errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog, bool permit_similar_primitives);
 
 // ---------------- ir_gen_does_extend ----------------
 // Returns whether a concrete subject type extends a potential parent type

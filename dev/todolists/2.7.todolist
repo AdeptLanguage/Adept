@@ -149,3 +149,4 @@ v2.7 COMPLETED:
 + classes, virtual methods, and virtual dispatch
 + add auto conversion between compatible class pointers
 + add `foreign enum` to allow for enums whose values don't require the `EnumName::` prefix
++ changed meta directive #halt to return 1 and added #done directive for equivalent that returns 0
