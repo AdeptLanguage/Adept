@@ -393,7 +393,7 @@ static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, opt
     return FAILURE;
 }
 
-errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, func_pair_t *result){
+errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, func_pair_t *result, bool allow_polymorphic){
     // Find list of function endpoints for the given name
     ir_func_endpoint_list_t *endpoint_list = ir_proc_map_find(
         &object->ir_module.func_map,
@@ -402,23 +402,40 @@ errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out
         &compare_ir_func_key
     );
 
-    // Return the first of them if it exists
-    if(endpoint_list){
-        ir_func_endpoint_t endpoint = endpoint_list->endpoints[0];
+    if(endpoint_list == NULL) return FAILURE;
 
-        *result = (func_pair_t){
-            .ast_func_id = endpoint.ast_func_id,
-            .ir_func_id = endpoint.ir_func_id,
-        };
+    ir_func_endpoint_t endpoint;
 
-        if(out_is_unique){
-            *out_is_unique = endpoint_list->length == 1;
-        }
-
-        return SUCCESS;
+    if(allow_polymorphic){
+        assert(endpoint_list->length > 0);
+        endpoint = endpoint_list->endpoints[0];
+        goto found;
     } else {
-        return FAILURE;
+        ast_func_t *funcs = object->ast.funcs;
+
+        // Find first endpoint that isn't polymorphic
+        for(length_t i = 0; i != endpoint_list->length; i++){
+            endpoint = endpoint_list->endpoints[i];
+
+            if(!(funcs[endpoint.ast_func_id].traits & AST_FUNC_POLYMORPHIC)){
+                goto found;
+            }
+        }
     }
+
+    return FAILURE;
+
+found:
+    *result = (func_pair_t){
+        .ast_func_id = endpoint.ast_func_id,
+        .ir_func_id = endpoint.ir_func_id,
+    };
+
+    if(out_is_unique){
+        *out_is_unique = endpoint_list->length == 1;
+    }
+
+    return SUCCESS;
 }
 
 errorcode_t ir_gen_find_func_regular(
@@ -542,7 +559,7 @@ errorcode_t ir_gen_find_singular_special_func(compiler_t *compiler, object_t *ob
     bool is_unique;
     func_pair_t result;
 
-    if(ir_gen_find_func_named(object, func_name, &is_unique, &result) == SUCCESS){
+    if(ir_gen_find_func_named(object, func_name, &is_unique, &result, false) == SUCCESS){
         // Found special function
 
         source_t source = object->ast.funcs[result.ast_func_id].source;

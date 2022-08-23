@@ -1373,7 +1373,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     if(expr->has_match_args == false){
         bool is_unique;
 
-        if(ir_gen_find_func_named(builder->object, expr->name, &is_unique, &pair)){
+        if(ir_gen_find_func_named(builder->object, expr->name, &is_unique, &pair, false)){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;
 

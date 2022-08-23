@@ -37,7 +37,6 @@ MEDIUM-PRIORITY:
 * nested functions
 * try operator, ?! or something (along with management function __try__(value POD Value) bool)
 * allow blocks/conditionals to be used as expressions and yield values
-* revert $T to being distinct from $~T (but only when not at the top level)
 * make $~T be instantiated as $T when they differ
 * revise 'unused variable' warning message
 * make records use the newly added "better constructors"
@@ -149,3 +148,4 @@ v2.7 COMPLETED:
 + classes, virtual methods, and virtual dispatch
 + add auto conversion between compatible class pointers
 + add `foreign enum` to allow for enums whose values don't require the `EnumName::` prefix
++ resolve incorrect behavior with implicit loose polymorphs

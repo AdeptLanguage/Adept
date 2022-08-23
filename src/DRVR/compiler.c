@@ -769,6 +769,7 @@ void show_help(bool show_advanced_options){
     printf("    --dump            Dump AST, IAST, & IR to files\n");
     printf("    --llvmir          Show generated LLVM representation\n");
     printf("    --no-verification Don't verify backend output\n");
+    printf("    --no-result       Don't create final binary\n");
     #endif // ENABLE_DEBUG_FEATURES
 }
 

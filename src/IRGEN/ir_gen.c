@@ -338,7 +338,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
         bool is_unique = true;
 
         if(falias->match_first_of_name){
-            error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair);
+            error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair, false);
         } else {
             optional_func_pair_t result;
             error = ir_gen_find_func_regular(compiler, object, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, falias->source, &result);

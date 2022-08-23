@@ -27,7 +27,7 @@ errorcode_t ir_gen_find_proc(ir_proc_query_t *query, optional_func_pair_t *resul
 // Result info stored 'result'
 // Optionally, whether the function has a unique name is
 // stored into 'out_is_unique'
-errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, func_pair_t *result);
+errorcode_t ir_gen_find_func_named(object_t *object, weak_cstr_t name, bool *out_is_unique, func_pair_t *result, bool allow_polymorphic);
 
 // ---------------- ir_gen_find_func_regular ----------------
 // Finds a function that exactly matches the given
