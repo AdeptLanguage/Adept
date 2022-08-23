@@ -2032,7 +2032,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
 
     if(!(default_impl->traits & AST_FUNC_VIRTUAL)){
         strong_cstr_t head_str = ast_func_head_str(default_impl);
-        compiler_panicf(compiler, instantiation_source, "Overlapping contenders for default implementation for virtual function '%s'", head_str);
+        compiler_panicf(compiler, instantiation_source, "Overlapping contenders for default implementation of virtual function '%s'", head_str);
         free(head_str);
         goto failure;
     }
