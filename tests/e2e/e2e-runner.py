@@ -6,7 +6,6 @@ from framework import test, e2e_framework_run
 
 e2e_root_dir = dirname(abspath(__file__))
 src_dir = join(e2e_root_dir, "src")
-no_result = True
 
 def run_all_tests():
     executable = sys.argv[1]

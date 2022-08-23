@@ -273,6 +273,10 @@ bool ast_type_is_generic_base_ptr(const ast_type_t *type);
 // Returns whether an AST type is a fixed array
 bool ast_type_is_fixed_array(const ast_type_t *type);
 
+// ---------------- ast_type_is_fixed_array_like ----------------
+// Returns whether an AST type is a fixed array or poly count fixed array
+bool ast_type_is_fixed_array_like(const ast_type_t *type);
+
 // ---------------- ast_type_is_func ----------------
 // Returns whether an AST type is a function pointer
 bool ast_type_is_func(const ast_type_t *type);

@@ -40,7 +40,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
                 ast_type_is_base(&func->return_type)
                 || ast_type_is_polymorph(&func->return_type)
                 || ast_type_is_generic_base(&func->return_type)
-                || ast_type_is_fixed_array(&func->return_type)
+                || ast_type_is_fixed_array_like(&func->return_type)
             )
             && !uses_forbidden_traits(func->traits, AST_FUNC_FOREIGN)
         ){
@@ -148,7 +148,7 @@ errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, sourc
     }
 
     if(streq(func->name, "__initializer_list__")){
-        // Must return what the User-Defined Variadic InitialierList Type will be
+        // Must return what the User-Defined Variadic InitializerList Type will be
         if(ast_type_is_void(&func->return_type)){
             compiler_panic(ctx->compiler, source, "Special function __initializer_list__ must return a value");
             return FAILURE;

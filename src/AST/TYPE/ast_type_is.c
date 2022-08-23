@@ -122,6 +122,13 @@ bool ast_type_is_fixed_array(const ast_type_t *type){
     return true;
 }
 
+bool ast_type_is_fixed_array_like(const ast_type_t *type){
+    if(type->elements_length < 2) return false;
+
+    unsigned int wrapper = type->elements[0]->id;
+    return wrapper == AST_ELEM_FIXED_ARRAY || wrapper == AST_ELEM_POLYCOUNT;
+}
+
 bool ast_type_is_func(const ast_type_t *type){
     if(type->elements_length != 1) return false;
     if(type->elements[0]->id != AST_ELEM_FUNC) return false;
