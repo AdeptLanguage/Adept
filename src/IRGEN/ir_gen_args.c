@@ -140,18 +140,17 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
     // Store a copy of the unmodified function argument values
-    ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
-    memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
+    ir_value_t **arg_value_list_unmodified = memclone(arg_value_list, sizeof(ir_value_t*) * type_list_length);
 
     // We will make weak copy of fields of 'poly_template' we will need to access,
-    // since it the location of the function in memory may move during conformation process
+    // since it the location of the function may move in memory during the conformation process
     ast_type_t poly_template_return_type = poly_template->return_type;
     ast_type_t *poly_template_arg_types = poly_template->arg_types;
 
     // Number of polymorphic paramater types that have been processed (used for cleanup)
     length_t i;
 
-    for(i = 0; i != type_list_length; i++){
+    for(i = 0; i != required_arity; i++){
         if(ast_type_has_polymorph(&poly_template_arg_types[i]))
             res = ir_gen_polymorphable(builder->compiler, builder->object, &poly_template_arg_types[i], &arg_types[i], &catalog, true);
         else
