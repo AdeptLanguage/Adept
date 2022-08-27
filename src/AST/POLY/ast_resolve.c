@@ -119,7 +119,14 @@ errorcode_t ast_resolve_expr_polymorphs(compiler_t *compiler, type_table_t *type
     switch(expr->id){
     case EXPR_RETURN: {
             ast_expr_return_t *return_stmt = (ast_expr_return_t*) expr;
-            if(return_stmt->value != NULL && ast_resolve_expr_polymorphs(compiler, type_table, catalog, return_stmt->value)) return FAILURE;
+
+            if(return_stmt->value != NULL && ast_resolve_expr_polymorphs(compiler, type_table, catalog, return_stmt->value)){
+                return FAILURE;
+            }
+            
+            if(ast_resolve_expr_list_polymorphs(compiler, type_table, catalog, &return_stmt->last_minute)){
+                return FAILURE;
+            }
         }
         break;
     case EXPR_CALL: {

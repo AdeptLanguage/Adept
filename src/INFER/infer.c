@@ -186,8 +186,8 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                     if(func_variable) func_variable->used = true;
                 }
                 
-                for(length_t a = 0; a != call_stmt->arity; a++){
-                    if(infer_expr(ctx, func, &call_stmt->args[a], EXPR_NONE, false)) return FAILURE;
+                for(length_t i = 0; i != call_stmt->arity; i++){
+                    if(infer_expr(ctx, func, &call_stmt->args[i], EXPR_NONE, false)) return FAILURE;
                 }
 
                 if(call_stmt->gives.elements_length != 0){
@@ -436,11 +436,12 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
     // NOTE: if 'default_assigned_type' is EXPR_NONE, then the most suitable type for the given generics is chosen
     // NOTE: 'ast_func' can be NULL
 
-    undetermined_expr_list_t undetermined;
-    undetermined.expressions = malloc(sizeof(ast_expr_t*) * 4);
-    undetermined.expressions_length = 0;
-    undetermined.expressions_capacity = 4;
-    undetermined.solution = EXPR_NONE;
+    undetermined_expr_list_t undetermined = {
+        .expressions = malloc(sizeof(ast_expr_t*) * 4),
+        .expressions_length = 0,
+        .expressions_capacity = 4,
+        .solution = EXPR_NONE,
+    };
 
     length_t previous_constants_recursion_depth = ctx->constants_recursion_depth;
     ctx->constants_recursion_depth = 0;
@@ -561,11 +562,12 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_LESSER:
     case EXPR_GREATEREQ:
     case EXPR_LESSEREQ: {
-            undetermined_expr_list_t local_undetermined;
-            local_undetermined.expressions = malloc(sizeof(ast_expr_t*) * 4);
-            local_undetermined.expressions_length = 0;
-            local_undetermined.expressions_capacity = 4;
-            local_undetermined.solution = EXPR_NONE;
+            undetermined_expr_list_t local_undetermined = {
+                .expressions = malloc(sizeof(ast_expr_t*) * 4),
+                .expressions_length = 0,
+                .expressions_capacity = 4,
+                .solution = EXPR_NONE,
+            };
 
             // Group inference for two child expressions
             a = &((ast_expr_math_t*) *expr)->a;
