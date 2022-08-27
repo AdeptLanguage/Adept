@@ -19,6 +19,7 @@
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
+#include "UTIL/util.h"
 
 successful_t func_args_match(ast_func_t *func, ast_type_t *type_list, length_t type_list_length){
     ast_type_t *arg_types = func->arg_types;
@@ -105,11 +106,13 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     length_t required_arity = poly_template->arity;
 
     // Ensure argument supplied meet length requirements
-    if(
-        required_arity < type_list_length &&
-        !(poly_template->traits & AST_FUNC_VARARG) &&
-        (conform_mode & CONFORM_MODE_VARIADIC ? !(poly_template->traits & AST_FUNC_VARIADIC) : true)
-    ) return FAILURE;
+    if(required_arity < type_list_length){
+        if(!(poly_template->traits & AST_FUNC_VARARG)){
+            if(!(conform_mode & CONFORM_MODE_VARIADIC) || !(poly_template->traits & AST_FUNC_VARIADIC)){
+                return FAILURE;
+            }
+        }
+    }
 
     // Determine whether we are missing arguments
     bool requires_use_of_defaults = required_arity > type_list_length;
@@ -150,7 +153,9 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     // Number of polymorphic paramater types that have been processed (used for cleanup)
     length_t i;
 
-    for(i = 0; i != required_arity; i++){
+    length_t num_conforms = length_min(type_list_length, required_arity);
+
+    for(i = 0; i != num_conforms; i++){
         if(ast_type_has_polymorph(&poly_template_arg_types[i]))
             res = ir_gen_polymorphable(builder->compiler, builder->object, &poly_template_arg_types[i], &arg_types[i], &catalog, true);
         else
@@ -176,17 +181,22 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
             goto polymorphic_failure;
         }
 
-        bool meets_return_matching_requirement = ast_types_identical(gives, &concrete_return_type);
+        bool matches_return_type = ast_types_identical(gives, &concrete_return_type);
         ast_type_free(&concrete_return_type);
 
-        if(!meets_return_matching_requirement){
+        if(!matches_return_type){
+            compiler_panicf(builder->compiler, gives->source, "Unable to match requested return type with callee's return type");
             res = FAILURE;
             goto polymorphic_failure;
         }
     }
 
-    if(out_catalog) *out_catalog = catalog;
-    else ast_poly_catalog_free(&catalog);
+    if(out_catalog){
+        *out_catalog = catalog;
+    } else {
+        ast_poly_catalog_free(&catalog);
+    }
+
     free(arg_value_list_unmodified);
     return SUCCESS;
 
