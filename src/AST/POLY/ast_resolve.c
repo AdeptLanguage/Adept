@@ -65,7 +65,7 @@ errorcode_t ast_resolve_type_polymorphs(compiler_t *compiler, type_table_t *type
                 ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, polymorphic_element->name);
 
                 if(type_var == NULL){
-                    compiler_panicf(compiler, in_type->source, "Undetermined polymorphic type variable '$%s'", polymorphic_element->name);
+                    compiler_panicf(compiler, polymorphic_element->source, "Undetermined polymorphic type variable '$%s'", polymorphic_element->name);
                     return FAILURE;
                 }
 
@@ -83,7 +83,7 @@ errorcode_t ast_resolve_type_polymorphs(compiler_t *compiler, type_table_t *type
                 ast_poly_catalog_count_t *count_var = ast_poly_catalog_find_count(catalog, polycount_elem->name);
 
                 if(count_var == NULL){
-                    compiler_panicf(compiler, in_type->source, "Undetermined polymorphic count variable '$#%s'", polycount_elem->name);
+                    compiler_panicf(compiler, polycount_elem->source, "Undetermined polymorphic count variable '$#%s'", polycount_elem->name);
                     return FAILURE;
                 }
 
