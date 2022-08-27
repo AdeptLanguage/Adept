@@ -648,7 +648,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             // aren't allowed for this particular cast
             as_call.only_implicit = !(mode & CONFORM_MODE_USER_EXPLICIT);
             as_call.no_user_casts = true;
-
+            
             ir_value_t *converted;
             ast_type_t temporary_type;
             errorcode_t error = ir_gen_expr(builder, (ast_expr_t*) &as_call, &converted, false, &temporary_type);

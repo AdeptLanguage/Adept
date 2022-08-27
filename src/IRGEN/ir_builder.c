@@ -1665,10 +1665,6 @@ errorcode_t handle_assign_management(
     // Ensure value is a structure value
     if(value->type->kind != TYPE_KIND_STRUCTURE || value_ast_type->elements_length != 1) return FAILURE;
 
-    if(!ast_types_conform(builder, &value, value_ast_type, destination_ast_type, CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
-        return FAILURE;
-    }
-
     optional_func_pair_t result;
     errorcode_t errorcode;
 
@@ -1698,7 +1694,7 @@ errorcode_t handle_assign_management(
         }
 
         build_zeroinit(builder, destination);
-    
+
         ast_type_t arg_types[2] = {
             ast_type_pointer_to(ast_type_clone(destination_ast_type)),
             *destination_ast_type,
