@@ -599,17 +599,25 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         if(infer_expr(ctx, ast_func, a, EXPR_NONE, false)) return FAILURE;
         if(infer_expr(ctx, ast_func, b, EXPR_NONE, false)) return FAILURE;
         break;
-    case EXPR_CALL:
-        // HACK: Mark a variable as used if a call is made to a function with the same name
-        // SPEED: PERFORMANCE: This is probably really slow to do
-        // TODO: Clean up and/or speed up this code
-        if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && ctx->scope != NULL){
-            infer_var_t *func_variable = infer_var_scope_find(ctx->scope, ((ast_expr_call_t*) *expr)->name);
-            if(func_variable) func_variable->used = true;
-        }
-        
-        for(length_t i = 0; i != ((ast_expr_call_t*) *expr)->arity; i++){
-            if(infer_expr(ctx, ast_func, &((ast_expr_call_t*) *expr)->args[i], EXPR_NONE, false)) return FAILURE;
+    case EXPR_CALL: {
+            // HACK: Mark a variable as used if a call is made to a function with the same name
+            // SPEED: PERFORMANCE: This is probably really slow to do
+            // TODO: Clean up and/or speed up this code
+            if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && ctx->scope != NULL){
+                infer_var_t *variable = infer_var_scope_find(ctx->scope, ((ast_expr_call_t*) *expr)->name);
+
+                if(variable){
+                    variable->used = true;
+                }
+            }
+
+            ast_expr_call_t *call_expr = (ast_expr_call_t*) *expr;
+            
+            for(length_t i = 0; i != call_expr->arity; i++){
+                if(infer_expr(ctx, ast_func, &call_expr->args[i], EXPR_NONE, false)) return FAILURE;
+            }
+
+            if(infer_type(ctx, &call_expr->gives)) return FAILURE;
         }
         break;
     case EXPR_GENERIC_INT:
@@ -621,8 +629,11 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         break;
     case EXPR_FUNC_ADDR: {
             ast_expr_func_addr_t *func_addr = (ast_expr_func_addr_t*) *expr;
-            if(func_addr->match_args != NULL) for(length_t a = 0; a != func_addr->match_args_length; a++){
-                if(infer_type(ctx, &func_addr->match_args[a])) return FAILURE;
+
+            if(func_addr->match_args != NULL){
+                for(length_t i = 0; i != func_addr->match_args_length; i++){
+                    if(infer_type(ctx, &func_addr->match_args[i])) return FAILURE;
+                }
             }
         }
         break;
@@ -647,10 +658,16 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     case EXPR_SIZEOF_VALUE:
         if(infer_expr(ctx, ast_func, &((ast_expr_sizeof_value_t*) *expr)->value, EXPR_NONE, false)) return FAILURE;
         break;
-    case EXPR_CALL_METHOD:
-        if(infer_expr_inner(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->value, undetermined, true)) return FAILURE;
-        for(length_t i = 0; i != ((ast_expr_call_method_t*) *expr)->arity; i++){
-            if(infer_expr(ctx, ast_func, &((ast_expr_call_method_t*) *expr)->args[i], EXPR_NONE, false)) return FAILURE;
+    case EXPR_CALL_METHOD: {
+            ast_expr_call_method_t *call_method_expr = (ast_expr_call_method_t*) *expr;
+
+            if(infer_expr_inner(ctx, ast_func, &call_method_expr->value, undetermined, true)) return FAILURE;
+
+            for(length_t i = 0; i != call_method_expr->arity; i++){
+                if(infer_expr(ctx, ast_func, &call_method_expr->args[i], EXPR_NONE, false)) return FAILURE;
+            }
+
+            if(infer_type(ctx, &call_method_expr->gives)) return FAILURE;
         }
         break;
     case EXPR_NOT:
