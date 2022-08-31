@@ -53,6 +53,7 @@ MEDIUM-PRIORITY:
 * add runtime error for trying to use unconstructed instance of class
 * make better error message for incorrect constructor call
 * add more ability to control the representation for enum values
+* make list.add() be able to accept compatible class pointers
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -150,3 +151,5 @@ v2.7 COMPLETED:
 + add `foreign enum` to allow for enums whose values don't require the `EnumName::` prefix
 + changed meta directive #halt to return 1 and added #done directive for equivalent that returns 0
 + resolve incorrect behavior with implicit loose polymorphs
+
+v2.8 COMPLETED:

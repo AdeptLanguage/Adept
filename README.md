@@ -3,26 +3,26 @@
 ## Adept
 A blazing fast language for general purpose programming.
 
-[Download Adept v2.6 for Windows](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.7 for Windows](https://github.com/IsaacShelton/Adept/releases)
 
-[Download Adept v2.6 for MacOS](https://github.com/IsaacShelton/Adept/releases)
+[Download Adept v2.7 for MacOS](https://github.com/IsaacShelton/Adept/releases)
 
-[Download Adept v2.6 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
+[Download Adept v2.7 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
 
 ## Resources
-[Adept v2.6 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
+[Adept v2.6 Documentation (v2.7 in progress)](https://github.com/AdeptLanguage/Adept/wiki)
 
-[Adept v2.6 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
+[Adept v2.7 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
 
-[Adept v2.6 VS-Code Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
+[Adept v2.7 VS-Code Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
 
-[Adept v2.6 VS-Code Basic Syntax Checking](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
+[Adept v2.7 VS-Code Basic Syntax Checking](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
 
-[Adept v2.6 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
+[Adept v2.7 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
 
-[Adept v2.6 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
+[Adept v2.7 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
 
-[Adept v2.6 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
+[Adept v2.6 MacOS Homebrew Tap (v2.7 in progress)](https://github.com/AdeptLanguage/homebrew-tap)
 
 ## Command-Line Usage
 
@@ -31,7 +31,7 @@ A blazing fast language for general purpose programming.
 - filename - default is 'main.adept'
 - options - secondary compiler options
 
-You can optionally use `adept2-6` instead of `adept` if you have multiple versions installed.
+You can optionally use `adept2-7` instead of `adept` if you have multiple versions installed.
 
 ## Basic Functionality
 
@@ -366,7 +366,7 @@ func main(argc int, argv **ubyte) {
     }
 
     // Collect arguments into string list
-    args <String> List = array(argv, argc).map(func &stringConstant)
+    args <String> List = Array(argv, argc).map(func &stringConstant)
 
     // Adept-style
     // Print out arguments again, except in cleaner way
@@ -442,7 +442,7 @@ func main(argc int, argv **ubyte) int {
 ### Pragma Directives
 
 ```
-pragma compiler_version '2.6'
+pragma compiler_version '2.7'
 pragma project_name 'my_cool_project'
 pragma optimization aggressive
 
@@ -644,60 +644,6 @@ func main {
     each int in my_integers {
         printf("my_integers[%zu] = %d\n", idx, it)
     }
-}
-```
-
-### Inline Variable Declarations
-
-```
-import basics
-
-func main {
-    color int = 0x112233FF
-
-    // -------------------------------------------------------------
-    // Inline variable declarations are syntactic sugar that
-    // is most often used in capturing indirect or optional outputs
-    // from functions, e.g.
-    // 
-    // glfwGetFramebufferSize(window, undef width double, undef height double)
-    //                     ... is the same as ...
-    // width, height double = undef
-    // glfwGetFramebufferSize(window, &width, &height)
-    // -------------------------------------------------------------
-
-    // 'undef variable_name Type' -  Inline Variable Declaration (Uninitialized)
-    getColorComponents(color, undef red int, undef green int, undef blue int)
-
-    printf("Color Components: (%d, %d, %d)\n", red, green, blue)
-    
-    // 'def variable_name Type' -  Inline Variable Declaration (Zero-Initialized)
-    if separateNameIntoParts("Isaac Shelton", def firstname String, def lastname String) {
-        print("First Name: " + firstname)
-        print("Last Name: " + lastname)
-    } else {
-        print("Unable to separate parts of name")
-    }
-}
-
-// "out" data-flow comment is optional - only exists to help the programmer
-func getColorComponents(color int, out r, g, b *int) {
-    *r = (color & 0xFF000000) >> 24
-    *g = (color & 0x00FF0000) >> 16
-    *b = (color & 0x0000FF00) >> 8
-}
-
-// "out" data-flow comment is optional - only exists to help the programmer
-func separateNameIntoParts(fullname String, out firstname, lastname *String) successful {
-    names <StringView> List = fullname.splitIntoViews(" ")
-
-    if names.length == 2 {
-        *firstname = names[0].clone()
-        *lastname = names[1].clone()
-        return true
-    }
-
-    return false
 }
 ```
 
