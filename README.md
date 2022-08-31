@@ -100,14 +100,12 @@ struct Configuration (
     filename String,
     numBatteries int,
     numPorts int,
-)
-
-func Configuration(filename POD String) Configuration {
-    config POD Configuration
-    config.filename = filename
-    config.numBatteries = 4
-    config.numPorts = 10
-    return config
+){
+    constructor(filename String) {
+        this.filename = filename.commit()
+        this.numBatteries = 4
+        this.numPorts = 10
+    }
 }
 
 func toString(config Configuration) String {
@@ -643,6 +641,53 @@ func main {
     // Print each number
     each int in my_integers {
         printf("my_integers[%zu] = %d\n", idx, it)
+    }
+}
+```
+
+### Classes and Virtual Dispatch
+```
+import basics
+
+class Shape () {
+    constructor {}
+    
+    virtual func draw {}
+}
+
+class Rectangle extends Shape (w, h float) {
+    constructor(w, h float) {
+        this.w = w
+        this.h = h
+    }
+    
+    override func draw {
+        printf("Rectangle %f by %f\n", this.w, this.h)
+    }
+}
+
+class Circle extends Shape (radius float) {
+    constructor(radius float) {
+        this.radius = radius
+    }
+    
+    override func draw {
+        printf("Circle with radius %f\n", this.radius)
+    }
+}
+
+func main {
+    shapes <*Shape> List
+    
+    defer {
+        each *Shape in shapes, delete it
+    }
+     
+    shapes.add(new Rectangle(4.0, 5.0) as *Shape)
+    shapes.add(new Circle(9.0) as *Shape)
+
+    each *Shape in shapes {
+        it.draw()
     }
 }
 ```
