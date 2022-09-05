@@ -1,6 +1,7 @@
-# Overall Things for Adept 2.7
+# Overall Things for Adept 2.8
 
 HIGH-PRIORITY:
+- migrate uses of deprecated LLVM functions to their replacements
 
 MEDIUM-PRIORITY:
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.

@@ -9,22 +9,22 @@ on:
     inputs:
       fullName:
         description: The full name of the release
-        default: Adept 2.7
+        default: Adept 2.8
         required: true
         type: string
       shortVersion:
         description: The short version number
-        default: "2.7"
+        default: "2.8"
         required: true
         type: string
       longVersion:
         description: The long version number
-        default: "2.7.0"
+        default: "2.8.0"
         required: true
         type: string
       alternativeBinaryName:
         description: The alternative binary name
-        default: "adept2-7"
+        default: "adept2-8"
         required: true
         type: string
 
