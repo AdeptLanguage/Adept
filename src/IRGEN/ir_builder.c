@@ -1400,11 +1400,11 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
 }
 
 errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_return){
-    // DANGEROUS: 'func' could be invalidated by generation of new functions
-    ast_func_t *autogen_func = &builder->object->ast.funcs[builder->ast_func_id];
-
     errorcode_t res = handle_children_pass(builder);
     if(res) return res;
+
+    // DANGEROUS: 'func' could be invalidated by generation of new functions
+    ast_func_t *autogen_func = &builder->object->ast.funcs[builder->ast_func_id];
 
     ast_type_t *passed_ast_type = autogen_func->arity == 1 ? &autogen_func->arg_types[0] : NULL;
     if(passed_ast_type == NULL) return FAILURE;
@@ -1654,7 +1654,7 @@ bool could_have_pass(ast_type_t *ast_type){
     return false;
 }
 
-errorcode_t handle_assign_management(
+errorcode_t try_user_defined_assign(
         ir_builder_t *builder,
         ir_value_t *value,
         ast_type_t *value_ast_type,

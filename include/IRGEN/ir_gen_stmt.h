@@ -115,9 +115,14 @@ errorcode_t ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_term
 // NOTE: If 'up_until_scope' is NULL, then all parent scopes will be visited.
 errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope);
 
-// ---------------- ir_gen_perform_pod_assignment ----------------
+
+// ---------------- ir_gen_assign----------------
+// Generates IR instructions for an assignment
+errorcode_t ir_gen_assign(ir_builder_t *builder, ir_value_t *initial, ast_type_t *initial_ast_type, ir_value_t *destination, ast_type_t *destination_type, bool force_pod_assignment, source_t source);
+
+// ---------------- ir_gen_assign_pod ----------------
 // Generates IR instructions for a POD (plain-old-data) assignment
-errorcode_t ir_gen_perform_pod_assignment(ir_builder_t *builder, ir_value_t **value, ast_type_t *value_ast_type,
+errorcode_t ir_gen_assign_pod(ir_builder_t *builder, ir_value_t **value, ast_type_t *value_ast_type,
         ir_value_t *destination, ast_type_t *destination_ast_type, source_t source_on_error);
 
 #endif // _ISAAC_IR_GEN_STMT_H

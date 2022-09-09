@@ -850,24 +850,9 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
         // Generate instructions to get initial value
         if(ir_gen_expr(working_builder, stmt->value, &initial, false, &initial_ast_type)) goto failure;
 
-        // Assign the initial value to the newly created variable
-        bool used_assign_function;
-
-        if(is_assign_pod){
-            used_assign_function = false;
-        } else {
-            errorcode_t errorcode = handle_assign_management(working_builder, initial, &initial_ast_type, destination, &stmt->type, stmt->source);
-            if(errorcode == ALT_FAILURE) return errorcode;
-
-            used_assign_function = errorcode == SUCCESS;
-        }
-
-        if(!used_assign_function && ir_gen_perform_pod_assignment(working_builder, &initial, &initial_ast_type, destination, &stmt->type, stmt->source)){
-            ast_type_free(&initial_ast_type);
-            goto failure;
-        }
-
+        errorcode_t errorcode = ir_gen_assign(working_builder, initial, &initial_ast_type, destination, &stmt->type, is_assign_pod, stmt->source);
         ast_type_free(&initial_ast_type);
+        if(errorcode != SUCCESS) goto failure;
     }
 
     // Destroy allocated scope if we used a secondary builder
@@ -905,34 +890,18 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
 
     // Regular Assignment
     if(assignment_kind == EXPR_ASSIGN){
-        bool used_assign_function;
-    
-        if(stmt->is_pod){
-            used_assign_function = false;
-        } else {
-            errorcode_t errorcode = handle_assign_management(builder, other_value, &other_value_type, destination, &destination_type, stmt->source);
-            if(errorcode == ALT_FAILURE) return errorcode;
-    
-            used_assign_function = errorcode == SUCCESS;
-        }
-
-        if(!used_assign_function && ir_gen_perform_pod_assignment(builder, &other_value, &other_value_type, destination, &destination_type, stmt->source)){
-            ast_type_free(&destination_type);
-            ast_type_free(&other_value_type);
-            return FAILURE;
-        }
-
+        errorcode_t errorcode = ir_gen_assign(builder, other_value, &other_value_type, destination, &destination_type, stmt->is_pod, stmt->source);
         ast_type_free(&destination_type);
         ast_type_free(&other_value_type);
-        return SUCCESS;
+        return errorcode;
     } else {
         // We only have to manually conform other type if doing POD operations,
         // and since as of now, non-POD assignment arithmetic isn't supported,
         // all non-regular assignments will be POD
 
         if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, CONFORM_MODE_CALCULATION)){
-            char *a_type_str = ast_type_str(&other_value_type);
-            char *b_type_str = ast_type_str(&destination_type);
+            strong_cstr_t a_type_str = ast_type_str(&other_value_type);
+            strong_cstr_t b_type_str = ast_type_str(&destination_type);
             compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
             free(a_type_str);
             free(b_type_str);
@@ -1846,7 +1815,18 @@ errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_
     return SUCCESS;
 }
 
-errorcode_t ir_gen_perform_pod_assignment(ir_builder_t *builder, ir_value_t **value, ast_type_t *value_ast_type,
+errorcode_t ir_gen_assign(ir_builder_t *builder, ir_value_t *value, ast_type_t *value_ast_type, ir_value_t *destination, ast_type_t *destination_type, bool force_pod_assignment, source_t source){
+    // User defined assignment
+    if(!force_pod_assignment){
+        errorcode_t errorcode = try_user_defined_assign(builder, value, value_ast_type, destination, destination_type, source);
+        if(errorcode == ALT_FAILURE || errorcode == SUCCESS) return errorcode;
+    }
+
+    // Regular POD Assignment
+    return ir_gen_assign_pod(builder, &value, value_ast_type, destination, destination_type, source);
+}
+
+errorcode_t ir_gen_assign_pod(ir_builder_t *builder, ir_value_t **value, ast_type_t *value_ast_type,
         ir_value_t *destination, ast_type_t *destination_ast_type, source_t source_on_error){
     // When doing normal assignment (which is POD), ensure the new value is of the same type
 

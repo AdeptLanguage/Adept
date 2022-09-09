@@ -2582,32 +2582,16 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
 
         // Generate IR value for initial value
         ir_value_t *initial;
-        ast_type_t temporary_type;
-        if(ir_gen_expr(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
+        ast_type_t initial_value_ast_type;
+        if(ir_gen_expr(builder, def->value, &initial, false, &initial_value_ast_type)) return FAILURE;
 
         // Add the variable
         ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id);
         add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
-        // Assign the initial value to the newly created variable
-        bool used_assign_function;
-
-        if(is_assign_pod){
-            used_assign_function = false;
-        } else {
-            errorcode_t errorcode = handle_assign_management(builder, initial, &temporary_type, destination, &def->type, def->source);
-            if(errorcode == ALT_FAILURE) return errorcode;
-
-            used_assign_function = errorcode == SUCCESS;
-        }
-
-        if(!used_assign_function && ir_gen_perform_pod_assignment(builder, &initial, &temporary_type, destination, &def->type, def->source)){
-            ast_type_free(&temporary_type);
-            return FAILURE;
-        }
-
-        // Dispose of temporary initial value AST type
-        ast_type_free(&temporary_type);
+        errorcode_t errorcode = ir_gen_assign(builder, initial, &initial_value_ast_type, destination, &def->type, is_assign_pod, def->source);
+        ast_type_free(&initial_value_ast_type);
+        if(errorcode != SUCCESS) return errorcode;
 
         // Result is pointer to variable on stack
         *ir_value = destination;

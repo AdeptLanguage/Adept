@@ -418,13 +418,13 @@ errorcode_t handle_children_pass(ir_builder_t *builder);
 // Returns whether a type could have __pass__ methods that need calling
 bool could_have_pass(ast_type_t *ast_type);
 
-// ---------------- handle_assign_management ----------------
+// ---------------- try_user_defined_assign ----------------
 // Handles '__assign__' management method calls
 // NOTE: 'ast_destination_type' is not a pointer, but value provided is mutable
 // NOTE: Returns SUCCESS if value was utilized in deference
 //       Returns FAILURE if value was not utilized in deference
 //       Returns ALT_FAILURE if a compile time error occurred
-errorcode_t handle_assign_management(
+errorcode_t try_user_defined_assign(
     ir_builder_t *builder,
     ir_value_t *value,
     ast_type_t *value_ast_type,
