@@ -1673,10 +1673,6 @@ errorcode_t handle_assign_management(
     ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
     instructions_snapshot_capture(builder, &instructions_snapshot);
 
-    ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
-    arguments[0] = destination;
-    arguments[1] = value;
-
     errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, destination_ast_type, &result);
     if(errorcode) goto failure;
 
@@ -1699,6 +1695,14 @@ errorcode_t handle_assign_management(
             ast_type_pointer_to(ast_type_clone(destination_ast_type)),
             *destination_ast_type,
         };
+
+        if(!ast_types_conform(builder, &value, value_ast_type, destination_ast_type, CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
+            goto failure;
+        }
+
+        ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
+        arguments[0] = destination;
+        arguments[1] = value;
 
         errorcode = handle_pass_management(builder, arguments, arg_types, ast->funcs[pair.ast_func_id].arg_type_traits, 2);
         ast_type_free(&arg_types[0]);

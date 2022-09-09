@@ -2585,17 +2585,6 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         ast_type_t temporary_type;
         if(ir_gen_expr(builder, def->value, &initial, false, &temporary_type)) return FAILURE;
 
-        // Conform initial IR value to expected AST type
-        if(!ast_types_conform(builder, &initial, &temporary_type, &def->type, CONFORM_MODE_ASSIGNING)){
-            char *a_type_str = ast_type_str(&temporary_type);
-            char *b_type_str = ast_type_str(&def->type);
-            compiler_panicf(builder->compiler, def->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-            free(a_type_str);
-            free(b_type_str);
-            ast_type_free(&temporary_type);
-            return FAILURE;
-        }
-
         // Add the variable
         ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id);
         add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
