@@ -62,7 +62,7 @@ jobs:
           key: ${{runner.os}}-cache-llvm-14.0.6-${{ hashFiles('llvm/**/*.txt') }}
       - name: Download LLVM (Unix)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
-        uses: KyleMayes/install-llvm-action@v1
+        uses: KyleMayes/install-llvm-action@v1.5.4
         with:
           version: "14.0.6"
           directory: ${{github.workspace}}/llvm
