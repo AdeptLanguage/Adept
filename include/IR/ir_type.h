@@ -108,6 +108,11 @@ trait_t ast_func_traits_to_type_kind_func_traits(trait_t ast_func_traits);
 // Gets the type pointed to by a pointer type
 ir_type_t *ir_type_dereference(ir_type_t *type);
 
+// ---------------- ir_type_unwrap ----------------
+// Gets the inner type for a wrapped type
+// Returns the original type if not a wrapped type
+ir_type_t *ir_type_unwrap(ir_type_t *type);
+
 // ---------------- ir_type_is_pointer_to ----------------
 // Returns whether an IR type is a pointer to a type of a specific kind
 bool ir_type_is_pointer_to(ir_type_t *type, unsigned int child_type_kind);

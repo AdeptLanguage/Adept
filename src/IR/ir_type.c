@@ -135,9 +135,20 @@ trait_t ast_func_traits_to_type_kind_func_traits(trait_t ast_func_traits){
     return type_kind_func_traits;
 }
 
-ir_type_t* ir_type_dereference(ir_type_t *type){
+ir_type_t *ir_type_dereference(ir_type_t *type){
     if(type->kind != TYPE_KIND_POINTER) return NULL;
     return (ir_type_t*) type->extra;
+}
+
+ir_type_t *ir_type_unwrap(ir_type_t *type){
+    switch(type->kind){
+    case TYPE_KIND_POINTER:
+        return (ir_type_t*) type->extra;
+    case TYPE_KIND_FIXED_ARRAY:
+        return (ir_type_t*) ((ir_type_extra_fixed_array_t*) type->extra)->subtype;
+    default:
+        return type;
+    }
 }
 
 bool ir_type_is_pointer_to(ir_type_t *type, unsigned int child_type_kind){

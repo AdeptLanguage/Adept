@@ -421,8 +421,8 @@ bool could_have_pass(ast_type_t *ast_type);
 // ---------------- try_user_defined_assign ----------------
 // Handles '__assign__' management method calls
 // NOTE: 'ast_destination_type' is not a pointer, but value provided is mutable
-// NOTE: Returns SUCCESS if value was utilized in deference
-//       Returns FAILURE if value was not utilized in deference
+// NOTE: Returns SUCCESS if value was utilized in assignment
+//       Returns FAILURE if value was not utilized in assignment
 //       Returns ALT_FAILURE if a compile time error occurred
 errorcode_t try_user_defined_assign(
     ir_builder_t *builder,

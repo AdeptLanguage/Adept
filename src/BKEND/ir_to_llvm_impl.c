@@ -27,12 +27,19 @@
 static LLVMValueRef llvm_create_global_string(llvm_context_t *llvm, const char *content){
     length_t length = strlen(content) + 1;
 
-    LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), length), ".str");
+    LLVMTypeRef array_type = LLVMArrayType(LLVMInt8Type(), length);
+
+    LLVMValueRef global_data = LLVMAddGlobal(llvm->module, array_type, ".str");
     LLVMSetLinkage(global_data, LLVMInternalLinkage);
     LLVMSetGlobalConstant(global_data, true);
     LLVMSetInitializer(global_data, LLVMConstString(content, length, true));
 
-    return global_data;
+    LLVMValueRef gep_indices_zeros[] = {
+        LLVMConstInt(LLVMInt32Type(), 0, true),
+        LLVMConstInt(LLVMInt32Type(), 0, true),
+    };
+
+    return LLVMConstGEP2(array_type, global_data, gep_indices_zeros, NUM_ITEMS(gep_indices_zeros));
 }
 
 static LLVMValueRef llvm_get_zero_value(llvm_context_t *llvm, ir_type_t *type){
@@ -210,8 +217,9 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
                 values[i] = ir_to_llvm_value(llvm, array_literal->values[i]);
             }
 
+            LLVMTypeRef array_type = LLVMArrayType(type, array_literal->length);
             LLVMValueRef static_array = LLVMConstArray(type, values, array_literal->length);
-            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(type, array_literal->length), "A");
+            LLVMValueRef global_data = LLVMAddGlobal(llvm->module, array_type, "A");
             LLVMSetLinkage(global_data, LLVMInternalLinkage);
             LLVMSetGlobalConstant(global_data, true);
             LLVMSetInitializer(global_data, static_array);
@@ -221,7 +229,7 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
                 LLVMConstInt(LLVMInt32Type(), 0, true),
             };
 
-            return LLVMConstGEP(global_data, indices, NUM_ITEMS(indices));
+            return LLVMConstGEP2(array_type, global_data, indices, NUM_ITEMS(indices));
         }
     case VALUE_TYPE_STRUCT_LITERAL: {
             ir_value_struct_literal_t *struct_literal = value->extra;
@@ -244,28 +252,31 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
         }
     case VALUE_TYPE_CSTR_OF_LEN: {
             ir_value_cstr_of_len_t *cstr_of_len = value->extra;
-            LLVMValueRef global_data = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->size);
+            LLVMValueRef value = llvm_string_table_find(&llvm->string_table, cstr_of_len->array, cstr_of_len->size);
 
-            if(global_data == NULL){
+            if(value == NULL){
                 // DANGEROUS: TODO: Remove this!!!
                 static int i = 0;
                 char name_buffer[256];
                 snprintf(name_buffer, sizeof name_buffer, "S%X", i++);
 
-                global_data = LLVMAddGlobal(llvm->module, LLVMArrayType(LLVMInt8Type(), cstr_of_len->size), name_buffer);
+                LLVMTypeRef raw_characters_type = LLVMArrayType(LLVMInt8Type(), cstr_of_len->size);
+
+                LLVMValueRef global_data = LLVMAddGlobal(llvm->module, raw_characters_type, name_buffer);
                 LLVMSetLinkage(global_data, LLVMInternalLinkage);
                 LLVMSetGlobalConstant(global_data, true);
                 LLVMSetInitializer(global_data, LLVMConstString(cstr_of_len->array, cstr_of_len->size, true));
 
-                llvm_string_table_add(&llvm->string_table, cstr_of_len->array, cstr_of_len->size, global_data);
+                LLVMValueRef indices[] = {
+                    LLVMConstInt(LLVMInt32Type(), 0, true),
+                    LLVMConstInt(LLVMInt32Type(), 0, true),
+                };
+
+                value = LLVMConstGEP2(raw_characters_type, global_data, indices, NUM_ITEMS(indices));
+                llvm_string_table_add(&llvm->string_table, cstr_of_len->array, cstr_of_len->size, value);
             }
             
-            LLVMValueRef indices[] = {
-                LLVMConstInt(LLVMInt32Type(), 0, true),
-                LLVMConstInt(LLVMInt32Type(), 0, true),
-            };
-            
-            return LLVMConstGEP(global_data, indices, NUM_ITEMS(indices));
+            return value;
         }
     case VALUE_TYPE_FUNC_ADDR: {
             ir_value_func_addr_t *func_addr = value->extra;
@@ -586,19 +597,13 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
         printf_fn = LLVMAddFunction(llvm->module, "printf", printf_fn_type);
     }
 
+    llvm_null_check_t *null_check = &llvm->null_check;
+
     // Create template error message
-    if(llvm->null_check.failure_message_bytes == NULL){
+    if(null_check->failure_message_bytes == NULL){
         const char *error_msg = "===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS! =====\nIn file:\t%s\nIn function:\t%s\nLine:\t%d\nColumn:\t%d\n";
-
-        llvm->null_check.failure_message_bytes = llvm_create_global_string(llvm, error_msg);
+        null_check->failure_message_bytes = llvm_create_global_string(llvm, error_msg);
     }
-
-    LLVMValueRef gep_indices_zeros[] = {
-        LLVMConstInt(LLVMInt32Type(), 0, true),
-        LLVMConstInt(LLVMInt32Type(), 0, true),
-    };
-    
-    LLVMValueRef message_format = LLVMConstGEP(llvm->null_check.failure_message_bytes, gep_indices_zeros, NUM_ITEMS(gep_indices_zeros));
 
     // Decide on filename to use for error message
     const char *filename = module_func->maybe_filename ? module_func->maybe_filename : "<unknown file>";
@@ -607,16 +612,16 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     const char *func_name = module_func->maybe_definition_string ? module_func->maybe_definition_string : module_func->name;
 
     // Define filename string
-    LLVMValueRef filename_str = LLVMConstGEP(llvm_create_global_string(llvm, filename), gep_indices_zeros, NUM_ITEMS(gep_indices_zeros));
+    LLVMValueRef filename_str = llvm_create_global_string(llvm, filename);
 
     // Define function definition string
-    LLVMValueRef func_name_str = LLVMConstGEP(llvm_create_global_string(llvm, func_name), gep_indices_zeros, NUM_ITEMS(gep_indices_zeros));
+    LLVMValueRef func_name_str = llvm_create_global_string(llvm, func_name);
 
     llvm->null_check.line_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
     llvm->null_check.column_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
 
     // Create argument list
-    LLVMValueRef args[] = {message_format, filename_str, func_name_str, llvm->null_check.line_phi, llvm->null_check.column_phi};
+    LLVMValueRef args[] = {null_check->failure_message_bytes, filename_str, func_name_str, llvm->null_check.line_phi, llvm->null_check.column_phi};
 
     // Print the error message
     LLVMBuildCall(builder, printf_fn, args, NUM_ITEMS(args), "");
@@ -858,6 +863,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
         case INSTRUCTION_MEMBER: {
                 ir_instr_member_t *member_instr = (ir_instr_member_t*) instr;
                 LLVMValueRef foundation = ir_to_llvm_value(llvm, member_instr->value);
+                LLVMTypeRef struct_type = ir_to_llvm_type(llvm, ir_type_unwrap(member_instr->value->type));
 
                 llvm_create_optional_null_check(llvm, f, foundation, member_instr->maybe_line_number, member_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
@@ -869,13 +875,14 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 // For some reason, LLVM has problems with using a regular GEP for a constant value/indicies
                 catalog->blocks[b].value_references[i] =
                     LLVMIsConstant(foundation)
-                        ? LLVMConstGEP(foundation, gep_indices, NUM_ITEMS(gep_indices))
-                        : LLVMBuildGEP(builder, foundation, gep_indices, NUM_ITEMS(gep_indices), "");
+                        ? LLVMConstGEP2(struct_type, foundation, gep_indices, NUM_ITEMS(gep_indices))
+                        : LLVMBuildGEP2(builder, struct_type, foundation, gep_indices, NUM_ITEMS(gep_indices), "");
             }
             break;
         case INSTRUCTION_ARRAY_ACCESS: {
                 ir_instr_array_access_t *array_access_instr = (ir_instr_array_access_t*) instr;
                 LLVMValueRef foundation = ir_to_llvm_value(llvm, array_access_instr->value);
+                LLVMTypeRef struct_type = ir_to_llvm_type(llvm, ir_type_unwrap(array_access_instr->value->type));
 
                 llvm_create_optional_null_check(llvm, f, foundation, array_access_instr->maybe_line_number, array_access_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
@@ -885,8 +892,8 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
                 catalog->blocks[b].value_references[i] = 
                     (LLVMIsConstant(foundation) && LLVMIsConstant(gep_indices[0]))
-                        ? LLVMConstGEP(foundation, gep_indices, NUM_ITEMS(gep_indices))
-                        : LLVMBuildGEP(builder, foundation, gep_indices, NUM_ITEMS(gep_indices), "");
+                        ? LLVMConstGEP2(struct_type, foundation, gep_indices, NUM_ITEMS(gep_indices))
+                        : LLVMBuildGEP2(builder, struct_type, foundation, gep_indices, NUM_ITEMS(gep_indices), "");
             }
             break;
         case INSTRUCTION_BITCAST:
