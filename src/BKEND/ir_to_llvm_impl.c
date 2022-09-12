@@ -24,6 +24,11 @@
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
 
+#if LLVM_VERSION_MAJOR < 14
+    #define LLVMBuildGEP2(BUILDER, TYPE, POINTER, INDICES, NUM_INDICES, NAME) LLVMBuildGEP((BUILDER), (POINTER), (INDICES), (NUM_INDICES), (NAME))
+    #define LLVMConstGEP2(TYPE, POINTER, INDICES, NUM_INDICES) LLVMConstGEP((POINTER), (INDICES), (NUM_INDICES))
+#endif
+
 static LLVMValueRef llvm_create_global_string(llvm_context_t *llvm, const char *content){
     length_t length = strlen(content) + 1;
 
