@@ -1,7 +1,6 @@
 # Overall Things for Adept 2.8
 
 HIGH-PRIORITY:
-- migrate uses of deprecated LLVM functions to their replacements
 
 MEDIUM-PRIORITY:
 * allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
@@ -154,3 +153,4 @@ v2.7 COMPLETED:
 + resolve incorrect behavior with implicit loose polymorphs
 
 v2.8 COMPLETED:
++ migrate uses of deprecated LLVM functions to their replacements
