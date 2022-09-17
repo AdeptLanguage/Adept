@@ -50,6 +50,10 @@ void ast_exprs_free_fully(ast_expr_t **exprs, length_t length){
     free(exprs);
 }
 
+ast_expr_t *ast_expr_clone_if_not_null(ast_expr_t *expr){
+    return expr ? ast_expr_clone(expr) : NULL;
+}
+
 ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     ast_expr_t *clone = NULL;
 
@@ -616,152 +620,209 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     return clone;
 }
 
-void ast_expr_create_bool(ast_expr_t **out_expr, adept_bool value, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_boolean_t));
-    ((ast_expr_boolean_t*) *out_expr)->id = EXPR_BOOLEAN;
-    ((ast_expr_boolean_t*) *out_expr)->value = value;
-    ((ast_expr_boolean_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_bool(adept_bool value, source_t source){
+    ast_expr_boolean_t *expr = malloc(sizeof(ast_expr_boolean_t));
+
+    *expr = (ast_expr_boolean_t){
+        .id = EXPR_BOOLEAN,
+        .source = source,
+        .value = value,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_long(ast_expr_t **out_expr, adept_long value, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_long_t));
-    ((ast_expr_long_t*) *out_expr)->id = EXPR_LONG;
-    ((ast_expr_long_t*) *out_expr)->value = value;
-    ((ast_expr_long_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_long(adept_long value, source_t source){
+    ast_expr_long_t *expr = malloc(sizeof(ast_expr_long_t));
+
+    *expr = (ast_expr_long_t){
+        .id = EXPR_LONG,
+        .source = source,
+        .value = value,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_double(ast_expr_t **out_expr, adept_double value, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_double_t));
-    ((ast_expr_double_t*) *out_expr)->id = EXPR_DOUBLE;
-    ((ast_expr_double_t*) *out_expr)->value = value;
-    ((ast_expr_double_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_double(adept_double value, source_t source){
+    ast_expr_double_t *expr = malloc(sizeof(ast_expr_double_t));
+
+    *expr = (ast_expr_double_t){
+        .id = EXPR_DOUBLE,
+        .source = source,
+        .value = value,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_string(ast_expr_t **out_expr, char *array, length_t length, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_str_t));
-    ((ast_expr_str_t*) *out_expr)->id = EXPR_STR;
-    ((ast_expr_str_t*) *out_expr)->array = array;
-    ((ast_expr_str_t*) *out_expr)->length = length;
-    ((ast_expr_str_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_string(char *array, length_t length, source_t source){
+    ast_expr_str_t *expr = malloc(sizeof(ast_expr_str_t));
+
+    *expr = (ast_expr_str_t){
+        .id = EXPR_STR,
+        .source = source,
+        .array = array,
+        .length = length,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_cstring(ast_expr_t **out_expr, char *value, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_cstr_t));
-    ((ast_expr_cstr_t*) *out_expr)->id = EXPR_CSTR;
-    ((ast_expr_cstr_t*) *out_expr)->value = value;
-    ((ast_expr_cstr_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_cstring(char *value, source_t source){
+    ast_expr_cstr_t *expr = malloc(sizeof(ast_expr_cstr_t));
+    
+    *expr = (ast_expr_cstr_t){
+        .id = EXPR_CSTR,
+        .source = source,
+        .value = value,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_null(ast_expr_t **out_expr, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_null_t));
-    ((ast_expr_null_t*) *out_expr)->id = EXPR_NULL;
-    ((ast_expr_null_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_null(source_t source){
+    ast_expr_t *expr = malloc(sizeof(ast_expr_null_t));
+
+    *expr = (ast_expr_null_t){
+        .id = EXPR_NULL,
+        .source = source,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_variable(ast_expr_t **out_expr, weak_cstr_t name, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_variable_t));
-    ((ast_expr_variable_t*) *out_expr)->id = EXPR_VARIABLE;
-    ((ast_expr_variable_t*) *out_expr)->name = name;
-    ((ast_expr_variable_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_variable(weak_cstr_t name, source_t source){
+    ast_expr_variable_t *expr = malloc(sizeof(ast_expr_variable_t));
+
+    *expr = (ast_expr_variable_t){
+        .id = EXPR_VARIABLE,
+        .source = source,
+        .name = name,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_call_t));
-    ast_expr_create_call_in_place((ast_expr_call_t*) *out_expr, name, arity, args, is_tentative, gives, source);
+ast_expr_t *ast_expr_create_call(strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source){
+    ast_expr_call_t *expr = malloc(sizeof(ast_expr_call_t));
+    ast_expr_create_call_in_place(expr, name, arity, args, is_tentative, gives, source);
+    return (ast_expr_t*) expr;
 }
 
 void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source){
-    out_expr->id = EXPR_CALL;
-    out_expr->name = name;
-    out_expr->arity = arity;
-    out_expr->args = args;
-    out_expr->is_tentative = is_tentative;
-    out_expr->source = source;
+    *out_expr = (ast_expr_call_t){
+        .id = EXPR_CALL,
+        .source = source,
+        .name = name,
+        .args = args,
+        .arity = arity,
+        .is_tentative = is_tentative,
+        .gives = (gives && gives->elements_length) ? *gives : AST_TYPE_NONE,
+        .only_implicit = false,
+        .no_user_casts = false,
+    };
+}
 
-    if(gives && gives->elements_length != 0){
-        out_expr->gives = *gives;
-    } else {
-        memset(&out_expr->gives, 0, sizeof(ast_type_t));
-    }
+ast_expr_t *ast_expr_create_call_method(strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source){
+    ast_expr_call_method_t *expr = malloc(sizeof(ast_expr_call_method_t));
+    ast_expr_create_call_method_in_place(expr, name, value, arity, args, is_tentative, allow_drop, gives, source);
+    return (ast_expr_t*) expr;
+}
+
+void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source){
+    *out_expr = (ast_expr_call_method_t){
+        .id = EXPR_CALL_METHOD,
+        .source = source,
+        .name = name,
+        .arity = arity,
+        .args = args,
+        .value = value,
+        .is_tentative = is_tentative,
+        .allow_drop = allow_drop,
+        .gives = (gives && gives->elements_length) ? *gives : AST_TYPE_NONE,
+    };
+}
+
+ast_expr_t *ast_expr_create_enum_value(weak_cstr_t name, weak_cstr_t kind, source_t source){
+    ast_expr_enum_value_t *expr = malloc(sizeof(ast_expr_enum_value_t));
+
+    *expr = (ast_expr_enum_value_t){
+        .id = EXPR_ENUM_VALUE,
+        .source = source,
+        .enum_name = name,
+        .kind_name = kind,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_ternary(ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source){
+    ast_expr_ternary_t *expr = malloc(sizeof(ast_expr_ternary_t));
     
-    out_expr->only_implicit = false;
-    out_expr->no_user_casts = false;
+    *expr = (ast_expr_ternary_t){
+        .id = EXPR_TERNARY,
+        .source = source,
+        .condition = condition,
+        .if_true = if_true,
+        .if_false = if_false,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_call_method_t));
-    ast_expr_create_call_method_in_place((ast_expr_call_method_t*) *out_expr, name, value, arity, args, is_tentative, allow_drop, gives, source);
-}
-
-void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, strong_cstr_t name, ast_expr_t *value,
-        length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source){
+ast_expr_t *ast_expr_create_cast(ast_type_t to, ast_expr_t *from, source_t source){
+    ast_expr_cast_t *expr = malloc(sizeof(ast_expr_cast_t));
     
-    out_expr->id = EXPR_CALL_METHOD;
-    out_expr->name = name;
-    out_expr->arity = arity;
-    out_expr->args = args;
-    out_expr->value = value;
-    out_expr->is_tentative = is_tentative;
-    out_expr->allow_drop = allow_drop;
-    out_expr->source = source;
+    *expr = (ast_expr_cast_t){
+        .id = EXPR_CAST,
+        .to = to,
+        .from = from,
+        .source = source,
+    };
 
-    if(gives && gives->elements_length != 0){
-        out_expr->gives = *gives;
-    } else {
-        memset(&out_expr->gives, 0, sizeof(ast_type_t));
-    }
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cstr_t kind, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_enum_value_t));
-    ((ast_expr_enum_value_t*) *out_expr)->id = EXPR_ENUM_VALUE;
-    ((ast_expr_enum_value_t*) *out_expr)->enum_name = name;
-    ((ast_expr_enum_value_t*) *out_expr)->kind_name = kind;
-    ((ast_expr_enum_value_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_phantom(ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable){
+    ast_expr_phantom_t *expr = malloc(sizeof(ast_expr_phantom_t));
+
+    *expr = (ast_expr_phantom_t){
+        .id = EXPR_PHANTOM,
+        .source = source,
+        .type = ast_type,
+        .ir_value = ir_value,
+        .is_mutable = is_mutable,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_ternary(ast_expr_t **out_expr, ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_ternary_t));
-    ((ast_expr_ternary_t*) *out_expr)->id = EXPR_TERNARY;
-    ((ast_expr_ternary_t*) *out_expr)->source = source;
-    ((ast_expr_ternary_t*) *out_expr)->condition = condition;
-    ((ast_expr_ternary_t*) *out_expr)->if_true = if_true;
-    ((ast_expr_ternary_t*) *out_expr)->if_false = if_false;
+ast_expr_t *ast_expr_create_typenameof(ast_type_t strong_type, source_t source){
+    ast_expr_typenameof_t *expr = malloc(sizeof(ast_expr_typenameof_t));
+    
+    *expr = (ast_expr_typenameof_t){
+        .id = EXPR_TYPENAMEOF,
+        .source = source,
+        .type = strong_type,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_cast_t));
-    ((ast_expr_cast_t*) *out_expr)->id = EXPR_CAST;
-    ((ast_expr_cast_t*) *out_expr)->to = to;
-    ((ast_expr_cast_t*) *out_expr)->from = from;
-    ((ast_expr_cast_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_embed(strong_cstr_t filename, source_t source){
+    ast_expr_embed_t *expr = malloc(sizeof(ast_expr_embed_t));
+    
+    *expr = (ast_expr_embed_t){
+        .id = EXPR_EMBED,
+        .source = source,
+        .filename = filename,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_phantom(ast_expr_t **out_expr, ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable){
-    *out_expr = malloc(sizeof(ast_expr_phantom_t));
-    ((ast_expr_phantom_t*) *out_expr)->id = EXPR_PHANTOM;
-    ((ast_expr_phantom_t*) *out_expr)->source = source;
-    ((ast_expr_phantom_t*) *out_expr)->type = ast_type;
-    ((ast_expr_phantom_t*) *out_expr)->ir_value = ir_value;
-    ((ast_expr_phantom_t*) *out_expr)->is_mutable = is_mutable;
-}
-
-void ast_expr_create_typenameof(ast_expr_t **out_expr, ast_type_t strong_type, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_typenameof_t));
-    ((ast_expr_typenameof_t*) *out_expr)->id = EXPR_TYPENAMEOF;
-    ((ast_expr_typenameof_t*) *out_expr)->source = source;
-    ((ast_expr_typenameof_t*) *out_expr)->type = strong_type;
-}
-
-void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_embed_t));
-    ((ast_expr_embed_t*) *out_expr)->id = EXPR_EMBED;
-    ((ast_expr_embed_t*) *out_expr)->source = source;
-    ((ast_expr_embed_t*) *out_expr)->filename = filename;
-}
-
-void ast_expr_create_declaration(
-    ast_expr_t **out_expr,
+ast_expr_t *ast_expr_create_declaration(
     unsigned int expr_id,
     source_t source,
     weak_cstr_t name,
@@ -770,68 +831,96 @@ void ast_expr_create_declaration(
     ast_expr_t *value,
     optional_ast_expr_list_t inputs
 ){
-    *out_expr = malloc(sizeof(ast_expr_declare_t));
-    ((ast_expr_declare_t*) *out_expr)->id = expr_id;
-    ((ast_expr_declare_t*) *out_expr)->source = source;
-    ((ast_expr_declare_t*) *out_expr)->name = name;
-    ((ast_expr_declare_t*) *out_expr)->traits = traits;
-    ((ast_expr_declare_t*) *out_expr)->type = type;
-    ((ast_expr_declare_t*) *out_expr)->value = value;
-    ((ast_expr_declare_t*) *out_expr)->inputs = inputs;
+    ast_expr_declare_t *expr = malloc(sizeof(ast_expr_declare_t));
+    
+    *expr = (ast_expr_declare_t){
+        .id = expr_id,
+        .source = source,
+        .name = name,
+        .traits = traits,
+        .type = type,
+        .value = value,
+        .inputs = inputs,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_assignment(ast_expr_t **out_expr, unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod){
-    *out_expr = malloc(sizeof(ast_expr_assign_t));
-    ((ast_expr_assign_t*) *out_expr)->id = stmt_id;
-    ((ast_expr_assign_t*) *out_expr)->source = source;
-    ((ast_expr_assign_t*) *out_expr)->destination = mutable_expression;
-    ((ast_expr_assign_t*) *out_expr)->value = value;
-    ((ast_expr_assign_t*) *out_expr)->is_pod = is_pod;
+ast_expr_t *ast_expr_create_assignment(unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod){
+    ast_expr_assign_t *expr = malloc(sizeof(ast_expr_assign_t));
+    
+    *expr = (ast_expr_assign_t){
+        .id = stmt_id,
+        .source = source,
+        .destination = mutable_expression,
+        .value = value,
+        .is_pod = is_pod,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_return(ast_expr_t **out_expr, source_t source, ast_expr_t *value, ast_expr_list_t last_minute){
-    *out_expr = malloc(sizeof(ast_expr_return_t));
-    ((ast_expr_return_t*) *out_expr)->id = EXPR_RETURN;
-    ((ast_expr_return_t*) *out_expr)->source = source;
-    ((ast_expr_return_t*) *out_expr)->value = value;
-    ((ast_expr_return_t*) *out_expr)->last_minute = last_minute;
+ast_expr_t *ast_expr_create_return(source_t source, ast_expr_t *value, ast_expr_list_t last_minute){
+    ast_expr_return_t *expr = malloc(sizeof(ast_expr_return_t));
+    
+    *expr = (ast_expr_return_t){
+        .id = EXPR_RETURN,
+        .source = source,
+        .value = value,
+        .last_minute = last_minute,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_create_member(ast_expr_t **out_expr, ast_expr_t *value, strong_cstr_t member_name, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_member_t));
-    ((ast_expr_member_t*) *out_expr)->id = EXPR_MEMBER;
-    ((ast_expr_member_t*) *out_expr)->value = value;
-    ((ast_expr_member_t*) *out_expr)->member = member_name;
-    ((ast_expr_member_t*) *out_expr)->source = source;
+ast_expr_t *ast_expr_create_member(ast_expr_t *value, strong_cstr_t member_name, source_t source){
+    ast_expr_member_t *expr = malloc(sizeof(ast_expr_member_t));
+    
+    *expr = (ast_expr_member_t){
+        .id = EXPR_MEMBER,
+        .value = value,
+        .member = member_name,
+        .source = source,
+    };
+
+    return (ast_expr_t*) expr;
 }
                 
-void ast_expr_create_access(ast_expr_t **out_expr, ast_expr_t *value, ast_expr_t *index, source_t source){
-    *out_expr = malloc(sizeof(ast_expr_array_access_t));
-    ((ast_expr_array_access_t*) *out_expr)->id = EXPR_ARRAY_ACCESS;
-    ((ast_expr_array_access_t*) *out_expr)->source = source;
-    ((ast_expr_array_access_t*) *out_expr)->value = value;
-    ((ast_expr_array_access_t*) *out_expr)->index = index;
+ast_expr_t *ast_expr_create_access(ast_expr_t *value, ast_expr_t *index, source_t source){
+    ast_expr_array_access_t *expr = malloc(sizeof(ast_expr_array_access_t));
+    
+    *expr = (ast_expr_array_access_t){
+        .id = EXPR_ARRAY_ACCESS,
+        .source = source,
+        .value = value,
+        .index = index,
+    };
+
+    return (ast_expr_t*) expr;
 }
 
-void ast_expr_list_init(ast_expr_list_t *list, length_t initial_capacity){
-    if(initial_capacity == 0){
-        list->statements = NULL;
-    } else {
-        list->statements = malloc(sizeof(ast_expr_t*) * initial_capacity);
-    }
-    list->length = 0;
-    list->capacity = initial_capacity;
+ast_expr_list_t ast_expr_list_create(length_t initial_capacity){
+    return (ast_expr_list_t){
+        .statements = initial_capacity ? malloc(sizeof(ast_expr_t*) * initial_capacity) : NULL,
+        .length = 0,
+        .capacity = initial_capacity,
+    };
 }
 
 void ast_expr_list_free(ast_expr_list_t *list){
     ast_exprs_free_fully(list->statements, list->length);
 }
 
+void ast_expr_list_append_unchecked(ast_expr_list_t *list, ast_expr_t *expr){
+    list->statements[list->length++] = expr;
+}
+
 ast_expr_list_t ast_expr_list_clone(ast_expr_list_t *list){
-    ast_expr_list_t result;
-    result.statements = malloc(sizeof(ast_expr_t*) * list->capacity);
-    result.length = list->length;
-    result.capacity = list->capacity;
+    ast_expr_list_t result = (ast_expr_list_t){
+        .statements = malloc(sizeof(ast_expr_t*) * list->capacity),
+        .length = list->length,
+        .capacity = list->capacity,
+    };
 
     for(length_t i = 0; i != result.length; i++){
         result.statements[i] = ast_expr_clone(list->statements[i]);
@@ -841,16 +930,16 @@ ast_expr_list_t ast_expr_list_clone(ast_expr_list_t *list){
 }
 
 optional_ast_expr_list_t optional_ast_expr_list_clone(optional_ast_expr_list_t *list){
-    optional_ast_expr_list_t result;
-
     if(list->has){
-        result.has = true;
-        result.value = ast_expr_list_clone(&list->value);
+        return (optional_ast_expr_list_t){
+            .has = true,
+            .value = ast_expr_list_clone(&list->value),
+        };
     } else {
-        result.has = false;
+        return (optional_ast_expr_list_t){
+            .has = false,
+        };
     }
-
-    return result;
 }
 
 errorcode_t ast_expr_deduce_to_size(ast_expr_t *expr, length_t *out_value){
@@ -935,18 +1024,19 @@ errorcode_t ast_expr_deduce_to_size(ast_expr_t *expr, length_t *out_value){
 }
 
 ast_case_t ast_case_clone(ast_case_t *original){
-    ast_case_t result;
-    result.condition = ast_expr_clone(original->condition);
-    result.statements = ast_expr_list_clone(&original->statements);
-    result.source = original->source;
-    return result;
+    return (ast_case_t){
+        .condition = ast_expr_clone(original->condition),
+        .statements = ast_expr_list_clone(&original->statements),
+        .source = original->source,
+    };
 }
 
 ast_case_list_t ast_case_list_clone(ast_case_list_t *original){
-    ast_case_list_t result;
-    result.cases = malloc(sizeof(ast_case_t) * original->capacity);
-    result.length = original->length;
-    result.capacity = original->capacity;
+    ast_case_list_t result = (ast_case_list_t){
+        .cases = malloc(sizeof(ast_case_t) * original->capacity),
+        .length = original->length,
+        .capacity = original->capacity,
+    };
 
     for(length_t i = 0; i != result.length; i++){
         result.cases[i] = ast_case_clone(&original->cases[i]);

@@ -86,23 +86,23 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
         LITERAL_TO_EXPR(ast_expr_generic_float_t, EXPR_GENERIC_FLOAT, adept_generic_float);
         break;
     case TOKEN_TRUE:
-        ast_expr_create_bool(out_expr, true, sources[(*i)++]);
+        *out_expr = ast_expr_create_bool(true, sources[(*i)++]);
         break;
     case TOKEN_FALSE:
-        ast_expr_create_bool(out_expr, false, sources[(*i)++]);
+        *out_expr = ast_expr_create_bool(false, sources[(*i)++]);
         break;
     case TOKEN_CSTRING:
-        ast_expr_create_cstring(out_expr, (char*) tokens[*i].data, sources[*i]);
+        *out_expr = ast_expr_create_cstring((char*) tokens[*i].data, sources[*i]);
         *i += 1;
         break;
     case TOKEN_STRING: {
             token_string_data_t *string_data = (token_string_data_t*) tokens[*i].data;
-            ast_expr_create_string(out_expr, string_data->array, string_data->length, sources[*i]);
+            *out_expr = ast_expr_create_string(string_data->array, string_data->length, sources[*i]);
             *i += 1;
         }
         break;
     case TOKEN_NULL:
-        ast_expr_create_null(out_expr, sources[(*i)++]);
+        *out_expr = ast_expr_create_null(sources[(*i)++]);
         break;
     case TOKEN_WORD:
         if(parse_expr_word(ctx, out_expr)) return FAILURE;
@@ -202,27 +202,27 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
 
             switch(value->id){
              case META_EXPR_UNDEF: case META_EXPR_NULL:
-                ast_expr_create_null(out_expr, sources[*i - 1]);
+                *out_expr = ast_expr_create_null(sources[*i - 1]);
                 break;
             case META_EXPR_TRUE:
-                ast_expr_create_bool(out_expr, true, sources[*i - 1]);
+                *out_expr = ast_expr_create_bool(true, sources[*i - 1]);
                 break;
             case META_EXPR_FALSE:
-                ast_expr_create_bool(out_expr, false, sources[*i - 1]);
+                *out_expr = ast_expr_create_bool(false, sources[*i - 1]);
                 break;
             case META_EXPR_STR: {
                     meta_expr_str_t *str = (meta_expr_str_t*) value;
-                    ast_expr_create_string(out_expr, str->value, strlen(str->value), sources[*i - 1]);
+                    *out_expr = ast_expr_create_string(str->value, strlen(str->value), sources[*i - 1]);
                 }
                 break;
             case META_EXPR_INT: {
                     meta_expr_int_t *integer = (meta_expr_int_t*) value;
-                    ast_expr_create_long(out_expr, integer->value, sources[*i - 1]);
+                    *out_expr = ast_expr_create_long(integer->value, sources[*i - 1]);
                 }
                 break;
             case META_EXPR_FLOAT: {
                     meta_expr_float_t *floating_point = (meta_expr_float_t*) value;
-                    ast_expr_create_double(out_expr, floating_point->value, sources[*i - 1]);
+                    *out_expr = ast_expr_create_double(floating_point->value, sources[*i - 1]);
                 }
                 break;
             default:
@@ -288,7 +288,7 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             ast_type_t type;
             if(parse_type(ctx, &type)) return FAILURE;
 
-            ast_expr_create_typenameof(out_expr, type, source);
+            *out_expr = ast_expr_create_typenameof(type, source);
         }
         break;
     case TOKEN_EMBED: {
@@ -297,8 +297,7 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             maybe_null_weak_cstr_t filename = parse_eat_string(ctx, "Expected filename after 'embed' keyword");
             if(filename == NULL) return FAILURE;
 
-            strong_cstr_t local_filename = filename_local(ctx->object->filename, filename);
-            ast_expr_create_embed(out_expr, /*pass ownership*/ local_filename, source);
+            *out_expr = ast_expr_create_embed(filename_local(ctx->object->filename, filename), source);
         }
         break;
     default:
@@ -336,7 +335,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     return FAILURE;
                 }
 
-                ast_expr_create_access(inout_expr, *inout_expr, index_expr, source);
+                *inout_expr = ast_expr_create_access(*inout_expr, index_expr, source);
             }
             break;
         case TOKEN_MEMBER: {
@@ -403,7 +402,7 @@ errorcode_t parse_expr_post(parse_ctx_t *ctx, ast_expr_t **inout_expr){
                     strong_cstr_t member_name = (char*) parse_ctx_peek_data_take(ctx);
 
                     // Member access expression
-                    ast_expr_create_member(inout_expr, *inout_expr, member_name, source);
+                    *inout_expr = ast_expr_create_member(*inout_expr, member_name, source);
                     *i += 1;
                 }
             }
@@ -567,7 +566,7 @@ static errorcode_t parse_expr_ternary(parse_ctx_t *ctx, ast_expr_t **inout_condi
     }
 
     // Construct and yield ternary expression
-    ast_expr_create_ternary(inout_condition, *inout_condition, expr_a, expr_b, source);
+    *inout_condition = ast_expr_create_ternary(*inout_condition, expr_a, expr_b, source);
     return SUCCESS;
 
 failure:
@@ -721,7 +720,7 @@ errorcode_t parse_expr_word(parse_ctx_t *ctx, ast_expr_t **out_expr){
     }
 
     weak_cstr_t variable_name = tokens[*i].data;
-    ast_expr_create_variable(out_expr, variable_name, ctx->tokenlist->sources[(*i)++]);
+    *out_expr = ast_expr_create_variable(variable_name, ctx->tokenlist->sources[(*i)++]);
     return SUCCESS;
 }
 
@@ -780,7 +779,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr, bool allow_
         memset(&gives, 0, sizeof(ast_type_t));
     }
 
-    ast_expr_create_call(out_expr, name, arity, args, is_tentative, &gives, source);
+    *out_expr = ast_expr_create_call(name, arity, args, is_tentative, &gives, source);
     return SUCCESS;
 }
 
@@ -791,8 +790,7 @@ errorcode_t parse_expr_arguments(parse_ctx_t *ctx, ast_expr_t ***out_args, lengt
     token_t *tokens = ctx->tokenlist->tokens;
     length_t *i = ctx->i;
 
-    ast_expr_list_t args;
-    ast_expr_list_init(&args, 0);
+    ast_expr_list_t args = ast_expr_list_create(0);
 
     while(tokens[*i].id != TOKEN_CLOSE){
         ast_expr_t *arg_expr;
@@ -843,7 +841,7 @@ errorcode_t parse_expr_enum_value(parse_ctx_t *ctx, ast_expr_t **out_expr){
     weak_cstr_t kind_name = parse_eat_word(ctx, "Expected enum value name after '::' operator");
     if(kind_name == NULL) return FAILURE;
 
-    ast_expr_create_enum_value(out_expr, enum_name, kind_name, source);
+    *out_expr = ast_expr_create_enum_value(enum_name, kind_name, source);
     return SUCCESS;
 }
 
@@ -1013,7 +1011,7 @@ errorcode_t parse_expr_as(parse_ctx_t *ctx, ast_expr_t **inout_expr){
     ast_type_t to;
     if(parse_type(ctx, &to)) return FAILURE;
 
-    ast_expr_create_cast(inout_expr, to, *inout_expr, source);
+    *inout_expr = ast_expr_create_cast(to, *inout_expr, source);
     return SUCCESS;
 }
 
@@ -1284,7 +1282,7 @@ errorcode_t parse_expr_def(parse_ctx_t *ctx, ast_expr_t **out_expr){
         }
     }
 
-    ast_expr_create_declaration(out_expr, expr_id, source, name, type, traits, value, NO_AST_EXPR_LIST);
+    *out_expr = ast_expr_create_declaration(expr_id, source, name, type, traits, value, NO_AST_EXPR_LIST);
     return SUCCESS;
 }
 

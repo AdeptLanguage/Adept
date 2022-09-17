@@ -24,9 +24,9 @@ typedef struct defer_scope {
     trait_t traits;
 } defer_scope_t;
 
-// ------------------ defer_scope_init ------------------
+// ------------------ defer_scope_create ------------------
 // Initializes a defer scope
-void defer_scope_init(defer_scope_t *defer_scope, defer_scope_t *parent, weak_cstr_t label, trait_t traits);
+defer_scope_t defer_scope_create(defer_scope_t *parent, weak_cstr_t label, trait_t traits);
 
 // ------------------ defer_scope_free ------------------
 // Frees a defer scope
@@ -49,6 +49,10 @@ void defer_scope_fulfill_by_cloning(defer_scope_t *defer_scope, ast_expr_list_t 
 // Fulfill current scope's deferred statements and duplicate parent scopes' deferred statements that would
 // normally be skipped over by 'break' or 'continue'
 void defer_scope_rewind(defer_scope_t *defer_scope, ast_expr_list_t *stmt_list, trait_t scope_trait, weak_cstr_t label);
+
+// ------------------ defer_scope_unwind_completely ------------------
+// Pure function that returns a new AST expression list of a defer scope and its ancestors unwound
+ast_expr_list_t defer_scope_unwind_completely(defer_scope_t *defer_scope);
 
 // ------------------ parse_stmts ------------------
 // Parses one or more statements into two lists.
@@ -102,7 +106,7 @@ errorcode_t parse_mid_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *
 // ------------------ parse_ambiguous_open_bracket ------------------
 // This function is used to disambiguate between the two following syntaxes:
 // variable[value] ... 
-// vairable [value] Type
+// variable [value] Type
 // And then injects the values along the way into the proper context
 // Must also handle cases like:
 // variable[value][value] ...

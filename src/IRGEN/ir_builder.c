@@ -2446,32 +2446,20 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     func->arg_type_traits[0] = AST_FUNC_ARG_TYPE_TRAIT_POD;
     func->arg_type_traits[1] = AST_FUNC_ARG_TYPE_TRAIT_POD;
     func->arity = 2;
-
-    length_t num_stmts = field_map.arrows_length;
-    
-    func->statements = (ast_expr_list_t){
-        .statements = malloc(sizeof(ast_expr_list_t*) * num_stmts),
-        .length = num_stmts,
-        .capacity = num_stmts,
-    };
-
+    func->statements = ast_expr_list_create(field_map.arrows_length);
     func->return_type = ast_type_make_base(strclone("void"));
 
     // Generate assignment statements
     for(length_t i = 0; i != field_map.arrows_length; i++){
         weak_cstr_t member = field_map.arrows[i].name;
 
-        // this.member = other.member
+        ast_expr_t *this_value = ast_expr_create_variable("this", NULL_SOURCE);
+        ast_expr_t *other_value = ast_expr_create_variable("$", NULL_SOURCE);
 
-        ast_expr_t *this_value, *other_value;
-        ast_expr_create_variable(&this_value, "this", NULL_SOURCE);
-        ast_expr_create_variable(&other_value, "$", NULL_SOURCE);
+        ast_expr_t *this_member = ast_expr_create_member(this_value, strclone(member), NULL_SOURCE);
+        ast_expr_t *other_member = ast_expr_create_member(other_value, strclone(member), NULL_SOURCE);
 
-        ast_expr_t *this_member, *other_member;
-        ast_expr_create_member(&this_member, this_value, strclone(member), NULL_SOURCE);
-        ast_expr_create_member(&other_member, other_value, strclone(member), NULL_SOURCE);
-
-        ast_expr_create_assignment(&func->statements.statements[i], EXPR_ASSIGN, NULL_SOURCE, this_member, other_member, false);
+        ast_expr_list_append(&func->statements, ast_expr_create_assignment(EXPR_ASSIGN, NULL_SOURCE, this_member, other_member, false));
     }
 
     // Create IR function

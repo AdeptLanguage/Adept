@@ -10,13 +10,12 @@
 
 static void TEST_ast_expr_call_str_1(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = false;
     length_t args_length = 0;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("function_name"), args_length, args, is_tentative, NULL, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("function_name"), args_length, args, is_tentative, NULL, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -29,14 +28,14 @@ static void TEST_ast_expr_call_str_1(CuTest *test){
 
 static void TEST_ast_expr_call_str_2(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = false;
     length_t args_length = 1;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_expr_create_long(&args[0], 12345, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(12345, NULL_SOURCE);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("f"), args_length, args, is_tentative, NULL, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("f"), args_length, args, is_tentative, NULL, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -49,15 +48,15 @@ static void TEST_ast_expr_call_str_2(CuTest *test){
 
 static void TEST_ast_expr_call_str_3(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = false;
     length_t args_length = 2;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_expr_create_long(&args[0], 12345, NULL_SOURCE);
-    ast_expr_create_long(&args[1], 67890, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(12345, NULL_SOURCE);
+    args[1] = ast_expr_create_long(67890, NULL_SOURCE);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("iAmAFunction"), args_length, args, is_tentative, NULL, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("iAmAFunction"), args_length, args, is_tentative, NULL, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -70,16 +69,16 @@ static void TEST_ast_expr_call_str_3(CuTest *test){
 
 static void TEST_ast_expr_call_str_4(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = false;
     length_t args_length = 3;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_expr_create_long(&args[0], 12345, NULL_SOURCE);
-    ast_expr_create_long(&args[1], 67890, NULL_SOURCE);
-    ast_expr_create_long(&args[2], 246810, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(12345, NULL_SOURCE);
+    args[1] = ast_expr_create_long(67890, NULL_SOURCE);
+    args[2] = ast_expr_create_long(246810, NULL_SOURCE);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("argargarg"), args_length, args, is_tentative, NULL, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("argargarg"), args_length, args, is_tentative, NULL, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -92,16 +91,16 @@ static void TEST_ast_expr_call_str_4(CuTest *test){
 
 static void TEST_ast_expr_call_str_5(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = true;
     length_t args_length = 3;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_expr_create_long(&args[0], 12345, NULL_SOURCE);
-    ast_expr_create_long(&args[1], 67890, NULL_SOURCE);
-    ast_expr_create_long(&args[2], 246810, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(12345, NULL_SOURCE);
+    args[1] = ast_expr_create_long(67890, NULL_SOURCE);
+    args[2] = ast_expr_create_long(246810, NULL_SOURCE);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("threeArgs_tentative"), args_length, args, is_tentative, NULL, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("threeArgs_tentative"), args_length, args, is_tentative, NULL, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -114,17 +113,17 @@ static void TEST_ast_expr_call_str_5(CuTest *test){
 
 static void TEST_ast_expr_call_str_6(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = false;
     length_t args_length = 3;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
     ast_type_t gives = ast_type_make_base(strclone("ResultingType"));
-    ast_expr_create_long(&args[0], 12345, NULL_SOURCE);
-    ast_expr_create_long(&args[1], 67890, NULL_SOURCE);
-    ast_expr_create_long(&args[2], 246810, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(12345, NULL_SOURCE);
+    args[1] = ast_expr_create_long(67890, NULL_SOURCE);
+    args[2] = ast_expr_create_long(246810, NULL_SOURCE);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("request_return_type"), args_length, args, is_tentative, &gives, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("request_return_type"), args_length, args, is_tentative, &gives, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -137,17 +136,17 @@ static void TEST_ast_expr_call_str_6(CuTest *test){
 
 static void TEST_ast_expr_call_str_7(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = true;
     length_t args_length = 3;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
     ast_type_t gives = ast_type_make_base(strclone("ResultingType"));
-    ast_expr_create_long(&args[0], 11111, NULL_SOURCE);
-    ast_expr_create_long(&args[1], 22222, NULL_SOURCE);
-    ast_expr_create_long(&args[2], 33333, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(11111, NULL_SOURCE);
+    args[1] = ast_expr_create_long(22222, NULL_SOURCE);
+    args[2] = ast_expr_create_long(33333, NULL_SOURCE);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("three_args_tentative_and_giving"), args_length, args, is_tentative, &gives, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("three_args_tentative_and_giving"), args_length, args, is_tentative, &gives, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -160,15 +159,15 @@ static void TEST_ast_expr_call_str_7(CuTest *test){
 
 static void TEST_ast_expr_call_str_8(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = true;
     length_t args_length = 1;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
     ast_type_t gives = ast_type_make_base(strclone("Return"));
-    ast_expr_create_long(&args[0], 13579, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(13579, NULL_SOURCE);
 
     // Create call expression
-    ast_expr_create_call(&call_expr, strclone("tentative_and_gives_with_single_arg"), args_length, args, is_tentative, &gives, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(strclone("tentative_and_gives_with_single_arg"), args_length, args, is_tentative, &gives, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);
@@ -181,11 +180,11 @@ static void TEST_ast_expr_call_str_8(CuTest *test){
 
 static void TEST_ast_expr_call_str_9(CuTest *test){
     // Parameters
-    ast_expr_t *call_expr = NULL;
     bool is_tentative = false;
     length_t args_length = 1;
     ast_expr_t **args = malloc(sizeof(ast_expr_t*) * args_length);
-    ast_expr_create_long(&args[0], 12345, NULL_SOURCE);
+
+    args[0] = ast_expr_create_long(12345, NULL_SOURCE);
 
     // Test using super long function name
     length_t function_name_length = 1234567;
@@ -197,7 +196,7 @@ static void TEST_ast_expr_call_str_9(CuTest *test){
 
     // Create call expression
     strong_cstr_t expected = mallocandsprintf("%s(12345sl)", function_name);
-    ast_expr_create_call(&call_expr, function_name, args_length, args, is_tentative, NULL, NULL_SOURCE);
+    ast_expr_t *call_expr = ast_expr_create_call(function_name, args_length, args, is_tentative, NULL, NULL_SOURCE);
 
     // Validate stringified representation
     strong_cstr_t actual = ast_expr_str(call_expr);

@@ -491,35 +491,39 @@ void ast_exprs_free_fully(ast_expr_t **expr, length_t length);
 // Clones an expression, producing a duplicate
 ast_expr_t *ast_expr_clone(ast_expr_t* expr);
 
+// ---------------- ast_expr_clone_if_not_null ----------------
+// If `expr` is NULL, then NULL otherwise clones an expression, producing a duplicate
+ast_expr_t *ast_expr_clone_if_not_null(ast_expr_t *expr);
+
 // ---------------- ast_expr_create_bool ----------------
 // Creates a boolean expression
-void ast_expr_create_bool(ast_expr_t **out_expr, adept_bool value, source_t source);
+ast_expr_t *ast_expr_create_bool(adept_bool value, source_t source);
 
 // ---------------- ast_expr_create_long ----------------
 // Creates a long expression
-void ast_expr_create_long(ast_expr_t **out_expr, adept_long value, source_t source);
+ast_expr_t *ast_expr_create_long(adept_long value, source_t source);
 
 // ---------------- ast_expr_create_double ----------------
 // Creates a double expression
-void ast_expr_create_double(ast_expr_t **out_expr, adept_double value, source_t source);
+ast_expr_t *ast_expr_create_double(adept_double value, source_t source);
 
 // ---------------- ast_expr_create_string ----------------
 // Creates a string expression
-void ast_expr_create_string(ast_expr_t **out_expr, char *array, length_t length, source_t source);
+ast_expr_t *ast_expr_create_string(char *array, length_t length, source_t source);
 
 // ---------------- ast_expr_create_cstring ----------------
 // Creates a cstring expression
-void ast_expr_create_cstring(ast_expr_t **out_expr, char *value, source_t source);
+ast_expr_t *ast_expr_create_cstring(char *value, source_t source);
 
 // ---------------- ast_expr_create_null ----------------
 // Creates a null expression
-void ast_expr_create_null(ast_expr_t **out_expr, source_t source);
+ast_expr_t *ast_expr_create_null(source_t source);
 
 // ---------------- ast_expr_create_call ----------------
 // Creates a call expression
 // NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
 //       to indicate no return matching
-void ast_expr_create_call(ast_expr_t **out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
+ast_expr_t *ast_expr_create_call(strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
 
 // ---------------- ast_expr_create_call_in_place ----------------
 // Creates a call expression without allocating memory on the heap
@@ -531,51 +535,49 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
 // Creates a call method expression
 // NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
 //       to indicate no return matching
-void ast_expr_create_call_method(ast_expr_t **out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source);
+ast_expr_t *ast_expr_create_call_method(strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source);
 
 // ---------------- ast_expr_create_call_method_in_place ----------------
 // Creates a call method expression without allocating memory on the heap
 // NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
 //       to indicate no return matching
-void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, strong_cstr_t name, ast_expr_t *value,
-        length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source);
+void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source);
 
 // ---------------- ast_expr_create_variable ----------------
 // Creates a variable expression
-void ast_expr_create_variable(ast_expr_t **out_expr, weak_cstr_t name, source_t source);
+ast_expr_t *ast_expr_create_variable(weak_cstr_t name, source_t source);
 
 // ---------------- ast_expr_create_enum_value ----------------
 // Creates an enum value expression
-void ast_expr_create_enum_value(ast_expr_t **out_expr, weak_cstr_t name, weak_cstr_t kind, source_t source);
+ast_expr_t *ast_expr_create_enum_value(weak_cstr_t name, weak_cstr_t kind, source_t source);
 
 // ---------------- ast_expr_create_ternary ----------------
 // Creates a ternary expression
-void ast_expr_create_ternary(ast_expr_t **out_expr, ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source);
+ast_expr_t *ast_expr_create_ternary(ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source);
 
 // ---------------- ast_expr_create_cast ----------------
 // Creates a cast expression
-void ast_expr_create_cast(ast_expr_t **out_expr, ast_type_t to, ast_expr_t *from, source_t source);
+ast_expr_t *ast_expr_create_cast(ast_type_t to, ast_expr_t *from, source_t source);
 
 // ---------------- ast_expr_create_phantom ----------------
 // Creates a phantom expression
 // NOTE: Ownership of 'ast_type' will be taken
-void ast_expr_create_phantom(ast_expr_t **out_expr, ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable);
+ast_expr_t *ast_expr_create_phantom(ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable);
 
 // ---------------- ast_expr_create_typenameof ----------------
 // Creates a typenameof expression
 // NOTE: Ownership of 'strong_type' will be taken
-void ast_expr_create_typenameof(ast_expr_t **out_expr, ast_type_t strong_type, source_t source);
+ast_expr_t *ast_expr_create_typenameof(ast_type_t strong_type, source_t source);
 
 // ---------------- ast_expr_create_embed ----------------
 // Creates an embed expression
 // NOTE: Ownership of 'filename' will be taken
-void ast_expr_create_embed(ast_expr_t **out_expr, strong_cstr_t filename, source_t source);
+ast_expr_t *ast_expr_create_embed(strong_cstr_t filename, source_t source);
 
 // ---------------- ast_expr_create_declaration ----------------
 // Creates a declare expression
 // NOTE: Ownership of 'type', 'value', and 'inputs' will be taken
-void ast_expr_create_declaration(
-    ast_expr_t **out_expr,
+ast_expr_t *ast_expr_create_declaration(
     unsigned int expr_id,
     source_t source,
     weak_cstr_t name,
@@ -588,28 +590,28 @@ void ast_expr_create_declaration(
 // ---------------- ast_expr_create_assignment ----------------
 // Creates an assign expression
 // NOTE: Ownership of 'mutable_expression' and 'value' will be taken
-void ast_expr_create_assignment(ast_expr_t **out_expr, unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod);
+ast_expr_t *ast_expr_create_assignment(unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod);
 
 // ---------------- ast_expr_create_return ----------------
 // Creates a return statement
 // NOTE: Ownership of 'value' and 'last_minute' will be taken
-void ast_expr_create_return(ast_expr_t **out_expr, source_t source, ast_expr_t *value, ast_expr_list_t last_minute);
+ast_expr_t *ast_expr_create_return(source_t source, ast_expr_t *value, ast_expr_list_t last_minute);
 
 // ---------------- ast_expr_create_member ----------------
 // Creates a member expression
 // NOTE: Ownership of 'value' and 'member_name' will be taken
-void ast_expr_create_member(ast_expr_t **out_expr, ast_expr_t *value, strong_cstr_t member_name, source_t source);
+ast_expr_t *ast_expr_create_member(ast_expr_t *value, strong_cstr_t member_name, source_t source);
 
 // ---------------- ast_expr_create_access ----------------
 // Creates an array access expression
 // NOTE: Ownership of 'value' and 'index' will be taken
-void ast_expr_create_access(ast_expr_t **out_expr, ast_expr_t *value, ast_expr_t *index, source_t source);
+ast_expr_t *ast_expr_create_access(ast_expr_t *value, ast_expr_t *index, source_t source);
 
-// ---------------- ast_expr_list_init ----------------
-// Initializes an ast_expr_list_t with a given capacity
-void ast_expr_list_init(ast_expr_list_t *list, length_t initial_capacity);
+// ---------------- ast_expr_list_create ----------------
+// Creates an ast_expr_list_t with a given capacity
+ast_expr_list_t ast_expr_list_create(length_t initial_capacity);
 
-// ---------------- ast_expr_list_init ----------------
+// ---------------- ast_expr_list_create ----------------
 // Frees an ast_expr_list_t
 // All contained expressions will be fully freed
 void ast_expr_list_free(ast_expr_list_t *list);
@@ -617,6 +619,10 @@ void ast_expr_list_free(ast_expr_list_t *list);
 // ---------------- ast_expr_list_append ----------------
 // Appends an expression to an ast_expr_list_t
 #define ast_expr_list_append(LIST, VALUE) list_append((LIST), (VALUE), ast_expr_t*)
+
+// ---------------- ast_expr_list_append_unchecked ----------------
+// Assumes enough space exists for another item and appends an expression to an ast_expr_list_t
+void ast_expr_list_append_unchecked(ast_expr_list_t *list, ast_expr_t *expr);
 
 // ---------------- ast_expr_list_clone ----------------
 // Deep-clones an AST expression list

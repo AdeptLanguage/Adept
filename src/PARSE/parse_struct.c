@@ -672,16 +672,9 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
         }
     }
 
-    length_t num_stmts = func->arity + 2;
+    func->statements = ast_expr_list_create(func->arity + 2);
 
-    func->statements = (ast_expr_list_t){
-        .statements = malloc(sizeof(ast_expr_t*) * num_stmts),
-        .length = num_stmts,
-        .capacity = num_stmts,
-    };
-
-    ast_expr_create_declaration(
-        &func->statements.statements[0],
+    ast_expr_list_append_unchecked(&func->statements, ast_expr_create_declaration(
         all_primitive ? EXPR_DECLAREUNDEF : EXPR_DECLARE,
         source,
         master_variable_name,
@@ -689,42 +682,31 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
         AST_EXPR_DECLARATION_POD | AST_EXPR_DECLARATION_ASSIGN_POD,
         NULL,
         NO_AST_EXPR_LIST
-    );
+    ));
 
     for(length_t i = 0; i != func->arity; i++){
         weak_cstr_t field_name = field_map->arrows[i].name;
 
-        ast_expr_t *master;
-        ast_expr_create_variable(&master, master_variable_name, source);
+        ast_expr_t *master = ast_expr_create_variable(master_variable_name, source);
 
         // Member value
-        ast_expr_t *mutable_expression;
-        ast_expr_create_member(&mutable_expression, master, strclone(field_name), source);
+        ast_expr_t *mutable_expression = ast_expr_create_member(master, strclone(field_name), source);
 
         // Argument variable
-        ast_expr_t *variable;
-        ast_expr_create_variable(&variable, field_name, source);
+        ast_expr_t *variable = ast_expr_create_variable(field_name, source);
 
-        ast_expr_create_assignment(&func->statements.statements[i + 1], EXPR_ASSIGN, source, mutable_expression, variable, false);
+        ast_expr_list_append_unchecked(&func->statements, ast_expr_create_assignment(EXPR_ASSIGN, source, mutable_expression, variable, false));
     }
 
-    ast_expr_t *variable;
-    ast_expr_create_variable(&variable, master_variable_name, source);
-
-    ast_expr_list_t last_minute;
-    memset(&last_minute, 0, sizeof(ast_expr_list_t));
-
-    ast_expr_create_return(&func->statements.statements[func->arity + 1], source, variable, last_minute);
+    ast_expr_list_append_unchecked(
+        &func->statements,
+        ast_expr_create_return(source, ast_expr_create_variable(master_variable_name, source), (ast_expr_list_t){0})
+    );
 
     // Add function to polymorphic function registry if it's polymorphic
     if(is_polymorphic){
-        expand((void**) &ast->poly_funcs, sizeof(ast_poly_func_t), ast->poly_funcs_length, &ast->poly_funcs_capacity, 1, 4);
-
         func->traits |= AST_FUNC_POLYMORPHIC;
-        ast_poly_func_t *poly_func = &ast->poly_funcs[ast->poly_funcs_length++];
-        poly_func->name = func->name;
-        poly_func->ast_func_id = ast_func_id;
-        poly_func->is_beginning_of_group = -1; // Uncalculated
+        ast_add_poly_func(ast, func->name, ast_func_id);
     }
 
     return SUCCESS;

@@ -1389,7 +1389,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     if(stmt->list){
         if(ir_gen_expr(builder, stmt->list, &single_value, true, &single_type)) return FAILURE;
 
-        ast_expr_create_phantom((ast_expr_t**) &single_expr, single_type, single_value, stmt->list->source, expr_is_mutable(stmt->list));
+        single_expr = (ast_expr_phantom_t*) ast_expr_create_phantom(single_type, single_value, stmt->list->source, expr_is_mutable(stmt->list));
     }
     
     ir_value_t *fixed_array_value = NULL;

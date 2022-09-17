@@ -281,18 +281,14 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
     };
 
     for(length_t i = 0; i != arity; i++){
-        ast_expr_create_variable(&inputs.value.expressions[i], func->arg_names[i], NULL_SOURCE);
+        inputs.value.expressions[i] = ast_expr_create_variable(func->arg_names[i], NULL_SOURCE);
         func->arg_type_traits[i] = AST_FUNC_ARG_TYPE_TRAIT_POD;
     }
 
-    ast_expr_t *declare_and_construct_stmt;
-    ast_expr_create_declaration(&declare_and_construct_stmt, EXPR_DECLARE, source, "$", ast_type_clone(&this_pointee_type_view), AST_EXPR_DECLARATION_POD, NULL, inputs);
+    ast_expr_t *declare_and_construct_stmt = ast_expr_create_declaration(EXPR_DECLARE, source, "$", ast_type_clone(&this_pointee_type_view), AST_EXPR_DECLARATION_POD, NULL, inputs);
 
-    ast_expr_t *return_value;
-    ast_expr_create_variable(&return_value, "$", NULL_SOURCE);
-
-    ast_expr_t *return_stmt;
-    ast_expr_create_return(&return_stmt, NULL_SOURCE, return_value, (ast_expr_list_t){0});
+    ast_expr_t *return_value = ast_expr_create_variable("$", NULL_SOURCE);
+    ast_expr_t *return_stmt = ast_expr_create_return(NULL_SOURCE, return_value, (ast_expr_list_t){0});
 
     ast_expr_list_append(&func->statements, declare_and_construct_stmt);
     ast_expr_list_append(&func->statements, return_stmt);
@@ -374,9 +370,9 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
 
     if(parse_ignore_newlines(ctx, "Expected function body")) return FAILURE;
 
+    defer_scope_t defer_scope = defer_scope_create(NULL, NULL, TRAIT_NONE);
+
     ast_expr_list_t stmts;
-    defer_scope_t defer_scope;
-    defer_scope_init(&defer_scope, NULL, NULL, TRAIT_NONE);
 
     if(parse_ctx_peek(ctx) == TOKEN_ASSIGN){
         if(ast_type_is_void(&func->return_type)){
@@ -392,8 +388,8 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
         ast_expr_t *return_expression;
         if(parse_expr(ctx, &return_expression)) return FAILURE;
 
-        ast_expr_list_init(&stmts, 1);
-        ast_expr_create_return(&stmts.statements[stmts.length++], return_expression->source, return_expression, (ast_expr_list_t){0});
+        stmts = ast_expr_list_create(1);
+        ast_expr_list_append(&stmts, ast_expr_create_return(return_expression->source, return_expression, (ast_expr_list_t){0}));
         goto success;
     }
 
@@ -408,7 +404,7 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
 
     if(parse_eat(ctx, TOKEN_BEGIN, "Expected '{' after function prototype")) return FAILURE;
 
-    ast_expr_list_init(&stmts, 16);
+    stmts = ast_expr_list_create(16);
     ctx->func = func;
 
     if(parse_stmts(ctx, &stmts, &defer_scope, PARSE_STMTS_STANDARD)){
@@ -958,9 +954,13 @@ void parse_collapse_polycount_var_fixed_arrays(ast_type_t *types, length_t lengt
 
                     // Replace with unwrapped version
                     ast_elem_polycount_t *new_elem = (ast_elem_polycount_t*) malloc(sizeof(ast_elem_polycount_t));
-                    new_elem->id = AST_ELEM_POLYCOUNT;
-                    new_elem->source = source;
-                    new_elem->name = name;
+
+                    *new_elem = (ast_elem_polycount_t){
+                        .id =  AST_ELEM_POLYCOUNT,
+                        .source = source,
+                        .name = name,
+                    };
+
                     type->elements[i] = (ast_elem_t*) new_elem;
                 }
             }
