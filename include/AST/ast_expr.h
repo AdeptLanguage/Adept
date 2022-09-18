@@ -607,6 +607,44 @@ ast_expr_t *ast_expr_create_member(ast_expr_t *value, strong_cstr_t member_name,
 // NOTE: Ownership of 'value' and 'index' will be taken
 ast_expr_t *ast_expr_create_access(ast_expr_t *value, ast_expr_t *index, source_t source);
 
+// ---------------- ast_expr_create_va_arg ----------------
+// Creates a va_arg expression
+// NOTE: Ownership of 'va_list_value' and 'arg_type' will be taken
+ast_expr_t *ast_expr_create_va_arg(source_t source, ast_expr_t *va_list_value, ast_type_t arg_type);
+
+// ---------------- ast_expr_create_polycount ----------------
+// Creates a polycount expression
+ast_expr_t *ast_expr_create_polycount(source_t source, strong_cstr_t name);
+
+// ---------------- ast_expr_create_va_copy ----------------
+// Creates a va_copy statement
+ast_expr_t *ast_expr_create_va_copy(source_t source, ast_expr_t *dest_value, ast_expr_t *src_value);
+                
+// ---------------- ast_expr_create_for ----------------
+// Creates a for-loop statement
+ast_expr_t *ast_expr_create_for(source_t source, weak_cstr_t label, ast_expr_list_t before, ast_expr_list_t after, ast_expr_t *condition, ast_expr_list_t statements);
+
+// ---------------- ast_expr_create_unary ----------------
+// Creates a unary expression
+ast_expr_t *ast_expr_create_unary(unsigned int expr_id, source_t source, ast_expr_t *value);
+#define ast_expr_create_toggle(SOURCE, VALUE) ast_expr_create_unary(EXPR_TOGGLE, (SOURCE), (VALUE))
+#define ast_expr_create_pre_increment(SOURCE, VALUE) ast_expr_create_unary(EXPR_PREINCREMENT, (SOURCE), (VALUE))
+#define ast_expr_create_post_increment(SOURCE, VALUE) ast_expr_create_unary(EXPR_POSTINCREMENT, (SOURCE), (VALUE))
+#define ast_expr_create_pre_decrement(SOURCE, VALUE) ast_expr_create_unary(EXPR_PREDECREMENT, (SOURCE), (VALUE))
+#define ast_expr_create_post_decrement(SOURCE, VALUE) ast_expr_create_unary(EXPR_POSTDECREMENT, (SOURCE), (VALUE))
+
+// ---------------- ast_expr_create_initlist ----------------
+// Creates an initializer list expression
+ast_expr_t *ast_expr_create_initlist(source_t source, ast_expr_t **values, length_t length);
+
+// ---------------- ast_expr_create_math ----------------
+// Creates a math expression
+ast_expr_t *ast_expr_create_math(source_t source, unsigned int expr_id, ast_expr_t *left, ast_expr_t *right);
+
+// ---------------- ast_expr_create_switch ----------------
+// Creates a switch statement
+ast_expr_t *ast_expr_create_switch(source_t source, ast_expr_t *value, ast_case_list_t cases, ast_expr_list_t or_default, bool is_exhaustive);
+
 // ---------------- ast_expr_list_create ----------------
 // Creates an ast_expr_list_t with a given capacity
 ast_expr_list_t ast_expr_list_create(length_t initial_capacity);

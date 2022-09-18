@@ -899,6 +899,113 @@ ast_expr_t *ast_expr_create_access(ast_expr_t *value, ast_expr_t *index, source_
     return (ast_expr_t*) expr;
 }
 
+ast_expr_t *ast_expr_create_va_arg(source_t source, ast_expr_t *va_list_value, ast_type_t arg_type){
+    ast_expr_va_arg_t *expr = malloc(sizeof(ast_expr_va_arg_t));
+    
+    *expr = (ast_expr_va_arg_t){
+        .id = EXPR_VA_ARG,
+        .source = source,
+        .va_list = va_list_value,
+        .arg_type = arg_type,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_polycount(source_t source, strong_cstr_t name){
+    ast_expr_polycount_t *expr = malloc(sizeof(ast_expr_polycount_t));
+
+    *expr = (ast_expr_polycount_t){
+        .id = EXPR_POLYCOUNT,
+        .source = source,
+        .name = name,
+    };
+    
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_va_copy(source_t source, ast_expr_t *dest_value, ast_expr_t *src_value){
+    ast_expr_va_copy_t *expr = malloc(sizeof(ast_expr_va_copy_t));
+    
+    *expr = (ast_expr_va_copy_t){
+        .id = EXPR_VA_COPY,
+        .source = source,
+        .dest_value = dest_value,
+        .src_value = src_value,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_for(source_t source, weak_cstr_t label, ast_expr_list_t before, ast_expr_list_t after, ast_expr_t *condition, ast_expr_list_t statements){
+    ast_expr_for_t *expr = malloc(sizeof(ast_expr_for_t));
+
+    *expr = (ast_expr_for_t){
+        .id = EXPR_FOR,
+        .source = source,
+        .label = label,
+        .before = before,
+        .after = after,
+        .condition = condition,
+        .statements = statements,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_unary(unsigned int expr_id, source_t source, ast_expr_t *value){
+    ast_expr_unary_t *expr = malloc(sizeof(ast_expr_unary_t));
+    
+    *expr = (ast_expr_unary_t){
+        .id = expr_id,
+        .source = source,
+        .value = value,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_initlist(source_t source, ast_expr_t **values, length_t length){
+    ast_expr_initlist_t *expr = malloc(sizeof(ast_expr_initlist_t));
+
+    *expr = (ast_expr_initlist_t){
+        .id = EXPR_INITLIST,
+        .source = source,
+        .elements = values,
+        .length = length,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_math(source_t source, unsigned int expr_id, ast_expr_t *left, ast_expr_t *right){
+    ast_expr_math_t *expr = malloc(sizeof(ast_expr_math_t));
+    
+    *expr = (ast_expr_math_t){
+        .id = expr_id,
+        .source = source,
+        .a = left,
+        .b = right,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
+ast_expr_t *ast_expr_create_switch(source_t source, ast_expr_t *value, ast_case_list_t cases, ast_expr_list_t or_default, bool is_exhaustive){
+    ast_expr_switch_t *expr = malloc(sizeof(ast_expr_switch_t));
+    
+    *expr = (ast_expr_switch_t){
+        .id = EXPR_SWITCH,
+        .source = source,
+        .value = value,
+        .cases = cases,
+        .or_default = or_default,
+        .is_exhaustive = is_exhaustive,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
 ast_expr_list_t ast_expr_list_create(length_t initial_capacity){
     return (ast_expr_list_t){
         .statements = initial_capacity ? malloc(sizeof(ast_expr_t*) * initial_capacity) : NULL,

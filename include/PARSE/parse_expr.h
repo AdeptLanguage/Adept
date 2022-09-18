@@ -51,7 +51,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr, bool allow_
 // ------------------ parse_expr_arguments ------------------
 // Parses the arguments to a call
 // NOTE: 'out_capacity' may be NULL
-// NOTE: Should start inside the parantheses, with the first argument
+// NOTE: Should start inside the parentheses, with the first argument
 errorcode_t parse_expr_arguments(parse_ctx_t *ctx, ast_expr_t ***out_args, length_t *out_arity, length_t *out_capacity);
 
 // ------------------ parse_expr_enum_value ------------------
@@ -118,6 +118,10 @@ errorcode_t parse_expr_preincrement(parse_ctx_t *ctx, ast_expr_t **out_expr);
 // ------------------ parse_expr_predecrement ------------------
 // Parses a pre-decrement expression
 errorcode_t parse_expr_predecrement(parse_ctx_t *ctx, ast_expr_t **out_expr);
+
+// ------------------ parse_expr_unary_prefix ------------------
+// Parses a unary prefix operator for a mutable value
+errorcode_t parse_expr_mutable_unary_prefix(parse_ctx_t *ctx, unsigned int unary_expr_id, const char *readable_operator, ast_expr_t **out_expr);
 
 // ------------------ parse_expr_initlist ------------------
 // Parses an initializer list expression

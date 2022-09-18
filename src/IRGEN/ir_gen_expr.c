@@ -2920,7 +2920,7 @@ errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_inst
     // NOTE: Sets the instruction id to 'i_instr' if operating on intergers
     //       Sets the instruction id to 'f_instr' if operating on floats
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
-    // NOTE: Returns 1 if unsupported type
+    // NOTE: Returns FAILURE if unsupported type
 
     switch(ir_type_get_category(instruction->a->type)){
     case PRIMITIVE_UI:
@@ -2942,7 +2942,7 @@ errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned i
     //       Sets the instruction id to 's_instr' if operating on signed intergers
     //       Sets the instruction id to 'f_instr' if operating on floats
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
-    // NOTE: Returns 1 if unsupported type
+    // NOTE: Returns FAILURE if unsupported type
 
     switch(ir_type_get_category(instruction->a->type)){
     case PRIMITIVE_UI:

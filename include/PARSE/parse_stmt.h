@@ -25,7 +25,7 @@ typedef struct defer_scope {
 } defer_scope_t;
 
 // ------------------ defer_scope_create ------------------
-// Initializes a defer scope
+// Creates a defer scope
 defer_scope_t defer_scope_create(defer_scope_t *parent, weak_cstr_t label, trait_t traits);
 
 // ------------------ defer_scope_free ------------------
