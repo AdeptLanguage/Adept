@@ -78,7 +78,7 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
             if(parse_composite(ctx, true)) return FAILURE;
             break;
         case TOKEN_DEFINE:
-            if(parse_global_constant_definition(ctx)) return FAILURE;
+            if(parse_global_named_expression_definition(ctx)) return FAILURE;
             break;
         case TOKEN_WORD:
             if(ctx->compiler->traits & COMPILER_COLON_COLON && tokens[i + 1].id == TOKEN_ASSOCIATE){

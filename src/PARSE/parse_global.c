@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "AST/ast.h"
-#include "AST/ast_constant.h"
+#include "AST/ast_named_expression.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
@@ -53,33 +53,32 @@ errorcode_t parse_global(parse_ctx_t *ctx){
 
     parse_prepend_namespace(ctx, &name);
 
-    if(tokens[*i].id == TOKEN_EQUALS){
-        // Handle old style constant '==' syntax
+    if(parse_ctx_peek(ctx) == TOKEN_EQUALS){
+        // Handle old style named expression '==' syntax
 
-        if(parse_old_style_constant_global(ctx, name, source)){
+        if(parse_old_style_named_expression_global(ctx, name, source)){
             goto failure;
         }
 
         return SUCCESS;
     }
 
-    if(tokens[*i].id == TOKEN_POD){
+    if(parse_eat(ctx, TOKEN_POD, NULL) == SUCCESS){
         traits |= AST_GLOBAL_POD;
-        (*i)++;
     }
     
     if(parse_type(ctx, &type)) goto failure;
 
     if(parse_eat(ctx, TOKEN_ASSIGN, NULL) == SUCCESS){
         if(parse_eat(ctx, TOKEN_UNDEF, NULL) == SUCCESS){
-             // 'undef' does nothing for globals, so pretend like this is a plain definition
+            // 'undef' does nothing for globals, so pretend like this is a plain definition
         } else if(parse_expr(ctx, &initial_value)){
             goto failure;
         }
     }
 
-    if(tokens[*i].id != TOKEN_NEWLINE){
-        compiler_panicf(ctx->compiler, ctx->tokenlist->sources[*i], "Expected end-of-line after global variable definition");
+    if(parse_ctx_peek(ctx) != TOKEN_NEWLINE){
+        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Expected end-of-line after global variable definition");
         goto failure;
     }
 
@@ -89,25 +88,25 @@ errorcode_t parse_global(parse_ctx_t *ctx){
 failure:
     free(name);
     ast_type_free(&type);
-    if(initial_value) ast_expr_free_fully(initial_value);
+    ast_expr_free_fully(initial_value);
     return FAILURE;
 }
 
-errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_constant){
+errorcode_t parse_named_expression_definition(parse_ctx_t *ctx, ast_named_expression_t *out_named_expression){
     // define NAME = value
     //   ^
 
     // NOTE: Assumes first token is 'define' keyword
     source_t source = ctx->tokenlist->sources[(*ctx->i)++];
 
-    // Get the name of the constant value
+    // Parse name for the named expression
     strong_cstr_t name;
     
     if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){
         name = ctx->prename;
         ctx->prename = NULL;
     } else {
-        name = parse_take_word(ctx, "Expected name for constant definition after 'define' keyword");
+        name = parse_take_word(ctx, "Expected name for named expression definition after 'define' keyword");
     }
     if(name == NULL) return FAILURE;
 
@@ -115,12 +114,12 @@ errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_cons
     parse_prepend_namespace(ctx, &name);
 
     // Eat '='
-    if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after name of constant")){
+    if(parse_eat(ctx, TOKEN_ASSIGN, "Expected '=' after name of named expression")){
         free(name);
         return FAILURE;
     }
 
-    // Parse the expression of the constant
+    // Parse the expression of the named expression
     ast_expr_t *value;
     if(parse_expr(ctx, &value)){
         free(name);
@@ -128,59 +127,47 @@ errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_cons
     }
 
     if(parse_ctx_peek(ctx) != TOKEN_NEWLINE){
-        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Expected end-of-line after constant definition");
+        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Expected end-of-line after named expression definition");
         ast_expr_free_fully(value);
         free(name);
         return FAILURE;
     }
 
-    // Construct the new constant value
-    *out_constant = (ast_constant_t){
-        .name = name,
-        .expression = value,
-        .traits = TRAIT_NONE,
-        .source = source,
-    };
-
+    *out_named_expression = ast_named_expression_create(name, value, TRAIT_NONE, source);
     return SUCCESS;
 }
 
-errorcode_t parse_global_constant_definition(parse_ctx_t *ctx){
+errorcode_t parse_global_named_expression_definition(parse_ctx_t *ctx){
     ast_t *ast = ctx->ast;
 
-    ast_constant_t new_constant;
-    if(parse_constant_definition(ctx, &new_constant)) return FAILURE;
+    ast_named_expression_t new_named_expression;
+    if(parse_named_expression_definition(ctx, &new_named_expression)) return FAILURE;
 
-    ast_add_global_constant(ast, new_constant);
+    ast_add_global_named_expression(ast, new_named_expression);
     return SUCCESS;
 }
 
-errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, strong_cstr_t name, source_t source){
-    // SOME_CONSTANT == value
-    //               ^
+errorcode_t parse_old_style_named_expression_global(parse_ctx_t *ctx, strong_cstr_t name, source_t source){
+    // SOME_NAMED_EXPRESSION == value
+    //                       ^
 
     ast_t *ast = ctx->ast;
-    *(ctx->i) += 1;
+
+    *ctx->i += 1;
 
     ast_expr_t *value;
     if(parse_expr(ctx, &value)) return FAILURE;
-
-    expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
 
     // Prepend namespace name
     parse_prepend_namespace(ctx, &name);
 
     if(parse_ctx_peek(ctx) != TOKEN_NEWLINE){
-        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Expected end-of-line after constant expression definition");
+        compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Expected end-of-line after named expression definition");
         ast_expr_free_fully(value);
         free(name);
         return FAILURE;
     }
 
-    ast_constant_t *constant = &ast->constants[ast->constants_length++];
-    constant->name = name;
-    constant->expression = value;
-    constant->traits = TRAIT_NONE;
-    constant->source = source;
+    ast_named_expression_list_append(&ast->named_expressions, ast_named_expression_create(name, value, TRAIT_NONE, source));
     return SUCCESS;
 }

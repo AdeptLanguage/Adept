@@ -1,0 +1,14 @@
+
+import 'sys/cstdio.adept'
+import 'sys/cstdlib.adept'
+
+MY_NAMED_EXPRESSION == 7 * 3
+APPLICATION_NAME == 'Named Expressions Example Program'
+SOLVED_GENERIC_NAMED_EXPRESSION == 3
+
+func main(in argc int, in argv **ubyte) int {
+    printf('MY_NAMED_EXPRESSION = %d\n', MY_NAMED_EXPRESSION)
+    printf('APPLICATION_NAME = %s\n', APPLICATION_NAME)
+    printf('3.1415d + SOLVED_GENERIC_NAMED_EXPRESSION = %f\n', 3.1415d + SOLVED_GENERIC_NAMED_EXPRESSION)
+    return 0
+}

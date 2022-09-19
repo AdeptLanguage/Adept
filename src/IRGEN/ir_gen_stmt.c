@@ -515,7 +515,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
                 builder->break_continue_scope = prev_break_continue_scope;
             }
             break;
-        case EXPR_DECLARE_CONSTANT:
+        case EXPR_DECLARE_NAMED_EXPRESSION:
             // This statement was handled during the inference stage
             break;
         case EXPR_LLVM_ASM: {

@@ -4,7 +4,7 @@
 
 /*
     ================================== infer.h =================================
-    Module for infering generic expressions and resolving type aliases within
+    Module for inferring generic expressions and resolving type aliases within
     abstract syntax trees
     ----------------------------------------------------------------------------
 */
@@ -12,9 +12,9 @@
 #include <stdbool.h>
 
 #include "AST/ast.h"
-#include "AST/ast_constant.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
+#include "AST/ast_named_expression.h"
 #include "AST/ast_type_lean.h"
 #include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
@@ -42,9 +42,7 @@ typedef struct infer_var_scope_t {
     struct infer_var_scope_t *parent;
     infer_var_list_t list;
 
-    ast_constant_t *constants;
-    length_t constants_length;
-    length_t constants_capacity;
+    ast_named_expression_list_t named_expressions;
 } infer_var_scope_t;
 
 // ---------------- infer_ctx_t ----------------
@@ -53,7 +51,7 @@ typedef struct {
     object_t *object;
     ast_t *ast;
     type_table_t *type_table;
-    length_t constants_recursion_depth;
+    length_t named_expressions_recursion_depth;
     length_t aliases_recursion_depth;
     infer_var_scope_t *scope;
 } infer_ctx_t;
@@ -147,17 +145,17 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope);
 // Finds a variable mapping within an inference variable scope
 infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name);
 
-// ---------------- infer_var_scope_find_constant ----------------
-// Finds a constant expression mapping within an inference variable scope
-ast_constant_t* infer_var_scope_find_constant(infer_var_scope_t *scope, const char *name);
+// ---------------- infer_var_scope_find_named_expression ----------------
+// Finds a named expression mapping within an inference variable scope
+ast_named_expression_t* infer_var_scope_find_named_expression(infer_var_scope_t *scope, const char *name);
 
 // ---------------- infer_var_scope_add_variable ----------------
 // Adds a variables to an inference variable scope
 void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const);
 
-// ---------------- infer_var_scope_add_constant ----------------
-// Adds a constant expression mapping to an inference variable scope
-void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t strong_new_constant_data);
+// ---------------- infer_var_scope_add_named_expression ----------------
+// Adds a named expression mapping to an inference variable scope
+void infer_var_scope_add_named_expression(infer_var_scope_t *scope, ast_named_expression_t named_expression);
 
 // ---------------- infer_var_scope_nearest ----------------
 // Finds the nearest variable name to the given variable name

@@ -117,11 +117,11 @@ errorcode_t parse_ambiguous_open_bracket(parse_ctx_t *ctx, ast_expr_list_t *stmt
 // Parses an inline LLVM assembly statement
 errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
 
-// ------------------ parse_local_constant_declaration ------------------
-// Parses a local named constant expression declaration
+// ------------------ parse_local_named_expression_declaration ------------------
+// Parses a local named expression declaration
 // NOTE: Assumes 'stmt_list' has enough space for another statement
 // NOTE: expand() should be used on stmt_list to make room sometime before calling
-errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source);
+errorcode_t parse_local_named_expression_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source);
 
 // ------------------ parse_block_begin ------------------
 // Parses the token that begins a block

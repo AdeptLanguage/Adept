@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "AST/ast_constant.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_named_expression.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
@@ -136,7 +136,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
             }
             break;
         case TOKEN_DEFINE:
-            if(parse_local_constant_declaration(ctx, stmt_list, sources[*i])) return FAILURE;
+            if(parse_local_named_expression_declaration(ctx, stmt_list, sources[*i])) return FAILURE;
             break;
         case TOKEN_WORD: {
                 source = sources[(*i)++]; // Read ahead to see what type of statement this is
@@ -1479,21 +1479,16 @@ failure:
     return FAILURE;
 }
 
-errorcode_t parse_local_constant_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source){
+errorcode_t parse_local_named_expression_declaration(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, source_t source){
     // NOTE: Assumes 'stmt_list' has enough space for another statement
     // NOTE: expand() should've already been used on stmt_list to make room
-    
-    ast_constant_t constant;
 
-    // Parse constant
-    if(parse_constant_definition(ctx, &constant)) return FAILURE;
+    // Parse named expression
+    ast_named_expression_t named_expression;
+    if(parse_named_expression_definition(ctx, &named_expression)) return FAILURE;
 
-    // Turn into declare constant statement
-    ast_expr_declare_constant_t *stmt = malloc(sizeof(ast_expr_declare_constant_t));
-    stmt->id = EXPR_DECLARE_CONSTANT;
-    stmt->source = source;
-    stmt->constant = constant;
-    stmt_list->statements[stmt_list->length++] = (ast_expr_t*) stmt;
+    // Turn into declare named expression statement
+    ast_expr_list_append_unchecked(stmt_list, ast_expr_create_declare_named_expression(source, named_expression));
     return SUCCESS;
 }
 

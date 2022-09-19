@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "AST/ast_constant.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_named_expression.h"
 #include "AST/ast_type.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
@@ -591,16 +591,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_for
         #undef clone_as_for
-    case EXPR_DECLARE_CONSTANT:
-        #define expr_as_declare_constant ((ast_expr_declare_constant_t*) expr)
-        #define clone_as_declare_constant ((ast_expr_declare_constant_t*) clone)
+    case EXPR_DECLARE_NAMED_EXPRESSION:
+        #define expr_as_declare_named_expression ((ast_expr_declare_named_expression_t*) expr)
+        #define clone_as_declare_named_expression ((ast_expr_declare_named_expression_t*) clone)
 
-        clone = malloc(sizeof(ast_expr_declare_constant_t));
-        clone_as_declare_constant->constant = ast_constant_clone(&expr_as_declare_constant->constant);
+        clone = malloc(sizeof(ast_expr_declare_named_expression_t));
+        clone_as_declare_named_expression->named_expression = ast_named_expression_clone(&expr_as_declare_named_expression->named_expression);
         break;
 
-        #undef expr_as_declare_constant
-        #undef clone_as_declare_constant
+        #undef expr_as_declare_named_expression
+        #undef clone_as_declare_named_expression
     case EXPR_CONDITIONLESS_BLOCK:
         #define expr_as_block ((ast_expr_conditionless_block_t*) expr)
         #define clone_as_block ((ast_expr_conditionless_block_t*) clone)
@@ -1005,6 +1005,19 @@ ast_expr_t *ast_expr_create_switch(source_t source, ast_expr_t *value, ast_case_
 
     return (ast_expr_t*) expr;
 }
+
+ast_expr_t *ast_expr_create_declare_named_expression(source_t source, ast_named_expression_t named_expression){
+    ast_expr_declare_named_expression_t *expr = malloc(sizeof(ast_expr_declare_named_expression_t));
+
+    *expr = (ast_expr_declare_named_expression_t){
+        .id = EXPR_DECLARE_NAMED_EXPRESSION,
+        .source = source,
+        .named_expression = named_expression,
+    };
+
+    return (ast_expr_t*) expr;
+}
+
 
 ast_expr_list_t ast_expr_list_create(length_t initial_capacity){
     return (ast_expr_list_t){

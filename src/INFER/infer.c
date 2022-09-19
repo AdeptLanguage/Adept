@@ -30,7 +30,7 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
         .compiler = compiler,
         .object = object,
         .ast = ast,
-        .constants_recursion_depth = 0,
+        .named_expressions_recursion_depth = 0,
         .aliases_recursion_depth = 0,
         .scope = NULL,
     };
@@ -39,9 +39,9 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     type_table_init(ast->type_table);
     ctx.type_table = ast->type_table;
 
-    // Sort aliases and constants so we can binary search on them later
+    // Sort named expressions, aliases, and others so we can binary search on them later
+    ast_named_expression_list_sort(&ast->named_expressions);
     qsort(ast->aliases, ast->aliases_length, sizeof(ast_alias_t), ast_aliases_cmp);
-    qsort(ast->constants, ast->constants_length, sizeof(ast_constant_t), ast_constants_cmp);
     qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
     qsort(ast->globals, ast->globals_length, sizeof(ast_global_t), ast_globals_cmp);
 
@@ -400,12 +400,12 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 infer_var_scope_pop(ctx->compiler, &ctx->scope);
             }
             break;
-        case EXPR_DECLARE_CONSTANT: {
+        case EXPR_DECLARE_NAMED_EXPRESSION: {
+                ast_expr_declare_named_expression_t *declare_named_expression_stmt = (ast_expr_declare_named_expression_t*) stmt;
+
                 assert(ctx->scope);
 
-                ast_expr_declare_constant_t *declare_constant_stmt = (ast_expr_declare_constant_t*) stmt;
-
-                infer_var_scope_add_constant(ctx->scope, ast_constant_clone(&declare_constant_stmt->constant));
+                infer_var_scope_add_named_expression(ctx->scope, ast_named_expression_clone(&declare_named_expression_stmt->named_expression));
             }
             break;
         case EXPR_PREINCREMENT:
@@ -443,16 +443,16 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
         .solution = EXPR_NONE,
     };
 
-    length_t previous_constants_recursion_depth = ctx->constants_recursion_depth;
-    ctx->constants_recursion_depth = 0;
+    length_t previous_named_expressions_recursion_depth = ctx->named_expressions_recursion_depth;
+    ctx->named_expressions_recursion_depth = 0;
 
     if(infer_expr_inner(ctx, ast_func, root, &undetermined, must_be_mutable)){
-        ctx->constants_recursion_depth = previous_constants_recursion_depth;
+        ctx->named_expressions_recursion_depth = previous_named_expressions_recursion_depth;
         free(undetermined.expressions);
         return FAILURE;
     }
 
-    ctx->constants_recursion_depth = previous_constants_recursion_depth;
+    ctx->named_expressions_recursion_depth = previous_named_expressions_recursion_depth;
 
     if(undetermined.solution == EXPR_NONE){
         if(default_assigned_type == EXPR_NONE){
@@ -871,17 +871,15 @@ errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, as
         goto found_variable;
     }
 
-    // Search in local constants scope
-    ast_constant_t *constant = ctx->scope ? infer_var_scope_find_constant(ctx->scope, variable_name) : NULL;
-    if(constant) goto found_constant;
-    
-    // Search in global constants scope
-    maybe_index_t constant_index = ast_find_constant(ast->constants, ast->constants_length, variable_name);
+    ast_named_expression_t *named_expression;
 
-    if(constant_index != -1){
-        constant = &ast->constants[constant_index];
-        goto found_constant;
-    }
+    // Search for local named expression
+    named_expression = ctx->scope ? infer_var_scope_find_named_expression(ctx->scope, variable_name) : NULL;
+    if(named_expression) goto found_named_expression;
+    
+    // Search for global named expression
+    named_expression = ast_named_expression_list_find(&ast->named_expressions, variable_name);
+    if(named_expression) goto found_named_expression;
 
     // Couldn't find identifier
     compiler_panicf(ctx->compiler, (*expr)->source, "Undeclared variable '%s'", variable_name);
@@ -889,10 +887,10 @@ errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, as
     if(nearest) printf("\nDid you mean '%s'?\n", nearest);
     return FAILURE;
 
-found_constant:
-    // Constant does exist, substitute it's value
+found_named_expression:
+    // Named expression does exist, substitute it's value
 
-    if(ctx->constants_recursion_depth++ >= 100){
+    if(ctx->named_expressions_recursion_depth++ >= 100){
         compiler_panicf(ctx->compiler, (*expr)->source, "Recursion depth of 100 exceeded, most likely a circular definition");
         return FAILURE;
     }
@@ -900,8 +898,8 @@ found_constant:
     // DANGEROUS: Manually freeing variable expression
     free(*expr);
 
-    // Clone expression of named constant expression
-    *expr = ast_expr_clone(constant->expression);
+    // Clone expression of named expression
+    *expr = ast_expr_clone(named_expression->expression);
     if(infer_expr_inner(ctx, ast_func, (ast_expr_t**) expr, undetermined, false)) return FAILURE;
 
     return SUCCESS;
@@ -1304,12 +1302,8 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
 
 void infer_var_scope_init(infer_var_scope_t *out_scope, infer_var_scope_t *parent){
     out_scope->parent = parent;
-    out_scope->list.variables = NULL;
-    out_scope->list.length = 0;
-    out_scope->list.capacity = 0;
-    out_scope->constants = NULL;
-    out_scope->constants_length = 0;
-    out_scope->constants_capacity = 0;
+    out_scope->list = (infer_var_list_t){0};
+    out_scope->named_expressions = (ast_named_expression_list_t){0};
 }
 
 void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
@@ -1329,11 +1323,7 @@ void infer_var_scope_free(compiler_t *compiler, infer_var_scope_t *scope){
     }
 
     free(scope->list.variables);
-
-    if(scope->constants){
-        ast_free_constants(scope->constants, scope->constants_length);
-        free(scope->constants);
-    }
+    ast_named_expression_list_free(&scope->named_expressions);
 }
 
 void infer_var_scope_push(infer_var_scope_t **scope){
@@ -1365,15 +1355,13 @@ infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name){
     return scope->parent ? infer_var_scope_find(scope->parent, name) : NULL;
 }
 
-ast_constant_t* infer_var_scope_find_constant(infer_var_scope_t *scope, const char *name){
+ast_named_expression_t* infer_var_scope_find_named_expression(infer_var_scope_t *scope, const char *name){
     // If the scope has local constants, search through them
-    if(scope->constants_length != 0){
-        maybe_index_t index = ast_find_constant(scope->constants, scope->constants_length, name);
-        if(index != -1) return &scope->constants[index];
-    }
+    ast_named_expression_t *found = ast_named_expression_list_find(&scope->named_expressions, name);
+    if(found) return found;
 
     // Otherwise try in parent scope
-    return scope->parent ? infer_var_scope_find_constant(scope->parent, name) : NULL;
+    return scope->parent ? infer_var_scope_find_named_expression(scope->parent, name) : NULL;
 }
 
 void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const){
@@ -1390,16 +1378,8 @@ void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, as
     var->is_const = is_const;
 }
 
-void infer_var_scope_add_constant(infer_var_scope_t *scope, ast_constant_t constant){
-    expand((void**) &scope->constants, sizeof(ast_constant_t), scope->constants_length, &scope->constants_capacity, 1, 4);
-
-    length_t insert_position = find_insert_position(scope->constants, scope->constants_length, ast_constants_cmp, &constant, sizeof(ast_constant_t));
-
-    // Move other constants over, so that the list will be sorted
-    memmove(&scope->constants[insert_position + 1], &scope->constants[insert_position], sizeof(ast_constant_t) * (scope->constants_length - insert_position));
-
-    scope->constants[insert_position] = constant;
-    scope->constants_length++;
+void infer_var_scope_add_named_expression(infer_var_scope_t *scope, ast_named_expression_t named_expression){
+    ast_named_expression_list_insert_sorted(&scope->named_expressions, named_expression);
 }
 
 const char* infer_var_scope_nearest(infer_var_scope_t *scope, const char *name){

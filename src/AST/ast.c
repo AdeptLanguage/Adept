@@ -32,9 +32,7 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->aliases = malloc(sizeof(ast_alias_t) * 8);
     ast->aliases_length = 0;
     ast->aliases_capacity = 8;
-    ast->constants = NULL;
-    ast->constants_length = 0;
-    ast->constants_capacity = 0;
+    ast->named_expressions = (ast_named_expression_list_t){0};
     ast->globals = NULL;
     ast->globals_length = 0;
     ast->globals_capacity = 0;
@@ -178,7 +176,7 @@ void ast_free(ast_t *ast){
     ast_free_function_aliases(ast->func_aliases, ast->func_aliases_length);
     ast_free_composites(ast->composites, ast->composites_length);
     ast_free_globals(ast->globals, ast->globals_length);
-    ast_free_constants(ast->constants, ast->constants_length);
+    ast_named_expression_list_free(&ast->named_expressions);
     ast_free_aliases(ast->aliases, ast->aliases_length);
 
     for(length_t l = 0; l != ast->libraries_length; l++){
@@ -189,7 +187,6 @@ void ast_free(ast_t *ast){
     free(ast->funcs);
     free(ast->func_aliases);
     free(ast->composites);
-    free(ast->constants);
     free(ast->globals);
     free(ast->aliases);
     free(ast->libraries);
@@ -260,14 +257,6 @@ void ast_free_composites(ast_composite_t *composites, length_t composites_length
         ast_layout_free(&composite->layout);
         ast_type_free(&composite->parent);
         free(composite->name);
-    }
-}
-
-void ast_free_constants(ast_constant_t *constants, length_t constants_length){
-    for(length_t i = 0; i != constants_length; i++){
-        ast_constant_t *constant = &constants[i];
-        ast_expr_free_fully(constant->expression);
-        free(constant->name);
     }
 }
 
@@ -1045,24 +1034,6 @@ maybe_index_t ast_find_alias(ast_alias_t *aliases, length_t aliases_length, cons
     return -1;
 }
 
-maybe_index_t ast_find_constant(ast_constant_t *constants, length_t constants_length, const char *constant){
-    // If not found returns -1 else returns index inside array
-
-    maybe_index_t first, middle, last, comparison;
-    first = 0; last = constants_length - 1;
-
-    while(first <= last){
-        middle = (first + last) / 2;
-        comparison = strcmp(constants[middle].name, constant);
-
-        if(comparison == 0) return middle;
-        else if(comparison > 0) last = middle - 1;
-        else first = middle + 1;
-    }
-
-    return -1;
-}
-
 maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char *enum_name){
     // If not found returns -1 else returns index inside array
 
@@ -1145,10 +1116,8 @@ void ast_add_enum(ast_t *ast, strong_cstr_t name, weak_cstr_t *kinds, length_t l
     ast_enum_init(&ast->enums[ast->enums_length++], name, kinds, length, source);
 }
 
-void ast_add_global_constant(ast_t *ast, ast_constant_t new_constant){
-    // Make room for another constant
-    expand((void**) &ast->constants, sizeof(ast_constant_t), ast->constants_length, &ast->constants_capacity, 1, 8);
-    ast->constants[ast->constants_length++] = new_constant;
+void ast_add_global_named_expression(ast_t *ast, ast_named_expression_t named_expression){
+    ast_named_expression_list_append(&ast->named_expressions, named_expression);
 }
 
 void ast_add_poly_func(ast_t *ast, weak_cstr_t func_name_persistent, func_id_t ast_func_id){
@@ -1281,10 +1250,6 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
 
 int ast_aliases_cmp(const void *a, const void *b){
     return strcmp(((ast_alias_t*) a)->name, ((ast_alias_t*) b)->name);
-}
-
-int ast_constants_cmp(const void *a, const void *b){
-    return strcmp(((ast_constant_t*) a)->name, ((ast_constant_t*) b)->name);
 }
 
 int ast_enums_cmp(const void *a, const void *b){

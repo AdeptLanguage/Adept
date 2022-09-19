@@ -273,15 +273,12 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
 
     optional_ast_expr_list_t inputs = (optional_ast_expr_list_t){
         .has = true,
-        .value = (ast_expr_list_t){
-            .expressions = malloc(sizeof(ast_expr_t*) * arity),
-            .length = arity,
-            .capacity = arity,
-        },
+        .value = ast_expr_list_create(arity),
     };
 
     for(length_t i = 0; i != arity; i++){
-        inputs.value.expressions[i] = ast_expr_create_variable(func->arg_names[i], NULL_SOURCE);
+        ast_expr_list_append_unchecked(&inputs.value, ast_expr_create_variable(func->arg_names[i], NULL_SOURCE));
+
         func->arg_type_traits[i] = AST_FUNC_ARG_TYPE_TRAIT_POD;
     }
 

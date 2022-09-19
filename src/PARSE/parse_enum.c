@@ -45,16 +45,8 @@ errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign){
     if(is_foreign){
         // Automatically add defines so using the enum name is optional
         for(length_t i = 0; i != length; i++){
-            ast_expr_t *value= ast_expr_create_enum_value(name, kinds[i], source);
-
-            ast_constant_t auto_constant = (ast_constant_t){
-                .name = strclone(kinds[i]),
-                .expression = value,
-                .traits = TRAIT_NONE,
-                .source = source,
-            };
-
-            ast_add_global_constant(ctx->ast, auto_constant);
+            ast_expr_t *value = ast_expr_create_enum_value(name, kinds[i], source);
+            ast_add_global_named_expression(ctx->ast, ast_named_expression_create(strclone(kinds[i]), value, TRAIT_NONE, source));
         }
     }
 

@@ -176,8 +176,8 @@ static void ast_expr_for_free(ast_expr_for_t *expr){
     ast_expr_list_free(&expr->statements);
 }
 
-static void ast_expr_declare_constant_free(ast_expr_declare_constant_t *expr){
-    ast_free_constants(&expr->constant, 1);
+static void ast_expr_declare_named_expression_free(ast_expr_declare_named_expression_t *expr){
+    ast_named_expression_free(&expr->named_expression);
 }
 
 void ast_expr_free(ast_expr_t *expr){
@@ -331,8 +331,8 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_FOR:
         ast_expr_for_free((ast_expr_for_t*) expr);
         break;
-    case EXPR_DECLARE_CONSTANT:
-        ast_expr_declare_constant_free((ast_expr_declare_constant_t*) expr);
+    case EXPR_DECLARE_NAMED_EXPRESSION:
+        ast_expr_declare_named_expression_free((ast_expr_declare_named_expression_t*) expr);
         break;
     case EXPR_CONDITIONLESS_BLOCK:
         ast_expr_list_free(&((ast_expr_conditionless_block_t*) expr)->statements);

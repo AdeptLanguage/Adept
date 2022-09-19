@@ -15,7 +15,7 @@ extern "C" {
 #include "UTIL/trait.h"
 #include "UTIL/ground.h"
 #include "UTIL/datatypes.h"
-#include "AST/ast_constant.h"
+#include "AST/ast_named_expression.h"
 #include "AST/ast_type_lean.h"
 #include "AST/ast_expr_lean.h" // IWYU pragma: export
 #include "AST/EXPR/ast_expr_ids.h" // IWYU pragma: export
@@ -459,9 +459,9 @@ typedef struct {
     ast_expr_list_t statements;
 } ast_expr_for_t;
 
-// ---------------- ast_expr_declare_constant_t ----------------
-// Expression for declaring a constant expression
-typedef struct { DERIVE_AST_EXPR; ast_constant_t constant; } ast_expr_declare_constant_t;
+// ---------------- ast_expr_declare_named_expression_t ----------------
+// Expression for declaring a named expression
+typedef struct { DERIVE_AST_EXPR; ast_named_expression_t named_expression; } ast_expr_declare_named_expression_t;
 
 // ---------------- expr_is_mutable ----------------
 // Tests to see if the result of an expression will be mutable
@@ -644,6 +644,10 @@ ast_expr_t *ast_expr_create_math(source_t source, unsigned int expr_id, ast_expr
 // ---------------- ast_expr_create_switch ----------------
 // Creates a switch statement
 ast_expr_t *ast_expr_create_switch(source_t source, ast_expr_t *value, ast_case_list_t cases, ast_expr_list_t or_default, bool is_exhaustive);
+
+// ---------------- ast_expr_create_declare_named_expression ----------------
+// Creates a declare-named-expression statement
+ast_expr_t *ast_expr_create_declare_named_expression(source_t source, ast_named_expression_t named_expression);
 
 // ---------------- ast_expr_list_create ----------------
 // Creates an ast_expr_list_t with a given capacity

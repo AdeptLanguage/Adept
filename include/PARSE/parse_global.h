@@ -9,20 +9,20 @@ extern "C" {
 #include "PARSE/parse_ctx.h"
 
 // ------------------ parse_global ------------------
-// Parses a global variable or constant
+// Parses a global variable or global named expression
 errorcode_t parse_global(parse_ctx_t *ctx);
 
-// ------------------ parse_constant_definition ------------------
-// Parses a constant expression declaration
-errorcode_t parse_constant_definition(parse_ctx_t *ctx, ast_constant_t *out_constant);
+// ------------------ parse_named_expression_definition ------------------
+// Parses a named expression declaration
+errorcode_t parse_named_expression_definition(parse_ctx_t *ctx, ast_named_expression_t *out_named_expression);
 
-// ------------------ parse_global_constant_definition ------------------
-// Parses a global constant expression declaration
-errorcode_t parse_global_constant_definition(parse_ctx_t *ctx);
+// ------------------ parse_global_named_expression_definition ------------------
+// Parses a global named expression definition
+errorcode_t parse_global_named_expression_definition(parse_ctx_t *ctx);
 
-// ------------------ parse_old_style_constant_global ------------------
-// Parses a global constant
-errorcode_t parse_old_style_constant_global(parse_ctx_t *ctx, strong_cstr_t name, source_t source);
+// ------------------ parse_old_style_named_expression_global ------------------
+// Parses an old-style global named expression definition
+errorcode_t parse_old_style_named_expression_global(parse_ctx_t *ctx, strong_cstr_t name, source_t source);
 
 #ifdef __cplusplus
 }
