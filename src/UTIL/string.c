@@ -26,11 +26,11 @@ void free_strings(strong_cstr_t *list, length_t length){
     free(list);
 }
 
-strong_cstr_t strong_cstr_empty_if_null(strong_cstr_t string){
+strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string){
     return string ? string : strclone("");
 }
 
-strong_cstr_t string_to_escaped_string(char *array, length_t length, char escaped_quote){
+strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote){
     length_t put_index = 0;
     length_t special_characters = 0;
 
@@ -92,7 +92,7 @@ bool string_needs_escaping(weak_cstr_t string, char escaped_quote){
 }
 #endif // ADEPT_INSIGHT_BUILD
 
-length_t string_count_character(char string[], length_t length, char character){
+length_t string_count_character(const char *string, length_t length, char character){
     length_t count = 0;
     for(length_t i = 0; i != length; i++) if(string[i] == character) count++;
     return count;

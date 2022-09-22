@@ -22,6 +22,7 @@
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/UTIL/string_builder_extensions.h"
 #include "AST/ast.h"
+#include "AST/ast_dump.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"

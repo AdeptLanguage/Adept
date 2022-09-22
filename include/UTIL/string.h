@@ -23,14 +23,14 @@ void free_strings(strong_cstr_t *list, length_t length);
 // ---------------- strong_cstr_empty_if_null ----------------
 // Will heap-allocate an empty string in place of 'string'
 // if 'string' is NULL
-strong_cstr_t strong_cstr_empty_if_null(strong_cstr_t string);
+strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string);
 
 // ---------------- string_to_escaped_string ----------------
 // Escapes the contents of a modern string so that
-// special characters such as \n are transfromed into \\n
+// special characters such as \n are transformed into \\n
 // and surrounds the string with 'escaped_quote' if not '\0'.
 // NOTE: 'escaped_quote' may be 0x00 to signify no surrounding quote character
-strong_cstr_t string_to_escaped_string(char *array, length_t length, char escaped_quote);
+strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote);
 
 // ---------------- string_needs_escaping ----------------
 // (insight API only)
@@ -42,7 +42,7 @@ bool string_needs_escaping(weak_cstr_t string, char escaped_quote);
 // ---------------- string_count_character ----------------
 // Returns the number of occurrences of 'character' in
 // potentially unterminated string of characters
-length_t string_count_character(char string[], length_t length, char character);
+length_t string_count_character(const char *string, length_t length, char character);
 
 #ifdef __cplusplus
 }

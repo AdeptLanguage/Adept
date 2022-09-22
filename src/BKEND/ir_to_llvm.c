@@ -48,11 +48,10 @@ static void create_static_variables(llvm_context_t *llvm){
         LLVMValueRef global = LLVMAddGlobal(llvm->module, type, "y");
         LLVMSetInitializer(global, LLVMGetUndef(type));
 
-        // Remember LLVM global variable
-        list_append(&llvm->static_variables, ((llvm_static_variable_t){
+        llvm_static_variables_append(&llvm->static_variables, ((llvm_static_variable_t){
             .global = global,
             .type = type,
-        }), llvm_static_variable_t);
+        }));
     }
 }
 

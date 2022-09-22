@@ -96,19 +96,23 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
 
     builder->job_list = &object->ir_module.job_list;
 
-    builder->static_bool_base.id = AST_ELEM_BASE;
-    builder->static_bool_base.source = NULL_SOURCE;
-    builder->static_bool_base.source.object_index = builder->object->index;
-    builder->static_bool_base.base = "bool";
-    builder->static_bool_elems = (ast_elem_t*) &builder->static_bool_base;
-    builder->static_bool.elements = &builder->static_bool_elems;
-    builder->static_bool.elements_length = 1;
-    builder->static_bool.source = NULL_SOURCE;
-    builder->static_bool.source.object_index = builder->object->index;
+    source_t object_source = { .index = 0, .object_index = builder->object->index, .stride = 0 };
 
-    builder->s8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    builder->s8_type->kind = TYPE_KIND_S8;
-    // neglect builder.s8_type->extra
+    builder->static_bool_base = (ast_elem_base_t){
+        .id = AST_ELEM_BASE,
+        .source = object_source,
+        .base = "bool",
+    };
+
+    builder->static_bool_elems = (ast_elem_t*) &builder->static_bool_base;
+
+    builder->static_bool = (ast_type_t){
+        .elements = &builder->static_bool_elems,
+        .elements_length = 1,
+        .source = object_source,
+    };
+
+    builder->s8_type = ir_type_make(builder->pool, TYPE_KIND_S8, NULL);
 
     builder->stack_pointer_type = NULL;
     builder->ptr_type = ir_type_make_pointer_to(builder->pool, builder->s8_type);
@@ -872,11 +876,12 @@ void prepare_for_new_label(ir_builder_t *builder){
 void open_scope(ir_builder_t *builder){
     bridge_scope_t *old_scope = builder->scope;
     bridge_scope_t *new_scope = malloc(sizeof(bridge_scope_t));
+
     bridge_scope_init(new_scope, old_scope);
     new_scope->first_var_id = builder->next_var_id;
 
-    expand((void**) &old_scope->children, sizeof(bridge_scope_t*), old_scope->children_length, &old_scope->children_capacity, 1, 4);
-    old_scope->children[old_scope->children_length++] = new_scope;
+    bridge_scope_ref_list_append(&old_scope->children, new_scope);
+
     builder->scope = new_scope;
 }
 
@@ -1650,17 +1655,18 @@ bool could_have_pass(ast_type_t *ast_type){
     case AST_ELEM_GENERIC_BASE:
     case AST_ELEM_FIXED_ARRAY:
         return true;
+    default:
+        return false;
     }
-    return false;
 }
 
 errorcode_t try_user_defined_assign(
-        ir_builder_t *builder,
-        ir_value_t *value,
-        ast_type_t *value_ast_type,
-        ir_value_t *destination,
-        ast_type_t *destination_ast_type,
-        source_t source_on_failure
+    ir_builder_t *builder,
+    ir_value_t *value,
+    ast_type_t *value_ast_type,
+    ir_value_t *destination,
+    ast_type_t *destination_ast_type,
+    source_t source_on_failure
 ){
     // Ensure value is a structure value
     if(value->type->kind != TYPE_KIND_STRUCTURE || value_ast_type->elements_length != 1) return FAILURE;
@@ -2157,7 +2163,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
     func->traits |= AST_FUNC_AUTOGEN | AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
 
-    func->arg_names = malloc(sizeof(weak_cstr_t) * 1);
+    func->arg_names = malloc(sizeof(weak_cstr_t));
     func->arg_types = malloc(sizeof(ast_type_t));
     func->arg_sources = malloc(sizeof(source_t));
     func->arg_flows = malloc(sizeof(char));

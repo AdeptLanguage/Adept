@@ -47,6 +47,11 @@ typedef struct {
 typedef listof(bridge_var_t, variables) bridge_var_list_t;
 #define bridge_var_list_append(LIST, VALUE) list_append((LIST), (VALUE), bridge_var_t)
 
+// ---------------- bridge_scope_ref_list_t ----------------
+// A list of pointers to bridge scopes
+typedef listof(struct bridge_scope_t*, scopes) bridge_scope_ref_list_t;
+#define bridge_scope_ref_list_append(LIST, VALUE) list_append((LIST), (VALUE), struct bridge_scope_t*)
+
 // ---------------- bridge_scope_t ----------------
 // A variable scope that contains a list of variables
 // within the scope as well as a reference to the
@@ -63,9 +68,7 @@ typedef struct bridge_scope_t {
     // or the child scopes. (Used for finding by id)
     length_t following_var_id;
 
-    struct bridge_scope_t **children;
-    length_t children_length;
-    length_t children_capacity;
+    bridge_scope_ref_list_t children;
 } bridge_scope_t;
 
 // ---------------- bridge_scope_init ----------------
@@ -95,10 +98,6 @@ bool bridge_scope_var_already_in_list(bridge_scope_t *scope, const char *name);
 // within the scope.
 // (NOTE: Minimum distance of 3 to count as near enough)
 const char* bridge_scope_var_nearest(bridge_scope_t *scope, const char *name);
-
-// ---------------- bridge_scope_var_nearest_inner ----------------
-// Inner recursive implementation of bridge_scope_var_nearest
-void bridge_scope_var_nearest_inner(bridge_scope_t *scope, const char *name, char **out_nearest_name, int *out_distance);
 
 // ---------------- bridge_var_list_nearest ----------------
 // Finds the nearest variable name to the given variable name

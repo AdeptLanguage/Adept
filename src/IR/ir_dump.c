@@ -40,8 +40,8 @@ static void ir_dump_var_scope_layout(FILE *file, bridge_scope_t *scope){
         free(type_str);
     }
 
-    for(length_t i = 0; i != scope->children_length; i++){
-        ir_dump_var_scope_layout(file, scope->children[i]);
+    for(length_t i = 0; i != scope->children.length; i++){
+        ir_dump_var_scope_layout(file, scope->children.scopes[i]);
     }
 }
 

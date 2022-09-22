@@ -30,7 +30,7 @@ set(core_source_files
 	src/AST/TYPE/ast_type_clone.c src/AST/TYPE/ast_type_free.c
 	src/AST/TYPE/ast_type_hash.c src/AST/TYPE/ast_type_helpers.c src/AST/TYPE/ast_type_identical.c
 	src/AST/TYPE/ast_type_is.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_str.c
-	src/AST/UTIL/string_builder_extensions.c
+	src/AST/UTIL/string_builder_extensions.c src/AST/ast_dump.c
 	src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_named_expression.c
 	src/AST/ast_poly_catalog.c src/AST/ast.c
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_c.c src/BKEND/ir_to_llvm.c src/BKEND/ir_to_llvm_impl.c src/BRIDGE/any.c

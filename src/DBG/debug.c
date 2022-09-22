@@ -4,6 +4,7 @@
 #else
 
 #include "AST/ast.h"
+#include "AST/ast_dump.h"
 #include "AST/ast_expr.h"
 #include "LEX/token.h"
 #include "UTIL/color.h"

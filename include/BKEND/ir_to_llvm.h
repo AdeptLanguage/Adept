@@ -50,6 +50,7 @@ typedef struct {
 } llvm_static_variable_t;
 
 typedef listof(llvm_static_variable_t, variables) llvm_static_variables_t;
+#define llvm_static_variables_append(LIST, VALUE) list_append((LIST), (VALUE), llvm_static_variable_t)
 
 typedef struct {
     LLVMValueRef memcpy;

@@ -271,22 +271,6 @@ void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length);
 void ast_free_globals(ast_global_t *globals, length_t globals_length);
 void ast_free_enums(ast_enum_t *enums, length_t enums_length);
 
-// ---------------- ast_dump ----------------
-// Converts an AST to a string representation
-// and then dumps it to a file
-void ast_dump(ast_t *ast, const char *filename);
-
-// ---------------- ast_dump_* ----------------
-// Writes a specific part of an AST to a file
-void ast_dump_functions(FILE *file, ast_func_t *functions, length_t functions_length);
-void ast_dump_statement_list(FILE *file, ast_expr_list_t *statements, length_t indentation);
-void ast_dump_statements(FILE *file, ast_expr_t **statements, length_t length, length_t indentation);
-void ast_dump_composites(FILE *file, ast_composite_t *composites, length_t composites_length);
-void ast_dump_composite(FILE *file, ast_composite_t *composite, length_t additional_indentation);
-void ast_dump_composite_subfields(FILE *file, ast_layout_skeleton_t *skeleton, ast_field_map_t *field_map, ast_layout_endpoint_t parent_endpoint, length_t indentation);
-void ast_dump_globals(FILE *file, ast_global_t *globals, length_t globals_length);
-void ast_dump_enums(FILE *file, ast_enum_t *enums, length_t enums_length);
-
 // ---------------- ast_func_is_method ----------------
 // Returns whether an AST function is method-like
 // (considered so if it has a first parameter name of 'this')
