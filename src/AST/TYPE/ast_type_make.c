@@ -203,13 +203,13 @@ ast_type_t ast_type_make_func_ptr(source_t source, ast_type_t *arg_types, length
     );
 }
 
-ast_type_t ast_type_make_generic_int(){
+ast_type_t ast_type_make_generic_int(void){
     return from_1elems(
         ast_elem_generic_int_make(NULL_SOURCE)
     );
 }
 
-ast_type_t ast_type_make_generic_float(){
+ast_type_t ast_type_make_generic_float(void){
     return from_1elems(
         ast_elem_generic_float_make(NULL_SOURCE)
     );

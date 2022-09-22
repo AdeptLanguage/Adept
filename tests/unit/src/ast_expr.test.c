@@ -208,7 +208,7 @@ static void TEST_ast_expr_call_str_9(CuTest *test){
     ast_expr_free_fully(call_expr);
 }
 
-CuSuite *CuSuite_for_ast_expr(){
+CuSuite *CuSuite_for_ast_expr(void){
     CuSuite *suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, TEST_ast_expr_call_str_1);
     SUITE_ADD_TEST(suite, TEST_ast_expr_call_str_2);

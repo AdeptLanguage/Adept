@@ -22,7 +22,7 @@ A blazing fast language for general purpose programming.
 
 [Adept v2.7 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
 
-[Adept v2.6 MacOS Homebrew Tap (v2.7 in progress)](https://github.com/AdeptLanguage/homebrew-tap)
+[Adept v2.7 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
 
 ## Command-Line Usage
 

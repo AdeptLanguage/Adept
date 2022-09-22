@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include "CuTest.h"
 
-CuSuite *CuSuite_for_ast_expr();
-CuSuite *CuSuite_for_lex();
+CuSuite *CuSuite_for_ast_expr(void);
+CuSuite *CuSuite_for_lex(void);
 
-int RunAllTests(){
+int RunAllTests(void){
     printf("Running all unit tests:\n");
 
     CuString *output = CuStringNew();
@@ -22,6 +22,6 @@ int RunAllTests(){
     return suite->failCount;
 }
 
-int main(){
+int main(void){
     return RunAllTests();
 }

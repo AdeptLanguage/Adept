@@ -80,7 +80,7 @@ void ir_basicblock_free(ir_basicblock_t *basicblock){
 static char *ir_implementation_encoding = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 static length_t ir_implementation_encoding_base;
 
-void ir_implementation_setup(){
+void ir_implementation_setup(void){
     ir_implementation_encoding_base = strlen(ir_implementation_encoding);
 }
 

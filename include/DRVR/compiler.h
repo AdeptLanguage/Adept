@@ -204,7 +204,7 @@ void show_root(compiler_t *compiler);
 
 // ---------------- compiler_get_string ----------------
 // Gets the string identifier of the compiler
-strong_cstr_t compiler_get_string();
+strong_cstr_t compiler_get_string(void);
 
 // ---------------- compiler_add_user_linker_option ----------------
 // Adds user-supplied linker option

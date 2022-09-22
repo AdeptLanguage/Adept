@@ -580,7 +580,7 @@ void ir_funcs_free(ir_funcs_t funcs);
 
 // ---------------- ir_implementation_setup ----------------
 // Prepares for calls to ir_implementation()
-void ir_implementation_setup();
+void ir_implementation_setup(void);
 
 // ---------------- ir_implementation ----------------
 // Encodes an ID for an implementation name

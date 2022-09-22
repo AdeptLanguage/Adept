@@ -826,7 +826,7 @@ void show_root(compiler_t *compiler){
     printf("%s\n", compiler->root);
 }
 
-strong_cstr_t compiler_get_string(){
+strong_cstr_t compiler_get_string(void){
     return mallocandsprintf("Adept %s - Built %s %s", ADEPT_VERSION_STRING, __DATE__, __TIME__);
 }
 

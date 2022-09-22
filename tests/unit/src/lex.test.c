@@ -101,7 +101,7 @@ static void TEST_lex_2(CuTest *test){
     compiler_free(&compiler);
 }
 
-CuSuite *CuSuite_for_lex(){
+CuSuite *CuSuite_for_lex(void){
     CuSuite *suite = CuSuiteNew();
     SUITE_ADD_TEST(suite, TEST_lex_1);
     SUITE_ADD_TEST(suite, TEST_lex_2);
