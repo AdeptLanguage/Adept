@@ -26,6 +26,8 @@
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm@14/bin/clang",
+                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm@14/bin/clang++",
                 "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm@14",
                 "ADEPT_LINK_LLVM_STATIC": false
             }

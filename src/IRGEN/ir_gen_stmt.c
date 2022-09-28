@@ -1311,20 +1311,19 @@ errorcode_t ir_gen_stmt_fallthrough(ir_builder_t *builder, ast_expr_t *stmt, boo
 }
 
 errorcode_t ir_gen_stmt_break_to(ir_builder_t *builder, ast_expr_break_to_t *stmt, bool *out_is_terminated){
-    length_t target_block_id;
-    bridge_scope_t *block_scope;
-
     // Get info about where this loop label is a reference to
-    if(!ir_builder_get_loop_label_info(builder, stmt->label, &block_scope, &target_block_id, NULL)){
+    block_t *block = ir_builder_get_loop_label_info(builder, stmt->label);
+
+    if(block == NULL){
         compiler_panicf(builder->compiler, stmt->label_source, "Undeclared label '%s'", stmt->label);
         return FAILURE;
     }
 
     // Make '__defer__()' calls for variables whose scope will end
-    ir_gen_variable_deference(builder, block_scope);
+    ir_gen_variable_deference(builder, block->scope);
 
     // Break to the targeted block
-    build_break(builder, target_block_id);
+    build_break(builder, block->break_id);
 
     // This statement is always a terminating statement
     if(out_is_terminated) *out_is_terminated = true;
@@ -1332,20 +1331,19 @@ errorcode_t ir_gen_stmt_break_to(ir_builder_t *builder, ast_expr_break_to_t *stm
 }
 
 errorcode_t ir_gen_stmt_continue_to(ir_builder_t *builder, ast_expr_break_to_t *stmt, bool *out_is_terminated){
-    length_t target_block_id;
-    bridge_scope_t *block_scope;
-
     // Get info about where this loop label is a reference to
-    if(!ir_builder_get_loop_label_info(builder, stmt->label, &block_scope, NULL, &target_block_id)){
+    block_t *block = ir_builder_get_loop_label_info(builder, stmt->label);
+
+    if(block == NULL){
         compiler_panicf(builder->compiler, stmt->label_source, "Undeclared label '%s'", stmt->label);
         return FAILURE;
     }
 
     // Make '__defer__()' calls for variables whose scope will end
-    if(ir_gen_variable_deference(builder, block_scope)) return FAILURE;
+    if(ir_gen_variable_deference(builder, block->scope)) return FAILURE;
 
     // Break to the targeted block
-    build_break(builder, target_block_id);
+    build_break(builder, block->continue_id);
 
     // This statement is always a terminating statement
     if(out_is_terminated) *out_is_terminated = true;

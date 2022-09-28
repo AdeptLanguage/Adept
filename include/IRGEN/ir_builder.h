@@ -20,6 +20,17 @@
 #include "UTIL/func_pair.h"
 #include "UTIL/list.h"
 
+typedef struct {
+    weak_cstr_t label;
+    length_t break_id;
+    length_t continue_id;
+    bridge_scope_t *scope;
+} block_t;
+
+typedef listof(block_t, blocks) block_stack_t;
+#define block_stack_push(LIST, VALUE) list_append((LIST), (VALUE), block_t)
+#define block_stack_pop(LIST) ((LIST)->length--)
+
 // ---------------- ir_builder_t ----------------
 // Container for storing general information
 // about the building state
@@ -32,12 +43,7 @@ typedef struct ir_builder {
     length_t fallthrough_block_id; // 0 == none
     bridge_scope_t *break_continue_scope;
     bridge_scope_t *fallthrough_scope;
-    weak_cstr_t *block_stack_labels;
-    length_t *block_stack_break_ids;
-    length_t *block_stack_continue_ids;
-    bridge_scope_t **block_stack_scopes;
-    length_t block_stack_length;
-    length_t block_stack_capacity;
+    block_stack_t block_stack;
     ir_pool_t *pool;
     ir_type_map_t *type_map;
     compiler_t *compiler;
@@ -489,8 +495,9 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 bool is_allowed_builtin_auto_conversion(compiler_t *compiler, object_t *object, const ast_type_t *a_type, const ast_type_t *b_type);
 
 // ---------------- ir_builder_get_loop_label_info ----------------
-// Gets information associated with a loop label
-successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id);
+// Returns a temporary pointer to the block information associated with a loop label
+// Returns NULL if no label with the given name exists
+block_t *ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label);
 
 // ---------------- ir_builder_get_noop_defer_func ----------------
 // Gets no-op defer function

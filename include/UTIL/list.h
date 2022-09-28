@@ -42,6 +42,16 @@ void *list_append_new_impl(void *list_struct, length_t sizeof_element);
 // Sort a list
 void list_qsort(void *list_struct, length_t sizeof_element, int (*cmp)(const void*, const void*));
 
+// ---------------- list_create ----------------
+// Creates a list
+#define list_create(LIST_TYPE, FIELD_TYPE, CAPACITY) ((LIST_TYPE){malloc(sizeof(FIELD_TYPE) * (CAPACITY)), 0, (CAPACITY)})
+
+// ---------------- list_last_unchecked ----------------
+// Returns a temporary pointer to the last item in a list
+// If no such element exists, the behavior is undefined
+#define list_last_unchecked(LIST, FIELD_TYPE) list_last_unchecked_impl((LIST), sizeof(FIELD_TYPE))
+void *list_last_unchecked_impl(void *list_struct, length_t sizeof_element);
+
 #ifdef __cplusplus
 }
 #endif

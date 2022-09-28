@@ -51,16 +51,15 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
 
         switch(id){
         case TOKEN_MULTIPLY: {
-                out_type->elements[out_type->elements_length] = malloc(sizeof(ast_elem_pointer_t));
-                out_type->elements[out_type->elements_length]->id = AST_ELEM_POINTER;
-                out_type->elements[out_type->elements_length]->source = sources[*i];
-                out_type->elements_length++;
+                out_type->elements[out_type->elements_length++] = malloc_init(ast_elem_pointer_t, {
+                    .id = AST_ELEM_POINTER,
+                    .source = sources[*i],
+                });
                 id = tokens[++(*i)].id;
             }
             break;
         case TOKEN_GENERIC_INT: {
                 out_type->elements[out_type->elements_length++] = ast_elem_fixed_array_make(sources[*i], *((adept_generic_int*) tokens[*i].data));
-
                 id = tokens[++(*i)].id;
             }
             break;
@@ -71,28 +70,23 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 ast_expr_t *length;
                 if(parse_expr(ctx, &length)) goto failure;
 
-                ast_elem_var_fixed_array_t *var_fixed_array = malloc(sizeof(ast_elem_var_fixed_array_t));
-
-                *var_fixed_array = (ast_elem_var_fixed_array_t){
+                out_type->elements[out_type->elements_length++] = (ast_elem_t*) malloc_init(ast_elem_var_fixed_array_t, {
                     .id = AST_ELEM_VAR_FIXED_ARRAY,
                     .source = sources[*i],
                     .length = length,
-                };
-
-                out_type->elements[out_type->elements_length++] = (ast_elem_t*) var_fixed_array;
+                });
 
                 if(parse_eat(ctx, TOKEN_BRACKET_CLOSE, "Expected ']' after size of fixed array in type")) goto failure;
                 id = tokens[*i].id;
             }
             break;
         case TOKEN_POLYCOUNT: {
-                ast_elem_polycount_t *polycount = malloc(sizeof(ast_elem_polycount_t));
-                polycount->id = AST_ELEM_POLYCOUNT;
-                polycount->name = parse_ctx_peek_data_take(ctx);
-                polycount->source = sources[*i];
+                out_type->elements[out_type->elements_length++] = (ast_elem_t*) malloc_init(ast_elem_polycount_t, {
+                    .id = AST_ELEM_POLYCOUNT,
+                    .name = parse_ctx_peek_data_take(ctx),
+                    .source = sources[*i],
+                });
 
-                out_type->elements[out_type->elements_length] = (ast_elem_t*) polycount;
-                out_type->elements_length++;
                 id = tokens[++(*i)].id;
             }
             break;

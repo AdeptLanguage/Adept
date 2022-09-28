@@ -754,10 +754,7 @@ success:
 failure:
     ir_funcs->funcs[ir_func_id].basicblocks = builder.basicblocks;
     object->ast.funcs[ast_func_id] = ast_func;
-    free(builder.block_stack_labels);
-    free(builder.block_stack_break_ids);
-    free(builder.block_stack_continue_ids);
-    free(builder.block_stack_scopes);
+    free(builder.block_stack.blocks);
     return errorcode;
 }
 

@@ -390,8 +390,7 @@ errorcode_t parse_func_body(parse_ctx_t *ctx, ast_func_t *func){
         goto success;
     }
 
-    // TODO: CLEANUP: Cleanup?
-    if(func->traits & AST_FUNC_DISALLOW && ctx->tokenlist->tokens[*ctx->i].id != TOKEN_BEGIN){
+    if(func->traits & AST_FUNC_DISALLOW && parse_ctx_peek(ctx) != TOKEN_BEGIN){
         // HACK:
         // Since we are expected to end on the last token we processed
         // we will need to go back a token
@@ -929,37 +928,41 @@ void parse_collapse_polycount_var_fixed_arrays(ast_type_t *types, length_t lengt
     // Will collapse all [$#N] type elements to $#N
 
     // TODO: CLEANUP: Cleanup?
-    for(length_t type_index = 0; type_index != length; type_index++){
-        ast_type_t *type = &types[type_index];
+    for(length_t i = 0; i != length; i++){
+        parse_collapse_polycount_var_fixed_arrays_for_type(&types[i]);
+    }
+}
 
-        for(length_t i = 0; i != type->elements_length; i++){
-            ast_elem_t *elem = type->elements[i];
+void parse_collapse_polycount_var_fixed_arrays_for_type(ast_type_t *type){
+    // Will collapse all [$#N] type elements to $#N
 
-            if(elem->id == AST_ELEM_VAR_FIXED_ARRAY){
-                ast_elem_var_fixed_array_t *var_fixed_array = (ast_elem_var_fixed_array_t*) elem;
+    for(length_t i = 0; i != type->elements_length; i++){
+        ast_elem_t *elem = type->elements[i];
 
-                if(var_fixed_array->length->id == EXPR_POLYCOUNT){
-                    ast_expr_polycount_t *old_polycount_expr = (ast_expr_polycount_t*) var_fixed_array->length;
-                    source_t source = old_polycount_expr->source;
+        if(elem->id == AST_ELEM_VAR_FIXED_ARRAY){
+            ast_elem_var_fixed_array_t *var_fixed_array = (ast_elem_var_fixed_array_t*) elem;
 
-                    // Take name
-                    strong_cstr_t name = old_polycount_expr->name;
-                    old_polycount_expr->name = NULL;
+            if(var_fixed_array->length->id == EXPR_POLYCOUNT){
+                ast_expr_polycount_t *old_polycount_expr = (ast_expr_polycount_t*) var_fixed_array->length;
+                source_t source = old_polycount_expr->source;
 
-                    // Delete old element
-                    ast_elem_free(type->elements[i]);
+                // Take name
+                strong_cstr_t name = old_polycount_expr->name;
+                old_polycount_expr->name = NULL;
 
-                    // Replace with unwrapped version
-                    ast_elem_polycount_t *new_elem = (ast_elem_polycount_t*) malloc(sizeof(ast_elem_polycount_t));
+                // Delete old element
+                ast_elem_free(type->elements[i]);
 
-                    *new_elem = (ast_elem_polycount_t){
-                        .id =  AST_ELEM_POLYCOUNT,
-                        .source = source,
-                        .name = name,
-                    };
+                // Replace with unwrapped version
+                ast_elem_polycount_t *new_elem = (ast_elem_polycount_t*) malloc(sizeof(ast_elem_polycount_t));
 
-                    type->elements[i] = (ast_elem_t*) new_elem;
-                }
+                *new_elem = (ast_elem_polycount_t){
+                    .id =  AST_ELEM_POLYCOUNT,
+                    .source = source,
+                    .name = name,
+                };
+
+                type->elements[i] = (ast_elem_t*) new_elem;
             }
         }
     }

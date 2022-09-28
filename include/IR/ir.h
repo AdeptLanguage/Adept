@@ -392,6 +392,9 @@ typedef struct {
 // ---------------- ir_instrs_t ----------------
 // List of instructions
 typedef listof(ir_instr_t*, instructions) ir_instrs_t;
+#define ir_instrs_create(CAPACITY) list_create(ir_instrs_t, ir_instr_t*, (CAPACITY))
+#define ir_instrs_append(LIST, VALUE) list_append((LIST), (VALUE), ir_instr_t*)
+#define ir_instrs_last_unchecked(LIST) list_last_unchecked((LIST), ir_instr_t*)
 
 // ---------------- ir_basicblock_t ----------------
 // An intermediate representation basic block
@@ -403,6 +406,7 @@ typedef struct {
 // ---------------- ir_basicblocks_t ----------------
 // A list of basicblocks
 typedef listof(ir_basicblock_t, blocks) ir_basicblocks_t;
+#define ir_basicblocks_append(LIST, VALUE) list_append((LIST), (VALUE), ir_basicblock_t)
 void ir_basicblocks_free(ir_basicblocks_t *basicblocks);
 
 // ---------------- ir_vtable_init_t ----------------

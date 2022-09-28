@@ -151,6 +151,10 @@ void *bsearch_insertion(const void *key, const void *base, size_t num, size_t si
 // ---------------- NUM_ITEMS ----------------
 #define NUM_ITEMS(array) (sizeof (array) / sizeof *(array))
 
+// ---------------- malloc_init ----------------
+// Based on https://tia.mat.br/posts/2015/05/01/initializing_a_heap_allocated_structure_in_c.html
+#define malloc_init(TYPE, ...) (TYPE*) memclone((TYPE[]){ __VA_ARGS__ }, sizeof(TYPE))
+
 // ---------------- special characters ----------------
 #ifdef __APPLE__
 #define USE_UTF8_INSTEAD_OF_EXTENDED_ASCII_FOR_SPECIAL_CHARACTERS

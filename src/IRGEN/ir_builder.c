@@ -58,11 +58,7 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     ir_basicblock_t *entry_block = &builder->basicblocks.blocks[0];
 
     *entry_block = (ir_basicblock_t){
-        .instructions = (ir_instrs_t){
-            .instructions = malloc(sizeof(ir_instr_t*) * 16),
-            .length = 0,
-            .capacity = 16,
-        },
+        .instructions = ir_instrs_create(16),
         .traits = TRAIT_NONE,
     };
 
@@ -77,12 +73,7 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
 
     // Block stack, used for breaking and continuing by label
     // NOTE: Unlabeled blocks won't go in this array
-    builder->block_stack_labels = NULL;
-    builder->block_stack_break_ids = NULL;
-    builder->block_stack_continue_ids = NULL;
-    builder->block_stack_scopes = NULL;
-    builder->block_stack_length = 0;
-    builder->block_stack_capacity = 0;
+    builder->block_stack = (block_stack_t){0};
 
     if(!static_builder){
         ir_func_t *module_func = &object->ir_module.funcs.funcs[ir_func_id];
@@ -125,10 +116,7 @@ void ir_builder_free(ir_builder_t *builder){
     // TODO: Work in progress to make unified ir_builder_free function
     
     // The primary builder has
-    free(builder->block_stack_labels);
-    free(builder->block_stack_break_ids);
-    free(builder->block_stack_continue_ids);
-    free(builder->block_stack_scopes);
+    free(builder->block_stack.blocks);
 
     // The two init/deinit builders have
     ir_basicblocks_free(&builder->object->ir_module.init_builder->basicblocks);
@@ -139,22 +127,21 @@ length_t build_basicblock(ir_builder_t *builder){
     // NOTE: All basicblock pointers should be recalculated after calling this function
     //           (Except for 'builder->current_block' which is automatically recalculated if necessary)
 
-    if(builder->basicblocks.length == builder->basicblocks.capacity){
-        builder->basicblocks.capacity *= 2;
-        ir_basicblock_t *new_basicblocks = malloc(sizeof(ir_basicblock_t) * builder->basicblocks.capacity);
-        memcpy(new_basicblocks, builder->basicblocks.blocks, sizeof(ir_basicblock_t) * builder->basicblocks.length);
-        free(builder->basicblocks.blocks);
-        builder->basicblocks.blocks = new_basicblocks;
-        builder->current_block = &builder->basicblocks.blocks[builder->current_block_id];
-    }
+    ir_basicblocks_t *container = &builder->basicblocks;
 
-    ir_basicblock_t *block = &builder->basicblocks.blocks[builder->basicblocks.length++];
-    block->instructions.instructions = malloc(sizeof(ir_instr_t*) * 16);
-    block->instructions.length = 0;
-    block->instructions.capacity = 16;
-    block->traits = TRAIT_NONE;
-    return builder->basicblocks.length - 1;
+    ir_basicblocks_append(container, ((ir_basicblock_t){
+        .instructions = ir_instrs_create(16),
+        .traits = TRAIT_NONE
+    }));
+
+    // Update current block pointer
+    builder->current_block = &container->blocks[builder->current_block_id];
+
+    // Return newest block id
+    return container->length - 1;
 }
+
+#define heap_allocate(TYPE, VALUE) (*(TYPE*)malloc(sizeof(TYPE)) = VALUE)
 
 void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id){
     // NOTE: Sets basicblock that instructions will be inserted into
@@ -168,13 +155,12 @@ ir_instr_t* build_instruction(ir_builder_t *builder, length_t size){
 
     ir_instrs_t *instrs = &builder->current_block->instructions;
 
-    instrs->instructions[instrs->length++] = (ir_instr_t*) ir_pool_alloc(builder->pool, size);
-    return instrs->instructions[instrs->length - 1];
+    ir_instrs_append(instrs, (ir_instr_t*) ir_pool_alloc(builder->pool, size));
+    return ir_instrs_last_unchecked(instrs);
 }
 
 ir_instr_t *ir_builder_built_instruction(ir_builder_t *builder){
-    ir_instrs_t *instrs = &builder->current_block->instructions;
-    return instrs->instructions[instrs->length - 1];
+    return ir_instrs_last_unchecked(&builder->current_block->instructions);
 }
 
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
@@ -250,22 +236,25 @@ void build_zeroinit(ir_builder_t *builder, ir_value_t *destination){
 }
 
 ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source){
+    // The value provided must be dereferencable
     ir_type_t *dereferenced_type = ir_type_dereference(value->type);
     if(dereferenced_type == NULL) return NULL;
 
     ir_instr_load_t *instruction = (ir_instr_load_t*) ir_pool_alloc(builder->pool, sizeof(ir_instr_load_t));
-    instruction->id = INSTRUCTION_LOAD;
-    instruction->result_type = dereferenced_type;
-    instruction->value = value;
-    
+
+    *instruction = (ir_instr_load_t){
+        .id = INSTRUCTION_LOAD,
+        .result_type = dereferenced_type,
+        .value = value,
+    };
+
     if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
         // If we're doing null checks, then give line/column to IR load instruction.
         lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &instruction->maybe_line_number, &instruction->maybe_column_number);
     }
 
     // Otherwise, we just ignore line/column fields
-    ir_basicblock_new_instructions(builder->current_block, 1);
-    builder->current_block->instructions.instructions[builder->current_block->instructions.length++] = (ir_instr_t*) instruction;
+    ir_instrs_append(&builder->current_block->instructions, (ir_instr_t*) instruction);
     return build_value_from_prev_instruction(builder);
 }
 
@@ -845,34 +834,6 @@ void build_main_deinitialization(ir_builder_t *builder){
     build_deinit_svars(builder);
 }
 
-void prepare_for_new_label(ir_builder_t *builder){
-    if(builder->block_stack_capacity == 0){
-        builder->block_stack_labels = malloc(sizeof(char*) * 4);
-        builder->block_stack_break_ids = malloc(sizeof(length_t) * 4);
-        builder->block_stack_continue_ids = malloc(sizeof(length_t) * 4);
-        builder->block_stack_scopes = malloc(sizeof(bridge_scope_t*) * 4);
-        builder->block_stack_capacity = 4;
-    } else if(builder->block_stack_length == builder->block_stack_capacity){
-        builder->block_stack_capacity *= 2;
-        char **new_block_stack_labels = malloc(sizeof(char*) * builder->block_stack_capacity);
-        length_t *new_block_stack_break_ids = malloc(sizeof(length_t) * builder->block_stack_capacity);
-        length_t *new_block_stack_continue_ids = malloc(sizeof(length_t) * builder->block_stack_capacity);
-        bridge_scope_t **new_block_stack_scopes = malloc(sizeof(bridge_scope_t*) * builder->block_stack_capacity);
-        memcpy(new_block_stack_labels, builder->block_stack_labels, sizeof(char*) * builder->block_stack_length);
-        memcpy(new_block_stack_break_ids, builder->block_stack_break_ids, sizeof(length_t) * builder->block_stack_length);
-        memcpy(new_block_stack_continue_ids, builder->block_stack_continue_ids, sizeof(length_t) * builder->block_stack_length);
-        memcpy(new_block_stack_scopes, builder->block_stack_scopes, sizeof(bridge_scope_t*) * builder->block_stack_length);
-        free(builder->block_stack_labels);
-        free(builder->block_stack_break_ids);
-        free(builder->block_stack_continue_ids);
-        free(builder->block_stack_scopes);
-        builder->block_stack_labels = new_block_stack_labels;
-        builder->block_stack_break_ids = new_block_stack_break_ids;
-        builder->block_stack_continue_ids = new_block_stack_continue_ids;
-        builder->block_stack_scopes = new_block_stack_scopes;
-    }
-}
-
 void open_scope(ir_builder_t *builder){
     bridge_scope_t *old_scope = builder->scope;
     bridge_scope_t *new_scope = malloc(sizeof(bridge_scope_t));
@@ -895,16 +856,16 @@ void close_scope(ir_builder_t *builder){
 }
 
 void push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id){
-    prepare_for_new_label(builder);
-    builder->block_stack_labels[builder->block_stack_length] = label;
-    builder->block_stack_break_ids[builder->block_stack_length] = break_basicblock_id;
-    builder->block_stack_continue_ids[builder->block_stack_length] = continue_basicblock_id;
-    builder->block_stack_scopes[builder->block_stack_length] = builder->scope;
-    builder->block_stack_length++;
+    block_stack_push(&builder->block_stack, ((block_t){
+        .label = label,
+        .break_id = break_basicblock_id,
+        .continue_id = continue_basicblock_id,
+        .scope = builder->scope,
+    }));
 }
 
 void pop_loop_label(ir_builder_t *builder){
-    builder->block_stack_length--;
+    block_stack_pop(&builder->block_stack);
 }
 
 bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
@@ -1827,11 +1788,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     length_t required_arity = poly_func->arity;
 
     // Require compatible arity
-    if(
-        required_arity < types_list_length &&
-        !(poly_func->traits & AST_FUNC_VARARG) &&
-        !(poly_func->traits & AST_FUNC_VARIADIC)
-    ){
+    if(required_arity < types_list_length && !(poly_func->traits & (AST_FUNC_VARARG | AST_FUNC_VARIADIC))){
         return FAILURE;
     }
     
@@ -2516,18 +2473,15 @@ bool is_allowed_builtin_auto_conversion(compiler_t *compiler, object_t *object, 
     return allowed;
 }
 
-successful_t ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label, bridge_scope_t **out_scope, length_t *out_break_block_id, length_t *out_continue_block_id){
+block_t *ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label){
     // Find loop label by name and return requested information
-    for(length_t i = builder->block_stack_length; i != 0; i--){
-        if(streq(label, builder->block_stack_labels[i - 1])){
-            if(out_scope)             *out_scope = builder->block_stack_scopes[i - 1];
-            if(out_break_block_id)    *out_break_block_id = builder->block_stack_break_ids[i - 1];
-            if(out_continue_block_id) *out_continue_block_id = builder->block_stack_continue_ids[i - 1];
-            return true;
+    for(length_t i = builder->block_stack.length; i != 0; i--){
+        if(streq(label, builder->block_stack.blocks[i - 1].label)){
+            return &builder->block_stack.blocks[i - 1];
         }
     }
 
-    return false;
+    return NULL;
 }
 
 errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, func_id_t *out_ir_func_id){
