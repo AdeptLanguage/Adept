@@ -49,8 +49,8 @@ void list_qsort(void *list_struct, length_t sizeof_element, int (*cmp)(const voi
 // ---------------- list_last_unchecked ----------------
 // Returns a temporary pointer to the last item in a list
 // If no such element exists, the behavior is undefined
-#define list_last_unchecked(LIST, FIELD_TYPE) list_last_unchecked_impl((LIST), sizeof(FIELD_TYPE))
-void *list_last_unchecked_impl(void *list_struct, length_t sizeof_element);
+#define list_last_unchecked(LIST, FIELD_TYPE) *((FIELD_TYPE*) list_last_unchecked_ptr_impl((LIST), sizeof(FIELD_TYPE)))
+void *list_last_unchecked_ptr_impl(void *list_struct, length_t sizeof_element);
 
 #ifdef __cplusplus
 }

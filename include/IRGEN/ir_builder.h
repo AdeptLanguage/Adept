@@ -85,10 +85,6 @@ void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id);
 // Builds a new undetermined instruction
 ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
 
-// ---------------- ir_builder_built_instruction ----------------
-// Returns the most recently built instruction
-ir_instr_t *ir_builder_built_instruction(ir_builder_t *builder);
-
 // ---------------- build_value_from_prev_instruction ----------------
 // Builds an IR value from the result of the previous instruction
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
@@ -124,7 +120,7 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_s
 
 // ---------------- build_store ----------------
 // Builds a store instruction
-void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source);
+ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source);
 
 // ---------------- build_call ----------------
 // Builds a call instruction

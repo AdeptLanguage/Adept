@@ -633,10 +633,9 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
         // Create placeholder store instruction,
         // The value to be stored will be filled in later during vtable resolution
-        build_store(&builder, NULL, destination, ast_func.source);
+        ir_instr_store_t *store_instr = build_store(&builder, NULL, destination, ast_func.source);
 
         // Get persistent pointer to the dummy store instruction
-        ir_instr_store_t *store_instr = (ir_instr_store_t*) ir_builder_built_instruction(&builder);
         assert(store_instr->id == INSTRUCTION_STORE);
 
         // Append vtable initialization for later processing

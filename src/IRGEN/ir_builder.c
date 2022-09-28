@@ -141,8 +141,6 @@ length_t build_basicblock(ir_builder_t *builder){
     return container->length - 1;
 }
 
-#define heap_allocate(TYPE, VALUE) (*(TYPE*)malloc(sizeof(TYPE)) = VALUE)
-
 void build_using_basicblock(ir_builder_t *builder, length_t basicblock_id){
     // NOTE: Sets basicblock that instructions will be inserted into
     builder->current_block = &builder->basicblocks.blocks[basicblock_id];
@@ -157,10 +155,7 @@ ir_instr_t* build_instruction(ir_builder_t *builder, length_t size){
 
     ir_instrs_append(instrs, (ir_instr_t*) ir_pool_alloc(builder->pool, size));
     return ir_instrs_last_unchecked(instrs);
-}
-
-ir_instr_t *ir_builder_built_instruction(ir_builder_t *builder){
-    return ir_instrs_last_unchecked(&builder->current_block->instructions);
+    // return instrs->instructions[instrs->length - 1];
 }
 
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
@@ -258,7 +253,7 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_s
     return build_value_from_prev_instruction(builder);
 }
 
-void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source){
+ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source){
     ir_instr_store_t *built_instr = (ir_instr_store_t*) build_instruction(builder, sizeof(ir_instr_store_t));
     built_instr->id = INSTRUCTION_STORE;
     built_instr->result_type = NULL;
@@ -271,7 +266,7 @@ void build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destinati
     }
 
     // Otherwise, we just ignore line/column fields
-    return;
+    return built_instr;
 }
 
 ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length){
@@ -2474,10 +2469,12 @@ bool is_allowed_builtin_auto_conversion(compiler_t *compiler, object_t *object, 
 }
 
 block_t *ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label){
+    block_stack_t *stack = &builder->block_stack;
+
     // Find loop label by name and return requested information
-    for(length_t i = builder->block_stack.length; i != 0; i--){
-        if(streq(label, builder->block_stack.blocks[i - 1].label)){
-            return &builder->block_stack.blocks[i - 1];
+    for(length_t i = stack->length; i != 0; i--){
+        if(streq(stack->blocks[i - 1].label, label)){
+            return &stack->blocks[i - 1];
         }
     }
 

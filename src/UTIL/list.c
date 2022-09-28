@@ -24,7 +24,7 @@ void list_qsort(void *list_struct, length_t sizeof_element, int (*cmp)(const voi
     qsort(list->items, list->length, sizeof_element, cmp);
 }
 
-void *list_last_unchecked_impl(void *list_struct, length_t sizeof_element){
+void *list_last_unchecked_ptr_impl(void *list_struct, length_t sizeof_element){
     void_list_t *list = (void_list_t*) list_struct;
-    return (void*) &(((char*) list->items)[list->length * sizeof_element]);
+    return (void*) &(((char*) list->items)[(list->length - 1) * sizeof_element]);
 }

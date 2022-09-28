@@ -57,7 +57,7 @@ maybe_index_t ast_named_expression_list_find_index(ast_named_expression_list_t *
     length_t length = sorted_list->length;
 
     maybe_index_t first, middle, last, comparison;
-    first = 0; last = length - 1;
+    first = 0; last = (maybe_index_t)length - 1;
 
     while(first <= last){
         middle = (first + last) / 2;
