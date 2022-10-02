@@ -12,10 +12,13 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
-#include "DRVR/compiler.h"
-#include "DRVR/object.h"
+#include <stdbool.h>
+
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "UTIL/ground.h"
 
 // ---------------- ir_gen_polymorphable ----------------
 // Finds whether a concrete AST type is valid for a given polymorphic type

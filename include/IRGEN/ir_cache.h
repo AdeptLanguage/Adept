@@ -15,7 +15,10 @@
     --------------------------------------------------------------------------
 */
 
+#include <stdio.h>
+
 #include "AST/ast.h"
+#include "AST/ast_type_lean.h"
 #include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 

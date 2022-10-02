@@ -8,6 +8,7 @@ extern "C" {
 
 #include "AST/ast.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 errorcode_t validate_func_requirements(parse_ctx_t *ctx, ast_func_t *func, source_t source);
 

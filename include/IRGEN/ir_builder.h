@@ -8,17 +8,25 @@
     ----------------------------------------------------------------------------
 */
 
-#include "IR/ir.h"
-#include "IR/ir_func_endpoint.h"
-#include "IR/ir_type_map.h"
-#include "AST/ast_type.h"
+#include <stdbool.h>
+
 #include "AST/ast_poly_catalog.h"
-#include "UTIL/ground.h"
+#include "AST/ast_type.h"
+#include "BRIDGE/bridge.h"
+#include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
-#include "BRIDGE/bridge.h"
+#include "IR/ir.h"
+#include "IR/ir_func_endpoint.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_type.h"
+#include "IR/ir_type_map.h"
+#include "IR/ir_value.h"
+#include "UTIL/datatypes.h"
 #include "UTIL/func_pair.h"
+#include "UTIL/ground.h"
 #include "UTIL/list.h"
+#include "UTIL/trait.h"
 
 typedef struct {
     weak_cstr_t label;

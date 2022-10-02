@@ -13,13 +13,16 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+
+#include "AST/ast_type_lean.h"
+#include "UTIL/ground.h"
 #include "UTIL/list.h"
 #include "UTIL/trait.h"
-#include "AST/ast_type_lean.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
-#include "IR/ir_value.h"
 #include "IR/ir_type.h"
+#include "IR/ir_value.h"
 #endif
 
 #define BRIDGE_VAR_UNDEF        TRAIT_1 // Variable is to be uninitialized

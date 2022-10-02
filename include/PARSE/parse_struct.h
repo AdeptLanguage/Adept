@@ -6,9 +6,14 @@
 extern "C" {
 #endif
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
+#include "AST/ast.h"
 #include "AST/ast_layout.h"
+#include "AST/ast_type_lean.h"
+#include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 // ------------------ parse_composite ------------------
 // Parses a composite

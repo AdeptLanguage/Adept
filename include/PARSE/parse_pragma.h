@@ -12,8 +12,8 @@ extern "C" {
 */
 
 #include "LEX/token.h"
-#include "UTIL/ground.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 // ---------------- parse_pragma ----------------
 // Handles parsing and interpretation of pragma directions

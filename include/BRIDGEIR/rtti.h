@@ -2,9 +2,12 @@
 #ifndef _ISAAC_RTTI_H
 #define _ISAAC_RTTI_H
 
-#include "UTIL/ground.h"
-#include "IRGEN/ir_builder.h"
 #include "AST/ast_type_lean.h"
+#include "BRIDGE/type_table.h"
+#include "IR/ir.h"
+#include "IR/ir_value.h"
+#include "IRGEN/ir_builder.h"
+#include "UTIL/ground.h"
 
 // ---------------- rtti_for ----------------
 // NOTE: Returns NULL on failure

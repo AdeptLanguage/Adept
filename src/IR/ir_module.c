@@ -1,5 +1,10 @@
 
 #include "IR/ir_module.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "IR/ir_type.h"
 #include "IRGEN/ir_builder.h"
 
 void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length, length_t number_of_function_names_guess){

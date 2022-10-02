@@ -2,6 +2,8 @@
 #include <stdlib.h>
 
 #include "AST/ast.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_named_expression.h"
 #include "DRVR/compiler.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
@@ -10,6 +12,7 @@
 #include "TOKEN/token_data.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
+#include "UTIL/trait.h"
 #include "UTIL/util.h"
 
 errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign){

@@ -12,6 +12,9 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+#include <stdio.h>
+
 #include "UTIL/ground.h"
 
 // -------------------- UTIL_USE_REALLOC --------------------

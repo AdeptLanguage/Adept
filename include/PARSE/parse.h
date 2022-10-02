@@ -13,7 +13,10 @@ extern "C" {
     ---------------------------------------------------------------------------
 */
 
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 // ------------------ parse ------------------
 // Entry point of the parser

@@ -12,9 +12,11 @@ extern "C" {
     --------------------------------------------------------------------------
 */
 
-#include "AST/ast.h"
-#include "UTIL/ground.h"
 #include <stdio.h>
+
+#include "AST/ast.h"
+#include "AST/ast_expr_lean.h"
+#include "UTIL/ground.h"
 
 // ---------------- ast_dump ----------------
 // Converts an AST to a string representation

@@ -12,9 +12,17 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
-#include "UTIL/ground.h"
+#include "AST/ast.h"
+#include "AST/ast_poly_catalog.h"
+#include "AST/ast_type_lean.h"
+#include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "IR/ir.h"
+#include "IR/ir_module.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
+#include "UTIL/ground.h"
 
 // ---------------- ir_rtti_types_t ----------------
 // Collection of IR types necessary for generating RTTI

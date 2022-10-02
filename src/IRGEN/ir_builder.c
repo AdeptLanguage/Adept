@@ -14,8 +14,6 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/bridge.h"
-#include "UTIL/func_pair.h"
-#include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
@@ -34,10 +32,10 @@
 #include "UTIL/builtin_type.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
+#include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
 #include "UTIL/trait.h"
-#include "UTIL/util.h"
 
 void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *object, func_id_t ast_func_id, func_id_t ir_func_id, bool static_builder){
     builder->basicblocks = (ir_basicblocks_t){

@@ -1,7 +1,7 @@
 
 #include "AST/ast.h"
 
-#include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,7 +10,6 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
-#include "UTIL/color.h"
 #include "UTIL/string.h"
 #include "UTIL/string_builder.h"
 #include "UTIL/util.h"

@@ -2,10 +2,11 @@
 #include <stddef.h>
 
 #include "AST/ast_type.h"
-#include "BRIDGEIR/rtti.h"
 #include "BRIDGE/type_table.h"
+#include "BRIDGEIR/rtti.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
+#include "IR/ir_module.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"

@@ -6,13 +6,18 @@
 extern "C" {
 #endif
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
 #include "AST/ast_expr.h"
+#include "AST/ast_type_lean.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // ------------------ defer_scope_t ------------------
 // A single scope for containing defer statements
 struct defer_scope;
+
 #define BREAKABLE       TRAIT_1
 #define CONTINUABLE     TRAIT_2
 #define FALLTHROUGHABLE TRAIT_3

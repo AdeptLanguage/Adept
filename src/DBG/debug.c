@@ -3,18 +3,14 @@
 #error This file should never be included in release builds
 #else
 
+#include <stdio.h>
+
 #include "AST/ast.h"
 #include "AST/ast_dump.h"
-#include "AST/ast_expr.h"
-#include "LEX/token.h"
-#include "UTIL/color.h"
-#include "UTIL/ground.h"
 #include "DBG/debug.h"
 #include "DRVR/compiler.h"
-#include "IR/ir.h"
 #include "IR/ir_dump.h"
-#include "IR/ir_lowering.h"
-#include "IRGEN/ir_builder.h"
+#include "IR/ir_module.h"
 
 void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data){
     #define OPTIONAL_NOTIF_MACRO(optional_trait, message) { \

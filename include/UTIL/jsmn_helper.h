@@ -19,8 +19,10 @@ extern "C" {
 // --------------------------------------------------------
 
 #define JSMN_HEADER
-#include "UTIL/jsmn.h"
+#include <stdbool.h>
+
 #include "UTIL/ground.h"
+#include "UTIL/jsmn.h"
 
 typedef struct {
     char *content;

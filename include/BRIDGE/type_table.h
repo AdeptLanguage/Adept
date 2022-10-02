@@ -6,8 +6,11 @@
 extern "C" {
 #endif
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
 #include "AST/ast_type_lean.h"
+#include "UTIL/ground.h"
+#include "UTIL/list.h"
 
 #ifndef ADEPT_INSIGHT_BUILD
 #include "IR/ir_type.h"

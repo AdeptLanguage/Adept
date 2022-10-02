@@ -1,10 +1,17 @@
 
+#include <assert.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "AST/POLY/ast_translate.h"
 #include "AST/TYPE/ast_type_identical.h"
-#include "AST/ast_poly_catalog.h"
+#include "AST/ast.h"
+#include "AST/ast_type.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_vtree.h"
 #include "IRGEN/ir_vtree.h"
+#include "UTIL/color.h"
+#include "UTIL/ground.h"
 
 errorcode_t ir_gen_vtree_overrides(
     compiler_t *compiler,

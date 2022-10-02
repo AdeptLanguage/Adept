@@ -9,12 +9,20 @@
     ---------------------------------------------------------------------------
 */
 
-#include "IR/ir.h"
 #include "AST/ast.h"
-#include "UTIL/ground.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_poly_catalog.h"
+#include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"
-#include "IRGEN/ir_gen.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_module.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_gen.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // Possible type conforming modes
 #define CONFORM_MODE_NOT_APPLICABLE TRAIT_NONE // Basic conforming rules

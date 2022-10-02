@@ -7,6 +7,7 @@
 #include "AST/ast.h"
 #include "AST/meta_directives.h"
 #include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
 #include "PARSE/parse_dependency.h"

@@ -1,12 +1,14 @@
 
-#include "CuTest.h"
+#include <stdbool.h>
+#include <stdlib.h>
 
-#include "UTIL/ground.h"
-#include "UTIL/util.h"
-#include "UTIL/string.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "AST/TYPE/ast_type_make.h"
+#include "CuTest.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
+#include "UTIL/util.h"
 
 static void TEST_ast_expr_call_str_1(CuTest *test){
     // Parameters

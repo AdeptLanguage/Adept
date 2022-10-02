@@ -2,11 +2,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 #include <assert.h>
-#include <setjmp.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <math.h>
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "CuTest.h"
 

@@ -12,9 +12,12 @@ extern "C" {
     -----------------------------------------------------------------------------
 */
 
+#include <assert.h>
+#include <stdbool.h>
+
+#include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
-#include "AST/ast_type_lean.h"
 #include "UTIL/ground.h"
 
 // (sorted)

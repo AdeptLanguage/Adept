@@ -1,8 +1,9 @@
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "AST/POLY/ast_resolve.h"
 #include "AST/TYPE/ast_type_make.h"

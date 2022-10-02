@@ -1,8 +1,15 @@
 
-#include "AST/ast_expr.h"
+#include <assert.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "AST/ast_dump.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type.h"
+#include "UTIL/color.h"
 #include "UTIL/string.h"
-#include "UTIL/string_builder.h"
 #include "UTIL/util.h"
 
 void ast_dump(ast_t *ast, const char *filename){

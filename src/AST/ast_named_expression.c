@@ -1,9 +1,10 @@
 
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "AST/ast.h"
-#include "AST/ast_named_expression.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_named_expression.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
 #include "UTIL/trait.h"

@@ -9,12 +9,22 @@
     ---------------------------------------------------------------------------
 */
 
-#include "IR/ir.h"
+#include <stdbool.h>
+
 #include "AST/ast.h"
-#include "UTIL/ground.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_layout.h"
+#include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"
-#include "IRGEN/ir_gen.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_gen.h"
+#include "UTIL/func_pair.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // ---------------- ir_gen_expr ----------------
 // ir_gens an AST expression into an IR value and
@@ -32,7 +42,7 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
 ir_value_t *ir_gen_conforming_expr(ir_builder_t *builder, ast_expr_t *ast_value, ast_type_t *to_type, unsigned int conform_mode, source_t source, const char *error_format);
 
 // ---------------- ir_gen_expr_* ----------------
-// Genarates an IR value for a specific kind of AST expression
+// Generates an IR value for a specific kind of AST expression
 errorcode_t ir_gen_expr_and(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_or(ir_builder_t *builder, ast_expr_or_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_str(ir_builder_t *builder, ast_expr_str_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);

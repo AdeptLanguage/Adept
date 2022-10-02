@@ -12,9 +12,15 @@ extern "C" {
     ---------------------------------------------------------------------------
 */
 
-#include "UTIL/ground.h"
+#include "AST/ast.h"
+#include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // ---------------- func_args_match ----------------
 // Returns whether a function's arguments match

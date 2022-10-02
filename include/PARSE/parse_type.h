@@ -6,8 +6,12 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 #include "AST/ast_type.h"
+#include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 // ------------------ parse_type ------------------
 // Parses a type into an abstract syntax tree form.

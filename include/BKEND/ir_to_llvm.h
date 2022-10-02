@@ -8,10 +8,17 @@
     ---------------------------------------------------------------------------
 */
 
+#include <llvm-c/TargetMachine.h>
+
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "IR/ir.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
 #include "UTIL/ground.h"
 #include "UTIL/list.h"
-#include "DRVR/compiler.h"
-#include <llvm-c/TargetMachine.h>
+#include "llvm-c/Target.h"
+#include "llvm-c/Types.h"
 
 // ---------------- value_catalog_block_t ----------------
 // Contains a list of resulting values from every

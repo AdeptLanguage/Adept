@@ -6,11 +6,15 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 #include "AST/ast.h"
-#include "LEX/lex.h"
-#include "UTIL/ground.h"
-#include "DRVR/object.h"
 #include "DRVR/compiler.h"
+#include "DRVR/object.h"
+#include "LEX/lex.h"
+#include "LEX/token.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // ------------------ parse_ctx_t ------------------
 // A general container struct that holds general

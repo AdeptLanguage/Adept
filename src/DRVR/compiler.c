@@ -46,7 +46,6 @@
 #include "BKEND/backend.h"
 #include "DBG/debug.h"
 #include "INFER/infer.h"
-#include "IR/ir.h"
 #include "IR/ir_module.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_polymorphable.h"

@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include <stdlib.h>
+
 #include "CuTest.h"
 
 CuSuite *CuSuite_for_ast_expr(void);

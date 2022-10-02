@@ -9,14 +9,20 @@
     ---------------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+
+#include "AST/ast.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "IR/ir.h"
 #include "IR/ir_proc_query.h"
-#include "AST/ast.h"
-#include "UTIL/ground.h"
-#include "DRVR/compiler.h"
-#include "UTIL/func_pair.h"
-#include "IRGEN/ir_cache.h"
+#include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_cache.h"
+#include "UTIL/func_pair.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // ---------------- ir_gen_find_proc ----------------
 // Generic way to find a procedure given a custom query

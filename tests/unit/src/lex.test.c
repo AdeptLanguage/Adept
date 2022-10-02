@@ -1,12 +1,15 @@
 
+#include <string.h>
+
 #include "CuTest.h"
 #include "CuTestExtras.h"
-
-#include "UTIL/ground.h"
-#include "UTIL/util.h"
-#include "UTIL/string.h"
 #include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "LEX/lex.h"
+#include "LEX/token.h"
+#include "TOKEN/token_data.h"
+#include "UTIL/ground.h"
+#include "UTIL/string.h"
 
 static void TEST_lex_1(CuTest *test){
     compiler_t compiler;

@@ -1,6 +1,10 @@
 
 #include "IR/ir_type_map.h"
 
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
 void ir_type_map_free(ir_type_map_t *type_map){
     free(type_map->mappings);
 }

@@ -2,9 +2,11 @@
 #ifndef _ISAAC_IR_TYPE_H
 #define _ISAAC_IR_TYPE_H
 
-#include "UTIL/trait.h"
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
 #include "IR/ir_pool.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // ============================================================
 // ------------------ Possible IR type kinds ------------------
@@ -35,12 +37,10 @@
 // An intermediate representation type
 // 'extra' can optionally contain one of the following:
 // 'ir_type_t', 'ir_type_extra_composite_t', or 'ir_type_extra_function_t'
-typedef struct ir_type_t ir_type_t;
-
-struct ir_type_t {
+typedef struct {
     unsigned int kind;
     void *extra;
-};
+} ir_type_t;
 
 // ---------------- ir_type_extra_composite_t ----------------
 // Structure for 'extra' field of 'ir_type_t' for composite

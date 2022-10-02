@@ -9,7 +9,6 @@
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
-#include "DRVR/object.h"
 #include "LEX/token.h"
 #include "PARSE/parse_ctx.h"
 #include "PARSE/parse_expr.h"

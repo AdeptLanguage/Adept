@@ -6,7 +6,9 @@
 extern "C" {
 #endif
 
+#include "AST/ast_named_expression.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 // ------------------ parse_global ------------------
 // Parses a global variable or global named expression

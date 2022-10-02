@@ -3,6 +3,7 @@
 #define _ISAAC_STASH_H
 
 #include "DRVR/config.h"
+#include "UTIL/ground.h"
 
 successful_t adept_install(config_t *config, weak_cstr_t root, weak_cstr_t identifier);
 successful_t adept_install_stash(config_t *config, weak_cstr_t root, char *bytes, length_t length);

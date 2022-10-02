@@ -13,6 +13,7 @@
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
+#include "IR/ir_module.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"

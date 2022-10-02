@@ -14,6 +14,7 @@ extern "C" {
 
 #include "IR/ir_pool.h"
 #include "IR/ir_value.h"
+#include "UTIL/ground.h"
 
 errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value);
 errorcode_t ir_lower_const_bitcast(ir_value_t **inout_value);

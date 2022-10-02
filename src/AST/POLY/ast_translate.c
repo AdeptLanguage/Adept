@@ -1,7 +1,11 @@
 
+#include <assert.h>
+#include <stdlib.h>
+
 #include "AST/POLY/ast_resolve.h"
 #include "AST/POLY/ast_translate.h"
 #include "AST/ast_poly_catalog.h"
+#include "AST/ast_type.h"
 
 errorcode_t ast_translate_poly_parent_class(
     compiler_t *compiler,

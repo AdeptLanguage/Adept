@@ -3,8 +3,8 @@
 #include <stdlib.h>
 
 #include "AST/ast.h"
-#include "AST/ast_named_expression.h"
 #include "AST/ast_expr.h"
+#include "AST/ast_named_expression.h"
 #include "AST/ast_type.h"
 #include "DRVR/compiler.h"
 #include "LEX/token.h"
@@ -15,7 +15,6 @@
 #include "TOKEN/token_data.h"
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
-#include "UTIL/util.h"
 
 errorcode_t parse_global(parse_ctx_t *ctx){
     length_t *i = ctx->i;

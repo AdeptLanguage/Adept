@@ -23,8 +23,8 @@ extern "C" {
 #include "BRIDGE/type_table.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
-#include "UTIL/trait.h"
 #include "UTIL/index_id_list.h"
+#include "UTIL/trait.h"
 
 struct compiler;
 

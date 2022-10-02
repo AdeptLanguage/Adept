@@ -6,6 +6,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 #include "UTIL/ground.h"
 
 enum update_schedule {

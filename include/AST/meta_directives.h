@@ -6,10 +6,12 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 #include "UTIL/ground.h"
 
-struct object;
 struct compiler;
+struct object;
 
 enum {
     META_EXPR_UNDEF,

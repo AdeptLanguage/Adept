@@ -9,12 +9,19 @@
     ---------------------------------------------------------------------------
 */
 
-#include "IR/ir.h"
+#include <stdbool.h>
+
 #include "AST/ast.h"
-#include "UTIL/ground.h"
+#include "AST/ast_expr.h"
+#include "AST/ast_type_lean.h"
+#include "BRIDGE/bridge.h"
 #include "DRVR/compiler.h"
-#include "IRGEN/ir_gen.h"
+#include "IR/ir.h"
+#include "IR/ir_type.h"
+#include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
+#include "IRGEN/ir_gen.h"
+#include "UTIL/ground.h"
 
 // ---------------- ir_gen_stmts ----------------
 // Generates intermediate representation for

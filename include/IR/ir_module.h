@@ -8,9 +8,14 @@
     -----------------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+
 #include "IR/ir.h"
+#include "IR/ir_func_endpoint.h"
+#include "IR/ir_pool.h"
 #include "IR/ir_proc_map.h"
 #include "IR/ir_type_map.h"
+#include "IRGEN/ir_cache.h"
 #include "UTIL/ground.h"
 
 // ---------------- ir_module_t ----------------

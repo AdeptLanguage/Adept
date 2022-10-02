@@ -1,4 +1,7 @@
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast_type.h"
 #include "IR/ir_func_endpoint.h"

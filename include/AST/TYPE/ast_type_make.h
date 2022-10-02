@@ -12,8 +12,12 @@
 extern "C" {
 #endif
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
+#include "AST/ast_expr_lean.h"
 #include "AST/ast_type.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // =====================================================================
 // =                          ast_type_make_*                          =

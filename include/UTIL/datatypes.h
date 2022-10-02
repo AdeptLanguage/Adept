@@ -13,6 +13,8 @@ extern "C" {
 */
 
 #include <inttypes.h>
+#include <stdbool.h>
+
 #include "UTIL/ground.h"
 
 typedef int8_t   int8;

@@ -4,6 +4,9 @@
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdlib.h>
+
+struct CuTest;
 
 #define CUTEST_VERSION  "CuTest 1.5c"
 

@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/ast_type.h"
 #include "IR/ir_lowering.h"
 #include "IR/ir_value_str.h"
-#include "IRGEN/ir_builder.h"
 #include "UTIL/datatypes.h"
 
 void ir_basicblock_new_instructions(ir_basicblock_t *block, length_t amount){

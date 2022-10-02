@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,10 +8,8 @@
 #include "AST/ast_expr.h"
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
-#include "UTIL/func_pair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
-#include "IR/ir.h"
 #include "IR/ir_func_endpoint.h"
 #include "IR/ir_module.h"
 #include "IR/ir_pool.h"
@@ -23,6 +22,8 @@
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_polymorphable.h"
 #include "IRGEN/ir_gen_type.h"
+#include "UTIL/color.h"
+#include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
 

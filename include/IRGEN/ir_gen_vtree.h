@@ -12,11 +12,14 @@ extern "C" {
     ----------------------------------------------------------------------------
 */
 
+#include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
+#include "IR/ir_func_endpoint.h"
 #include "IRGEN/ir_vtree.h"
 #include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
+#include "UTIL/list.h"
 
 // ---------------- virtual_addition_t ----------------
 // Represents a delayed virtual method addition into a vtree structure

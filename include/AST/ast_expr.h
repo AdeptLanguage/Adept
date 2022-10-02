@@ -12,13 +12,16 @@
 extern "C" {
 #endif
 
-#include "UTIL/trait.h"
-#include "UTIL/ground.h"
-#include "UTIL/datatypes.h"
+#include <stdbool.h>
+
+#include "AST/EXPR/ast_expr_ids.h" // IWYU pragma: export
+#include "AST/ast_expr_lean.h" // IWYU pragma: export
 #include "AST/ast_named_expression.h"
 #include "AST/ast_type_lean.h"
-#include "AST/ast_expr_lean.h" // IWYU pragma: export
-#include "AST/EXPR/ast_expr_ids.h" // IWYU pragma: export
+#include "UTIL/datatypes.h"
+#include "UTIL/ground.h"
+#include "UTIL/list.h"
+#include "UTIL/trait.h"
 
 // ---------------- ast_expr_byte_t ----------------
 // Expression for a literal byte value

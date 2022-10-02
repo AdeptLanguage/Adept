@@ -9,12 +9,19 @@
     ---------------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+
+#include "AST/ast.h"
+#include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
+#include "DRVR/object.h"
 #include "IR/ir.h"
 #include "IR/ir_func_endpoint.h"
-#include "AST/ast.h"
-#include "UTIL/ground.h"
-#include "DRVR/compiler.h"
+#include "IR/ir_pool.h"
+#include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
+#include "UTIL/func_pair.h"
+#include "UTIL/ground.h"
 
 // ---------------- ir_gen_type_mappings ----------------
 errorcode_t ir_gen(compiler_t *compiler, object_t *object);

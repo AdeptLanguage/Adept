@@ -6,8 +6,10 @@
 extern "C" {
 #endif
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
 
 // ------------------ parse_enum ------------------
 // Parses a enum

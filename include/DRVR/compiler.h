@@ -21,9 +21,10 @@ extern "C" {
 #include "DRVR/config.h"
 #include "DRVR/object.h"
 #include "UTIL/ground.h"
-#include "UTIL/trait.h"
-#include "UTIL/string_list.h"
+#include "UTIL/index_id_list.h"
 #include "UTIL/string_builder.h"
+#include "UTIL/string_list.h"
+#include "UTIL/trait.h"
 
 // Possible compiler trait options
 #define COMPILER_SHOW_CONSOLE     TRAIT_1

@@ -3,15 +3,15 @@
 #include <stddef.h>
 
 #include "AST/ast_type.h"
-#include "UTIL/func_pair.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
-#include "IR/ir.h"
+#include "IR/ir_module.h"
 #include "IR/ir_value.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_cache.h"
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_find_sf.h"
+#include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 
 errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, optional_func_pair_t *result){

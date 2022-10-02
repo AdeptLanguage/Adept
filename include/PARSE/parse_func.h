@@ -6,8 +6,13 @@
 extern "C" {
 #endif
 
-#include "UTIL/ground.h"
+#include <stdbool.h>
+
+#include "AST/ast.h"
+#include "AST/ast_type_lean.h"
 #include "PARSE/parse_ctx.h"
+#include "UTIL/ground.h"
+#include "UTIL/trait.h"
 
 // ------------------ parse_func ------------------
 // Parses a function

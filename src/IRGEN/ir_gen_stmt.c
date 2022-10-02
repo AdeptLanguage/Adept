@@ -23,6 +23,7 @@
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
 #include "UTIL/builtin_type.h"
+#include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
 #include "UTIL/trait.h"
