@@ -9,7 +9,6 @@ extern "C" {
 #include "AST/ast.h"
 #include "AST/ast_type_lean.h"
 #include "DRVR/compiler.h"
-#include "DRVR/object.h"
 #include "UTIL/ground.h"
 
 // ---------------- ast_translate_poly_parent_class ----------------
@@ -28,7 +27,7 @@ extern "C" {
 // IR generation.
 errorcode_t ast_translate_poly_parent_class(
     compiler_t *compiler,
-    object_t *object,
+    ast_t *ast,
     ast_composite_t *the_child_class,
     const ast_type_t *the_child_class_concrete_usage, 
     ast_type_t *out_type

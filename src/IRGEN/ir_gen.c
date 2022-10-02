@@ -44,12 +44,7 @@
 #include "UTIL/util.h"
 
 errorcode_t ir_gen(compiler_t *compiler, object_t *object){
-    ir_module_t *module = &object->ir_module;
-    ast_t *ast = &object->ast;
-
-    ir_implementation_setup();
-    ir_module_init(module, ast->funcs_length, ast->globals_length, ast->funcs_length + ast->func_aliases_length + 32);
-    object->compilation_stage = COMPILATION_STAGE_IR_MODULE;
+    object_create_module(object);
 
     return ir_gen_type_mappings(compiler, object)
         || ir_gen_globals(compiler, object)
@@ -103,7 +98,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
     }
 
     // Link up parents and children
-    if(ir_gen_vtree_link_up_nodes(compiler, object, &vtree_list, 0)) goto failure;
+    if(ir_gen_vtree_link_up_nodes(compiler, ast, &vtree_list, 0)) goto failure;
 
     // Search for overrides for descendent classes
     for(length_t i = 0; i != vtree_list.length; i++){
@@ -165,7 +160,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         }
 
         // Link up any newly created vtrees
-        if(ir_gen_vtree_link_up_nodes(compiler, object, &vtree_list, start_vtree_i)) goto failure;
+        if(ir_gen_vtree_link_up_nodes(compiler, ast, &vtree_list, start_vtree_i)) goto failure;
 
         // Waterfall new virtuals and search for their overrides
         for(length_t i = 0; i < additions.length; i++){
@@ -526,6 +521,18 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         if(ir_gen_resolve_type(compiler, object, &ast_func->return_type, &module_func->return_type)) return FAILURE;
     }
 
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_auxiliary_builders(compiler_t *compiler, object_t *object){
+    ir_module_t *ir_module = &object->ir_module;
+    ir_shared_common_t *common = &ir_module->common;
+
+    ir_module->init_builder = malloc(sizeof(ir_builder_t));
+    object->ir_module.deinit_builder = malloc(sizeof(ir_builder_t));
+
+    ir_builder_init(ir_module->init_builder, compiler, object, common->ast_main_id, common->ir_main_id, true);
+    ir_builder_init(ir_module->deinit_builder, compiler, object, common->ast_main_id, common->ir_main_id, true);
     return SUCCESS;
 }
 

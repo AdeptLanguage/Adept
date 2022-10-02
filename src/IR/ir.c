@@ -77,12 +77,8 @@ void ir_basicblock_free(ir_basicblock_t *basicblock){
     free(basicblock->instructions.instructions);
 }
 
-static char *ir_implementation_encoding = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-static length_t ir_implementation_encoding_base;
-
-void ir_implementation_setup(void){
-    ir_implementation_encoding_base = strlen(ir_implementation_encoding);
-}
+static char ir_implementation_encoding[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+static length_t ir_implementation_encoding_base = NUM_ITEMS(ir_implementation_encoding) - 1;
 
 void ir_implementation(length_t id, char prefix, char *output_buffer){
     // NOTE: output_buffer is assumed to be able to hold 32 characters

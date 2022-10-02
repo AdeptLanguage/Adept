@@ -9,7 +9,7 @@
 
 errorcode_t ast_translate_poly_parent_class(
     compiler_t *compiler,
-    object_t *object,
+    ast_t *ast,
     ast_composite_t *the_child_class,
     const ast_type_t *the_child_class_concrete_usage, 
     ast_type_t *out_type
@@ -45,7 +45,6 @@ errorcode_t ast_translate_poly_parent_class(
     assert(generics_length == concrete_generic_base->generics_length);
 
     // Find parent composite
-    ast_t *ast = &object->ast;
     ast_poly_composite_t *parent_composite = (ast_poly_composite_t*) ast_find_composite(ast, poly_extended_type);
     
     if(parent_composite == NULL){

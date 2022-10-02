@@ -70,7 +70,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
 // the in list yet
 errorcode_t ir_gen_vtree_link_up_nodes(
     compiler_t *compiler,
-    object_t *object,
+    ast_t *ast,
     vtree_list_t *vtree_list,
     length_t starting_index
 );

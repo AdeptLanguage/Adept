@@ -38,13 +38,11 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_shared_common_t *common = &ir_module->common;
 
     memset(common, 0, sizeof *common);
-
     common->ir_ubyte = ir_type_make(pool, TYPE_KIND_U8, NULL);
     common->ir_usize = ir_type_make(pool, TYPE_KIND_U64, NULL);
     common->ir_usize_ptr = ir_type_make_pointer_to(&ir_module->pool, common->ir_usize);
     common->ir_ptr = ir_type_make_pointer_to(pool, common->ir_ubyte);
     common->ir_bool = ir_type_make(pool, TYPE_KIND_BOOLEAN, NULL);
-
     common->has_rtti_array = TROOLEAN_UNKNOWN;
 }
 

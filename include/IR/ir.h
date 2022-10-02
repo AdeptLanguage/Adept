@@ -582,10 +582,6 @@ void ir_basicblock_free(ir_basicblock_t *basicblock);
 // Frees a list of IR functions
 void ir_funcs_free(ir_funcs_t funcs);
 
-// ---------------- ir_implementation_setup ----------------
-// Prepares for calls to ir_implementation()
-void ir_implementation_setup(void);
-
 // ---------------- ir_implementation ----------------
 // Encodes an ID for an implementation name
 // NOTE: output_buffer is assumed to be able to hold 32 characters

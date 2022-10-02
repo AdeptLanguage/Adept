@@ -64,6 +64,10 @@ typedef struct object {
 // Initializes the AST portion of an object_t
 void object_init_ast(object_t *object, unsigned int cross_compile_for);
 
+#ifndef ADEPT_INSIGHT_BUILD
+void object_create_module(object_t *object);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

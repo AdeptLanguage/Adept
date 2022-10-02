@@ -75,6 +75,9 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     ir_pool_snapshot_t snapshot;
     ir_pool_snapshot_capture(builder->pool, &snapshot);
 
+    instructions_snapshot_t instructions_snapshot;
+    instructions_snapshot_capture(builder, &instructions_snapshot);
+
     // Store a copy of the unmodified function argument values
     ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
     memcpy(arg_value_list_unmodified, arg_value_list, sizeof(ir_value_t*) * type_list_length);
@@ -85,8 +88,9 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
 
     for(length_t a = 0; a != min_arity; a++){
         if(!ast_types_conform(builder, &arg_value_list[a], &arg_type_list[a], &arg_types[a], conform_mode)){
-            // Restore pool snapshot
+            // Restore snapshot
             ir_pool_snapshot_restore(builder->pool, &snapshot);
+            instructions_snapshot_restore(builder, &instructions_snapshot);
 
             // Undo any modifications to the function arguments
             memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * (a + 1));

@@ -29,135 +29,129 @@
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
 
-errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
-    // NOTE: Maps all accessible types in the program
+ir_type_map_t ir_type_map_create(ast_t *ast, ir_module_t *module){
+    ir_pool_t *pool = &module->pool;
 
+    length_t estimate = ast->composites_length + ast->enums_length + 24;
+    ir_type_map_t type_map = list_create(ir_type_map_t, ir_type_mapping_t, estimate);
+
+    ir_type_mapping_t builtin_types[] = {
+        ir_type_mapping_create("bool", module->common.ir_bool),
+        ir_type_mapping_create("byte", ir_type_make(pool, TYPE_KIND_S8, NULL)),
+        ir_type_mapping_create("ubyte", ir_type_make(pool, TYPE_KIND_U8, NULL)),
+        ir_type_mapping_create("short", ir_type_make(pool, TYPE_KIND_S16, NULL)),
+        ir_type_mapping_create("ushort", ir_type_make(pool, TYPE_KIND_U16, NULL)),
+        ir_type_mapping_create("int", ir_type_make(pool, TYPE_KIND_S32, NULL)),
+        ir_type_mapping_create("uint", ir_type_make(pool, TYPE_KIND_U32, NULL)),
+        ir_type_mapping_create("long", ir_type_make(pool, TYPE_KIND_S64, NULL)),
+        ir_type_mapping_create("ulong", ir_type_make(pool, TYPE_KIND_U64, NULL)),
+        ir_type_mapping_create("half", ir_type_make(pool, TYPE_KIND_HALF, NULL)),
+        ir_type_mapping_create("float", ir_type_make(pool, TYPE_KIND_FLOAT, NULL)),
+        ir_type_mapping_create("double", ir_type_make(pool, TYPE_KIND_DOUBLE, NULL)),
+        ir_type_mapping_create("ptr", module->common.ir_ptr),
+        ir_type_mapping_create("usize", module->common.ir_usize),
+        ir_type_mapping_create("successful", module->common.ir_bool),
+        ir_type_mapping_create("void", ir_type_make(pool, TYPE_KIND_VOID, NULL))
+    };
+
+    for(length_t i = 0; i < NUM_ITEMS(builtin_types); i++){
+        ir_type_map_append(&type_map, builtin_types[i]);
+    }
+
+    for(length_t i = 0; i != ast->composites_length; i++){
+        // Create skeletons for composite type maps
+        ast_composite_t *composite = &ast->composites[i];
+
+        ir_type_map_append(&type_map, ((ir_type_mapping_t){
+            .name = composite->name,
+            .type = ir_type_make(pool, TYPE_KIND_UNBUILT_COMPOSITE, composite),
+        }));
+    }
+
+    for(length_t i = 0; i != ast->enums_length; i++){
+        ast_enum_t *enum_definition = &ast->enums[i];
+
+        ir_type_map_append(&type_map, ((ir_type_mapping_t){
+            .name = enum_definition->name,
+            .type = module->common.ir_usize,
+        }));
+    }
+
+    qsort(type_map.mappings, type_map.length, sizeof(ir_type_mapping_t), ir_type_mapping_cmp);
+    return type_map;
+}
+
+errorcode_t ir_gen_type_mappings(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
 
-    // Base types:
-    // byte, ubyte, short, ushort, int, uint, long, ulong, half, float, double, bool, ptr, usize, successful, void
-    #define IR_GEN_BASE_TYPE_MAPPINGS_COUNT 16
+    module->type_map = ir_type_map_create(ast, module);
 
-    length_t mappings_length = ast->composites_length + ast->enums_length + IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
-    ir_type_mapping_t *mappings = malloc(sizeof(ir_type_mapping_t) * mappings_length);
+    ir_type_map_t *type_map = &module->type_map;
 
-    mappings[0].name = "byte";
-    mappings[0].type.kind = TYPE_KIND_S8;
-    // <dont bother setting 'mappings[0].type.extra' because it will never be accessed>
-    mappings[1].name = "ubyte";
-    mappings[1].type.kind = TYPE_KIND_U8;
-    mappings[2].name = "short";
-    mappings[2].type.kind = TYPE_KIND_S16;
-    mappings[3].name = "ushort";
-    mappings[3].type.kind = TYPE_KIND_U16;
-    mappings[4].name = "int";
-    mappings[4].type.kind = TYPE_KIND_S32;
-    mappings[5].name = "uint";
-    mappings[5].type.kind = TYPE_KIND_U32;
-    mappings[6].name = "long";
-    mappings[6].type.kind = TYPE_KIND_S64;
-    mappings[7].name = "ulong";
-    mappings[7].type.kind = TYPE_KIND_U64;
-    mappings[8].name = "half";
-    mappings[8].type.kind = TYPE_KIND_HALF;
-    mappings[9].name = "float";
-    mappings[9].type.kind = TYPE_KIND_FLOAT;
-    mappings[10].name = "double";
-    mappings[10].type.kind = TYPE_KIND_DOUBLE;
-    mappings[11].name = "bool";
-    mappings[11].type.kind = TYPE_KIND_BOOLEAN;
-    mappings[12].name = "ptr";
-    mappings[12].type = *module->common.ir_ptr;
-    mappings[13].name = "usize";
-    mappings[13].type.kind = TYPE_KIND_U64;
-    mappings[14].name = "successful";
-    mappings[14].type.kind = TYPE_KIND_BOOLEAN;
-    mappings[15].name = "void";
-    mappings[15].type.kind = TYPE_KIND_VOID;
+    // Ensure the identifier for each type mapping is unique
+    for(length_t i = 1; i < type_map->length; i++){
+        if(streq(type_map->mappings[i - 1].name, type_map->mappings[i].name)){
+            // Error - Multiple types with the same name
 
-    length_t beginning_of_composites = IR_GEN_BASE_TYPE_MAPPINGS_COUNT;
-    length_t beginning_of_enums = mappings_length - ast->enums_length;
-
-    for(length_t i = beginning_of_composites; i != beginning_of_enums; i++){
-        // Create skeletons for composite type maps
-        ast_composite_t *composite = &ast->composites[i - IR_GEN_BASE_TYPE_MAPPINGS_COUNT];
-        mappings[i].name = composite->name; // Will live on
-        mappings[i].type.kind = TYPE_KIND_STRUCTURE;
-
-        // Temporary use mappings[i].type.extra as a pointer to reference the ast_composite_t used
-        // It will later be changed to the required composite data after this mappings have been sorted
-        mappings[i].type.extra = composite;
-    }
-
-    for(length_t i = beginning_of_enums; i != mappings_length; i++){
-        ast_enum_t *enum_definition = &ast->enums[i - beginning_of_enums];
-        mappings[i].name = enum_definition->name;
-        mappings[i].type.kind = TYPE_KIND_U64;
-    }
-
-    qsort(mappings, mappings_length, sizeof(ir_type_mapping_t), ir_type_mapping_cmp);
-
-    module->type_map = (ir_type_map_t){
-        .mappings = mappings,
-        .mappings_length = mappings_length,
-    };
-
-    // EXPERIMENTAL: Make sure each identifier is unique
-    for(length_t i = 1; i < mappings_length; i++){
-        if(streq(mappings[i - 1].name, mappings[i].name)){
-            // ERROR: Multiple types with the same name
-            weak_cstr_t name = mappings[i].name;
+            weak_cstr_t name = type_map->mappings[i].name;
             object_panicf_plain(object, "Multiple definitions of type '%s'", name);
 
             // Find every composite with that name
-            for(length_t s = 0; s != ast->composites_length; s++){
-                if(streq(ast->composites[s].name, name))
-                    compiler_panic(compiler, ast->composites[s].source, "Here");
+            for(length_t j = 0; j != ast->composites_length; j++){
+                if(streq(ast->composites[j].name, name)){
+                    compiler_panic(compiler, ast->composites[j].source, "Here");
+                }
             }
 
             // Find every enum with that name
-            for(length_t e = 0; e != ast->enums_length; e++){
-                if(streq(ast->enums[e].name, name))
-                    compiler_panic(compiler, ast->enums[e].source, "Here");
+            for(length_t j = 0; j != ast->enums_length; j++){
+                if(streq(ast->enums[j].name, name)){
+                    compiler_panic(compiler, ast->enums[j].source, "Here");
+                }
             }
 
             return FAILURE;
         }
     }
 
-    for(length_t i = 0; i != mappings_length; i++){
-        // Fill in bodies for struct/composite type maps
-        if(mappings[i].type.kind != TYPE_KIND_STRUCTURE) continue;
+    // Pre-validate string type (if it exists)
+    ir_type_t *ir_string_type;
+    if(ir_type_map_find(type_map, "String", &ir_string_type)){
+        ast_composite_t *composite = (ast_composite_t*) ir_string_type->extra;
 
-        // NOTE: mappings[i].type.extra is used temporary to store the ast_composite_t* used
-        ast_composite_t *composite = mappings[i].type.extra;
-
-        // Special enforcement of type 'String'
-        if(streq(composite->name, "String")){
-            if(composite->layout.traits != TRAIT_NONE
-            || !ast_layout_is_simple_struct(&composite->layout)
-            || ast_simple_field_map_get_count(&composite->layout.field_map) != 4
-            || !ast_type_is_base_ptr_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 0), "ubyte")
-            || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 1), "usize")
-            || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 2), "usize")
-            || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 3), "StringOwnership")){
-                compiler_panic(compiler, composite->source, "Invalid definition of built-in type 'String'");
-                printf("\nShould be declared as:\n\nstruct String (\n    array *ubyte,   length usize,\n    capacity usize, ownership StringOwnership\n)\n");
-                return FAILURE;
-            }
-
-            module->common.ir_string_struct = &mappings[i].type;
+        if(ir_string_type->kind != TYPE_KIND_UNBUILT_COMPOSITE
+        || composite->layout.traits != TRAIT_NONE
+        || !ast_layout_is_simple_struct(&composite->layout)
+        || ast_simple_field_map_get_count(&composite->layout.field_map) != 4
+        || !ast_type_is_base_ptr_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 0), "ubyte")
+        || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 1), "usize")
+        || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 2), "usize")
+        || !ast_type_is_base_of(ast_layout_skeleton_get_type_at_index(&composite->layout.skeleton, 3), "StringOwnership")){
+            compiler_panic(compiler, composite->source, "Invalid definition of built-in type 'String'");
+            printf("\nShould be declared as:\n\nstruct String (\n    array *ubyte,   length usize,\n    capacity usize, ownership StringOwnership\n)\n");
+            return FAILURE;
         }
-
-        ast_layout_bone_t layout_as_bone = ast_layout_as_bone(&composite->layout);
-        ir_type_t *ir_type_of_composite = ast_layout_bone_to_ir_type(compiler, object, &layout_as_bone, NULL);
-        if(ir_type_of_composite == NULL) return FAILURE;
-
-        // Do memory copy of IR type, so that pointer to the original remain the same
-        mappings[i].type = *ir_type_of_composite;
     }
 
+    // Fill in composite types
+    for(length_t i = 0; i != type_map->length; i++){
+        ir_type_t **mapping_type = &type_map->mappings[i].type;
+
+        if((*mapping_type)->kind == TYPE_KIND_UNBUILT_COMPOSITE){
+            ast_composite_t *composite = (*mapping_type)->extra;
+            ast_layout_bone_t layout_as_bone = ast_layout_as_bone(&composite->layout);
+
+            ir_type_t *composite_type = ast_layout_bone_to_ir_type(compiler, object, &layout_as_bone, NULL);
+            if(composite_type == NULL) return FAILURE;
+
+            // Replace by value so that the pointer remains the same
+            **mapping_type = *composite_type;
+        }
+    }
+
+    // Cache string IR type
+    ir_type_map_find(type_map, "String", &module->common.ir_string_struct);
     return SUCCESS;
 }
 

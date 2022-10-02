@@ -43,6 +43,8 @@ typedef listof(block_t, blocks) block_stack_t;
 // Container for storing general information
 // about the building state
 typedef struct ir_builder {
+    compiler_t *compiler;
+    object_t *object;
     ir_basicblocks_t basicblocks;
     ir_basicblock_t *current_block;
     length_t current_block_id;
@@ -54,8 +56,6 @@ typedef struct ir_builder {
     block_stack_t block_stack;
     ir_pool_t *pool;
     ir_type_map_t *type_map;
-    compiler_t *compiler;
-    object_t *object;
     func_id_t ast_func_id;
     func_id_t ir_func_id;
     bridge_scope_t *scope;

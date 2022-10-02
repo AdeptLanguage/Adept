@@ -34,6 +34,10 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object);
 // Generates IR function skeletons for AST functions.
 errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object);
 
+// ---------------- ir_gen_auxiliary_builders ----------------
+// Generates init/deinit builders
+errorcode_t ir_gen_auxiliary_builders(compiler_t *compiler, object_t *object);
+
 // ---------------- ir_gen_func_template ----------------
 // Generates empty template IR function
 errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cstr_t name, source_t from_source, func_id_t *out_ir_func_id);

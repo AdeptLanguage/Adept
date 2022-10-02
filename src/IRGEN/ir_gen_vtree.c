@@ -195,12 +195,10 @@ failure:
 
 errorcode_t ir_gen_vtree_link_up_nodes(
     compiler_t *compiler,
-    object_t *object,
+    ast_t *ast,
     vtree_list_t *vtree_list,
     length_t start_i
 ){
-    ast_t *ast = &object->ast;
-
     for(length_t i = start_i; i != vtree_list->length; i++){
         vtree_t *vtree = vtree_list->vtrees[i];
 
@@ -216,6 +214,7 @@ errorcode_t ir_gen_vtree_link_up_nodes(
         if(!composite->is_class){
             strong_cstr_t typename = ast_type_str(&vtree->signature);
             compiler_warnf(compiler, vtree->signature.source, "Cannot extend non-class '%s'", typename);
+            free(typename);
             return FAILURE;
         }
 
@@ -224,7 +223,7 @@ errorcode_t ir_gen_vtree_link_up_nodes(
         }
 
         ast_type_t parent;
-        if(ast_translate_poly_parent_class(compiler, object, composite, &vtree->signature, &parent)){
+        if(ast_translate_poly_parent_class(compiler, ast, composite, &vtree->signature, &parent)){
             return FAILURE;
         }
 

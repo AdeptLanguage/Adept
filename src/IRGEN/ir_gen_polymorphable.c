@@ -46,6 +46,7 @@ bool ir_gen_does_extend(compiler_t *compiler, object_t *object, ast_type_t *subj
     if(!ast_type_is_base_like(parent)) return false;
 
     ast_t *ast = &object->ast;
+
     ast_type_t *subject = subject_usage;
     ast_type_t subject_storage;
 
@@ -74,7 +75,7 @@ bool ir_gen_does_extend(compiler_t *compiler, object_t *object, ast_type_t *subj
         }
 
         ast_type_t next_subject;
-        if(ast_translate_poly_parent_class(compiler, object, subject_composite, subject, &next_subject)){
+        if(ast_translate_poly_parent_class(compiler, ast, subject_composite, subject, &next_subject)){
             goto failure;
         }
 
@@ -104,6 +105,8 @@ static errorcode_t enforce_prereq(
     ast_poly_catalog_t *catalog,
     length_t index
 ){
+    ast_t *ast = &object->ast;
+
     ast_elem_polymorph_prereq_t *prereq = (ast_elem_polymorph_prereq_t*) polymorphic_type->elements[index];
     enum special_prereq special_prereq = (enum special_prereq) -1;
 
@@ -132,7 +135,7 @@ static errorcode_t enforce_prereq(
     // Enforce struct-field prerequisites
     // `$T~MyStruct`
     if(prereq->similarity_prerequisite){
-        ast_composite_t *similar = ast_composite_find_exact(&object->ast, prereq->similarity_prerequisite);
+        ast_composite_t *similar = ast_composite_find_exact(ast, prereq->similarity_prerequisite);
 
         if(similar == NULL){
             compiler_panicf(compiler, prereq->source, "Undeclared struct '%s'", prereq->similarity_prerequisite);
@@ -151,7 +154,7 @@ static errorcode_t enforce_prereq(
 
         if(concrete_elem->id == AST_ELEM_BASE){
             weak_cstr_t given_name = ((ast_elem_base_t*) concrete_elem)->base;
-            ast_composite_t *given = ast_composite_find_exact(&object->ast, given_name);
+            ast_composite_t *given = ast_composite_find_exact(ast, given_name);
 
             if(given == NULL){
                 // Undeclared struct given, no error should be necessary
@@ -169,7 +172,7 @@ static errorcode_t enforce_prereq(
             }
 
             weak_cstr_t given_name = generic_base_elem->name;
-            ast_poly_composite_t *given = ast_poly_composite_find_exact(&object->ast, given_name);
+            ast_poly_composite_t *given = ast_poly_composite_find_exact(ast, given_name);
 
             if(given == NULL){
                 internalerrorprintf("ir_gen_polymorphable() - Failed to find polymorphic struct '%s', which should exist\n", given_name);

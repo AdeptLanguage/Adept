@@ -105,11 +105,11 @@ static strong_cstr_t literal_func_addr_by_name_to_str(ir_value_t *value){
     return mallocandsprintf("funcaddr %s", func_addr_by_name->name);
 }
 
-static strong_cstr_t literal_const_sizeof_to_str(ir_value_t *value){
+static strong_cstr_t literal_const_sizeof_like_to_str(const char *op_name, ir_value_t *value){
     ir_type_t *type = ((ir_value_const_sizeof_t*) value->extra)->type;
 
     strong_cstr_t type_str = ir_type_str(type);
-    strong_cstr_t result = mallocandsprintf("csizeof %s", type_str);
+    strong_cstr_t result = mallocandsprintf("%s %s", op_name, type_str);
     free(type_str);
 
     return result;
@@ -185,7 +185,10 @@ strong_cstr_t ir_value_str(ir_value_t *value){
         result = literal_func_addr_by_name_to_str(value);
         break;
     case VALUE_TYPE_CONST_SIZEOF:
-        result = literal_const_sizeof_to_str(value);
+        result = literal_const_sizeof_like_to_str("csizeof", value);
+        break;
+    case VALUE_TYPE_CONST_ALIGNOF:
+        result = literal_const_sizeof_like_to_str("alignof", value);
         break;
     case VALUE_TYPE_CONST_ADD:
         result = literal_const_add_to_str(value);
