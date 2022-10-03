@@ -65,7 +65,6 @@ typedef struct ir_builder {
     ast_type_t static_bool;
     ast_elem_base_t static_bool_base;
     ast_elem_t *static_bool_elems;
-    ir_type_t *stack_pointer_type;
     ir_type_t *s8_type;
     ir_type_t *ptr_type;
     type_table_t *type_table;
@@ -116,11 +115,15 @@ ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
 
 // ---------------- build_malloc ----------------
 // Builds a malloc instruction
-ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef, ir_type_t *optional_result_ptr_type);
+ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef);
 
 // ---------------- build_zeroinit ----------------
 // Builds a zero initialization instruction
 void build_zeroinit(ir_builder_t *builder, ir_value_t *destination);
+
+// ---------------- build_memcpy ----------------
+// Builds a memcpy instruction
+void build_memcpy(ir_builder_t *builder, ir_value_t *destination, ir_value_t *value, ir_value_t *num_bytes, bool is_volatile);
 
 // ---------------- build_load ----------------
 // Builds a load instruction
@@ -329,7 +332,7 @@ ir_value_t *build_phi2(ir_builder_t *builder, ir_type_t *result_type, ir_value_t
 
 // ---------------- build_bool ----------------
 // Builds a literal boolean value
-ir_value_t *build_bool(ir_pool_t *pool, bool value);
+ir_value_t *build_bool(ir_pool_t *pool, adept_bool value);
 
 // ---------------- build_rtti_relocation ----------------
 // Adds an RTTI index that requires resolution to the rtti_relocations array

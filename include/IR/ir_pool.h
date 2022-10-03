@@ -7,6 +7,10 @@
 
 #define POOL_ALLOCATION_ALIGNMENT sizeof(void*)
 
+// ---------------- ir_pool_alloc_init ----------------
+// Based on https://tia.mat.br/posts/2015/05/01/initializing_a_heap_allocated_structure_in_c.html
+#define ir_pool_alloc_init(POOL, TYPE, ...) (TYPE*) ir_pool_memclone((POOL), (TYPE[]){ __VA_ARGS__ }, sizeof(TYPE))
+
 // ---------------- ir_pool_fragment_t ----------------
 // A memory fragment within an 'ir_pool_t'
 typedef struct {
@@ -54,5 +58,9 @@ void ir_pool_snapshot_capture(ir_pool_t *pool, ir_pool_snapshot_t *snapshot);
 // ---------------- ir_pool_snapshot_restore ----------------
 // Restores an IR pool to a previous memory usage snapshot
 void ir_pool_snapshot_restore(ir_pool_t *pool, ir_pool_snapshot_t *snapshot);
+
+// ---------------- ir_pool_memclone ----------------
+// Creates a pool-allocated copy of a portion of memory
+void *ir_pool_memclone(ir_pool_t *pool, void *bytes, length_t num_bytes);
 
 #endif // _ISAAC_IR_POOL_H

@@ -49,6 +49,7 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
     return ir_gen_type_mappings(compiler, object)
         || ir_gen_globals(compiler, object)
         || ir_gen_functions(compiler, object)
+        || ir_gen_auxiliary_builders(compiler, object)
         || ir_gen_functions_body(compiler, object, NULL)
         || ir_gen_vtables(compiler, object)
         || ir_gen_special_globals(compiler, object)
@@ -541,16 +542,6 @@ errorcode_t ir_gen_functions_body(compiler_t *compiler, object_t *object, ir_job
 
     ast_func_t **ast_funcs = &object->ast.funcs;
     ir_job_list_t *job_list = &object->ir_module.job_list;
-    
-    if(object->ir_module.init_builder == NULL){
-        object->ir_module.init_builder = malloc(sizeof(ir_builder_t));
-        ir_builder_init(object->ir_module.init_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
-    }
-
-    if(object->ir_module.deinit_builder == NULL){
-        object->ir_module.deinit_builder = malloc(sizeof(ir_builder_t));
-        ir_builder_init(object->ir_module.deinit_builder, compiler, object, object->ir_module.common.ast_main_id, object->ir_module.common.ir_main_id, true);
-    }
 
     while(job_list->length != 0){
         ir_func_endpoint_t job = job_list->jobs[--job_list->length];

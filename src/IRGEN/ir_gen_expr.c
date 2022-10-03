@@ -2047,7 +2047,7 @@ errorcode_t ir_gen_expr_new(ir_builder_t *builder, ast_expr_new_t *expr, ir_valu
     if(ir_gen_resolve_type(builder->compiler, builder->object, &expr->type, &ir_type)) return FAILURE;
 
     // Build heap allocation instruction
-    *ir_value = build_malloc(builder, ir_type, amount, expr->is_undef, NULL);
+    *ir_value = build_malloc(builder, ir_type, amount, expr->is_undef);
 
     if(expr->inputs.has){
         if(expr->amount != NULL){
@@ -2074,32 +2074,21 @@ errorcode_t ir_gen_expr_new(ir_builder_t *builder, ast_expr_new_t *expr, ir_valu
 errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
     ir_shared_common_t *common = &builder->object->ir_module.common;
 
-    // Get length of C-string
-    length_t value_length = strlen(expr->value);
-
     // Get IR value for bytes necessary
-    ir_value_t *bytes_value = build_literal_usize(builder->pool, value_length + 1);
+    ir_value_t *num_bytes = build_literal_usize(builder->pool, strlen(expr->value) + 1);
 
     // Build heap allocation instruction
-    *ir_value = build_malloc(builder, common->ir_ubyte, bytes_value, true, common->ir_ptr);
+    ir_value_t *result = build_bitcast(builder, build_malloc(builder, common->ir_ubyte, num_bytes, true), common->ir_ptr);
 
-    // Generate a C-string constant
-    ir_value_t *cstring_value = build_literal_cstr(builder, expr->value);
-
-    // Generate instruction to copy string constant to allocated heap memory
-    ir_instr_memcpy_t *memcpy_instruction = (ir_instr_memcpy_t*) build_instruction(builder, sizeof(ir_instr_memcpy_t));
-    memcpy_instruction->id = INSTRUCTION_MEMCPY;
-    memcpy_instruction->result_type = NULL;
-    memcpy_instruction->destination = *ir_value;
-    memcpy_instruction->value = cstring_value;
-    memcpy_instruction->bytes = bytes_value;
-    memcpy_instruction->is_volatile = false;
+    // Copy constant string bytes into heap-allocated block of memory
+    build_memcpy(builder, result, build_literal_cstr(builder, expr->value), num_bytes, false);
 
     // Result type is *ubyte
     if(out_expr_type != NULL){
         *out_expr_type = ast_type_make_base_ptr(strclone("ubyte"));
     }
 
+    *ir_value = result;
     return SUCCESS;
 }
 
@@ -2255,6 +2244,7 @@ errorcode_t ir_gen_expr_static_struct(ir_builder_t *builder, ast_expr_static_dat
         *out_expr_type = ast_type_clone(&expr->type);
         ast_type_prepend_ptr(out_expr_type);
     }
+
     return SUCCESS;
 }
 

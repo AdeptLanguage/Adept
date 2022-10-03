@@ -103,7 +103,6 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
 
     builder->s8_type = ir_type_make(builder->pool, TYPE_KIND_S8, NULL);
 
-    builder->stack_pointer_type = NULL;
     builder->ptr_type = ir_type_make_pointer_to(builder->pool, builder->s8_type);
     builder->type_table = object->ast.type_table;
     builder->has_noop_defer_function = false;
@@ -157,75 +156,111 @@ ir_instr_t* build_instruction(ir_builder_t *builder, length_t size){
 }
 
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
-    // NOTE: Builds an ir_value_t for the result of the last instruction in the current block
+    // Builds an ir_value_t for the result of the last instruction in the current block
 
     ir_instrs_t *instrs = &builder->current_block->instructions;
 
-    ir_value_result_t *result = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
-    result->block_id = builder->current_block_id;
-    result->instruction_id = instrs->length - 1;
+    if(instrs->length == 0){
+        die("build_value_from_prev_instruction() cannot be called when no instructions present\n");
+    }
 
-    ir_value_t *ir_value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-    ir_value->value_type = VALUE_TYPE_RESULT;
-    ir_value->type = instrs->instructions[result->instruction_id]->result_type;
-    ir_value->extra = result;
+    length_t instruction_id = instrs->length - 1;
+    ir_type_t *result_type = instrs->instructions[instruction_id]->result_type;
 
-    // Little test to make sure ir_value->type is valid
-    if(ir_value->type == NULL){
-        internalerrorprintf("build_value_from_prev_instruction() tried to create value from instruction without return_type set\n");
-        redprintf("Previous instruction id: 0x%08X\n", (int) result->instruction_id);
+    if(result_type == NULL){
+        internalerrorprintf("build_value_from_prev_instruction() cannot create value for instruction that doesn't have a result\n");
+        redprintf("Previous instruction id: 0x%08X\n", (int) instruction_id);
         die("Terminating...\n");
     }
 
-    return ir_value;
+    return ir_pool_alloc_init(builder->pool, ir_value_t, {
+        .value_type = VALUE_TYPE_RESULT,
+        .type = result_type,
+        .extra = ir_pool_alloc_init(builder->pool, ir_value_result_t, {
+            .block_id = builder->current_block_id,
+            .instruction_id = instruction_id,
+        })
+    });
 }
 
 ir_value_t *build_varptr(ir_builder_t *builder, ir_type_t *ptr_type, bridge_var_t *var){
-    if(var->traits & BRIDGE_VAR_STATIC)
+    if(var->traits & BRIDGE_VAR_STATIC){
         return build_svarptr(builder, ptr_type, var->static_id);
-    else
+    } else {
         return build_lvarptr(builder, ptr_type, var->id);
+    }
 }
 
 ir_value_t *build_lvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
     ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) build_instruction(builder, sizeof(ir_instr_varptr_t));
-    instruction->id = INSTRUCTION_VARPTR;
-    instruction->result_type = ptr_type;
-    instruction->index = variable_id;
+
+    *instruction = (ir_instr_varptr_t){
+        .id = INSTRUCTION_VARPTR,
+        .result_type = ptr_type,
+        .index = variable_id,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_gvarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
-    // Build gvarptr instruction
     ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) build_instruction(builder, sizeof(ir_instr_varptr_t));
-    instruction->id = INSTRUCTION_GLOBALVARPTR;
-    instruction->result_type = ptr_type;
-    instruction->index = variable_id;
+
+    *instruction = (ir_instr_varptr_t){
+        .id = INSTRUCTION_GLOBALVARPTR,
+        .result_type = ptr_type,
+        .index = variable_id,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t variable_id){
     ir_instr_varptr_t *instruction = (ir_instr_varptr_t*) build_instruction(builder, sizeof(ir_instr_varptr_t));
-    instruction->id = INSTRUCTION_STATICVARPTR;
-    instruction->result_type = ptr_type;
-    instruction->index = variable_id;
+
+    *instruction = (ir_instr_varptr_t){
+        .id = INSTRUCTION_STATICVARPTR,
+        .result_type = ptr_type,
+        .index = variable_id,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef, ir_type_t *optional_result_ptr_type){
+ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef){
     ir_instr_malloc_t *instruction = (ir_instr_malloc_t*) build_instruction(builder, sizeof(ir_instr_malloc_t));
-    instruction->id = INSTRUCTION_MALLOC;
-    instruction->result_type = optional_result_ptr_type ? optional_result_ptr_type : ir_type_make_pointer_to(builder->pool, type);
-    instruction->type = type;
-    instruction->amount = amount;
-    instruction->is_undef = is_undef;
+
+    *instruction = (ir_instr_malloc_t){
+        .id = INSTRUCTION_MALLOC,
+        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .type = type,
+        .amount = amount,
+        .is_undef = is_undef,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 void build_zeroinit(ir_builder_t *builder, ir_value_t *destination){
     ir_instr_zeroinit_t *instruction = (ir_instr_zeroinit_t*) build_instruction(builder, sizeof(ir_instr_zeroinit_t));
-    instruction->id = INSTRUCTION_ZEROINIT;
-    instruction->destination = destination;
+
+    *instruction = (ir_instr_zeroinit_t){
+        .id = INSTRUCTION_ZEROINIT,
+        .destination = destination,
+    };
+}
+
+void build_memcpy(ir_builder_t *builder, ir_value_t *destination, ir_value_t *value, ir_value_t *num_bytes, bool is_volatile){
+    ir_instr_memcpy_t *instruction = (ir_instr_memcpy_t*) build_instruction(builder, sizeof(ir_instr_memcpy_t));
+
+    *instruction = (ir_instr_memcpy_t){
+        .id = INSTRUCTION_MEMCPY,
+        .result_type = NULL,
+        .destination = destination,
+        .value = value,
+        .bytes = num_bytes,
+        .is_volatile = is_volatile,
+    };
 }
 
 ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source){
@@ -252,77 +287,99 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_s
 }
 
 ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source){
-    ir_instr_store_t *built_instr = (ir_instr_store_t*) build_instruction(builder, sizeof(ir_instr_store_t));
-    built_instr->id = INSTRUCTION_STORE;
-    built_instr->result_type = NULL;
-    built_instr->value = value;
-    built_instr->destination = destination;
+    ir_instr_store_t *instruction = (ir_instr_store_t*) build_instruction(builder, sizeof(ir_instr_store_t));
 
+    *instruction = (ir_instr_store_t){
+        .id = INSTRUCTION_STORE,
+        .result_type = NULL,
+        .value = value,
+        .destination = destination,
+    };
+
+    // If we're doing null checks, then give line/column to IR store instruction.
     if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
-        // If we're doing null checks, then give line/column to IR load instruction.
-        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &built_instr->maybe_line_number, &built_instr->maybe_column_number);
+        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &instruction->maybe_line_number, &instruction->maybe_column_number);
     }
 
-    // Otherwise, we just ignore line/column fields
-    return built_instr;
+    return instruction;
 }
 
 ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length){
     ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = result_type;
-    instruction->values = arguments;
-    instruction->values_length = arguments_length;
-    instruction->ir_func_id = ir_func_id;
+
+    *instruction = (ir_instr_call_t){
+        .id = INSTRUCTION_CALL,
+        .result_type = result_type,
+        .values = arguments,
+        .values_length = arguments_length,
+        .ir_func_id = ir_func_id,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length){
     ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
-    instruction->id = INSTRUCTION_CALL;
-    instruction->result_type = result_type;
-    instruction->values = arguments;
-    instruction->values_length = arguments_length;
-    instruction->ir_func_id = ir_func_id;
+
+    *instruction = (ir_instr_call_t){
+        .id = INSTRUCTION_CALL,
+        .result_type = result_type,
+        .values = arguments,
+        .values_length = arguments_length,
+        .ir_func_id = ir_func_id,
+    };
 }
 
 ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity){
     ir_instr_call_address_t *instruction = (ir_instr_call_address_t*) build_instruction(builder, sizeof(ir_instr_call_address_t));
-    instruction->id = INSTRUCTION_CALL_ADDRESS;
-    instruction->result_type = return_type;
-    instruction->address = address;
-    instruction->values = arg_values;
-    instruction->values_length = arity;
+
+    *instruction = (ir_instr_call_address_t){
+        .id = INSTRUCTION_CALL_ADDRESS,
+        .result_type = return_type,
+        .address = address,
+        .values = arg_values,
+        .values_length = arity,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 void build_break(ir_builder_t *builder, length_t basicblock_id){
-    ir_instr_break_t *built_instr = (ir_instr_break_t*) build_instruction(builder, sizeof(ir_instr_break_t));
-    built_instr->id = INSTRUCTION_BREAK;
-    built_instr->result_type = NULL;
-    built_instr->block_id = basicblock_id;
+    ir_instr_break_t *instruction = (ir_instr_break_t*) build_instruction(builder, sizeof(ir_instr_break_t));
+
+    *instruction = (ir_instr_break_t){
+        .id = INSTRUCTION_BREAK,
+        .result_type = NULL,
+        .block_id = basicblock_id,
+    };
 }
 
 void build_cond_break(ir_builder_t *builder, ir_value_t *condition, length_t true_block_id, length_t false_block_id){
-    ir_instr_cond_break_t *built_instr = (ir_instr_cond_break_t*) build_instruction(builder, sizeof(ir_instr_cond_break_t));
-    built_instr->id = INSTRUCTION_CONDBREAK;
-    built_instr->result_type = NULL;
-    built_instr->value = condition;
-    built_instr->true_block_id = true_block_id;
-    built_instr->false_block_id = false_block_id;
+    ir_instr_cond_break_t *instruction = (ir_instr_cond_break_t*) build_instruction(builder, sizeof(ir_instr_cond_break_t));
+
+    *instruction = (ir_instr_cond_break_t){
+        .id = INSTRUCTION_CONDBREAK,
+        .result_type = NULL,
+        .value = condition,
+        .true_block_id = true_block_id,
+        .false_block_id = false_block_id,
+    };
 }
 
 ir_value_t *build_equals(ir_builder_t *builder, ir_value_t *a, ir_value_t *b){
-    ir_instr_math_t *built_instr = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-    built_instr->id = INSTRUCTION_EQUALS;
-    built_instr->a = a;
-    built_instr->b = b;
-    built_instr->result_type = ir_builder_bool(builder);
+    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
+
+    *instruction = (ir_instr_math_t){
+        .id = INSTRUCTION_EQUALS,
+        .a = a,
+        .b = b,
+        .result_type = ir_builder_bool(builder),
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, source_t code_source){
-    // NOTE: Array access is only for pointer values
     if(value->type->kind != TYPE_KIND_POINTER){
         internalerrorprintf("build_array_access() - Cannot perform array access on non-pointer value\n");
         redprintf("                (value left unmodified)\n");
@@ -333,73 +390,91 @@ ir_value_t *build_array_access(ir_builder_t *builder, ir_value_t *value, ir_valu
 }
 
 ir_value_t *build_array_access_ex(ir_builder_t *builder, ir_value_t *value, ir_value_t *index, ir_type_t *result_type, source_t code_source){
-    ir_instr_array_access_t *built_instr = (ir_instr_array_access_t*) build_instruction(builder, sizeof(ir_instr_array_access_t));
-    built_instr->id = INSTRUCTION_ARRAY_ACCESS;
-    built_instr->result_type = result_type;
-    built_instr->value = value;
-    built_instr->index = index;
+    ir_instr_array_access_t *instruction = (ir_instr_array_access_t*) build_instruction(builder, sizeof(ir_instr_array_access_t));
 
+    *instruction = (ir_instr_array_access_t){
+        .id = INSTRUCTION_ARRAY_ACCESS,
+        .result_type = result_type,
+        .value = value,
+        .index = index,
+        .maybe_line_number = -1,
+        .maybe_column_number = -1,
+    };
+
+    // If we're doing null checks, then give line/column to IR array access instruction.
     if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
-        // If we're doing null checks, then give line/column to IR load instruction.
-        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &built_instr->maybe_line_number, &built_instr->maybe_column_number);
+        const char *const buffer = builder->compiler->objects[code_source.object_index]->buffer;
+        lex_get_location(buffer, code_source.index, &instruction->maybe_line_number, &instruction->maybe_column_number);
     }
 
-    // Otherwise, we just ignore line/column fields
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_member(ir_builder_t *builder, ir_value_t *value, length_t member, ir_type_t *result_type, source_t code_source){
-    ir_instr_member_t *built_instr = (ir_instr_member_t*) build_instruction(builder, sizeof(ir_instr_member_t));
-    built_instr->id = INSTRUCTION_MEMBER;
-    built_instr->result_type = result_type;
-    built_instr->value = value;
-    built_instr->member = member;
+    ir_instr_member_t *instruction = (ir_instr_member_t*) build_instruction(builder, sizeof(ir_instr_member_t));
 
+    *instruction = (ir_instr_member_t){
+        .id = INSTRUCTION_MEMBER,
+        .result_type = result_type,
+        .value = value,
+        .member = member,
+        .maybe_line_number = -1,
+        .maybe_column_number = -1,
+    };
+
+    // If we're doing null checks, then give line/column to IR member instruction.
     if(builder->compiler->checks & COMPILER_NULL_CHECKS) {
-        // If we're doing null checks, then give line/column to IR load instruction.
-        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &built_instr->maybe_line_number, &built_instr->maybe_column_number);
+        const char *const buffer = builder->compiler->objects[code_source.object_index]->buffer;
+        lex_get_location(buffer, code_source.index, &instruction->maybe_line_number, &instruction->maybe_column_number);
     }
 
-    // Otherwise, we just ignore line/column fields
     return build_value_from_prev_instruction(builder);
 }
 
 void build_return(ir_builder_t *builder, ir_value_t *value){
-    ir_instr_ret_t *built_instr = (ir_instr_ret_t*) build_instruction(builder, sizeof(ir_instr_ret_t));
-    built_instr->id = INSTRUCTION_RET;
-    built_instr->result_type = NULL;
-    built_instr->value = value;
+    ir_instr_ret_t *instruction = (ir_instr_ret_t*) build_instruction(builder, sizeof(ir_instr_ret_t));
+
+    *instruction = (ir_instr_ret_t){
+        .id = INSTRUCTION_RET,
+        .result_type = NULL,
+        .value = value,
+    };
 }
 
 ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable){
-    ir_value_t *value = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_STRUCT_LITERAL;
-    value->type = type;
-    ir_value_struct_literal_t *extra = ir_pool_alloc(&module->pool, sizeof(ir_value_struct_literal_t));
-    extra->values = values;
-    extra->length = length;
-    value->extra = extra;
+    ir_value_t *value = ir_pool_alloc_init(&module->pool, ir_value_t, {
+        .value_type = VALUE_TYPE_STRUCT_LITERAL,
+        .type = type,
+        .extra = ir_pool_alloc_init(&module->pool, ir_value_struct_literal_t, {
+            .values = values,
+            .length = length,
+        })
+    });
 
+    // If mutability is required, then create an anonymous global for the structure data
     if(make_mutable){
-        ir_value_t *anon_global = build_anon_global(module, type, true);
-        build_anon_global_initializer(module, anon_global, value);
-        value = anon_global;
+        // Create anonymous global
+        ir_value_t *anonymous_global_variable = build_anon_global(module, type, true);
+
+        // Set initializer for anonymous global
+        build_anon_global_initializer(module, anonymous_global_variable, value);
+
+        // Use mutable anonymous global instead of constant
+        value = anonymous_global_variable;
     }
 
     return value;
 }
 
 ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_STRUCT_CONSTRUCTION;
-    value->type = type;
-
-    ir_value_struct_construction_t *extra = ir_pool_alloc(pool, sizeof(ir_value_struct_construction_t));
-    extra->values = values;
-    extra->length = length;
-    value->extra = extra;
-
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_STRUCT_CONSTRUCTION,
+        .type = type,
+        .extra = ir_pool_alloc_init(pool, ir_value_struct_construction_t, {
+            .values = values,
+            .length = length,
+        })
+    });
 }
 
 ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index){
@@ -407,97 +482,104 @@ ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t inde
 }
 
 ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type, length_t index){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_OFFSETOF;
-    value->type = usize_type;
-
     if(type->kind != TYPE_KIND_STRUCTURE){
         die("build_offsetof() - Cannot get offset of field for non-struct type\n");
     }
 
-    ir_value_offsetof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_offsetof_t));
-    extra->type = type;
-    extra->index = index;
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_OFFSETOF,
+        .type = usize_type,
+        .extra = ir_pool_alloc_init(pool, ir_value_offsetof_t, {
+            .type = type,
+            .index = index,
+        })
+    });
 }
 
 ir_value_t *build_const_sizeof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_CONST_SIZEOF;
-    value->type = usize_type;
-
-    ir_value_const_sizeof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_const_sizeof_t));
-    extra->type = type;
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_CONST_SIZEOF,
+        .type = usize_type,
+        .extra = ir_pool_alloc_init(pool, ir_value_const_sizeof_t, {
+            .type = type,
+        })
+    });
 }
 
 ir_value_t *build_const_alignof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_CONST_ALIGNOF;
-    value->type = usize_type;
-
-    ir_value_const_alignof_t *extra = ir_pool_alloc(pool, sizeof(ir_value_const_alignof_t));
-    extra->type = type;
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_CONST_ALIGNOF,
+        .type = usize_type,
+        .extra = ir_pool_alloc_init(pool, ir_value_const_alignof_t, {
+            .type = type,
+        })
+    });
 }
 
 ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_CONST_ADD;
-    value->type = a->type;
-
-    ir_value_const_math_t *extra = ir_pool_alloc(pool, sizeof(ir_value_const_math_t));
-    extra->a = a;
-    extra->b = b;
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_CONST_ADD,
+        .type = a->type,
+        .extra = ir_pool_alloc_init(pool, ir_value_const_math_t, {
+            .a = a,
+            .b = b,
+        })
+    });
 }
 
 ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *item_type, ir_value_t **values, length_t length){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_ARRAY_LITERAL;
-    value->type = ir_type_make_pointer_to(pool, item_type);
-
-    ir_value_array_literal_t *extra = ir_pool_alloc(pool, sizeof(ir_value_array_literal_t));
-    
-    *extra = (ir_value_array_literal_t){
-        .values = values,
-        .length = length,
-    };
-
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_ARRAY_LITERAL,
+        .type = ir_type_make_pointer_to(pool, item_type),
+        .extra = ir_pool_alloc_init(pool, ir_value_array_literal_t, {
+            .values = values,
+            .length = length,
+        })
+    });
 }
 
 ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
+    unsigned int value_type;
+    trait_t traits;
+
+    if(is_constant){
+        value_type = VALUE_TYPE_CONST_ANON_GLOBAL;
+        traits = IR_ANON_GLOBAL_CONSTANT;
+    } else {
+        value_type = VALUE_TYPE_ANON_GLOBAL;
+        traits = TRAIT_NONE;
+    }
+
     ir_anon_globals_append(&module->anon_globals, (
         (ir_anon_global_t){
             .type = type,
-            .traits = is_constant ? IR_ANON_GLOBAL_CONSTANT : TRAIT_NONE,
+            .traits = traits,
             .initializer = NULL,
         }
     ));
 
-    ir_value_t *reference = ir_pool_alloc(&module->pool, sizeof(ir_value_t));
-    reference->value_type = is_constant ? VALUE_TYPE_CONST_ANON_GLOBAL : VALUE_TYPE_ANON_GLOBAL;
-    reference->type = ir_type_make_pointer_to(&module->pool, type);
+    length_t anon_global_id = module->anon_globals.length - 1;
 
-    reference->extra = ir_pool_alloc(&module->pool, sizeof(ir_value_anon_global_t));
-    ((ir_value_anon_global_t*) reference->extra)->anon_global_id = module->anon_globals.length - 1;
-    return reference;
+    return ir_pool_alloc_init(&module->pool, ir_value_t, {
+        .value_type = value_type,
+        .type = ir_type_make_pointer_to(&module->pool, type),
+        .extra = ir_pool_alloc_init(&module->pool, ir_value_anon_global_t, {
+            .anon_global_id = anon_global_id,
+        })
+    });
 }
 
 void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer){
-    if(anon_global->value_type != VALUE_TYPE_ANON_GLOBAL && anon_global->value_type != VALUE_TYPE_CONST_ANON_GLOBAL){
+    switch(anon_global->value_type){
+    case VALUE_TYPE_ANON_GLOBAL:
+    case VALUE_TYPE_CONST_ANON_GLOBAL: {
+            ir_value_anon_global_t *extra = (ir_value_anon_global_t*) anon_global->extra;
+            module->anon_globals.globals[extra->anon_global_id].initializer = initializer;
+        }
+        break;
+    default:
         internalerrorprintf("build_anon_global_initializer() - Cannot set initializer on a value that isn't a reference to an anonymous global variable\n");
-        return;
     }
-
-    length_t index = ((ir_value_anon_global_t*) anon_global->extra)->anon_global_id;
-    module->anon_globals.globals[index].initializer = initializer;
 }
 
 ir_type_t* ir_builder_usize(ir_builder_t *builder){
@@ -543,55 +625,46 @@ maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_fai
     return -1;
 }
 
-ir_value_t *build_literal_int(ir_pool_t *pool, adept_int literal_value){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-
-    value->value_type = VALUE_TYPE_LITERAL;
-    value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    value->type->kind = TYPE_KIND_S32;
-    // neglect ir_value->type->extra
-    
-    value->extra = ir_pool_alloc(pool, sizeof(adept_int));
-    *((adept_int*) value->extra) = literal_value;
-    return value;
+ir_value_t *build_literal_int(ir_pool_t *pool, adept_int value){
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_LITERAL,
+        .type = ir_type_make(pool, TYPE_KIND_S32, NULL),
+        .extra = ir_pool_memclone(pool, &value, sizeof value),
+    });
 }
 
-ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize literal_value){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-
-    value->value_type = VALUE_TYPE_LITERAL;
-    value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    value->type->kind = TYPE_KIND_U64;
-    // neglect ir_value->type->extra
-    
-    value->extra = ir_pool_alloc(pool, sizeof(adept_usize));
-    *((adept_usize*) value->extra) = literal_value;
-    return value;
+ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize value){
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_LITERAL,
+        .type = ir_type_make(pool, TYPE_KIND_U64, NULL),
+        .extra = ir_pool_memclone(pool, &value, sizeof value),
+    });
 }
 
 ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length){
-    if(builder->object->ir_module.common.ir_string_struct == NULL){
+    ir_type_t *ir_string_type = builder->object->ir_module.common.ir_string_struct;
+
+    if(ir_string_type == NULL){
         redprintf("Can't create string literal without String type present");
         printf("\nTry importing '%s/String.adept'\n", ADEPT_VERSION_STRING);
         return NULL;
     }
 
-    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 4);
+    length_t num_fields = 4;
+    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * num_fields);
     values[0] = build_literal_cstr_of_length(builder, array, length);
     values[1] = build_literal_usize(builder->pool, length);
     values[2] = build_literal_usize(builder->pool, length);
+    values[3] = build_literal_usize(builder->pool, 0); // DANGEROUS: This is a hack to initialize String.ownership as a reference
 
-    // DANGEROUS: This is a hack to initialize String.ownership as a reference
-    values[3] = build_literal_usize(builder->pool, 0);
-    
-    ir_value_t *value = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_STRUCT_LITERAL;
-    value->type = builder->object->ir_module.common.ir_string_struct;
-    ir_value_struct_literal_t *extra = ir_pool_alloc(builder->pool, sizeof(ir_value_struct_literal_t));
-    extra->values = values;
-    extra->length = 4;
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(builder->pool, ir_value_t, {
+        .value_type = VALUE_TYPE_STRUCT_LITERAL,
+        .type = ir_string_type,
+        .extra = ir_pool_alloc_init(builder->pool, ir_value_struct_literal_t, {
+            .values = values,
+            .length = num_fields,
+        })
+    });
 }
 
 ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
@@ -607,73 +680,56 @@ ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, char *array, len
 }
 
 ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t size){
-    // NOTE: Builds a null-terminated string literal value
+    ir_type_t *ir_ubyte_type;
 
-    ir_value_t *ir_value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    ir_value->value_type = VALUE_TYPE_CSTR_OF_LEN;
-    ir_type_t *ubyte_type;
-
-    if(!ir_type_map_find(type_map, "ubyte", &ubyte_type)){
+    if(!ir_type_map_find(type_map, "ubyte", &ir_ubyte_type)){
         die("build_literal_cstr_of_length_ex() - Failed to find 'ubyte' type mapping\n");
     }
 
-    ir_value->type = ir_type_make_pointer_to(pool, ubyte_type);
-    ir_value->extra = ir_pool_alloc(pool, sizeof(ir_value_cstr_of_len_t));
-    ((ir_value_cstr_of_len_t*) ir_value->extra)->array = array;
-    ((ir_value_cstr_of_len_t*) ir_value->extra)->size = size;
-    return ir_value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_CSTR_OF_LEN,
+        .type = ir_type_make_pointer_to(pool, ir_ubyte_type),
+        .extra = ir_pool_alloc_init(pool, ir_value_cstr_of_len_t, {
+            .array = array,
+            .size = size,
+        })
+    });
 }
 
 ir_value_t *build_null_pointer(ir_pool_t *pool){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_NULLPTR;
-    // neglect value->extra
-
-    value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    value->type->kind = TYPE_KIND_POINTER;
-    value->type->extra = ir_pool_alloc(pool, sizeof(ir_type_t));
-    ((ir_type_t*) value->type->extra)->kind = TYPE_KIND_S8;
-    // neglect ((ir_type_t*) value->type->extra)->extra
-
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_NULLPTR,
+        .type = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_S8, NULL)),
+        .extra = NULL,
+    });
 }
 
 ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_NULLPTR_OF_TYPE;
-    value->type = type;
-    // neglect value->extra
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_NULLPTR,
+        .type = type,
+        .extra = NULL,
+    });
 }
 
 ir_value_t *build_func_addr(ir_pool_t *pool, ir_type_t *result_type, func_id_t ir_func_id){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_FUNC_ADDR;
-    value->type = result_type;
-
-    ir_value_func_addr_t *extra = ir_pool_alloc(pool, sizeof(ir_value_func_addr_t));
-
-    *extra = (ir_value_func_addr_t){
-        .ir_func_id = ir_func_id,
-    };
-
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_FUNC_ADDR,
+        .type = result_type,
+        .extra = ir_pool_alloc_init(pool, ir_value_func_addr_t, {
+            .ir_func_id = ir_func_id,
+        })
+    });
 }
 
 ir_value_t *build_func_addr_by_name(ir_pool_t *pool, ir_type_t *result_type, const char *name){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = VALUE_TYPE_FUNC_ADDR_BY_NAME;
-    value->type = result_type;
-
-    ir_value_func_addr_by_name_t *extra = ir_pool_alloc(pool, sizeof(ir_value_func_addr_by_name_t));
-
-    *extra = (ir_value_func_addr_by_name_t){
-        .name = name,
-    };
-
-    value->extra = extra;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_FUNC_ADDR_BY_NAME,
+        .type = result_type,
+        .extra = ir_pool_alloc_init(pool, ir_value_func_addr_by_name_t, {
+            .name = name,
+        })
+    });
 }
 
 ir_value_t *build_cast(ir_builder_t *builder, unsigned int const_cast_value_type, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t *to){
@@ -685,103 +741,119 @@ ir_value_t *build_cast(ir_builder_t *builder, unsigned int const_cast_value_type
 }
 
 ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int cast_instr_id, ir_value_t *from, ir_type_t* to){
-    ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-    instr->id = cast_instr_id;
-    instr->result_type = to;
-    instr->value = from;
+    ir_instr_cast_t *instruction = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
+
+    *instruction = (ir_instr_cast_t){
+        .id = cast_instr_id,
+        .result_type = to,
+        .value = from,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_const_cast(ir_pool_t *pool, unsigned int cast_value_type, ir_value_t *from, ir_type_t *to){
-    ir_value_t *value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    value->value_type = cast_value_type;
-    value->type = to;
-    value->extra = from;
-    return value;
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = cast_value_type,
+        .type = to,
+        .extra = from,
+    });
 }
 
 ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
-    ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
-    instr->id = INSTRUCTION_ALLOC;
-    instr->result_type = ir_type_make_pointer_to(builder->pool, type);
-    instr->alignment = 0;
-    instr->count = NULL;
+    ir_instr_alloc_t *instruction = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
+
+    *instruction = (ir_instr_alloc_t){
+        .id = INSTRUCTION_ALLOC,
+        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .alignment = 0,
+        .count = NULL,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t *count){
-    ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
-    instr->id = INSTRUCTION_ALLOC;
-    instr->result_type = ir_type_make_pointer_to(builder->pool, type);
-    instr->alignment = 0;
-    instr->count = count;
+    ir_instr_alloc_t *instruction = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
+
+    *instruction = (ir_instr_alloc_t){
+        .id = INSTRUCTION_ALLOC,
+        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .alignment = 0,
+        .count = count,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment){
-    ir_instr_alloc_t *instr = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
-    instr->id = INSTRUCTION_ALLOC;
-    instr->result_type = ir_type_make_pointer_to(builder->pool, type);
-    instr->alignment = alignment;
-    instr->count = NULL;
+    ir_instr_alloc_t *instruction = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
+
+    *instruction = (ir_instr_alloc_t){
+        .id = INSTRUCTION_ALLOC,
+        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .alignment = alignment,
+        .count = NULL,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_stack_save(ir_builder_t *builder){
-    ir_instr_t *instr = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
-    instr->id = INSTRUCTION_STACK_SAVE;
+    ir_instr_t *instruction = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
 
-    if(builder->stack_pointer_type == NULL){
-        ir_type_t *i8_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        i8_type->kind = TYPE_KIND_S8;
-        i8_type->extra = NULL;
-        builder->stack_pointer_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        builder->stack_pointer_type->kind = TYPE_KIND_POINTER;
-        builder->stack_pointer_type->extra = i8_type;
-    }
+    *instruction = (ir_instr_t){
+        .id = INSTRUCTION_STACK_SAVE,
+        .result_type = builder->object->ir_module.common.ir_ptr,
+    };
 
-    instr->result_type = builder->stack_pointer_type;
     return build_value_from_prev_instruction(builder);
 }
 
 void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer){
-    ir_instr_unary_t *instr = (ir_instr_unary_t*) build_instruction(builder, sizeof(ir_instr_unary_t));
-    instr->id = INSTRUCTION_STACK_RESTORE;
-    instr->result_type = NULL;
-    instr->value = stack_pointer;
+    ir_instr_unary_t *instruction = (ir_instr_unary_t*) build_instruction(builder, sizeof(ir_instr_unary_t));
+
+    *instruction = (ir_instr_unary_t){
+        .id = INSTRUCTION_STACK_RESTORE,
+        .result_type = NULL,
+        .value = stack_pointer,
+    };
 }
 
 ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result){
     ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-    instruction->id = instr_id;
-    instruction->a = a;
-    instruction->b = b;
-    instruction->result_type = result;
+
+    *instruction = (ir_instr_math_t){
+        .id = instr_id,
+        .a = a,
+        .b = b,
+        .result_type = result,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
 ir_value_t *build_phi2(ir_builder_t *builder, ir_type_t *result_type, ir_value_t *a, ir_value_t *b, length_t landing_a_block_id, length_t landing_b_block_id){
     ir_instr_phi2_t *instruction = (ir_instr_phi2_t*) build_instruction(builder, sizeof(ir_instr_phi2_t));
-    instruction->id = INSTRUCTION_PHI2;
-    instruction->result_type = result_type;
-    instruction->a = a;
-    instruction->b = b;
-    instruction->block_id_a = landing_a_block_id;
-    instruction->block_id_b = landing_b_block_id;
+
+    *instruction = (ir_instr_phi2_t){
+        .id = INSTRUCTION_PHI2,
+        .result_type = result_type,
+        .a = a,
+        .b = b,
+        .block_id_a = landing_a_block_id,
+        .block_id_b = landing_b_block_id,
+    };
+
     return build_value_from_prev_instruction(builder);
 }
 
-ir_value_t *build_bool(ir_pool_t *pool, bool value){
-    ir_value_t *ir_value = ir_pool_alloc(pool, sizeof(ir_value_t));
-    ir_value->value_type = VALUE_TYPE_LITERAL;
-
-    ir_value->type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    ir_value->type->kind = TYPE_KIND_BOOLEAN;
-    // neglect ir_value->type->extra
-
-    ir_value->extra = ir_pool_alloc(pool, sizeof(bool));
-    *((bool*) ir_value->extra) = value;
-    return ir_value;
+ir_value_t *build_bool(ir_pool_t *pool, adept_bool value){
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_LITERAL,
+        .type = ir_type_make(pool, TYPE_KIND_BOOLEAN, NULL),
+        .extra = ir_pool_memclone(pool, &value, sizeof value),
+    });
 }
 
 errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure){
@@ -798,28 +870,36 @@ errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_not
 
 void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, weak_cstr_t constraints, ir_value_t **args, length_t arity, bool has_side_effects, bool is_stack_align){
     ir_instr_asm_t *instruction = (ir_instr_asm_t*) build_instruction(builder, sizeof(ir_instr_asm_t));
-    instruction->id = INSTRUCTION_ASM;
-    instruction->result_type = NULL;
-    instruction->assembly = assembly;
-    instruction->constraints = constraints;
-    instruction->args = args;
-    instruction->arity = arity;
-    instruction->is_intel = is_intel;
-    instruction->has_side_effects = has_side_effects;
-    instruction->is_stack_align = is_stack_align;
-    return;
+
+    *instruction = (ir_instr_asm_t){
+        .id = INSTRUCTION_ASM,
+        .result_type = NULL,
+        .assembly = assembly,
+        .constraints = constraints,
+        .args = args,
+        .arity = arity,
+        .is_intel = is_intel,
+        .has_side_effects = has_side_effects,
+        .is_stack_align = is_stack_align,
+    };
 }
 
 void build_deinit_svars(ir_builder_t *builder){
     ir_instr_t *instruction = build_instruction(builder, sizeof(ir_instr_t));
-    instruction->id = INSTRUCTION_DEINIT_SVARS;
-    instruction->result_type = NULL;
+
+    *instruction = (ir_instr_t){
+        .id = INSTRUCTION_DEINIT_SVARS,
+        .result_type = NULL,
+    };
 }
 
 void build_unreachable(ir_builder_t *builder){
-    ir_instr_t *built_instr = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
-    built_instr->id = INSTRUCTION_UNREACHABLE;
-    built_instr->result_type = NULL;
+    ir_instr_t *instruction = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
+
+    *instruction = (ir_instr_t){
+        .id = INSTRUCTION_UNREACHABLE,
+        .result_type = NULL,
+    };
 }
 
 void build_main_deinitialization(ir_builder_t *builder){
@@ -829,13 +909,13 @@ void build_main_deinitialization(ir_builder_t *builder){
 
 void open_scope(ir_builder_t *builder){
     bridge_scope_t *old_scope = builder->scope;
-    bridge_scope_t *new_scope = malloc(sizeof(bridge_scope_t));
 
+    bridge_scope_t *new_scope = malloc(sizeof(bridge_scope_t));
     bridge_scope_init(new_scope, old_scope);
+
     new_scope->first_var_id = builder->next_var_id;
 
     bridge_scope_ref_list_append(&old_scope->children, new_scope);
-
     builder->scope = new_scope;
 }
 
@@ -907,21 +987,21 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         // Determine where to build the deference code
         // Will build inline for regular variables
         // Will build inside static variable deinitialization function for static variables
-        ir_builder_t *deinit_builder = traits & BRIDGE_VAR_STATIC ? builder->object->ir_module.deinit_builder : builder;
+        ir_builder_t *defer_builder = traits & BRIDGE_VAR_STATIC ? builder->object->ir_module.deinit_builder : builder;
 
         // Capture snapshot of current pool state (for if we need to revert allocations)
         ir_pool_snapshot_t snapshot;
-        ir_pool_snapshot_capture(deinit_builder->pool, &snapshot);
+        ir_pool_snapshot_capture(defer_builder->pool, &snapshot);
 
-        ir_value_t *ir_var_value = build_varptr(deinit_builder, ir_type_make_pointer_to(deinit_builder->pool, variable->ir_type), variable);
-        errorcode_t failed = handle_single_deference(deinit_builder, variable->ast_type, ir_var_value);
+        ir_value_t *ir_var_value = build_varptr(defer_builder, ir_type_make_pointer_to(defer_builder->pool, variable->ir_type), variable);
+        errorcode_t failed = handle_single_deference(defer_builder, variable->ast_type, ir_var_value);
 
         if(failed){
             // Remove VARPTR instruction
-            deinit_builder->current_block->instructions.length--;
+            defer_builder->current_block->instructions.length--;
 
             // Revert recent pool allocations
-            ir_pool_snapshot_restore(deinit_builder->pool, &snapshot);
+            ir_pool_snapshot_restore(defer_builder->pool, &snapshot);
 
             // Real failure if a compile time error occurred
             if(failed == ALT_FAILURE) return FAILURE;
