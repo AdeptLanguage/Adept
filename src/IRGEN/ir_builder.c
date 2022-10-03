@@ -706,7 +706,7 @@ ir_value_t *build_null_pointer(ir_pool_t *pool){
 
 ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
     return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_NULLPTR,
+        .value_type = VALUE_TYPE_NULLPTR_OF_TYPE,
         .type = type,
         .extra = NULL,
     });
