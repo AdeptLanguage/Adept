@@ -102,6 +102,7 @@ strong_cstr_t string_to_unescaped_string(const char *data, length_t length, leng
             *out_error_cause = (string_unescape_error_t){
                 .relative_position = get,
             };
+            free(output);
             return NULL;
         }
 
