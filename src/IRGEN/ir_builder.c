@@ -990,8 +990,7 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         ir_builder_t *defer_builder = traits & BRIDGE_VAR_STATIC ? builder->object->ir_module.deinit_builder : builder;
 
         // Capture snapshot of current pool state (for if we need to revert allocations)
-        ir_pool_snapshot_t snapshot;
-        ir_pool_snapshot_capture(defer_builder->pool, &snapshot);
+        ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(defer_builder->pool);
 
         ir_value_t *ir_var_value = build_varptr(defer_builder, ir_type_make_pointer_to(defer_builder->pool, variable->ir_type), variable);
         errorcode_t failed = handle_single_deference(defer_builder, variable->ast_type, ir_var_value);
@@ -1028,8 +1027,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
         if(global->type.elements_length != 1) continue;
 
         // Capture snapshot of current pool state (for if we need to revert allocations)
-        ir_pool_snapshot_t snapshot;
-        ir_pool_snapshot_capture(builder->pool, &snapshot);
+        ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
         ir_type_t *ir_type;
         if(ir_gen_resolve_type(builder->compiler, builder->object, &global->type, &ir_type)){
@@ -1065,8 +1063,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
     optional_func_pair_t pair;
-    ir_pool_snapshot_t pool_snapshot;
-    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
 
     ir_value_t **arguments = NULL;
 
@@ -1150,7 +1147,6 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
     // DANGEROUS: 'func' could be invalidated by generation of new functions
     ast_func_t *func = &builder->object->ast.funcs[builder->ast_func_id];
     ast_type_t *this_ast_type = func->arity == 1 ? &func->arg_types[0] : NULL;
-    ir_pool_snapshot_t snapshot;
 
     if(this_ast_type == NULL || this_ast_type->elements_length != 2){
         compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_dereference() encountered unrecognized format of __defer__ management method");
@@ -1186,7 +1182,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
 
                 // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_capture(builder->pool, &snapshot);
+                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
                 
                 ir_type_t *ir_field_type, *this_ir_type;
                 if(
@@ -1254,7 +1250,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 }
 
                 // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_capture(builder->pool, &snapshot);
+                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
                 
                 ir_type_t *ir_field_type, *this_ir_type;
                 if(
@@ -1307,25 +1303,34 @@ bool could_have_deference(ast_type_t *ast_type){
     return false;
 }
 
+static inline bool ast_type_allows_pass_management(ast_type_t *type){
+    if(type->elements_length != 1) return false;
+
+    switch(type->elements[0]->id){
+    case AST_ELEM_BASE:
+    case AST_ELEM_GENERIC_BASE:
+    case AST_ELEM_FIXED_ARRAY:
+        return true;
+    default:
+        return false;
+    }
+}
+
 errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, ast_type_t *types, trait_t *arg_type_traits, length_t arity){
     for(length_t i = 0; i != arity; i++){
+        // Don't do __pass__ calls for parameters marked as 'POD'
         if(arg_type_traits != NULL && arg_type_traits[i] & AST_FUNC_ARG_TYPE_TRAIT_POD) continue;
         
         unsigned int value_type_kind = values[i]->type->kind;
 
         if(value_type_kind == TYPE_KIND_STRUCTURE || value_type_kind == TYPE_KIND_FIXED_ARRAY){
-            ast_type_t *ast_type = &types[i];
-            unsigned int elem_id = ast_type->elements[0]->id;
-
-            if((ast_type->elements_length == 1 && (elem_id == AST_ELEM_BASE || elem_id == AST_ELEM_GENERIC_BASE)) || elem_id == AST_ELEM_FIXED_ARRAY){
-                ir_pool_snapshot_t snapshot;
-                ir_pool_snapshot_capture(builder->pool, &snapshot);
+            if(ast_type_allows_pass_management(&types[i])){
+                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
                 optional_func_pair_t pair;
-                ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
-                arguments[0] = values[i];
+                ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, values[i]);
 
-                errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &pair);
+                errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, &types[i], &pair);
                 if(errorcode == ALT_FAILURE) return FAILURE;
 
                 if(errorcode == FAILURE){
@@ -1334,8 +1339,9 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                 }
 
                 if(pair.has){
-                    ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;                
-                    values[i] = build_call(builder, pair.value.ir_func_id, result_type, arguments, 1);
+                    func_id_t ir_func_id = pair.value.ir_func_id;
+                    ir_type_t *return_type = builder->object->ir_module.funcs.funcs[ir_func_id].return_type;                
+                    values[i] = build_call(builder, ir_func_id, return_type, arguments, 1);
                 }
             }
         }
@@ -1354,8 +1360,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
 
     optional_func_pair_t pass_func;
 
-    ir_pool_snapshot_t pool_snapshot;
-    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
 
     ir_value_t **arguments = NULL;
     unsigned int elem_id = ast_type->elements[0]->id;
@@ -1469,7 +1474,6 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
     // DANGEROUS: 'func' could be invalidated by generation of new functions
     ast_func_t *func = &builder->object->ast.funcs[builder->ast_func_id];
     ast_type_t *passed_ast_type = func->arity == 1 ? &func->arg_types[0] : NULL;
-    ir_pool_snapshot_t snapshot;
 
     if(passed_ast_type == NULL || passed_ast_type->elements_length < 1){
         compiler_panicf(builder->compiler, func->source, "INTERNAL ERROR: handle_children_pass() encountered unrecognized format of __pass__ management method");
@@ -1502,7 +1506,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
 
                 // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_capture(builder->pool, &snapshot);
+                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
                 
                 ir_type_t *ir_field_type, *passed_ir_type;
                 if(
@@ -1575,7 +1579,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 }
 
                 // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_capture(builder->pool, &snapshot);
+                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
                 ir_type_t *ir_field_type, *passed_ir_type;
                 if(
@@ -1634,7 +1638,7 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             // OPTIMIZATION: SPEED: CLEANUP: Reduce the number of generated instructions for this
             for(length_t e = 0; e != fixed_count; e++){
                 // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_capture(builder->pool, &snapshot);
+                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
                 ir_type_t *ir_element_type, *passed_ir_type;
                 if(
@@ -1708,10 +1712,8 @@ errorcode_t try_user_defined_assign(
     optional_func_pair_t result;
     errorcode_t errorcode;
 
-    ir_pool_snapshot_t pool_snapshot;
-    instructions_snapshot_t instructions_snapshot;
-    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
-    instructions_snapshot_capture(builder, &instructions_snapshot);
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
     errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, destination_ast_type, &result);
     if(errorcode) goto failure;
@@ -1768,8 +1770,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
     if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
         optional_func_pair_t result;
 
-        ir_pool_snapshot_t snapshot;
-        ir_pool_snapshot_capture(builder->pool, &snapshot);
+        ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
         ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
         arguments[0] = lhs;
@@ -1814,8 +1815,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, i
         return NULL;
     }
 
-    ir_pool_snapshot_t snapshot;
-    ir_pool_snapshot_capture(builder->pool, &snapshot);
+    ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
     optional_func_pair_t result;
 
@@ -2527,8 +2527,7 @@ bool is_allowed_builtin_auto_conversion(compiler_t *compiler, object_t *object, 
 
     ir_pool_t *pool = &object->ir_module.pool;
 
-    ir_pool_snapshot_t snapshot;
-    ir_pool_snapshot_capture(pool, &snapshot);
+    ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(pool);
 
     ir_type_t *a, *b;
     if(ir_gen_resolve_type(compiler, object, a_type, &a)) return false;
@@ -2611,10 +2610,12 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
     return SUCCESS;
 }
 
-void instructions_snapshot_capture(ir_builder_t *builder, instructions_snapshot_t *snapshot){
-    snapshot->current_block_id = builder->current_block_id;
-    snapshot->current_basicblock_instructions_length = builder->current_block->instructions.length;
-    snapshot->basicblocks_length = builder->basicblocks.length;
+instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder){
+    return (instructions_snapshot_t){
+        .current_block_id = builder->current_block_id,
+        .current_basicblock_instructions_length = builder->current_block->instructions.length,
+        .basicblocks_length = builder->basicblocks.length,
+    };
 }
 
 void instructions_snapshot_restore(ir_builder_t *builder, instructions_snapshot_t *snapshot){

@@ -61,9 +61,11 @@ void ir_pool_free(ir_pool_t *pool){
     free(pool->fragments);
 }
 
-void ir_pool_snapshot_capture(ir_pool_t *pool, ir_pool_snapshot_t *snapshot){
-    snapshot->used = pool->fragments[pool->length - 1].used;
-    snapshot->fragments_length = pool->length;
+ir_pool_snapshot_t ir_pool_snapshot_capture(ir_pool_t *pool){
+    return (ir_pool_snapshot_t){
+        .used = pool->fragments[pool->length - 1].used,
+        .fragments_length = pool->length,
+    };
 }
 
 void ir_pool_snapshot_restore(ir_pool_t *pool, ir_pool_snapshot_t *snapshot){

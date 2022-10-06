@@ -72,11 +72,9 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
         // and leave processing and conforming the default arguments to higher level functions
     }
 
-    ir_pool_snapshot_t snapshot;
-    ir_pool_snapshot_capture(builder->pool, &snapshot);
+    ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
-    instructions_snapshot_t instructions_snapshot;
-    instructions_snapshot_capture(builder, &instructions_snapshot);
+    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
     // Store a copy of the unmodified function argument values
     ir_value_t **arg_value_list_unmodified = malloc(sizeof(ir_value_t*) * type_list_length);
@@ -143,8 +141,7 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     ast_poly_catalog_t catalog;
     ast_poly_catalog_init(&catalog);
 
-    ir_pool_snapshot_t snapshot;
-    ir_pool_snapshot_capture(builder->pool, &snapshot);
+    ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
     // Store a copy of the unmodified function argument values
     ir_value_t **arg_value_list_unmodified = memclone(arg_value_list, sizeof(ir_value_t*) * type_list_length);

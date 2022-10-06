@@ -533,14 +533,11 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
 }
 
 errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    ir_pool_snapshot_t pool_snapshot;
-    instructions_snapshot_t instructions_snapshot;
-
     // Take snapshot of construction state,
     // so that if this call ends up to be a no-op,
     // we can reset back as if nothing happened
-    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
-    instructions_snapshot_capture(builder, &instructions_snapshot);
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
     ir_value_t **arg_values;
     ast_type_t *arg_types;
@@ -1708,8 +1705,7 @@ errorcode_t ir_gen_expr_sizeof_value(ir_builder_t *builder, ast_expr_sizeof_valu
     ast_type_t ast_type;
 
     // Take snapshot of IR pool in order to restore it later
-    ir_pool_snapshot_t snapshot;
-    ir_pool_snapshot_capture(builder->pool, &snapshot);
+    ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
     // DANGEROUS: Manually storing state of builder
     length_t basicblocks_length = builder->basicblocks.length;
@@ -1757,14 +1753,11 @@ errorcode_t ir_gen_expr_phantom(ast_expr_phantom_t *expr, ir_value_t **ir_value,
 }
 
 errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    ir_pool_snapshot_t pool_snapshot;
-    instructions_snapshot_t instructions_snapshot;
-
     // Take snapshot of construction state,
     // so that if this call ends up to be a no-op,
     // we can reset back as if nothing happened
-    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
-    instructions_snapshot_capture(builder, &instructions_snapshot);
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
     // Setup for generating method call
     ast_t *ast = &builder->object->ast;
@@ -2673,7 +2666,6 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
     // NOTE: If instr3 is INSTRUCTION_NONE then the operation will be differentiated for Integer vs. Float (using instr1 and instr2)
     //       Otherwise, the operation will be differentiated for Unsigned Integer vs. Signed Integer vs. Float (using instr1, instr2 & instr3)
 
-    ir_pool_snapshot_t snapshot;
     ast_type_t ast_type_a, ast_type_b;
     ir_value_t *lhs, *rhs;
 
@@ -2724,7 +2716,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
     }
 
     // Add math instruction template
-    ir_pool_snapshot_capture(builder->pool, &snapshot);
+    ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
     ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
     instruction->a = lhs;
     instruction->b = rhs;

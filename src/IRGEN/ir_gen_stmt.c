@@ -746,14 +746,11 @@ errorcode_t ir_gen_do_construct(
     object_t *object = builder->object;
     weak_cstr_t struct_name = ast_type_struct_name(struct_ast_type);
 
-    ir_pool_snapshot_t pool_snapshot;
-    instructions_snapshot_t instructions_snapshot;
-
     // Take snapshot of construction state,
     // so that if this call ends up to be a no-op,
     // we can reset back as if nothing happened
-    ir_pool_snapshot_capture(builder->pool, &pool_snapshot);
-    instructions_snapshot_capture(builder, &instructions_snapshot);
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
     ir_value_t **raw_arg_values;
     ast_type_t *raw_arg_types;

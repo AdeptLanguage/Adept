@@ -53,7 +53,7 @@ void ir_pool_free(ir_pool_t *pool);
 
 // ---------------- ir_pool_snapshot_capture ----------------
 // Captures a snapshot of the current memory used of an IR pool
-void ir_pool_snapshot_capture(ir_pool_t *pool, ir_pool_snapshot_t *snapshot);
+ir_pool_snapshot_t ir_pool_snapshot_capture(ir_pool_t *pool);
 
 // ---------------- ir_pool_snapshot_restore ----------------
 // Restores an IR pool to a previous memory usage snapshot

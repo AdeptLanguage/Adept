@@ -519,7 +519,7 @@ typedef struct {
     length_t basicblocks_length;
 } instructions_snapshot_t;
 
-void instructions_snapshot_capture(ir_builder_t *builder, instructions_snapshot_t *snapshot);
+instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder);
 void instructions_snapshot_restore(ir_builder_t *builder, instructions_snapshot_t *snapshot);
 
 #endif // _ISAAC_IR_BUILDER_H
