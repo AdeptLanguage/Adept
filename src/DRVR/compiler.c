@@ -323,31 +323,24 @@ void compiler_free_warnings(compiler_t *compiler){
     compiler->warnings_capacity = 0;
 }
 
-object_t* compiler_new_object(compiler_t *compiler){
+object_t *compiler_new_object(compiler_t *compiler){
     // NOTE: Returns pointer to object that the compiler itself will free when destroyed
 
-    // Manually manage resizing of objects list
-    if(compiler->objects_length == compiler->objects_capacity){
-        object_t **new_objects = malloc(sizeof(object_t*) * compiler->objects_length * 2);
-        memcpy(new_objects, compiler->objects, sizeof(object_t*) * compiler->objects_length);
-        free(compiler->objects);
-        compiler->objects = new_objects;
-        compiler->objects_capacity *= 2;
-    }
+    expand((void**) &compiler->objects, sizeof(object_t*), compiler->objects_length, &compiler->objects_capacity, 1, 4);
+    length_t next_object_index = compiler->objects_length;
 
-    // Allocate object on heap
-    compiler->objects[compiler->objects_length++] = malloc(sizeof(object_t));
+    object_t *object = malloc_init(object_t, {
+        .filename = NULL,
+        .full_filename = NULL,
+        .compilation_stage = COMPILATION_STAGE_NONE,
+        .index = next_object_index,
+        .traits = OBJECT_NONE,
+        .default_stdlib = NULL,
+        .current_namespace = NULL,
+        .current_namespace_length = 0,
+    });
 
-    // Fill in some default values
-    object_t *object = compiler->objects[compiler->objects_length - 1];
-    object->filename = NULL;
-    object->full_filename = NULL;
-    object->compilation_stage = COMPILATION_STAGE_NONE;
-    object->index = compiler->objects_length - 1;
-    object->traits = OBJECT_NONE;
-    object->default_stdlib = NULL;
-    object->current_namespace = NULL;
-    object->current_namespace_length = 0;
+    compiler->objects[compiler->objects_length++] = object;
     return object;
 }
 
@@ -355,7 +348,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
     int arg_index = 1;
 
     while(arg_index != argc){
-        const char *arg = argv[arg_index];
+        weak_cstr_t arg = argv[arg_index];
 
         if(arg[0] == '-'){
             if(streq(arg, "-h") || streq(arg, "--help")){
@@ -541,22 +534,15 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             }
         } else if(object->filename == NULL){
             object->compilation_stage = COMPILATION_STAGE_FILENAME;
-            object->filename = malloc(strlen(arg) + 1);
-            strcpy(object->filename, arg);
+            object->filename = strclone(arg);
 
-            // Check that there aren't spaces in the filename
-            length_t filename_length = strlen(object->filename);
-            for(length_t c = 0; c != filename_length; c++){
-                if(object->filename[c] == ' '){
-                    redprintf("Filename cannot contain spaces! :\\\n");
-                    return FAILURE;
-                }
+            if(strchr(object->filename, ' ') != NULL){
+                redprintf("Filename cannot contain spaces! :\\\n");
+                return FAILURE;
             }
 
             if(access(object->filename, F_OK) == -1){
-                object->compilation_stage = COMPILATION_STAGE_NONE;
                 redprintf("Can't find file '%s'\n", object->filename);
-                free(object->filename);
                 return FAILURE;
             }
 
@@ -564,9 +550,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             object->full_filename = filename_absolute(object->filename);
 
             if(object->full_filename == NULL){
-                object->compilation_stage = COMPILATION_STAGE_NONE;
                 internalerrorprintf("Failed to get absolute path of filename '%s'\n", object->filename);
-                free(object->filename);
                 return FAILURE;
             }
         } else {
@@ -588,9 +572,7 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
             object->full_filename = filename_absolute(object->filename);
 
             if(object->full_filename == NULL){
-                object->compilation_stage = COMPILATION_STAGE_NONE;
                 internalerrorprintf("Failed to get absolute path of filename '%s'\n", object->filename);
-                free(object->filename);
                 return FAILURE;
             }
         } else {

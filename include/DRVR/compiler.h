@@ -175,7 +175,7 @@ void compiler_free_warnings(compiler_t *compiler);
 
 // ---------------- compiler_new_object ----------------
 // Generates a new object within the compiler
-object_t* compiler_new_object(compiler_t *compiler);
+object_t *compiler_new_object(compiler_t *compiler);
 
 // ---------------- parse_arguments ----------------
 // Configures a compiler based on program arguments.
