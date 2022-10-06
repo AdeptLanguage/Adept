@@ -177,10 +177,6 @@ void compiler_free_warnings(compiler_t *compiler);
 // Generates a new object within the compiler
 object_t* compiler_new_object(compiler_t *compiler);
 
-// ---------------- compiler_final_words ----------------
-// Says any final notes the compiler has
-void compiler_final_words(compiler_t *compiler);
-
 // ---------------- parse_arguments ----------------
 // Configures a compiler based on program arguments.
 // argv[0] is ignored
@@ -194,6 +190,10 @@ void break_into_arguments(const char *s, int *out_argc, char ***out_argv);
 // ---------------- show_help ----------------
 // Displays program help information
 void show_help(bool show_advanced_options);
+
+// ---------------- show_how_to_ignore_unused_variables ----------------
+// Displays information on how to ignore unused variables
+void show_how_to_ignore_unused_variables();
 
 // ---------------- show_version ----------------
 // Displays program version information

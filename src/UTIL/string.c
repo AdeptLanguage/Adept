@@ -76,6 +76,43 @@ strong_cstr_t string_to_escaped_string(const char *array, length_t length, char 
     return string;
 }
 
+
+strong_cstr_t string_to_unescaped_string(const char *data, length_t length, length_t *out_length, string_unescape_error_t *out_error_cause){
+    strong_cstr_t output = malloc(length + 1);
+    length_t get = 0;
+    length_t put = 0;
+
+    while(get != length){
+        if(data[get] != '\\'){
+            output[put++] = data[get++];
+            continue;
+        }
+
+        switch(data[get + 1]){
+        case 'n': output[put++] = '\n';  break;
+        case 'r': output[put++] = '\r';  break;
+        case 't': output[put++] = '\t';  break;
+        case 'b': output[put++] = '\b';  break;
+        case '0': output[put++] = '\0';  break;
+        case '"': output[put++] = '"';   break;
+        case 'e': output[put++] = 0x1B;  break;
+        case '\'': output[put++] = '\''; break;
+        case '\\': output[put++] = '\\'; break;
+        default:
+            *out_error_cause = (string_unescape_error_t){
+                .relative_position = get,
+            };
+            return NULL;
+        }
+
+        get += 2;
+    }
+
+    output[put] = '\0';
+    *out_length = put;
+    return output;
+}
+
 #ifdef ADEPT_INSIGHT_BUILD
 // (insight only)
 bool string_needs_escaping(weak_cstr_t string, char escaped_quote){

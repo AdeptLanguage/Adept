@@ -58,7 +58,6 @@
 errorcode_t compiler_run(compiler_t *compiler, int argc, char **argv){
     // A wrapper function around 'compiler_invoke'
     compiler_invoke(compiler, argc, argv);
-    compiler_final_words(compiler);
     return compiler->result_flags & COMPILER_RESULT_SUCCESS ? SUCCESS : FAILURE;
 }
 
@@ -352,26 +351,19 @@ object_t* compiler_new_object(compiler_t *compiler){
     return object;
 }
 
-void compiler_final_words(compiler_t *compiler){
-    #ifndef ADEPT_INSIGHT_BUILD
-    
-    if(compiler->show_unused_variables_how_to_disable){
-        printf("\nIf you'd like to disable unused variables warnings, you can:\n");
-        printf("    * Prefix them with '_'\n");
-        printf("    * Add 'pragma ignore_unused' to your file\n");
-        printf("    * Pass '--ignore-unused' to the compiler\n");
-    }
-
-    #endif
-}
-
 errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){
     int arg_index = 1;
 
     while(arg_index != argc){
-        if(argv[arg_index][0] == '-'){
-            if(streq(argv[arg_index], "-h") || streq(argv[arg_index], "--help")){
+        const char *arg = argv[arg_index];
+
+        if(arg[0] == '-'){
+            if(streq(arg, "-h") || streq(arg, "--help")){
                 show_help(false);
+                compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+                return ALT_FAILURE;
+            } else if(streq(arg, "--how-to-ignore-unused") || streq(arg, "--how-to-ignore-unused-variables")){
+                show_how_to_ignore_unused_variables();
                 compiler->result_flags |= COMPILER_RESULT_SUCCESS;
                 return ALT_FAILURE;
             } else if(streq(argv[arg_index], "-H") || streq(argv[arg_index], "--help-advanced")){
@@ -771,6 +763,13 @@ void show_help(bool show_advanced_options){
     printf("    --no-verification Don't verify backend output\n");
     printf("    --no-result       Don't create final binary\n");
     #endif // ENABLE_DEBUG_FEATURES
+}
+
+void show_how_to_ignore_unused_variables(){
+    blueprintf("Choose one or more options to ignore unused variables:\n");
+    printf("  A.) prefix the variable with '_'              [single variable]\n");
+    printf("  B.) add 'pragma ignore_unused' to your file   [entire project]\n");
+    printf("  C.) pass '--ignore-unused' option             [entire project]\n");
 }
 
 void show_version(compiler_t *compiler){

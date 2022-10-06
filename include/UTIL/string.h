@@ -32,6 +32,12 @@ strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string);
 // NOTE: 'escaped_quote' may be 0x00 to signify no surrounding quote character
 strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote);
 
+// ---------------- string_to_unescaped_string ----------------
+// Unescapes the contents of a modern string so that
+// special escape sequences such as \\n are transformed into \n
+typedef struct { length_t relative_position; } string_unescape_error_t;
+strong_cstr_t string_to_unescaped_string(const char *data, length_t length, length_t *out_length, string_unescape_error_t *out_error_cause);
+
 // ---------------- string_needs_escaping ----------------
 // (insight API only)
 // Returns whether a string contains characters that need escaping

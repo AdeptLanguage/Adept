@@ -14,6 +14,7 @@
 #include "UTIL/filename.h"
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
+#include "UTIL/string.h"
 #include "UTIL/util.h"
 
 /*
@@ -70,18 +71,20 @@ static inline token_t character_to_token(char c){
 
 static inline void add_simple_token(lex_ctx_t *ctx){
     add_token(&ctx->tokenlist, character_to_token(ctx->buffer[ctx->i]), (source_t){ctx->i, 1, ctx->object_index});
+    ctx->i += 1;
 }
 
 static inline void cases(lex_ctx_t *ctx, char cases[], tokenid_t tokenids[], length_t count, tokenid_t tokenid_default){
     for(length_t i = 0; i != count; i++){
         if(ctx->buffer[ctx->i + 1] == cases[i]){
             add_token(&ctx->tokenlist, (token_t){tokenids[i], NULL}, (source_t){ctx->i, 2, ctx->object_index});
-            ctx->i += 1;
+            ctx->i += 2;
             return;
         }
     }
 
     add_token(&ctx->tokenlist, (token_t){tokenid_default, NULL}, (source_t){ctx->i, 1, ctx->object_index});
+    ctx->i += 1;
 }
 
 static inline void options(lex_ctx_t *ctx, char **options, tokenid_t *cases, length_t count){
@@ -92,7 +95,7 @@ static inline void options(lex_ctx_t *ctx, char **options, tokenid_t *cases, len
 
         if(memcmp(&ctx->buffer[ctx->i], options[i], len) == 0){
             add_token(&ctx->tokenlist, (token_t){cases[i], NULL}, (source_t){ctx->i, len, ctx->object_index});
-            ctx->i += len - 1;
+            ctx->i += len;
             return;
         }
     }
@@ -106,143 +109,135 @@ static inline void stacking(lex_ctx_t *ctx, char character, tokenid_t *cases, le
     }
 
     add_token(&ctx->tokenlist, (token_t){cases[stride - 1], NULL}, (source_t){ctx->i, stride, ctx->object_index});
-    ctx->i += stride - 1;
+    ctx->i += stride;
 }
 
-static inline errorcode_t string(lex_ctx_t *ctx, compiler_t *optional_error_compiler, object_t *optional_error_object){
-    const char *beginning = &ctx->buffer[ctx->i + 1];
+static inline const char *escapable_until_or_null(const char *beginning, const char *eof, char terminator, char escape_prefix){
     const char *end = beginning;
-    const char *eof = &ctx->buffer[ctx->buffer_length];
 
-    // Scout out string contents
-    while(end < eof && *end != '"'){
-        if(*end == '\\'){
+    while(end < eof){
+        if(*end == terminator){
+            return end;
+        } else if(*end == escape_prefix){
             end += 2;
         } else {
             end += 1;
         }
     }
 
-    // Construct string contents and process escapes
-    length_t put = 0;
-    length_t size = end - beginning;
-    char *string = malloc(size + 1);
+    return NULL;
+}
 
-    for(length_t i = 0; i != size;){
-        if(beginning[i] != '\\'){
-            string[put++] = beginning[i++];
-            continue;
-        }
-
-        switch(beginning[i + 1]){
-        case 'n': string[put++] = '\n';  break;
-        case 'r': string[put++] = '\r';  break;
-        case 't': string[put++] = '\t';  break;
-        case 'b': string[put++] = '\b';  break;
-        case '0': string[put++] = '\0';  break;
-        case '"': string[put++] = '"';   break;
-        case 'e': string[put++] = 0x1B;  break;
-        case '\'': string[put++] = '\''; break;
-        case '\\': string[put++] = '\\'; break;
-        default:
-            if(optional_error_compiler && optional_error_object){
-                int line, column;
-                lex_get_location(ctx->buffer, ctx->i + i, &line, &column);
-                redprintf("%s:%d:%d: Unknown escape sequence '\\%c'\n", filename_name_const(optional_error_object->filename), line, column, ctx->buffer[ctx->i + i]);
-                compiler_print_source(optional_error_compiler, line, (source_t){ctx->i, 2, ctx->object_index});
-            }
-            return FAILURE;
-        }
-
-        i += 2;
-    }
-
-    string[put] = '\0';
-
-    // Create string data container
-    token_string_data_t *string_data = malloc(sizeof(token_string_data_t));
-    *string_data = (token_string_data_t){
-        .array = string,
-        .length = put
+static inline void error_unterminated_string(lex_ctx_t *ctx, compiler_t *compiler){
+    source_t source = {
+        .index = ctx->i,
+        .stride = 1,
+        .object_index = ctx->object_index,
     };
 
-    // Create string token
-    add_token(&ctx->tokenlist, (token_t){TOKEN_STRING, string_data}, (source_t){ctx->i, size + 2, ctx->object_index});
-    ctx->i += size + 1;
+    compiler_panicf(compiler, source, "Unterminated string literal");
+}
+
+static inline void error_unknown_escape_sequence(lex_ctx_t *ctx, compiler_t *compiler, string_unescape_error_t *error){
+    length_t position = ctx->i + 1 + error->relative_position;
+    const char invalid_escape_char = ctx->buffer[position + 1];
+
+    source_t source = {
+        .index = position,
+        .stride = 2,
+        .object_index = ctx->object_index,
+    };
+
+    compiler_panicf(compiler, source, "Unknown escape sequence '\\%c\'", invalid_escape_char);
+}
+
+static inline maybe_null_strong_cstr_t string_unescape_or_fail(lex_ctx_t *ctx, compiler_t *compiler, const char *beginning, length_t size, length_t *out_length){
+    string_unescape_error_t error_cause;
+    maybe_null_strong_cstr_t string = string_to_unescaped_string(beginning, size, out_length, &error_cause);
+
+    if(string == NULL){
+        error_unknown_escape_sequence(ctx, compiler, &error_cause);
+    }
+
+    return string;
+}
+
+static inline errorcode_t string(lex_ctx_t *ctx, compiler_t *compiler){
+    const char *beginning = &ctx->buffer[ctx->i + 1];
+    const char *eof = &ctx->buffer[ctx->buffer_length];
+    const char *end = escapable_until_or_null(beginning, eof, '"', '\\');
+
+    if(end == NULL){
+        error_unterminated_string(ctx, compiler);
+        return FAILURE;
+    }
+
+    length_t size = end - beginning;
+    length_t length;
+
+    maybe_null_strong_cstr_t string = string_unescape_or_fail(ctx, compiler, beginning, size, &length);
+    if(string == NULL) return FAILURE;
+
+    add_token(
+        &ctx->tokenlist,
+        (token_t){
+            .id = TOKEN_STRING,
+            .data = malloc_init(token_string_data_t, {
+                .array = string,
+                .length = length,
+            })
+        },
+        (source_t){
+            .index = ctx->i,
+            .stride = size + 2,
+            .object_index = ctx->object_index
+        }
+    );
+
+    ctx->i += size + 2;
     return SUCCESS;
 }
 
-static inline errorcode_t cstring(lex_ctx_t *ctx, compiler_t *optional_error_compiler, object_t *optional_error_object){
+static inline errorcode_t cstring(lex_ctx_t *ctx, compiler_t *compiler){
     const char *beginning = &ctx->buffer[ctx->i + 1];
-    const char *end = beginning;
     const char *eof = ctx->buffer + ctx->buffer_length;
+    const char *end = escapable_until_or_null(beginning, eof, '\'', '\\');
 
-    // Scout out string contents
-    while(end < eof && *end != '\''){
-        if(*end == '\\'){
-            end += 2;
-        } else {
-            end += 1;
-        }
+    if(end == NULL){
+        error_unterminated_string(ctx, compiler);
+        return FAILURE;
     }
 
-    // Construct string contents and process escapes
-    length_t put = 0;
     length_t size = end - beginning;
-    char *string = malloc(size + 1);
+    length_t length;
+    
+    maybe_null_strong_cstr_t string = string_unescape_or_fail(ctx, compiler, beginning, size, &length);
+    if(string == NULL) return FAILURE;
 
-    for(length_t i = 0; i != size;){
-        if(beginning[i] != '\\'){
-            string[put++] = beginning[i++];
-            continue;
-        }
+    // Handle special case of character literals differently
+    if(length == 1){
+        const char *suffix_start = &ctx->buffer[ctx->i + size + 2];
 
-        switch(beginning[i + 1]){
-        case 'n': string[put++] = '\n';  break;
-        case 'r': string[put++] = '\r';  break;
-        case 't': string[put++] = '\t';  break;
-        case 'b': string[put++] = '\b';  break;
-        case '0': string[put++] = '\0';  break;
-        case '"': string[put++] = '"';   break;
-        case 'e': string[put++] = 0x1B;  break;
-        case '\'': string[put++] = '\''; break;
-        case '\\': string[put++] = '\\'; break;
-        default:
-            if(optional_error_compiler && optional_error_object){
-                int line, column;
-                lex_get_location(ctx->buffer, ctx->i + i, &line, &column);
-                redprintf("%s:%d:%d: Unknown escape sequence '\\%c'\n", filename_name_const(optional_error_object->filename), line, column, ctx->buffer[ctx->i + i]);
-                compiler_print_source(optional_error_compiler, line, (source_t){ctx->i, 2, ctx->object_index});
+        if(suffix_start + 2 <= eof){
+            if(memcmp(suffix_start, "ub", 2) == 0){
+                // Actually a 'ubyte' character literal
+                add_token(&ctx->tokenlist, (token_t){TOKEN_UBYTE, (adept_ubyte*) string}, (source_t){ctx->i, size + 4, ctx->object_index});
+                ctx->i += size + 4;
+                return SUCCESS;
             }
-            return FAILURE;
-        }
 
-        i += 2;
-    }
-
-    // Check if this is actually a character literal
-    if(put == 1){
-        if(memcmp(&ctx->buffer[ctx->i + size + 2], "ub", 2) == 0){
-            // Actually a 'ubyte' character literal
-            add_token(&ctx->tokenlist, (token_t){TOKEN_UBYTE, (unsigned char*) string}, (source_t){ctx->i, size + 4, ctx->object_index});
-            ctx->i += size + 3;
-            return SUCCESS;
-        }
-
-        if(memcmp(&ctx->buffer[ctx->i + size + 2], "sb", 2) == 0){
-            // Actually a 'byte' character literal
-            add_token(&ctx->tokenlist, (token_t){TOKEN_BYTE, (char*) string}, (source_t){ctx->i, size + 4, ctx->object_index});
-            ctx->i += size + 3;
-            return SUCCESS;
+            if(memcmp(suffix_start, "sb", 2) == 0){
+                // Actually a 'byte' character literal
+                add_token(&ctx->tokenlist, (token_t){TOKEN_BYTE, (adept_byte*) string}, (source_t){ctx->i, size + 4, ctx->object_index});
+                ctx->i += size + 4;
+                return SUCCESS;
+            }
         }
     }
 
-    // Otherwise, this lexical construct is a C-String
-    string[put] = '\0';
-
-    // Create C-String token
+    // Otherwise, create C-String token
     add_token(&ctx->tokenlist, (token_t){TOKEN_CSTRING, string}, (source_t){ctx->i, size + 2, ctx->object_index});
-    ctx->i += size + 1;
+    ctx->i += size + 2;
     return SUCCESS;
 }
 
@@ -311,32 +306,27 @@ static inline errorcode_t number(lex_ctx_t *ctx, compiler_t *optional_error_comp
         switch(*(end + 1)){
         case 'b':
             token_id = TOKEN_UBYTE;
-            data = malloc(sizeof(adept_ubyte));
-            *((adept_ubyte*) data) = string_to_uint8(buf, base);
+            data = malloc_init(adept_ubyte, string_to_uint8(buf, base));
             stride += 2;
             break;
         case 's':
             token_id = TOKEN_USHORT;
-            data = malloc(sizeof(adept_ushort));
-            *((adept_ushort*) data) = string_to_uint16(buf, base);
+            data = malloc_init(adept_ushort, string_to_uint16(buf, base));
             stride += 2;
             break;
         case 'i':
             token_id = TOKEN_UINT;
-            data = malloc(sizeof(adept_uint));
-            *((adept_uint*) data) = string_to_uint32(buf, base);
+            data = malloc_init(adept_uint, string_to_uint32(buf, base));
             stride += 2;
             break;
         case 'l':
             token_id = TOKEN_ULONG;
-            data = malloc(sizeof(adept_ulong));
-            *((adept_ulong*) data) = string_to_uint64(buf, base);
+            data = malloc_init(adept_ulong, string_to_uint64(buf, base));
             stride += 2;
             break;
         case 'z':
             token_id = TOKEN_USIZE;
-            data = malloc(sizeof(adept_usize));
-            *((adept_usize*) data) = string_to_uint64(buf, base);
+            data = malloc_init(adept_usize, string_to_uint64(buf, base));
             stride += 2;
             break;
         default: {
@@ -351,87 +341,74 @@ static inline errorcode_t number(lex_ctx_t *ctx, compiler_t *optional_error_comp
         switch(*(end + 1)){
         case 'b':
             token_id = TOKEN_BYTE;
-            data = malloc(sizeof(adept_byte));
-            *((adept_byte*) data) = string_to_int8(buf, base);
+            data = malloc_init(adept_byte, string_to_int8(buf, base));
             stride += 2;
             break;
         case 's':
             token_id = TOKEN_SHORT;
-            data = malloc(sizeof(adept_ushort));
-            *((short*) data) = string_to_int16(buf, base);
+            data = malloc_init(adept_short, string_to_int16(buf, base));
             stride += 2;
             break;
         case 'i':
             token_id = TOKEN_INT;
-            data = malloc(sizeof(adept_int));
-            *((adept_int*) data) = string_to_int32(buf, base);
+            data = malloc_init(adept_int, string_to_int32(buf, base));
             stride += 2;
             break;
         case 'l':
             token_id = TOKEN_LONG;
-            data = malloc(sizeof(adept_long));
-            *((adept_long*) data) = string_to_int64(buf, base);
+            data = malloc_init(adept_long, string_to_int64(buf, base));
             stride += 2;
             break;
         default:
             token_id = TOKEN_SHORT;
-            data = malloc(sizeof(adept_short));
-            *((adept_short*) data) = string_to_int16(buf, base);
+            data = malloc_init(adept_short, string_to_int16(buf, base));
             stride += 1;
         }
         break;
     case 'b':
         token_id = TOKEN_BYTE;
-        data = malloc(sizeof(adept_byte));
-        *((adept_byte*) data) = string_to_int8(buf, base);
+        data = malloc_init(adept_byte, string_to_int8(buf, base));
         stride += 1;
         break;
     case 'i':
         token_id = TOKEN_INT;
-        data = malloc(sizeof(adept_int));
-        *((adept_int*) data) = string_to_int32(buf, base);
+        data = malloc_init(adept_int, string_to_int32(buf, base));
         stride += 1;
         break;
     case 'l':
         token_id = TOKEN_LONG;
-        data = malloc(sizeof(adept_long));
-        *((adept_long*) data) = string_to_int64(buf, base);
+        data = malloc_init(adept_long, string_to_int64(buf, base));
         stride += 1;
         break;
     case 'f':
         token_id = TOKEN_FLOAT;
-        data = malloc(sizeof(adept_float));
-        *((adept_float*) data) = string_to_float32(buf);
+        data = malloc_init(adept_float, string_to_float32(buf));
         stride += 1;
         break;
     case 'd':
         token_id = TOKEN_DOUBLE;
-        data = malloc(sizeof(adept_double));
-        *((adept_double*) data) = string_to_float64(buf);
+        data = malloc_init(adept_double, string_to_float64(buf));
         stride += 1;
         break;
     default:
         if((!is_hex && !can_dot) || did_exp){
             // Default to normal generic floating-point
             token_id = TOKEN_GENERIC_FLOAT;
-            data = malloc(sizeof(adept_generic_float));
-            *((adept_generic_float*) data) = string_to_float64(buf);
+            data = malloc_init(adept_generic_float, string_to_float64(buf));
         } else if(string_to_int_must_be_uint64(buf, put, base)){
             // Numbers that cannot be expressed using int64 will be promoted to uint64
             token_id = TOKEN_ULONG;
-            data = malloc(sizeof(adept_ulong));
-            *((adept_ulong*) data) = string_to_uint64(buf, base);
+            data = malloc_init(adept_ulong, string_to_uint64(buf, base));
         } else {
             // Otherwise, default to normal generic integer
             token_id = TOKEN_GENERIC_INT;
-            data = malloc(sizeof(adept_generic_int));
-            *((adept_generic_int*) data) = string_to_int64(buf, base);
+            data = malloc_init(adept_generic_int, string_to_int64(buf, base));
         }
     }
     
     // Add number token
     add_token(&ctx->tokenlist, (token_t){token_id, data}, (source_t){ctx->i, stride, ctx->object_index});
-    ctx->i += stride - 1;
+    ctx->i += stride;
     return SUCCESS;
 }
 
@@ -491,14 +468,14 @@ static inline void running(lex_ctx_t *ctx, tokenid_t intent){
         // Handle word tokens that should be keywords
         if(keyword_index != -1){
             add_token(&ctx->tokenlist, (token_t){BEGINNING_OF_KEYWORD_TOKENS + (unsigned int) keyword_index, NULL}, (source_t){ctx->i, size, ctx->object_index});
-            ctx->i += size - 1;
+            ctx->i += size;
             free(identifier);
             return;
         } else if(size == 4 && memcmp(beginning, "elif", 4) == 0){
             // Legacy alternative syntax 'elif'
             add_token(&ctx->tokenlist, (token_t){TOKEN_ELSE, NULL}, (source_t){ctx->i, 2, ctx->object_index});
             add_token(&ctx->tokenlist, (token_t){TOKEN_IF, NULL}, (source_t){ctx->i + 2, 2, ctx->object_index});
-            ctx->i += 3;
+            ctx->i += 4;
             free(identifier);
             return;
         }
@@ -514,7 +491,7 @@ static inline void running(lex_ctx_t *ctx, tokenid_t intent){
 
     // Create token
     add_token(&ctx->tokenlist, (token_t){intent, identifier}, (source_t){ctx->i, size + flag_length, ctx->object_index});
-    ctx->i += size + flag_length - 1;
+    ctx->i += size + flag_length;
 }
 
 errorcode_t lex(compiler_t *compiler, object_t *object){
@@ -547,10 +524,11 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         .i = 0
     };
 
-    for(; ctx.i != buffer_length; ctx.i++){
+    while(ctx.i != buffer_length){
         switch(buffer[ctx.i]){
         case ' ':
         case '\t':
+            ctx.i += 1;
             break;
         case '(': case ')':
         case '{': case '}':
@@ -571,7 +549,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
         case '/':
             switch(buffer[ctx.i + 1]){
             case '/':
-                do ctx.i += 1; while(buffer[ctx.i + 1] != '\n');
+                do ctx.i += 1; while(buffer[ctx.i] != '\n');
                 break;
             case '*': {
                     const char *end = &buffer[ctx.i];
@@ -582,11 +560,16 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                     }
 
                     if(end >= eof){
-                        int line, column;
-                        lex_get_location(buffer, ctx.i, &line, &column);
-                        redprintf("%s:%d:%d: Unterminated multiline comment\n", filename_name_const(object->filename), line, column);
+                        source_t source = (source_t){
+                            .index = ctx.i,
+                            .stride = 2,
+                            .object_index = ctx.object_index,
+                        };
+
+                        compiler_panic(compiler, source, "Unterminated multi-line comment");
+                        return FAILURE;
                     } else {
-                        ctx.i += end - &buffer[ctx.i] + 1;
+                        ctx.i += end - &buffer[ctx.i] + 2;
                     }
                 }
                 break;
@@ -642,10 +625,10 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
             stacking(&ctx, '.', (tokenid_t[]){TOKEN_MEMBER, TOKEN_RANGE, TOKEN_ELLIPSIS}, 3);
             break;
         case '"':
-            if(string(&ctx, compiler, object)) goto failure;
+            if(string(&ctx, compiler)) goto failure;
             break;
         case '\'':
-            if(cstring(&ctx, compiler, object)) goto failure;
+            if(cstring(&ctx, compiler)) goto failure;
             break;
         case '#':
             running(&ctx, TOKEN_META);

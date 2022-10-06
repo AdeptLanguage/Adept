@@ -277,6 +277,24 @@ def run_all_tests():
         lambda output: b"main.adept: This file is no longer supported or was never supported to begin with!\n" in output and b"Use 'newer/supported.adept' instead" in output,
         expected_exitcode=1
     )
+    test("unterminated_comment",
+        [executable,
+        join(src_dir, "unterminated_comment/main.adept")],
+        lambda output: b"main.adept:3:5: error: Unterminated multi-line comment\n  3|     /* todo\n         ^^" in output,
+        expected_exitcode=1
+    )
+    test("unterminated_cstring",
+        [executable,
+        join(src_dir, "unterminated_cstring/main.adept")],
+        lambda output: b"main.adept:3:20: error: Unterminated string literal\n  3|     value *ubyte = '\n                        ^" in output,
+        expected_exitcode=1
+    )
+    test("unterminated_string",
+        [executable,
+        join(src_dir, "unterminated_string/main.adept")],
+        lambda output: b"main.adept:3:20: error: Unterminated string literal\n  3|     value String = \"\n                        ^" in output,
+        expected_exitcode=1
+    )
     test("until", [executable, join(src_dir, "until/main.adept")], compiles)
     test("until_break", [executable, join(src_dir, "until_break/main.adept")], compiles)
     test("va_args", [executable, join(src_dir, "va_args/main.adept")], compiles)
