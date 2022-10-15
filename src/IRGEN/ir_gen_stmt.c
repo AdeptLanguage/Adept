@@ -686,7 +686,7 @@ errorcode_t ir_gen_stmt_call_like(ir_builder_t *builder, ast_expr_t *call_like_s
         build_store(builder, dropped_value, temporary_mutable, call_like_stmt->source);
 
         // Properly clean up the dropped value
-        if(handle_single_deference(builder, &dropped_type, temporary_mutable) == ALT_FAILURE){
+        if(handle_single_deference(builder, &dropped_type, temporary_mutable, call_like_stmt->source) == ALT_FAILURE){
             ast_type_free(&dropped_type);
             return FAILURE;
         }
@@ -876,7 +876,9 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
     // Generate instructions to get "other value"
     ir_value_t *other_value;
     ast_type_t other_value_type;
-    if(ir_gen_expr(builder, stmt->value, &other_value, false, &other_value_type)) return FAILURE;
+    if(ir_gen_expr(builder, stmt->value, &other_value, false, &other_value_type)){
+        return FAILURE;
+    }
     
     // Generate instructions to get "destination value"
     ir_value_t *destination;
@@ -913,98 +915,71 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
     ast_type_free(&destination_type);
     ast_type_free(&other_value_type);
 
-    ir_value_t *previous_value = build_load(builder, destination, stmt->source);
+    ir_value_t *original_value = build_load(builder, destination, stmt->source);
 
-    ir_value_result_t *value_result;
-    value_result = ir_pool_alloc(builder->pool, sizeof(ir_value_result_t));
-    value_result->block_id = builder->current_block_id;
-    value_result->instruction_id = builder->current_block->instructions.length;
-
-    ir_instr_math_t *math_instr = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-    math_instr->result_type = other_value->type;
-    math_instr->a = previous_value;
-    math_instr->b = other_value;
+    unsigned int instr_id;
+    const char *op_verb;
 
     switch(assignment_kind){
     case EXPR_ADD_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_ADD, INSTRUCTION_FADD)){
-            compiler_panic(builder->compiler, stmt->source, "Can't add those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_ADD, INSTRUCTION_FADD);
+        op_verb = "add";
         break;
     case EXPR_SUBTRACT_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
-            compiler_panic(builder->compiler, stmt->source, "Can't subtract those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT);
+        op_verb = "subtract";
         break;
     case EXPR_MULTIPLY_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY)){
-            compiler_panic(builder->compiler, stmt->source, "Can't multiply those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY);
+        op_verb = "multiply";
         break;
     case EXPR_DIVIDE_ASSIGN:
-        if(u_vs_s_vs_float_instruction(math_instr, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE)){
-            compiler_panic(builder->compiler, stmt->source, "Can't divide those types");
-            return FAILURE;
-        }
+        instr_id = uvsvf_instruction(original_value->type, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE);
+        op_verb = "divide";
         break;
     case EXPR_MODULUS_ASSIGN:
-        if(u_vs_s_vs_float_instruction(math_instr, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS)){
-            compiler_panic(builder->compiler, stmt->source, "Can't take the modulus of those types");
-            return FAILURE;
-        }
+        instr_id = uvsvf_instruction(original_value->type, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS);
+        op_verb = "take the modulus of";
         break;
     case EXPR_AND_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_AND, INSTRUCTION_NONE)){
-            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'and' on those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_AND, INSTRUCTION_NONE);
+        op_verb = "perform bitwise 'and' on";
         break;
     case EXPR_OR_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_OR, INSTRUCTION_NONE)){
-            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'or' on those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_OR, INSTRUCTION_NONE);
+        op_verb = "perform bitwise 'or' on";
         break;
     case EXPR_XOR_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE)){
-            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'xor' on those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE);
+        op_verb = "perform bitwise 'xor' on";
         break;
     case EXPR_LSHIFT_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
-            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'left shift' on those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE);
+        op_verb = "perform bitwise 'left shift' on";
         break;
     case EXPR_RSHIFT_ASSIGN:
-        if(u_vs_s_vs_float_instruction(math_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS)){
-            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'right shift' on those types");
-            return FAILURE;
-        }
+        instr_id = uvsvf_instruction(original_value->type, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS);
+        op_verb = "perform bitwise 'right shift' on";
         break;
     case EXPR_LGC_LSHIFT_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE)){
-            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'logical left shift' on those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE);
+        op_verb = "perform bitwise 'logical left shift' on";
         break;
     case EXPR_LGC_RSHIFT_ASSIGN:
-        if(i_vs_f_instruction(math_instr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE)){
-            compiler_panic(builder->compiler, stmt->source, "Can't perform bitwise 'logical right shift' on those types");
-            return FAILURE;
-        }
+        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE);
+        op_verb = "perform bitwise 'logical right shift' on";
         break;
     default:
         compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: ir_gen_stmts() got unknown assignment operator id");
         return FAILURE;
     }
 
-    // Store result of math instruction into variable
-    build_store(builder, build_value_from_prev_instruction(builder), destination, stmt->source);
+    if(instr_id == INSTRUCTION_NONE){
+        compiler_panicf(builder->compiler, stmt->source, "Cannot %s those types", op_verb);
+        return FAILURE;
+    }
+
+    build_store(builder, build_math(builder, instr_id, original_value, other_value, other_value->type), destination, stmt->source);
     return SUCCESS;
 }
 
@@ -1586,7 +1561,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     if(!stmt->is_static && stmt->list && !single_expr->is_mutable){
         // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
 
-        if(handle_single_deference(builder, &single_type, single_value) == ALT_FAILURE){
+        if(handle_single_deference(builder, &single_type, single_value, single_expr->source) == ALT_FAILURE){
             close_scope(builder);
             goto failure;
         }
@@ -1607,7 +1582,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     if(stmt->list && !single_expr->is_mutable){
         // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
 
-        if(handle_single_deference(builder, &single_type, single_value) == ALT_FAILURE){
+        if(handle_single_deference(builder, &single_type, single_value, stmt->list->source) == ALT_FAILURE){
             close_scope(builder);
             goto failure;
         }
@@ -1814,7 +1789,7 @@ errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_
 errorcode_t ir_gen_assign(ir_builder_t *builder, ir_value_t *value, ast_type_t *value_ast_type, ir_value_t *destination, ast_type_t *destination_type, bool force_pod_assignment, source_t source){
     // User defined assignment
     if(!force_pod_assignment){
-        errorcode_t errorcode = try_user_defined_assign(builder, value, value_ast_type, destination, destination_type, source);
+        errorcode_t errorcode = handle_assign_management(builder, value, value_ast_type, destination, destination_type, source);
         if(errorcode == ALT_FAILURE || errorcode == SUCCESS) return errorcode;
     }
 

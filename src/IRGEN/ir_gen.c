@@ -586,7 +586,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         }
     }
 
-    bool terminated;
     errorcode_t errorcode = FAILURE;
 
     // Used for constructing array of basicblocks
@@ -683,7 +682,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         }
 
         ir_value_t *function_pointer = build_bitcast(&builder, raw_function_pointer, function_pointer_type);
-
         ir_value_t *result = build_call_address(&builder, result_type, function_pointer, arg_values, arity);
 
         build_return(&builder, result_type->kind != TYPE_KIND_VOID ? result : NULL);
@@ -697,6 +695,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         goto success;
     }
 
+    bool terminated;
     if(ir_gen_stmts(&builder, &ast_func.statements, &terminated)) goto failure;
     if(terminated) goto success;
 
@@ -758,8 +757,8 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
     ast_t *ast = &object->ast;
     ir_module_t *module = &object->ir_module;
 
-    for(length_t g = 0; g != ast->globals_length; g++){
-        ast_global_t *ast_global = &ast->globals[g];
+    for(length_t i = 0; i != ast->globals_length; i++){
+        ast_global_t *ast_global = &ast->globals[i];
 
         trait_t traits = TRAIT_NONE;
         if(ast_global->traits & AST_GLOBAL_EXTERNAL)     traits |= IR_GLOBAL_EXTERNAL;
@@ -770,7 +769,7 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object){
             return FAILURE;
         }
 
-        module->globals[g] = (ir_global_t){
+        module->globals[i] = (ir_global_t){
             .name = ast_global->name,
             .traits = traits,
             .trusted_static_initializer = NULL,
@@ -849,8 +848,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             return SUCCESS;
         }
 
-        ir_value_t *value = build_literal_usize(pool, type_table->length);
-        ir_global->trusted_static_initializer = value;
+        ir_global->trusted_static_initializer = build_literal_usize(pool, type_table->length);
         return SUCCESS;
     }
 
@@ -871,23 +869,21 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             return SUCCESS;
         }
 
-        ir_value_array_literal_t *kinds_array_literal = ir_pool_alloc(pool, sizeof(ir_value_array_literal_t));
-        kinds_array_literal->values = NULL; // Will be set to array_values
-        kinds_array_literal->length = MAX_ANY_TYPE_KIND + 1;
-
-        ir_value_t *kinds_array_value = ir_pool_alloc(pool, sizeof(ir_value_t));
-        kinds_array_value->value_type = VALUE_TYPE_ARRAY_LITERAL;
-        kinds_array_value->type = ir_type_make_pointer_to(pool, ubyte_ptr_type);
-        kinds_array_value->extra = kinds_array_literal;
-        
         ir_value_t **array_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * (MAX_ANY_TYPE_KIND + 1));
 
         for(length_t i = 0; i != MAX_ANY_TYPE_KIND + 1; i++){
             array_values[i] = build_literal_cstr_ex(pool, &ir_module->type_map, (weak_cstr_t) any_type_kind_names[i]);
         }
 
-        kinds_array_literal->values = array_values;
-        ir_global->trusted_static_initializer = kinds_array_value;
+        ir_global->trusted_static_initializer = ir_pool_alloc_init(pool, ir_value_t, {
+            .value_type = VALUE_TYPE_ARRAY_LITERAL,
+            .type = ir_type_make_pointer_to(pool, ubyte_ptr_type),
+            .extra = ir_pool_alloc_init(pool, ir_value_array_literal_t, {
+                .values = array_values,
+                .length = MAX_ANY_TYPE_KIND + 1,
+            }),
+        });
+
         return SUCCESS;
     }
 
@@ -897,8 +893,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             return SUCCESS;
         }
 
-        ir_value_t *value = build_literal_usize(pool, MAX_ANY_TYPE_KIND + 1);
-        ir_global->trusted_static_initializer = value;
+        ir_global->trusted_static_initializer = build_literal_usize(pool, MAX_ANY_TYPE_KIND + 1);
         return SUCCESS;
     }
 
@@ -935,6 +930,78 @@ weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
     free(finalized.cstr);
 
     return result;
+}
+
+enum format_conversion_permission {
+    FORMAT_CONVERSION_ALLOWED,
+    FORMAT_CONVERSION_DISCOURAGED,
+    FORMAT_CONVERSION_DISALLOWED,
+};
+
+static const char *format_conversion_alternatives_integers[] = {
+    "bool",
+    "byte" ,
+    "ubyte" ,
+    "short" ,
+    "ushort",
+    "int",
+    "uint" ,
+    "long" ,
+    "ulong" ,
+    "usize" ,
+    "successful",
+};
+static length_t format_conversion_alternatives_integers_length = NUM_ITEMS(format_conversion_alternatives_integers);
+
+
+static const char *format_conversion_alternatives_floats[] = {
+    "double",
+    "float",
+    "bool",
+    "byte",
+    "ubyte",
+    "short",
+    "ushort",
+    "int",
+    "uint",
+    "long",
+    "ulong",
+    "usize",
+    "successful",
+};
+static length_t format_conversion_alternatives_floats_length = NUM_ITEMS(format_conversion_alternatives_floats);
+
+static enum format_conversion_permission format_conversion_permission(const ast_type_t *given_type, const char *target, const char *alternatives[], length_t alternatives_length){
+    if(ast_type_is_base_of(given_type, target)){
+        return FORMAT_CONVERSION_ALLOWED;
+    }
+
+    for(length_t i = 0; i != alternatives_length; i++){
+        if(ast_type_is_base_of(given_type, alternatives[i])){
+            return FORMAT_CONVERSION_DISCOURAGED;
+        }
+    }
+
+    return FORMAT_CONVERSION_DISALLOWED;
+}
+
+static errorcode_t format_conversion_should_fail(compiler_t *compiler, source_t source, ast_type_t *given_type, const char *target, length_t substitutions_gotten, int size_modifier, char format_char, enum format_conversion_permission permission){
+    switch(permission){
+    case FORMAT_CONVERSION_ALLOWED:
+        break;
+    case FORMAT_CONVERSION_DISCOURAGED:
+        // Error if RTTI is disabled
+        if(compiler->traits & COMPILER_NO_TYPEINFO){
+            bad_printf_format(compiler, source, given_type, target, substitutions_gotten, size_modifier, format_char, true);
+            return FAILURE;
+        }
+        break;
+    case FORMAT_CONVERSION_DISALLOWED:
+        bad_printf_format(compiler, source, given_type, target, substitutions_gotten, size_modifier, format_char, false);
+        return FAILURE;
+    }
+
+    return SUCCESS;
 }
 
 errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func_pair_t pair, ast_type_t *ast_types, ir_value_t **ir_values, source_t source, length_t variadic_length){
@@ -1060,72 +1127,36 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
                 return FAILURE;
             }
             break;
-        case 'd': case 'i':
-            switch(size_modifier){
-            case 1:  target = "byte";  break;
-            case 2:  target = "short"; break;
-            case 8:  target = "long";  break;
-            default: target = "int";
-            }
+        case 'd': case 'i': {
+                switch(size_modifier){
+                case 1:  target = "byte";  break;
+                case 2:  target = "short"; break;
+                case 8:  target = "long";  break;
+                default: target = "int";
+                }
 
-            if(ast_type_is_base_of(given_type, target)){
-                // Always allowed
-            } else if(
-                ast_type_is_base_of(given_type, "bool") ||
-                ast_type_is_base_of(given_type, "byte") || 
-                ast_type_is_base_of(given_type, "ubyte") || 
-                ast_type_is_base_of(given_type, "short") || 
-                ast_type_is_base_of(given_type, "ushort") ||
-                ast_type_is_base_of(given_type, "int") ||
-                ast_type_is_base_of(given_type, "uint") || 
-                ast_type_is_base_of(given_type, "long") || 
-                ast_type_is_base_of(given_type, "ulong") || 
-                ast_type_is_base_of(given_type, "usize") || 
-                ast_type_is_base_of(given_type, "successful")
-            ){
-                // Allowed, but discouraged (Error if RTTI is disabled)
-                if(builder->compiler->traits & COMPILER_NO_TYPEINFO){
-                    bad_printf_format(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), true);
+                enum format_conversion_permission permission = format_conversion_permission(given_type, target, format_conversion_alternatives_integers, format_conversion_alternatives_integers_length);
+
+                if(format_conversion_should_fail(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), permission)){
                     return FAILURE;
                 }
-            } else {
-                // Never allowed
-                bad_printf_format(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), false);
-                return FAILURE;
             }
             break;
-        case 'u':
-            switch(size_modifier){
-            case 1:  target = "ubyte";  break;
-            case 2:  target = "ushort"; break;
-            case 8:  target = "ulong";  break;
-            default: target = "uint";
-            }
+        case 'u': {
+                switch(size_modifier){
+                case 1:  target = "ubyte";  break;
+                case 2:  target = "ushort"; break;
+                case 8:  target = "ulong";  break;
+                default: target = "uint";
+                }
 
-            if(ast_type_is_base_of(given_type, target) || (size_modifier == 8 && ast_type_is_base_of(given_type, "usize"))){
-                // Always allowed
-            } else if(
-                ast_type_is_base_of(given_type, "bool") ||
-                ast_type_is_base_of(given_type, "byte") || 
-                ast_type_is_base_of(given_type, "ubyte") || 
-                ast_type_is_base_of(given_type, "short") || 
-                ast_type_is_base_of(given_type, "ushort") || 
-                ast_type_is_base_of(given_type, "int") || 
-                ast_type_is_base_of(given_type, "uint") || 
-                ast_type_is_base_of(given_type, "long") || 
-                ast_type_is_base_of(given_type, "ulong") || 
-                ast_type_is_base_of(given_type, "usize") || 
-                ast_type_is_base_of(given_type, "successful")
-            ){
-                // Allowed, but discouraged (Error if RTTI is disabled)
-                if(builder->compiler->traits & COMPILER_NO_TYPEINFO){
-                    bad_printf_format(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), true);
+                enum format_conversion_permission permission = size_modifier == 8 && ast_type_is_base_of(given_type, "usize")
+                    ? FORMAT_CONVERSION_ALLOWED
+                    : format_conversion_permission(given_type, target, format_conversion_alternatives_integers, format_conversion_alternatives_integers_length);
+                
+                if(format_conversion_should_fail(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), permission)){
                     return FAILURE;
                 }
-            } else {
-                // Never allowed
-                bad_printf_format(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), false);
-                return FAILURE;
             }
             break;
         case 'f':
@@ -1133,33 +1164,13 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
             case 2:  target = "float";  break;
             default: target = "double";
             }
-            if(ast_type_is_base_of(given_type, target)){
-                // Always allowed
-            } else if(
-                ast_type_is_base_of(given_type, "double") ||
-                ast_type_is_base_of(given_type, "float") ||
-                ast_type_is_base_of(given_type, "bool") ||
-                ast_type_is_base_of(given_type, "byte") || 
-                ast_type_is_base_of(given_type, "ubyte") || 
-                ast_type_is_base_of(given_type, "short") || 
-                ast_type_is_base_of(given_type, "ushort") || 
-                ast_type_is_base_of(given_type, "int") || 
-                ast_type_is_base_of(given_type, "uint") || 
-                ast_type_is_base_of(given_type, "long") || 
-                ast_type_is_base_of(given_type, "ulong") || 
-                ast_type_is_base_of(given_type, "usize") || 
-                ast_type_is_base_of(given_type, "successful")
-            ){
-                // Allowed, but discouraged (Error if RTTI is disabled)
-                if(builder->compiler->traits & COMPILER_NO_TYPEINFO){
-                    bad_printf_format(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), true);
-                    return FAILURE;
-                }
-            } else {
-                // Never allowed
-                bad_printf_format(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), false);
+
+            enum format_conversion_permission permission = format_conversion_permission(given_type, target, format_conversion_alternatives_floats, format_conversion_alternatives_floats_length);
+
+            if(format_conversion_should_fail(builder->compiler, source, given_type, target, substitutions_gotten, size_modifier, *(p - 1), permission)){
                 return FAILURE;
             }
+
             break;
         case 'p':
             if(!ast_type_is_pointer(given_type) && !ast_type_is_base_of(given_type, "ptr")){
@@ -1169,8 +1180,9 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
             }
             break;
         default:
-            if(compiler_warnf(builder->compiler, source, "Unrecognized format specifier '%%%c'", *(p - 1)))
+            if(compiler_warnf(builder->compiler, source, "Unrecognized format specifier '%%%c'", *(p - 1))){
                 return FAILURE;
+            }
         }
     }
 
@@ -1184,7 +1196,7 @@ errorcode_t ir_gen_do_builtin_warn_bad_printf_format(ir_builder_t *builder, func
     return SUCCESS;
 }
 
-void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_type, weak_cstr_t expected, int variadic_argument_number, int size_modifier, char specifier, bool is_semimatch){
+void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_type, const char *expected, int variadic_argument_number, int size_modifier, char specifier, bool is_semimatch){
     weak_cstr_t modifiers = "";
     weak_cstr_t additional_part = "";
     
@@ -1197,22 +1209,21 @@ void bad_printf_format(compiler_t *compiler, source_t source, ast_type_t *given_
     // Hack to get '%z' to always print as '%zu'
     if(specifier == 'z') additional_part = "u";
 
-    strong_cstr_t incorrect_type = ast_type_str(given_type);
     compiler_panicf(compiler, source, "Got value of incorrect type for format specifier '%%%s%c%s'", modifiers, specifier, additional_part);
     printf("\n");
 
+    strong_cstr_t incorrect_type = ast_type_str(given_type);
     printf("    Expected value of type '%s', got value of type '%s'\n", expected, incorrect_type);
     printf("    For %d%s variadic argument\n", variadic_argument_number, get_numeric_ending(variadic_argument_number));
+    free(incorrect_type);
     
     if(is_semimatch){
         printf("    Support for this type mismatch requires runtime type information\n");
     }
-
-    free(incorrect_type);
 }
 
 weak_cstr_t get_numeric_ending(length_t integer){
-    if(integer > 9 && integer < 11) return "th";
+    if(11 <= integer && integer <= 13) return "th";
 
     switch(integer % 10){
     case 1: return "st";

@@ -31,16 +31,17 @@ extern "C" {
 #define BRIDGE_VAR_STATIC       TRAIT_4 // Variable is to static (global-like)
 
 typedef struct {
-    weak_cstr_t name;        // name of the variable
-    ast_type_t *ast_type;    // AST type of the variable
+    weak_cstr_t name;
+    ast_type_t *ast_type;
 
-    index_id_t id;                 // ID of the variable within the function stack (only applies to non-static variables)
-    index_id_t static_id;          // ID of the variable as a static variable (only applies to static variables)
-    trait_t traits;          // traits of the variable
+    index_id_t id;           // ID of the variable within the function stack (only applies to non-static variables)
+    index_id_t static_id;    // ID of the variable as a static variable (only applies to static variables)
+    trait_t traits;
+    source_t source;
 
     #ifndef ADEPT_INSIGHT_BUILD
-    ir_type_t *ir_type;      // IR type of the variable
-    ir_value_t *anon_global; // Used for static variables
+    ir_type_t *ir_type;
+    ir_value_t *optional_anon_global;
     #endif
 } bridge_var_t;
 

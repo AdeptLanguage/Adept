@@ -76,23 +76,6 @@ errorcode_t ir_gen_expr_typenameof(ir_builder_t *builder, ast_expr_typenameof_t 
 errorcode_t ir_gen_expr_embed(ir_builder_t *builder, ast_expr_embed_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 errorcode_t ir_gen_expr_alignof(ir_builder_t *builder, ast_expr_alignof_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
 
-// ---------------- ir_gen_expr_* helper functions ----------------
-// Functions that assist the ir_gen_expr_* functions
-
-// Generates math for operations that either work on integers or floats
-// If the instruction ID of the chosen instruction is INSTRUCTION_NONE,
-// then FAILURE will be returned
-// NOTE: Returns FAILURE on failure
-errorcode_t ir_gen_expr_math_ivf(ir_builder_t *builder, ast_expr_math_t *expr, unsigned int ints_instr, unsigned int floats_instr,
-        ir_value_t **ir_value, ast_type_t *out_expr_type);
-
-// Generates math for operations that either work on unsigned integers, signed integers, or floats
-// If the instruction ID of the chosen instruction is INSTRUCTION_NONE,
-// then FAILURE will be returned
-// NOTE: Returns FAILURE on failure
-errorcode_t ir_gen_expr_math_uvsvf(ir_builder_t *builder, ast_expr_math_t *expr, unsigned int uints_instr, unsigned int sints_instr,
-        unsigned int floats_instr, ir_value_t **ir_value, ast_type_t *out_expr_type);
-
 // Generates the setup for either an 'AND' or an 'OR' expression
 errorcode_t ir_gen_expr_pre_andor(ir_builder_t *builder, ast_expr_math_t *andor_expr, ir_value_t **a, ir_value_t **b,
         length_t *landing_a_block_id, length_t *landing_b_block_id, length_t *landing_more_block_id, ast_type_t *out_expr_type);
@@ -114,7 +97,7 @@ typedef struct {
 } ir_field_info_t;
 
 // ---------------- ir_gen_get_field_info ----------------
-// Gets info about a field of a compsite
+// Gets info about a field of a composite
 errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_cstr_t member, source_t source, ast_type_t *ast_type_of_composite, ir_field_info_t *out_field_info);
 
 // ---------------- ir_gen_arguments ----------------
@@ -136,12 +119,6 @@ errorcode_t ir_gen_expr_call_procedure_handle_pass_management(ir_builder_t *buil
 errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *builder, ir_value_t ***arg_values, ast_type_t *arg_types,
         length_t *arity, func_pair_t *pair, ir_value_t **stack_pointer, source_t source_on_failure);
 
-// ---------------- ir_gen_math_operands ----------------
-// ir_gens both expression operands of a math expression
-// and returns a new IR math instruction with an undetermined
-// instruction id (for caller to determine afterwards).
-ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type);
-
 // ---------------- ir_gen_call_function_value ----------------
 // Generates instructions for calling a value that's a function pointer
 errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_var_type,
@@ -157,39 +134,77 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 //     - instr1 is chosen for unsigned integers
 //     - instr2 is chosen for signed integers
 //     - instr3 is chosen for floats
-errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
-        unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, weak_cstr_t overload, bool result_is_boolean);
+enum instr_choosing_method {
+    INSTR_CHOOSING_METHOD_IvF,
+    INSTR_CHOOSING_METHOD_UvSvF,
+};
+struct instr_choosing_ivf { unsigned int i_instr, f_instr; };
+struct instr_choosing_uvsvf { unsigned int u_instr, s_instr, f_instr; };
+struct instr_choosing {
+    enum instr_choosing_method method;
+    union {
+        struct instr_choosing_ivf as_ivf;
+        struct instr_choosing_uvsvf as_uvsvf;
+    };
+};
+static inline struct instr_choosing instr_choosing_ivf(unsigned int i_instr, unsigned int f_instr){
+    return (struct instr_choosing){
+        .method = INSTR_CHOOSING_METHOD_IvF,
+        .as_ivf = (struct instr_choosing_ivf){
+            .i_instr = i_instr,
+            .f_instr = f_instr,
+        },
+    };
+}
+static inline struct instr_choosing instr_choosing_i(unsigned int i_instr){
+    return instr_choosing_ivf(i_instr, INSTRUCTION_NONE);
+}
+static inline struct instr_choosing instr_choosing_uvsvf(unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
+    return (struct instr_choosing){
+        .method = INSTR_CHOOSING_METHOD_UvSvF,
+        .as_uvsvf = (struct instr_choosing_uvsvf){
+            .u_instr = u_instr,
+            .s_instr = s_instr,
+            .f_instr = f_instr,
+        },
+    };
+}
+static inline struct instr_choosing instr_choosing_uvs(unsigned int u_instr, unsigned int s_instr){
+    return instr_choosing_uvsvf(u_instr, s_instr, INSTRUCTION_NONE);
+}
 
-// ---------------- i_vs_f_instruction ----------------
+errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
+        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean);
+
+errorcode_t ir_gen_math(ir_builder_t *builder, ir_math_operands_t *ops, source_t source, ir_value_t **ir_value, ast_type_t *out_expr_type,
+        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean);
+
+// ---------------- ir_gen_resolve_ternary_conflict ----------------
 // Attempts to resolve conflict between two possible result types
 // of a ternary expression
 successful_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
         length_t *inout_a_basicblock, length_t *inout_b_basicblock);
 
-// ---------------- i_vs_f_instruction ----------------
-// If the math instruction given will have it's
-// instruction id changed based on what it operates on.
-// 'int_instr' if it operates on integers.
-// 'float_instr' if it operates on floating point values.
-errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int int_instr, unsigned int float_instr);
+// ---------------- ivf_instruction ----------------
+// Returns which instruction should be used (int-based or float-based) depending on a given IR type.
+// Returns INSTRUCTION_NONE on error
+unsigned int ivf_instruction(ir_type_t *a_type, unsigned int i_instr, unsigned int f_instr);
 
-// ---------------- u_vs_s_vs_float_instruction ----------------
-// If the math instruction given will have it's
-// instruction id changed based on what it operates on.
-// 'u_instr' if it operates on unsigned integers.
-// 's_instr' if it operates on signed integers.
-// 'float_instr' if it operates on floating point values.
-errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr);
+// ---------------- uvsvf_instruction ----------------
+// Returns which instruction should be used (unsigned-int-based or signed-int-based or float-based) depending on a given IR type.
+// Returns INSTRUCTION_NONE on error
+unsigned int uvsvf_instruction(ir_type_t *a_type, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr);
 
 // Primitive category indicators returned by 'ir_type_get_category'
-#define PRIMITIVE_NA 0x00 // N/A
-#define PRIMITIVE_SI 0x01 // Signed Integer
-#define PRIMITIVE_UI 0x02 // Unsigned Integer
-#define PRIMITIVE_FP 0x03 // FLoating Point Value
+enum ir_type_category {
+    PRIMITIVE_NA, // N/A
+    PRIMITIVE_SI, // Signed Integer
+    PRIMITIVE_UI, // Unsigned Integer
+    PRIMITIVE_FP, // FLoating Point Value
+};
 
 // ---------------- ir_type_get_category ----------------
 // Returns a general category for an IR type.
-// (either signed, unsigned, or float)
-char ir_type_get_category(ir_type_t *type);
+enum ir_type_category ir_type_get_category(ir_type_t *type);
 
 #endif // _ISAAC_IR_GEN_EXPR_H

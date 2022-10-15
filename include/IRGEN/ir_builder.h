@@ -401,7 +401,7 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder);
 // NOTE: Returns SUCCESS if value was utilized in deference
 //       Returns FAILURE if value was not utilized in deference
 //       Returns ALT_FAILURE if a compile time error occurred
-errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value);
+errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value, source_t from_source);
 
 errorcode_t handle_children_deference(ir_builder_t *builder);
 
@@ -431,13 +431,13 @@ errorcode_t handle_children_pass(ir_builder_t *builder);
 // Returns whether a type could have __pass__ methods that need calling
 bool could_have_pass(ast_type_t *ast_type);
 
-// ---------------- try_user_defined_assign ----------------
+// ---------------- handle_assign_management ----------------
 // Handles '__assign__' management method calls
 // NOTE: 'ast_destination_type' is not a pointer, but value provided is mutable
 // NOTE: Returns SUCCESS if value was utilized in assignment
 //       Returns FAILURE if value was not utilized in assignment
 //       Returns ALT_FAILURE if a compile time error occurred
-errorcode_t try_user_defined_assign(
+errorcode_t handle_assign_management(
     ir_builder_t *builder,
     ir_value_t *value,
     ast_type_t *value_ast_type,
@@ -449,8 +449,22 @@ errorcode_t try_user_defined_assign(
 // ---------------- handle_math_management ----------------
 // Handles basic math management function calls
 // NOTE: 'from_source' is used for error messages, and may be NULL_SOURCE
-ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs,
-    ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name);
+typedef struct {
+    ir_value_t *lhs, *rhs;
+    ast_type_t *lhs_type, *rhs_type;
+} ir_math_operands_t;
+
+static inline ir_math_operands_t ir_math_operands_flipped(ir_math_operands_t *ops){
+    return (ir_math_operands_t){
+        .lhs = ops->rhs,
+        .lhs_type = ops->rhs_type,
+        .rhs = ops->lhs,
+        .rhs_type = ops->lhs_type,
+    };
+}
+
+ir_value_t *handle_math_management(ir_builder_t *builder, ir_math_operands_t *operands, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name);
+ir_value_t *handle_math_management_allow_other_direction(ir_builder_t *builder, ir_math_operands_t *operands, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name);
 
 // ---------------- handle_access_management ----------------
 // Handles '__access__' management function calls for [] operator

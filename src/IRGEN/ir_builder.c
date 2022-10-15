@@ -976,31 +976,24 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
     for(length_t i = 0; i != list->length; i++){
         bridge_var_t *variable = &list->variables[i];
 
-        // Don't perform defer management on POD variables or non-struct types
         trait_t traits = variable->traits;
-        if(traits & BRIDGE_VAR_POD || traits & BRIDGE_VAR_REFERENCE ||
-            !(variable->ir_type->kind == TYPE_KIND_STRUCTURE || variable->ir_type->kind == TYPE_KIND_FIXED_ARRAY)) continue;
+        unsigned int ir_type_kind = variable->ir_type->kind;
 
-        // Ensure we're working with a single AST type element in the type for structs
-        if(variable->ir_type->kind == TYPE_KIND_STRUCTURE && variable->ast_type->elements_length != 1) continue;
+        if(traits & (BRIDGE_VAR_POD | BRIDGE_VAR_REFERENCE) || !(ir_type_kind == TYPE_KIND_STRUCTURE && ir_type_kind != TYPE_KIND_FIXED_ARRAY)){
+            continue;
+        }
 
-        // Determine where to build the deference code
-        // Will build inline for regular variables
-        // Will build inside static variable deinitialization function for static variables
         ir_builder_t *defer_builder = traits & BRIDGE_VAR_STATIC ? builder->object->ir_module.deinit_builder : builder;
 
-        // Capture snapshot of current pool state (for if we need to revert allocations)
-        ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(defer_builder->pool);
+        ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(defer_builder->pool);
+        instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
-        ir_value_t *ir_var_value = build_varptr(defer_builder, ir_type_make_pointer_to(defer_builder->pool, variable->ir_type), variable);
-        errorcode_t failed = handle_single_deference(defer_builder, variable->ast_type, ir_var_value);
+        ir_value_t *ir_variable_value = build_varptr(defer_builder, ir_type_make_pointer_to(defer_builder->pool, variable->ir_type), variable);
+        errorcode_t failed = handle_single_deference(defer_builder, variable->ast_type, ir_variable_value, variable->source);
 
         if(failed){
-            // Remove VARPTR instruction
-            defer_builder->current_block->instructions.length--;
-
-            // Revert recent pool allocations
-            ir_pool_snapshot_restore(defer_builder->pool, &snapshot);
+            instructions_snapshot_restore(builder, &instructions_snapshot);
+            ir_pool_snapshot_restore(defer_builder->pool, &pool_snapshot);
 
             // Real failure if a compile time error occurred
             if(failed == ALT_FAILURE) return FAILURE;
@@ -1020,32 +1013,34 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
         // Don't perform defer management on POD variables or non-struct types or special globals
         trait_t traits = global->traits;
         
-        // Faster way of doing: (traits & AST_GLOBAL_EXTERNAL || traits & AST_GLOBAL_POD || traits & AST_GLOBAL_SPECIAL)
-        if(traits != TRAIT_NONE) continue;
+        // Skip deference for global variables with any of these traits
+        if(traits & (AST_GLOBAL_EXTERNAL | AST_GLOBAL_POD | AST_GLOBAL_SPECIAL)) continue;
 
         // Ensure we're working with a single AST type element in the type
         if(global->type.elements_length != 1) continue;
 
         // Capture snapshot of current pool state (for if we need to revert allocations)
-        ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
+        ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
 
         ir_type_t *ir_type;
         if(ir_gen_resolve_type(builder->compiler, builder->object, &global->type, &ir_type)){
             // Revert recent pool allocations
-            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
             return FAILURE;
         }
 
-        // WARNING: Assuming i is the same as the global variable id
+        // Capture snapshot of current instruction building state (for if we need to revert)
+        instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+
+        // DANGEROUS: Assuming i is the same as the global variable id
         ir_value_t *ir_value = build_gvarptr(builder, ir_type, i);
-        errorcode_t failed = handle_single_deference(builder, &global->type, ir_value);
+        errorcode_t failed = handle_single_deference(builder, &global->type, ir_value, global->source);
 
         if(failed){
-            // Remove GVARPTR instruction
-            builder->current_block->instructions.length--;
+            instructions_snapshot_restore(builder, &instructions_snapshot);
 
             // Revert recent pool allocations
-            ir_pool_snapshot_restore(builder->pool, &snapshot);
+            ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
 
             // Real failure if a compile time error occurred
             if(failed == ALT_FAILURE) return FAILURE;
@@ -1054,7 +1049,49 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
     return SUCCESS;
 }
 
-errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value){
+static errorcode_t visit_fixed_array_items(
+    ir_builder_t *builder,
+    ast_type_t *ast_type,
+    ir_value_t *mutable_value,
+    source_t from_source,
+    bool (*could_have)(ast_type_t*),
+    errorcode_t (*handle_single)(ir_builder_t*, ast_type_t*, ir_value_t*, source_t)
+){
+    ast_type_t temporary_rest_of_type = ast_type_unwrapped_view(ast_type);
+
+    if(!could_have(&temporary_rest_of_type)) return FAILURE;
+
+    // Record the number of items of the fixed array
+    length_t count = ((ast_elem_fixed_array_t*) ast_type->elements[0])->length;
+
+    // Remember current state of instruction building in case we have to revert back
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+
+    // Convert from '*n T' to '*T'
+    mutable_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, 0), ast_type->source);
+
+    // TODO: Make this a runtime loop if count is big enough
+    for(length_t i = 0; i != count; i++){
+        // Call handle_single_dereference() on each item else restore snapshots
+
+        // Access at 'i'
+        ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
+        
+        // Handle deference for that single item
+        errorcode_t errorcode = handle_single(builder, &temporary_rest_of_type, mutable_item_value, from_source);
+
+        if(errorcode){
+            instructions_snapshot_restore(builder, &instructions_snapshot);
+            ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+            return errorcode;
+        }
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value, source_t from_source){
     // Calls __defer__ method on a mutable value and it's children if the method exists
     // NOTE: Assumes (ast_type->elements_length >= 1)
     // NOTE: Returns SUCCESS if mutable_value was utilized in deference
@@ -1062,16 +1099,12 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
     //       Returns ALT_FAILURE if a compiler time error occurred
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
-    optional_func_pair_t pair;
-    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-
-    ir_value_t **arguments = NULL;
-
     switch(ast_type->elements[0]->id){
-    case AST_ELEM_BASE: case AST_ELEM_GENERIC_BASE: {
-            arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
-            arguments[0] = mutable_value;
+    case AST_ELEM_BASE:
+    case AST_ELEM_GENERIC_BASE: {
+            ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
 
+            optional_func_pair_t pair;
             errorcode_t errorcode = ir_gen_find_defer_func(builder->compiler, builder->object, ast_type, &pair);
 
             if(errorcode){
@@ -1082,63 +1115,21 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             // Call __defer__()
             if(pair.has){
                 ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;
+                ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, mutable_value);
+
                 build_call_ignore_result(builder, pair.value.ir_func_id, result_type, arguments, 1);
                 return SUCCESS;
             }
+
+            return FAILURE;
         }
-        break;
-    case AST_ELEM_FIXED_ARRAY: {
-            ast_type_t temporary_rest_of_type;
-            temporary_rest_of_type.elements = &ast_type->elements[1];
-            temporary_rest_of_type.elements_length = ast_type->elements_length - 1;
-            temporary_rest_of_type.source = ast_type->source;
-
-            if(!could_have_deference(&temporary_rest_of_type)){
-                ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-                return FAILURE;
-            }
-
-            // Record the number of items of the fixed array
-            length_t count = ((ast_elem_fixed_array_t*) ast_type->elements[0])->length;
-
-            // Take snapshot of instruction count
-            length_t before_modification_instructions_length = builder->current_block->instructions.length;
-
-            // Bitcast to '*T' from '*n T'
-            // NOTE: Assumes that the IR type of 'mutable_value' is a pointer to a fixed array
-            assert(mutable_value->type->kind == TYPE_KIND_POINTER);
-            assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
-
-            ir_type_t *casted_ir_type = ir_type_make_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
-            mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
-
-            // TODO: Make this a runtime loop if count is big enough
-            for(length_t i = 0; i != count; i++){
-                // Call handle_single_dereference() on each item else restore snapshots
-
-                // Access at 'i'
-                ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
-                
-                // Handle deference for that single item
-                errorcode_t errorcode = handle_single_deference(builder, &temporary_rest_of_type, mutable_item_value);
-
-                if(errorcode){
-                    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-
-                    // Restore basicblock to previous amount of instructions
-                    // NOTE: This is only okay because this function 'handle_single_dereference' cannot generate new basicblocks
-                    builder->current_block->instructions.length = before_modification_instructions_length;
-                    return errorcode;
-                }
-            }
-        }
-        return SUCCESS;
+    case AST_ELEM_FIXED_ARRAY:
+        return visit_fixed_array_items(builder, ast_type, mutable_value, from_source, could_have_deference, handle_single_deference);
     default:
+        // value.__defer__() is a noop
+        // Return FAILURE, since we didn't utilize given value
         return FAILURE;
     }
-
-    // Return FAILURE, since we didn't utilize given value
-    return FAILURE;
 }
 
 errorcode_t handle_children_deference(ir_builder_t *builder){
@@ -1195,7 +1186,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
                 ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
-                errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value);
+                errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value, composite->source);
 
                 if(failed){
                     // Remove VARPTR, LOAD, and MEMBER instruction
@@ -1265,7 +1256,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
                 ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
                 ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
-                errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value);
+                errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value, template->source);
                 ast_type_free(&ast_field_type);
 
                 if(failed){
@@ -1358,89 +1349,39 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     //       Returns ALT_FAILURE if a compiler time error occurred
     // NOTE: This function is not allowed to generate or switch basicblocks!
 
-    optional_func_pair_t pass_func;
-
-    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-
-    ir_value_t **arguments = NULL;
-    unsigned int elem_id = ast_type->elements[0]->id;
-
-    switch(elem_id){
+    switch(ast_type->elements[0]->id){
     case AST_ELEM_BASE:
     case AST_ELEM_GENERIC_BASE: {
-            arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*));
-            arguments[0] = build_load(builder, mutable_value, ast_type->source);
+            ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+            ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, build_load(builder, mutable_value, ast_type->source));
 
-            errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &pass_func);
+            optional_func_pair_t pair;
+            errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &pair);
 
             if(errorcode){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
                 return errorcode;
             }
-        }
-        break;
-    case AST_ELEM_FIXED_ARRAY: {
-            ast_type_t temporary_rest_of_type;
-            temporary_rest_of_type.elements = &ast_type->elements[1];
-            temporary_rest_of_type.elements_length = ast_type->elements_length - 1;
-            temporary_rest_of_type.source = ast_type->source;
 
-            if(!could_have_pass(&temporary_rest_of_type)){
-                ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-                return FAILURE;
+            // Call __pass__()
+            if(pair.has){
+                ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;
+                ir_value_t *passed = build_call(builder, pair.value.ir_func_id, result_type, arguments, 1);
+
+                // Store result back into mutable value
+                build_store(builder, passed, mutable_value, ast_type->source);
+                return SUCCESS;
             }
 
-            // Record the number of items of the fixed array
-            length_t count = ((ast_elem_fixed_array_t*) ast_type->elements[0])->length;
-
-            // Take snapshot of instruction count
-            length_t before_modification_instructions_length = builder->current_block->instructions.length;
-
-            // Bitcast to '*T' from '*n T'
-            // NOTE: Assumes that the IR type of 'mutable_value' is a pointer to a fixed array
-            assert(mutable_value->type->kind == TYPE_KIND_POINTER);
-            assert(((ir_type_t*) mutable_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY);
-
-            ir_type_t *casted_ir_type = ir_type_make_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) mutable_value->type->extra)->extra)->subtype);
-            mutable_value = build_bitcast(builder, mutable_value, casted_ir_type);
-
-            for(length_t i = 0; i != count; i++){
-                // Call handle_single_pass() on each item else restore snapshots
-
-                // Access at 'i'
-                ir_value_t *mutable_item_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, i), ast_type->source);
-                
-                // Handle passing for that single item
-                errorcode_t errorcode = handle_single_pass(builder, &temporary_rest_of_type, mutable_item_value, from_source);
-
-                if(errorcode){
-                    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-
-                    // Restore basicblock to previous amount of instructions
-                    // NOTE: This is only okay because this function 'handle_single_dereference' cannot generate new basicblocks
-                    builder->current_block->instructions.length = before_modification_instructions_length;
-                    return errorcode;
-                }
-            }
+            return FAILURE;
         }
-        return SUCCESS;
+    case AST_ELEM_FIXED_ARRAY:
+        return visit_fixed_array_items(builder, ast_type, mutable_value, from_source, could_have_pass, handle_single_pass);
     default:
+        // __pass__() for this type is a noop
+        // Return FAILURE since we didn't utilize given value
         return FAILURE;
     }
-
-    // Call __pass__()
-    if(pass_func.has){
-        ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pass_func.value.ir_func_id].return_type;
-        ir_value_t *passed = build_call(builder, pass_func.value.ir_func_id, result_type, arguments, 1);
-
-        // Store result back into mutable value
-        build_store(builder, passed, mutable_value, ast_type->source);
-        return SUCCESS;
-    }
-
-    // __pass__() is a noop
-    // Return FAILURE, since we didn't utilize given value
-    return FAILURE;
 }
 
 errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_return){
@@ -1465,6 +1406,7 @@ errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_re
     if(!already_has_return){
         build_return(builder, return_value);
     }
+
     return SUCCESS;
 }
 
@@ -1698,7 +1640,7 @@ bool could_have_pass(ast_type_t *ast_type){
     }
 }
 
-errorcode_t try_user_defined_assign(
+errorcode_t handle_assign_management(
     ir_builder_t *builder,
     ir_value_t *value,
     ast_type_t *value_ast_type,
@@ -1764,22 +1706,22 @@ failure:
     return errorcode;
 }
 
-ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_value_t *rhs, ast_type_t *lhs_type, ast_type_t *rhs_type, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name){
-    if(lhs->type->kind != TYPE_KIND_STRUCTURE) return NULL;
+ir_value_t *handle_math_management(ir_builder_t *builder, ir_math_operands_t *ops, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name){
+    if(ops->lhs->type->kind != TYPE_KIND_STRUCTURE) return NULL;
 
-    if(lhs_type->elements_length == 1 && lhs_type->elements[0]->id == AST_ELEM_BASE){
-        optional_func_pair_t result;
-
+    if(ast_type_is_base(ops->lhs_type)){
         ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
 
         ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
-        arguments[0] = lhs;
-        arguments[1] = rhs;
+        arguments[0] = ops->lhs;
+        arguments[1] = ops->rhs;
 
-        ast_type_t types[2] = {*lhs_type, *rhs_type};
+        ast_type_t types[2] = {*ops->lhs_type, *ops->rhs_type};
 
         ast_t *ast = &builder->object->ast;
         ir_module_t *module = &builder->object->ir_module;
+        
+        optional_func_pair_t result;
 
         if(ir_gen_find_func_conforming_without_defaults(builder, overload_name, arguments, types, 2, NULL, false, from_source, &result)
         || !result.has
@@ -1799,6 +1741,16 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_value_t *lhs, ir_va
     }
 
     return NULL;
+}
+
+ir_value_t *handle_math_management_allow_other_direction(ir_builder_t *builder, ir_math_operands_t *ops, source_t from_source, ast_type_t *out_type, weak_cstr_t overload_name){
+    // Try LHS op RHS
+    ir_value_t *attempt = handle_math_management(builder, ops, from_source, out_type, overload_name);
+    if(attempt) return attempt;
+
+    // Try RHS op LHS
+    ir_math_operands_t flipped_ops = ir_math_operands_flipped(ops);
+    return handle_math_management(builder, &flipped_ops, from_source, out_type, overload_name);
 }
 
 ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, ir_value_t *index_value,

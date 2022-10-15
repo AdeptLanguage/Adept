@@ -112,44 +112,37 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     #undef build_literal_ir_value
     
     case EXPR_BIT_AND:
-        if(ir_gen_expr_math_ivf(builder, (ast_expr_math_t*) expr, INSTRUCTION_BIT_AND, INSTRUCTION_NONE, ir_value, out_expr_type)){
-            compiler_panic(builder->compiler, expr->source, "Can't perform bitwise 'and' on those types");
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_AND), "bitwise and", NULL, false)){
             return FAILURE;
         }
         break;
     case EXPR_BIT_OR:
-        if(ir_gen_expr_math_ivf(builder, (ast_expr_math_t*) expr, INSTRUCTION_BIT_OR, INSTRUCTION_NONE, ir_value, out_expr_type)){
-            compiler_panic(builder->compiler, expr->source, "Can't perform bitwise 'or' on those types");
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_OR), "bitwise or", NULL, false)){
             return FAILURE;
         }
         break;
     case EXPR_BIT_XOR:
-        if(ir_gen_expr_math_ivf(builder, (ast_expr_math_t*) expr, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE, ir_value, out_expr_type)){
-            compiler_panic(builder->compiler, expr->source, "Can't perform bitwise 'xor' on those types");
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_XOR), "bitwise xor", NULL, false)){
             return FAILURE;
         }
         break;
     case EXPR_BIT_LSHIFT:
-        if(ir_gen_expr_math_ivf(builder, (ast_expr_math_t*) expr, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE, ir_value, out_expr_type)){
-            compiler_panic(builder->compiler, expr->source, "Can't perform bitwise 'left shift' on those types");
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_LSHIFT), "left shift", NULL, false)){
             return FAILURE;
         }
         break;
     case EXPR_BIT_LGC_LSHIFT:
-        if(ir_gen_expr_math_ivf(builder, (ast_expr_math_t*) expr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE, ir_value, out_expr_type)){
-            compiler_panic(builder->compiler, expr->source, "Can't perform bitwise 'logical left shift' on those types");
-            return FAILURE;
-        }
-        break;
-    case EXPR_BIT_LGC_RSHIFT:
-        if(ir_gen_expr_math_ivf(builder, (ast_expr_math_t*) expr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE, ir_value, out_expr_type)){
-            compiler_panic(builder->compiler, expr->source, "Can't perform bitwise 'logical right shift' on those types");
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(/*logical and arithmetic left shifts are the same*/ INSTRUCTION_BIT_LSHIFT), "logical left shift", NULL, false)){
             return FAILURE;
         }
         break;
     case EXPR_BIT_RSHIFT:
-        if(ir_gen_expr_math_uvsvf(builder, (ast_expr_math_t*) expr, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_NONE, ir_value, out_expr_type)){
-            compiler_panic(builder->compiler, expr->source, "Can't perform bitwise 'right shift' on those types");
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvs(/*same as logical if unsigned*/ INSTRUCTION_BIT_LGC_RSHIFT, /*otherwise use arithmetic*/ INSTRUCTION_BIT_RSHIFT), "right shift", NULL, false)){
+            return FAILURE;
+        }
+        break;
+    case EXPR_BIT_LGC_RSHIFT:
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_LGC_RSHIFT), "logical right shift", NULL, false)){
             return FAILURE;
         }
         break;
@@ -161,47 +154,47 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         *ir_value = build_null_pointer(builder->pool);
         break;
     case EXPR_ADD:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ADD, INSTRUCTION_FADD, INSTRUCTION_NONE, "add", "__add__", false))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_ADD, INSTRUCTION_FADD), "add", "__add__", false))
             return FAILURE;
         break;
     case EXPR_SUBTRACT:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT, INSTRUCTION_NONE, "subtract", "__subtract__", false))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT), "subtract", "__subtract__", false))
             return FAILURE;
         break;
     case EXPR_MULTIPLY:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY, INSTRUCTION_NONE, "multiply", "__multiply__", false))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY), "multiply", "__multiply__", false))
             return FAILURE;
         break;
     case EXPR_DIVIDE:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE, "divide", "__divide__", false))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE), "divide", "__divide__", false))
             return FAILURE;
         break;
     case EXPR_MODULUS:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS, "take the modulus of", "__modulus__", false))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS), "take the modulus of", "__modulus__", false))
             return FAILURE;
         break;
     case EXPR_EQUALS:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS, INSTRUCTION_NONE, "test equality for", "__equals__", true))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS), "test equality for", "__equals__", true))
             return FAILURE;
         break;
     case EXPR_NOTEQUALS:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS, INSTRUCTION_NONE, "test inequality for", "__not_equals__", true))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS), "test inequality for", "__not_equals__", true))
             return FAILURE;
         break;
     case EXPR_GREATER:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER, "compare", "__greater_than__", true))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER), "compare", "__greater_than__", true))
             return FAILURE;
         break;
     case EXPR_LESSER:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER, "compare", "__less_than__", true))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER), "compare", "__less_than__", true))
             return FAILURE;
         break;
     case EXPR_GREATEREQ:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ, "compare", "__greater_than_or_equal__", true))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ), "compare", "__greater_than_or_equal__", true))
             return FAILURE;
         break;
     case EXPR_LESSEREQ:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ, "compare", "__less_than_or_equal__", true))
+        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ), "compare", "__less_than_or_equal__", true))
             return FAILURE;
         break;
     case EXPR_AND:
@@ -329,38 +322,6 @@ ir_value_t *ir_gen_conforming_expr(ir_builder_t *builder, ast_expr_t *ast_value,
 
     ast_type_free(&ast_type);
     return ir_value;
-}
-
-errorcode_t ir_gen_expr_math_ivf(ir_builder_t *builder, ast_expr_math_t *expr, unsigned int ints_instr, unsigned int floats_instr,
-        ir_value_t **ir_value, ast_type_t *out_expr_type){
-    
-    // Create undesignated math operation
-    ir_instr_math_t *instruction = ir_gen_math_operands(builder, expr, ir_value, out_expr_type);
-    if(instruction == NULL) return FAILURE;
-
-    // Designated math operation based on operand types 
-    if(i_vs_f_instruction(instruction, ints_instr, floats_instr)){
-        ast_type_free(out_expr_type);
-        return FAILURE;
-    }
-
-    return SUCCESS;
-}
-
-errorcode_t ir_gen_expr_math_uvsvf(ir_builder_t *builder, ast_expr_math_t *expr, unsigned int uints_instr, unsigned int sints_instr,
-        unsigned int floats_instr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    
-    // Create undesignated math operation
-    ir_instr_math_t *instruction = ir_gen_math_operands(builder, expr, ir_value, out_expr_type);
-    if(instruction == NULL) return FAILURE;
-
-    // Designated math operation based on operand types 
-    if(u_vs_s_vs_float_instruction(instruction, uints_instr, sints_instr, floats_instr)){
-        ast_type_free(out_expr_type);
-        return FAILURE;
-    }
-
-    return SUCCESS;
 }
 
 errorcode_t ir_gen_expr_and(ir_builder_t *builder, ast_expr_and_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
@@ -1903,7 +1864,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
         ast_type_dereference(&arg_types[0]);
         
         // Call __defer__ on temporary mutable value
-        if(handle_single_deference(builder, &arg_types[0], arg_values[0]) == ALT_FAILURE){
+        if(handle_single_deference(builder, &arg_types[0], arg_values[0], expr->source) == ALT_FAILURE){
             ast_types_free_fully(arg_types, unpacked_arity);
             return FAILURE;
         }
@@ -2355,141 +2316,134 @@ errorcode_t ir_gen_expr_ternary(ir_builder_t *builder, ast_expr_ternary_t *expr,
 }
 
 errorcode_t ir_gen_expr_crement(ir_builder_t *builder, ast_expr_unary_t *expr, ir_value_t **ir_value, bool leave_mutable, ast_type_t *out_expr_type){
-    ir_value_t *before_value;
-    ast_type_t before_ast_type;
 
     // Ensure mutable value given
     if(!expr_is_mutable(expr->value)){
         compiler_panic(builder->compiler, expr->value->source, "INTERNAL ERROR: xCREMENT expression expected mutable value");
-        ast_type_free(&before_ast_type);
         return FAILURE;
     }
+
+    ir_value_t *mutable_expr;
+    ast_type_t mutable_expr_ast_type;
 
     // Generate IR value for initial value
-    if(ir_gen_expr(builder, expr->value, &before_value, true, &before_ast_type)) return FAILURE;
+    if(ir_gen_expr(builder, expr->value, &mutable_expr, true, &mutable_expr_ast_type)) return FAILURE;
     
     // Ensure IR type of IR value of initial value is a pointer
-    if(before_value->type->kind != TYPE_KIND_POINTER){
+    if(mutable_expr->type->kind != TYPE_KIND_POINTER){
         compiler_panic(builder->compiler, expr->value->source, "INTERNAL ERROR: ir_gen_expr() EXPR_xCREMENT expected mutable value");
-        ast_type_free(&before_ast_type);
+        ast_type_free(&mutable_expr_ast_type);
         return FAILURE;
     }
 
-    // Generate an IR value of '1' for the type we're working with
-    ir_value_t *one = ir_pool_alloc(builder->pool, sizeof(ir_value_t));
-    one->value_type = VALUE_TYPE_LITERAL;
-    one->type = (ir_type_t*) before_value->type->extra;
-    one->extra = NULL;
+    ir_type_t *type = (ir_type_t*) mutable_expr->type->extra;
+    void *extra = NULL;
     
-    switch(one->type->kind){
+    switch(type->kind){
     case TYPE_KIND_S8:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_byte));
-        *((adept_byte*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_byte, 1);
         break;
     case TYPE_KIND_U8:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ubyte));
-        *((adept_ubyte*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_ubyte, 1);
         break;
     case TYPE_KIND_S16:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_short));
-        *((adept_short*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_short, 1);
         break;
     case TYPE_KIND_U16:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ushort));
-        *((adept_ushort*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_ushort, 1);
         break;
     case TYPE_KIND_S32:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_int));
-        *((adept_int*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_int, 1);
         break;
     case TYPE_KIND_U32:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_uint));
-        *((adept_uint*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_uint, 1);
         break;
     case TYPE_KIND_S64:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_long));
-        *((adept_long*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_long, 1);
         break;
     case TYPE_KIND_U64:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_ulong));
-        *((adept_ulong*) one->extra) = 1;
+        extra = ir_pool_alloc_init(builder->pool, adept_ulong, 1);
         break;
     case TYPE_KIND_FLOAT:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_float));
-        *((adept_float*) one->extra) = 1.0f;
+        extra = ir_pool_alloc_init(builder->pool, adept_float, 1.0f);
         break;
     case TYPE_KIND_DOUBLE:
-        one->extra = ir_pool_alloc(builder->pool, sizeof(adept_double));
-        *((adept_double*) one->extra) = 1.0;
+        extra = ir_pool_alloc_init(builder->pool, adept_double, 1.0);
         break;
     }
 
     // If we couldn't create a value for 'one' of that type, so
     // we can't perform the -crement instruction on this value
-    if(one->extra == NULL){
-        char *typename = ast_type_str(&before_ast_type);
+    if(extra == NULL){
+        strong_cstr_t typename = ast_type_str(&mutable_expr_ast_type);
         compiler_panicf(builder->compiler, expr->source, "Can't %s type '%s'",
             expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT ? "increment" : "decrement", typename);
-        ast_type_free(&before_ast_type);
+        ast_type_free(&mutable_expr_ast_type);
         free(typename);
         return FAILURE;
     }
 
-    ir_value_t *before_value_immutable = build_load(builder, before_value, expr->source);
+    // Generate an IR value of '1' for the type we're working with
+    ir_value_t *one = ir_pool_alloc_init(builder->pool, ir_value_t, {
+        .value_type = VALUE_TYPE_LITERAL,
+        .type = type,
+        .extra = extra,
+    });
 
-    // Build template for math instruction
-    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-    instruction->id = INSTRUCTION_NONE; // Will be determined
-    instruction->a = before_value_immutable;
-    instruction->b = one;
-    instruction->result_type = before_value->type; 
+    ir_value_t *before_value_immutable = build_load(builder, mutable_expr, expr->source);
+    unsigned int instr_id = INSTRUCTION_NONE;
 
     // Generate respective instruction
     if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_POSTINCREMENT){
+        instr_id = ivf_instruction(one->type, INSTRUCTION_ADD, INSTRUCTION_FADD);
+
         // For '++', do add instruction
-        if(i_vs_f_instruction(instruction, INSTRUCTION_ADD, INSTRUCTION_FADD)){
-            char *typename = ast_type_str(&before_ast_type);
-            compiler_panicf(builder->compiler, expr->source, "Can't increment type '%s'", typename);
-            ast_type_free(&before_ast_type);
+        if(instr_id == INSTRUCTION_NONE){
+            strong_cstr_t typename = ast_type_str(&mutable_expr_ast_type);
+            compiler_panicf(builder->compiler, expr->source, "Cannot increment type '%s'", typename);
+            ast_type_free(&mutable_expr_ast_type);
             free(typename);
             return FAILURE;
         }
     } else {
+        instr_id = ivf_instruction(one->type, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT);
+
         // For '--', do subtract instruction
-        if(i_vs_f_instruction(instruction, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT)){
-            char *typename = ast_type_str(&before_ast_type);
-            compiler_panicf(builder->compiler, expr->source, "Can't decrement type '%s'", typename);
-            ast_type_free(&before_ast_type);
+        if(instr_id == INSTRUCTION_NONE){
+            strong_cstr_t typename = ast_type_str(&mutable_expr_ast_type);
+            compiler_panicf(builder->compiler, expr->source, "Cannot decrement type '%s'", typename);
+            ast_type_free(&mutable_expr_ast_type);
             free(typename);
             return FAILURE;
         }
     }
 
+    // Build math instruction
+    ir_value_t *result = build_math(builder, instr_id, before_value_immutable, one, mutable_expr->type);
+
     // Store modified value
-    ir_value_t *modified = build_value_from_prev_instruction(builder);
-    build_store(builder, modified, before_value, expr->source);
+    build_store(builder, result, mutable_expr, expr->source);
 
     // Result type is the type of the initial expression
     if(out_expr_type){
-        *out_expr_type = before_ast_type;
+        *out_expr_type = mutable_expr_ast_type;
     } else {
         // Dispose of the temporary type of the initial expression
         // if we're not going to use it as the result type
-        ast_type_free(&before_ast_type);
+        ast_type_free(&mutable_expr_ast_type);
     }
 
     // Don't even bother with result unless we care about the it
     if(ir_value){
         if(expr->id == EXPR_PREINCREMENT || expr->id == EXPR_PREDECREMENT){
             // For pre-crement instructions, work with the post value
-            *ir_value = leave_mutable ? before_value : build_load(builder, before_value, expr->source);
+            *ir_value = leave_mutable ? mutable_expr : build_load(builder, mutable_expr, expr->source);
         } else {
             // For post-crement instructions, work with the pre value
-            *ir_value = leave_mutable ? before_value : before_value_immutable;
+            *ir_value = leave_mutable ? mutable_expr : before_value_immutable;
         }
     }
 
-    // We successfully generate instructions for the xCREMENT instruction
     return SUCCESS;
 }
 
@@ -2661,145 +2615,109 @@ errorcode_t ir_gen_expr_alignof(ir_builder_t *builder, ast_expr_alignof_t *expr,
 }
 
 errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
-        unsigned int instr1, unsigned int instr2, unsigned int instr3, const char *op_verb, weak_cstr_t overload, bool result_is_boolean){
+        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean){
 
-    // NOTE: If instr3 is INSTRUCTION_NONE then the operation will be differentiated for Integer vs. Float (using instr1 and instr2)
-    //       Otherwise, the operation will be differentiated for Unsigned Integer vs. Signed Integer vs. Float (using instr1, instr2 & instr3)
-
-    ast_type_t ast_type_a, ast_type_b;
+    ast_type_t lhs_type, rhs_type;
     ir_value_t *lhs, *rhs;
 
     // Generate IR values for left and right sides of the math operator
-    if(ir_gen_expr(builder, math_expr->a, &lhs, false, &ast_type_a)) return FAILURE;
-    if(ir_gen_expr(builder, math_expr->b, &rhs, false, &ast_type_b)){
-        ast_type_free(&ast_type_a);
+    if(ir_gen_expr(builder, math_expr->a, &lhs, false, &lhs_type)) return FAILURE;
+    if(ir_gen_expr(builder, math_expr->b, &rhs, false, &rhs_type)){
+        ast_type_free(&lhs_type);
         return FAILURE;
     }
 
-    // Conform the type of the second value to the first
-    if(!ast_types_conform(builder, &rhs, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
+    ir_math_operands_t operands = (ir_math_operands_t){
+        .lhs = lhs,
+        .rhs = rhs,
+        .lhs_type = &lhs_type,
+        .rhs_type = &rhs_type,
+    };
 
-        // Failed to conform the values, if we have an overload function, we can use the argument
-        // types for that and continue on our way
+    errorcode_t errorcode = ir_gen_math(
+        builder,
+        &operands,
+        math_expr->source,
+        ir_value,
+        out_expr_type,
+        instr_choosing,
+        op_verb,
+        overload,
+        result_is_boolean
+    );
+
+    ast_type_free(&lhs_type);
+    ast_type_free(&rhs_type);
+    return errorcode;
+}
+
+errorcode_t ir_gen_math(ir_builder_t *builder, ir_math_operands_t *ops, source_t source, ir_value_t **ir_value, ast_type_t *out_expr_type,
+        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean){
+
+    // Conform the second value to the type of the first
+    if(!ast_types_conform(builder, &ops->rhs, ops->rhs_type, ops->lhs_type, CONFORM_MODE_CALCULATION)){
         if(overload){
-            *ir_value = handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, math_expr->source, out_expr_type, overload);
-
-            // We successfully used the overload function
-            if(*ir_value != NULL){
-                ast_type_free(&ast_type_a);
-                ast_type_free(&ast_type_b);
-                return SUCCESS;
-            }
-        }
-
-        // Failed to conform the values if we had an overload function, we'll try to use the arguments in reverse order now
-        if(overload){
-            *ir_value = handle_math_management(builder, rhs, lhs, &ast_type_b, &ast_type_a, math_expr->source, out_expr_type, overload);
-
-            // We successfully used the overload function
-            if(*ir_value != NULL){
-                ast_type_free(&ast_type_a);
-                ast_type_free(&ast_type_b);
-                return SUCCESS;
-            }
+            *ir_value = handle_math_management_allow_other_direction(builder, ops, source, out_expr_type, overload);
+            if(*ir_value != NULL) return SUCCESS;
         }
 
         // Otherwise, we couldn't do anything the the types given to us
-        char *a_type_str = ast_type_str(&ast_type_a);
-        char *b_type_str = ast_type_str(&ast_type_b);
-        compiler_panicf(builder->compiler, math_expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-        free(a_type_str);
-        free(b_type_str);
-        ast_type_free(&ast_type_a);
-        ast_type_free(&ast_type_b);
+        strong_cstr_t lhs_type_str = ast_type_str(ops->lhs_type);
+        strong_cstr_t rhs_type_str = ast_type_str(ops->rhs_type);
+        compiler_panicf(builder->compiler, source, "Incompatible types '%s' and '%s'", lhs_type_str, rhs_type_str);
+        free(lhs_type_str);
+        free(rhs_type_str);
         return FAILURE;
     }
 
-    // Add math instruction template
-    ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
-    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-    instruction->a = lhs;
-    instruction->b = rhs;
-    instruction->id = INSTRUCTION_NONE; // For safety
-    instruction->result_type = result_is_boolean ? ir_builder_bool(builder) : lhs->type;
-
     // Determine which instruction to use
-    errorcode_t error = instr3 ? u_vs_s_vs_float_instruction(instruction, instr1, instr2, instr3) : i_vs_f_instruction(instruction, instr1, instr2);
+    unsigned int instr_id;
+    switch(instr_choosing.method){
+    case INSTR_CHOOSING_METHOD_IvF: {
+            struct instr_choosing_ivf ivf = instr_choosing.as_ivf;
+            instr_id = ivf_instruction(ops->lhs->type, ivf.i_instr, ivf.f_instr);
+        }
+        break;
+    case INSTR_CHOOSING_METHOD_UvSvF: {
+            struct instr_choosing_uvsvf uvsvf = instr_choosing.as_uvsvf;
+            instr_id = uvsvf_instruction(ops->lhs->type, uvsvf.u_instr, uvsvf.s_instr, uvsvf.f_instr);
+        }
+        break;
+    default:
+        instr_id = INSTRUCTION_NONE;
+    }
 
     // We couldn't use the built-in instructions to operate on these types
-    if(error){
-        // Undo last instruction we attempted to build
-        ir_pool_snapshot_restore(builder->pool, &snapshot);
-        builder->current_block->instructions.length--;
-
+    if(instr_id == INSTRUCTION_NONE){
         // Try to use the overload function if it exists
-        *ir_value = overload ? handle_math_management(builder, lhs, rhs, &ast_type_a, &ast_type_b, math_expr->source, out_expr_type, overload) : NULL;
-        ast_type_free(&ast_type_a);
-        ast_type_free(&ast_type_b);
+        *ir_value = overload
+            ? handle_math_management(builder, ops, source, out_expr_type, overload)
+            : NULL;
 
         // If we got a value back, then we successfully used the overload function instead
         if(*ir_value != NULL) return SUCCESS;
 
         // Otherwise, we don't have a way to operate on these types
-        compiler_panicf(builder->compiler, math_expr->source, "Can't %s those types", op_verb);
+        strong_cstr_t lhs_type_string = ast_type_str(ops->lhs_type);
+        strong_cstr_t rhs_type_string = ast_type_str(ops->rhs_type);
+        compiler_panicf(builder->compiler, source, "Cannot %s those types (%s and %s)", op_verb, lhs_type_string, rhs_type_string);
+        free(lhs_type_string);
+        free(rhs_type_string);
         return FAILURE;
     }
 
-    // We successfully used the built-in instructions to perform the operation
-    *ir_value = build_value_from_prev_instruction(builder);
+    *ir_value = build_math(builder, instr_id, ops->lhs, ops->rhs, result_is_boolean ? ir_builder_bool(builder) : ops->lhs->type);
 
     // Write the result type, will either be a boolean or the same type as the given arguments
     if(out_expr_type != NULL){
-        *out_expr_type = result_is_boolean ? ast_type_make_base(strclone("bool")) : ast_type_clone(&ast_type_a);
+        if(result_is_boolean){
+            *out_expr_type = ast_type_make_base(strclone("bool"));
+        } else {
+            *out_expr_type = ast_type_clone(ops->lhs_type);
+        }
     }
 
-    ast_type_free(&ast_type_a);
-    ast_type_free(&ast_type_b);
     return SUCCESS;
-}
-
-ir_instr_math_t* ir_gen_math_operands(ir_builder_t *builder, ast_expr_math_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    // ir_gen the operands of an expression into instructions and gives back an instruction with unknown id
-
-    // NOTE: Returns the generated instruction
-    // NOTE: The instruction id still must be specified after this call
-    // NOTE: Returns NULL if an error occurred
-    // NOTE:'op_res' should be either MATH_OP_RESULT_MATCH
-
-    ir_value_t *a, *b;
-    ast_type_t ast_type_a, ast_type_b;
-
-    if(ir_gen_expr(builder, expr->a, &a, false, &ast_type_a)) return NULL;
-    if(ir_gen_expr(builder, expr->b, &b, false, &ast_type_b)){
-        ast_type_free(&ast_type_a);
-        return NULL;
-    }
-
-    if(!ast_types_conform(builder, &b, &ast_type_b, &ast_type_a, CONFORM_MODE_CALCULATION)){
-        char *a_type_str = ast_type_str(&ast_type_a);
-        char *b_type_str = ast_type_str(&ast_type_b);
-        compiler_panicf(builder->compiler, expr->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-        free(a_type_str);
-        free(b_type_str);
-
-        ast_type_free(&ast_type_a);
-        ast_type_free(&ast_type_b);
-        return NULL;
-    }
-
-    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-    instruction->id = INSTRUCTION_NONE; // To be filled in by the caller
-    instruction->a = a;
-    instruction->b = b;
-    instruction->result_type = a->type;
-    *ir_value = build_value_from_prev_instruction(builder);
-
-    // Result type is the AST type of expression 'A'
-    if(out_expr_type != NULL) *out_expr_type = ast_type_clone(&ast_type_a);
-    
-    ast_type_free(&ast_type_a);
-    ast_type_free(&ast_type_b);
-    return instruction;
 }
 
 errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_ast_variable_type,
@@ -2899,52 +2817,37 @@ successful_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t *
     return successful;
 }
 
-errorcode_t i_vs_f_instruction(ir_instr_math_t *instruction, unsigned int i_instr, unsigned int f_instr){
+unsigned int ivf_instruction(ir_type_t *a_type, unsigned int i_instr, unsigned int f_instr){
     // NOTE: Sets the instruction id to 'i_instr' if operating on intergers
     //       Sets the instruction id to 'f_instr' if operating on floats
     // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
     // NOTE: Returns FAILURE if unsupported type
 
-    switch(ir_type_get_category(instruction->a->type)){
+    switch(ir_type_get_category(a_type)){
     case PRIMITIVE_UI:
     case PRIMITIVE_SI:
-        instruction->id = i_instr;
-        break;
+        return i_instr;
     case PRIMITIVE_FP:
-        instruction->id = f_instr;
-        break;
+        return f_instr;
     default:
-        return FAILURE;
+        return INSTRUCTION_NONE;
     }
-
-    return instruction->id != INSTRUCTION_NONE ? SUCCESS : FAILURE;
 }
 
-errorcode_t u_vs_s_vs_float_instruction(ir_instr_math_t *instruction, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
-    // NOTE: Sets the instruction id to 'u_instr' if operating on unsigned intergers
-    //       Sets the instruction id to 's_instr' if operating on signed intergers
-    //       Sets the instruction id to 'f_instr' if operating on floats
-    // NOTE: If target instruction id is INSTRUCTION_NONE, then 1 is returned
-    // NOTE: Returns FAILURE if unsupported type
-
-    switch(ir_type_get_category(instruction->a->type)){
+unsigned int uvsvf_instruction(ir_type_t *a_type, unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
+    switch(ir_type_get_category(a_type)){
     case PRIMITIVE_UI:
-        instruction->id = u_instr;
-        break;
+        return u_instr;
     case PRIMITIVE_SI:
-        instruction->id = s_instr;
-        break;
+        return s_instr;
     case PRIMITIVE_FP:
-        instruction->id = f_instr;
-        break;
+        return f_instr;
     default:
-        return FAILURE;
+        return INSTRUCTION_NONE;
     }
-
-    return instruction->id != INSTRUCTION_NONE ? SUCCESS : FAILURE;
 }
 
-char ir_type_get_category(ir_type_t *type){
+enum ir_type_category ir_type_get_category(ir_type_t *type){
     switch(type->kind){
     case TYPE_KIND_POINTER:
     case TYPE_KIND_BOOLEAN:
@@ -2966,8 +2869,8 @@ char ir_type_get_category(ir_type_t *type){
     case TYPE_KIND_DOUBLE:
         // Floating point like values
         return PRIMITIVE_FP;
+    default:
+        // Otherwise, no category
+        return PRIMITIVE_NA;
     }
-
-    // Otherwise, no category
-    return PRIMITIVE_NA;
 }
