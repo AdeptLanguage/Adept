@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-2019, macos-latest, ubuntu-latest]
     defaults:
       run:
         working-directory: ${{github.workspace}}
@@ -49,7 +49,7 @@ jobs:
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@latest
       - name: Configure to use MinGW-w64 (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2019'
         shell: bash
         run: |
           export CC=x86_64-w64-mingw32-gcc
@@ -61,7 +61,7 @@ jobs:
           path: ${{github.workspace}}/llvm
           key: ${{runner.os}}-cache-llvm-13.0.1-${{ hashFiles('llvm/**/*.txt') }}
       - name: Download LLVM (Unix)
-        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os != 'windows-2019'
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: "13.0.1"
@@ -72,16 +72,16 @@ jobs:
       # Which means we're gonna have to spend an hour or so compiling from scratch (Github willing)
       # At least we have ninja
       - name: Download LLVM Source Code (Windows)
-        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-2019'
         run: curl -o llvm-source-tree.tar.xz -L https://github.com/llvm/llvm-project/releases/download/llvmorg-13.0.1/llvm-13.0.1.src.tar.xz
       - name: Extract LLVM Source Code (Windows)
-        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-2019'
         run: |
           7z x llvm-source-tree.tar.xz
           tar xf llvm-source-tree.tar
           mv llvm-13.0.1.src llvm
       - name: Build LLVM from Source (Windows)
-        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
+        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-2019'
         working-directory: ${{github.workspace}}/llvm
         shell: bash
         run: |
@@ -89,7 +89,7 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE="Release" -G Ninja
           cmake --build build
       - name: Download and extract libcurl (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'windows-2019' }}
         shell: bash
         run: |
           curl -o curl.zip -L https://curl.se/windows/dl-7.83.1/curl-7.83.1-win64-mingw.zip
@@ -101,18 +101,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
       - name: Download static zlib libraries (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'windows-2019' }}
         run: |
           C:\msys64\usr\bin\pacman -S zlib-devel --noconfirm
           del C:\msys64\usr\lib\libz.dll.a
       - name: Configure (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'windows-2019' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=${{github.workspace}}/llvm/build -DCMAKE_LIBRARY_PATH=C:\msys64\usr\lib -DCURL_LIBRARY=curl -DCURL_LIBRARY_DIRS=${{github.workspace}}/libcurl/lib -DCURL_INCLUDE_DIR=libcurl/include -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           LLVM_DIR: ${{github.workspace}}/llvm/build
       - name: Configure (Unix)
-        if: ${{ matrix.os != 'windows-latest' }}
+        if: ${{ matrix.os != 'windows-2019' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=${{github.workspace}}/llvm -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
@@ -136,7 +136,7 @@ jobs:
           outPath: e2e.tar.gz
       - name: Archive Support Libraries Infrastructure
         uses: a7ul/tar-action@v1.1.0
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'windows-2019' }}
         with:
           command: c
           files: res
@@ -154,7 +154,7 @@ jobs:
           path: e2e.tar.gz
       - name: Upload Resources Artifact
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'windows-2019' }}
         with:
           name: res
           path: res.tar.gz
@@ -170,7 +170,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-2019, macos-latest, ubuntu-latest]
     name: ${{ format('Test / {0}', matrix.os) }}
     steps:
       - name: Setup Python
@@ -207,9 +207,9 @@ jobs:
         working-directory: ${{github.workspace}}/e2e
         run: python3 e2e-runner.py ../build/adept
   build-windows-installer:
-    name: Installer / windows-latest
+    name: Installer / windows-2019
     needs: test
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Get workflow dispatch inputs (workflow dispatch)
         if: github.event_name == 'workflow_dispatch'
@@ -230,7 +230,7 @@ jobs:
       - name: Download Build Artifact
         uses: actions/download-artifact@v3
         with:
-          name: build-windows-latest-archive
+          name: build-windows-2019-archive
       - name: Download Support Libraries Artifact
         uses: actions/download-artifact@v3
         with:
@@ -243,7 +243,7 @@ jobs:
         uses: a7ul/tar-action@v1.1.0
         with:
           command: x
-          files: build-windows-latest.tar.gz
+          files: build-windows-2019.tar.gz
       - name: Unpack Support Libraries Artifact
         uses: a7ul/tar-action@v1.1.0
         with:
@@ -415,10 +415,10 @@ jobs:
           echo 'alternativeBinaryName=adept-nightly' >> $GITHUB_ENV
           echo 'releaseName=Nightly' >> $GITHUB_ENV
           echo 'releaseTagName=Nightly' >> $GITHUB_ENV
-      - name: Download Build Artifact (windows-latest)
+      - name: Download Build Artifact (windows-2019)
         uses: actions/download-artifact@v3
         with:
-          name: build-windows-latest-archive
+          name: build-windows-2019-archive
       - name: Download Build Artifact (macos-latest)
         uses: actions/download-artifact@v3
         with:
@@ -454,13 +454,13 @@ jobs:
         with:
           name: macos-standalone
       - name: Pre-Unpack
-        run: mkdir windows-latest macos-latest ubuntu-latest
+        run: mkdir windows-2019 macos-latest ubuntu-latest
       - name: Unpack Windows Build
         uses: a7ul/tar-action@v1.1.0
         with:
           command: x
-          cwd: windows-latest
-          files: build-windows-latest.tar.gz
+          cwd: windows-2019
+          files: build-windows-2019.tar.gz
       - name: Unpack macOS Build
         uses: a7ul/tar-action@v1.1.0
         with:
