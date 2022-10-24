@@ -433,6 +433,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
 
     if(parse_ignore_newlines(ctx, "Expected '(' after function name")) return FAILURE;
 
+    // Add automatic `this` parameter if defined inside composite
     if(ctx->composite_association){
         if(func->traits & AST_FUNC_FOREIGN){
             compiler_panic(ctx->compiler, func->source, "Cannot declare foreign function inside of struct domain");
@@ -476,12 +477,12 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
     }
     
     // Allow for no argument list
-    if(tokens[*i].id != TOKEN_OPEN) return SUCCESS;
-    (*i)++; // Eat '('
+    if(parse_eat(ctx, TOKEN_OPEN, NULL) != SUCCESS) return SUCCESS;
 
     // Allow polymorphic prerequisites for function arguments
     ctx->allow_polymorphic_prereqs = true;
 
+    // Parse parameters
     while(tokens[*i].id != TOKEN_CLOSE){
         if(parse_ignore_newlines(ctx, "Expected function argument")){
             parse_free_unbackfilled_arguments(func, backfill);
@@ -557,25 +558,24 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
     if(func->arg_defaults)
         func->arg_defaults[func->arity + *backfill] = NULL;
     
-    if(tokens[*i].id == TOKEN_ELLIPSIS){
+    if(parse_eat(ctx, TOKEN_ELLIPSIS, NULL) == SUCCESS){
         // Alone ellipsis, used for c-style varargs
 
         if(*backfill != 0){
-            compiler_panic(ctx->compiler, sources[*i], "Expected type for previous arguments before ellipsis");
+            compiler_panic(ctx->compiler, sources[*i - 1], "Expected type for previous arguments before ellipsis");
             parse_free_unbackfilled_arguments(func, *backfill);
             return FAILURE;
         }
 
-        (*i)++;
         func->traits |= AST_FUNC_VARARG;
         *out_is_solid = false;
         return SUCCESS;
     }
 
-    // Argument name
+    // Parse argument name
     // TODO: CLEANUP: Cleanup this messy code
     if(func->traits & AST_FUNC_FOREIGN){
-        // If this is a foreign function, argument names are optional
+        // Parse argument name of foreign function declaration (argument names are optional)
 
         // Look ahead to see if word token is for type, or is for argument name
         length_t lookahead = *i;
@@ -583,8 +583,14 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
 
         if(tokens[lookahead].id == TOKEN_WORD){
             lookahead++;
-            while(tokens[lookahead].id == TOKEN_NEWLINE) lookahead++;
-            if(tokens[lookahead].id != TOKEN_NEXT && tokens[lookahead].id != TOKEN_CLOSE) is_argument_name = true;
+
+            while(tokens[lookahead].id == TOKEN_NEWLINE){
+                lookahead++;
+            }
+
+            if(tokens[lookahead].id != TOKEN_NEXT && tokens[lookahead].id != TOKEN_CLOSE){
+                is_argument_name = true;
+            }
         }
 
         if(is_argument_name){
@@ -602,9 +608,14 @@ errorcode_t parse_func_argument(parse_ctx_t *ctx, ast_func_t *func, length_t cap
 
             maybe_null_strong_cstr_t arg_name = parse_take_word(ctx, "INTERNAL ERROR: Expected argument name while parsing foreign function declaration, will probably crash...");
             func->arg_names[func->arity + *backfill] = arg_name;
+        } else {
+            if(func->arg_names != NULL){
+                func->arg_names[func->arity + *backfill] = NULL;
+            }
         }
     } else {
-        // Otherwise, if this is a normal function, argument names are required
+        // Parse argument name for normal function definition (argument names are required)
+
         maybe_null_strong_cstr_t name = parse_take_word(ctx, "Expected argument name before argument type");
 
         if(name == NULL){

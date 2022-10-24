@@ -32,11 +32,10 @@
 #define VALUE_TYPE_CSTR_OF_LEN         0x0000000B // data = pointer to an 'ir_value_cstr_of_len_t'
 #define VALUE_TYPE_FUNC_ADDR           0x0000000C // data = pointer to an 'ir_value_func_addr_t'
 #define VALUE_TYPE_FUNC_ADDR_BY_NAME   0x0000000D // data = pointer to an 'ir_value_func_addr_by_name_t'
-#define VALUE_TYPE_LAST_CONST_NON_CAST VALUE_TYPE_FUNC_ADDR
-
 #define VALUE_TYPE_CONST_SIZEOF        0x0000000E // data = pointer to an 'ir_value_const_sizeof_t'
 #define VALUE_TYPE_CONST_ALIGNOF       0x0000000F // data = pointer to an 'ir_value_const_alignof_t'
 #define VALUE_TYPE_CONST_ADD           0x00000010 // data = pointer to an 'ir_value_const_math_t'
+#define VALUE_TYPE_LAST_CONST_NON_CAST VALUE_TYPE_CONST_ADD
 
 // Const cast values
 #define VALUE_TYPE_CONST_BITCAST       0x00000011 // data = pointer to an 'ir_value_t'

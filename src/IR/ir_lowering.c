@@ -16,7 +16,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
     unsigned int value_type = (*inout_value)->value_type;
     if(!VALUE_TYPE_IS_CONSTANT_CAST(value_type)) return SUCCESS;
     
-    // Lower any descandant casts
+    // Lower any descendant casts
     ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
     if(VALUE_TYPE_IS_CONSTANT_CAST((*child)->value_type) && ir_lower_const_cast(pool, child)) return FAILURE;
 
@@ -67,6 +67,11 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
+static bool is_little_endian(){
+    unsigned short x = 1;
+    return *((unsigned char*) &x) == 1;
+}
+
 errorcode_t ir_lower_const_bitcast(ir_value_t **inout_value){
     // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
     //       In other words, that the value inside the given value is not another constant cast
@@ -110,11 +115,9 @@ errorcode_t ir_lower_const_trunc(ir_value_t **inout_value){
         return FAILURE;
     }
 
-    unsigned short x = 0xEEFF;
-    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
     char *pointer = (*child)->extra;
 
-    if(!is_little_endian){
+    if(!is_little_endian()){
         // Only have to move bytes if big endian
         memmove(pointer, &pointer[from_spec.bytes - to_spec.bytes], to_spec.bytes);
     }
@@ -142,15 +145,13 @@ errorcode_t ir_lower_const_zext(ir_pool_t *pool, ir_value_t **inout_value){
         return FAILURE;
     }
 
-    unsigned short x = 0xEEFF;
-    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
     char *pointer = (*child)->extra;
     
     char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
     memset(new_pointer, 0, to_spec.bytes);
     
     // Copy bytes of value to proper place in new value
-    memcpy(is_little_endian ? new_pointer : &new_pointer[to_spec.bytes - from_spec.bytes], pointer, from_spec.bytes);
+    memcpy(is_little_endian() ? new_pointer : &new_pointer[to_spec.bytes - from_spec.bytes], pointer, from_spec.bytes);
     
     // Promote the altered child literal value
     (*child)->extra = new_pointer;
@@ -176,10 +177,8 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
         return FAILURE;
     }
 
-    unsigned short x = 0xEEFF;
-    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
     char *pointer = (*child)->extra;
-    char *sign_byte = is_little_endian ? &pointer[from_spec.bytes - 1] : pointer;
+    char *sign_byte = is_little_endian() ? &pointer[from_spec.bytes - 1] : pointer;
     bool sign_bit = *sign_byte & 0x80;
     
     // Turn off sign bit and format to magnitude based unsigned integer
@@ -205,7 +204,7 @@ errorcode_t ir_lower_const_sext(ir_pool_t *pool, ir_value_t **inout_value){
     memset(new_pointer, 0, to_spec.bytes);
     
     // Copy bytes of value to proper place in new value
-    memcpy(is_little_endian ? new_pointer : &new_pointer[to_spec.bytes - from_spec.bytes], pointer, from_spec.bytes);
+    memcpy(is_little_endian() ? new_pointer : &new_pointer[to_spec.bytes - from_spec.bytes], pointer, from_spec.bytes);
     
     // Treat as signed integer of same size for platform independent sign swap and representation formatting
     if(sign_bit) switch(to_spec.bytes){
@@ -296,14 +295,7 @@ errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value){
     ir_type_spec_t to_spec, from_spec;
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
-    unsigned short x = 0xEEFF;
-    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
-    
-    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
-    memset(new_pointer, 0, to_spec.bytes);
-
     uint64_t as_unsigned;
-    char *pointer = (char*) &as_unsigned;
 
     switch(from_spec.bytes){
     case 4:
@@ -317,15 +309,22 @@ errorcode_t ir_lower_const_fptoui(ir_pool_t *pool, ir_value_t **inout_value){
         return FAILURE;
     }
     
-    // Copy bytes of value to proper place in new value
-    memcpy(new_pointer, is_little_endian ? pointer : &pointer[sizeof(uint64_t) - to_spec.bytes], to_spec.bytes);
-    
-    // Promote the altered child literal value
-    (*child)->extra = new_pointer;
-    *inout_value = *child;
+    const char *bits = (char*) &as_unsigned;
 
-    // Change the type of the literal value
-    (*inout_value)->type = type;
+    // Copy bytes of value to proper place of zero-initalized IR pool-allocated memory
+    void *new_value = memcpy(
+        memset(ir_pool_alloc(pool, to_spec.bytes), 0, to_spec.bytes),
+        is_little_endian() ? bits : &bits[sizeof(uint64_t) - to_spec.bytes],
+        to_spec.bytes
+    );
+
+    // Give back result
+    *inout_value = ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_LITERAL,
+        .type = type,
+        .extra = new_value,
+    });
+
     return SUCCESS;
 }
 
@@ -339,14 +338,7 @@ errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
     ir_type_spec_t to_spec, from_spec;
     if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
 
-    unsigned short x = 0xEEFF;
-    bool is_little_endian = *((unsigned char*) &x) == 0xFF;
-    
-    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
-    memset(new_pointer, 0, to_spec.bytes);
-
     int64_t as_signed;
-    char *pointer = (char*) &as_signed;
 
     switch(from_spec.bytes){
     case 4:
@@ -361,36 +353,48 @@ errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
     }
 
     bool is_signed = as_signed < 0;
-    if(is_signed) as_signed *= -1;
-    
-    // Copy bytes of value to proper place in new value
-    memcpy(new_pointer, is_little_endian ? pointer : &pointer[sizeof(uint64_t) - to_spec.bytes], to_spec.bytes);
+
+    if(is_signed){
+        as_signed *= -1;
+    }
+
+    const char *bits = (char*) &as_signed;
+
+    // Copy bytes of value to proper place of zero-initalized IR pool-allocated memory
+    void *new_value = memcpy(
+        memset(ir_pool_alloc(pool, to_spec.bytes), 0, to_spec.bytes),
+        is_little_endian() ? bits : &bits[sizeof(uint64_t) - to_spec.bytes],
+        to_spec.bytes
+    );
 
     // Treat as signed integer of same size for platform independent sign swap and representation formatting
-    if(is_signed) switch(to_spec.bytes){
-    case 1:
-        *((int8_t*) new_pointer) *= -1;
-        break;
-    case 2:
-        *((int16_t*) new_pointer) *= -1;
-        break;
-    case 4:
-        *((int32_t*) new_pointer) *= -1;
-        break;
-    case 8:
-        *((int64_t*) new_pointer) *= -1;
-        break;
-    default:
-        internalerrorprintf("ir_lower_const_fptosi() - Failed to swap sign bit\n");
-        return FAILURE;
+    if(is_signed){
+        switch(to_spec.bytes){
+        case 1:
+            *((int8_t*) new_value) *= -1;
+            break;
+        case 2:
+            *((int16_t*) new_value) *= -1;
+            break;
+        case 4:
+            *((int32_t*) new_value) *= -1;
+            break;
+        case 8:
+            *((int64_t*) new_value) *= -1;
+            break;
+        default:
+            internalerrorprintf("ir_lower_const_fptosi() - Failed to swap sign bit\n");
+            return FAILURE;
+        }
     }
-    
-    // Promote the altered child literal value
-    (*child)->extra = new_pointer;
-    *inout_value = *child;
 
-    // Change the type of the literal value
-    (*inout_value)->type = type;
+    // Give back result
+    *inout_value = ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_LITERAL,
+        .type = type,
+        .extra = new_value,
+    });
+    
     return SUCCESS;
 }
 

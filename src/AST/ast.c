@@ -168,8 +168,6 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
 }
 
 void ast_free(ast_t *ast){
-    length_t i;
-
     ast_free_enums(ast->enums, ast->enums_length);
     ast_free_functions(ast->funcs, ast->funcs_length);
     ast_free_function_aliases(ast->func_aliases, ast->func_aliases_length);
@@ -178,8 +176,8 @@ void ast_free(ast_t *ast){
     ast_named_expression_list_free(&ast->named_expressions);
     ast_free_aliases(ast->aliases, ast->aliases_length);
 
-    for(length_t l = 0; l != ast->libraries_length; l++){
-        free(ast->libraries[l]);
+    for(length_t i = 0; i != ast->libraries_length; i++){
+        free(ast->libraries[i]);
     }
 
     free(ast->enums);
@@ -199,7 +197,7 @@ void ast_free(ast_t *ast){
     type_table_free(ast->type_table);
     free(ast->type_table);
 
-    for(i = 0; i != ast->meta_definitions_length; i++){
+    for(length_t i = 0; i != ast->meta_definitions_length; i++){
         meta_expr_free_fully(ast->meta_definitions[i].value);
     }
 
@@ -207,7 +205,7 @@ void ast_free(ast_t *ast){
     free(ast->poly_funcs);
     free(ast->polymorphic_methods);
 
-    for(i = 0; i != ast->poly_composites_length; i++){
+    for(length_t i = 0; i != ast->poly_composites_length; i++){
         ast_poly_composite_t *poly_composite = &ast->poly_composites[i];
 
         ast_free_composites((ast_composite_t*) poly_composite, 1);
@@ -702,7 +700,7 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
             ast_type_make_base(strclone("ptr")),
         };
 
-        ast_layout_init_with_struct_fields(&layout, names, types, 1);
+        ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(names));
         ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
     } else {
         // Larger Intel x86_64 va_list
@@ -715,11 +713,12 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
             compiler_warnf(compiler, NULL_SOURCE, "Assuming Intel x86_64 va_list\n");
         }
 
-        strong_cstr_t names[4];
-        names[0] = strclone("_opaque1");
-        names[1] = strclone("_opaque2");
-        names[2] = strclone("_opaque3");
-        names[3] = strclone("_opaque4");
+        strong_cstr_t names[4] = {
+            strclone("_opaque1"),
+            strclone("_opaque2"),
+            strclone("_opaque3"),
+            strclone("_opaque4"),
+        };
 
         ast_type_t types[4] = {
             ast_type_make_base(strclone("int")),
@@ -728,7 +727,7 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
             ast_type_make_base(strclone("ptr")),
         };
         
-        ast_layout_init_with_struct_fields(&layout, names, types, 1);
+        ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(names));
         ast_add_composite(ast, strclone("va_list"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
     }
 }
