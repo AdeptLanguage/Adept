@@ -132,6 +132,7 @@ typedef struct compiler {
     weak_cstr_t entry_point;
     string_builder_t user_linker_options;
     strong_cstr_list_t user_search_paths;
+    strong_cstr_list_t windows_resources;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00

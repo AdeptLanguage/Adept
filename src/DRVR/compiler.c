@@ -260,7 +260,7 @@ void compiler_free(compiler_t *compiler){
     free(compiler->root);
     free(compiler->output_filename);
     string_builder_abandon(&compiler->user_linker_options);
-    cstr_list_free(&compiler->user_search_paths);
+    strong_cstr_list_free(&compiler->user_search_paths);
 
     compiler_free_objects(compiler);
     compiler_free_error(compiler);

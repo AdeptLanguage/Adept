@@ -23,9 +23,10 @@ typedef listof(weak_cstr_t, items) weak_cstr_list_t;
 
 // ---------------- cstr_list_append ----------------
 #define cstr_list_append(LIST, VALUE) list_append((LIST), (VALUE), char*)
+#define strong_cstr_list_append(LIST, VALUE) cstr_list_append((LIST), (VALUE))
 
-// ---------------- cstr_list_free ----------------
-void cstr_list_free(strong_cstr_list_t *list);
+// ---------------- strong_cstr_list_free ----------------
+void strong_cstr_list_free(strong_cstr_list_t *list);
 
 #ifdef __cplusplus
 }

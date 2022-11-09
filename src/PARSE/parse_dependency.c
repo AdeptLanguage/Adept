@@ -19,7 +19,7 @@
 #include "UTIL/util.h"
 
 errorcode_t parse_import(parse_ctx_t *ctx){
-    // import 'somefile.adept'
+    // import 'some_file.adept'
     //   ^
 
     // Don't allow importing while inside struct domains

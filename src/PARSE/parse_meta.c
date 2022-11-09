@@ -35,7 +35,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
     const char *standard_directives[] = {
         "default", "define", "done", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
-        "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning"
+        "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning", "windows_resource"
     };
 
     #define META_DIRECTIVE_DEFAULT           0
@@ -61,6 +61,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     #define META_DIRECTIVE_SET               20
     #define META_DIRECTIVE_UNLESS            21
     #define META_DIRECTIVE_WARNING           22
+    #define META_DIRECTIVE_WINDOWS_RESOURCE  23
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -332,7 +333,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
         }
         break;
     case META_DIRECTIVE_INPUT: {
-            char *definition_name = parse_grab_word(ctx, "Expected transcendent variable name after #set");
+            maybe_null_weak_cstr_t definition_name = parse_grab_word(ctx, "Expected transcendent variable name after #set");
             if(!definition_name) return FAILURE;
             (*i)++;
 
@@ -340,9 +341,10 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             fgets(input_str, 512, stdin);
             input_str[strcspn(input_str, "\n")] = '\0';
 
-            meta_expr_str_t *value = malloc(sizeof(meta_expr_str_t));
-            value->id = META_EXPR_STR;
-            value->value = strclone(input_str);
+            meta_expr_str_t *value = malloc_init(meta_expr_str_t, {
+                .id = META_EXPR_STR,
+                .value = strclone(input_str),
+            });
 
             meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
 
@@ -361,7 +363,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
 
-            char *print_value = meta_expr_str(value);
+            strong_cstr_t print_value = meta_expr_str(value);
             printf("%s", print_value);
             free(print_value);
 
@@ -375,7 +377,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
 
-            char *print_value = meta_expr_str(value);
+            strong_cstr_t print_value = meta_expr_str(value);
             redprintf("%s", print_value);
             free(print_value);
 
@@ -389,7 +391,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
 
-            char *print_value = meta_expr_str(value);
+            strong_cstr_t print_value = meta_expr_str(value);
             yellowprintf("%s", print_value);
             free(print_value);
 
@@ -536,11 +538,27 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
 
-            char *print_value = meta_expr_str(value);
+            strong_cstr_t print_value = meta_expr_str(value);
             compiler_warnf(ctx->compiler, source, "%s", print_value);
             free(print_value);
 
             meta_expr_free_fully(value);
+        }
+        break;
+    case META_DIRECTIVE_WINDOWS_RESOURCE: { // windows_resource
+            (*i)++;
+
+            meta_expr_t *value;
+            if(parse_meta_expr(ctx, &value)) return FAILURE;
+
+            strong_cstr_t raw_resource_filename;
+            bool should_exit = meta_expr_into_string(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value, &raw_resource_filename);
+            meta_expr_free_fully(value);
+
+            if(should_exit) return FAILURE;
+
+            strong_cstr_list_append(&ctx->compiler->windows_resources, filename_local(ctx->object->filename, raw_resource_filename));
+            free(raw_resource_filename);
         }
         break;
     default:

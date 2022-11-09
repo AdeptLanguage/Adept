@@ -54,6 +54,12 @@ MEDIUM-PRIORITY:
 * make better error message for incorrect constructor call
 * add more ability to control the representation for enum values
 * make list.add() be able to accept compatible class pointers
+* add ability to (optionally) have parameter names in function alias parameters
+* add ability to create function alias for above function (e.g. func alias CreateWindow ^)
+* add standard library method for random choice of element from arrays/lists/initializer-lists/etc
+* improve how Optional behaves with non-POD types like Strings, particularly creating them and checking them, e.g. some() and isSome()
+* add constructors for Optional
+* do proper implementation of replace(*String, T, T) so that replacement strings are able to contain the needle string
 
 LOW-PRIORITY:
 * Finish 'Any'
