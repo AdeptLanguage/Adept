@@ -15,15 +15,10 @@ execute_process(COMMAND ${LLVM_LIBRARY_DIRS}/../bin/llvm-config --link-static --
 target_link_libraries(UnitTestRunner libadept ${CURL_LIBRARIES} ${llvm_static_libs} ${extra_libs})
 
 if(WIN32)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/crt2.o DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/crtbegin.o DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/curl-ca-bundle.crt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/ld.exe DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/libcurl-x64.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/libdep.a DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/libgcc_s_seh-1.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/libstdc++-6.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/libwinpthread-1.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	add_custom_command(
+		TARGET adept POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/ $<TARGET_FILE_DIR:adept>
+	)
 endif()
 
 set_target_properties(UnitTestRunner adept PROPERTIES LINKER_LANGUAGE CXX)
