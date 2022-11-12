@@ -16,7 +16,7 @@ target_link_libraries(UnitTestRunner libadept ${CURL_LIBRARIES} ${llvm_static_li
 
 if(WIN32)
 	add_custom_command(
-		TARGET adept POST_BUILD
+		TARGET UnitTestRunner PRE_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../res/necessities/windows/ $<TARGET_FILE_DIR:adept>
 	)
 endif()
