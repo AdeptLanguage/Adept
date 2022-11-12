@@ -38,7 +38,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
         "enable_warnings", "entry_point", "help", "ignore_all", "ignore_deprecation", "ignore_early_return", "ignore_obsolete",
         "ignore_partial_support", "ignore_unrecognized_directives", "ignore_unused", "libm", "linux_only", "mac_only", "mwindows",
         "no_type_info", "no_typeinfo", "no_undef", "null_checks", "optimization", "options", "package", "project_name", "search_path",
-        "short_warnings", "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "warn_short", "windowed", "windows_only"
+        "short_warnings", "unsafe_meta", "unsafe_new", "unsupported", "warn_as_error", "warn_short", "windowed", "windows_only", "windres"
     };
 
     const length_t directives_length = sizeof(directives) / sizeof(const char * const);
@@ -83,6 +83,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     #define PRAGMA_WARN_SHORT                       0x00000022
     #define PRAGMA_WINDOWED                         0x00000023
     #define PRAGMA_WINDOWS_ONLY                     0x00000024
+    #define PRAGMA_WINDRES                          0x00000025
 
     maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
 
@@ -356,6 +357,12 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
                 return FAILURE;
         }
         #endif
+        return SUCCESS;
+    case PRAGMA_WINDRES:
+        read = parse_grab_string(ctx, "Expected string containing windows resource filename after 'pragma windres'");
+        if(read == NULL) return FAILURE;
+
+        strong_cstr_list_append(&ctx->compiler->windows_resources, filename_local(ctx->object->filename, read));
         return SUCCESS;
     default:
         if(ctx->compiler->ignore & COMPILER_IGNORE_UNRECOGNIZED_DIRECTIVES){

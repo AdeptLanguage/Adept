@@ -246,6 +246,7 @@ void compiler_init(compiler_t *compiler){
     compiler->entry_point = "main";
     string_builder_init(&compiler->user_linker_options);
     compiler->user_search_paths = (strong_cstr_list_t){0};
+    compiler->windows_resources = (strong_cstr_list_t){0};
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
@@ -261,6 +262,7 @@ void compiler_free(compiler_t *compiler){
     free(compiler->output_filename);
     string_builder_abandon(&compiler->user_linker_options);
     strong_cstr_list_free(&compiler->user_search_paths);
+    strong_cstr_list_free(&compiler->windows_resources);
 
     compiler_free_objects(compiler);
     compiler_free_error(compiler);

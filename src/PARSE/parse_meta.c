@@ -35,7 +35,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
 
     const char *standard_directives[] = {
         "default", "define", "done", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
-        "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning", "windows_resource"
+        "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning"
     };
 
     #define META_DIRECTIVE_DEFAULT           0
@@ -61,7 +61,6 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     #define META_DIRECTIVE_SET               20
     #define META_DIRECTIVE_UNLESS            21
     #define META_DIRECTIVE_WARNING           22
-    #define META_DIRECTIVE_WINDOWS_RESOURCE  23
 
     maybe_index_t standard = binary_string_search(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -543,22 +542,6 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             free(print_value);
 
             meta_expr_free_fully(value);
-        }
-        break;
-    case META_DIRECTIVE_WINDOWS_RESOURCE: { // windows_resource
-            (*i)++;
-
-            meta_expr_t *value;
-            if(parse_meta_expr(ctx, &value)) return FAILURE;
-
-            strong_cstr_t raw_resource_filename;
-            bool should_exit = meta_expr_into_string(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value, &raw_resource_filename);
-            meta_expr_free_fully(value);
-
-            if(should_exit) return FAILURE;
-
-            strong_cstr_list_append(&ctx->compiler->windows_resources, filename_local(ctx->object->filename, raw_resource_filename));
-            free(raw_resource_filename);
         }
         break;
     default:

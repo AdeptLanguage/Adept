@@ -106,9 +106,11 @@ static strong_cstr_t create_windows_link_command(
     compiler_t *compiler,
     const char *bin_root,
     const char *linker,
+    const char *windres,
     const char *objfile_filename,
     const char *linker_additional,
     const char *libmsvcrt,
+    const char *include,
     bool cmd_shell
 ){
     string_builder_t builder;
@@ -116,6 +118,32 @@ static strong_cstr_t create_windows_link_command(
 
     if(cmd_shell){
         string_builder_append_char(&builder, '"');
+    }
+
+    const char *and_then = cmd_shell ? " & " : " && ";
+
+    // Add commands to compile any windows resources before linking
+    for(size_t i = 0; i < compiler->windows_resources.length; i++){
+        const char *resource_file = compiler->windows_resources.items[i];
+
+        // file/path/to/root/windres.exe
+        string_builder_append2_quoted(&builder, bin_root, windres);
+        string_builder_append_char(&builder, ' ');
+
+        // from.rc
+        string_builder_append_quoted(&builder, resource_file);
+
+        // -o
+        string_builder_append(&builder, " -o ");
+
+        // from.rc.o
+        string_builder_append2_quoted(&builder, resource_file, ".o");
+
+        //  --preprocessor-arg=-nostdinc -I"path/to/include"
+        string_builder_append(&builder, " --preprocessor-arg=-nostdinc -I");
+        string_builder_append_quoted(&builder, include);
+
+        string_builder_append(&builder, and_then);
     }
 
     // file/path/to/root/ld.exe
@@ -139,6 +167,15 @@ static strong_cstr_t create_windows_link_command(
     // location/of/object/file.o
     string_builder_append_quoted(&builder, objfile_filename);
     string_builder_append_char(&builder, ' ');
+
+    // each.rc.o windows.rc.o resource.rc.o file.rc.o
+    for(size_t i = 0; i < compiler->windows_resources.length; i++){
+        const char *resource_file = compiler->windows_resources.items[i];
+
+        // windows-resource-file.rc.o
+        string_builder_append2_quoted(&builder, resource_file, ".o");
+        string_builder_append_char(&builder, ' ');
+    }
 
     // libdep.a
     string_builder_append2_quoted(&builder, bin_root, "libdep.a");
@@ -244,30 +281,39 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
     }
 
     // Windows -> Windows
-    return create_windows_link_command(llvm->compiler, llvm->compiler->root, "ld.exe", objfile_filename, linker_additional, "C:/Windows/System32/msvcrt.dll", true);
+    strong_cstr_t include = mallocandsprintf("%sinclude", llvm->compiler->root);
+    strong_cstr_t result = create_windows_link_command(llvm->compiler, llvm->compiler->root, "bin\\ld.exe", "bin\\windres.exe", objfile_filename, linker_additional, "C:/Windows/System32/msvcrt.dll", include, true);
+
+    free(include);
+    return result;
 	#else
     // Unix -> ???
 
     if(llvm->compiler->cross_compile_for == CROSS_COMPILE_WINDOWS){
         // Unix -> Windows
-        const char *linker = "x86_64-w64-mingw32-ld";
+        const char *linker = "bin/x86_64-w64-mingw32-ld";
+        const char *windres = "bin/x86_64-w64-mingw32-windres";
         strong_cstr_t alt_bin_root = mallocandsprintf("%scross-compile-windows/", llvm->compiler->root);
         strong_cstr_t cross_linker = mallocandsprintf("%s%s", alt_bin_root, linker);
+        strong_cstr_t cross_windres = mallocandsprintf("%s%s", alt_bin_root, windres);
         strong_cstr_t libmsvcrt = mallocandsprintf("%s%s", alt_bin_root, "libmsvcrt.a");
+        strong_cstr_t include = mallocandsprintf("%scross-compile-windows/include", llvm->compiler->root);
         strong_cstr_t result = NULL;
 
-        if(file_exists(cross_linker)){
-            result = create_windows_link_command(llvm->compiler, alt_bin_root, linker, objfile_filename, linker_additional, libmsvcrt, false);
+        if(file_exists(cross_linker) && file_exists(cross_windres)){
+            result = create_windows_link_command(llvm->compiler, alt_bin_root, linker, windres, objfile_filename, linker_additional, libmsvcrt, include, false);
         } else {
             printf("\n");
-            redprintf("Cross compiling for Windows requires the 'cross-compile-windows' extension!\n");
+            redprintf("Cross compiling for Windows requires the 'cross-compile-windows' for v2.8+ extension!\n");
             redprintf("You need to first download and install it from here:\n");
             printf("    https://github.com/IsaacShelton/AdeptCrossCompilation/releases\n");
         }
 
+        free(include);
         free(libmsvcrt);
         free(alt_bin_root);
         free(cross_linker);
+        free(cross_windres);
         return result;
     }
 
@@ -489,6 +535,19 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
 
     if(!(compiler->traits & COMPILER_NO_REMOVE_OBJECT)){
         remove(objfile_filename);
+
+        for(size_t i = 0; i < compiler->windows_resources.length; i++){
+            const char *resource_file = compiler->windows_resources.items[i];
+
+            string_builder_t builder;
+            string_builder_init(&builder);
+            string_builder_append(&builder, resource_file);
+            string_builder_append(&builder, ".o");
+            
+            strong_cstr_t resource_object = string_builder_finalize(&builder);
+            remove(resource_object);
+            free(resource_object);
+        }
     }
     
     free(objfile_filename);
