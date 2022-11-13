@@ -60,6 +60,7 @@ MEDIUM-PRIORITY:
 * improve how Optional behaves with non-POD types like Strings, particularly creating them and checking them, e.g. some() and isSome()
 * add constructors for Optional
 * do proper implementation of replace(*String, T, T) so that replacement strings are able to contain the needle string
+* improve linux cross compilation
 
 LOW-PRIORITY:
 * Finish 'Any'
