@@ -531,7 +531,7 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
 
 // ---------------- ir_gen_actualize_unknown_enum ----------------
 // Converts a value of an unknown enum to a concrete IR value
-ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t **out_expr_type);
+ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t *out_expr_type);
 
 // ---------------- instructions_snapshot_t ----------------
 // Snapshot used to easily reset the forward generation of IR instructions

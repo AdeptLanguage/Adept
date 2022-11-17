@@ -2580,7 +2580,7 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
     return SUCCESS;
 }
 
-ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t **out_expr_type){
+ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t *out_expr_type){
     ast_expr_t *enum_expr = ast_expr_create_enum_value(enum_name, kind_name, source);
 
     ir_value_t *result;

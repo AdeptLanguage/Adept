@@ -7,9 +7,9 @@ func printColor(color Color, indentation int = 0) {
     repeat indentation, putchar(' 'ub)
 
     exhaustive switch color {
-    case Color::RED,   print("red")
-    case Color::GREEN, print("green")
-    case Color::BLUE,  print("blue")
+    case ::RED,   print("red")
+    case ::GREEN, print("green")
+    case ::BLUE,  print("blue")
     }
 }
 
