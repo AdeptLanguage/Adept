@@ -35,6 +35,7 @@ typedef struct {
 // ---------------- infer_var_list_t ----------------
 // Variable list used for inference stage
 typedef listof(infer_var_t, variables) infer_var_list_t;
+#define infer_var_list_append(LIST, VALUE) list_append((LIST), (VALUE), infer_var_t);
 
 // ---------------- infer_var_scope_t ----------------
 // Variable scope used for inference stage

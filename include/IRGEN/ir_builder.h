@@ -232,6 +232,10 @@ ir_value_t *build_literal_int(ir_pool_t *pool, adept_int value);
 // Builds a literal usize value
 ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize value);
 
+// ---------------- build_unknown_enum_value ----------------
+// Builds an enum value of an unknown type
+ir_value_t *build_unknown_enum_value(ir_pool_t *pool, source_t source, weak_cstr_t kind_name);
+
 // ---------------- build_literal_str ----------------
 // Builds a literal string value
 // NOTE: If no 'String' type is present, an error will be printed and NULL will be returned
@@ -524,6 +528,10 @@ block_t *ir_builder_get_loop_label_info(ir_builder_t *builder, const char *label
 // Gets no-op defer function
 // Will create if doesn't already exist
 errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t source_on_error, func_id_t *out_ir_func_id);
+
+// ---------------- ir_gen_actualize_unknown_enum ----------------
+// Converts a value of an unknown enum to a concrete IR value
+ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t **out_expr_type);
 
 // ---------------- instructions_snapshot_t ----------------
 // Snapshot used to easily reset the forward generation of IR instructions

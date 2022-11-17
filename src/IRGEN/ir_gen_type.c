@@ -268,6 +268,20 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             return FAILURE;
         }
         break;
+    case AST_ELEM_UNKNOWN_ENUM: {
+            ast_elem_unknown_enum_t *unknown_enum = (ast_elem_unknown_enum_t*) unresolved_type->elements[non_concrete_layers];
+
+            if(unresolved_type->elements_length == 1){
+                compiler_panicf(compiler, unresolved_type->source, "Undetermined generic enum '[enum with %s]'", unknown_enum->kind_name);
+            } else {
+                strong_cstr_t typename = ast_type_str(unresolved_type);
+                compiler_panicf(compiler, unresolved_type->source, "Undetermined generic enum '[enum with %s]' in type '%s'", unknown_enum->kind_name, typename);
+                free(typename);
+            }
+
+            return FAILURE;
+        }
+        break;
     default: {
             strong_cstr_t unresolved_typename = ast_type_str(unresolved_type);
             compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown type element id in type '%s'", unresolved_typename);
@@ -608,6 +622,21 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
             *ir_value = build_bitcast(builder, *ir_value, ir_to_type);
+            return true;
+        }
+    }
+
+    // Handle conforming of values of unknown enum types to concrete enum values
+    if(ast_type_is_base(ast_to_type) && ast_type_is_unknown_enum(ast_from_type)){
+        weak_cstr_t maybe_enum_name = ((ast_elem_base_t*) ast_to_type->elements[0])->base;
+        ast_elem_unknown_enum_t *unknown_enum = (ast_elem_unknown_enum_t*) ast_from_type->elements[0];
+
+        ast_t *ast = &builder->object->ast;
+        maybe_index_t enum_index = ast_find_enum(ast->enums, ast->enums_length, maybe_enum_name);
+
+        if(enum_index >= 0 && ast_enum_contains(&ast->enums[enum_index], unknown_enum->kind_name)){
+            *ir_value = ir_gen_actualize_unknown_enum(builder->compiler, builder->object, maybe_enum_name, unknown_enum->kind_name, unknown_enum->source, NULL);
+            assert(*ir_value != NULL);
             return true;
         }
     }

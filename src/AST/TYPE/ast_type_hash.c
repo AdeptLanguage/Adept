@@ -44,6 +44,10 @@ static hash_t ast_elem_generic_base_hash(ast_elem_generic_base_t *elem, hash_t w
     return         hash_combine(working_hash, ast_types_hash(elem->generics, elem->generics_length));
 }
 
+static hash_t ast_elem_unknown_enum_hash(ast_elem_unknown_enum_t *elem, hash_t working_hash){
+    return hash_combine(working_hash, hash_data(elem->kind_name, strlen(elem->kind_name)));
+}
+
 static hash_t ast_elem_hash(ast_elem_t *elem){
     hash_t id_hash = hash_data(&elem->id, sizeof(elem->id));
     
@@ -71,6 +75,8 @@ static hash_t ast_elem_hash(ast_elem_t *elem){
     case AST_ELEM_VAR_FIXED_ARRAY:
         internalwarningprintf("ast_elem_hash() - Cannot hash AST_ELEM_VAR_FIXED_ARRAY element, returning faux hash\n");
         break;
+    case AST_ELEM_UNKNOWN_ENUM:
+        return ast_elem_unknown_enum_hash((ast_elem_unknown_enum_t*) elem, id_hash);
     default:
         die("ast_elem_hash() - Unrecognized type element ID\n");
     }

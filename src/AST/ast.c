@@ -535,6 +535,15 @@ maybe_index_t ast_find_enum(ast_enum_t *enums, length_t enums_length, const char
     return -1;
 }
 
+bool ast_enum_contains(ast_enum_t *ast_enum, const char *kind_name){
+    for(size_t i = 0; i < ast_enum->length; i++){
+        if(streq(ast_enum->kinds[i], kind_name)){
+            return true;
+        }
+    }
+    return false;
+}
+
 maybe_index_t ast_find_global(ast_global_t *globals, length_t globals_length, weak_cstr_t name){
     // If not found returns -1 else returns index inside array
 

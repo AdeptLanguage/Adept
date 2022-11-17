@@ -4,6 +4,7 @@
 
 #include "AST/POLY/ast_translate.h"
 #include "AST/TYPE/ast_type_identical.h"
+#include "AST/TYPE/ast_type_make.h"
 #include "AST/ast.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_poly_catalog.h"
@@ -23,10 +24,15 @@ static errorcode_t enforce_polymorph(
     ast_poly_catalog_t *catalog,
     ast_elem_polymorph_t *polymorph_elem,
     ast_poly_catalog_type_t *type_var,
+    ir_value_t **inout_concrete_value,
     ast_type_t *concrete_replacement,
     bool permit_similar_primitives
 ){
     if(type_var == NULL){
+        if(ast_type_is_unknown_enum(concrete_replacement)){
+            return FAILURE;
+        }
+
         ast_poly_catalog_add_type(catalog, polymorph_elem->name, concrete_replacement);
         return SUCCESS;
     }
@@ -37,6 +43,23 @@ static errorcode_t enforce_polymorph(
 
     if((permit_similar_primitives || polymorph_elem->allow_auto_conversion) && is_allowed_builtin_auto_conversion(compiler, object, concrete_replacement, &type_var->binding)){
         return SUCCESS;
+    }
+
+    if(inout_concrete_value != NULL && ast_type_is_unknown_enum(concrete_replacement) && ast_type_is_base(&type_var->binding)){
+        ast_elem_unknown_enum_t *unknown_enum = (ast_elem_unknown_enum_t*) concrete_replacement->elements[0];
+        weak_cstr_t maybe_enum_name = ((ast_elem_base_t*) type_var->binding.elements[0])->base;
+
+        maybe_index_t enum_index = ast_find_enum(object->ast.enums, object->ast.enums_length, maybe_enum_name);
+
+        if(enum_index >= 0 && ast_enum_contains(&object->ast.enums[enum_index], unknown_enum->kind_name)){
+            assert((*inout_concrete_value)->value_type == VALUE_TYPE_UNKNOWN_ENUM);
+
+            ir_type_extra_unknown_enum_t *value_unknown_enum = (*inout_concrete_value)->type->extra;
+            assert(streq(unknown_enum->kind_name, value_unknown_enum->kind_name));
+
+            *inout_concrete_value = ir_gen_actualize_unknown_enum(compiler, object, maybe_enum_name, value_unknown_enum->kind_name, value_unknown_enum->source, NULL);
+            return SUCCESS;
+        }
     }
 
     return FAILURE;
@@ -63,7 +86,7 @@ bool ir_gen_does_extend(compiler_t *compiler, object_t *object, ast_type_t *subj
 
         if(!subject_composite->is_class) goto failure;
 
-        errorcode_t errorcode = ir_gen_polymorphable(compiler, object, parent, subject, catalog, true);
+        errorcode_t errorcode = ir_gen_polymorphable(compiler, object, NULL, subject, parent, catalog, true);
         if(errorcode == ALT_FAILURE) goto failure;
 
         if(subject_is_generic == parent_is_generic && errorcode == SUCCESS){
@@ -209,6 +232,7 @@ static errorcode_t ir_gen_polymorphable_elem_prereq(
     compiler_t *compiler,
     object_t *object,
     ast_type_t *polymorphic_type,
+    ir_value_t **inout_full_concrete_value,
     ast_type_t *concrete_type,
     ast_poly_catalog_t *catalog,
     length_t index,
@@ -223,6 +247,8 @@ static errorcode_t ir_gen_polymorphable_elem_prereq(
         internalerrorprintf("ir_gen_polymorphable_elem_prereq() - Encountered polymorphic element in middle of AST type\n");
         return FAILURE;
     }
+
+    ir_value_t **inout_concrete_value = (index == 0) ? inout_full_concrete_value : NULL;
 
     if(enforce_prereq(compiler, object, polymorphic_type, concrete_type, catalog, index)) return FAILURE;
 
@@ -240,12 +266,12 @@ static errorcode_t ir_gen_polymorphable_elem_prereq(
     ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, prereq->name);
 
     // Ok since 'ast_elem_polymorph_prereq_t' is guaranteed to overlap with 'ast_elem_polymorph_t'
-    errorcode_t res = enforce_polymorph(compiler, object, catalog, (ast_elem_polymorph_t*) prereq, type_var, &replacement, permit_similar_primitives);
+    errorcode_t res = enforce_polymorph(compiler, object, catalog, (ast_elem_polymorph_t*) prereq, type_var, inout_concrete_value, &replacement, permit_similar_primitives);
     free(replacement.elements);
     return res;
 }
 
-errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog, bool permit_similar_primitives){
+errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ir_value_t **concrete_value, ast_type_t *concrete_type, ast_type_t *polymorphic_type, ast_poly_catalog_t *catalog, bool permit_similar_primitives){
     if(polymorphic_type->elements_length > concrete_type->elements_length) return FAILURE;
 
     // TODO: CLEANUP: Cleanup this dirty code
@@ -275,11 +301,11 @@ errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_typ
                 if((func_elem_a->traits & AST_FUNC_STDCALL) != (func_elem_b->traits & AST_FUNC_STDCALL)) return FAILURE;
                 if(func_elem_a->arity != func_elem_b->arity) return FAILURE;
 
-                res = ir_gen_polymorphable(compiler, object, func_elem_a->return_type, func_elem_b->return_type, catalog, false);
+                res = ir_gen_polymorphable(compiler, object, NULL, func_elem_b->return_type, func_elem_a->return_type, catalog, false);
                 if(res != SUCCESS) return res;
 
                 for(length_t a = 0; a != func_elem_a->arity; a++){
-                    res = ir_gen_polymorphable(compiler, object, &func_elem_a->arg_types[a], &func_elem_b->arg_types[a], catalog, false);
+                    res = ir_gen_polymorphable(compiler, object, NULL, &func_elem_b->arg_types[a], &func_elem_a->arg_types[a], catalog, false);
                     if(res != SUCCESS) return res;
                 }
             }
@@ -298,7 +324,7 @@ errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_typ
                 if(!streq(generic_base_a->name, generic_base_b->name)) return FAILURE;
 
                 for(length_t i = 0; i != generic_base_a->generics_length; i++){
-                    res = ir_gen_polymorphable(compiler, object, &generic_base_a->generics[i], &generic_base_b->generics[i], catalog, false);
+                    res = ir_gen_polymorphable(compiler, object, NULL, &generic_base_b->generics[i], &generic_base_a->generics[i], catalog, false);
                     if(res != SUCCESS) return res;
                 }
             }
@@ -319,11 +345,13 @@ errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_typ
                     .source = concrete_type->elements[i]->source,
                 };
 
+                ir_value_t **inout_concrete_value = (i == 0) ? concrete_value : NULL;
+
                 // Ensure consistency with catalog
                 ast_elem_polymorph_t *polymorphic_elem = (ast_elem_polymorph_t*) polymorphic_type->elements[i];
                 ast_poly_catalog_type_t *type_var = ast_poly_catalog_find_type(catalog, polymorphic_elem->name);
 
-                if(enforce_polymorph(compiler, object, catalog, polymorphic_elem, type_var, &replacement, permit_similar_primitives && i == 0)){
+                if(enforce_polymorph(compiler, object, catalog, polymorphic_elem, type_var, inout_concrete_value, &replacement, permit_similar_primitives && i == 0)){
                     free(replacement.elements);
                     return FAILURE;
                 }
@@ -333,7 +361,7 @@ errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_typ
             }
             return SUCCESS;
         case AST_ELEM_POLYMORPH_PREREQ:
-            if(ir_gen_polymorphable_elem_prereq(compiler, object, polymorphic_type, concrete_type, catalog, i, permit_similar_primitives && i == 0)){
+            if(ir_gen_polymorphable_elem_prereq(compiler, object, polymorphic_type, concrete_value, concrete_type, catalog, i, permit_similar_primitives && i == 0)){
                 return FAILURE;
             }
             return SUCCESS;

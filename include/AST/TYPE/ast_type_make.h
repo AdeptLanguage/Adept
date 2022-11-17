@@ -62,6 +62,10 @@ ast_type_t ast_type_make_generic_int(void);
 // Creates a generic floating point type (no syntactic equivalent - represents the type of an unsuffixed float)
 ast_type_t ast_type_make_generic_float(void);
 
+// ---------------- ast_type_make_unknown_enum ----------------
+// Creates an unknown enum value type
+ast_type_t ast_type_make_unknown_enum(source_t source, weak_cstr_t kind_name);
+
 // =====================================================================
 // =                          ast_elem_*_make                          =
 // =====================================================================
@@ -113,6 +117,10 @@ ast_elem_t *ast_elem_fixed_array_make(source_t source, length_t count);
 // ---------------- ast_elem_var_fixed_array_make ----------------
 // Makes a variably-sized fixed array element (e.g. [DEFAULT_CONTAINER_SIZE] or [100] or [#get b2_max_vertices])
 ast_elem_t *ast_elem_var_fixed_array_make(source_t source, ast_expr_t *length);
+
+// ---------------- ast_elem_unknown_enum_make ----------------
+// Makes an unknown enum value type element
+ast_elem_t *ast_elem_unknown_enum_make(source_t source, weak_cstr_t kind_name);
 
 // =====================================================================
 // =                              helpers                              =

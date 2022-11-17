@@ -1164,7 +1164,7 @@ static errorcode_t method_subject_is_possible(compiler_t *compiler, object_t *ob
         #else
             ast_poly_catalog_t catalog;
             ast_poly_catalog_init(&catalog);
-            errorcode_t res = ir_gen_polymorphable(compiler, object, potential_subject, subject, &catalog, false);
+            errorcode_t res = ir_gen_polymorphable(compiler, object, NULL, subject, potential_subject, &catalog, false);
             ast_poly_catalog_free(&catalog);
             return res;
         #endif

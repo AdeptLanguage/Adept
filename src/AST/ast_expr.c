@@ -745,16 +745,20 @@ void ast_expr_create_call_method_in_place(ast_expr_call_method_t *out_expr, stro
 }
 
 ast_expr_t *ast_expr_create_enum_value(weak_cstr_t name, weak_cstr_t kind, source_t source){
-    ast_expr_enum_value_t *expr = malloc(sizeof(ast_expr_enum_value_t));
-
-    *expr = (ast_expr_enum_value_t){
+    return (ast_expr_t*) malloc_init(ast_expr_enum_value_t, {
         .id = EXPR_ENUM_VALUE,
         .source = source,
         .enum_name = name,
         .kind_name = kind,
-    };
+    });
+}
 
-    return (ast_expr_t*) expr;
+ast_expr_t *ast_expr_create_generic_enum_value(weak_cstr_t kind, source_t source){
+    return (ast_expr_t*) malloc_init(ast_expr_generic_enum_value_t, {
+        .id = EXPR_GENERIC_ENUM_VALUE,
+        .source = source,
+        .kind_name = kind,
+    });
 }
 
 ast_expr_t *ast_expr_create_ternary(ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source){

@@ -13,10 +13,6 @@
 #include "UTIL/ground.h"
 #include "UTIL/util.h"
 
-void *memclone(void *memory, length_t bytes){
-    return memcpy(malloc(bytes), memory, bytes);
-}
-
 void expand(void **inout_memory, length_t unit_size, length_t length, length_t *inout_capacity, length_t amount, length_t default_capacity){
     // Expands an array in memory to be able to fit more units
 

@@ -1,0 +1,30 @@
+
+import basics
+
+enum Color (RED, GREEN, BLUE)
+
+func printColor(color Color, indentation int = 0) {
+    repeat indentation, putchar(' 'ub)
+
+    exhaustive switch color {
+    case Color::RED,   print("red")
+    case Color::GREEN, print("green")
+    case Color::BLUE,  print("blue")
+    }
+}
+
+func printColor(c1, c2, c3 $T){
+    print("{")
+    printColor(c1, 4)
+    printColor(c2, 4)
+    printColor(c3, 4)
+    print("}")
+}
+
+func main {
+    printColor(Color::RED, ::GREEN, ::BLUE)
+
+    printColor(::RED)
+    printColor(::GREEN)
+    printColor(::BLUE)
+}

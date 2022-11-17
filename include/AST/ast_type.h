@@ -40,6 +40,7 @@ enum {
     AST_ELEM_POLYMORPH_PREREQ,
     AST_ELEM_GENERIC_BASE,
     AST_ELEM_LAYOUT,
+    AST_ELEM_UNKNOWN_ENUM,
 };
 
 // Possible data flow patterns
@@ -156,6 +157,15 @@ typedef struct {
     source_t source;
     ast_layout_t layout;
 } ast_elem_layout_t;
+
+
+// ---------------- ast_elem_unknown_enum_t ----------------
+// Type element for an unknown enum value
+typedef struct {
+    unsigned int id;
+    source_t source;
+    weak_cstr_t kind_name;
+} ast_elem_unknown_enum_t;
 
 // ---------------- ast_unnamed_arg_t ----------------
 // Data structure for an unnamed argument
@@ -280,6 +290,10 @@ bool ast_type_is_fixed_array_like(const ast_type_t *type);
 // ---------------- ast_type_is_func ----------------
 // Returns whether an AST type is a function pointer
 bool ast_type_is_func(const ast_type_t *type);
+
+// ---------------- ast_type_is_unknown_enum ----------------
+// Returns whether an AST type is an unknown type of an enum value
+bool ast_type_is_unknown_enum(const ast_type_t *type);
 
 // ---------------- ast_type_has_polymorph ----------------
 // Returns whether an AST type contains a polymorphic type

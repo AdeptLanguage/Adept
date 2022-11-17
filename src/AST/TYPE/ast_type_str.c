@@ -112,6 +112,12 @@ static void ast_elem_layout_str(string_builder_t *builder, ast_elem_layout_t *el
     free(layout_str);
 }
 
+static void ast_elem_unknown_enum_str(string_builder_t *builder, ast_elem_unknown_enum_t *elem){
+    string_builder_append(builder, "[enum with ");
+    string_builder_append(builder, elem->kind_name);
+    string_builder_append(builder, "]");
+}
+
 static void ast_elem_str(string_builder_t *builder, ast_elem_t *elem){
     switch(elem->id){
     case AST_ELEM_BASE:
@@ -149,6 +155,9 @@ static void ast_elem_str(string_builder_t *builder, ast_elem_t *elem){
         break;
     case AST_ELEM_LAYOUT:
         ast_elem_layout_str(builder, (ast_elem_layout_t*) elem);
+        break;
+    case AST_ELEM_UNKNOWN_ENUM:
+        ast_elem_unknown_enum_str(builder, (ast_elem_unknown_enum_t*) elem);
         break;
     default:
         die("ast_type_str() - Unrecognized type element 0x%08X\n", elem->id);

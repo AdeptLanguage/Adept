@@ -131,6 +131,10 @@ typedef struct { DERIVE_AST_EXPR; weak_cstr_t value; } ast_expr_new_cstring_t;
 // Gets the constant value of an enum kind
 typedef struct { DERIVE_AST_EXPR; weak_cstr_t enum_name; weak_cstr_t kind_name; } ast_expr_enum_value_t;
 
+// ---------------- ast_expr_generic_enum_value_t ----------------
+// Gets the constant value of a generic enum kind
+typedef struct { DERIVE_AST_EXPR; weak_cstr_t kind_name; } ast_expr_generic_enum_value_t;
+
 // ---------------- ast_expr_static_data_t ----------------
 // Represents a static array value
 // (Used for EXPR_STATIC_ARRAY and EXPR_STATIC_STRUCT)
@@ -553,6 +557,10 @@ ast_expr_t *ast_expr_create_variable(weak_cstr_t name, source_t source);
 // ---------------- ast_expr_create_enum_value ----------------
 // Creates an enum value expression
 ast_expr_t *ast_expr_create_enum_value(weak_cstr_t name, weak_cstr_t kind, source_t source);
+
+// ---------------- ast_expr_create_generic_enum_value ----------------
+// Creates a generic enum value expression
+ast_expr_t *ast_expr_create_generic_enum_value(weak_cstr_t kind, source_t source);
 
 // ---------------- ast_expr_create_ternary ----------------
 // Creates a ternary expression

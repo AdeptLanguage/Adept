@@ -24,10 +24,6 @@ extern "C" {
 #endif
 // ----------------------------------------------------------
 
-// ---------------- memclone ----------------
-// Clones a section of memory
-void *memclone(void *memory, length_t bytes);
-
 // ---------------- expand ----------------
 // Expands an array if it won't be able hold new elements
 void expand(void **inout_memory, length_t unit_size, length_t length, length_t *inout_capacity,

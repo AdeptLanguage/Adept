@@ -112,11 +112,11 @@ typedef struct {
     length_t length;
 } lenstr_t, strong_lenstr_t, weak_lenstr_t;
 
-inline bool lenstreq(lenstr_t a, lenstr_t b){
+static inline bool lenstreq(lenstr_t a, lenstr_t b){
     return a.length == b.length && memcmp(a.cstr, b.cstr, a.length) == 0;
 }
 
-inline int lenstrcmp(lenstr_t a, lenstr_t b){
+static inline int lenstrcmp(lenstr_t a, lenstr_t b){
     if(a.length == b.length){
         return memcmp(a.cstr, b.cstr, a.length);
     } else {
@@ -124,8 +124,12 @@ inline int lenstrcmp(lenstr_t a, lenstr_t b){
     }
 }
 
-inline lenstr_t cstr_to_lenstr(char *cstr){
+static inline lenstr_t cstr_to_lenstr(char *cstr){
     return (lenstr_t){ .cstr = cstr, .length = strlen(cstr) };
+}
+
+static inline void *memclone(void *memory, length_t bytes){
+    return memcpy(malloc(bytes), memory, bytes);
 }
 
 // ---------------- SOURCE_IS_NULL ----------------
@@ -154,6 +158,10 @@ void *bsearch_insertion(const void *key, const void *base, size_t num, size_t si
 // ---------------- malloc_init ----------------
 // Based on https://tia.mat.br/posts/2015/05/01/initializing_a_heap_allocated_structure_in_c.html
 #define malloc_init(TYPE, ...) (TYPE*) memclone((TYPE[]){ __VA_ARGS__ }, sizeof(TYPE))
+
+// ---------------- memclone ----------------
+// Clones a section of memory
+void *memclone(void *memory, length_t bytes);
 
 // ---------------- special characters ----------------
 #ifdef __APPLE__

@@ -816,6 +816,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         }
         break;
     case EXPR_EMBED:
+    case EXPR_GENERIC_ENUM_VALUE:
         // Nothing to infer
         break;
     case EXPR_ALIGNOF:
@@ -1366,15 +1367,13 @@ ast_named_expression_t* infer_var_scope_find_named_expression(infer_var_scope_t 
 void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const){
     // NOTE: Assumes name is a valid C-String
 
-    infer_var_list_t *list = &scope->list;
-    expand((void**) &list->variables, sizeof(infer_var_t), list->length, &list->capacity, 1, 4);
-
-    infer_var_t *var = &list->variables[list->length++];
-    var->name = name;
-    var->type = type;
-    var->source = source;
-    var->used = force_used || name[0] == '_';
-    var->is_const = is_const;
+    infer_var_list_append(&scope->list, ((infer_var_t){
+        .name = name,
+        .type = type,
+        .source = source,
+        .used = force_used || name[0] == '_',
+        .is_const = is_const,
+    }));
 }
 
 void infer_var_scope_add_named_expression(infer_var_scope_t *scope, ast_named_expression_t named_expression){
@@ -1497,24 +1496,25 @@ void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expres
     case EXPR_CSTR: {
             // Create '*ubyte' type template for cloning
             // ------------------------------
-            ast_elem_pointer_t ptr_elem;
-            ptr_elem.id = AST_ELEM_POINTER;
-            ptr_elem.source = NULL_SOURCE;
-
-            ast_elem_base_t cstr_base_elem;
-            cstr_base_elem.id = AST_ELEM_BASE;
-            cstr_base_elem.source = NULL_SOURCE;
-            cstr_base_elem.base = "ubyte";
-
-            ast_elem_t *cstr_type_elements[] = {
-                (ast_elem_t*) &ptr_elem,
-                (ast_elem_t*) &cstr_base_elem
+            ast_elem_pointer_t ptr_elem = (ast_elem_pointer_t){
+                .id = AST_ELEM_POINTER,
+                .source = NULL_SOURCE,
             };
 
-            ast_type_t cstr_type;
-            cstr_type.elements = cstr_type_elements;
-            cstr_type.elements_length = 2;
-            cstr_type.source = NULL_SOURCE;
+            ast_elem_base_t cstr_base_elem = (ast_elem_base_t){
+                .id = AST_ELEM_BASE,
+                .source = NULL_SOURCE,
+                .base = "ubyte",
+            };
+
+            ast_type_t cstr_type = (ast_type_t){
+                .elements = (ast_elem_t*[]){
+                    (ast_elem_t*) &ptr_elem,
+                    (ast_elem_t*) &cstr_base_elem,
+                },
+                .elements_length = 2,
+                .source = NULL_SOURCE,
+            };
             // ------------------------------
 
             type_table_give(ctx->type_table, &cstr_type, NULL);

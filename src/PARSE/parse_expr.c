@@ -290,6 +290,16 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
             *out_expr = ast_expr_create_embed(filename_local(ctx->object->filename, filename), source);
         }
         break;
+    case TOKEN_ASSOCIATE: {
+            source_t source = sources[(*i)++];
+
+            weak_cstr_t kind_name = parse_eat_word(ctx, "Expected enum value name after '::' operator");
+            if(kind_name == NULL) return FAILURE;
+
+            *out_expr = ast_expr_create_generic_enum_value(kind_name, source);
+            return SUCCESS;
+        }
+        break;
     default:
         parse_panic_token(ctx, sources[*i], tokens[*i].id, "Unexpected token '%s' in expression");
         return FAILURE;

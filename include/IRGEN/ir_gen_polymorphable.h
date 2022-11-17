@@ -27,7 +27,7 @@ extern "C" {
 // NOTE: Returns SUCCESS if true
 // NOTE: Returns FAILURE if false
 // NOTE: Returns ALT_FAILURE if couldn't fully resolve
-errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ast_type_t *polymorphic_type, ast_type_t *concrete_type, ast_poly_catalog_t *catalog, bool permit_similar_primitives);
+errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ir_value_t **concrete_value, ast_type_t *concrete_type, ast_type_t *polymorphic_type, ast_poly_catalog_t *catalog, bool permit_similar_primitives);
 
 // ---------------- ir_gen_does_extend ----------------
 // Returns whether a concrete subject type extends a potential parent type

@@ -641,6 +641,14 @@ ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize value){
     });
 }
 
+ir_value_t *build_unknown_enum_value(ir_pool_t *pool, source_t source, weak_cstr_t kind_name){
+    return ir_pool_alloc_init(pool, ir_value_t, {
+        .value_type = VALUE_TYPE_UNKNOWN_ENUM,
+        .type = ir_type_make_unknown_enum(pool, source, kind_name),
+        .extra = NULL,
+    });
+}
+
 ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length){
     ir_type_t *ir_string_type = builder->object->ir_module.common.ir_string_struct;
 
@@ -1909,7 +1917,17 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
                 return FAILURE;
             }
 
-            func->arg_types[i] = ast_type_clone(&types[i]);
+            // HACK: Allow for using unknown enum values for raw polymorphs (nothing else is allowed or supported)
+            if(ast_type_is_unknown_enum(&types[i]) && ast_type_is_polymorph(template_arg_type)){
+                ast_elem_polymorph_t *polymorph = (ast_elem_polymorph_t*) template_arg_type->elements[0];
+
+                ast_poly_catalog_type_t *type = ast_poly_catalog_find_type(catalog, polymorph->name);
+                assert(type != NULL);
+
+                func->arg_types[i] = ast_type_clone(&type->binding);
+            } else {
+                func->arg_types[i] = ast_type_clone(&types[i]);
+            }
         } else {
             func->arg_types[i] = ast_type_clone(template_arg_type);
         }
@@ -2560,6 +2578,19 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
 
     *out_ir_func_id = ir_func_id;
     return SUCCESS;
+}
+
+ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t **out_expr_type){
+    ast_expr_t *enum_expr = ast_expr_create_enum_value(enum_name, kind_name, source);
+
+    ir_value_t *result;
+    if(ir_gen_expr_enum_value(compiler, object, (ast_expr_enum_value_t*) enum_expr, &result, out_expr_type)){
+        ast_expr_free_fully(enum_expr);
+        return NULL;
+    }
+
+    ast_expr_free_fully(enum_expr);
+    return result;
 }
 
 instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder){

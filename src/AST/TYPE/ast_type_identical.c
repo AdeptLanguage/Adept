@@ -96,6 +96,13 @@ static bool ast_elem_layout_identical(ast_elem_t *raw_a, ast_elem_t *raw_b){
     return ast_layouts_identical(&a->layout, &b->layout);
 }
 
+static bool ast_elem_unknown_enum_identical(ast_elem_t *raw_a, ast_elem_t *raw_b){
+    ast_elem_unknown_enum_t *a = (ast_elem_unknown_enum_t*) raw_a;
+    ast_elem_unknown_enum_t *b = (ast_elem_unknown_enum_t*) raw_b;
+
+    return streq(a->kind_name, b->kind_name);
+}
+
 bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
     // NOTE: Returns true if the two types are identical
     // NOTE: The two types must be EXACTLY the same to be considered identical
@@ -143,6 +150,9 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
             internalerrorprintf("ast_types_identical() - Cannot compare uncollapsed AST_ELEM_VAR_FIXED_ARRAY elements\n");
             printf("    Assuming they are different...\n");
             return false;
+        case AST_ELEM_UNKNOWN_ENUM:
+            if(!ast_elem_unknown_enum_identical(a_elem, b_elem)) return false;
+            break;
         default:
             die("ast_types_identical() - Unrecognized element ID %d\n", (int) a_elem->id);
         }

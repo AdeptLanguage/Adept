@@ -35,6 +35,7 @@ bool ast_type_has_polymorph(const ast_type_t *type){
         case AST_ELEM_GENERIC_FLOAT:
         case AST_ELEM_FIXED_ARRAY:
         case AST_ELEM_VAR_FIXED_ARRAY:
+        case AST_ELEM_UNKNOWN_ENUM:
             break;
         case AST_ELEM_FUNC: {
                 ast_elem_func_t *func_elem = (ast_elem_func_t*) type->elements[i];

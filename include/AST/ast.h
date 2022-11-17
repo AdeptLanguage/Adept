@@ -332,7 +332,11 @@ successful_t ast_composite_find_exact_field(ast_composite_t *composite, const ch
 
 // ---------------- ast_enum_find_kind ----------------
 // Finds a kind by name within an enum
-successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t *out_index);
+successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *kind_name, length_t *out_index);
+
+// ---------------- ast_enum_contains ----------------
+// Returns whether an AST enum contains a kind with the given name
+bool ast_enum_contains(ast_enum_t *ast_enum, const char *kind_name);
 
 // ---------------- ast_find_alias ----------------
 // Finds an alias by name

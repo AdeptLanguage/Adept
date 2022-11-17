@@ -13,75 +13,53 @@
 // =====================================================================
 
 ast_elem_t *ast_elem_empty_make(unsigned int id, source_t source){
-    ast_elem_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_t){
+    return (ast_elem_t*) malloc_init(ast_elem_t, {
         .id = id,
         .source = source,
-    };
-
-    return elem;
+    });
 }
 
 ast_elem_t *ast_elem_base_make(strong_cstr_t base, source_t source){
-    ast_elem_base_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_base_t){
+    return (ast_elem_t*) malloc_init(ast_elem_base_t, {
         .id = AST_ELEM_BASE,
-        .base = base,
         .source = source,
-    };
-
-    return (ast_elem_t*) elem;
+        .base = base,
+    });
 }
 
 ast_elem_t *ast_elem_generic_base_make(strong_cstr_t base, source_t source, ast_type_t *generics, length_t generics_length){
-    ast_elem_generic_base_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_generic_base_t){
+    return (ast_elem_t*) malloc_init(ast_elem_generic_base_t, {
         .id = AST_ELEM_GENERIC_BASE,
-        .name = base,
         .source = source,
+        .name = base,
         .name_is_polymorphic = false,
         .generics = generics,
         .generics_length = generics_length,
-    };
-
-    return (ast_elem_t*) elem;
+    });
 }
 
 ast_elem_t *ast_elem_polymorph_make(strong_cstr_t name, source_t source, bool allow_auto_conversion){
-    ast_elem_polymorph_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_polymorph_t){
+    return (ast_elem_t*) malloc_init(ast_elem_polymorph_t, {
         .id = AST_ELEM_POLYMORPH,
-        .name = name,
         .source = source,
+        .name = name,
         .allow_auto_conversion = allow_auto_conversion,
-    };
-
-    return (ast_elem_t*) elem;
+    });
 }
 
 ast_elem_t *ast_elem_polymorph_prereq_make(strong_cstr_t name, source_t source, bool allow_auto_conversion, maybe_null_strong_cstr_t similarity_prerequisite, ast_type_t extends){
-    ast_elem_polymorph_prereq_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_polymorph_prereq_t){
+    return (ast_elem_t*) malloc_init(ast_elem_polymorph_prereq_t, {
         .id = AST_ELEM_POLYMORPH_PREREQ,
-        .name = name,
         .source = source,
+        .name = name,
         .allow_auto_conversion = allow_auto_conversion,
         .similarity_prerequisite = similarity_prerequisite,
         .extends = extends,
-    };
-
-    return (ast_elem_t*) elem;
+    });
 }
 
 ast_elem_t *ast_elem_func_make(source_t source, ast_type_t *arg_types, length_t arity, ast_type_t *return_type, trait_t traits, bool have_ownership){
-    ast_elem_func_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_func_t){
+    return (ast_elem_t*) malloc_init(ast_elem_func_t, {
         .id = AST_ELEM_FUNC,
         .source = source,
         .arg_types = arg_types,
@@ -89,33 +67,31 @@ ast_elem_t *ast_elem_func_make(source_t source, ast_type_t *arg_types, length_t 
         .return_type = return_type,
         .traits = traits,
         .ownership = have_ownership,
-    };
-
-    return (ast_elem_t*) elem;
+    });
 }
 
 ast_elem_t *ast_elem_fixed_array_make(source_t source, length_t count){
-    ast_elem_fixed_array_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_fixed_array_t){
+    return (ast_elem_t*) malloc_init(ast_elem_fixed_array_t, {
         .id = AST_ELEM_FIXED_ARRAY,
         .source = source,
         .length = count,
-    };
-
-    return (ast_elem_t*) elem;
+    });
 }
 
 ast_elem_t *ast_elem_var_fixed_array_make(source_t source, ast_expr_t *length){
-    ast_elem_var_fixed_array_t *elem = malloc(sizeof *elem);
-
-    *elem = (ast_elem_var_fixed_array_t){
+    return (ast_elem_t*) malloc_init(ast_elem_var_fixed_array_t, {
         .id = AST_ELEM_VAR_FIXED_ARRAY,
         .source = source,
         .length = length,
-    };
+    });
+}
 
-    return (ast_elem_t*) elem;
+ast_elem_t *ast_elem_unknown_enum_make(source_t source, weak_cstr_t kind_name){
+    return (ast_elem_t*) malloc_init(ast_elem_unknown_enum_t, {
+        .id = AST_ELEM_UNKNOWN_ENUM,
+        .source = source,
+        .kind_name = kind_name,
+    });
 }
 
 // =====================================================================
@@ -213,6 +189,15 @@ ast_type_t ast_type_make_generic_float(void){
     return from_1elems(
         ast_elem_generic_float_make(NULL_SOURCE)
     );
+}
+
+ast_type_t ast_type_make_unknown_enum(source_t source, weak_cstr_t kind_name){
+    ast_type_t result = from_1elems(
+        ast_elem_unknown_enum_make(source, kind_name)
+    );
+
+    result.source = source;
+    return result;
 }
 
 // =====================================================================

@@ -301,6 +301,11 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             ir_value_func_addr_by_name_t *func_addr_by_name = value->extra;
             return LLVMGetNamedFunction(llvm->module, func_addr_by_name->name);
         }
+    case VALUE_TYPE_UNKNOWN_ENUM: {
+            ir_type_extra_unknown_enum_t *unknown_enum = (ir_type_extra_unknown_enum_t*) value->type->extra;
+            compiler_panicf(llvm->compiler, unknown_enum->source, "Undetermined generic enum '[enum with %s]'", unknown_enum->kind_name);
+            die("Exiting from unexpected undetermined generic enum\n");
+        }
     case VALUE_TYPE_CONST_BITCAST:
             return LLVMConstBitCast(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
     case VALUE_TYPE_CONST_ZEXT:

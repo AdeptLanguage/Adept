@@ -128,6 +128,13 @@ ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool, ir_type_t **arg_types,
     return ir_type_make(pool, TYPE_KIND_FUNCPTR, extra);
 }
 
+ir_type_t *ir_type_make_unknown_enum(ir_pool_t *pool, source_t source, weak_cstr_t kind_name){
+    return ir_type_make(pool, TYPE_KIND_UNKNOWN_ENUM, ir_pool_alloc_init(pool, ir_type_extra_unknown_enum_t, {
+        .source = source,
+        .kind_name = kind_name,
+    }));
+}
+
 trait_t ast_func_traits_to_type_kind_func_traits(trait_t ast_func_traits){
     trait_t type_kind_func_traits = TRAIT_NONE;
     if(ast_func_traits & AST_FUNC_VARARG)  type_kind_func_traits |= TYPE_KIND_FUNC_VARARG;

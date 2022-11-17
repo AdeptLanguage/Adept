@@ -40,6 +40,7 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length){
         case AST_ELEM_FIXED_ARRAY:
         case AST_ELEM_GENERIC_INT:
         case AST_ELEM_GENERIC_FLOAT:
+        case AST_ELEM_UNKNOWN_ENUM:
             break;
         case AST_ELEM_VAR_FIXED_ARRAY: 
             ast_expr_free_fully(((ast_elem_var_fixed_array_t*) elem)->length);
@@ -75,7 +76,7 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length){
             ast_layout_free(&(((ast_elem_layout_t*) elem)->layout));
             break;
         default:
-            die("ast_elems_free() - Unrecognized type element ID at index %zu\n", i);
+            die("ast_elems_free() - Unrecognized type element ID %zu at index %zu\n", (size_t) elem->id, i);
         }
 
         free(elem);

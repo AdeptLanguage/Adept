@@ -261,7 +261,7 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         if(ir_gen_expr_new_cstring(builder, (ast_expr_new_cstring_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_ENUM_VALUE:
-        if(ir_gen_expr_enum_value(builder, (ast_expr_enum_value_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        if(ir_gen_expr_enum_value(builder->compiler, builder->object, (ast_expr_enum_value_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
     case EXPR_STATIC_ARRAY:
         if(ir_gen_expr_static_array(builder, (ast_expr_static_data_t*) expr, ir_value, out_expr_type)) return FAILURE;
@@ -296,8 +296,11 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_ALIGNOF:
         if(ir_gen_expr_alignof(builder, (ast_expr_alignof_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
+    case EXPR_GENERIC_ENUM_VALUE:
+        if(ir_gen_expr_generic_enum_value(builder, (ast_expr_generic_enum_value_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        break;
     default:
-        compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Unknown expression type id in expression");
+        compiler_panic(builder->compiler, expr->source, "INTERNAL ERROR: Unknown expression id for expression");
         return FAILURE;
     }
 
@@ -2046,33 +2049,45 @@ errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_enum_value(ir_builder_t *builder, ast_expr_enum_value_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    length_t enum_kind_id;
+errorcode_t ir_gen_expr_enum_value(compiler_t *compiler, object_t *object, ast_expr_enum_value_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    ir_pool_t *pool = &object->ir_module.pool;
 
     // Find referenced enum
-    maybe_index_t enum_index = ast_find_enum(builder->object->ast.enums, builder->object->ast.enums_length, expr->enum_name);
+    maybe_index_t enum_index = ast_find_enum(object->ast.enums, object->ast.enums_length, expr->enum_name);
 
     // Fail if we couldn't find the enum
     if(enum_index == -1){
-        compiler_panicf(builder->compiler, expr->source, "Failed to enum '%s'", expr->enum_name);
+        compiler_panicf(compiler, expr->source, "Failed to enum '%s'", expr->enum_name);
         return FAILURE;
     }
 
     // Get enum information
-    ast_enum_t *enum_definition = &builder->object->ast.enums[enum_index];
+    ast_enum_t *enum_definition = &object->ast.enums[enum_index];
 
     // Find the ID of the field of the enum
+    length_t enum_kind_id;
+
     if(!ast_enum_find_kind(enum_definition, expr->kind_name, &enum_kind_id)){
-        compiler_panicf(builder->compiler, expr->source, "Failed to find member '%s' of enum '%s'", expr->kind_name, expr->enum_name);
+        compiler_panicf(compiler, expr->source, "Failed to find member '%s' of enum '%s'", expr->kind_name, expr->enum_name);
         return FAILURE;
     }
 
     // The IR value for the enum value is just its ID as an u64
-    *ir_value = build_literal_usize(builder->pool, enum_kind_id);
+    *ir_value = build_literal_usize(pool, enum_kind_id);
 
     // Result type is the enum
     if(out_expr_type != NULL){
         *out_expr_type = ast_type_make_base(strclone(expr->enum_name));
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t ir_gen_expr_generic_enum_value(ir_builder_t *builder, ast_expr_generic_enum_value_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    *ir_value = build_unknown_enum_value(builder->pool, expr->source, expr->kind_name);
+
+    if(out_expr_type != NULL){
+        *out_expr_type = ast_type_make_unknown_enum(expr->source, expr->kind_name);
     }
 
     return SUCCESS;
