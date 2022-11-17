@@ -15,3 +15,4 @@ bugs
 dev/counter.py
 dev/iwyu.out
 dev/remove_include_comments.regex
+next

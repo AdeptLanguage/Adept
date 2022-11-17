@@ -493,6 +493,10 @@ void ast_dump_funcs(FILE *file, ast_func_t *functions, length_t functions_length
         strong_cstr_t args = ast_func_args_str(func);
         strong_cstr_t return_type = ast_type_str(&func->return_type);
 
+        if(func->traits & AST_FUNC_DISPATCHER) fprintf(file, "dispatcher ");
+        if(func->traits & AST_FUNC_VIRTUAL)    fprintf(file, "virtual ");
+        if(func->traits & AST_FUNC_OVERRIDE)   fprintf(file, "override ");
+
         if(func->traits & AST_FUNC_FOREIGN){
             fprintf(file, "foreign %s(%s) %s\n", func->name, args, return_type);
         } else {

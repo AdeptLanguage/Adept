@@ -247,10 +247,9 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
                 }
             }
 
-            assert(index_value != NULL);
-
-            adept_usize *literal = (adept_usize*) index_value->extra;
-            *literal = index;
+            if(index_value != NULL){
+                *((adept_usize*) index_value->extra) = index;
+            }
         }
     }
 
@@ -620,7 +619,11 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         assert(bridge_var);
 
         // Get value of 'this'
-        ir_value_t *this_value = build_load(&builder, build_varptr(&builder, bridge_var->ir_type, bridge_var), ast_func.source);
+        ir_value_t *this_value = build_load(
+            &builder, 
+            build_varptr(&builder, ir_type_make_pointer_to(builder.pool, bridge_var->ir_type), bridge_var),
+            ast_func.source
+        );
 
         // Create 'this.__vtable__' value
         ir_type_t *ir_ptr = builder.object->ir_module.common.ir_ptr;
@@ -649,7 +652,11 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         assert(bridge_var);
 
         // Get value of 'this'
-        ir_value_t *this_value = build_load(&builder, build_varptr(&builder, bridge_var->ir_type, bridge_var), ast_func.source);
+        ir_value_t *this_value = build_load(
+            &builder,
+            build_varptr(&builder, ir_type_make_pointer_to(builder.pool, bridge_var->ir_type), bridge_var),
+            ast_func.source
+        );
 
         // Create 'this.__vtable__' value
         ir_type_t *ir_ptr = builder.object->ir_module.common.ir_ptr;

@@ -149,8 +149,10 @@ static void ir_dump_condbreak_instruction(FILE *file, ir_instr_cond_break_t *ins
 
 static void ir_dump_member_instruction(FILE *file, ir_instr_member_t *instruction){
     strong_cstr_t value_str = ir_value_str(instruction->value);
-    fprintf(file, "memb %s, %zu\n", value_str, instruction->member);
+    strong_cstr_t result_str = ir_type_str(instruction->result_type);
+    fprintf(file, "memb %s, %zu -> %s\n", value_str, instruction->member, result_str);
     free(value_str);
+    free(result_str);
 }
 
 static void ir_dump_array_access(FILE *file, ir_instr_array_access_t *instruction){

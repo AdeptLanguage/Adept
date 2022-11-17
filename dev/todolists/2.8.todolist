@@ -61,6 +61,7 @@ MEDIUM-PRIORITY:
 * add constructors for Optional
 * do proper implementation of replace(*String, T, T) so that replacement strings are able to contain the needle string
 * improve linux cross compilation
+* better error message for when accidentally doing `class Rectangle (w, h float) extends Shape` (should have `extends Shape` before fields)
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -96,6 +97,7 @@ LOW-PRIORITY:
 * remove old `.dep` packages
 * parse arguments before reading config, and never check for updates when using options such as `--root`, `-h`, and `--help`
 * include trace back for `Encountered undetermined polymorphic type '$T' in type '$T'` error
+* `delete[count] pointer` syntax to allow for __defer__/delete in single step
 
 v2.4 COMPLETED:
 + Standard Library Imports

@@ -437,7 +437,7 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
     case EXPR_STATIC_STRUCT:
         return ast_expr_static_data_to_str((ast_expr_static_data_t*) expr, "static %s ( %s )");
     case EXPR_TYPEINFO:
-        return ast_expr_unary_type_to_str((ast_expr_typenameof_t*) expr, "typenameof");
+        return ast_expr_unary_type_to_str((ast_expr_typenameof_t*) expr, "typeinfo");
     case EXPR_TERNARY:
         return ast_expr_ternary_to_str((ast_expr_ternary_t*) expr);
     case EXPR_PREINCREMENT:
