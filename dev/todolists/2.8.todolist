@@ -163,3 +163,6 @@ v2.7 COMPLETED:
 
 v2.8 COMPLETED:
 + migrate uses of deprecated LLVM functions to their replacements
++ add values for unknown enums, e.g. `::KIND`
++ added ability to compile/link against Window's resource files with `pragma windres "my_resource.rc"` (even when cross compiling)
++ lots of bug fixes

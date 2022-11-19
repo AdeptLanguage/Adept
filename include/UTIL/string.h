@@ -29,8 +29,9 @@ strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string);
 // Escapes the contents of a modern string so that
 // special characters such as \n are transformed into \\n
 // and surrounds the string with 'escaped_quote' if not '\0'.
-// NOTE: 'escaped_quote' may be 0x00 to signify no surrounding quote character
-strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote);
+// NOTE: 'escaped_quote' may be 0x00 to signify no quote character
+// NOTE: 'surround' may be false to signify no surrounding quote
+strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote, bool surround);
 
 // ---------------- string_to_unescaped_string ----------------
 // Unescapes the contents of a modern string so that

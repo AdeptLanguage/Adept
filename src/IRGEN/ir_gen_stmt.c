@@ -1754,11 +1754,11 @@ errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name
         if(!is_missing_case){
             is_missing_case = true;
 
-            compiler_panic(builder->compiler, switch_source, "Not all cases covered in exhaustive switch statement");
+            compiler_panic(builder->compiler, switch_source, "Not all cases covered in exhaustive switch");
             printf("\nMissing cases:\n");
         }
         
-        printf("    case %s::%s\n", enum_name, enum_definition->kinds[i]);
+        printf("    case ::%s\n", enum_definition->kinds[i]);
     }
 
     return is_missing_case ? FAILURE : SUCCESS;

@@ -30,7 +30,7 @@ strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string){
     return string ? string : strclone("");
 }
 
-strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote){
+strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote, bool surround){
     length_t put_index = 0;
     length_t special_characters = 0;
 
@@ -40,7 +40,7 @@ strong_cstr_t string_to_escaped_string(const char *array, length_t length, char 
     }
 
     strong_cstr_t string = malloc(length + special_characters + 3);
-    if(escaped_quote) string[put_index++] = escaped_quote;
+    if(escaped_quote && surround) string[put_index++] = escaped_quote;
     
     for(length_t i = 0; i != length; i++){
         if(array[i] <= 0x1F || array[i] == '\\' || (array[i] == escaped_quote && escaped_quote)){
@@ -71,7 +71,7 @@ strong_cstr_t string_to_escaped_string(const char *array, length_t length, char 
         }
     }
 
-    if(escaped_quote) string[put_index++] = escaped_quote;
+    if(escaped_quote && surround) string[put_index++] = escaped_quote;
     string[put_index++] = '\0';
     return string;
 }

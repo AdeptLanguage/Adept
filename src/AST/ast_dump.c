@@ -213,7 +213,7 @@ static void ast_dump_stmt_va_copy(FILE *file, ast_expr_va_copy_t *stmt){
 }
 
 static void ast_dump_stmt_llvm_asm(FILE *file, ast_expr_llvm_asm_t *stmt){
-    strong_cstr_t assembly = string_to_escaped_string(stmt->assembly, strlen(stmt->assembly), '\"');
+    strong_cstr_t assembly = string_to_escaped_string(stmt->assembly, strlen(stmt->assembly), '\"', true);
     fprintf(file, "llvm_asm ... { \"%s\" } ... (...)\n", assembly);
     free(assembly);
 }

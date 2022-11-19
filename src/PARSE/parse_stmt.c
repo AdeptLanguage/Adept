@@ -1509,6 +1509,7 @@ errorcode_t parse_block_beginning(parse_ctx_t *ctx, weak_cstr_t block_readable_m
     case TOKEN_DELETE:
     case TOKEN_ELSE:
     case TOKEN_EXHAUSTIVE:
+    case TOKEN_FALLTHROUGH:
     case TOKEN_FOR:
     case TOKEN_IF:
     case TOKEN_REPEAT:

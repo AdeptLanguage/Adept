@@ -55,7 +55,7 @@ static strong_cstr_t literal_to_str(ir_value_t *value, weak_cstr_t typename){
         // '*ubyte' null-terminated string literal
         if(typecast(ir_type_t*, value->type->extra)->kind == TYPE_KIND_U8){
             char *string = (char*) value->extra;
-            value_part = string_to_escaped_string(string, strlen(string), '\'');
+            value_part = string_to_escaped_string(string, strlen(string), '\'', true);
         } else {
             die("ir_value_str() - Unrecognized literal with pointer type kind\n");
         }
@@ -84,7 +84,7 @@ static strong_cstr_t value_result_to_str(ir_value_t *value, weak_cstr_t typename
 static strong_cstr_t literal_cstr_of_len_to_str(ir_value_t *value){
     ir_value_cstr_of_len_t *cstroflen = value->extra;
 
-    strong_cstr_t string = string_to_escaped_string(cstroflen->array, cstroflen->size, '\"');
+    strong_cstr_t string = string_to_escaped_string(cstroflen->array, cstroflen->size, '\"', true);
     strong_cstr_t result = mallocandsprintf("cstroflen %d %s", (int) cstroflen->size, string);
     free(string);
 

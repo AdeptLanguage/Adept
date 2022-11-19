@@ -18,7 +18,7 @@
 */
 
 static strong_cstr_t ast_expr_string_to_str(ast_expr_str_t *str_expr){
-    return string_to_escaped_string(str_expr->array, str_expr->length, '"');
+    return string_to_escaped_string(str_expr->array, str_expr->length, '"', true);
 }
 
 static strong_cstr_t ast_expr_ubyte_to_str(ast_expr_ubyte_t *ubyte_expr){
@@ -311,7 +311,7 @@ static strong_cstr_t ast_expr_initlist_to_str(ast_expr_initlist_t *initlist_expr
 }
 
 static strong_cstr_t ast_expr_embed_to_str(ast_expr_embed_t *embed_expr){
-    strong_cstr_t filename_string_escaped = string_to_escaped_string(embed_expr->filename, strlen(embed_expr->filename), '"');
+    strong_cstr_t filename_string_escaped = string_to_escaped_string(embed_expr->filename, strlen(embed_expr->filename), '"', true);
     strong_cstr_t result = mallocandsprintf("embed %s", filename_string_escaped);
     free(filename_string_escaped);
     return result;
