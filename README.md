@@ -706,6 +706,7 @@ func main {
 - [(2.5) MiniBox Multiplayer Gamepad](https://github.com/IsaacShelton/MiniBox)
 - [(2.6) Shared Pointer Demo](https://github.com/IsaacShelton/AdeptSharedPtr)
 - [(2.7) RTS Parody Game](https://github.com/IsaacShelton/GalaxyCraft)
+- [(2.8) Windows GUI Examples](https://github.com/IsaacShelton/AdeptWin32Examples)
 
 ## Popular Libraries and Ports
 - [(2.5) Box2D](https://github.com/IsaacShelton/Box2D)
