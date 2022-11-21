@@ -62,6 +62,7 @@ MEDIUM-PRIORITY:
 * do proper implementation of replace(*String, T, T) so that replacement strings are able to contain the needle string
 * improve linux cross compilation
 * better error message for when accidentally doing `class Rectangle (w, h float) extends Shape` (should have `extends Shape` before fields)
+* add better backtracking error messages for when cannot instantiate polymorphic type e.g. for `value <NotExistentType> Optional`
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -165,4 +166,5 @@ v2.8 COMPLETED:
 + migrate uses of deprecated LLVM functions to their replacements
 + add values for unknown enums, e.g. `::KIND`
 + added ability to compile/link against Window's resource files with `pragma windres "my_resource.rc"` (even when cross compiling)
++ add way for constructors to not generate stand-alone helper functions [adding via `in constructor`]
 + lots of bug fixes

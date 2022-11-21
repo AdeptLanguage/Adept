@@ -23,6 +23,7 @@ errorcode_t parse_func(parse_ctx_t *ctx);
 
 typedef struct {
     bool is_constructor : 1;
+    bool is_in_only_constructor : 1;
 } ast_func_head_parse_info_t;
 
 errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head, ast_func_head_parse_info_t *out_info);

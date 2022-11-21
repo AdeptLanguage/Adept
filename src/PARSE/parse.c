@@ -55,6 +55,12 @@ errorcode_t parse_tokens(parse_ctx_t *ctx){
         switch(tokens[i].id){
         case TOKEN_NEWLINE:
             break;
+        case TOKEN_IN:
+            if(tokens[i + 1].id != TOKEN_CONSTRUCTOR){
+                compiler_panicf(ctx->compiler, ctx->tokenlist->sources[i], "Expected 'constructor' keyword after 'in'");
+                return FAILURE;
+            }
+            /* fall through */
         case TOKEN_FUNC: case TOKEN_STDCALL: case TOKEN_VERBATIM: case TOKEN_IMPLICIT: case TOKEN_CONSTRUCTOR: case TOKEN_VIRTUAL: case TOKEN_OVERRIDE:
             if(parse_func(ctx)) return FAILURE;
             break;

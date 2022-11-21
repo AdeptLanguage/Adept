@@ -204,7 +204,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
 
     if(parse_func_body(ctx, func)) return FAILURE;
 
-    if(func_head_parse_info.is_constructor){
+    if(func_head_parse_info.is_constructor && !func_head_parse_info.is_in_only_constructor){
         parse_func_solidify_constructor(ast, func, source);
     }
 
@@ -298,6 +298,8 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head, ast_fun
     ast_func_prefixes_t prefixes;
     parse_func_prefixes(ctx, &prefixes);
 
+    bool is_in_only_constructor = parse_eat(ctx, TOKEN_IN, NULL) == SUCCESS;
+
     tokenid_t id = parse_ctx_peek(ctx);
     *ctx->i += 1;
 
@@ -353,7 +355,11 @@ errorcode_t parse_func_head(parse_ctx_t *ctx, ast_func_head_t *out_head, ast_fun
         .export_name = export_name,
     };
 
-    out_info->is_constructor = is_constructor;
+    *out_info = (ast_func_head_parse_info_t){
+        .is_constructor = is_constructor,
+        .is_in_only_constructor = is_in_only_constructor,
+    };
+
     return SUCCESS;
 }
 

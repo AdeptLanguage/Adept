@@ -78,6 +78,10 @@ def run_all_tests():
     test("conditionless_break_label", [executable, join(src_dir, "conditionless_break_label/main.adept")], compiles)
     test("const_variables", [executable, join(src_dir, "const_variables/main.adept")], compiles)
     test("constructor", [executable, join(src_dir, "constructor/main.adept")], compiles)
+    test("constructor_in_only",
+        [executable, join(src_dir, "constructor_in_only/main.adept")],
+        lambda output: b"main.adept:20:20: error: Undeclared function 'Thing'\n  20|     thing2 Thing = Thing()" in output,
+        expected_exitcode=1)
     test("constructor_with_defaults", [executable, join(src_dir, "constructor_with_defaults/main.adept")], compiles)
     test("continue", [executable, join(src_dir, "continue/main.adept")], compiles)
     test("continue_to", [executable, join(src_dir, "continue_to/main.adept")], compiles)
