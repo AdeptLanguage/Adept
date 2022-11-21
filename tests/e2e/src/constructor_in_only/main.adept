@@ -1,0 +1,22 @@
+
+import basics
+
+struct Thing (a, b, c int) {
+    in constructor {
+        this.a = 1
+        this.b = 2
+        this.c = 3
+    }
+    
+    func __assign__(other POD Thing) = delete
+}
+
+func main {
+    thing Thing()
+    print(thing.a, thing.b, thing.c)
+
+    // `in constructor` does not generate additional subject-less constructor function
+    // main.adept:20:20: error: Undeclared function 'Thing'
+    thing2 Thing = Thing()
+    print(thing2.a, thing2.b, thing2.c)
+}

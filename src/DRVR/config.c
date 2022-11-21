@@ -123,7 +123,9 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
 
         try_update_installation(config, filename, &ctx.fulltext, optional_last_update);
     }
-    #endif // ADEPT_ENABLE_PACKAGE_MANAGER
+    #else
+    (void) optional_last_update;
+    #endif
 
     jsmnh_obj_ctx_free(&ctx);
     free(raw_buffer);
