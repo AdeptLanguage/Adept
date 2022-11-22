@@ -570,10 +570,6 @@ typedef listof(ir_anon_global_t, globals) ir_anon_globals_t;
 typedef listof(ir_func_t, funcs) ir_funcs_t;
 #define ir_funcs_append(LIST, VALUE) list_append((LIST), (VALUE), ir_func_t)
 
-// ---------------- ir_basicblock_new_instructions ----------------
-// Ensures that there is enough room for 'amount' more instructions
-void ir_basicblock_new_instructions(ir_basicblock_t *block, length_t amount);
-
 // ---------------- ir_basicblock_free ----------------
 // Frees an IR basicblock
 void ir_basicblock_free(ir_basicblock_t *basicblock);

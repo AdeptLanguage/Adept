@@ -10,7 +10,10 @@ extern "C" {
 
 // ---------------- strclone ----------------
 // Clones a string, producing a duplicate
-strong_cstr_t strclone(const char *src);
+inline strong_cstr_t strclone(const char *src){
+    length_t size = strlen(src) + 1;
+    return memcpy(malloc(size), src, size);
+}
 
 // ---------------- strsclone ----------------
 // Clones a strong string list
@@ -23,7 +26,9 @@ void free_strings(strong_cstr_t *list, length_t length);
 // ---------------- strong_cstr_empty_if_null ----------------
 // Will heap-allocate an empty string in place of 'string'
 // if 'string' is NULL
-strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string);
+inline strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string){
+    return string ? string : strclone("");
+}
 
 // ---------------- string_to_escaped_string ----------------
 // Escapes the contents of a modern string so that
@@ -50,6 +55,10 @@ bool string_needs_escaping(weak_cstr_t string, char escaped_quote);
 // Returns the number of occurrences of 'character' in
 // potentially unterminated string of characters
 length_t string_count_character(const char *string, length_t length, char character);
+
+// ---------------- string_starts_with ----------------
+// Returns whether a string starts with another string
+bool string_starts_with(weak_cstr_t original, weak_cstr_t stub);
 
 #ifdef __cplusplus
 }

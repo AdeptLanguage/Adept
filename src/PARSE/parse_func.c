@@ -766,20 +766,22 @@ void parse_func_grow_arguments(ast_func_t *func, length_t backfill, length_t *ca
         return;
     }
 
-    if(func->arity + backfill != *capacity) return;
-    *capacity *= 2;
+    if(func->arity + backfill == *capacity){
+        *capacity *= 2;
 
-    if(!(func->traits & AST_FUNC_FOREIGN) || func->arg_names){
-        grow((void**) &func->arg_names, sizeof(char*), func->arity + backfill, *capacity);
+        if(!(func->traits & AST_FUNC_FOREIGN) || func->arg_names){
+            grow((void**) &func->arg_names, sizeof(char*), *capacity);
+        }
+
+        grow((void**) &func->arg_types,       sizeof(ast_type_t), *capacity);
+        grow((void**) &func->arg_sources,     sizeof(source_t),   *capacity);
+        grow((void**) &func->arg_flows,       sizeof(char),       *capacity);
+        grow((void**) &func->arg_type_traits, sizeof(trait_t),    *capacity);
+
+        if(func->arg_defaults){
+            grow((void**) &func->arg_defaults, sizeof(ast_expr_t*), *capacity);
+        }
     }
-
-    grow((void**) &func->arg_types,       sizeof(ast_type_t), func->arity, *capacity);
-    grow((void**) &func->arg_sources,     sizeof(source_t),   func->arity + backfill, *capacity);
-    grow((void**) &func->arg_flows,       sizeof(char),       func->arity + backfill, *capacity);
-    grow((void**) &func->arg_type_traits, sizeof(trait_t),    func->arity + backfill, *capacity);
-
-    if(func->arg_defaults)
-        grow((void**) &func->arg_defaults, sizeof(ast_expr_t*), func->arity + backfill, *capacity);
 }
 
 void parse_func_prefixes(parse_ctx_t *ctx, ast_func_prefixes_t *out_prefixes){

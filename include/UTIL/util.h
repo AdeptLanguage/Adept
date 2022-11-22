@@ -17,32 +17,21 @@ extern "C" {
 
 #include "UTIL/ground.h"
 
-// -------------------- UTIL_USE_REALLOC --------------------
-// Specifies whether or not memory utils should use realloc()
-#ifndef TRACK_MEMORY_USAGE
-#define UTIL_USE_REALLOC
-#endif
-// ----------------------------------------------------------
-
 // ---------------- expand ----------------
-// Expands an array if it won't be able hold new elements
+// Smartly expands an array if it won't be able hold new elements
 void expand(void **inout_memory, length_t unit_size, length_t length, length_t *inout_capacity,
     length_t amount, length_t default_capacity);
 
 // ---------------- coexpand ----------------
-// Expands two arrays if they won't be able hold new elements
+// Smartly expands two arrays if they won't be able hold new elements
 void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, length_t unit_size2,
     length_t length, length_t *inout_capacity, length_t amount, length_t default_capacity);
 
 // ---------------- grow ----------------
-// Forces growth of an array to a certain length
-#ifdef UTIL_USE_REALLOC
-#define grow(inout_memory, unit_size, old_length, new_length) grow_impl(inout_memory, unit_size, new_length)
-void grow_impl(void **inout_memory, length_t unit_size, length_t new_length);
-#else
-#define grow(inout_memory, unit_size, old_length, new_length) grow_impl(inout_memory, unit_size, old_length, new_length)
-void grow_impl(void **inout_memory, length_t unit_size, length_t old_length, length_t new_length);
-#endif
+// Forces growth of an array to support a certain capacity
+inline void grow(void **inout_memory, length_t unit_size, length_t new_length){
+    *inout_memory = realloc(*inout_memory, unit_size * new_length);
+}
 
 // ---------------- mallocandsprintf ----------------
 // NOTE: Only supports using '%s', '%d', and '%%'
@@ -82,10 +71,6 @@ errorcode_t file_copy(weak_cstr_t src_filename, weak_cstr_t dst_filename);
 // ---------------- indent ----------------
 // Writes 4-spaces 'indentation_level' times to a stream
 void indent(FILE *file, length_t indentation_level);
-
-// ---------------- string_starts_with ----------------
-// Returns whether a string starts with another string
-bool string_starts_with(weak_cstr_t original, weak_cstr_t stub);
 
 // ---------------- length_min ----------------
 // Returns the smaller of two length values

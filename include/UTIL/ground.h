@@ -42,8 +42,6 @@ extern "C" {
 #include <unistd.h>
 #endif
 
-#include "UTIL/memory.h"
-
 #ifdef ADEPT_INSIGHT_BUILD
 #include "UTIL/__insight_overloads.h"
 #endif

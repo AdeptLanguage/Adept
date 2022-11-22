@@ -750,22 +750,31 @@ int ast_enums_cmp(const void *a, const void *b){
 }
 
 int ast_poly_funcs_cmp(const void *a, const void *b){
-    int diff = strcmp(((ast_poly_func_t*) a)->name, ((ast_poly_func_t*) b)->name);
+    const ast_poly_func_t *fa = (ast_poly_func_t*) a;
+    const ast_poly_func_t *fb = (ast_poly_func_t*) b;
+
+    const int diff = strcmp(fa->name, fb->name);
     if(diff != 0) return diff;
-    return (int) ((ast_poly_func_t*) a)->ast_func_id - (int) ((ast_poly_func_t*) b)->ast_func_id;
+
+    const func_id_t id_a = fa->ast_func_id;
+    const func_id_t id_b = fb->ast_func_id;
+
+    if(id_a != id_b){
+        return id_a > id_b ? 1 : -1;
+    } else {
+        return 0;
+    }
 }
 
-int ast_globals_cmp(const void *ga, const void *gb){
-    #define global_a ((ast_global_t*) ga)
-    #define global_b ((ast_global_t*) gb)
+int ast_globals_cmp(const void *raw_a, const void *raw_b){
+    const ast_global_t *a = (ast_global_t*) raw_a;
+    const ast_global_t *b = (ast_global_t*) raw_b;
 
-    if(global_a->name_length != global_b->name_length){
-        // DANGEROUS: Assume that the length difference isn't of
-        // magnitudes big enough to cause overflow of 'int' value
-        return (int) global_a->name_length - (int) global_b->name_length;
+    if(a->name_length != b->name_length){
+        return a->name_length > b->name_length ? 1 : -1;
     }
 
-    return strncmp(global_a->name, global_b->name, global_a->name_length);
+    return strncmp(a->name, b->name, a->name_length);
     
     #undef global_a
     #undef global_b

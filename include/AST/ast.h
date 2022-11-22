@@ -429,7 +429,7 @@ int ast_poly_funcs_cmp(const void *a, const void *b);
 
 // ---------------- ast_globals_cmp ----------------
 // Compares two 'ast_global_t*' structures by name
-int ast_globals_cmp(const void *ga, const void *gb);
+int ast_globals_cmp(const void *a, const void *b);
 
 #ifdef __cplusplus
 }

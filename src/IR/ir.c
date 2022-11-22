@@ -10,18 +10,6 @@
 #include "IR/ir_value_str.h"
 #include "UTIL/datatypes.h"
 
-void ir_basicblock_new_instructions(ir_basicblock_t *block, length_t amount){
-    // NOTE: Ensures that there is enough room for 'amount' more instructions
-    // NOTE: If there isn't, more memory will be allocated so they can be generated
-    if(block->instructions.length + amount >= block->instructions.capacity){
-        ir_instr_t **new_instructions = malloc(sizeof(ir_instr_t*) * block->instructions.capacity * 2);
-        memcpy(new_instructions, block->instructions.instructions, sizeof(ir_instr_t*) * block->instructions.length);
-        block->instructions.capacity *= 2;
-        free(block->instructions.instructions);
-        block->instructions.instructions = new_instructions;
-    }
-}
-
 void ir_basicblocks_free(ir_basicblocks_t *basicblocks){
     for(length_t i = 0; i != basicblocks->length; i++){
         ir_basicblock_free(&basicblocks->blocks[i]);

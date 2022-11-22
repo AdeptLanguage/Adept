@@ -193,28 +193,24 @@ strong_cstr_t filename_absolute(const char *filename){
     return node_path_resolve(filename);
     #elif defined(_WIN32) || defined(_WIN64)
 
-    char *buffer = malloc(512);
+    strong_cstr_t buffer = malloc(512);
+
     if(GetFullPathName(filename, 512, buffer, NULL) == 0){
         free(buffer);
         return NULL;
     }
-    return buffer;
 
     #else
 
-    char *buffer = realpath(filename, NULL);
+    strong_cstr_t buffer = realpath(filename, NULL);
 
     if(buffer == NULL){
         die("filename_absolute() - Could not determine absolute path for '%s'\n", filename);
     }
 
-    #ifdef TRACK_MEMORY_USAGE
-    if(buffer)
-        memory_track_external_allocation(buffer, strlen(buffer) + 1, __FILE__, __LINE__);
-    #endif
-    
-    return buffer;
     #endif    
+
+    return buffer;
 }
 
 void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_for, unsigned int mode){

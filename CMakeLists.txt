@@ -48,7 +48,7 @@ set(core_source_files
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/NET/download.c
 	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/func_pair.c src/UTIL/ground.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c
-	src/UTIL/list.c src/UTIL/memory.c src/UTIL/search.c src/NET/stash.c src/UTIL/string_builder.c
+	src/UTIL/list.c src/UTIL/search.c src/NET/stash.c src/UTIL/string_builder.c
 	src/UTIL/string_list.c src/UTIL/string.c src/UTIL/util.c)
 
 add_executable(adept)

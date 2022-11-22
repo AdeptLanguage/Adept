@@ -4,12 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-strong_cstr_t strclone(const char *src){
-    length_t size = strlen(src) + 1;
-    char *clone = malloc(size);
-    memcpy(clone, src, size);
-    return clone;
-}
+extern inline strong_cstr_t strclone(const char *src);
+extern inline strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string);
 
 strong_cstr_t *strsclone(strong_cstr_t *list, length_t length){
     strong_cstr_t *new_list = malloc(sizeof(strong_cstr_t) * length);
@@ -24,10 +20,6 @@ strong_cstr_t *strsclone(strong_cstr_t *list, length_t length){
 void free_strings(strong_cstr_t *list, length_t length){
     for(length_t i = 0; i != length; i++) free(list[i]);
     free(list);
-}
-
-strong_cstr_t strong_cstr_empty_if_null(maybe_null_strong_cstr_t string){
-    return string ? string : strclone("");
 }
 
 strong_cstr_t string_to_escaped_string(const char *array, length_t length, char escaped_quote, bool surround){
@@ -134,4 +126,10 @@ length_t string_count_character(const char *string, length_t length, char charac
     length_t count = 0;
     for(length_t i = 0; i != length; i++) if(string[i] == character) count++;
     return count;
+}
+
+bool string_starts_with(weak_cstr_t original, weak_cstr_t stub){
+    length_t original_length = strlen(original);
+    length_t stub_length = strlen(stub);
+    return stub_length <= original_length && strncmp(original, stub, stub_length) == 0;
 }

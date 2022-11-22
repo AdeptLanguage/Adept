@@ -17,10 +17,6 @@ extern "C" {
 typedef struct {
     void *bytes;
     length_t length;
-
-    #ifdef TRACK_MEMORY_USAGE
-    length_t capacity;
-    #endif // TRACK_MEMORY_USAGE
 } download_buffer_t;
 
 #ifdef ADEPT_ENABLE_PACKAGE_MANAGER

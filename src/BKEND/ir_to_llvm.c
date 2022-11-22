@@ -65,7 +65,7 @@ static char *get_triple(compiler_t *compiler){
         return LLVMCreateMessage("wasm32-unknown-unknown");
     }
 
-	#ifdef _WIN32
+    #ifdef _WIN32
         return LLVMCreateMessage("x86_64-pc-windows-gnu");
     #else
         return LLVMGetDefaultTargetTriple();
@@ -94,7 +94,7 @@ static void autofill_output_filename(compiler_t *compiler, object_t *object){
     if(compiler->output_filename == NULL){
         compiler->output_filename = filename_without_ext(object->filename);
     }
-	
+    
     filename_auto_ext(&compiler->output_filename, compiler->cross_compile_for, FILENAME_AUTO_EXECUTABLE);
 }
 
@@ -270,7 +270,7 @@ static strong_cstr_t create_linker_additional(llvm_context_t *llvm){
 }
 
 static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *llvm, const char *objfile_filename, const char *linker_additional){
-	#ifdef _WIN32
+    #ifdef _WIN32
     // Windows -> ???
 
     if(llvm->compiler->cross_compile_for == CROSS_COMPILE_MACOS){
@@ -286,7 +286,7 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
 
     free(include);
     return result;
-	#else
+    #else
     // Unix -> ???
 
     if(llvm->compiler->cross_compile_for == CROSS_COMPILE_WINDOWS){
@@ -319,7 +319,7 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
 
     // Unix -> Unix
     return create_unix_link_command(llvm->compiler, "gcc", objfile_filename, linker_additional);
-	#endif
+    #endif
 }
 
 static maybe_null_strong_cstr_t create_link_command(llvm_context_t *llvm, const char *objfile_filename){

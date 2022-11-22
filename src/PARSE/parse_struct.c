@@ -124,6 +124,7 @@ bool parse_struct_is_function_like_beginning(tokenid_t token){
     case TOKEN_CONSTRUCTOR:
     case TOKEN_FUNC:
     case TOKEN_IMPLICIT:
+    case TOKEN_IN:
     case TOKEN_VERBATIM:
     case TOKEN_VIRTUAL:
     case TOKEN_OVERRIDE:
