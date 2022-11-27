@@ -599,7 +599,7 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
         if(ir_gen_expr(builder, stmt->value, &ir_value_to_be_returned, false, &value_return_type)) return FAILURE;
 
         // Conform return value to expected return type
-        if(!ast_types_conform(builder, &ir_value_to_be_returned, &value_return_type, &return_type, CONFORM_MODE_CALCULATION)){
+        if(!ast_types_conform(builder, &ir_value_to_be_returned, &value_return_type, &return_type, CONFORM_MODE_RETURN)){
             char *a_type_str = ast_type_str(&value_return_type);
             char *b_type_str = ast_type_str(&return_type);
             compiler_panicf(builder->compiler, stmt->source, "Attempting to return type '%s' when function expects type '%s'", a_type_str, b_type_str);
