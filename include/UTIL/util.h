@@ -18,12 +18,12 @@ extern "C" {
 #include "UTIL/ground.h"
 
 // ---------------- expand ----------------
-// Smartly expands an array if it won't be able hold new elements
+// Intelligently expands an array if it won't be able hold new elements
 void expand(void **inout_memory, length_t unit_size, length_t length, length_t *inout_capacity,
     length_t amount, length_t default_capacity);
 
 // ---------------- coexpand ----------------
-// Smartly expands two arrays if they won't be able hold new elements
+// Intelligently expands two arrays if they won't be able hold new elements
 void coexpand(void **inout_memory1, length_t unit_size1, void **inout_memory2, length_t unit_size2,
     length_t length, length_t *inout_capacity, length_t amount, length_t default_capacity);
 

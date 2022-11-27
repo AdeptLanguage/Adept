@@ -258,6 +258,10 @@ static strong_cstr_t ast_expr_enum_value_to_str(ast_expr_enum_value_t *enum_valu
     return mallocandsprintf("%s::%s", enum_value_expr->enum_name, enum_value_expr->kind_name);
 }
 
+static strong_cstr_t ast_expr_generic_enum_value_to_str(ast_expr_generic_enum_value_t *generic_enum_value_expr){
+    return mallocandsprintf("::%s", generic_enum_value_expr->kind_name);
+}
+
 static strong_cstr_t ast_expr_static_data_to_str(ast_expr_static_data_t *data_expr, const char *format){
     // USAGE: Expects two '%s' in 'format'
 
@@ -428,6 +432,8 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         return ast_expr_new_cstring_to_str((ast_expr_new_cstring_t*) expr);
     case EXPR_ENUM_VALUE:
         return ast_expr_enum_value_to_str((ast_expr_enum_value_t*) expr);
+    case EXPR_GENERIC_ENUM_VALUE:
+        return ast_expr_generic_enum_value_to_str((ast_expr_generic_enum_value_t*) expr);
     case EXPR_BIT_COMPLEMENT:
         return ast_expr_unary_to_str((ast_expr_unary_t*) expr, "~(%s)");
     case EXPR_NEGATE:

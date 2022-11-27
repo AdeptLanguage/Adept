@@ -62,6 +62,7 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
         *((expr_type*) clone) = *((expr_type*) expr); \
     }
 
+    // TODO: CLEANUP: Clean up this code
     switch(expr->id){
     case EXPR_BYTE:          MACRO_VALUE_CLONE(ast_expr_byte_t); break;
     case EXPR_UBYTE:         MACRO_VALUE_CLONE(ast_expr_ubyte_t); break;
@@ -351,6 +352,11 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
 
         #undef expr_as_enum_value
         #undef clone_as_enum_value
+    case EXPR_GENERIC_ENUM_VALUE:
+        clone = (ast_expr_t*) malloc_init(ast_expr_generic_enum_value_t, {
+            .kind_name = ((ast_expr_generic_enum_value_t*) expr)->kind_name,
+        });
+        break;
     case EXPR_TERNARY:
         #define expr_as_ternary ((ast_expr_ternary_t*) expr)
         #define clone_as_ternary ((ast_expr_ternary_t*) clone)

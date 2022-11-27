@@ -775,7 +775,4 @@ int ast_globals_cmp(const void *raw_a, const void *raw_b){
     }
 
     return strncmp(a->name, b->name, a->name_length);
-    
-    #undef global_a
-    #undef global_b
 }

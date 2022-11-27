@@ -567,7 +567,7 @@ errorcode_t lex_buffer(compiler_t *compiler, object_t *object){
                         };
 
                         compiler_panic(compiler, source, "Unterminated multi-line comment");
-                        return FAILURE;
+                        goto failure;
                     } else {
                         ctx.i += end - &buffer[ctx.i] + 2;
                     }

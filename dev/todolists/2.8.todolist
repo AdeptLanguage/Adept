@@ -63,6 +63,7 @@ MEDIUM-PRIORITY:
 * improve linux cross compilation
 * better error message for when accidentally doing `class Rectangle (w, h float) extends Shape` (should have `extends Shape` before fields)
 * add better backtracking error messages for when cannot instantiate polymorphic type e.g. for `value <NotExistentType> Optional`
+* anonymous generic compile-time sum types e.g. ubyte | String
 
 LOW-PRIORITY:
 * Finish 'Any'

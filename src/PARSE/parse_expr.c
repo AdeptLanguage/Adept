@@ -481,6 +481,7 @@ static tokenid_t parse_expr_has_terminating_token(tokenid_t id){
     case TOKEN_EACH:
     case TOKEN_ELSE:
     case TOKEN_EXHAUSTIVE:
+    case TOKEN_FALLTHROUGH:
     case TOKEN_FOR:
     case TOKEN_IF:
     case TOKEN_REPEAT:
