@@ -1,0 +1,13 @@
+
+import basics
+
+func main {
+    // error: Undeclared function other(*struct (a int, b float, c 20 String))
+    other(null as *struct(a int, b float, c 20 String))
+}
+
+func other(_type *struct (a $A, b $B, c $A)) {
+    print(typenameof $A)
+    print(typenameof $B)
+    print(typenameof $A)
+}

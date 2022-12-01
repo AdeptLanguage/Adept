@@ -1,0 +1,12 @@
+
+import basics
+
+func main {
+    other(null as *struct(a int, b float, c 20 String))
+}
+
+func other(_type *struct (a $A, b $B, c $C)) {
+    print(typenameof $A)
+    print(typenameof $B)
+    print(typenameof $C)
+}

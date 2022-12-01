@@ -224,6 +224,12 @@ def run_all_tests():
         expected_exitcode=1
     )
     test("polycount", [executable, join(src_dir, "polycount/main.adept")], compiles)
+    test("polymorphic_anonymous_composites", [executable, join(src_dir, "polymorphic_anonymous_composites/main.adept")], compiles)
+    test("polymorphic_anonymous_composites_mismatch",
+        [executable, join(src_dir, "polymorphic_anonymous_composites_mismatch/main.adept")],
+        lambda output: b"Undeclared function other(*struct (a int, b float, c 20 String))" in output,
+        expected_exitcode=1
+    )
     test("polymorphic_functions", [executable, join(src_dir, "polymorphic_functions/main.adept")], compiles)
     test("polymorphic_inner", [executable, join(src_dir, "polymorphic_inner/main.adept")], compiles)
     test("polymorphic_methods", [executable, join(src_dir, "polymorphic_methods/main.adept")], compiles)

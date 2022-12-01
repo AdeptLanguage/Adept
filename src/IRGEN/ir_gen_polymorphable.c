@@ -238,11 +238,10 @@ static errorcode_t ir_gen_polymorphable_elem_prereq(
     length_t index,
     bool permit_similar_primitives
 ){
-    // Verify that we are at the final element of the concrete type, otherwise it
-    // isn't possible for the prerequisite to be fulfilled
+    // Verify that we are at the final element of the concrete type
     if(index + 1 != concrete_type->elements_length) return FAILURE;
     
-    // Ensure there aren't other elements following the polymorphic element
+    // Verify that we are at the final element of the polymorphic type
     if(index + 1 != polymorphic_type->elements_length){
         internalerrorprintf("ir_gen_polymorphable_elem_prereq() - Encountered polymorphic element in middle of AST type\n");
         return FAILURE;
@@ -269,6 +268,79 @@ static errorcode_t ir_gen_polymorphable_elem_prereq(
     errorcode_t res = enforce_polymorph(compiler, object, catalog, (ast_elem_polymorph_t*) prereq, type_var, inout_concrete_value, &replacement, permit_similar_primitives);
     free(replacement.elements);
     return res;
+}
+
+static errorcode_t ir_gen_polymorphable_layout_bone(
+    compiler_t *compiler,
+    object_t *object,
+    ast_layout_bone_t *poly_bone,
+    ast_layout_bone_t *concrete_bone,
+    ast_poly_catalog_t *catalog
+){
+    if(poly_bone->kind != concrete_bone->kind || poly_bone->traits != concrete_bone->traits) return FAILURE;
+
+    switch(concrete_bone->kind){
+    case AST_LAYOUT_BONE_KIND_TYPE:
+        return ir_gen_polymorphable(compiler, object, NULL, &concrete_bone->type, &poly_bone->type, catalog, false);
+    case AST_LAYOUT_BONE_KIND_STRUCT:
+    case AST_LAYOUT_BONE_KIND_UNION: {
+            ast_layout_skeleton_t *poly_skeleton = &poly_bone->children;
+            ast_layout_skeleton_t *concrete_skeleton = &concrete_bone->children;
+
+            if(concrete_skeleton->bones_length != poly_skeleton->bones_length){
+                return FAILURE;
+            }
+
+            for(length_t i = 0; i < concrete_skeleton->bones_length; i++){
+                if(ir_gen_polymorphable_layout_bone(
+                    compiler,
+                    object,
+                    &poly_skeleton->bones[i],
+                    &concrete_skeleton->bones[i],
+                    catalog
+                )){
+                    return FAILURE;
+                }
+            }
+        }
+        return SUCCESS;
+    }
+
+    internalerrorprintf("ir_gen_polymorphable_layout_bone got unrecognized bone type 0x%08X!\n", concrete_bone->kind);
+    return FAILURE;
+}
+
+static errorcode_t ir_gen_polymorphable_elem_layout(
+    compiler_t *compiler,
+    object_t *object,
+    ast_type_t *polymorphic_type,
+    ast_type_t *concrete_type,
+    ast_poly_catalog_t *catalog,
+    length_t index
+){
+    // Verify that we are at the final element of the concrete type
+    if(index + 1 != concrete_type->elements_length) return FAILURE;
+
+    // Verify that we are at the final element of the polymorphic type
+    if(index + 1 != polymorphic_type->elements_length){
+        internalerrorprintf("ir_gen_polymorphable_elem_layout() - Encountered layout element in middle of AST type\n");
+        return FAILURE;
+    }
+
+    ast_layout_t *concrete_layout = &((ast_elem_layout_t*) concrete_type->elements[index])->layout;
+    ast_layout_t *poly_layout = &((ast_elem_layout_t*) polymorphic_type->elements[index])->layout;
+
+    ast_field_map_t *concrete_field_map = &concrete_layout->field_map;
+    ast_field_map_t *poly_field_map = &poly_layout->field_map;
+
+    if(!ast_field_maps_identical(concrete_field_map, poly_field_map)){
+        return FAILURE;
+    }
+
+    ast_layout_bone_t concrete_bone = ast_layout_as_bone(concrete_layout);
+    ast_layout_bone_t poly_bone = ast_layout_as_bone(poly_layout);
+
+    return ir_gen_polymorphable_layout_bone(compiler, object, &poly_bone, &concrete_bone, catalog);
 }
 
 errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ir_value_t **concrete_value, ast_type_t *concrete_type, ast_type_t *polymorphic_type, ast_poly_catalog_t *catalog, bool permit_similar_primitives){
@@ -366,10 +438,7 @@ errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ir_valu
             }
             return SUCCESS;
         case AST_ELEM_POLYCOUNT: {
-                if(concrete_type->elements[i]->id != AST_ELEM_FIXED_ARRAY){
-                    // Concrete type must have a fixed array element here
-                    return FAILURE;
-                }
+                if(concrete_elem->id != AST_ELEM_FIXED_ARRAY) return FAILURE;
     
                 length_t required_binding = ((ast_elem_fixed_array_t*) concrete_type->elements[i])->length;
                 
@@ -386,8 +455,13 @@ errorcode_t ir_gen_polymorphable(compiler_t *compiler, object_t *object, ir_valu
                 }
             }
             break;
+        case AST_ELEM_LAYOUT:
+            if(ir_gen_polymorphable_elem_layout(compiler, object, polymorphic_type, concrete_type, catalog, i)){
+                return FAILURE;
+            }
+            return SUCCESS;
         default:
-            internalerrorprintf("ir_gen_polymorphable() - Encountered unrecognized element ID 0x%8X\n", polymorphic_type->elements[i]->id);
+            internalerrorprintf("ir_gen_polymorphable() - Encountered unrecognized element ID 0x%08X\n", polymorphic_type->elements[i]->id);
             return ALT_FAILURE;
         }
     }
