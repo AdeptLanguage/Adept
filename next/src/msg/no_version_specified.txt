@@ -1,0 +1,3 @@
+No compiler version specified for `%S`!
+    To use Adept 3.x, your file must start with `pragma compiler_version '3.0'`
+    To use Adept 2.x, specify the `-2` flag

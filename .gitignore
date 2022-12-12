@@ -15,4 +15,6 @@ bugs
 dev/counter.py
 dev/iwyu.out
 dev/remove_include_comments.regex
-next
+next/grab_import.sh
+next/main
+next/next.adept

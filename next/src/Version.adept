@@ -1,0 +1,4 @@
+
+namespace adept
+
+enum Version (TWO, THREE)

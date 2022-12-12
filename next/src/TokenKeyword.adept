@@ -1,0 +1,47 @@
+
+import "TokenID.adept"
+
+namespace adept {
+    func getTokenForKeyword(identifier String) adept\TokenID {
+        info *adept\TokenKeyword = adept\keywords.search(identifier)
+        return info ? info.token_id : adept\TokenID::NONE
+    }
+
+    keywords <adept\TokenKeyword> List = adept\getKeywords()
+
+    func getKeywords() <adept\TokenKeyword> List {
+        list <adept\TokenKeyword> List
+        keyword_suffix StringView = " keyword"
+
+        repeat static adept\TokenID::NUM_ITEMS as usize {
+            token_id adept\TokenID = idx as adept\TokenID
+            info *adept\TokenAssociatedInfo = adept\getAssociatedInfo(token_id)
+
+            if info.category == ::KEYWORD && info.name.endsWith(keyword_suffix) {
+                identifier StringView = info.name.range(0, info.name.length - keyword_suffix.length)
+                list.add(
+                    adept\TokenKeyword(
+                        identifier,
+                        token_id
+                    )
+                )
+            }
+        }
+
+        qsort(list.items, list.length, sizeof adept\TokenKeyword, func &adept\compareKeywords as ptr as func(ptr, ptr) int)
+
+        return list.commit()
+    }
+
+    record TokenKeyword (identifier StringView, token_id adept\TokenID)
+
+    func compareKeywords(a *adept\TokenKeyword, b *adept\TokenKeyword) int {
+        return a.identifier.compare(b.identifier)
+    }
+}
+
+func search(this *<adept\TokenKeyword> List, identifier String) *adept\TokenKeyword {
+    key adept\TokenKeyword = adept\TokenKeyword(identifier, ::NONE)
+    compare_fn func(ptr, ptr) int = func &adept\compareKeywords(*adept\TokenKeyword, *adept\TokenKeyword) as ptr as func(ptr, ptr) int
+    return bsearch(&key, this.items, this.length, sizeof(key), compare_fn)
+}

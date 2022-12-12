@@ -1,0 +1,5 @@
+Usage: adept [options] [filename]
+
+Options:
+    -h, --help        Display this message
+    -e                Execute result

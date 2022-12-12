@@ -1,0 +1,30 @@
+
+pragma compiler_version '2.8'
+
+import "src/Context.adept"
+import "src/Lexer.adept"
+
+func main(argc int, argv **ubyte) int {
+    context adept\Context(argc, argv)
+
+    exhaustive switch context.intent {
+    case ::FAILED_TO_PARSE_ARGS
+        return 1
+    case ::HELP
+        context.output.send(adept\Icon())
+        context.output.send(adept\Text(embed "src/msg/help.txt", none()))
+        return 0
+    case ::COMPILE
+        tokenlist <adept\Token> List
+
+        unless adept\lex(&context, context.filename.get()).take(&tokenlist) {
+            return context.exit_code
+        }
+
+        each adept\Token in tokenlist {
+            print(adept\getAssociatedInfo(it.id).name)
+        }
+    }
+
+    return 0
+}

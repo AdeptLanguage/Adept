@@ -1,0 +1,41 @@
+
+import del
+import "TokenID.adept"
+
+record adept\Token (id adept\TokenID, extra *adept\TokenExtra, source adept\Source) {
+    func __defer__ {
+        exhaustive switch adept\getAssociatedInfo(this.id).extra_kind {
+        case ::ID_ONLY,  // (nothing)
+        case ::SIGNED,   delete this.extra
+        case ::UNSIGNED, delete this.extra
+        case ::FLOATING, delete this.extra
+        case ::STRING,   del(this.extra as *String)
+        }
+    }
+}
+
+union adept\TokenExtra (string String, signed long, unsigned ulong, floating double)
+
+func adept\TokenExtra(string String) *adept\TokenExtra {
+    result *String = new String
+    *result = string.toOwned()
+    return result as *adept\TokenExtra
+}
+
+func adept\TokenExtra(signed long) *adept\TokenExtra {
+    result *long = new undef long
+    *result = signed
+    return result as *adept\TokenExtra
+}
+
+func adept\TokenExtra(unsigned ulong) *adept\TokenExtra {
+    result *ulong = new undef ulong
+    *result = unsigned
+    return result as *adept\TokenExtra
+}
+
+func adept\TokenExtra(floating double) *adept\TokenExtra {
+    result *double = new undef double
+    *result = floating
+    return result as *adept\TokenExtra
+}

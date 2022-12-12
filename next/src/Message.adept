@@ -1,0 +1,39 @@
+
+import String
+import Optional
+
+import "configuration.adept"
+import "Source.adept"
+
+enum adept\MessageKind (NONE, ERROR, WARNING, INFO, ICON)
+
+record adept\Message (kind adept\MessageKind, content String, source <adept\Source> Optional) {
+    func make {
+        this.content.make()
+    }
+
+    func equals(other *adept\Message) bool {
+        return this.kind == other.kind &&
+               this.content == other.content &&
+               this.source.equals(&other.source)
+    }
+}
+
+func adept\Text(content String, source <adept\Source> Optional) adept\Message
+    = adept\Message(::NONE, content, source)
+
+func adept\Error(content String, source <adept\Source> Optional) adept\Message
+    = adept\Message(::ERROR, content, source)
+
+func adept\Warning(content String, source <adept\Source> Optional) adept\Message
+    = adept\Message(::WARNING, content, source)
+
+func adept\Info(content String, source <adept\Source> Optional) adept\Message
+    = adept\Message(::INFO, content, source)
+
+func adept\Icon() adept\Message
+    = adept\Message(
+        ::ICON,
+        sprintf("The Adept Compiler v%S - (c) 2016-2022 Isaac Shelton", adept\VERSION_STRING),
+        none()
+    )
