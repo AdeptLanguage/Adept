@@ -100,6 +100,7 @@ LOW-PRIORITY:
 * parse arguments before reading config, and never check for updates when using options such as `--root`, `-h`, and `--help`
 * include trace back for `Encountered undetermined polymorphic type '$T' in type '$T'` error
 * `delete[count] pointer` syntax to allow for __defer__/delete in single step
+* allow trailing comma for enum members
 
 v2.4 COMPLETED:
 + Standard Library Imports

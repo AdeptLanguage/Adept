@@ -99,6 +99,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
+          sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
       - name: Download static zlib libraries (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
