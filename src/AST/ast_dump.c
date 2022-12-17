@@ -127,8 +127,8 @@ static void ast_dump_stmt_repeat(FILE *file, ast_expr_repeat_t *stmt, length_t i
     fprintf(file, "%s ", s);
     free(s);
 
-    if(stmt->idx_overload_name){
-        fprintf(file, "using %s ", stmt->idx_overload_name);
+    if(stmt->idx_name){
+        fprintf(file, "using %s ", stmt->idx_name);
     }
 
     fprintf(file, "{\n");

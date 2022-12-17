@@ -167,14 +167,6 @@ typedef struct {
     weak_cstr_t kind_name;
 } ast_elem_unknown_enum_t;
 
-// ---------------- ast_unnamed_arg_t ----------------
-// Data structure for an unnamed argument
-typedef struct {
-    ast_type_t type;
-    source_t source;
-    char flow; // in | out | inout
-} ast_unnamed_arg_t;
-
 // ---------------- ast_type_clone ----------------
 // Clones an AST type, producing a duplicate
 ast_type_t ast_type_clone(const ast_type_t *type);

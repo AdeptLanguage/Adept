@@ -133,6 +133,7 @@ tokens = [
     Token("alignof"               , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "alignof keyword"                   ),
     Token("and"                   , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "and keyword"                       ),
     Token("as"                    , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "as keyword"                        ),
+    Token("assert"                , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "assert keyword"                    ),
     Token("at"                    , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "at keyword"                        ),
     Token("break"                 , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "break keyword"                     ),
     Token("case"                  , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "case keyword"                      ),

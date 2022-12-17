@@ -1633,7 +1633,7 @@ errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
     
     open_scope(builder);
 
-    weak_cstr_t idx_var_name = stmt->idx_overload_name ? stmt->idx_overload_name : "idx";
+    weak_cstr_t idx_var_name = stmt->idx_name ? stmt->idx_name : "idx";
 
     // Create 'idx' variable
     add_variable(builder, idx_var_name, idx_ast_type, idx_ir_type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);

@@ -380,6 +380,13 @@ typedef struct {
     ast_expr_list_t statements;
 } ast_expr_conditionless_block_t;
 
+// ---------------- ast_expr_assert_t ----------------
+// An assertion statement
+typedef struct {
+    DERIVE_AST_EXPR;
+    ast_expr_t *assertion;
+} ast_expr_assert_t;
+
 // ---------------- ast_expr_each_in_t ----------------
 // Expression for 'each in' loop. Used for iterating
 // over a low-level array given a length.
@@ -403,7 +410,7 @@ typedef struct {
     weak_cstr_t label;
     ast_expr_t *limit;
     ast_expr_list_t statements;
-    maybe_null_weak_cstr_t idx_overload_name;
+    maybe_null_weak_cstr_t idx_name;
     bool is_static;
 } ast_expr_repeat_t;
 
@@ -659,6 +666,11 @@ ast_expr_t *ast_expr_create_switch(source_t source, ast_expr_t *value, ast_case_
 // ---------------- ast_expr_create_declare_named_expression ----------------
 // Creates a declare-named-expression statement
 ast_expr_t *ast_expr_create_declare_named_expression(source_t source, ast_named_expression_t named_expression);
+
+// ---------------- ast_expr_create_declare_named_expression ----------------
+// Creates a declare-named-expression statement
+ast_expr_t *ast_expr_create_assert(source_t source, ast_expr_t *assertion);
+
 
 // ---------------- ast_expr_list_create ----------------
 // Creates an ast_expr_list_t with a given capacity

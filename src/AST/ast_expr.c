@@ -54,48 +54,55 @@ ast_expr_t *ast_expr_clone_if_not_null(ast_expr_t *expr){
     return expr ? ast_expr_clone(expr) : NULL;
 }
 
-ast_expr_t *ast_expr_clone(ast_expr_t* expr){
-    ast_expr_t *clone = NULL;
+static inline ast_expr_t **ast_exprs_clone(ast_expr_t **exprs, length_t arity){
+    ast_expr_t **array = malloc(sizeof *array * arity);
 
-    #define MACRO_VALUE_CLONE(expr_type) { \
-        clone = malloc(sizeof(expr_type)); \
-        *((expr_type*) clone) = *((expr_type*) expr); \
+    for(length_t i = 0; i < arity; i++){
+        array[i] = ast_expr_clone(exprs[i]);
     }
 
-    // TODO: CLEANUP: Clean up this code
+    return array;
+}
+
+ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     switch(expr->id){
-    case EXPR_BYTE:          MACRO_VALUE_CLONE(ast_expr_byte_t); break;
-    case EXPR_UBYTE:         MACRO_VALUE_CLONE(ast_expr_ubyte_t); break;
-    case EXPR_SHORT:         MACRO_VALUE_CLONE(ast_expr_short_t); break;
-    case EXPR_USHORT:        MACRO_VALUE_CLONE(ast_expr_ushort_t); break;
-    case EXPR_INT:           MACRO_VALUE_CLONE(ast_expr_int_t); break;
-    case EXPR_UINT:          MACRO_VALUE_CLONE(ast_expr_uint_t); break;
-    case EXPR_LONG:          MACRO_VALUE_CLONE(ast_expr_long_t); break;
-    case EXPR_ULONG:         MACRO_VALUE_CLONE(ast_expr_ulong_t); break;
-    case EXPR_USIZE:         MACRO_VALUE_CLONE(ast_expr_usize_t); break;
-    case EXPR_FLOAT:         MACRO_VALUE_CLONE(ast_expr_float_t); break;
-    case EXPR_DOUBLE:        MACRO_VALUE_CLONE(ast_expr_double_t); break;
-    case EXPR_BOOLEAN:       MACRO_VALUE_CLONE(ast_expr_boolean_t); break;
-    case EXPR_GENERIC_INT:   MACRO_VALUE_CLONE(ast_expr_generic_int_t); break;
-    case EXPR_GENERIC_FLOAT: MACRO_VALUE_CLONE(ast_expr_generic_float_t); break;
-    case EXPR_CSTR:          MACRO_VALUE_CLONE(ast_expr_cstr_t); break;
     case EXPR_NULL:
     case EXPR_BREAK:
     case EXPR_CONTINUE:
     case EXPR_FALLTHROUGH:
-        clone = malloc(sizeof(ast_expr_t));
-        break;
+        return memclone(expr, sizeof(ast_expr_t));
+    case EXPR_BYTE:
+        return memclone(expr, sizeof(ast_expr_byte_t));
+    case EXPR_UBYTE:
+        return memclone(expr, sizeof(ast_expr_ubyte_t));
+    case EXPR_SHORT:
+        return memclone(expr, sizeof(ast_expr_short_t));
+    case EXPR_USHORT:
+        return memclone(expr, sizeof(ast_expr_ushort_t));
+    case EXPR_INT:
+        return memclone(expr, sizeof(ast_expr_int_t));
+    case EXPR_UINT:
+        return memclone(expr, sizeof(ast_expr_uint_t));
+    case EXPR_LONG:
+        return memclone(expr, sizeof(ast_expr_long_t));
+    case EXPR_ULONG:
+        return memclone(expr, sizeof(ast_expr_ulong_t));
+    case EXPR_USIZE:
+        return memclone(expr, sizeof(ast_expr_usize_t));
+    case EXPR_FLOAT:
+        return memclone(expr, sizeof(ast_expr_float_t));
+    case EXPR_DOUBLE:
+        return memclone(expr, sizeof(ast_expr_double_t));
+    case EXPR_BOOLEAN:
+        return memclone(expr, sizeof(ast_expr_boolean_t));
+    case EXPR_GENERIC_INT:
+        return memclone(expr, sizeof(ast_expr_generic_int_t));
+    case EXPR_GENERIC_FLOAT:
+        return memclone(expr, sizeof(ast_expr_generic_float_t));
+    case EXPR_CSTR:
+        return memclone(expr, sizeof(ast_expr_cstr_t));
     case EXPR_STR:
-        #define expr_as_str ((ast_expr_str_t*) expr)
-        #define clone_as_str ((ast_expr_str_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_str_t));
-        clone_as_str->array = expr_as_str->array;
-        clone_as_str->length = expr_as_str->length;
-        break;
-
-        #undef expr_as_str
-        #undef clone_as_str
+        return memclone(expr, sizeof(ast_expr_str_t));
     case EXPR_ADD:
     case EXPR_SUBTRACT:
     case EXPR_MULTIPLY:
@@ -115,64 +122,50 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_BIT_LSHIFT:
     case EXPR_BIT_RSHIFT:
     case EXPR_BIT_LGC_LSHIFT:
-    case EXPR_BIT_LGC_RSHIFT:
-        #define expr_as_math ((ast_expr_math_t*) expr)
-        #define clone_as_math ((ast_expr_math_t*) clone)
+    case EXPR_BIT_LGC_RSHIFT: {
+            ast_expr_math_t *original = (ast_expr_math_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_math_t));
-        clone_as_math->a = ast_expr_clone(expr_as_math->a);
-        clone_as_math->b = ast_expr_clone(expr_as_math->b);
-        break;
-
-        #undef expr_as_math
-        #undef clone_as_math
-    case EXPR_CALL:
-        #define expr_as_call ((ast_expr_call_t*) expr)
-        #define clone_as_call ((ast_expr_call_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_call_t));
-        clone_as_call->name = strclone(expr_as_call->name);
-        clone_as_call->args = malloc(sizeof(ast_expr_t*) * expr_as_call->arity);
-        clone_as_call->arity = expr_as_call->arity;
-        clone_as_call->is_tentative = expr_as_call->is_tentative;
-        clone_as_call->only_implicit = expr_as_call->only_implicit;
-        clone_as_call->no_user_casts = expr_as_call->no_user_casts;
-
-        for(length_t i = 0; i != expr_as_call->arity; i++){
-            clone_as_call->args[i] = ast_expr_clone(expr_as_call->args[i]);
+            return (ast_expr_t*) malloc_init(ast_expr_math_t, {
+                .id = original->id,
+                .source = original->source,
+                .a = ast_expr_clone(original->a),
+                .b = ast_expr_clone(original->b),
+            });
         }
+    case EXPR_CALL: {
+            ast_expr_call_t *original = (ast_expr_call_t*) expr;
 
-        if(expr_as_call->gives.elements_length != 0){
-            clone_as_call->gives = ast_type_clone(&expr_as_call->gives);
-        } else {
-            memset(&clone_as_call->gives, 0, sizeof(ast_type_t));
+            return (ast_expr_t*) malloc_init(ast_expr_call_t, {
+                .id = original->id,
+                .source = original->source,
+                .name = strclone(original->name),
+                .args = ast_exprs_clone(original->args, original->arity),
+                .arity = original->arity,
+                .is_tentative = original->is_tentative,
+                .only_implicit = original->only_implicit,
+                .no_user_casts = original->no_user_casts,
+                .gives = AST_TYPE_IS_NONE(original->gives) ? AST_TYPE_NONE : ast_type_clone(&original->gives),
+            });
         }
-        break;
+    case EXPR_VARIABLE: {
+            ast_expr_variable_t *original = (ast_expr_variable_t*) expr;
 
-        #undef expr_as_call
-        #undef clone_as_call
-    case EXPR_VARIABLE:
-        #define expr_as_variable ((ast_expr_variable_t*) expr)
-        #define clone_as_variable ((ast_expr_variable_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_variable_t, {
+                .id = original->id,
+                .source = original->source,
+                .name = original->name,
+            });
+        }
+    case EXPR_MEMBER: {
+            ast_expr_member_t *original = (ast_expr_member_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_variable_t));
-        clone_as_variable->name = expr_as_variable->name;
-        break;
-
-        #undef expr_as_variable
-        #undef clone_as_variable
-    case EXPR_MEMBER:
-        #define expr_as_member ((ast_expr_member_t*) expr)
-        #define clone_as_member ((ast_expr_member_t*) clone)
-        
-        clone = malloc(sizeof(ast_expr_member_t));
-        clone_as_member->value = ast_expr_clone(expr_as_member->value);
-        clone_as_member->member = malloc(strlen(expr_as_member->member) + 1);
-        strcpy(clone_as_member->member, expr_as_member->member);
-        break;
-
-        #undef expr_as_member    
-        #undef clone_as_member
+            return (ast_expr_t*) malloc_init(ast_expr_member_t, {
+                .id = original->id,
+                .source = original->source,
+                .value = ast_expr_clone(original->value),
+                .member = strclone(original->member),
+            });
+        }
     case EXPR_ADDRESS:
     case EXPR_DEREFERENCE:
     case EXPR_BIT_COMPLEMENT:
@@ -185,529 +178,416 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     case EXPR_POSTDECREMENT:
     case EXPR_TOGGLE:
     case EXPR_VA_START:
-    case EXPR_VA_END:
-        #define expr_as_unary ((ast_expr_unary_t*) expr)
-        #define clone_as_unary ((ast_expr_unary_t*) clone)
+    case EXPR_VA_END: {
+            ast_expr_unary_t *original = (ast_expr_unary_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_unary_t));
-        clone_as_unary->value = ast_expr_clone(expr_as_unary->value);
-        break;
-
-        #undef expr_as_unary
-        #undef clone_as_unary
-    case EXPR_FUNC_ADDR:
-        #define expr_as_func_addr ((ast_expr_func_addr_t*) expr)
-        #define clone_as_func_addr ((ast_expr_func_addr_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_func_addr_t));
-        clone_as_func_addr->name = expr_as_func_addr->name;
-        clone_as_func_addr->traits = expr_as_func_addr->traits;
-        clone_as_func_addr->match_args_length = expr_as_func_addr->match_args_length;
-        clone_as_func_addr->tentative = expr_as_func_addr->tentative;
-        clone_as_func_addr->has_match_args = expr_as_func_addr->has_match_args;
-        
-        if(expr_as_func_addr->match_args == NULL){
-            clone_as_func_addr->match_args = NULL;
-        } else {
-            clone_as_func_addr->match_args = malloc(sizeof(ast_unnamed_arg_t) * expr_as_func_addr->match_args_length);
-
-            for(length_t a = 0; a != clone_as_func_addr->match_args_length; a++){
-                clone_as_func_addr->match_args[a] = ast_type_clone(&expr_as_func_addr->match_args[a]);
-            }
+            return (ast_expr_t*) malloc_init(ast_expr_unary_t, {
+                .id = original->id,
+                .source = original->source,
+                .value = ast_expr_clone(original->value),
+            });
         }
         break;
+    case EXPR_FUNC_ADDR: {
+            ast_expr_func_addr_t *original = (ast_expr_func_addr_t*) expr;
 
-        #undef expr_as_func_addr
-        #undef clone_as_func_addr
+            return (ast_expr_t*) malloc_init(ast_expr_func_addr_t, {
+                .id = original->id,
+                .source = original->source,
+                .name = original->name,
+                .traits = original->traits,
+                .match_args_length = original->match_args_length,
+                .tentative = original->tentative,
+                .has_match_args = original->has_match_args,
+                .match_args = ast_types_clone(original->match_args, original->match_args_length),
+            });
+        }
+        break;
     case EXPR_AT:
-    case EXPR_ARRAY_ACCESS:
-        #define expr_as_access ((ast_expr_array_access_t*) expr)
-        #define clone_as_access ((ast_expr_array_access_t*) clone)
+    case EXPR_ARRAY_ACCESS: {
+            ast_expr_array_access_t *original = (ast_expr_array_access_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_array_access_t));
-        clone_as_access->value = ast_expr_clone(expr_as_access->value);
-        clone_as_access->index = ast_expr_clone(expr_as_access->index);
-        break;
+            return (ast_expr_t*) malloc_init(ast_expr_array_access_t, {
+                .id = original->id,
+                .source = original->source,
+                .value = ast_expr_clone(original->value),
+                .index = ast_expr_clone(original->index),
+            });
+        }
+    case EXPR_CAST: {
+            ast_expr_cast_t *original = (ast_expr_cast_t*) expr;
 
-        #undef expr_as_access
-        #undef clone_as_access
-    case EXPR_CAST:
-        #define expr_as_cast ((ast_expr_cast_t*) expr)
-        #define clone_as_cast ((ast_expr_cast_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_cast_t));
-        clone_as_cast->from = ast_expr_clone(expr_as_cast->from);
-        clone_as_cast->to = ast_type_clone(&expr_as_cast->to);
-        break;
-
-        #undef expr_as_cast
-        #undef clone_as_cast
+            return (ast_expr_t*) malloc_init(ast_expr_cast_t, {
+                .id = original->id,
+                .source = original->source,
+                .from = ast_expr_clone(original->from),
+                .to = ast_type_clone(&original->to),
+            });
+        }
     case EXPR_SIZEOF:
     case EXPR_ALIGNOF:
     case EXPR_TYPEINFO:
-    case EXPR_TYPENAMEOF:
-        #define expr_as_unary_type_expr ((ast_expr_unary_type_t*) expr)
-        #define clone_as_unary_type_expr ((ast_expr_unary_type_t*) clone)
+    case EXPR_TYPENAMEOF: {
+            ast_expr_unary_type_t *original = (ast_expr_unary_type_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_unary_type_t));
-        clone_as_unary_type_expr->type = ast_type_clone(&expr_as_unary_type_expr->type);
-        break;
-
-        #undef expr_as_unary_type_expr
-        #undef clone_as_unary_type_expr
-    case EXPR_SIZEOF_VALUE:
-        #define expr_as_sizeof_value ((ast_expr_sizeof_value_t*) expr)
-        #define clone_as_sizeof_value ((ast_expr_sizeof_value_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_sizeof_value_t));
-        clone_as_sizeof_value->value = ast_expr_clone(expr_as_sizeof_value->value);
-        break;
-
-        #undef expr_as_sizeof_value
-        #undef clone_as_sizeof_value
-    case EXPR_PHANTOM:
-        #define expr_as_phantom ((ast_expr_phantom_t*) expr)
-        #define clone_as_phantom ((ast_expr_phantom_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_phantom_t));
-        clone_as_phantom->type = ast_type_clone(&expr_as_phantom->type);
-        clone_as_phantom->ir_value = expr_as_phantom->ir_value;
-        break;
-
-        #undef expr_as_phantom
-        #undef clone_as_phantom
-    case EXPR_CALL_METHOD:
-        #define expr_as_call_method ((ast_expr_call_method_t*) expr)
-        #define clone_as_call_method ((ast_expr_call_method_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_call_method_t));
-        clone_as_call_method->name = strclone(expr_as_call_method->name);
-        clone_as_call_method->args = malloc(sizeof(ast_expr_t*) * expr_as_call_method->arity);
-        clone_as_call_method->arity = expr_as_call_method->arity;
-        clone_as_call_method->value = ast_expr_clone(expr_as_call_method->value);
-        clone_as_call_method->is_tentative = expr_as_call_method->is_tentative;
-        clone_as_call_method->allow_drop = expr_as_call_method->allow_drop;
-        for(length_t i = 0; i != expr_as_call_method->arity; i++){
-            clone_as_call_method->args[i] = ast_expr_clone(expr_as_call_method->args[i]);
+            return (ast_expr_t*) malloc_init(ast_expr_unary_type_t, {
+                .id = original->id,
+                .source = original->source,
+                .type = ast_type_clone(&original->type),
+            });
         }
+    case EXPR_SIZEOF_VALUE: {
+            ast_expr_sizeof_value_t *original = (ast_expr_sizeof_value_t*) expr;
 
-        if(expr_as_call_method->gives.elements_length != 0){
-            clone_as_call_method->gives = ast_type_clone(&expr_as_call_method->gives);
-        } else {
-            memset(&clone_as_call_method->gives, 0, sizeof(ast_type_t));
+            return (ast_expr_t*) malloc_init(ast_expr_sizeof_value_t, {
+                .id = original->id,
+                .source = original->source,
+                .value = ast_expr_clone(original->value),
+            });
         }
+    case EXPR_PHANTOM: {
+            ast_expr_phantom_t *original = (ast_expr_phantom_t*) expr;
 
-        break;
-        
-        #undef expr_as_call_method
-        #undef clone_as_call_method
-    case EXPR_NEW:
-        #define expr_as_new ((ast_expr_new_t*) expr)
-        #define clone_as_new ((ast_expr_new_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_phantom_t, {
+                .id = original->id,
+                .source = original->source,
+                .type = ast_type_clone(&original->type),
+                .ir_value = original->ir_value,
+            });
+        }
+    case EXPR_CALL_METHOD: {
+            ast_expr_call_method_t *original = (ast_expr_call_method_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_new_t));
-        clone_as_new->type = ast_type_clone(&expr_as_new->type);
-        clone_as_new->amount = expr_as_new->amount ? ast_expr_clone(expr_as_new->amount) : NULL;
-        clone_as_new->is_undef = expr_as_new->is_undef;
-        clone_as_new->inputs = optional_ast_expr_list_clone(&expr_as_new->inputs);
+            return (ast_expr_t*) malloc_init(ast_expr_call_method_t, {
+                .id = original->id,
+                .source = original->source,
+                .name = strclone(original->name),
+                .args = ast_exprs_clone(original->args, original->arity),
+                .arity = original->arity,
+                .value = ast_expr_clone(original->value),
+                .is_tentative = original->is_tentative,
+                .allow_drop = original->allow_drop,
+                .gives = AST_TYPE_IS_NONE(original->gives) ? AST_TYPE_NONE : ast_type_clone(&original->gives),
+            });
+        }
+    case EXPR_NEW: {
+            ast_expr_new_t *original = (ast_expr_new_t*) expr;
 
-        break;
-
-        #undef expr_as_new
-        #undef clone_as_new
+            return (ast_expr_t*) malloc_init(ast_expr_new_t, {
+                .id = original->id,
+                .source = original->source,
+                .type = ast_type_clone(&original->type),
+                .amount = ast_expr_clone_if_not_null(original->amount),
+                .is_undef = original->is_undef,
+                .inputs = optional_ast_expr_list_clone(&original->inputs),
+            });
+        }
     case EXPR_NEW_CSTRING:
-        #define expr_as_new_cstring ((ast_expr_new_cstring_t*) expr)
-        #define clone_as_new_cstring ((ast_expr_new_cstring_t*) clone)
+        return memclone(expr, sizeof(ast_expr_new_cstring_t));
+    case EXPR_STATIC_ARRAY:
+    case EXPR_STATIC_STRUCT: {
+            ast_expr_static_data_t *original = (ast_expr_static_data_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_new_cstring_t));
-        clone_as_new_cstring->value = expr_as_new_cstring->value;
-        break;
-
-        #undef expr_as_new_cstring
-        #undef clone_as_new_cstring
-    case EXPR_STATIC_ARRAY: case EXPR_STATIC_STRUCT:
-        #define expr_as_static_data ((ast_expr_static_data_t*) expr)
-        #define clone_as_static_data ((ast_expr_static_data_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_static_data_t));
-        clone_as_static_data->type = ast_type_clone(&expr_as_static_data->type);
-        clone_as_static_data->values = malloc(sizeof(ast_expr_t*) * expr_as_static_data->length);
-        clone_as_static_data->length = expr_as_static_data->length;
-
-        for(length_t i = 0; i != expr_as_static_data->length; i++){
-            clone_as_static_data->values[i] = ast_expr_clone(expr_as_static_data->values[i]);
+            return (ast_expr_t*) malloc_init(ast_expr_static_data_t, {
+                .id = original->id,
+                .source = original->source,
+                .type = ast_type_clone(&original->type),
+                .values = ast_exprs_clone(original->values, original->length),
+                .length = original->length,
+            });
         }
         break;
-
-        #undef expr_as_static_data
-        #undef clone_as_static_data
     case EXPR_ENUM_VALUE:
-        #define expr_as_enum_value ((ast_expr_enum_value_t*) expr)
-        #define clone_as_enum_value ((ast_expr_enum_value_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_enum_value_t));
-        clone_as_enum_value->enum_name = expr_as_enum_value->enum_name;
-        clone_as_enum_value->kind_name = expr_as_enum_value->kind_name;
-        break;
-
-        #undef expr_as_enum_value
-        #undef clone_as_enum_value
+        return memclone(expr, sizeof(ast_expr_enum_value_t));
     case EXPR_GENERIC_ENUM_VALUE:
-        clone = (ast_expr_t*) malloc_init(ast_expr_generic_enum_value_t, {
-            .kind_name = ((ast_expr_generic_enum_value_t*) expr)->kind_name,
-        });
-        break;
-    case EXPR_TERNARY:
-        #define expr_as_ternary ((ast_expr_ternary_t*) expr)
-        #define clone_as_ternary ((ast_expr_ternary_t*) clone)
+        return memclone(expr, sizeof(ast_expr_generic_enum_value_t));
+    case EXPR_TERNARY: {
+            ast_expr_ternary_t *original = (ast_expr_ternary_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_ternary_t));
-        clone_as_ternary->condition = ast_expr_clone(expr_as_ternary->condition);
-        clone_as_ternary->if_true = ast_expr_clone(expr_as_ternary->if_true);
-        clone_as_ternary->if_false = ast_expr_clone(expr_as_ternary->if_false);
-        break;
-
-        #undef expr_as_ternary
-        #undef clone_as_ternary
-    case EXPR_VA_ARG:
-        #define expr_as_va_arg ((ast_expr_va_arg_t*) expr)
-        #define clone_as_va_arg ((ast_expr_va_arg_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_va_arg_t));
-        clone_as_va_arg->va_list = ast_expr_clone(expr_as_va_arg->va_list);
-        clone_as_va_arg->arg_type = ast_type_clone(&expr_as_va_arg->arg_type);
-        break;
-
-        #undef expr_as_va_arg
-        #undef clone_as_va_arg
-    case EXPR_INITLIST:
-        #define expr_as_initlist ((ast_expr_initlist_t*) expr)
-        #define clone_as_initlist ((ast_expr_initlist_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_initlist_t));
-        clone_as_initlist->elements = malloc(sizeof(ast_expr_t*) * expr_as_initlist->length);
-        clone_as_initlist->length = expr_as_initlist->length;
-
-        for(length_t i = 0; i != expr_as_initlist->length; i++){
-            clone_as_initlist->elements[i] = ast_expr_clone(expr_as_initlist->elements[i]);
+            return (ast_expr_t*) malloc_init(ast_expr_ternary_t, {
+                .id = original->id,
+                .source = original->source,
+                .condition = ast_expr_clone(original->condition),
+                .if_true = ast_expr_clone(original->if_true),
+                .if_false = ast_expr_clone(original->if_false),
+            });
         }
+    case EXPR_VA_ARG: {
+            ast_expr_va_arg_t *original = (ast_expr_va_arg_t*) expr;
 
-        break;
-
-        #undef expr_as_initlist
-        #undef clone_as_initlist
-    case EXPR_POLYCOUNT:
-        #define expr_as_polycount ((ast_expr_polycount_t*) expr)
-        #define clone_as_polycount ((ast_expr_polycount_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_polycount_t));
-        clone_as_polycount->name = strclone(expr_as_polycount->name);
-        break;
-
-        #undef expr_as_polycount
-        #undef clone_as_polycount
-    case EXPR_LLVM_ASM:
-        #define expr_as_llvm_asm ((ast_expr_llvm_asm_t*) expr)
-        #define clone_as_llvm_asm ((ast_expr_llvm_asm_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_llvm_asm_t));
-        clone_as_llvm_asm->assembly = strclone(expr_as_llvm_asm->assembly);
-        clone_as_llvm_asm->constraints = expr_as_llvm_asm->constraints;
-        clone_as_llvm_asm->args = malloc(sizeof(ast_expr_t*) * expr_as_llvm_asm->arity);
-        clone_as_llvm_asm->arity = expr_as_llvm_asm->arity;
-        clone_as_llvm_asm->has_side_effects = expr_as_llvm_asm->has_side_effects;
-        clone_as_llvm_asm->is_stack_align =expr_as_llvm_asm->is_stack_align;
-        clone_as_llvm_asm->is_intel = expr_as_llvm_asm->is_intel;
-
-        for(length_t i = 0; i != expr_as_llvm_asm->arity; i++){
-            clone_as_llvm_asm->args[i] = ast_expr_clone(expr_as_llvm_asm->args[i]);
+            return (ast_expr_t*) malloc_init(ast_expr_va_arg_t, {
+                .id = original->id,
+                .source = original->source,
+                .va_list = ast_expr_clone(original->va_list),
+                .arg_type = ast_type_clone(&original->arg_type),
+            });
         }
-        break;
+    case EXPR_INITLIST: {
+            ast_expr_initlist_t *original = (ast_expr_initlist_t*) expr;
 
-        #undef expr_as_llvm_asm
-        #undef clone_as_llvm_asm
-    case EXPR_EMBED:
-        #define expr_as_embed ((ast_expr_embed_t*) expr)
-        #define clone_as_embed ((ast_expr_embed_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_initlist_t, {
+                .id = original->id,
+                .source = original->source,
+                .elements = ast_exprs_clone(original->elements, original->length),
+                .length = original->length,
+            });
+        }
+    case EXPR_POLYCOUNT: {
+            ast_expr_polycount_t *original = (ast_expr_polycount_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_embed_t));
-        clone_as_embed->filename = strclone(expr_as_embed->filename);
-        break;
+            return (ast_expr_t*) malloc_init(ast_expr_polycount_t, {
+                .id = original->id,
+                .source = original->source,
+                .name = strclone(original->name),
+            });
+        }
+    case EXPR_LLVM_ASM: {
+            ast_expr_llvm_asm_t *original = (ast_expr_llvm_asm_t*) expr;
 
-        #undef expr_as_embed
-        #undef clone_as_embed
-    case EXPR_DECLARE: case EXPR_DECLAREUNDEF:
-    case EXPR_ILDECLARE: case EXPR_ILDECLAREUNDEF:
-        #define expr_as_declare ((ast_expr_declare_t*) expr)
-        #define clone_as_declare ((ast_expr_declare_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_llvm_asm_t, {
+                .id = original->id,
+                .source = original->source,
+                .assembly = strclone(original->assembly),
+                .constraints = original->constraints,
+                .args = ast_exprs_clone(original->args, original->arity),
+                .arity = original->arity,
+                .has_side_effects = original->has_side_effects,
+                .is_stack_align = original->is_stack_align,
+                .is_intel = original->is_intel,
+            });
+        }
+    case EXPR_EMBED: {
+            ast_expr_embed_t *original = (ast_expr_embed_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_declare_t));
-        clone_as_declare->name = expr_as_declare->name;
-        clone_as_declare->type = ast_type_clone(&expr_as_declare->type);
-        clone_as_declare->value = expr_as_declare->value ? ast_expr_clone(expr_as_declare->value) : NULL;
-        clone_as_declare->traits = expr_as_declare->traits;
-        clone_as_declare->inputs = optional_ast_expr_list_clone(&expr_as_declare->inputs);
-        break;
+            return (ast_expr_t*) malloc_init(ast_expr_embed_t, {
+                .id = original->id,
+                .source = original->source,
+                .filename = strclone(original->filename),
+            });
+        }
+    case EXPR_DECLARE:
+    case EXPR_DECLAREUNDEF:
+    case EXPR_ILDECLARE:
+    case EXPR_ILDECLAREUNDEF: {
+            ast_expr_declare_t *original = (ast_expr_declare_t*) expr;
 
-        #undef expr_as_declare
-        #undef clone_as_declare
-    case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
-    case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
-    case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
-    case EXPR_LSHIFT_ASSIGN: case EXPR_RSHIFT_ASSIGN:
-    case EXPR_LGC_LSHIFT_ASSIGN: case EXPR_LGC_RSHIFT_ASSIGN:
-        #define expr_as_assign ((ast_expr_assign_t*) expr)
-        #define clone_as_assign ((ast_expr_assign_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_declare_t, {
+                .id = original->id,
+                .source = original->source,
+                .name = original->name,
+                .type = ast_type_clone(&original->type),
+                .value = ast_expr_clone_if_not_null(original->value),
+                .traits = original->traits,
+                .inputs = optional_ast_expr_list_clone(&original->inputs),
+            });
+        }
+    case EXPR_ASSIGN:
+    case EXPR_ADD_ASSIGN:
+    case EXPR_SUBTRACT_ASSIGN:
+    case EXPR_MULTIPLY_ASSIGN:
+    case EXPR_DIVIDE_ASSIGN:
+    case EXPR_MODULUS_ASSIGN:
+    case EXPR_AND_ASSIGN:
+    case EXPR_OR_ASSIGN:
+    case EXPR_XOR_ASSIGN:
+    case EXPR_LSHIFT_ASSIGN:
+    case EXPR_RSHIFT_ASSIGN:
+    case EXPR_LGC_LSHIFT_ASSIGN:
+    case EXPR_LGC_RSHIFT_ASSIGN: {
+            ast_expr_assign_t *original = (ast_expr_assign_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_assign_t));
-        clone_as_assign->destination = expr_as_assign->destination ? ast_expr_clone(expr_as_assign->destination) : NULL;
-        clone_as_assign->value = expr_as_assign->value ? ast_expr_clone(expr_as_assign->value) : NULL;
-        clone_as_assign->is_pod = expr_as_assign->is_pod;
-        break;
+            return (ast_expr_t*) malloc_init(ast_expr_assign_t, {
+                .id = original->id,
+                .source = original->source,
+                .destination = ast_expr_clone_if_not_null(original->destination),
+                .value = ast_expr_clone_if_not_null(original->value),
+                .is_pod = original->is_pod,
+            });
+        }
+    case EXPR_RETURN: {
+            ast_expr_return_t *original = (ast_expr_return_t*) expr;
 
-        #undef expr_as_assign
-        #undef clone_as_assign
-    case EXPR_RETURN:
-        #define expr_as_return ((ast_expr_return_t*) expr)
-        #define clone_as_return ((ast_expr_return_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_return_t));
-        clone_as_return->value = expr_as_return->value ? ast_expr_clone(expr_as_return->value) : NULL;
-        clone_as_return->last_minute = ast_expr_list_clone(&expr_as_return->last_minute);
-        break;
-
-        #undef expr_as_return
-        #undef clone_as_return
+            return (ast_expr_t*) malloc_init(ast_expr_return_t, {
+                .id = original->id,
+                .source = original->source,
+                .value = ast_expr_clone_if_not_null(original->value),
+                .last_minute = ast_expr_list_clone(&original->last_minute),
+            });
+        }
     case EXPR_IF:
     case EXPR_UNLESS:
     case EXPR_WHILE:
     case EXPR_UNTIL:
     case EXPR_WHILECONTINUE:
-    case EXPR_UNTILBREAK:
-        #define expr_as_if ((ast_expr_if_t*) expr)
-        #define clone_as_if ((ast_expr_if_t*) clone)
+    case EXPR_UNTILBREAK: {
+            ast_expr_if_t *original = (ast_expr_if_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_if_t));
-        clone_as_if->label = expr_as_if->label;
-        clone_as_if->value = expr_as_if->value ? ast_expr_clone(expr_as_if->value) : NULL;
-        clone_as_if->statements = ast_expr_list_clone(&expr_as_if->statements);
-        break;
-        
-        #undef expr_as_if
-        #undef clone_as_if
-    case EXPR_IFELSE:
-    case EXPR_UNLESSELSE:
-        #define expr_as_ifelse ((ast_expr_ifelse_t*) expr)
-        #define clone_as_ifelse ((ast_expr_ifelse_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_ifelse_t));
-        clone_as_ifelse->label = expr_as_ifelse->label;
-        clone_as_ifelse->value = ast_expr_clone(expr_as_ifelse->value);
-        clone_as_ifelse->statements = ast_expr_list_clone(&expr_as_ifelse->statements);
-        clone_as_ifelse->else_statements = ast_expr_list_clone(&expr_as_ifelse->else_statements);
-        break;
-        
-        #undef expr_as_ifelse
-        #undef clone_as_ifelse
-    case EXPR_EACH_IN:
-        #define expr_as_each_in ((ast_expr_each_in_t*) expr)
-        #define clone_as_each_in ((ast_expr_each_in_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_each_in_t));
-        clone_as_each_in->label = expr_as_each_in->label;
-        clone_as_each_in->it_name = expr_as_each_in->it_name ? strclone(expr_as_each_in->it_name) : NULL;
-
-        if(expr_as_each_in->it_type){
-            clone_as_each_in->it_type = malloc(sizeof(ast_type_t));
-            *clone_as_each_in->it_type = ast_type_clone(expr_as_each_in->it_type);
-        } else {
-            clone_as_each_in->it_type = NULL;
+            return (ast_expr_t*) malloc_init(ast_expr_if_t, {
+                .id = original->id,
+                .source = original->source,
+                .label = original->label,
+                .value = ast_expr_clone_if_not_null(original->value),
+                .statements = ast_expr_list_clone(&original->statements),
+            });
         }
+    case EXPR_IFELSE:
+    case EXPR_UNLESSELSE: {
+            ast_expr_ifelse_t *original = (ast_expr_ifelse_t*) expr;
 
-        clone_as_each_in->low_array = expr_as_each_in->low_array ? ast_expr_clone(expr_as_each_in->low_array) : NULL;
-        clone_as_each_in->length = expr_as_each_in->length ? ast_expr_clone(expr_as_each_in->length) : NULL;
-        clone_as_each_in->list = expr_as_each_in->list ? ast_expr_clone(expr_as_each_in->list) : NULL;
-        clone_as_each_in->statements = ast_expr_list_clone(&expr_as_each_in->statements);
-        clone_as_each_in->is_static = expr_as_each_in->is_static;
-        break;
+            return (ast_expr_t*) malloc_init(ast_expr_ifelse_t, {
+                .id = original->id,
+                .source = original->source,
+                .label = original->label,
+                .value = ast_expr_clone(original->value),
+                .statements = ast_expr_list_clone(&original->statements),
+                .else_statements = ast_expr_list_clone(&original->else_statements),
+            });
+        }
+    case EXPR_EACH_IN: {
+            ast_expr_each_in_t *original = (ast_expr_each_in_t*) expr;
 
-        #undef expr_as_each_in
-        #undef clone_as_each_in
-    case EXPR_REPEAT:
-        #define expr_as_repeat ((ast_expr_repeat_t*) expr)
-        #define clone_as_repeat ((ast_expr_repeat_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_each_in_t, {
+                .id = original->id,
+                .source = original->source,
+                .label = original->label,
+                .it_name = original->it_name ? strclone(original->it_name) : NULL,
+                .it_type = original->it_type ? malloc_init(ast_type_t, ast_type_clone(original->it_type)) : NULL,
+                .low_array = ast_expr_clone_if_not_null(original->low_array),
+                .length = ast_expr_clone_if_not_null(original->length),
+                .list = ast_expr_clone_if_not_null(original->list),
+                .statements = ast_expr_list_clone(&original->statements),
+                .is_static = original->is_static,
+            });
+        }
+    case EXPR_REPEAT: {
+            ast_expr_repeat_t *original = (ast_expr_repeat_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_repeat_t));
-        clone_as_repeat->label = expr_as_repeat->label;
-        clone_as_repeat->limit = expr_as_repeat->limit ? ast_expr_clone(expr_as_repeat->limit) : NULL;
-        clone_as_repeat->statements = ast_expr_list_clone(&expr_as_repeat->statements);
-        clone_as_repeat->is_static = expr_as_repeat->is_static;
-        clone_as_repeat->idx_overload_name = expr_as_repeat->idx_overload_name;
-        break;
-
-        #undef expr_as_repeat
-        #undef clone_as_repeat
+            return (ast_expr_t*) malloc_init(ast_expr_repeat_t, {
+                .id = original->id,
+                .source = original->source,
+                .label = original->label,
+                .limit = ast_expr_clone_if_not_null(original->limit),
+                .statements = ast_expr_list_clone(&original->statements),
+                .is_static = original->is_static,
+                .idx_name = original->idx_name,
+            });
+        }
     case EXPR_BREAK_TO:
     case EXPR_CONTINUE_TO:
-        #define expr_as_break_to ((ast_expr_break_to_t*) expr)
-        #define clone_as_break_to ((ast_expr_break_to_t*) clone)
+        return memclone(expr, sizeof(ast_expr_break_to_t));
+    case EXPR_SWITCH: {
+            ast_expr_switch_t *original = (ast_expr_switch_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_break_to_t));
-        clone_as_break_to->label_source = expr_as_break_to->label_source;
-        clone_as_break_to->label = expr_as_break_to->label;
-        break;
+            return (ast_expr_t*) malloc_init(ast_expr_switch_t, {
+                .id = original->id,
+                .source = original->source,
+                .value = ast_expr_clone(original->value),
+                .cases = ast_case_list_clone(&original->cases),
+                .or_default = ast_expr_list_clone(&original->or_default),
+                .is_exhaustive = original->is_exhaustive,
+            });
+        }
+    case EXPR_VA_COPY: {
+            ast_expr_va_copy_t *original = (ast_expr_va_copy_t*) expr;
 
-        #undef expr_as_break_to
-        #undef clone_as_break_to
-    case EXPR_SWITCH:
-        #define expr_as_switch ((ast_expr_switch_t*) expr)
-        #define clone_as_switch ((ast_expr_switch_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_va_copy_t, {
+                .id = original->id,
+                .source = original->source,
+                .src_value = ast_expr_clone(original->src_value),
+                .dest_value = ast_expr_clone(original->dest_value),
+            });
+        }
+    case EXPR_FOR: {
+            ast_expr_for_t *original = (ast_expr_for_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_switch_t));
-        clone_as_switch->value = ast_expr_clone(expr_as_switch->value);
-        clone_as_switch->cases = ast_case_list_clone(&expr_as_switch->cases);
-        clone_as_switch->or_default = ast_expr_list_clone(&expr_as_switch->or_default);
-        clone_as_switch->is_exhaustive = expr_as_switch->is_exhaustive;
-        break;
+            return (ast_expr_t*) malloc_init(ast_expr_for_t, {
+                .id = original->id,
+                .source = original->source,
+                .label = original->label,
+                .condition = ast_expr_clone_if_not_null(original->condition),
+                .before = ast_expr_list_clone(&original->before),
+                .after = ast_expr_list_clone(&original->after),
+                .statements = ast_expr_list_clone(&original->statements),
+            });
+        }
+    case EXPR_DECLARE_NAMED_EXPRESSION: {
+            ast_expr_declare_named_expression_t *original = (ast_expr_declare_named_expression_t*) expr;
 
-        #undef expr_as_switch
-        #undef clone_as_switch
-    case EXPR_VA_COPY:
-        #define expr_as_va_copy ((ast_expr_va_copy_t*) expr)
-        #define clone_as_va_copy ((ast_expr_va_copy_t*) clone)
+            return (ast_expr_t*) malloc_init(ast_expr_declare_named_expression_t, {
+                .id = original->id,
+                .source = original->source,
+                .named_expression = ast_named_expression_clone(&original->named_expression),
+            });
+        }
+    case EXPR_CONDITIONLESS_BLOCK: {
+            ast_expr_conditionless_block_t *original = (ast_expr_conditionless_block_t*) expr;
 
-        clone = malloc(sizeof(ast_expr_va_copy_t));
-        clone_as_va_copy->src_value = ast_expr_clone(expr_as_va_copy->src_value);
-        clone_as_va_copy->dest_value = ast_expr_clone(expr_as_va_copy->dest_value);
-        break;
-
-        #undef expr_as_va_copy
-        #undef clone_as_va_copy
-    case EXPR_FOR:
-        #define expr_as_for ((ast_expr_for_t*) expr)
-        #define clone_as_for ((ast_expr_for_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_for_t));
-        clone_as_for->label = expr_as_for->label;
-        clone_as_for->condition = expr_as_for->condition ? ast_expr_clone(expr_as_for->condition) : NULL;
-        clone_as_for->before = ast_expr_list_clone(&expr_as_for->before);
-        clone_as_for->after = ast_expr_list_clone(&expr_as_for->after);
-        clone_as_for->statements = ast_expr_list_clone(&expr_as_for->statements);
-        break;
-
-        #undef expr_as_for
-        #undef clone_as_for
-    case EXPR_DECLARE_NAMED_EXPRESSION:
-        #define expr_as_declare_named_expression ((ast_expr_declare_named_expression_t*) expr)
-        #define clone_as_declare_named_expression ((ast_expr_declare_named_expression_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_declare_named_expression_t));
-        clone_as_declare_named_expression->named_expression = ast_named_expression_clone(&expr_as_declare_named_expression->named_expression);
-        break;
-
-        #undef expr_as_declare_named_expression
-        #undef clone_as_declare_named_expression
-    case EXPR_CONDITIONLESS_BLOCK:
-        #define expr_as_block ((ast_expr_conditionless_block_t*) expr)
-        #define clone_as_block ((ast_expr_conditionless_block_t*) clone)
-
-        clone = malloc(sizeof(ast_expr_conditionless_block_t));
-        clone_as_block->statements = ast_expr_list_clone(&expr_as_block->statements);
-        break;
-        
-        #undef expr_as_conditionless_block
-        #undef clone_as_conditionless_block
+            return (ast_expr_t*) malloc_init(ast_expr_conditionless_block_t, {
+                .id = original->id,
+                .source = original->source,
+                .statements = ast_expr_list_clone(&original->statements),
+            });
+        }
     default:
         die("ast_expr_clone() - Got unrecognized expression ID 0x%08X\n", expr->id);
+        return NULL;
     }
-
-    clone->id = expr->id;
-    clone->source = expr->source;
-    return clone;
 }
 
 ast_expr_t *ast_expr_create_bool(adept_bool value, source_t source){
-    ast_expr_boolean_t *expr = malloc(sizeof(ast_expr_boolean_t));
-
-    *expr = (ast_expr_boolean_t){
+    return (ast_expr_t*) malloc_init(ast_expr_boolean_t, {
         .id = EXPR_BOOLEAN,
         .source = source,
         .value = value,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_long(adept_long value, source_t source){
-    ast_expr_long_t *expr = malloc(sizeof(ast_expr_long_t));
-
-    *expr = (ast_expr_long_t){
+    return (ast_expr_t*) malloc_init(ast_expr_long_t, {
         .id = EXPR_LONG,
         .source = source,
         .value = value,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_double(adept_double value, source_t source){
-    ast_expr_double_t *expr = malloc(sizeof(ast_expr_double_t));
-
-    *expr = (ast_expr_double_t){
+    return (ast_expr_t*) malloc_init(ast_expr_double_t, {
         .id = EXPR_DOUBLE,
         .source = source,
         .value = value,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_string(char *array, length_t length, source_t source){
-    ast_expr_str_t *expr = malloc(sizeof(ast_expr_str_t));
-
-    *expr = (ast_expr_str_t){
+    return (ast_expr_t*) malloc_init(ast_expr_str_t, {
         .id = EXPR_STR,
         .source = source,
         .array = array,
         .length = length,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_cstring(char *value, source_t source){
-    ast_expr_cstr_t *expr = malloc(sizeof(ast_expr_cstr_t));
-    
-    *expr = (ast_expr_cstr_t){
+    return (ast_expr_t*) malloc_init(ast_expr_cstr_t, {
         .id = EXPR_CSTR,
         .source = source,
         .value = value,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_null(source_t source){
-    ast_expr_t *expr = malloc(sizeof(ast_expr_null_t));
-
-    *expr = (ast_expr_null_t){
+    return (ast_expr_t*) malloc_init(ast_expr_null_t, {
         .id = EXPR_NULL,
         .source = source,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_variable(weak_cstr_t name, source_t source){
-    ast_expr_variable_t *expr = malloc(sizeof(ast_expr_variable_t));
-
-    *expr = (ast_expr_variable_t){
+    return (ast_expr_t*) malloc_init(ast_expr_variable_t, {
         .id = EXPR_VARIABLE,
         .source = source,
         .name = name,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_call(strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source){
@@ -768,68 +648,48 @@ ast_expr_t *ast_expr_create_generic_enum_value(weak_cstr_t kind, source_t source
 }
 
 ast_expr_t *ast_expr_create_ternary(ast_expr_t *condition, ast_expr_t *if_true, ast_expr_t *if_false, source_t source){
-    ast_expr_ternary_t *expr = malloc(sizeof(ast_expr_ternary_t));
-    
-    *expr = (ast_expr_ternary_t){
+    return (ast_expr_t*) malloc_init(ast_expr_ternary_t, {
         .id = EXPR_TERNARY,
         .source = source,
         .condition = condition,
         .if_true = if_true,
         .if_false = if_false,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_cast(ast_type_t to, ast_expr_t *from, source_t source){
-    ast_expr_cast_t *expr = malloc(sizeof(ast_expr_cast_t));
-    
-    *expr = (ast_expr_cast_t){
+    return (ast_expr_t*) malloc_init(ast_expr_cast_t, {
         .id = EXPR_CAST,
         .to = to,
         .from = from,
         .source = source,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_phantom(ast_type_t ast_type, void *ir_value, source_t source, bool is_mutable){
-    ast_expr_phantom_t *expr = malloc(sizeof(ast_expr_phantom_t));
-
-    *expr = (ast_expr_phantom_t){
+    return (ast_expr_t*) malloc_init(ast_expr_phantom_t, {
         .id = EXPR_PHANTOM,
         .source = source,
         .type = ast_type,
         .ir_value = ir_value,
         .is_mutable = is_mutable,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_typenameof(ast_type_t strong_type, source_t source){
-    ast_expr_typenameof_t *expr = malloc(sizeof(ast_expr_typenameof_t));
-    
-    *expr = (ast_expr_typenameof_t){
+    return (ast_expr_t*) malloc_init(ast_expr_typenameof_t, {
         .id = EXPR_TYPENAMEOF,
         .source = source,
         .type = strong_type,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_embed(strong_cstr_t filename, source_t source){
-    ast_expr_embed_t *expr = malloc(sizeof(ast_expr_embed_t));
-    
-    *expr = (ast_expr_embed_t){
+    return (ast_expr_t*) malloc_init(ast_expr_embed_t, {
         .id = EXPR_EMBED,
         .source = source,
         .filename = filename,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_declaration(
@@ -841,9 +701,7 @@ ast_expr_t *ast_expr_create_declaration(
     ast_expr_t *value,
     optional_ast_expr_list_t inputs
 ){
-    ast_expr_declare_t *expr = malloc(sizeof(ast_expr_declare_t));
-    
-    *expr = (ast_expr_declare_t){
+    return (ast_expr_t*) malloc_init(ast_expr_declare_t, {
         .id = expr_id,
         .source = source,
         .name = name,
@@ -851,106 +709,74 @@ ast_expr_t *ast_expr_create_declaration(
         .type = type,
         .value = value,
         .inputs = inputs,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_assignment(unsigned int stmt_id, source_t source, ast_expr_t *mutable_expression, ast_expr_t *value, bool is_pod){
-    ast_expr_assign_t *expr = malloc(sizeof(ast_expr_assign_t));
-    
-    *expr = (ast_expr_assign_t){
+    return (ast_expr_t*) malloc_init(ast_expr_assign_t, {
         .id = stmt_id,
         .source = source,
         .destination = mutable_expression,
         .value = value,
         .is_pod = is_pod,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_return(source_t source, ast_expr_t *value, ast_expr_list_t last_minute){
-    ast_expr_return_t *expr = malloc(sizeof(ast_expr_return_t));
-    
-    *expr = (ast_expr_return_t){
+    return (ast_expr_t*) malloc_init(ast_expr_return_t, {
         .id = EXPR_RETURN,
         .source = source,
         .value = value,
         .last_minute = last_minute,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_member(ast_expr_t *value, strong_cstr_t member_name, source_t source){
-    ast_expr_member_t *expr = malloc(sizeof(ast_expr_member_t));
-    
-    *expr = (ast_expr_member_t){
+    return (ast_expr_t*) malloc_init(ast_expr_member_t, {
         .id = EXPR_MEMBER,
         .value = value,
         .member = member_name,
         .source = source,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
                 
 ast_expr_t *ast_expr_create_access(ast_expr_t *value, ast_expr_t *index, source_t source){
-    ast_expr_array_access_t *expr = malloc(sizeof(ast_expr_array_access_t));
-    
-    *expr = (ast_expr_array_access_t){
+    return (ast_expr_t*) malloc_init(ast_expr_array_access_t, {
         .id = EXPR_ARRAY_ACCESS,
         .source = source,
         .value = value,
         .index = index,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_va_arg(source_t source, ast_expr_t *va_list_value, ast_type_t arg_type){
-    ast_expr_va_arg_t *expr = malloc(sizeof(ast_expr_va_arg_t));
-    
-    *expr = (ast_expr_va_arg_t){
+    return (ast_expr_t*) malloc_init(ast_expr_va_arg_t, {
         .id = EXPR_VA_ARG,
         .source = source,
         .va_list = va_list_value,
         .arg_type = arg_type,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_polycount(source_t source, strong_cstr_t name){
-    ast_expr_polycount_t *expr = malloc(sizeof(ast_expr_polycount_t));
-
-    *expr = (ast_expr_polycount_t){
+    return (ast_expr_t*) malloc_init(ast_expr_polycount_t, {
         .id = EXPR_POLYCOUNT,
         .source = source,
         .name = name,
-    };
-    
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_va_copy(source_t source, ast_expr_t *dest_value, ast_expr_t *src_value){
-    ast_expr_va_copy_t *expr = malloc(sizeof(ast_expr_va_copy_t));
-    
-    *expr = (ast_expr_va_copy_t){
+    return (ast_expr_t*) malloc_init(ast_expr_va_copy_t, {
         .id = EXPR_VA_COPY,
         .source = source,
         .dest_value = dest_value,
         .src_value = src_value,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_for(source_t source, weak_cstr_t label, ast_expr_list_t before, ast_expr_list_t after, ast_expr_t *condition, ast_expr_list_t statements){
-    ast_expr_for_t *expr = malloc(sizeof(ast_expr_for_t));
-
-    *expr = (ast_expr_for_t){
+    return (ast_expr_t*) malloc_init(ast_expr_for_t, {
         .id = EXPR_FOR,
         .source = source,
         .label = label,
@@ -958,74 +784,60 @@ ast_expr_t *ast_expr_create_for(source_t source, weak_cstr_t label, ast_expr_lis
         .after = after,
         .condition = condition,
         .statements = statements,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_unary(unsigned int expr_id, source_t source, ast_expr_t *value){
-    ast_expr_unary_t *expr = malloc(sizeof(ast_expr_unary_t));
-    
-    *expr = (ast_expr_unary_t){
+    return (ast_expr_t*) malloc_init(ast_expr_unary_t, {
         .id = expr_id,
         .source = source,
         .value = value,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_initlist(source_t source, ast_expr_t **values, length_t length){
-    ast_expr_initlist_t *expr = malloc(sizeof(ast_expr_initlist_t));
-
-    *expr = (ast_expr_initlist_t){
+    return (ast_expr_t*) malloc_init(ast_expr_initlist_t, {
         .id = EXPR_INITLIST,
         .source = source,
         .elements = values,
         .length = length,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_math(source_t source, unsigned int expr_id, ast_expr_t *left, ast_expr_t *right){
-    ast_expr_math_t *expr = malloc(sizeof(ast_expr_math_t));
-    
-    *expr = (ast_expr_math_t){
+    return (ast_expr_t*) malloc_init(ast_expr_math_t, {
         .id = expr_id,
         .source = source,
         .a = left,
         .b = right,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_switch(source_t source, ast_expr_t *value, ast_case_list_t cases, ast_expr_list_t or_default, bool is_exhaustive){
-    ast_expr_switch_t *expr = malloc(sizeof(ast_expr_switch_t));
-    
-    *expr = (ast_expr_switch_t){
+    return (ast_expr_t*) malloc_init(ast_expr_switch_t, {
         .id = EXPR_SWITCH,
         .source = source,
         .value = value,
         .cases = cases,
         .or_default = or_default,
         .is_exhaustive = is_exhaustive,
-    };
-
-    return (ast_expr_t*) expr;
+    });
 }
 
 ast_expr_t *ast_expr_create_declare_named_expression(source_t source, ast_named_expression_t named_expression){
-    ast_expr_declare_named_expression_t *expr = malloc(sizeof(ast_expr_declare_named_expression_t));
-
-    *expr = (ast_expr_declare_named_expression_t){
+    return (ast_expr_t*) malloc_init(ast_expr_declare_named_expression_t, {
         .id = EXPR_DECLARE_NAMED_EXPRESSION,
         .source = source,
         .named_expression = named_expression,
-    };
+    });
+}
 
-    return (ast_expr_t*) expr;
+ast_expr_t *ast_expr_create_assert(source_t source, ast_expr_t *assertion){
+    return (ast_expr_t*) malloc_init(ast_expr_assert_t, {
+        .id = EXPR_ASSERT,
+        .source = source,
+        .assertion = assertion,
+    });
 }
 
 

@@ -412,7 +412,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 ast_expr_t *limit = NULL;
                 trait_t stmts_mode;
                 maybe_null_weak_cstr_t label = NULL;
-                maybe_null_weak_cstr_t idx_overload_name = NULL;
+                maybe_null_weak_cstr_t idx_name = NULL;
 
                 if(tokens[*i].id == TOKEN_WORD && tokens[*i + 1].id == TOKEN_COLON){
                     label = tokens[*i].data;
@@ -429,9 +429,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 }
 
                 if(tokens[*i].id == TOKEN_USING){
-                    idx_overload_name = parse_grab_word(ctx, "Expected name for 'idx' variable after 'using' keyword");
+                    idx_name = parse_grab_word(ctx, "Expected name for 'idx' variable after 'using' keyword");
 
-                    if(idx_overload_name == NULL){
+                    if(idx_name == NULL){
                         ast_expr_free_fully(limit);
                         return FAILURE;
                     }
@@ -475,7 +475,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 stmt->limit = limit;
                 stmt->statements = repeat_stmt_list;
                 stmt->is_static = is_static;
-                stmt->idx_overload_name = idx_overload_name;
+                stmt->idx_name = idx_name;
                 ast_expr_list_append_unchecked(stmt_list, (ast_expr_t*) stmt);
             }
             break;
