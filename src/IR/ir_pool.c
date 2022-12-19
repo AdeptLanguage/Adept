@@ -77,6 +77,6 @@ void ir_pool_snapshot_restore(ir_pool_t *pool, ir_pool_snapshot_t *snapshot){
     pool->fragments[snapshot->fragments_length - 1].used = snapshot->used;
 }
 
-void *ir_pool_memclone(ir_pool_t *pool, void *bytes, length_t num_bytes){
+void *ir_pool_memclone(ir_pool_t *pool, const void *bytes, length_t num_bytes){
     return memcpy(ir_pool_alloc(pool, num_bytes), bytes, num_bytes);
 }

@@ -337,5 +337,9 @@ void ast_expr_free(ast_expr_t *expr){
     case EXPR_CONDITIONLESS_BLOCK:
         ast_expr_list_free(&((ast_expr_conditionless_block_t*) expr)->statements);
         break;
+    case EXPR_ASSERT:
+        ast_expr_free_fully(((ast_expr_assert_t*) expr)->assertion);
+        ast_expr_free_fully(((ast_expr_assert_t*) expr)->message);
+        break;
     }
 }

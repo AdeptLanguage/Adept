@@ -22,6 +22,7 @@
 #include "IRGEN/ir_gen_find.h"
 #include "IRGEN/ir_gen_stmt.h"
 #include "IRGEN/ir_gen_type.h"
+#include "LEX/lex.h"
 #include "UTIL/builtin_type.h"
 #include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
@@ -34,7 +35,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
     ast_type_t temporary_type;
 
     // Default value of whether the statements were terminated is 'false'
-    if(out_is_terminated) *out_is_terminated = false;
+    *out_is_terminated = false;
 
     for(length_t s = 0; s != stmt_list->length; s++){
         ast_expr_t *stmt = stmt_list->statements[s];
@@ -550,6 +551,9 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
                     return SUCCESS;
                 }
             }
+            break;
+        case EXPR_ASSERT:
+            if(ir_gen_stmt_assert(builder, (ast_expr_assert_t*) stmt)) return FAILURE;
             break;
         default:
             compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: Unimplemented statement in ir_gen_stmts()");
@@ -1711,6 +1715,58 @@ errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt){
     builder->continue_block_id = prev_continue_block_id;
     builder->break_continue_scope = prev_break_continue_scope;
     return SUCCESS;
+}
+
+errorcode_t ir_gen_stmt_assert(ir_builder_t *builder, ast_expr_assert_t *stmt){
+    object_t *src_object = builder->compiler->objects[stmt->assertion->source.object_index];
+
+    weak_cstr_t expression_cstr, filename_cstr, function_signature;
+
+    {
+        strong_cstr_t on_heap = ast_expr_str(stmt->assertion);
+        expression_cstr = ir_pool_memclone(builder->pool, on_heap, strlen(on_heap) + 1);
+        free(on_heap);
+    }
+
+    const char *full_filename = src_object->full_filename;
+    filename_cstr = ir_pool_memclone(builder->pool, full_filename, strlen(full_filename) + 1);
+
+    {
+        strong_cstr_t on_heap = ast_func_head_str(&builder->object->ast.funcs[builder->ast_func_id]);
+        function_signature = ir_pool_memclone(builder->pool, on_heap, strlen(on_heap) + 1);
+        free(on_heap);
+    }
+    
+    int line, column;
+    lex_get_location(src_object->buffer, stmt->source.index, &line, &column);
+
+    length_t num_args = 6;
+    ast_expr_t **args = malloc(sizeof *args * num_args);
+    args[0] = stmt->message ? ast_expr_clone(stmt->message) : ast_expr_create_null(stmt->source);
+    args[1] = ast_expr_create_cstring(expression_cstr, stmt->source);
+    args[2] = ast_expr_create_cstring(filename_cstr, stmt->source);
+    args[3] = ast_expr_create_cstring(function_signature, stmt->source);
+    args[4] = ast_expr_create_long(line, stmt->source);
+    args[5] = ast_expr_create_long(column, stmt->source);
+
+    ast_expr_t *call_stmt = ast_expr_create_call(strclone("__assertion_failed__"), num_args, args, false, NULL, stmt->source);
+
+    ast_expr_list_t on_fail_statements = {0};
+    ast_expr_list_append(&on_fail_statements, call_stmt);
+
+    ast_expr_t *conditional = ast_expr_create_simple_conditional(stmt->source, EXPR_UNLESS, NULL, ast_expr_clone(stmt->assertion), on_fail_statements);
+
+    ast_expr_list_t assertion_code = {0};
+    ast_expr_list_append(&assertion_code, conditional);
+
+    bool is_terminated;
+    errorcode_t errorcode = ir_gen_stmts(builder, &assertion_code, &is_terminated);
+    
+    // We don't care if it was terminated
+    (void) is_terminated;
+
+    ast_expr_list_free(&assertion_code);
+    return errorcode;
 }
 
 errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length){

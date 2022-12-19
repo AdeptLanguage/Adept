@@ -99,6 +99,10 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
 // Parses a conditionless block
 errorcode_t parse_conditionless_block(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope);
 
+// ------------------ parse_assert ------------------
+// Parses an assert statement
+errorcode_t parse_assert(parse_ctx_t *ctx, ast_expr_list_t *stmt_list);
+
 // ------------------ parse_mutable_expr_operation ------------------
 // Parses a statement that begins with a mutable expression
 // e.g.  variable = value     or    my_array[index].doSomething()

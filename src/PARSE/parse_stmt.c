@@ -707,6 +707,9 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
         case TOKEN_BEGIN:
             if(parse_conditionless_block(ctx, stmt_list, defer_scope)) return FAILURE;
             break;
+        case TOKEN_ASSERT:
+            if(parse_assert(ctx, stmt_list)) return FAILURE;
+            break;
         default:
             parse_panic_token(ctx, sources[*i], tokens[*i].id, "Encountered unexpected token '%s' at beginning of statement");
             return FAILURE;
@@ -1010,16 +1013,41 @@ errorcode_t parse_conditionless_block(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
 
     defer_scope_free(&block_defer_scope);
 
-    ast_expr_conditionless_block_t *stmt = malloc(sizeof(ast_expr_conditionless_block_t));
-
-    *stmt = (ast_expr_conditionless_block_t){
+    ast_expr_list_append_unchecked(stmt_list, (ast_expr_t*) malloc_init(ast_expr_conditionless_block_t, {
         .id = EXPR_CONDITIONLESS_BLOCK,
         .source = source,
         .statements = block_stmt_list,
-    };
+    }));
 
-    ast_expr_list_append_unchecked(stmt_list, (ast_expr_t*) stmt);
     return SUCCESS;
+}
+
+errorcode_t parse_assert(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
+    ast_expr_t *assertion = NULL, *message = NULL;
+
+    source_t source = ctx->tokenlist->sources[(*ctx->i)++];
+
+    if(parse_expr(ctx, &assertion)){
+        goto failure;
+    }
+
+    if(parse_eat(ctx, TOKEN_NEXT, NULL) == SUCCESS && parse_expr(ctx, &message)){
+        goto failure;
+    }
+
+    ast_expr_list_append_unchecked(stmt_list, (ast_expr_t*) malloc_init(ast_expr_assert_t, {
+        .id = EXPR_ASSERT,
+        .source = source,
+        .assertion = assertion,
+        .message = message,
+    }));
+
+    return SUCCESS;
+
+failure:
+    ast_expr_free_fully(assertion);
+    ast_expr_free_fully(message);
+    return FAILURE;
 }
 
 errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scope_t *defer_scope){
@@ -1029,18 +1057,18 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
     unsigned int conditional_type = tokens[*i].id;
     source_t source = ctx->tokenlist->sources[(*ctx->i)++];
 
-    ast_expr_t *conditional;
+    ast_expr_t *condition;
     trait_t stmts_mode;
 
-    if(parse_expr(ctx, &conditional)) return FAILURE;
+    if(parse_expr(ctx, &condition)) return FAILURE;
 
     if(parse_ignore_newlines(ctx, "Expected '{' or ',' after conditional expression")){
-        ast_expr_free_fully(conditional);
+        ast_expr_free_fully(condition);
         return FAILURE;
     }
 
     if(parse_block_beginning(ctx, "conditional", &stmts_mode)){
-        ast_expr_free_fully(conditional);
+        ast_expr_free_fully(condition);
         return FAILURE;
     }
 
@@ -1049,7 +1077,7 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
 
     if(parse_stmts(ctx, &if_stmt_list, &if_defer_scope, stmts_mode)){
         ast_expr_list_free(&if_stmt_list);
-        ast_expr_free_fully(conditional);
+        ast_expr_free_fully(condition);
         defer_scope_free(&if_defer_scope);
         return FAILURE;
     }
@@ -1087,7 +1115,7 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
 
         if(parse_stmts(ctx, &else_stmt_list, &else_defer_scope, stmts_mode)){
             ast_expr_list_free(&else_stmt_list);
-            ast_expr_free_fully(conditional);
+            ast_expr_free_fully(condition);
             defer_scope_free(&else_defer_scope);
             return FAILURE;
         }
@@ -1104,7 +1132,7 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
         stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESSELSE : EXPR_IFELSE;
         stmt->source = source;
         stmt->label = NULL;
-        stmt->value = conditional;
+        stmt->value = condition;
         stmt->statements = if_stmt_list;
         stmt->else_statements = else_stmt_list;
         ast_expr_list_append_unchecked(stmt_list, (ast_expr_t*) stmt);
@@ -1113,13 +1141,10 @@ errorcode_t parse_onetime_conditional(parse_ctx_t *ctx, ast_expr_list_t *stmt_li
             *i -= 1;
         }
 
-        ast_expr_if_t *stmt = malloc(sizeof(ast_expr_if_t));
-        stmt->id = (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESS : EXPR_IF;
-        stmt->source = source;
-        stmt->label = NULL;
-        stmt->value = conditional;
-        stmt->statements = if_stmt_list;
-        ast_expr_list_append_unchecked(stmt_list, (ast_expr_t*) stmt);
+        ast_expr_list_append_unchecked(
+            stmt_list,
+            ast_expr_create_simple_conditional(source, (conditional_type == TOKEN_UNLESS) ? EXPR_UNLESS : EXPR_IF, NULL, condition, if_stmt_list)
+        );
     }
 
     return SUCCESS;

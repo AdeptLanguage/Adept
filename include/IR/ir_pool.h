@@ -61,6 +61,6 @@ void ir_pool_snapshot_restore(ir_pool_t *pool, ir_pool_snapshot_t *snapshot);
 
 // ---------------- ir_pool_memclone ----------------
 // Creates a pool-allocated copy of a portion of memory
-void *ir_pool_memclone(ir_pool_t *pool, void *bytes, length_t num_bytes);
+void *ir_pool_memclone(ir_pool_t *pool, const void *bytes, length_t num_bytes);
 
 #endif // _ISAAC_IR_POOL_H

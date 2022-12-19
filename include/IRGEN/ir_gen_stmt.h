@@ -108,6 +108,10 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt);
 // Generates IR instructions for an 'repeat' loop
 errorcode_t ir_gen_stmt_repeat(ir_builder_t *builder, ast_expr_repeat_t *stmt);
 
+// ---------------- ir_gen_stmt_assert ----------------
+// Generates IR instructions for an 'assert' statement
+errorcode_t ir_gen_stmt_assert(ir_builder_t *builder, ast_expr_assert_t *stmt);
+
 // ---------------- exhaustive_switch_check ----------------
 // Performs exhaustive switch checking for switch values
 errorcode_t exhaustive_switch_check(ir_builder_t *builder, weak_cstr_t enum_name, source_t switch_source, unsigned long long uniqueness_values[], length_t uniqueness_values_length);
@@ -121,7 +125,6 @@ errorcode_t ir_gen_stmts_auto_terminate(ir_builder_t *builder, bool already_term
 // Generates IR instructions to make variable deference calls up until a scope.
 // NOTE: If 'up_until_scope' is NULL, then all parent scopes will be visited.
 errorcode_t ir_gen_variable_deference(ir_builder_t *builder, bridge_scope_t *up_until_scope);
-
 
 // ---------------- ir_gen_assign----------------
 // Generates IR instructions for an assignment

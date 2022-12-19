@@ -212,11 +212,19 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 infer_var_scope_add_variable(ctx->scope, declare_stmt->name, &declare_stmt->type, declare_stmt->source, false, declare_stmt->traits & AST_EXPR_DECLARATION_CONST);
             }
             break;
-        case EXPR_ASSIGN: case EXPR_ADD_ASSIGN: case EXPR_SUBTRACT_ASSIGN:
-        case EXPR_MULTIPLY_ASSIGN: case EXPR_DIVIDE_ASSIGN: case EXPR_MODULUS_ASSIGN:
-        case EXPR_AND_ASSIGN: case EXPR_OR_ASSIGN: case EXPR_XOR_ASSIGN:
-        case EXPR_LSHIFT_ASSIGN: case EXPR_RSHIFT_ASSIGN:
-        case EXPR_LGC_LSHIFT_ASSIGN: case EXPR_LGC_RSHIFT_ASSIGN: {
+        case EXPR_ASSIGN:
+        case EXPR_ADD_ASSIGN:
+        case EXPR_SUBTRACT_ASSIGN:
+        case EXPR_MULTIPLY_ASSIGN:
+        case EXPR_DIVIDE_ASSIGN:
+        case EXPR_MODULUS_ASSIGN:
+        case EXPR_AND_ASSIGN:
+        case EXPR_OR_ASSIGN:
+        case EXPR_XOR_ASSIGN:
+        case EXPR_LSHIFT_ASSIGN:
+        case EXPR_RSHIFT_ASSIGN:
+        case EXPR_LGC_LSHIFT_ASSIGN:
+        case EXPR_LGC_RSHIFT_ASSIGN: {
                 ast_expr_assign_t *assign_stmt = (ast_expr_assign_t*) stmt;
                 if(infer_expr(ctx, func, &assign_stmt->destination, EXPR_NONE, true)) return FAILURE;
                 if(infer_expr(ctx, func, &assign_stmt->value, EXPR_NONE, false)) return FAILURE;
@@ -233,6 +241,12 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                     return FAILURE;
                 }
                 infer_var_scope_pop(ctx->compiler, &ctx->scope);
+            }
+            break;
+        case EXPR_ASSERT: {
+                ast_expr_assert_t *assert = (ast_expr_assert_t*) stmt;
+                if(infer_expr(ctx, func, &assert->assertion, EXPR_NONE, false)) return FAILURE;
+                if(assert->message && infer_expr(ctx, func, &assert->message, EXPR_NONE, false)) return FAILURE;
             }
             break;
         case EXPR_IF: case EXPR_UNLESS: case EXPR_WHILE: case EXPR_UNTIL: {

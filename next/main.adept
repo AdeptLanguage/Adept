@@ -1,6 +1,7 @@
 
 pragma compiler_version '2.8'
 
+import basics
 import "src/Context.adept"
 import "src/Lexer.adept"
 

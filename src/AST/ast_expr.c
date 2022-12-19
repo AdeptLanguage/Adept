@@ -528,6 +528,16 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
                 .statements = ast_expr_list_clone(&original->statements),
             });
         }
+    case EXPR_ASSERT: {
+            ast_expr_assert_t *original = (ast_expr_assert_t*) expr;
+
+            return (ast_expr_t*) malloc_init(ast_expr_assert_t, {
+                .id = original->id,
+                .source = original->source,
+                .assertion = ast_expr_clone(original->assertion),
+                .message = ast_expr_clone_if_not_null(original->message),
+            });
+        }
     default:
         die("ast_expr_clone() - Got unrecognized expression ID 0x%08X\n", expr->id);
         return NULL;
@@ -772,6 +782,16 @@ ast_expr_t *ast_expr_create_va_copy(source_t source, ast_expr_t *dest_value, ast
         .source = source,
         .dest_value = dest_value,
         .src_value = src_value,
+    });
+}
+
+ast_expr_t *ast_expr_create_simple_conditional(source_t source, unsigned int conditional_type, maybe_null_weak_cstr_t label, ast_expr_t *condition, ast_expr_list_t statements){
+    return (ast_expr_t*) malloc_init(ast_expr_if_t, {
+        .id = conditional_type,
+        .source = source,
+        .label = label,
+        .value = condition,
+        .statements = statements,
     });
 }
 

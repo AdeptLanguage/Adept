@@ -1107,6 +1107,10 @@ void compiler_undeclared_function(compiler_t *compiler, object_t *object, source
             free(subject);
         } else {
             compiler_panicf(compiler, source, "Undeclared function '%s'", name);
+
+            if(streq(name, "__assertion_failed__")){
+                printf("\nDo you mean to use the standard failed-assertion handlers? `import assertions`\n");
+            }
         }
         goto success;
     } else {

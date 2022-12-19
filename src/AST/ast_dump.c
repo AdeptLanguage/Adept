@@ -93,6 +93,20 @@ static void ast_dump_stmt_conditionless_block(FILE *file, ast_expr_conditionless
     fprintf(file, "}\n");
 }
 
+static void ast_dump_stmt_assert(FILE *file, ast_expr_assert_t *stmt){
+    if(stmt->message){
+        strong_cstr_t assertion = ast_expr_str(stmt->assertion);
+        strong_cstr_t message = ast_expr_str(stmt->message);
+        fprintf(file, "assert %s, %s\n", assertion, message);
+        free(assertion);
+        free(message);
+    } else {
+        strong_cstr_t assertion = ast_expr_str(stmt->assertion);
+        fprintf(file, "assert %s\n", assertion);
+        free(assertion);
+    }
+}
+
 static void ast_dump_stmt_simple_conditional(FILE *file, ast_expr_conditional_t *stmt, const char *keyword, length_t indentation){
     strong_cstr_t s = ast_expr_str(stmt->value);
     fprintf(file, "%s %s {\n", keyword, s);
@@ -276,6 +290,9 @@ void ast_dump_stmts(FILE *file, ast_expr_t **statements, length_t length, length
             break;
         case EXPR_CONDITIONLESS_BLOCK:
             ast_dump_stmt_conditionless_block(file, (ast_expr_conditionless_block_t*) stmt, indentation);
+            break;
+        case EXPR_ASSERT:
+            ast_dump_stmt_assert(file, (ast_expr_assert_t*) stmt);
             break;
         case EXPR_IF:
             ast_dump_stmt_simple_conditional(file, (ast_expr_conditional_t*) stmt, "if", indentation);

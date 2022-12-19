@@ -529,7 +529,7 @@ typedef struct {
     ir_type_t *ir_ubyte;
     length_t rtti_array_index;
     troolean has_rtti_array;
-    ir_type_t *ir_variadic_array;         // NOTE: Can be NULL
+    ir_type_t *ir_variadic_array;          // NOTE: Can be NULL
     func_id_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
     bool has_main;
     func_id_t ast_main_id;
