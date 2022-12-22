@@ -1,0 +1,10 @@
+
+import assertions
+
+func main {
+    this_is_true bool = true
+    this_is_false bool = false
+
+    assert this_is_true
+    assert this_is_false
+}

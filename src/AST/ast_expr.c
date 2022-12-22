@@ -786,7 +786,7 @@ ast_expr_t *ast_expr_create_va_copy(source_t source, ast_expr_t *dest_value, ast
 }
 
 ast_expr_t *ast_expr_create_simple_conditional(source_t source, unsigned int conditional_type, maybe_null_weak_cstr_t label, ast_expr_t *condition, ast_expr_list_t statements){
-    return (ast_expr_t*) malloc_init(ast_expr_if_t, {
+    return (ast_expr_t*) malloc_init(ast_expr_conditional_t, {
         .id = conditional_type,
         .source = source,
         .label = label,

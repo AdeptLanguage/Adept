@@ -33,6 +33,8 @@ def run_all_tests():
     test("any_type_sizes", [executable, join(src_dir, "any_type_sizes/main.adept")], compiles)
     test("array_access", [executable, join(src_dir, "array_access/main.adept")], compiles)
     test("as", [executable, join(src_dir, "as/main.adept")], compiles)
+    test("assert_simple", [executable, join(src_dir, "assert_simple/main.adept")], compiles)
+    test("assert_with_message", [executable, join(src_dir, "assert_with_message/main.adept")], compiles)
     test("assign_func", [executable, join(src_dir, "assign_func/main.adept")], compiles)
     test("assign_func_autogen", [executable, join(src_dir, "assign_func_autogen/main.adept")], compiles)
     test("assignment", [executable, join(src_dir, "assignment/main.adept")], compiles)
