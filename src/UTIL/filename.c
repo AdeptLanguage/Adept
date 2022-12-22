@@ -190,27 +190,25 @@ EM_JS(strong_cstr_t, node_path_resolve, (const char *filename), {
 
 strong_cstr_t filename_absolute(const char *filename){
     #if defined(__EMSCRIPTEN__)
-    return node_path_resolve(filename);
+        return node_path_resolve(filename);
     #elif defined(_WIN32) || defined(_WIN64)
+        strong_cstr_t buffer = malloc(512);
 
-    strong_cstr_t buffer = malloc(512);
+        if(GetFullPathName(filename, 512, buffer, NULL) == 0){
+            free(buffer);
+            return NULL;
+        }
 
-    if(GetFullPathName(filename, 512, buffer, NULL) == 0){
-        free(buffer);
-        return NULL;
-    }
-
+        return buffer;
     #else
+        strong_cstr_t buffer = realpath(filename, NULL);
 
-    strong_cstr_t buffer = realpath(filename, NULL);
+        if(buffer == NULL){
+            die("filename_absolute() - Could not determine absolute path for '%s'\n", filename);
+        }
 
-    if(buffer == NULL){
-        die("filename_absolute() - Could not determine absolute path for '%s'\n", filename);
-    }
-
-    #endif    
-
-    return buffer;
+        return buffer;
+    #endif
 }
 
 void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_for, unsigned int mode){
