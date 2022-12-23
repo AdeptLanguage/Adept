@@ -84,14 +84,14 @@ successful_t func_args_conform(ir_builder_t *builder, ast_func_t *func, ir_value
     // only conform the non-varargs arguments.
     length_t min_arity = func->arity < type_list_length ? func->arity : type_list_length;
 
-    for(length_t a = 0; a != min_arity; a++){
-        if(!ast_types_conform(builder, &arg_value_list[a], &arg_type_list[a], &arg_types[a], conform_mode)){
+    for(length_t i = 0; i != min_arity; i++){
+        if(!ast_types_conform(builder, &arg_value_list[i], &arg_type_list[i], &arg_types[i], conform_mode)){
             // Restore snapshot
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             instructions_snapshot_restore(builder, &instructions_snapshot);
 
             // Undo any modifications to the function arguments
-            memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * (a + 1));
+            memcpy(arg_value_list, arg_value_list_unmodified, sizeof(ir_value_t*) * (i + 1));
             free(arg_value_list_unmodified);
             return false;
         }

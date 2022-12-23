@@ -1320,22 +1320,21 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
 
         if(value_type_kind == TYPE_KIND_STRUCTURE || value_type_kind == TYPE_KIND_FIXED_ARRAY){
             if(ast_type_allows_pass_management(&types[i])){
-                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
-
                 optional_func_pair_t pair;
-                ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, values[i]);
+                errorcode_t errorcode = ir_gen_find_pass_func(builder->compiler, builder->object, &types[i], &pair);
 
-                errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, &types[i], &pair);
-                if(errorcode == ALT_FAILURE) return FAILURE;
-
-                if(errorcode == FAILURE){
-                    ir_pool_snapshot_restore(builder->pool, &snapshot);
+                if(errorcode == ALT_FAILURE){
+                    return FAILURE;
+                } else if(errorcode){
                     continue;
                 }
 
                 if(pair.has){
                     func_id_t ir_func_id = pair.value.ir_func_id;
+
+                    ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, values[i]);
                     ir_type_t *return_type = builder->object->ir_module.funcs.funcs[ir_func_id].return_type;                
+
                     values[i] = build_call(builder, ir_func_id, return_type, arguments, 1);
                 }
             }
@@ -1346,7 +1345,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
 }
 
 errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_value_t *mutable_value, source_t from_source){
-    // Calls pass__ method on a mutable value and it's children if the method exists
+    // Calls __pass__ method on a mutable value and it's children if the method exists
     // NOTE: Assumes (ast_type->elements_length >= 1)
     // NOTE: Returns SUCCESS if mutable_value was utilized in deference
     //       Returns FAILURE if mutable_value was not utilized in deference
@@ -1356,24 +1355,22 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     switch(ast_type->elements[0]->id){
     case AST_ELEM_BASE:
     case AST_ELEM_GENERIC_BASE: {
-            ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-            ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, build_load(builder, mutable_value, ast_type->source));
-
             optional_func_pair_t pair;
-            errorcode_t errorcode = ir_gen_find_pass_func(builder, arguments, ast_type, &pair);
+            errorcode_t errorcode = ir_gen_find_pass_func(builder->compiler, builder->object, ast_type, &pair);
 
             if(errorcode){
-                ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
                 return errorcode;
             }
 
-            // Call __pass__()
+            // Has a __pass__ implementation?
             if(pair.has){
-                ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;
-                ir_value_t *passed = build_call(builder, pair.value.ir_func_id, result_type, arguments, 1);
+                func_id_t ir_func_id = pair.value.ir_func_id;
 
-                // Store result back into mutable value
-                build_store(builder, passed, mutable_value, ast_type->source);
+                ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, build_load(builder, mutable_value, ast_type->source));
+                ir_type_t *result_type = builder->object->ir_module.funcs.funcs[ir_func_id].return_type;
+
+                // Perform __pass__
+                build_store(builder, build_call(builder, ir_func_id, result_type, arguments, 1), mutable_value, ast_type->source);
                 return SUCCESS;
             }
 
@@ -1692,7 +1689,7 @@ errorcode_t handle_assign_management(
         arguments[0] = destination;
         arguments[1] = value;
 
-        errorcode = handle_pass_management(builder, arguments, arg_types, ast->funcs[pair.ast_func_id].arg_type_traits, 2);
+        errorcode = handle_pass_management(builder, arguments, ast->funcs[pair.ast_func_id].arg_types, ast->funcs[pair.ast_func_id].arg_type_traits, 2);
         ast_type_free(&arg_types[0]);
 
         if(errorcode) goto failure;
@@ -1729,7 +1726,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_math_operands_t *op
 
         if(ir_gen_find_func_conforming_without_defaults(builder, overload_name, arguments, types, 2, NULL, false, from_source, &result)
         || !result.has
-        || handle_pass_management(builder, arguments, types, ast->funcs[result.value.ast_func_id].arg_type_traits, 2)){
+        || handle_pass_management(builder, arguments, ast->funcs[result.value.ast_func_id].arg_types, ast->funcs[result.value.ast_func_id].arg_type_traits, 2)){
             ir_pool_snapshot_restore(builder->pool, &snapshot);
             return NULL;
         }
@@ -1792,7 +1789,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, i
     ast_t *ast = &builder->object->ast;
     trait_t *arg_type_traits = ast->funcs[result.value.ast_func_id].arg_type_traits;
 
-    bool error = search_error || !result.has || handle_pass_management(builder, arguments, argument_ast_types, arg_type_traits, 2);
+    bool error = search_error || !result.has || handle_pass_management(builder, arguments, ast->funcs[result.value.ast_func_id].arg_types, arg_type_traits, 2);
     ast_type_free(&argument_ast_types[0]);
     
     if(error){

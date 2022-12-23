@@ -590,6 +590,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         func_pair_t pair = result.value;
 
         trait_t ast_func_traits;
+        ast_type_t *ast_func_arg_types;
         length_t ast_func_arity;
         trait_t *arg_type_traits;
         ast_type_t ast_func_return_type;
@@ -597,6 +598,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         {
             ast_func_t *ast_func = &ast->funcs[pair.ast_func_id];
             ast_func_traits = ast_func->traits;
+            ast_func_arg_types = ast_func->arg_types;
             ast_func_arity = ast_func->arity;
             arg_type_traits = ast_func->arg_type_traits;
             ast_func_return_type = ast_func->return_type;
@@ -618,7 +620,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
             return ALT_FAILURE;
         }
 
-        if(ir_gen_expr_call_procedure_handle_pass_management(builder, arg_arity, arg_values, arg_types, ast_func_traits, arg_type_traits, ast_func_arity)){
+        if(ir_gen_expr_call_procedure_handle_pass_management(builder, arg_arity, arg_values, arg_types, ast_func_arg_types, ast_func_traits, arg_type_traits, ast_func_arity)){
             ast_types_free_fully(arg_types, arg_arity);
             return FAILURE;
         }
@@ -767,29 +769,28 @@ errorcode_t ir_gen_expr_call_procedure_handle_pass_management(
     ir_builder_t *builder,
     length_t arity,
     ir_value_t **arg_values,
-    ast_type_t *final_arg_types,
+    ast_type_t *arg_types,
+    ast_type_t *ast_func_arg_types,
     trait_t target_traits,
     trait_t *target_arg_type_traits,
     length_t arity_without_variadic_arguments
 ){
     // Handle __pass__ calls for argument values being passed
+
+    // Handle regular arguments using types expected by AST function
+    if(handle_pass_management(builder, arg_values, ast_func_arg_types, target_arg_type_traits, arity_without_variadic_arguments)) return FAILURE;
+
+    // Handle additional arguments using types of values passed in
     length_t extra_argument_count = arity - arity_without_variadic_arguments;
 
     if(extra_argument_count != 0 && (target_traits & AST_FUNC_VARARG || target_traits & AST_FUNC_VARIADIC)){
         // Additional argument traits are needed for the extra optional arguments
-        trait_t padded_type_traits[arity];
-        
-        // Copy type traits for required arguments with the specified argument traits
-        memcpy(padded_type_traits, target_arg_type_traits, sizeof(trait_t) * arity_without_variadic_arguments);
+        trait_t extra_type_traits[extra_argument_count];
 
-        // Fill in type traits for additional optional arguments with regular argument traits
-        memset(&padded_type_traits[arity_without_variadic_arguments], TRAIT_NONE, sizeof(trait_t) * extra_argument_count);
+        // Fill in extra type traits without anything special
+        memset(extra_type_traits, TRAIT_NONE, sizeof(trait_t) * extra_argument_count);
         
-        // Use padded argument traits for functions with variable arity
-        if(handle_pass_management(builder, arg_values, final_arg_types, padded_type_traits, arity)) return FAILURE;
-    } else {
-        // Otherwise no padding is required,
-        if(handle_pass_management(builder, arg_values, final_arg_types, target_arg_type_traits, arity)) return FAILURE;
+        if(handle_pass_management(builder, &arg_values[arity_without_variadic_arguments], &arg_types[arity_without_variadic_arguments], extra_type_traits, extra_argument_count)) return FAILURE;
     }
 
     // Successfully called __pass__ for the arguments that needed it
@@ -1838,7 +1839,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     {
         ast_func_t *ast_func = &ast->funcs[pair.ast_func_id];
 
-        if(ir_gen_expr_call_procedure_handle_pass_management(builder, arg_arity, arg_values, arg_types, ast_func->traits, ast_func->arg_type_traits, ast_func->arity)){
+        if(ir_gen_expr_call_procedure_handle_pass_management(builder, arg_arity, arg_values, arg_types, ast_func->arg_types, ast_func->traits, ast_func->arg_type_traits, ast_func->arity)){
             ast_types_free_fully(arg_types, arg_arity);
             return FAILURE;
         }
@@ -2769,13 +2770,13 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
         return FAILURE;
     }
 
-    for(length_t a = 0; a != function_elem->arity; a++){
-        if(!ast_types_conform(builder, &arg_values[a], &arg_types[a], &function_elem->arg_types[a], CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
+    for(length_t i = 0; i != function_elem->arity; i++){
+        if(!ast_types_conform(builder, &arg_values[i], &arg_types[i], &function_elem->arg_types[i], CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
             if(call->is_tentative) return ALT_FAILURE;
 
-            char *s1 = ast_type_str(&function_elem->arg_types[a]);
-            char *s2 = ast_type_str(&arg_types[a]);
-            compiler_panicf(builder->compiler, call->args[a]->source, "Required argument type '%s' is incompatible with type '%s'", s1, s2);
+            char *s1 = ast_type_str(&function_elem->arg_types[i]);
+            char *s2 = ast_type_str(&arg_types[i]);
+            compiler_panicf(builder->compiler, call->args[i]->source, "Required argument type '%s' is incompatible with type '%s'", s1, s2);
             free(s1);
             free(s2);
             return FAILURE;
@@ -2783,7 +2784,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
     }
 
     // Handle __pass__ management for values that need it
-    if(handle_pass_management(builder, arg_values, arg_types, NULL, call->arity)) return FAILURE;
+    if(handle_pass_management(builder, arg_values, function_elem->arg_types, NULL, call->arity)) return FAILURE;
 
     // Generate the actual call address instruction
     *inout_ir_value = build_call_address(builder, ir_return_type, *inout_ir_value, arg_values, call->arity);

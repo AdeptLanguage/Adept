@@ -14,19 +14,19 @@
 #include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 
-errorcode_t ir_gen_find_pass_func(ir_builder_t *builder, ir_value_t **argument, ast_type_t *arg_type, optional_func_pair_t *result){
+errorcode_t ir_gen_find_pass_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_func_pair_t *result){
     // Finds the correct __pass__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
     //               ALT_FAILURE when something goes wrong
 
-    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&builder->object->ir_module.sf_cache, arg_type);
+    ir_gen_sf_cache_entry_t *cache_entry = ir_gen_sf_cache_locate_or_insert(&object->ir_module.sf_cache, arg_type);
 
     if(ir_gen_sf_cache_read(cache_entry->has_pass, cache_entry->pass, result) == SUCCESS){
         return SUCCESS;
     }
 
-    errorcode_t errorcode = ir_gen_find_func_conforming_without_defaults(builder, "__pass__", argument, arg_type, 1, NULL, true, NULL_SOURCE, result);
+    errorcode_t errorcode = ir_gen_find_func_regular(compiler, object, "__pass__", arg_type, 1, TRAIT_NONE, TRAIT_NONE, NULL_SOURCE, result);
 
     if(errorcode == SUCCESS && result->has){
         cache_entry->pass = result->value;
