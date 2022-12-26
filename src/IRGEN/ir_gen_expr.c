@@ -747,8 +747,6 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
 errorcode_t ir_gen_expr_super(ir_builder_t *builder, ast_expr_super_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
     // super(a, b, c, d)  ->  (this as Super).__constructor__(a, b, c); this.__vtable__ = <__vtable__>
 
-    // ast_expr_t *this_value = ast_expr_create_variable("this", expr->source);
-
     // Find 'this' argument
     bridge_var_t *bridge_var = bridge_scope_find_var(builder->scope, "this");
     assert(bridge_var);

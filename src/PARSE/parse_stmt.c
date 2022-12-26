@@ -1279,30 +1279,39 @@ errorcode_t parse_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt
     return parse_expr(ctx, &mutable_expr) || parse_mid_mutable_expr_operation(ctx, stmt_list, mutable_expr, source);
 }
 
-static bool is_casting_construct(ast_expr_t *expr){
+static bool is_attempting_to_incorrectly_call_parent_constructor(ast_expr_t *expr){
+    // Returns whether an expression seems to be incorrectly calling
+    // the parent constructor of a class
+
+    // Must be method call
     if(expr->id != EXPR_CALL_METHOD) return false;
 
     ast_expr_call_method_t *call = (ast_expr_call_method_t*) expr;
 
+    // Must be calling `__constructor__` method
     if(!streq(call->name, "__constructor__")) return false;
 
     ast_expr_t *subject = call->value;
 
+    // Must have casted subject
     if(subject->id != EXPR_CAST) return false;
 
+    // (Unwrap N casts)
     ast_expr_cast_t *cast = (ast_expr_cast_t*) subject;
 
     while(cast->from->id == EXPR_CAST){
         cast = (ast_expr_cast_t*) cast->from;
     }
 
+    // Must have variable for pre-casted subject expression
     if(cast->from->id != EXPR_VARIABLE) return false;
 
     ast_expr_variable_t *variable = (ast_expr_variable_t*) cast->from;
 
+    // Must have `this` variable for pre-casted subject expression
     if(!streq(variable->name, "this")) return false;
 
-    // This expression is trivially attempting to call __constructor__ on a casted version of 'this'
+    // This expression can be trivially shown to be attempting to call __constructor__ on a casted version of 'this'
     return true;
 }
 
@@ -1321,7 +1330,7 @@ errorcode_t parse_mid_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *
     switch(mutable_expr->id){
     case EXPR_CALL_METHOD:
         // Validate that not (this as X).__constructor__() within another constructor
-        if(ctx->func->traits & AST_FUNC_CLASS_CONSTRUCTOR && is_casting_construct(mutable_expr)){
+        if(ctx->func->traits & AST_FUNC_CLASS_CONSTRUCTOR && is_attempting_to_incorrectly_call_parent_constructor(mutable_expr)){
             compiler_panic(ctx->compiler, mutable_expr->source, "Unusual construction of class as different type, did you mean to use 'super()'");
             ast_expr_free_fully(mutable_expr);
             return FAILURE;

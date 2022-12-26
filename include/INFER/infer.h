@@ -96,6 +96,10 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
 // Infers an inner expression that is variable-like
 errorcode_t infer_expr_inner_variable(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **expr, undetermined_expr_list_t *undetermined, bool must_be_mutable);
 
+// ---------------- infer_expr_inner_super ----------------
+// Infers for a `super()` call
+errorcode_t infer_expr_inner_super(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_super_t *expr);
+
 // ---------------- undetermined_expr_list_give ----------------
 // Gives a potential solution for an undetermined list
 errorcode_t undetermined_expr_list_give_solution(infer_ctx_t *ctx, undetermined_expr_list_t *undetermined, unsigned int potential_solution_primitive);

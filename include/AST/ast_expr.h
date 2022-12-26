@@ -158,7 +158,7 @@ typedef struct {
     ast_expr_t *if_false;
 } ast_expr_ternary_t;
 
-// ---------------- ast_expr_super_t ----------------
+// ---------------- ast_expr_call_t ----------------
 // Expression for calling a function
 typedef struct {
     DERIVE_AST_EXPR;

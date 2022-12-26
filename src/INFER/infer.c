@@ -180,7 +180,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 // HACK: Mark a variable as used if a call is made to a function with the same name
                 // SPEED: PERFORMANCE: This is probably really slow to do
                 // TODO: Clean up and/or speed up this code
-                if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && ctx->scope != NULL && call_stmt->id == EXPR_CALL){
+                if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && ctx->scope != NULL){
                     infer_var_t *func_variable = infer_var_scope_find(ctx->scope, call_stmt->name);
                     if(func_variable) func_variable->used = true;
                 }
@@ -194,13 +194,8 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 }
             }
             break;
-        case EXPR_SUPER: {
-                ast_expr_super_t *super_stmt = (ast_expr_super_t*) stmt;
-
-                for(length_t i = 0; i != super_stmt->arity; i++){
-                    if(infer_expr(ctx, func, &super_stmt->args[i], EXPR_NONE, false)) return FAILURE;
-                }
-            }
+        case EXPR_SUPER:
+            if(infer_expr_inner_super(ctx, func, (ast_expr_super_t*) stmt)) return FAILURE;
             break;
         case EXPR_DECLARE: case EXPR_DECLAREUNDEF: {
                 ast_expr_declare_t *declare_stmt = (ast_expr_declare_t*) stmt;
@@ -643,13 +638,8 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             if(infer_type(ctx, &call_expr->gives)) return FAILURE;
         }
         break;
-    case EXPR_SUPER: {
-            ast_expr_super_t *super_expr = (ast_expr_super_t*) *expr;
-
-            for(length_t i = 0; i != super_expr->arity; i++){
-                if(infer_expr(ctx, ast_func, &super_expr->args[i], EXPR_NONE, false)) return FAILURE;
-            }
-        }
+    case EXPR_SUPER:
+        if(infer_expr_inner_super(ctx, ast_func, (ast_expr_super_t*) *expr)) return FAILURE; 
         break;
     case EXPR_GENERIC_INT:
     case EXPR_GENERIC_FLOAT:
@@ -740,14 +730,14 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             ast_expr_static_data_t *static_data = (ast_expr_static_data_t*) *expr;
             if(infer_type(ctx, &static_data->type)) return FAILURE;
 
-            if(static_data->type.elements_length != 1 || static_data->type.elements[0]->id != AST_ELEM_BASE){
+            if(!ast_type_is_base(&static_data->type)){
                 strong_cstr_t s = ast_type_str(&static_data->type);
                 compiler_panicf(ctx->compiler, static_data->type.source, "Can't create struct literal for non-struct type '%s'\n", s);
                 free(s);
                 return FAILURE;
             }
 
-            const char *base = ((ast_elem_base_t*) static_data->type.elements[0])->base;
+            const char *base = ast_type_struct_name(&static_data->type);
             ast_composite_t *composite = ast_composite_find_exact(ctx->ast, base);
 
             if(composite == NULL){
@@ -790,18 +780,19 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
         }
         break;
     case EXPR_TERNARY: {
-            if(infer_expr(ctx, ast_func, &((ast_expr_ternary_t*) *expr)->condition, EXPR_NONE, false)) return FAILURE;
+            ast_expr_ternary_t *ternary = (ast_expr_ternary_t*) *expr;
 
-            undetermined_expr_list_t local_undetermined;
-            local_undetermined.expressions = malloc(sizeof(ast_expr_t*) * 4);
-            local_undetermined.expressions_length = 0;
-            local_undetermined.expressions_capacity = 4;
-            local_undetermined.solution = EXPR_NONE;
+            if(infer_expr(ctx, ast_func, &ternary->condition, EXPR_NONE, false)) return FAILURE;
+
+            undetermined_expr_list_t local_undetermined = (undetermined_expr_list_t){
+                .expressions = malloc(sizeof(ast_expr_t*) * 4),
+                .expressions_length = 0,
+                .expressions_capacity = 4,
+                .solution = EXPR_NONE,
+            };
 
             // Group inference for two child expressions
-            a = &((ast_expr_ternary_t*) *expr)->if_true;
-            b = &((ast_expr_ternary_t*) *expr)->if_false;
-            if(infer_expr_inner(ctx, ast_func, a, &local_undetermined, false) || infer_expr_inner(ctx, ast_func, b, &local_undetermined, false)){
+            if(infer_expr_inner(ctx, ast_func, &ternary->if_true, &local_undetermined, false) || infer_expr_inner(ctx, ast_func, &ternary->if_false, &local_undetermined, false)){
                 free(local_undetermined.expressions);
                 return FAILURE;
             }
@@ -809,8 +800,10 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             // Resolve primitives in children if needed
             if(local_undetermined.solution == EXPR_NONE){
                 unsigned int default_assigned_type = generics_primitive_type(local_undetermined.expressions, local_undetermined.expressions_length);
+
                 if(default_assigned_type != EXPR_NONE){
                     infer_mention_expression_literal_type(ctx, default_assigned_type);
+
                     if(undetermined_expr_list_give_solution(ctx, &local_undetermined, default_assigned_type)){
                         free(local_undetermined.expressions);
                         return FAILURE;
@@ -941,6 +934,14 @@ found_variable:
     // Attempt to boil down undetermined primitive types
     var_expr_primitive = ast_primitive_from_ast_type(variable_type);
     if(undetermined_expr_list_give_solution(ctx, undetermined, var_expr_primitive)) return FAILURE;
+
+    return SUCCESS;
+}
+
+errorcode_t infer_expr_inner_super(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_super_t *expr){
+    for(length_t i = 0; i != expr->arity; i++){
+        if(infer_expr(ctx, ast_func, &expr->args[i], EXPR_NONE, false)) return FAILURE;
+    }
 
     return SUCCESS;
 }
