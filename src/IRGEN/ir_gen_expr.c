@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "AST/POLY/ast_resolve.h"
+#include "AST/POLY/ast_translate.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/TYPE/ast_type_make.h"
 #include "AST/ast.h"
@@ -751,6 +752,21 @@ errorcode_t ir_gen_expr_super(ir_builder_t *builder, ast_expr_super_t *expr, ir_
     bridge_var_t *bridge_var = bridge_scope_find_var(builder->scope, "this");
     assert(bridge_var);
 
+    ast_type_t subject_type = ast_type_dereferenced_view(bridge_var->ast_type);
+    ast_composite_t *the_child_class = ast_find_composite(&builder->object->ast, &subject_type);
+
+    if(the_child_class == NULL){
+        strong_cstr_t subject_typename = ast_type_str(&subject_type);
+        compiler_panicf(builder->compiler, expr->source, "Cannot call parent constructor from non-existent class '%s'", subject_typename);
+        free(subject_typename);
+        return FAILURE;
+    }
+
+    ast_type_t parent_class_type;
+    if(ast_translate_poly_parent_class(builder->compiler, &builder->object->ast, the_child_class, &subject_type, &parent_class_type)){
+        return FAILURE;
+    }
+
     // Get value of 'this'
     ir_value_t *this_value = build_load(
         builder, 
@@ -759,17 +775,13 @@ errorcode_t ir_gen_expr_super(ir_builder_t *builder, ast_expr_super_t *expr, ir_
     );
 
     ast_expr_t *this_pointer = ast_expr_create_phantom(ast_type_clone(bridge_var->ast_type), this_value, expr->source, false);
-
-    ast_type_t to = ast_type_pointer_to(ast_type_clone(&expr->parent_type));
-    ast_expr_t *this_as_super = ast_expr_create_cast(to, this_pointer, expr->source);
+    ast_expr_t *this_as_super = ast_expr_create_cast(ast_type_pointer_to(parent_class_type), this_pointer, expr->source);
 
     ast_expr_t **args = ast_exprs_clone(expr->args, expr->arity);
     ast_expr_t *primary_call = ast_expr_create_call_method(strclone("__constructor__"), this_as_super, expr->arity, args, expr->is_tentative, false, NULL, expr->source);
 
     errorcode_t errorcode = ir_gen_expr(builder, primary_call, NULL, false, NULL);
     ast_expr_free_fully(primary_call);
-
-    ast_type_t subject_type = ast_type_dereferenced_view(bridge_var->ast_type);
     
     if(errorcode == SUCCESS){
         // Refresh vtable

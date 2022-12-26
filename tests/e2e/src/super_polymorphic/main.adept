@@ -1,0 +1,46 @@
+
+import basics
+
+class <$T> Parent (x $T) {
+    constructor(x $T~__number__){
+        this.x = x
+    }
+
+    virtual func print {
+        print("x=" + this.x)
+    }
+}
+
+class <$T> Child extends <$T> Parent (y $T) {
+    constructor(x, y $T~__number__){
+        super(x)
+        this.y = y
+    }
+
+    override func print {
+        print("x=" + this.x + ", y=" + this.y)
+    }
+}
+
+func main {
+    {
+        thing *<double> Parent = new <double> Child(10.0, 11.0)
+        defer del(thing)
+
+        thing.print()
+    }
+
+    {
+        thing *<ubyte> Parent = new <ubyte> Child('a'ub, 'b'ub)
+        defer del(thing)
+
+        thing.print()
+    }
+
+    {
+        thing *<int> Parent = new <int> Parent(21)
+        defer del(thing)
+
+        thing.print()
+    }
+}

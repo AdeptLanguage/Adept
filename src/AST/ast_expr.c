@@ -145,7 +145,6 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
             return (ast_expr_t*) malloc_init(ast_expr_super_t, {
                 .id = original->id,
                 .source = original->source,
-                .parent_type = ast_type_clone(&original->parent_type),
                 .args = ast_exprs_clone(original->args, original->arity),
                 .arity = original->arity,
                 .is_tentative = original->is_tentative,
@@ -625,11 +624,10 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
     };
 }
 
-ast_expr_t *ast_expr_create_super(ast_type_t parent_type, length_t arity, ast_expr_t **args, bool is_tentative, source_t source){
+ast_expr_t *ast_expr_create_super(ast_expr_t **args, length_t arity, bool is_tentative, source_t source){
     return (ast_expr_t*) malloc_init(ast_expr_super_t, {
         .id = EXPR_SUPER,
         .source = source,
-        .parent_type = parent_type,
         .args = args,
         .arity = arity,
         .is_tentative = is_tentative,

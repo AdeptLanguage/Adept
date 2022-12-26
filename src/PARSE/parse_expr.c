@@ -771,7 +771,7 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr, bool allow_
             return FAILURE;
         }
 
-        *out_expr = ast_expr_create_super(ast_type_clone(&composite->parent), arity, args, is_tentative, source);
+        *out_expr = ast_expr_create_super(args, arity, is_tentative, source);
     } else {
         *out_expr = ast_expr_create_call(name, arity, args, is_tentative, &gives, source);
     }

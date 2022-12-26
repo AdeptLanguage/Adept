@@ -189,7 +189,6 @@ typedef struct {
 // Expression for `super()` invocations
 typedef struct {
     DERIVE_AST_EXPR;
-    ast_type_t parent_type;
     ast_expr_t **args;
     length_t arity;
 
@@ -572,7 +571,7 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
 
 // ---------------- ast_expr_create_super ----------------
 // Creates a `super()` call expression
-ast_expr_t *ast_expr_create_super(ast_type_t parent_type, length_t arity, ast_expr_t **args, bool is_tentative, source_t source);
+ast_expr_t *ast_expr_create_super(ast_expr_t **args, length_t arity, bool is_tentative, source_t source);
 
 // ---------------- ast_expr_create_method_call ----------------
 // Creates a call method expression

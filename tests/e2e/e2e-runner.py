@@ -271,6 +271,11 @@ def run_all_tests():
         join(src_dir, "super/main.adept"), "-e"],
         lambda output: b"[shape constructor]\n[circle constructor]\nName is: Circle\nX is: 21\n" in output
     )
+    test("super_polymorphic",
+        [executable,
+        join(src_dir, "super_polymorphic/main.adept"), "-e"],
+        lambda output: b"x=10.0, y=11.0\nx=a, y=b\nx=21\n" in output
+    )
     test("switch", [executable, join(src_dir, "switch/main.adept")], compiles)
     test("switch_exhaustive", [executable, join(src_dir, "switch_exhaustive/main.adept")], compiles)
     test("switch_more", [executable, join(src_dir, "switch_more/main.adept")], compiles)

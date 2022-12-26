@@ -25,7 +25,6 @@ static void ast_expr_call_free(ast_expr_call_t *expr){
 }
 
 static void ast_expr_super_free(ast_expr_super_t *expr){
-    ast_type_free(&expr->parent_type);
     ast_exprs_free_fully(expr->args, expr->arity);
 }
 

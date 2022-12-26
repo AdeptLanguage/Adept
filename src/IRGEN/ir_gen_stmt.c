@@ -782,7 +782,8 @@ errorcode_t ir_gen_do_construct(
 
     if(search_errorcode || !result.has){
         if(search_errorcode != ALT_FAILURE){
-            compiler_panicf(builder->compiler, source, "Constructor with arguments does not exist");
+            // TODO: Improve error message
+            compiler_panicf(builder->compiler, source, "Constructor with given arguments does not exist");
         }
         goto failure;
     }
