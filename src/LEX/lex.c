@@ -263,7 +263,7 @@ static inline errorcode_t number(lex_ctx_t *ctx, compiler_t *optional_error_comp
     }
 
     while(put < buf_size){
-        if(isdigit(*end) || *end == '_'){
+        if(isdigit(*end)){
             buf[put++] = *(end++);
         } else if(*end == '.' && can_dot){
             buf[put++] = *(end++);
@@ -278,6 +278,8 @@ static inline errorcode_t number(lex_ctx_t *ctx, compiler_t *optional_error_comp
             if(*end == '+' || *end == '-'){
                 buf[put++] = *(end++);
             }
+        } else if(*end == '_'){
+            end++;
         } else {
             break;
         }

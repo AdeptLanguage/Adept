@@ -108,7 +108,7 @@ struct adept\lex\Lexer (
     }
 
     func lexBufferAdept2 successful {
-        while this.i != this.buffer.length {
+        while this.i < this.buffer.length {
             c ubyte = this.char()
             
             switch c {
@@ -231,7 +231,7 @@ struct adept\lex\Lexer (
 
                 this.context.output.send(
                     adept\Error(
-                        sprintf("Unexpected character '%c' while lexing", this.char()),
+                        sprintf("Unexpected character '%c' while lexing (char code %d)", this.char(), this.char()),
                         some(adept\Source(this.i, 1, this.object_index))
                     )
                 )
@@ -360,7 +360,8 @@ struct adept\lex\Lexer (
     func number successful {
         define buf_size = 96
 
-        is_hex, can_dot, did_exp bool = false
+        is_hex, did_exp bool = false
+        can_dot bool = true
         start_i usize = this.i
 
         if this.char() == '-'ub {
@@ -501,8 +502,7 @@ struct adept\lex\Lexer (
         }
         
         // Add number token
-        this.add(token_id, data, adept\Source(this.i, stride, this.object_index))
-        this.i += stride
+        this.add(token_id, data, adept\Source(start_i, stride, this.object_index))
         return true
     }
 
@@ -557,11 +557,11 @@ struct adept\lex\Lexer (
             
             // Handle word tokens that should be keywords
             if keyword_token_id != ::NONE {
-                this.add(keyword_token_id, null, adept\Source(this.i, identifier.length, this.object_index))
+                this.add(keyword_token_id, null, adept\Source(start_i, identifier.length, this.object_index))
                 return
             } elif identifier == "elif" {
-                this.add(::ELSE, null, adept\Source(this.i, 2, this.object_index))
-                this.add(::IF, null, adept\Source(this.i + 2, 2, this.object_index))
+                this.add(::ELSE, null, adept\Source(start_i, 2, this.object_index))
+                this.add(::IF, null, adept\Source(start_i + 2, 2, this.object_index))
                 return
             }
 
@@ -574,7 +574,7 @@ struct adept\lex\Lexer (
         this.add(
             intent,
             new String(identifier.commit()),
-            adept\Source(this.i, identifier.length + flag_length, this.object_index)
+            adept\Source(start_i, identifier.length + flag_length, this.object_index)
         )
     }
 
@@ -611,7 +611,6 @@ struct adept\lex\Lexer (
 
         return true
     }
-
 
     func stringUnescapeOrFail(string String, out result *String) successful {
         error <adept\string\UnescapeError> Optional = adept\string\unescape(string, result)

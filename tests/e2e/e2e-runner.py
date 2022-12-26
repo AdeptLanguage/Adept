@@ -212,6 +212,11 @@ def run_all_tests():
         lambda output: b"===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS! =====\nIn file:\t" in output and b"main.adept\nIn function:\ttriggerNullCheck(*int) void\nLine:\t10\nColumn:\t5" in output,
         expected_exitcode=1
     )
+    test("numeric_separators",
+        [executable,
+        join(src_dir, "numeric_separators/main.adept"), "-e"],
+        lambda output: b"123456789\n" in output
+    )
     test("order", [executable, join(src_dir, "order/main.adept")], compiles)
     test("package", [executable, join(src_dir, "package/main.adept")], compiles)
     test("package_use", [executable, join(src_dir, "package_use/main.adept")], compiles)
