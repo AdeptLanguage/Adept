@@ -1,0 +1,27 @@
+
+import basics
+
+class Shape (x int) {
+    constructor(value int = 21){
+        print("[shape constructor]")
+        this.x = value
+    }
+
+    virtual func getName String = "Shape"
+}
+
+class Circle extends Shape () {
+    constructor(){
+        super()
+        print("[circle constructor]")
+    }
+
+    override func getName String = "Circle"
+}
+
+func main {
+    shape *Shape = new Circle()
+    defer del(shape)
+
+    print("Name is: " + shape.getName(), "X is: " + shape.x)
+}

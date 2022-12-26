@@ -59,6 +59,7 @@ enum {
     EXPR_AT,
 // Complex operators ------------------
     EXPR_CALL,
+    EXPR_SUPER,
     EXPR_VARIABLE,
     EXPR_MEMBER,
     EXPR_ADDRESS,

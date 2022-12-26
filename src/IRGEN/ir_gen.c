@@ -258,7 +258,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
         ast_func_t *func = &ast->funcs[i];
 
         if(func->traits & AST_FUNC_OVERRIDE && !(func->traits & AST_FUNC_POLYMORPHIC) && !(func->traits & AST_FUNC_USED_OVERRIDE)){
-            compiler_panicf(compiler, func->source, "No virtual method exists to override");
+            compiler_panicf(compiler, func->source, "No corresponding virtual method exists to override");
             goto failure;
         }
     }
@@ -638,12 +638,10 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         assert(store_instr->id == INSTRUCTION_STORE);
 
         // Append vtable initialization for later processing
-        ir_vtable_init_t vtable_init = (ir_vtable_init_t){
+        ir_vtable_init_list_append(&builder.object->ir_module.vtable_init_list, ((ir_vtable_init_t){
             .store_instr = store_instr,
             .subject_type = ast_type_clone(&subject_type),
-        };
-
-        ir_vtable_init_list_append(&builder.object->ir_module.vtable_init_list, vtable_init);
+        }));
     }
 
     if(ast_func.traits & AST_FUNC_DISPATCHER){

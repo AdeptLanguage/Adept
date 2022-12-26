@@ -759,7 +759,23 @@ errorcode_t parse_expr_call(parse_ctx_t *ctx, ast_expr_t **out_expr, bool allow_
         memset(&gives, 0, sizeof(ast_type_t));
     }
 
-    *out_expr = ast_expr_create_call(name, arity, args, is_tentative, &gives, source);
+    if(ctx->func && ctx->func->traits & AST_FUNC_CLASS_CONSTRUCTOR && streq("super", name)){
+        ast_poly_composite_t *composite = ctx->composite_association;
+        assert(composite->is_class);
+
+        if(AST_TYPE_IS_NONE(composite->parent)){
+            compiler_panicf(ctx->compiler, source, "Cannot call constructor for parent when class has no parent class");
+            ast_type_free(&gives);
+            ast_exprs_free_fully(args, arity);
+            free(name);
+            return FAILURE;
+        }
+
+        *out_expr = ast_expr_create_super(ast_type_clone(&composite->parent), arity, args, is_tentative, source);
+    } else {
+        *out_expr = ast_expr_create_call(name, arity, args, is_tentative, &gives, source);
+    }
+
     return SUCCESS;
 }
 

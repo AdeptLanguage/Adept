@@ -70,7 +70,7 @@ def run_all_tests():
         expected_exitcode=1)
     test("class_virtual_methods_8_unused_override",
         [executable, join(src_dir, "class_virtual_methods_8_unused_override/main.adept")],
-        lambda output: b"main.adept:10:5: error: No virtual method exists to override\n  10|     override func myUnusedOverride {\n          ^^^^^^^^" in output,
+        lambda output: b"main.adept:10:5: error: No corresponding virtual method exists to override\n  10|     override func myUnusedOverride {\n          ^^^^^^^^" in output,
         expected_exitcode=1)
     test("class_virtual_methods_9", [executable, join(src_dir, "class_virtual_methods_9/main.adept")], compiles)
     test("colons_alternative_syntax", [executable, join(src_dir, "colons_alternative_syntax/main.adept")], compiles)
@@ -266,6 +266,11 @@ def run_all_tests():
     test("struct_association", [executable, join(src_dir, "struct_association/main.adept")], compiles)
     test("structs", [executable, join(src_dir, "structs/main.adept")], compiles)
     test("successful", [executable, join(src_dir, "successful/main.adept")], compiles)
+    test("super",
+        [executable,
+        join(src_dir, "super/main.adept"), "-e"],
+        lambda output: b"[shape constructor]\n[circle constructor]\nName is: Circle\nX is: 21\n" in output
+    )
     test("switch", [executable, join(src_dir, "switch/main.adept")], compiles)
     test("switch_exhaustive", [executable, join(src_dir, "switch_exhaustive/main.adept")], compiles)
     test("switch_more", [executable, join(src_dir, "switch_more/main.adept")], compiles)

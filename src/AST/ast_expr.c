@@ -54,15 +54,7 @@ ast_expr_t *ast_expr_clone_if_not_null(ast_expr_t *expr){
     return expr ? ast_expr_clone(expr) : NULL;
 }
 
-static inline ast_expr_t **ast_exprs_clone(ast_expr_t **exprs, length_t arity){
-    ast_expr_t **array = malloc(sizeof *array * arity);
-
-    for(length_t i = 0; i < arity; i++){
-        array[i] = ast_expr_clone(exprs[i]);
-    }
-
-    return array;
-}
+extern inline ast_expr_t **ast_exprs_clone(ast_expr_t **exprs, length_t arity);
 
 ast_expr_t *ast_expr_clone(ast_expr_t* expr){
     switch(expr->id){
@@ -145,6 +137,18 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr){
                 .only_implicit = original->only_implicit,
                 .no_user_casts = original->no_user_casts,
                 .gives = AST_TYPE_IS_NONE(original->gives) ? AST_TYPE_NONE : ast_type_clone(&original->gives),
+            });
+        }
+    case EXPR_SUPER: {
+            ast_expr_super_t *original = (ast_expr_super_t*) expr;
+
+            return (ast_expr_t*) malloc_init(ast_expr_super_t, {
+                .id = original->id,
+                .source = original->source,
+                .parent_type = ast_type_clone(&original->parent_type),
+                .args = ast_exprs_clone(original->args, original->arity),
+                .arity = original->arity,
+                .is_tentative = original->is_tentative,
             });
         }
     case EXPR_VARIABLE: {
@@ -617,7 +621,19 @@ void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name
         .gives = (gives && gives->elements_length) ? *gives : AST_TYPE_NONE,
         .only_implicit = false,
         .no_user_casts = false,
+        .no_discard = false,
     };
+}
+
+ast_expr_t *ast_expr_create_super(ast_type_t parent_type, length_t arity, ast_expr_t **args, bool is_tentative, source_t source){
+    return (ast_expr_t*) malloc_init(ast_expr_super_t, {
+        .id = EXPR_SUPER,
+        .source = source,
+        .parent_type = parent_type,
+        .args = args,
+        .arity = arity,
+        .is_tentative = is_tentative,
+    });
 }
 
 ast_expr_t *ast_expr_create_call_method(strong_cstr_t name, ast_expr_t *value, length_t arity, ast_expr_t **args, bool is_tentative, bool allow_drop, ast_type_t *gives, source_t source){

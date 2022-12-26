@@ -24,6 +24,11 @@ static void ast_expr_call_free(ast_expr_call_t *expr){
     free(expr->name);
 }
 
+static void ast_expr_super_free(ast_expr_super_t *expr){
+    ast_type_free(&expr->parent_type);
+    ast_exprs_free_fully(expr->args, expr->arity);
+}
+
 static void ast_expr_member_free(ast_expr_member_t *expr){
     ast_expr_free_fully(expr->value);
     free(expr->member);
@@ -208,6 +213,9 @@ void ast_expr_free(ast_expr_t *expr){
         break;
     case EXPR_CALL:
         ast_expr_call_free((ast_expr_call_t*) expr);
+        break;
+    case EXPR_SUPER:
+        ast_expr_super_free((ast_expr_super_t*) expr);
         break;
     case EXPR_VARIABLE:
         // Nothing to free

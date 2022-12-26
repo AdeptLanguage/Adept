@@ -180,7 +180,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 // HACK: Mark a variable as used if a call is made to a function with the same name
                 // SPEED: PERFORMANCE: This is probably really slow to do
                 // TODO: Clean up and/or speed up this code
-                if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && ctx->scope != NULL){
+                if(!(ctx->compiler->ignore & COMPILER_IGNORE_UNUSED || ctx->compiler->traits & COMPILER_NO_WARN) && ctx->scope != NULL && call_stmt->id == EXPR_CALL){
                     infer_var_t *func_variable = infer_var_scope_find(ctx->scope, call_stmt->name);
                     if(func_variable) func_variable->used = true;
                 }
@@ -191,6 +191,14 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
 
                 if(call_stmt->gives.elements_length != 0){
                     if(infer_type(ctx, &call_stmt->gives)) return FAILURE;
+                }
+            }
+            break;
+        case EXPR_SUPER: {
+                ast_expr_super_t *super_stmt = (ast_expr_super_t*) stmt;
+
+                for(length_t i = 0; i != super_stmt->arity; i++){
+                    if(infer_expr(ctx, func, &super_stmt->args[i], EXPR_NONE, false)) return FAILURE;
                 }
             }
             break;
@@ -633,6 +641,14 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             }
 
             if(infer_type(ctx, &call_expr->gives)) return FAILURE;
+        }
+        break;
+    case EXPR_SUPER: {
+            ast_expr_super_t *super_expr = (ast_expr_super_t*) *expr;
+
+            for(length_t i = 0; i != super_expr->arity; i++){
+                if(infer_expr(ctx, ast_func, &super_expr->args[i], EXPR_NONE, false)) return FAILURE;
+            }
         }
         break;
     case EXPR_GENERIC_INT:

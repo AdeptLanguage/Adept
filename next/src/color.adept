@@ -4,7 +4,7 @@ import 'sys/cstdio.adept'
 enum color\Color (RESET, RED, YELLOW, WHITE, BLUE, LIGHT_BLUE)
 
 func color\use(color color\Color){
-    exhaustive switch(color){
+    exhaustive switch color {
     case ::RESET
         fputs('\e[0m', stdout)
         fflush(stdout)

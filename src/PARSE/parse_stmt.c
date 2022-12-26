@@ -184,7 +184,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
             break;
         case TOKEN_MULTIPLY: case TOKEN_OPEN: case TOKEN_INCREMENT: case TOKEN_DECREMENT:
         case TOKEN_BIT_AND: case TOKEN_BIT_OR: case TOKEN_BIT_XOR: case TOKEN_BIT_LSHIFT: case TOKEN_BIT_RSHIFT:
-        case TOKEN_BIT_LGC_LSHIFT: case TOKEN_BIT_LGC_RSHIFT: /* DUPLICATE: case TOKEN_ADDRESS: */
+        case TOKEN_BIT_LGC_LSHIFT: case TOKEN_BIT_LGC_RSHIFT: case TOKEN_CAST: /* DUPLICATE: case TOKEN_ADDRESS: */
             if(parse_mutable_expr_operation(ctx, stmt_list)) return FAILURE;
             break;
         case TOKEN_IF: case TOKEN_UNLESS:
@@ -782,7 +782,7 @@ errorcode_t parse_stmt_call(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, bool i
             ast_expr_free_fully(out_expr);
         }
         
-        if(out_expr->id != EXPR_CALL && out_expr->id != EXPR_CALL_METHOD){
+        if(out_expr->id != EXPR_CALL && out_expr->id != EXPR_CALL_METHOD && out_expr->id != EXPR_SUPER){
             compiler_panicf(ctx->compiler, out_expr->source, "Expression is not a statement");
             ast_expr_free_fully(out_expr);
             errorcode = FAILURE;
@@ -1279,6 +1279,33 @@ errorcode_t parse_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt
     return parse_expr(ctx, &mutable_expr) || parse_mid_mutable_expr_operation(ctx, stmt_list, mutable_expr, source);
 }
 
+static bool is_casting_construct(ast_expr_t *expr){
+    if(expr->id != EXPR_CALL_METHOD) return false;
+
+    ast_expr_call_method_t *call = (ast_expr_call_method_t*) expr;
+
+    if(!streq(call->name, "__constructor__")) return false;
+
+    ast_expr_t *subject = call->value;
+
+    if(subject->id != EXPR_CAST) return false;
+
+    ast_expr_cast_t *cast = (ast_expr_cast_t*) subject;
+
+    while(cast->from->id == EXPR_CAST){
+        cast = (ast_expr_cast_t*) cast->from;
+    }
+
+    if(cast->from->id != EXPR_VARIABLE) return false;
+
+    ast_expr_variable_t *variable = (ast_expr_variable_t*) cast->from;
+
+    if(!streq(variable->name, "this")) return false;
+
+    // This expression is trivially attempting to call __constructor__ on a casted version of 'this'
+    return true;
+}
+
 errorcode_t parse_mid_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, ast_expr_t *mutable_expr, source_t source){
     // Parses a statement that begins with a mutable expression
     // e.g.  variable = value     or    my_array[index].doSomething()
@@ -1293,6 +1320,14 @@ errorcode_t parse_mid_mutable_expr_operation(parse_ctx_t *ctx, ast_expr_list_t *
     // For some expressions, bypass and treat as statement
     switch(mutable_expr->id){
     case EXPR_CALL_METHOD:
+        // Validate that not (this as X).__constructor__() within another constructor
+        if(ctx->func->traits & AST_FUNC_CLASS_CONSTRUCTOR && is_casting_construct(mutable_expr)){
+            compiler_panic(ctx->compiler, mutable_expr->source, "Unusual construction of class as different type, did you mean to use 'super()'");
+            ast_expr_free_fully(mutable_expr);
+            return FAILURE;
+        }
+        
+        /* fallthrough */
     case EXPR_POSTINCREMENT:
     case EXPR_POSTDECREMENT:
     case EXPR_PREINCREMENT:
@@ -1460,7 +1495,6 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
         free(assembly);
         return FAILURE;
     }
-
 
     while(tokens[*i].id != TOKEN_CLOSE){
         ast_expr_t *arg;

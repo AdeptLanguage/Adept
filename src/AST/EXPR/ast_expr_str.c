@@ -152,6 +152,20 @@ static strong_cstr_t ast_expr_call_to_str(ast_expr_call_t *call_expr){
     return string_builder_finalize(&builder);
 }
 
+static strong_cstr_t ast_expr_super_to_str(ast_expr_super_t *super_expr){
+    string_builder_t builder;
+    string_builder_init(&builder);
+
+    string_builder_append(&builder, "super");
+
+    if(super_expr->is_tentative){
+        string_builder_append_char(&builder, '?');
+    }
+
+    string_builder_append_expr_list(&builder, super_expr->args, super_expr->arity, true);
+    return string_builder_finalize(&builder);
+}
+
 static strong_cstr_t ast_expr_call_method_to_str(ast_expr_call_method_t *method_expr){
     string_builder_t builder;
     string_builder_init(&builder);
@@ -400,6 +414,8 @@ strong_cstr_t ast_expr_str(ast_expr_t *expr){
         return ast_expr_math_to_str((ast_expr_math_t*) expr);
     case EXPR_CALL:
         return ast_expr_call_to_str((ast_expr_call_t*) expr);
+    case EXPR_SUPER:
+        return ast_expr_super_to_str((ast_expr_super_t*) expr);
     case EXPR_VARIABLE:
         return strclone(typecast(ast_expr_variable_t*, expr)->name);
     case EXPR_MEMBER:

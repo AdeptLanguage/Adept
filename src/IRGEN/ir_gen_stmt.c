@@ -61,6 +61,7 @@ errorcode_t ir_gen_stmts(ir_builder_t *builder, ast_expr_list_t *stmt_list, bool
         case EXPR_CALL_METHOD:
             if(ir_gen_stmt_call_like(builder, stmt)) return FAILURE;
             break;
+        case EXPR_SUPER:
         case EXPR_PREINCREMENT:
         case EXPR_PREDECREMENT:
         case EXPR_POSTINCREMENT:

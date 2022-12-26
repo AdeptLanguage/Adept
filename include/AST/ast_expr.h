@@ -158,7 +158,7 @@ typedef struct {
     ast_expr_t *if_false;
 } ast_expr_ternary_t;
 
-// ---------------- ast_expr_call_t ----------------
+// ---------------- ast_expr_super_t ----------------
 // Expression for calling a function
 typedef struct {
     DERIVE_AST_EXPR;
@@ -184,6 +184,18 @@ typedef struct {
     // Throw an error when trying to use functions marked as "no discard"
     bool no_discard : 1;
 } ast_expr_call_t;
+
+// ---------------- ast_expr_super_t ----------------
+// Expression for `super()` invocations
+typedef struct {
+    DERIVE_AST_EXPR;
+    ast_type_t parent_type;
+    ast_expr_t **args;
+    length_t arity;
+
+    // Ignore this call if it can't be compiled
+    bool is_tentative : 1;
+} ast_expr_super_t;
 
 // ---------------- ast_expr_variable_t ----------------
 // Expression for accessing a variable
@@ -510,6 +522,18 @@ ast_expr_t *ast_expr_clone(ast_expr_t* expr);
 // If `expr` is NULL, then NULL otherwise clones an expression, producing a duplicate
 ast_expr_t *ast_expr_clone_if_not_null(ast_expr_t *expr);
 
+// ---------------- ast_exprs_clone ----------------
+// Clones an array of expressions
+static inline ast_expr_t **ast_exprs_clone(ast_expr_t **exprs, length_t arity){
+    ast_expr_t **array = malloc(sizeof *array * arity);
+
+    for(length_t i = 0; i < arity; i++){
+        array[i] = ast_expr_clone(exprs[i]);
+    }
+
+    return array;
+}
+
 // ---------------- ast_expr_create_bool ----------------
 // Creates a boolean expression
 ast_expr_t *ast_expr_create_bool(adept_bool value, source_t source);
@@ -545,6 +569,10 @@ ast_expr_t *ast_expr_create_call(strong_cstr_t name, length_t arity, ast_expr_t 
 // NOTE: 'gives' may be NULL or 'gives.elements_length' be zero
 //       to indicate no return matching
 void ast_expr_create_call_in_place(ast_expr_call_t *out_expr, strong_cstr_t name, length_t arity, ast_expr_t **args, bool is_tentative, ast_type_t *gives, source_t source);
+
+// ---------------- ast_expr_create_super ----------------
+// Creates a `super()` call expression
+ast_expr_t *ast_expr_create_super(ast_type_t parent_type, length_t arity, ast_expr_t **args, bool is_tentative, source_t source);
 
 // ---------------- ast_expr_create_method_call ----------------
 // Creates a call method expression
@@ -672,10 +700,9 @@ ast_expr_t *ast_expr_create_switch(source_t source, ast_expr_t *value, ast_case_
 // Creates a declare-named-expression statement
 ast_expr_t *ast_expr_create_declare_named_expression(source_t source, ast_named_expression_t named_expression);
 
-// ---------------- ast_expr_create_declare_named_expression ----------------
-// Creates a declare-named-expression statement
+// ---------------- ast_expr_create_assert ----------------
+// Creates an assert statement
 ast_expr_t *ast_expr_create_assert(source_t source, ast_expr_t *assertion);
-
 
 // ---------------- ast_expr_list_create ----------------
 // Creates an ast_expr_list_t with a given capacity

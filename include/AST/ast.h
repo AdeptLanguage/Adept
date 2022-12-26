@@ -118,6 +118,7 @@ typedef struct {
 
 // ---------------- DERIVE_AST_COMPOSITE ----------------
 // Common fields for all ast_composite_*_t derivatives
+// NOTE: `parent` may be AST_TYPE_NONE
 #define DERIVE_AST_COMPOSITE struct { \
     strong_cstr_t name; \
     ast_layout_t layout; \

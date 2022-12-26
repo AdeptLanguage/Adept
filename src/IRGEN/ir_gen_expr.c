@@ -215,6 +215,9 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_CALL:
         if(ir_gen_expr_call(builder, (ast_expr_call_t*) expr, ir_value, out_expr_type)) return FAILURE;
         break;
+    case EXPR_SUPER:
+        if(ir_gen_expr_super(builder, (ast_expr_super_t*) expr, ir_value, out_expr_type)) return FAILURE;
+        break;
     case EXPR_MEMBER:
         if(ir_gen_expr_member(builder, (ast_expr_member_t*) expr, ir_value, leave_mutable, out_expr_type)) return FAILURE;
         break;
@@ -739,6 +742,64 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     compiler_undeclared_function(builder->compiler, builder->object, expr->source, expr->name, arg_types, expr->arity, &expr->gives, false);
     ast_types_free_fully(arg_types, arg_arity);
     return FAILURE;
+}
+
+errorcode_t ir_gen_expr_super(ir_builder_t *builder, ast_expr_super_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
+    // super(a, b, c, d)  ->  (this as Super).__constructor__(a, b, c); this.__vtable__ = <__vtable__>
+
+    // ast_expr_t *this_value = ast_expr_create_variable("this", expr->source);
+
+    // Find 'this' argument
+    bridge_var_t *bridge_var = bridge_scope_find_var(builder->scope, "this");
+    assert(bridge_var);
+
+    // Get value of 'this'
+    ir_value_t *this_value = build_load(
+        builder, 
+        build_varptr(builder, ir_type_make_pointer_to(builder->pool, bridge_var->ir_type), bridge_var),
+        expr->source
+    );
+
+    ast_expr_t *this_pointer = ast_expr_create_phantom(ast_type_clone(bridge_var->ast_type), this_value, expr->source, false);
+
+    ast_type_t to = ast_type_pointer_to(ast_type_clone(&expr->parent_type));
+    ast_expr_t *this_as_super = ast_expr_create_cast(to, this_pointer, expr->source);
+
+    ast_expr_t **args = ast_exprs_clone(expr->args, expr->arity);
+    ast_expr_t *primary_call = ast_expr_create_call_method(strclone("__constructor__"), this_as_super, expr->arity, args, expr->is_tentative, false, NULL, expr->source);
+
+    errorcode_t errorcode = ir_gen_expr(builder, primary_call, NULL, false, NULL);
+    ast_expr_free_fully(primary_call);
+
+    ast_type_t subject_type = ast_type_dereferenced_view(bridge_var->ast_type);
+    
+    if(errorcode == SUCCESS){
+        // Refresh vtable
+
+        // Get pointer to vtable field
+        ir_value_t *destination = build_bitcast(builder, this_value, ir_type_make_pointer_to(builder->pool, builder->object->ir_module.common.ir_ptr));
+
+        // Create placeholder store instruction,
+        // The proper value to be stored will be filled in later during vtable resolution
+        ir_instr_store_t *store_instr = build_store(builder, NULL, destination, expr->source);
+
+        // Get persistent pointer to the dummy store instruction
+        assert(store_instr->id == INSTRUCTION_STORE);
+
+        // Append vtable initialization for later processing
+        ir_vtable_init_list_append(&builder->object->ir_module.vtable_init_list, ((ir_vtable_init_t){
+            .store_instr = store_instr,
+            .subject_type = ast_type_clone(&subject_type),
+        }));
+
+        *ir_value = NULL;
+
+        if(out_expr_type != NULL){
+            *out_expr_type = ast_type_make_base(strclone("void"));
+        }
+    }
+
+    return errorcode;
 }
 
 errorcode_t ir_gen_arguments(ir_builder_t *builder, ast_expr_t **args, length_t arity, ir_value_t ***out_arg_values, ast_type_t **out_arg_types){
@@ -2774,8 +2835,8 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
         if(!ast_types_conform(builder, &arg_values[i], &arg_types[i], &function_elem->arg_types[i], CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
             if(call->is_tentative) return ALT_FAILURE;
 
-            char *s1 = ast_type_str(&function_elem->arg_types[i]);
-            char *s2 = ast_type_str(&arg_types[i]);
+            strong_cstr_t s1 = ast_type_str(&function_elem->arg_types[i]);
+            strong_cstr_t s2 = ast_type_str(&arg_types[i]);
             compiler_panicf(builder->compiler, call->args[i]->source, "Required argument type '%s' is incompatible with type '%s'", s1, s2);
             free(s1);
             free(s2);
