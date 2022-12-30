@@ -884,7 +884,7 @@ void compiler_print_source(compiler_t *compiler, int line, source_t source){
     }
 
     char prefix[128];
-    sprintf(prefix, "  %d| ", line);
+    snprintf(prefix, sizeof prefix, "  %d| ", line);
     length_t prefix_length = strlen(prefix);
     printf("%s", prefix);
 

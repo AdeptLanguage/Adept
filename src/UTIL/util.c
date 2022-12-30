@@ -81,7 +81,7 @@ char *mallocandsprintf(const char *format, ...){
     }
     va_end(transverse);
     destination = malloc(size);
-    vsprintf(destination, format, args);
+    vsnprintf(destination, size, format, args);
     va_end(args);
     return destination;
 }

@@ -25,7 +25,7 @@ static strong_cstr_t ast_expr_ubyte_to_str(ast_expr_ubyte_t *ubyte_expr){
     // Converts a literal ubyte expression into a human-readable string
     // ast_expr_ubyte_t   --->   "0x0Aub"
     strong_cstr_t result = malloc(7);
-    sprintf(result, "0x%02Xub", (unsigned int) ubyte_expr->value);
+    snprintf(result, 7, "0x%02Xub", (unsigned int) ubyte_expr->value);
     return result;
 }
 

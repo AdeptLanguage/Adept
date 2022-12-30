@@ -55,8 +55,8 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
         else if(tokens[t].id == TOKEN_CSTRING){
             extra_data_length = strlen(tokens[t].data);
 
-            if(extra_data_length == 1024){
-                redprintf("Failed to create package because string exceeded max length of 1024 bytes!\n");
+            if(extra_data_length == sizeof buffer){
+                redprintf("Failed to create package because string exceeded max length of %d bytes!\n", (int) sizeof buffer);
                 fclose(file);
                 return FAILURE;
             }
@@ -72,12 +72,12 @@ errorcode_t pkg_write(const char *filename, tokenlist_t *tokenlist){
         }
         else if(tokens[t].id == TOKEN_GENERIC_INT){
             fwrite(&id, sizeof(tokenid_t), 1, file);
-            sprintf(buffer, "%ld", (long) *((long long*) tokens[t].data));
+            snprintf(buffer, sizeof buffer, "%ld", (long) *((long long*) tokens[t].data));
             fwrite(buffer, strlen(buffer) + 1, 1, file);
         }
         else if(tokens[t].id == TOKEN_GENERIC_FLOAT){
             fwrite(&id, sizeof(tokenid_t), 1, file);
-            sprintf(buffer, "%06.6f", *((double*) tokens[t].data));
+            snprintf(buffer, sizeof buffer, "%06.6f", *((double*) tokens[t].data));
             fwrite(buffer, strlen(buffer) + 1, 1, file);
         }
         else {

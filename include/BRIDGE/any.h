@@ -93,6 +93,10 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast);
 // Injects AST struct 'AnyFixedArrayType'
 void any_inject_ast_AnyFixedArrayType(ast_t *ast);
 
+// ---------------- any_inject_ast_AnyEnumType ----------------
+// Injects AST struct 'AnyEnumType'
+void any_inject_ast_AnyEnumType(ast_t *ast);
+
 // ---------------- any_inject_ast___types__ ----------------
 // Injects AST global variable '__types__'
 void any_inject_ast___types__(ast_t *ast);

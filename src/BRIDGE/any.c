@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -13,7 +14,7 @@
 
 const char *any_type_kind_names[] = {
     "void", "bool", "byte", "ubyte", "short", "ushort", "int", "uint",
-    "long", "ulong", "float", "double", "pointer", "struct", "union", "function-pointer", "fixed-array"
+    "long", "ulong", "float", "double", "pointer", "struct", "union", "function-pointer", "fixed-array", "enum"
 };
 
 void any_inject_ast(ast_t *ast){
@@ -27,6 +28,7 @@ void any_inject_ast(ast_t *ast){
     any_inject_ast_AnyFuncPtrType(ast);
     any_inject_ast_AnyCompositeType(ast);
     any_inject_ast_AnyFixedArrayType(ast);
+    any_inject_ast_AnyEnumType(ast);
 
     any_inject_ast___types__(ast);
     any_inject_ast___types_length__(ast);
@@ -48,8 +50,10 @@ void any_inject_ast_Any(ast_t *ast){
         ast_type_make_base(strclone("ulong")),
     };
 
+    static_assert(NUM_ITEMS(names) == NUM_ITEMS(types), "");
+
     ast_layout_t layout;
-    ast_layout_init_with_struct_fields(&layout, names, types, 2);
+    ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(types));
     ast_add_composite(ast, strclone("Any"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
@@ -71,8 +75,10 @@ void any_inject_ast_AnyType(ast_t *ast){
         ast_type_make_base(strclone("usize")),
     };
 
+    static_assert(NUM_ITEMS(names) == NUM_ITEMS(types), "");
+
     ast_layout_t layout;
-    ast_layout_init_with_struct_fields(&layout, names, types, 4);
+    ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(types));
     ast_add_composite(ast, strclone("AnyType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
@@ -81,22 +87,31 @@ void any_inject_ast_AnyTypeKind(ast_t *ast){
     /*
     enum AnyTypeKind (
         VOID, BOOL, BYTE, UBYTE, SHORT, USHORT, INT, UINT, LONG,
-        ULONG, FLOAT, DOUBLE, PTR, STRUCT, UNION, FUNC_PTR, FIXED_ARRAY
+        ULONG, FLOAT, DOUBLE, PTR, STRUCT, UNION, FUNC_PTR, FIXED_ARRAY, ENUM
     )
     */
 
-    weak_cstr_t *kinds = malloc(sizeof(weak_cstr_t) * 17);
-    kinds[0]  = "VOID";     kinds[1]  = "BOOL";
-    kinds[2]  = "BYTE";     kinds[3]  = "UBYTE";
-    kinds[4]  = "SHORT";    kinds[5]  = "USHORT";
-    kinds[6]  = "INT";      kinds[7]  = "UINT";
-    kinds[8]  = "LONG";     kinds[9]  = "ULONG";
-    kinds[10] = "FLOAT";    kinds[11] = "DOUBLE";
-    kinds[12] = "PTR";      kinds[13] = "STRUCT";
-    kinds[14] = "UNION";    kinds[15] = "FUNC_PTR";
+    weak_cstr_t *kinds = malloc(sizeof(weak_cstr_t) * 18);
+    kinds[0]  = "VOID";
+    kinds[1]  = "BOOL";
+    kinds[2]  = "BYTE";
+    kinds[3]  = "UBYTE";
+    kinds[4]  = "SHORT";
+    kinds[5]  = "USHORT";
+    kinds[6]  = "INT";
+    kinds[7]  = "UINT";
+    kinds[8]  = "LONG";
+    kinds[9]  = "ULONG";
+    kinds[10] = "FLOAT";
+    kinds[11] = "DOUBLE";
+    kinds[12] = "PTR";
+    kinds[13] = "STRUCT";
+    kinds[14] = "UNION";
+    kinds[15] = "FUNC_PTR";
     kinds[16] = "FIXED_ARRAY";
+    kinds[17] = "ENUM";
 
-    ast_add_enum(ast, strclone("AnyTypeKind"), kinds, 17, NULL_SOURCE);
+    ast_add_enum(ast, strclone("AnyTypeKind"), kinds, 18, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyPtrType(ast_t *ast){
@@ -119,8 +134,10 @@ void any_inject_ast_AnyPtrType(ast_t *ast){
         ast_type_make_base_ptr(strclone("AnyType")),
     };
 
+    static_assert(NUM_ITEMS(names) == NUM_ITEMS(types), "");
+
     ast_layout_t layout;
-    ast_layout_init_with_struct_fields(&layout, names, types, 5);
+    ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(types));
     ast_add_composite(ast, strclone("AnyPtrType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
@@ -152,8 +169,10 @@ void any_inject_ast_AnyCompositeType(ast_t *ast){
         ast_type_make_base(strclone("bool")),
     };
 
+    static_assert(NUM_ITEMS(names) == NUM_ITEMS(types), "");
+
     ast_layout_t layout;
-    ast_layout_init_with_struct_fields(&layout, names, types, 9);
+    ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(types));
     ast_add_composite(ast, strclone("AnyCompositeType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
@@ -207,8 +226,10 @@ void any_inject_ast_AnyFuncPtrType(ast_t *ast){
         ast_type_make_base(strclone("bool")),
     };
 
+    static_assert(NUM_ITEMS(names) == NUM_ITEMS(types), "");
+
     ast_layout_t layout;
-    ast_layout_init_with_struct_fields(&layout, names, types, 9);
+    ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(types));
     ast_add_composite(ast, strclone("AnyFuncPtrType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
@@ -234,9 +255,40 @@ void any_inject_ast_AnyFixedArrayType(ast_t *ast){
         ast_type_make_base(strclone("usize")),
     };
 
+    static_assert(NUM_ITEMS(names) == NUM_ITEMS(types), "");
+
     ast_layout_t layout;
-    ast_layout_init_with_struct_fields(&layout, names, types, 6);
+    ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(types));
     ast_add_composite(ast, strclone("AnyFixedArrayType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
+}
+
+void any_inject_ast_AnyEnumType(ast_t *ast){
+    
+    /* struct AnyEnumType (kind AnyTypeKind, name *ubyte, is_alias bool, size usize, members **ubyte, length usize) */
+
+    strong_cstr_t names[6] = {
+        strclone("kind"),
+        strclone("name"),
+        strclone("is_alias"),
+        strclone("size"),
+        strclone("members"),
+        strclone("length"),
+    };
+
+    ast_type_t types[6] = {
+        ast_type_make_base(strclone("AnyTypeKind")),
+        ast_type_make_base_ptr(strclone("ubyte")),
+        ast_type_make_base(strclone("bool")),
+        ast_type_make_base(strclone("usize")),
+        ast_type_pointer_to(ast_type_make_base_ptr(strclone("ubyte"))),
+        ast_type_make_base(strclone("usize")),
+    };
+
+    static_assert(NUM_ITEMS(names) == NUM_ITEMS(types), "");
+
+    ast_layout_t layout;
+    ast_layout_init_with_struct_fields(&layout, names, types, NUM_ITEMS(types));
+    ast_add_composite(ast, strclone("AnyEnumType"), layout, NULL_SOURCE, AST_TYPE_NONE, false);
 }
 
 void any_inject_ast___types__(ast_t *ast){

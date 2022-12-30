@@ -128,10 +128,10 @@ strong_cstr_t filename_adept_import(const char *root, const char *filename){
     // NOTE: Returns string that must be freed by caller
 
     length_t root_len = strlen(root);
-
     length_t filename_len = strlen(filename);
-    char *result = malloc(root_len + filename_len + 8);
-    sprintf(result, "%simport/%s", root, filename);
+    length_t buffer_size = root_len + filename_len + 8;
+    char *result = malloc(buffer_size);
+    snprintf(result, buffer_size, "%simport/%s", root, filename);
     return result;
 }
 

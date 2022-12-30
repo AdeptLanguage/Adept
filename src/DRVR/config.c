@@ -228,7 +228,7 @@ failure:
         // Since we are using binary file stream mode, don't rely on fprintf
         time_t timestamp = time(NULL);
         char timestamp_buffer[256];
-        sprintf(timestamp_buffer, "%zu", (size_t) timestamp);
+        snprintf(timestamp_buffer, sizeof timestamp_buffer, "%zu", (size_t) timestamp);
         fwrite(timestamp_buffer, 1, strlen(timestamp_buffer), f);
         
         fwrite(buffer.content + last_update.end, 1, buffer.capacity - last_update.end, f);

@@ -46,7 +46,7 @@ void string_builder_append_char(string_builder_t *builder, char character){
 
 void string_builder_append_int(string_builder_t *builder, int integer){
     char buffer[32];
-    sprintf(buffer, "%d", integer);
+    snprintf(buffer, sizeof buffer, "%d", integer);
     string_builder_append(builder, buffer);
 }
 
