@@ -17,10 +17,13 @@ void type_table_init(type_table_t *table){
 
 void type_table_free(type_table_t *table){
     if(table == NULL) return;
+
     for(length_t i = 0; i != table->length; i++){
-        free(table->entries[i].name);
-        ast_type_free(&table->entries[i].ast_type);
+        type_table_entry_t *entry = &table->entries[i];
+        free(entry->name);
+        ast_type_free(&entry->ast_type);
     }
+
     free(table->entries);
 }
 
@@ -57,14 +60,16 @@ bool type_table_add(type_table_t *table, type_table_entry_t entry){
 void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cstr_t maybe_alias_name){
     if(ast_type_has_polymorph(type)) return;
 
-    type_table_entry_t weak_ast_type_entry;
-    weak_ast_type_entry.name = maybe_alias_name ? maybe_alias_name : ast_type_str(type);
-    weak_ast_type_entry.ast_type = *type;
-    #ifndef ADEPT_INSIGHT_BUILD
-    weak_ast_type_entry.ir_type = NULL;
-    #endif
-    weak_ast_type_entry.is_alias = (maybe_alias_name != NULL);
-    weak_ast_type_entry.is_enum = false;
+    type_table_entry_t weak_ast_type_entry = (type_table_entry_t){
+        .name = maybe_alias_name ? maybe_alias_name : ast_type_str(type),
+        .ast_type = *type,
+        .is_alias = maybe_alias_name != NULL,
+        .is_enum = false,
+
+        #ifndef ADEPT_INSIGHT_BUILD
+        .ir_type = NULL,
+        #endif
+    };
 
     // Don't add if it already exists
     if(!type_table_add(table, weak_ast_type_entry)){
@@ -80,16 +85,16 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
     if(!streq(weak_ast_type_entry.name, "void")){
         ast_type_t with_additional_ptr = ast_type_pointer_to(ast_type_clone(type));
 
-        type_table_entry_t strong_ast_type_entry;
-        strong_ast_type_entry.name = ast_type_str(&with_additional_ptr);
-        strong_ast_type_entry.ast_type = with_additional_ptr;
+        type_table_entry_t strong_ast_type_entry = (type_table_entry_t){
+            .name = ast_type_str(&with_additional_ptr),
+            .ast_type = with_additional_ptr,
+            .is_alias = false,
+            .is_enum = false,
 
-        #ifndef ADEPT_INSIGHT_BUILD
-        strong_ast_type_entry.ir_type = NULL;
-        #endif
-
-        strong_ast_type_entry.is_alias = false;
-        strong_ast_type_entry.is_enum = false;
+            #ifndef ADEPT_INSIGHT_BUILD
+            .ir_type = NULL,
+            #endif
+        };
 
         if(!type_table_add(table, strong_ast_type_entry)){
             ast_type_free(&strong_ast_type_entry.ast_type);

@@ -67,6 +67,7 @@ void type_table_give_impl(type_table_t *table, weak_cstr_t base, bool is_enum);
 // NOTE: If call fails, 'entry.name' will most likely need to be freed
 // DANGEROUS: This function is really quirky, and should avoided when possible
 //            Use 'type_table_give' instead!
+// TODO: CLEANUP: FIX THIS FIX THIS FIX THIS FIX THIS FIX THIS FIX THIS!!!
 /*
     -----------------------------------------------------------------
                         Ownership transfer details
@@ -74,12 +75,12 @@ void type_table_give_impl(type_table_t *table, weak_cstr_t base, bool is_enum);
     typedef struct {
         strong_cstr_t name;                Ownership taken if added
         ast_type_t ast_type;               Ownership never taken (cloned instead)
+        bool is_alias;                     Ownershipless
+        bool is_enum;                     Ownershipless
 
         #ifndef ADEPT_INSIGHT_BUILD
         ir_type_t *ir_type;                Ownershipless
         #endif
-        
-        bool is_alias;                     Ownershipless
     } type_table_entry_t;
     -----------------------------------------------------------------
 */

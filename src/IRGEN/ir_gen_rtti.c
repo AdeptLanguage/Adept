@@ -32,12 +32,11 @@ errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t 
 
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
-
-    ir_rtti_types_t rtti_types;
     length_t array_length = object->ast.type_table->length;
 
     // Fetch IR Types for RTTI
-    if(ir_gen_rtti_fetch_rtti_types(ir_module, &rtti_types)) return FAILURE;
+    ir_rtti_types_t rtti_types;
+    if(ir_gen_rtti_fetch_rtti_representation_types(ir_module, &rtti_types)) return FAILURE;
     
     // Generate Array Values
     ir_value_t **array_values = ir_gen__types__values(compiler, object, &rtti_types);
@@ -49,7 +48,7 @@ errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t 
     return SUCCESS;
 }
 
-errorcode_t ir_gen_rtti_fetch_rtti_types(ir_module_t *ir_module, ir_rtti_types_t *out_rtti_types){
+errorcode_t ir_gen_rtti_fetch_rtti_representation_types(ir_module_t *ir_module, ir_rtti_types_t *out_rtti_types){
     ir_pool_t *pool = &ir_module->pool;
     ir_type_map_t *type_map = &ir_module->type_map;
 
@@ -59,20 +58,13 @@ errorcode_t ir_gen_rtti_fetch_rtti_types(ir_module_t *ir_module, ir_rtti_types_t
     || !ir_type_map_find(type_map, "AnyPtrType", &out_rtti_types->any_ptr_type_type)
     || !ir_type_map_find(type_map, "AnyFuncPtrType", &out_rtti_types->any_funcptr_type_type)
     || !ir_type_map_find(type_map, "AnyFixedArrayType", &out_rtti_types->any_fixed_array_type_type)
-    || !ir_type_map_find(type_map, "AnyEnumType", &out_rtti_types->any_enum_type_type)
-    || !ir_type_map_find(type_map, "ubyte", &out_rtti_types->ubyte_ptr_type)){
-        internalerrorprintf("ir_gen_rtti_fetch_rtti_types() - Failed to find critical types used by the runtime type table, which should already exist\n");
+    || !ir_type_map_find(type_map, "AnyEnumType", &out_rtti_types->any_enum_type_type)){
+        internalerrorprintf("ir_gen_rtti_fetch_rtti_representation_types() - Failed to find critical types used by the runtime type table, which should already exist\n");
         return FAILURE;
     }
 
-    // Turn 'ubyte' type into '*ubyte' type
-    out_rtti_types->ubyte_ptr_type = ir_type_make_pointer_to(pool, out_rtti_types->ubyte_ptr_type);
-
     // Make '*AnyType' type
     out_rtti_types->any_type_ptr_type = ir_type_make_pointer_to(pool, out_rtti_types->any_type_type);
-
-    // Fetch 'usize' type
-    out_rtti_types->usize_type = ir_module->common.ir_usize;
     return SUCCESS;
 }
 
@@ -123,11 +115,11 @@ errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_va
     }
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 5);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_PTR);                     // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
-    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
-    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
-    fields[4] = subtype_rtti;                                                     // subtype
+    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_PTR);                         // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
+    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
+    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
+    fields[4] = subtype_rtti;                                                         // subtype
 
     // Cast pointer fields to s8* since that's we store them
     fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
@@ -172,12 +164,12 @@ errorcode_t ir_gen__types__fixed_array_entry(object_t *object, ir_value_t **arra
     ir_value_t *length = build_literal_usize(pool, ((ast_elem_fixed_array_t*) entry->ast_type.elements[0])->length);
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FIXED_ARRAY);             // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
-    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
-    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
-    fields[4] = subtype_rtti;                                                     // subtype
-    fields[5] = length;                                                           // length
+    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FIXED_ARRAY);                 // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
+    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
+    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
+    fields[4] = subtype_rtti;                                                         // subtype
+    fields[5] = length;                                                               // length
 
     // Cast pointer fields to s8* since that's we store them
     fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
@@ -239,15 +231,15 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
     ir_value_t *return_type = ir_gen__types__get_rtti_pointer_for(object, fp->return_type, array_values, rtti_types);
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FUNC_PTR);                // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
-    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
-    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
-    fields[4] = args;                                                             // args
-    fields[5] = length;                                                           // length
-    fields[6] = return_type;                                                      // return_type
-    fields[7] = build_bool(pool, fp->traits & AST_FUNC_VARARG);                   // is_vararg
-    fields[8] = build_bool(pool, fp->traits & AST_FUNC_STDCALL);                  // is_stdcall
+    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FUNC_PTR);                    // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
+    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
+    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
+    fields[4] = args;                                                                 // args
+    fields[5] = length;                                                               // length
+    fields[6] = return_type;                                                          // return_type
+    fields[7] = build_bool(pool, fp->traits & AST_FUNC_VARARG);                       // is_vararg
+    fields[8] = build_bool(pool, fp->traits & AST_FUNC_STDCALL);                      // is_stdcall
 
     // Cast pointer fields to s8* since that's we store them
     fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
@@ -298,10 +290,10 @@ errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_
     }
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 4);
-    fields[0] = build_literal_usize(pool, kind_id);                               // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
-    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
-    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
+    fields[0] = build_literal_usize(pool, kind_id);                                   // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
+    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
+    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
 
     // Cast pointer fields to s8* since that's we store them
     fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
@@ -333,13 +325,31 @@ errorcode_t ir_gen__types__enum_entry(object_t *object, ir_value_t **array_value
     ir_value_t **result = &array_values[array_value_index];
     type_table_entry_t *entry = &type_table->entries[array_value_index];
 
+    const char *enum_name = entry->name;
+    ast_t *ast = &object->ast;
+    maybe_index_t enum_index = ast_find_enum(ast->enums, ast->enums_length, entry->name);
+
+    if(enum_index < 0){
+        internalerrorprintf("Failed to generate RTTI for enum '%s' that should exist\n", enum_name);
+        return FAILURE;
+    }
+
+    ast_enum_t *enum_definition = &ast->enums[enum_index];
+
+    length_t length = enum_definition->length;
+    ir_value_t **values = malloc(sizeof(ir_value_t) * length);
+
+    for(length_t i = 0; i != length; i++){
+        values[i] = build_literal_cstr_ex(pool, &ir_module->type_map, enum_definition->kinds[i]);
+    }
+
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_ENUM);                    // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
-    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
-    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
-    fields[4] = build_null_pointer_of_type(pool, ir_type_make_pointer_to(pool, ir_type_make_pointer_to(pool, ir_module->common.ir_ubyte))); // members
-    fields[5] = build_literal_usize(pool, 0);                                     // length
+    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_ENUM);                            // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);           // name
+    fields[2] = build_bool(pool, entry->is_alias);                                        // is_alias
+    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type);     // size
+    fields[4] = build_static_array(pool, ir_module->common.ir_ubyte_ptr, values, length); // members
+    fields[5] = build_literal_usize(pool, length);                                        // length
 
     // Cast pointer fields to s8* since that's we store them
     fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
@@ -404,15 +414,15 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
     ir_gen__types__composite_entry_free_info(&info);
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
-    fields[0] = build_literal_usize(pool, kind);                                  // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
-    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
-    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
-    fields[4] = members_array;                                                    // members
-    fields[5] = length;                                                           // length
-    fields[6] = offsets_array;                                                    // offsets
-    fields[7] = member_names_array;                                               // member_names
-    fields[8] = is_packed;                                                        // is_packed
+    fields[0] = build_literal_usize(pool, kind);                                      // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
+    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
+    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
+    fields[4] = members_array;                                                        // members
+    fields[5] = length;                                                               // length
+    fields[6] = offsets_array;                                                        // offsets
+    fields[7] = member_names_array;                                                   // member_names
+    fields[8] = is_packed;                                                            // is_packed
 
     // Cast pointer fields to s8* since that's we store them
     fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
@@ -576,7 +586,7 @@ ir_value_t *ir_gen__types__composite_entry_offsets_array(object_t *object, ir_ge
         offsets[i] = offset;
     }
 
-    return build_static_array(pool, info->rtti_types->usize_type, offsets, field_map->arrows_length);
+    return build_static_array(pool, ir_module->common.ir_usize, offsets, field_map->arrows_length);
 }
 
 ir_value_t *ir_gen__types__composite_entry_member_names_array(ir_module_t *ir_module, ir_gen_composite_rtti_info_t *info){
@@ -590,7 +600,7 @@ ir_value_t *ir_gen__types__composite_entry_member_names_array(ir_module_t *ir_mo
         member_names[i] = build_literal_cstr_ex(pool, type_map, field_map->arrows[i].name);
     }
 
-    return build_static_array(pool, info->rtti_types->ubyte_ptr_type, member_names, field_map->arrows_length);
+    return build_static_array(pool, ir_module->common.ir_ubyte_ptr, member_names, field_map->arrows_length);
 }
 
 ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rtti_types_t *rtti_types){

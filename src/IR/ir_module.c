@@ -39,6 +39,7 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
 
     memset(common, 0, sizeof *common);
     common->ir_ubyte = ir_type_make(pool, TYPE_KIND_U8, NULL);
+    common->ir_ubyte_ptr = ir_type_make_pointer_to(pool, common->ir_ubyte);
     common->ir_usize = ir_type_make(pool, TYPE_KIND_U64, NULL);
     common->ir_usize_ptr = ir_type_make_pointer_to(&ir_module->pool, common->ir_usize);
     common->ir_ptr = ir_type_make_pointer_to(pool, common->ir_ubyte);

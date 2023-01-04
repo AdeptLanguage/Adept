@@ -34,8 +34,6 @@ typedef struct {
     ir_type_t *any_fixed_array_type_type;
     ir_type_t *any_enum_type_type;
     ir_type_t *any_type_ptr_type;
-    ir_type_t *ubyte_ptr_type;
-    ir_type_t *usize_type;
 } ir_rtti_types_t;
 
 // ---------------- ir_gen_composite_rtti_info_t ----------------
@@ -60,9 +58,9 @@ typedef struct {
 // Initializes the '__types__' global variable
 errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t *ir_global);
 
-// ---------------- ir_gen_rtti_fetch_rtti_types ----------------
+// ---------------- ir_gen_rtti_fetch_rtti_representation_types ----------------
 // Collects IR types necessary for generating RTTI
-errorcode_t ir_gen_rtti_fetch_rtti_types(ir_module_t *ir_module, ir_rtti_types_t *out_rtti_types);
+errorcode_t ir_gen_rtti_fetch_rtti_representation_types(ir_module_t *ir_module, ir_rtti_types_t *out_rtti_types);
 
 // ---------------- ir_gen__types__placeholder ----------------
 // Initializes the '__types__' global variable as a null pointer
