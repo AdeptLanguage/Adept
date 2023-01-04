@@ -21,12 +21,12 @@ extern "C" {
 typedef struct {
     strong_cstr_t name;
     ast_type_t ast_type;
+    bool is_alias;
+    bool is_enum;
 
     #ifndef ADEPT_INSIGHT_BUILD
     ir_type_t *ir_type;
     #endif
-    
-    bool is_alias;
 } type_table_entry_t;
 
 // ---------------- type_table_t ----------------
@@ -58,6 +58,8 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
 // ---------------- type_table_give_base ----------------
 // Mentions a base type to a bridging type table
 void type_table_give_base(type_table_t *table, weak_cstr_t base);
+void type_table_give_enum(type_table_t *table, weak_cstr_t base);
+void type_table_give_impl(type_table_t *table, weak_cstr_t base, bool is_enum);
 
 // ---------------- type_table_add ----------------
 // Adds entry if it has a unique name

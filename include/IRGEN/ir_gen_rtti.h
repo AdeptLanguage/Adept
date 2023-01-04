@@ -32,6 +32,7 @@ typedef struct {
     ir_type_t *any_ptr_type_type;
     ir_type_t *any_funcptr_type_type;
     ir_type_t *any_fixed_array_type_type;
+    ir_type_t *any_enum_type_type;
     ir_type_t *any_type_ptr_type;
     ir_type_t *ubyte_ptr_type;
     ir_type_t *usize_type;
@@ -91,6 +92,10 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
 // ---------------- ir_gen__types__primitive_entry ----------------
 // Fills in the RTTI for a primitive type inside the prepared global values for '__types__'
 errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_values, length_t array_value_index, ir_rtti_types_t *rtti_types);
+
+// ---------------- ir_gen__types__enum_entry ----------------
+// Fills in the RTTI for an enum type inside the prepared global values for '__types__'
+errorcode_t ir_gen__types__enum_entry(object_t *object, ir_value_t **array_values, length_t array_value_index, ir_rtti_types_t *rtti_types);
 
 // ---------------- ir_gen__types__composite_entry ----------------
 // Fills in the RTTI for a composite type inside the prepared global values for '__types__'

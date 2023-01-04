@@ -52,9 +52,17 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
         type_table_give_base(ctx.type_table, composite->name);
     }
 
+    for(length_t i = 0; i != ast->enums_length; i++){
+        ast_enum_t *enum_definition = &ast->enums[i];
+
+        type_table_give_enum(ctx.type_table, enum_definition->name);
+    }
+
     for(length_t i = 0; i != ast->globals_length; i++){
         if(infer_type(&ctx, &ast->globals[i].type)) return FAILURE;
+
         ast_expr_t **global_initial = &ast->globals[i].initial;
+
         if(*global_initial != NULL){
             unsigned int default_primitive = ast_primitive_from_ast_type(&ast->globals[i].type);
             if(infer_expr(&ctx, NULL, global_initial, default_primitive, false)) return FAILURE;

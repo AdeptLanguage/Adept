@@ -64,6 +64,7 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
     weak_ast_type_entry.ir_type = NULL;
     #endif
     weak_ast_type_entry.is_alias = (maybe_alias_name != NULL);
+    weak_ast_type_entry.is_enum = false;
 
     // Don't add if it already exists
     if(!type_table_add(table, weak_ast_type_entry)){
@@ -88,6 +89,7 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
         #endif
 
         strong_ast_type_entry.is_alias = false;
+        strong_ast_type_entry.is_enum = false;
 
         if(!type_table_add(table, strong_ast_type_entry)){
             ast_type_free(&strong_ast_type_entry.ast_type);
@@ -119,6 +121,14 @@ void type_table_give(type_table_t *table, ast_type_t *type, maybe_null_strong_cs
 }
 
 void type_table_give_base(type_table_t *table, weak_cstr_t base){
+    type_table_give_impl(table, base, false);
+}
+
+void type_table_give_enum(type_table_t *table, weak_cstr_t base){
+    type_table_give_impl(table, base, true);
+}
+
+void type_table_give_impl(type_table_t *table, weak_cstr_t base, bool is_enum){
     strong_cstr_t name = strclone(base);
 
     // Static AST type for base
@@ -143,6 +153,7 @@ void type_table_give_base(type_table_t *table, weak_cstr_t base){
             .source = NULL_SOURCE,
         },
         .is_alias = false,
+        .is_enum = is_enum,
 
         #ifndef ADEPT_INSIGHT_BUILD
         .ir_type = NULL,

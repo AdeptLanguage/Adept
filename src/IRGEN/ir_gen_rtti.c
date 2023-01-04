@@ -59,6 +59,7 @@ errorcode_t ir_gen_rtti_fetch_rtti_types(ir_module_t *ir_module, ir_rtti_types_t
     || !ir_type_map_find(type_map, "AnyPtrType", &out_rtti_types->any_ptr_type_type)
     || !ir_type_map_find(type_map, "AnyFuncPtrType", &out_rtti_types->any_funcptr_type_type)
     || !ir_type_map_find(type_map, "AnyFixedArrayType", &out_rtti_types->any_fixed_array_type_type)
+    || !ir_type_map_find(type_map, "AnyEnumType", &out_rtti_types->any_enum_type_type)
     || !ir_type_map_find(type_map, "ubyte", &out_rtti_types->ubyte_ptr_type)){
         internalerrorprintf("ir_gen_rtti_fetch_rtti_types() - Failed to find critical types used by the runtime type table, which should already exist\n");
         return FAILURE;
@@ -307,6 +308,44 @@ errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_type_type, fields, 4, false);
+    build_anon_global_initializer(ir_module, *result, initializer);
+    
+    // We don't have to bitcast '*AnyType' to '*AnyType', since it already is a '*AnyType'
+    return SUCCESS;
+}
+
+errorcode_t ir_gen__types__enum_entry(object_t *object, ir_value_t **array_values, length_t array_value_index, ir_rtti_types_t *rtti_types){
+    // ---------------------------------------------------------------------------------------------
+    // struct AnyEnumType (
+    //     kind AnyTypeKind,
+    //     name *ubyte,
+    //     is_alias bool,
+    //     size usize,
+    //     members **ubyte,
+    //     length usize
+    // )
+    // ---------------------------------------------------------------------------------------------
+
+    type_table_t *type_table = object->ast.type_table;
+    ir_module_t *ir_module = &object->ir_module;
+    ir_pool_t *pool = &ir_module->pool;
+
+    ir_value_t **result = &array_values[array_value_index];
+    type_table_entry_t *entry = &type_table->entries[array_value_index];
+
+    ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
+    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_ENUM);                    // kind
+    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);   // name
+    fields[2] = build_bool(pool, entry->is_alias);                                // is_alias
+    fields[3] = build_const_sizeof(pool, rtti_types->usize_type, entry->ir_type); // size
+    fields[4] = build_null_pointer_of_type(pool, ir_type_make_pointer_to(pool, ir_type_make_pointer_to(pool, ir_module->common.ir_ubyte))); // members
+    fields[5] = build_literal_usize(pool, 0);                                     // length
+
+    // Cast pointer fields to s8* since that's we store them
+    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
+
+    // Create struct literal and set as initializer
+    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_enum_type_type, fields, 6, false);
     build_anon_global_initializer(ir_module, *result, initializer);
     
     // We don't have to bitcast '*AnyType' to '*AnyType', since it already is a '*AnyType'
@@ -562,13 +601,14 @@ ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rt
     type_table_t *type_table = object->ast.type_table;
     
     ir_value_t **array_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * type_table->length);
-    
+
     // Preparation for each array value
     if(ir_gen__types__prepare_each_value(compiler, object, rtti_types, array_values)) return NULL;
 
     // Fill in each RTTI value
     for(length_t i = 0; i != type_table->length; i++){
-        switch(type_table->entries[i].ir_type->kind){
+        type_table_entry_t *entry = &type_table->entries[i];
+        switch(entry->ir_type->kind){
         case TYPE_KIND_POINTER:
             // Pointer Types
             if(ir_gen__types__pointer_entry(object, array_values, i, rtti_types)) return NULL;
@@ -586,8 +626,13 @@ ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rt
             if(ir_gen__types__func_ptr_entry(object, array_values, i, rtti_types)) return NULL;
             continue;
         default:
-            // Primitive Types
-            if(ir_gen__types__primitive_entry(object, array_values, i, rtti_types)) return NULL;
+            if(entry->is_enum){
+                // Enum Types
+                if(ir_gen__types__enum_entry(object, array_values, i, rtti_types)) return NULL;
+            } else {
+                // Primitive Types
+                if(ir_gen__types__primitive_entry(object, array_values, i, rtti_types)) return NULL;
+            }
             continue;
         }
     }
@@ -602,15 +647,17 @@ errorcode_t ir_gen__types__prepare_each_value(compiler_t *compiler, object_t *ob
     type_table_t *type_table = object->ast.type_table;
 
     for(length_t i = 0; i != type_table->length; i++){
+        type_table_entry_t *entry = &type_table->entries[i];
+
         // Resolve AST type to IR type for each type table entry
-        if(ir_gen_resolve_type(compiler, object, &type_table->entries[i].ast_type, &type_table->entries[i].ir_type)){
+        if(ir_gen_resolve_type(compiler, object, &entry->ast_type, &entry->ir_type)){
             return FAILURE;
         }
 
         // Create foundation for each array value that is of the correct AnyType variant
         ir_type_t *any_type_variant;
 
-        switch(type_table->entries[i].ir_type->kind){
+        switch(entry->ir_type->kind){
         case TYPE_KIND_POINTER:
             any_type_variant = rtti_types->any_ptr_type_type;
             break;
@@ -625,7 +672,11 @@ errorcode_t ir_gen__types__prepare_each_value(compiler_t *compiler, object_t *ob
             any_type_variant = rtti_types->any_fixed_array_type_type;
             break;
         default:
-            any_type_variant = rtti_types->any_type_type;
+            if(entry->is_enum){
+                any_type_variant = rtti_types->any_enum_type_type;
+            } else {
+                any_type_variant = rtti_types->any_type_type;
+            }
         }
 
         // Create empty anonymous global variable of the correct AnyType variant for the entry

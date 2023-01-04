@@ -39,8 +39,9 @@ enum {
     ANY_TYPE_KIND_UNION,
     ANY_TYPE_KIND_FUNC_PTR,
     ANY_TYPE_KIND_FIXED_ARRAY,
+    ANY_TYPE_KIND_ENUM,
 };
-#define MAX_ANY_TYPE_KIND ANY_TYPE_KIND_FIXED_ARRAY
+#define MAX_ANY_TYPE_KIND ANY_TYPE_KIND_ENUM
 
 // ---------------- any_type_kind_names ----------------
 // Names for each ANY_TYPE_KIND_* id
