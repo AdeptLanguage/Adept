@@ -16,7 +16,7 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGE/type_table.h"
+#include "BRIDGE/rtti_collector.h"
 #include "BRIDGEIR/rtti.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
@@ -1096,7 +1096,6 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
     // TODO: CLEANUP: Clean up the code in this function
 
     ast_elem_t *elem = ast_type_of_composite->elements[0];
-    type_table_t *type_table = object->ast.type_table;
 
     if(elem->id == AST_ELEM_BASE){
         // Non-polymorphic composite type
@@ -1174,7 +1173,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
 
         // Get the AST field type of the target field by index and resolve any polymorphs
         ast_type_t field_type;
-        if(ast_resolve_type_polymorphs(compiler, type_table, &catalog, maybe_polymorphic_field_type, &field_type)){
+        if(ast_resolve_type_polymorphs(compiler, object->ir_module.rtti_collector, &catalog, maybe_polymorphic_field_type, &field_type)){
             ast_poly_catalog_free(&catalog);
             return FAILURE;
         }

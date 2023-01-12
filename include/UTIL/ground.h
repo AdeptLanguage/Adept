@@ -110,11 +110,11 @@ typedef struct {
     length_t length;
 } lenstr_t, strong_lenstr_t, weak_lenstr_t;
 
-static inline bool lenstreq(lenstr_t a, lenstr_t b){
+inline bool lenstreq(lenstr_t a, lenstr_t b){
     return a.length == b.length && memcmp(a.cstr, b.cstr, a.length) == 0;
 }
 
-static inline int lenstrcmp(lenstr_t a, lenstr_t b){
+inline int lenstrcmp(lenstr_t a, lenstr_t b){
     if(a.length == b.length){
         return memcmp(a.cstr, b.cstr, a.length);
     } else {
@@ -122,11 +122,11 @@ static inline int lenstrcmp(lenstr_t a, lenstr_t b){
     }
 }
 
-static inline lenstr_t cstr_to_lenstr(char *cstr){
+inline lenstr_t cstr_to_lenstr(char *cstr){
     return (lenstr_t){ .cstr = cstr, .length = strlen(cstr) };
 }
 
-static inline void *memclone(void *memory, length_t bytes){
+inline void *memclone(void *memory, length_t bytes){
     return memcpy(malloc(bytes), memory, bytes);
 }
 
@@ -146,20 +146,12 @@ static inline void *memclone(void *memory, length_t bytes){
 // Equivalent to 'strcmp(STRING, VALUE) == 0)'
 #define streq(STRING, VALUE) (strcmp((STRING), (VALUE)) == 0)
 
-// ---------------- bsearch_insertion ----------------
-// Like bsearch, except will return the last checked pivot (or NULL)
-void *bsearch_insertion(const void *key, const void *base, size_t num, size_t size, int (*cmp)(const void *, const void*));
-
 // ---------------- NUM_ITEMS ----------------
 #define NUM_ITEMS(array) (sizeof (array) / sizeof *(array))
 
 // ---------------- malloc_init ----------------
 // Based on https://tia.mat.br/posts/2015/05/01/initializing_a_heap_allocated_structure_in_c.html
 #define malloc_init(TYPE, ...) (TYPE*) memclone((TYPE[]){ __VA_ARGS__ }, sizeof(TYPE))
-
-// ---------------- memclone ----------------
-// Clones a section of memory
-void *memclone(void *memory, length_t bytes);
 
 // ---------------- special characters ----------------
 #ifdef __APPLE__

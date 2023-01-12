@@ -35,7 +35,8 @@ ir_type_map_t ir_type_map_create(ast_t *ast, ir_module_t *module){
     length_t estimate = ast->composites_length + ast->enums_length + 24;
     ir_type_map_t type_map = list_create(ir_type_map_t, ir_type_mapping_t, estimate);
 
-    ir_type_mapping_t builtin_types[] = {
+    // Create type mappings for all builtin types
+    ir_type_mapping_t builtin_type_mappings[] = {
         ir_type_mapping_create("bool", module->common.ir_bool),
         ir_type_mapping_create("byte", ir_type_make(pool, TYPE_KIND_S8, NULL)),
         ir_type_mapping_create("ubyte", ir_type_make(pool, TYPE_KIND_U8, NULL)),
@@ -54,30 +55,29 @@ ir_type_map_t ir_type_map_create(ast_t *ast, ir_module_t *module){
         ir_type_mapping_create("void", ir_type_make(pool, TYPE_KIND_VOID, NULL))
     };
 
-    for(length_t i = 0; i < NUM_ITEMS(builtin_types); i++){
-        ir_type_map_append(&type_map, builtin_types[i]);
+    for(length_t i = 0; i < NUM_ITEMS(builtin_type_mappings); i++){
+        ir_type_map_append(&type_map, builtin_type_mappings[i]);
     }
 
+    // Create type mappings for every composite type.
+    // Each mapping will have a placeholder value for the IR type, since the IR type of a composite
+    // may depend on the type mappings of other composites.
     for(length_t i = 0; i != ast->composites_length; i++){
-        // Create skeletons for composite type maps
         ast_composite_t *composite = &ast->composites[i];
-
-        ir_type_map_append(&type_map, ((ir_type_mapping_t){
-            .name = composite->name,
-            .type = ir_type_make(pool, TYPE_KIND_UNBUILT_COMPOSITE, composite),
-        }));
+        ir_type_map_append(&type_map, ir_type_mapping_create(composite->name, ir_type_make(pool, TYPE_KIND_UNBUILT_COMPOSITE, composite)));
     }
 
+    // Create type mappings for every enum type.
+    // Since every enum is lowered to a u64, all of them will be mapped to the u64 IR type.
     for(length_t i = 0; i != ast->enums_length; i++){
         ast_enum_t *enum_definition = &ast->enums[i];
-
-        ir_type_map_append(&type_map, ((ir_type_mapping_t){
-            .name = enum_definition->name,
-            .type = module->common.ir_usize,
-        }));
+        ir_type_map_append(&type_map, ir_type_mapping_create(enum_definition->name, module->common.ir_usize));
     }
 
+    // Sort the mappings for easily lookup later on
     qsort(type_map.mappings, type_map.length, sizeof(ir_type_mapping_t), ir_type_mapping_cmp);
+    
+    // Return created type map
     return type_map;
 }
 
@@ -164,14 +164,28 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
     //       will inactive and unused memory.
     // TODO: Add ability to handle cases with dynamic arrays etc.
 
+
     ir_module_t *ir_module = &object->ir_module;
-    length_t non_concrete_layers;
     ir_type_map_t *type_map = &ir_module->type_map;
     
     // Peel back pointer layers
-    for(non_concrete_layers = 0; non_concrete_layers != unresolved_type->elements_length; non_concrete_layers++){
-        unsigned int element_id = unresolved_type->elements[non_concrete_layers]->id;
-        if(element_id != AST_ELEM_FIXED_ARRAY && element_id != AST_ELEM_POINTER) break;
+    length_t non_concrete_layers = 0;
+    ast_type_t unwrapped_view = *unresolved_type;
+
+    while(unwrapped_view.elements_length > 0){
+        if(object->ir_module.rtti_collector){
+            rtti_collector_mention(object->ir_module.rtti_collector, &unwrapped_view);
+        }
+
+        unsigned int element_id = unwrapped_view.elements[0]->id;
+
+        if(element_id != AST_ELEM_FIXED_ARRAY && element_id != AST_ELEM_POINTER){
+            // Found concrete element type element
+            break;
+        }
+
+        unwrapped_view = ast_type_unwrapped_view(&unwrapped_view);
+        non_concrete_layers++;
     }
 
     switch(unresolved_type->elements[non_concrete_layers]->id){
@@ -316,6 +330,34 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
     return SUCCESS;
 }
 
+#define TYPE_TRAIT_POINTER     TRAIT_1 // *something
+#define TYPE_TRAIT_BASE_PTR    TRAIT_2 // ptr
+#define TYPE_TRAIT_FUNC_PTR    TRAIT_3 // function pointer
+#define TYPE_TRAIT_INTEGER     TRAIT_4 // integer
+#define TYPE_TRAIT_FIXED_ARRAY TRAIT_5 // fixed array
+#define TYPE_TRAIT_BASE_ANY    TRAIT_6 // Any
+
+static trait_t get_type_traits(const ast_type_t *ast_type){
+    trait_t traits = TRAIT_NONE;
+    unsigned int type_kind = ir_primitive_from_ast_type(ast_type);
+
+    if(ast_type_is_pointer(ast_type)){
+        traits |= TYPE_TRAIT_POINTER;
+    } else if(ast_type_is_base_of(ast_type, "ptr")){
+        traits |= TYPE_TRAIT_BASE_PTR;
+    } else if(ast_type_is_func(ast_type)){
+        traits |= TYPE_TRAIT_FUNC_PTR;
+    } else if(ast_type_is_fixed_array(ast_type)){
+        traits |= TYPE_TRAIT_FIXED_ARRAY;
+    } else if(ast_type_is_base_of(ast_type, "Any")){
+        traits |= TYPE_TRAIT_BASE_ANY;
+    } else if(type_kind != TYPE_KIND_NONE && type_kind != TYPE_KIND_FLOAT && type_kind != TYPE_KIND_DOUBLE){
+        traits |= TYPE_TRAIT_INTEGER;
+    }
+
+    return traits;
+}
+
 successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t *ast_from_type, ast_type_t *ast_to_type, trait_t mode){
     // NOTE: _____RETURNS TRUE ON SUCCESSFUL MERGE_____
     // NOTE: If the types are not identical, then this function will attempt to make
@@ -324,70 +366,22 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     // NOTE: This function can be used as a substitute for ast_types_identical if the desired
     //           behavior is conforming to a single type, for two-way casting use ast_types_merge()
 
-    ir_type_t *ir_to_type;
-
-    // Macro to determine whether a specific base
-    #define MACRO_TYPE_IS_BASE(ast_type, a) (ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_BASE && \
-        streq(((ast_elem_base_t*) ast_type->elements[0])->base, a))
-    
-    // Macro to determine whether a type is 'ptr'
-    #define MACRO_TYPE_IS_BASE_PTR(ast_type) ast_type_is_base_of(ast_type, "ptr")
-
-    // Macro to determine whether a type is 'Any'
-    #define MACRO_TYPE_IS_BASE_ANY(ast_type) ast_type_is_base_of(ast_type, "Any")
-
-    // Macro to determine whether a type is a function pointer
-    #define MACRO_TYPE_IS_FUNC_PTR(ast_type) (ast_type->elements_length == 1 && ast_type->elements[0]->id == AST_ELEM_FUNC)
-
-    // Macro to determine whether a type is a '*something'
-    #define MACRO_TYPE_IS_POINTER(ast_type) ast_type_is_pointer(ast_type)
-
-    // Macro to determine whether a type is a 'n something'
-    #define MACRO_TYPE_IS_FIXED_ARRAY(ast_type) (ast_type->elements_length > 1 && ast_type->elements[0]->id == AST_ELEM_FIXED_ARRAY)
-
-    // Traits to keep track of what properties each type has
-    trait_t to_traits = TRAIT_NONE, from_traits = TRAIT_NONE;
-    #define TYPE_TRAIT_POINTER     TRAIT_1 // *something
-    #define TYPE_TRAIT_BASE_PTR    TRAIT_2 // ptr
-    #define TYPE_TRAIT_FUNC_PTR    TRAIT_3 // function pointer
-    #define TYPE_TRAIT_INTEGER     TRAIT_4 // integer
-    #define TYPE_TRAIT_FIXED_ARRAY TRAIT_5 // fixed array
-    #define TYPE_TRAIT_BASE_ANY    TRAIT_6 // Any
-
     unsigned int from_type_kind = ir_primitive_from_ast_type(ast_from_type);
     unsigned int to_type_kind = ir_primitive_from_ast_type(ast_to_type);
-    if(from_type_kind == to_type_kind && from_type_kind != TYPE_KIND_NONE) return true;
 
-    // Mark 'to_traits' depending on the contents of 'ast_to_type'
-    if(MACRO_TYPE_IS_POINTER(ast_to_type)) to_traits |= TYPE_TRAIT_POINTER;
-    else if(MACRO_TYPE_IS_BASE_PTR(ast_to_type)) to_traits |= TYPE_TRAIT_BASE_PTR;
-    else if(MACRO_TYPE_IS_FUNC_PTR(ast_to_type)) to_traits |= TYPE_TRAIT_FUNC_PTR;
-    else if(MACRO_TYPE_IS_FIXED_ARRAY(ast_to_type)) to_traits |= TYPE_TRAIT_FIXED_ARRAY;
-    else if(MACRO_TYPE_IS_BASE_ANY(ast_to_type)) to_traits |= TYPE_TRAIT_BASE_ANY;
-    else {
-        if(to_type_kind != TYPE_KIND_NONE && to_type_kind != TYPE_KIND_FLOAT
-        && to_type_kind != TYPE_KIND_DOUBLE){
-            to_traits |= TYPE_TRAIT_INTEGER;
-        }
+    if(to_type_kind != TYPE_KIND_NONE && from_type_kind == to_type_kind){
+        return true;
     }
 
-    // Mark 'from_traits' depending on the contents of 'ast_from_type'
-    if(MACRO_TYPE_IS_POINTER(ast_from_type)) from_traits |= TYPE_TRAIT_POINTER;
-    else if(MACRO_TYPE_IS_BASE_PTR(ast_from_type)) from_traits |= TYPE_TRAIT_BASE_PTR;
-    else if(MACRO_TYPE_IS_FUNC_PTR(ast_from_type)) from_traits |= TYPE_TRAIT_FUNC_PTR;
-    else if(MACRO_TYPE_IS_FIXED_ARRAY(ast_from_type)) from_traits |= TYPE_TRAIT_FIXED_ARRAY;
-    else if(MACRO_TYPE_IS_BASE_ANY(ast_from_type)) from_traits |= TYPE_TRAIT_BASE_ANY;
-    else {
-        if(from_type_kind != TYPE_KIND_NONE && from_type_kind != TYPE_KIND_FLOAT
-        && from_type_kind != TYPE_KIND_DOUBLE){
-            from_traits |= TYPE_TRAIT_INTEGER;
-        }
-    }
-
+    // Don't try to conform types if one or both of them is 'void'
     if(ast_type_is_base_of(ast_from_type, "void") || ast_type_is_base_of(ast_to_type, "void")){
-        // Don't try to conform types if one or both of them is 'void'
         return false;
     }
+
+    trait_t to_traits = get_type_traits(ast_to_type);
+    trait_t from_traits = get_type_traits(ast_from_type);
+
+    ir_type_t *ir_to_type;
     
     // Integer or pointer to boolean
     if(to_type_kind == TYPE_KIND_BOOLEAN && (
@@ -396,11 +390,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     )){
         if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
 
-        ir_instr_cast_t *instr = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-        instr->id = INSTRUCTION_ISNTZERO;
-        instr->result_type = ir_to_type;
-        instr->value = *ir_value;
-        *ir_value = build_value_from_prev_instruction(builder);
+        *ir_value = build_nonconst_cast(builder, INSTRUCTION_ISNTZERO, *ir_value, ir_to_type);
         return true;
     }
 
@@ -698,15 +688,6 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         }
     }
 
-    #undef TYPE_TRAIT_POINTER
-    #undef TYPE_TRAIT_BASE_PTR
-    #undef TYPE_TRAIT_FUNC_PTR
-    #undef TYPE_TRAIT_INTEGER
-
-    #undef MACRO_TYPE_IS_BASE_PTR
-    #undef MACRO_TYPE_IS_FUNC_PTR
-    #undef MACRO_TYPE_IS_POINTER
-
     return false;
 }
 
@@ -741,7 +722,7 @@ ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, as
         if(optional_catalog){
             ast_type_t resolved_ast_type;
 
-            if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, optional_catalog, &bone->type, &resolved_ast_type)){
+            if(ast_resolve_type_polymorphs(compiler, object->ir_module.rtti_collector, optional_catalog, &bone->type, &resolved_ast_type)){
                 return NULL;
             }
 

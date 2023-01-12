@@ -16,7 +16,6 @@
 #include "AST/ast_layout.h"
 #include "AST/ast_named_expression.h"
 #include "AST/ast_type_lean.h"
-#include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "UTIL/ground.h"
@@ -51,7 +50,6 @@ typedef struct {
     compiler_t *compiler;
     object_t *object;
     ast_t *ast;
-    type_table_t *type_table;
     length_t named_expressions_recursion_depth;
     length_t aliases_recursion_depth;
     infer_var_scope_t *scope;
@@ -75,6 +73,14 @@ errorcode_t infer(compiler_t *compiler, object_t *object);
 // ---------------- infer_layout_skeleton ----------------
 // Infers types inside of a layout skeleton
 errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skeleton);
+
+// ---------------- infer_in_composites ----------------
+// Infers aliases in a list of composites
+errorcode_t infer_in_composites(infer_ctx_t *ctx, ast_composite_t *composites, length_t composites_length);
+
+// ---------------- infer_in_globals ----------------
+// Infers aliases in a list of global variables
+errorcode_t infer_in_globals(infer_ctx_t *ctx, ast_global_t *globals, length_t globals_length);
 
 // ---------------- infer_in_funcs ----------------
 // Infers aliases and generics in a list of functions
@@ -177,9 +183,5 @@ void infer_var_scope_nearest_inner(infer_var_scope_t *scope, const char *name, c
 // within the inference variable list.
 // (NOTE: Minimum distance of 3 to count as near enough)
 void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out_nearest_name, int *out_distance);
-
-// ---------------- infer_mention_expression_literal_type ----------------
-// Mentions the type of a literal expression
-void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expression_literal_id);
 
 #endif // _ISAAC_INFER_H

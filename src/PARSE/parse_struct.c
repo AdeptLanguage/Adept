@@ -403,7 +403,7 @@ static errorcode_t resolve_polymorphs_in_integration_for_bone(parse_ctx_t *ctx, 
 
     switch(bone->kind){
     case AST_LAYOUT_BONE_KIND_TYPE:
-        if(ast_resolve_type_polymorphs(ctx->compiler, ctx->ast->type_table, catalog, &bone->type, NULL)){
+        if(ast_resolve_type_polymorphs(ctx->compiler, NULL, catalog, &bone->type, NULL)){
             return FAILURE;
         }
         break;

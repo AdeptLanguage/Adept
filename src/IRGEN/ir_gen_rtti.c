@@ -8,7 +8,6 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/any.h"
-#include "BRIDGE/type_table.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
@@ -23,6 +22,14 @@
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 
+static inline ir_value_t *as_vernacular_pointer(ir_module_t *ir_module, ir_value_t *value){
+    // Removes compile-time type information from an IR pointer (aka transforms it into a `ptr`)
+    // This pointer transformation is necessary for things like struct field types so they can
+    // contain pointers to values of the same struct type
+
+    return build_const_bitcast(&ir_module->pool, value, ir_module->common.ir_ptr);
+}
+
 errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t *ir_global){
     
     // Don't generate RTTI when it's disabled, use null as a placeholder
@@ -32,7 +39,7 @@ errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t 
 
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
-    length_t array_length = object->ast.type_table->length;
+    length_t array_length = object->ir_module.rtti_table->length;
 
     // Fetch IR Types for RTTI
     ir_rtti_types_t rtti_types;
@@ -43,8 +50,7 @@ errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t 
     if(array_values == NULL) return FAILURE;
 
     // Create RTTI Array and set __types__'s initializer to be it
-    ir_value_t *rtti_array = build_static_array(pool, rtti_types.any_type_ptr_type, array_values, array_length);
-    ir_global->trusted_static_initializer = rtti_array;
+    ir_global->trusted_static_initializer = build_static_array(pool, rtti_types.any_type_ptr_type, array_values, array_length);
     return SUCCESS;
 }
 
@@ -72,9 +78,8 @@ errorcode_t ir_gen__types__placeholder(object_t *object, ir_global_t *ir_global)
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
-    ir_type_t *any_type_type;
-
     // Fetch 'AnyType' IR Type
+    ir_type_t *any_type_type;
     if(!ir_type_map_find(&ir_module->type_map, "AnyType", &any_type_type)){
         internalerrorprintf("ir_gen__types__placeholder() - Failed to get critical type 'AnyType' which should exist\n");
         redprintf("    (when creating null pointer to initialize __types__ because type info was disabled)\n");
@@ -82,9 +87,18 @@ errorcode_t ir_gen__types__placeholder(object_t *object, ir_global_t *ir_global)
     }
 
     // Construct '**AnyType' null pointer and set it as __types__'s initializer
-    ir_type_t *any_type_ptr_ptr_type = ir_type_make_pointer_to(pool, ir_type_make_pointer_to(pool, any_type_type));
-    ir_global->trusted_static_initializer = build_null_pointer_of_type(pool, any_type_ptr_ptr_type);
+    ir_global->trusted_static_initializer = build_null_pointer_of_type(pool, ir_type_make_pointer_to(pool, ir_type_make_pointer_to(pool, any_type_type)));
     return SUCCESS;
+}
+
+static void ir_gen__types__entry_common_header(ir_module_t *ir_module, rtti_table_entry_t *entry, unsigned int any_type_kind, ir_value_t **fields_array_to_write_to){
+    // Fills in header field data for an `AnyType` derivative
+
+    ir_pool_t *pool = &ir_module->pool;
+    fields_array_to_write_to[0] = build_literal_usize(pool, any_type_kind);                             // kind
+    fields_array_to_write_to[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
+    fields_array_to_write_to[2] = build_bool(pool, entry->traits & RTTI_TABLE_ENTRY_IS_ALIAS);          // is_alias
+    fields_array_to_write_to[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
 }
 
 errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_values, length_t array_value_index, ir_rtti_types_t *rtti_types){
@@ -98,32 +112,25 @@ errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_va
     // )
     // ---------------------------------------------------------------------------------------------
 
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
     ir_value_t **result = &array_values[array_value_index];
-    type_table_entry_t *entry = &type_table->entries[array_value_index];
+    rtti_table_entry_t *entry = &rtti_table->entries[array_value_index];
 
-    ast_type_t subtype_view = ast_type_unwrapped_view(&entry->ast_type);
+    ast_type_t subtype_view = ast_type_unwrapped_view(&entry->resolved_ast_type);
     ir_value_t *subtype_rtti;
     
-    if(entry->ast_type.elements_length > 1){
+    if(entry->resolved_ast_type.elements_length > 1){
         subtype_rtti = ir_gen__types__get_rtti_pointer_for(object, &subtype_view, array_values, rtti_types);
     } else {
         subtype_rtti = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
     }
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 5);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_PTR);                         // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
-    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
-    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
-    fields[4] = subtype_rtti;                                                         // subtype
-
-    // Cast pointer fields to s8* since that's we store them
-    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
-    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
+    ir_gen__types__entry_common_header(ir_module, entry, ANY_TYPE_KIND_PTR, fields);
+    fields[4] = as_vernacular_pointer(ir_module, subtype_rtti); // subtype
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_ptr_type_type, fields, 5, false);
@@ -146,34 +153,27 @@ errorcode_t ir_gen__types__fixed_array_entry(object_t *object, ir_value_t **arra
     // )
     // ---------------------------------------------------------------------------------------------
 
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
     ir_value_t **result = &array_values[array_value_index];
-    type_table_entry_t *entry = &type_table->entries[array_value_index];
+    rtti_table_entry_t *entry = &rtti_table->entries[array_value_index];
 
     // Ensure we're working with a fixed array AST type
-    if(entry->ast_type.elements[0]->id != AST_ELEM_FIXED_ARRAY){
+    if(entry->resolved_ast_type.elements[0]->id != AST_ELEM_FIXED_ARRAY){
         internalerrorprintf("ir_gen__types__fixed_array_entry() - Received non-fixed-array AST type in entry\n");
         return FAILURE;
     }
 
-    ast_type_t subtype_view = ast_type_unwrapped_view(&entry->ast_type);
+    ast_type_t subtype_view = ast_type_unwrapped_view(&entry->resolved_ast_type);
     ir_value_t *subtype_rtti = ir_gen__types__get_rtti_pointer_for(object, &subtype_view, array_values, rtti_types);
-    ir_value_t *length = build_literal_usize(pool, ((ast_elem_fixed_array_t*) entry->ast_type.elements[0])->length);
+    ir_value_t *length = build_literal_usize(pool, ((ast_elem_fixed_array_t*) entry->resolved_ast_type.elements[0])->length);
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FIXED_ARRAY);                 // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
-    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
-    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
-    fields[4] = subtype_rtti;                                                         // subtype
-    fields[5] = length;                                                               // length
-
-    // Cast pointer fields to s8* since that's we store them
-    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
-    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
+    ir_gen__types__entry_common_header(ir_module, entry, ANY_TYPE_KIND_FIXED_ARRAY, fields);
+    fields[4] = as_vernacular_pointer(ir_module, subtype_rtti); // subtype
+    fields[5] = length;                                         // length
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_fixed_array_type_type, fields, 6, false);
@@ -199,21 +199,21 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
     // )
     // ---------------------------------------------------------------------------------------------
 
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
     ir_value_t **result = &array_values[array_value_index];
-    type_table_entry_t *entry = &type_table->entries[array_value_index];
+    rtti_table_entry_t *entry = &rtti_table->entries[array_value_index];
 
     // Ensure we're working with a function pointer AST type
-    if(entry->ast_type.elements[0]->id != AST_ELEM_FUNC){
+    if(entry->resolved_ast_type.elements[0]->id != AST_ELEM_FUNC){
         internalerrorprintf("ir_gen__types__func_ptr_entry() - Received non-function-pointer AST type in entry\n");
         return FAILURE;
     }
 
     // Function pointer information source
-    ast_elem_func_t *fp = (ast_elem_func_t*) entry->ast_type.elements[0];
+    ast_elem_func_t *fp = (ast_elem_func_t*) entry->resolved_ast_type.elements[0];
 
     // Construct list of RTTI for arguments
     ir_value_t **arg_rtti_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * fp->arity);
@@ -231,20 +231,12 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
     ir_value_t *return_type = ir_gen__types__get_rtti_pointer_for(object, fp->return_type, array_values, rtti_types);
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_FUNC_PTR);                    // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
-    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
-    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
-    fields[4] = args;                                                                 // args
-    fields[5] = length;                                                               // length
-    fields[6] = return_type;                                                          // return_type
-    fields[7] = build_bool(pool, fp->traits & AST_FUNC_VARARG);                       // is_vararg
-    fields[8] = build_bool(pool, fp->traits & AST_FUNC_STDCALL);                      // is_stdcall
-
-    // Cast pointer fields to s8* since that's we store them
-    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
-    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
-    fields[6] = build_const_bitcast(pool, fields[6], ir_module->common.ir_ptr);
+    ir_gen__types__entry_common_header(ir_module, entry, ANY_TYPE_KIND_FUNC_PTR, fields);
+    fields[4] = as_vernacular_pointer(ir_module, args);          // args
+    fields[5] = length;                                          // length
+    fields[6] = as_vernacular_pointer(ir_module, return_type);   // return_type
+    fields[7] = build_bool(pool, fp->traits & AST_FUNC_VARARG);  // is_vararg
+    fields[8] = build_bool(pool, fp->traits & AST_FUNC_STDCALL); // is_stdcall
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_funcptr_type_type, fields, 9, false);
@@ -265,12 +257,12 @@ errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_
     // )
     // ---------------------------------------------------------------------------------------------
 
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
     ir_value_t **result = &array_values[array_value_index];
-    type_table_entry_t *entry = &type_table->entries[array_value_index];
+    rtti_table_entry_t *entry = &rtti_table->entries[array_value_index];
 
     unsigned int kind_id;
 
@@ -290,13 +282,7 @@ errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_
     }
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 4);
-    fields[0] = build_literal_usize(pool, kind_id);                                   // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
-    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
-    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
-
-    // Cast pointer fields to s8* since that's we store them
-    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
+    ir_gen__types__entry_common_header(ir_module, entry, kind_id, fields);
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_type_type, fields, 4, false);
@@ -318,12 +304,12 @@ errorcode_t ir_gen__types__enum_entry(object_t *object, ir_value_t **array_value
     // )
     // ---------------------------------------------------------------------------------------------
 
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
     ir_value_t **result = &array_values[array_value_index];
-    type_table_entry_t *entry = &type_table->entries[array_value_index];
+    rtti_table_entry_t *entry = &rtti_table->entries[array_value_index];
 
     const char *enum_name = entry->name;
     ast_t *ast = &object->ast;
@@ -344,15 +330,9 @@ errorcode_t ir_gen__types__enum_entry(object_t *object, ir_value_t **array_value
     }
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
-    fields[0] = build_literal_usize(pool, ANY_TYPE_KIND_ENUM);                            // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);           // name
-    fields[2] = build_bool(pool, entry->is_alias);                                        // is_alias
-    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type);     // size
-    fields[4] = build_static_array(pool, ir_module->common.ir_ubyte_ptr, values, length); // members
-    fields[5] = build_literal_usize(pool, length);                                        // length
-
-    // Cast pointer fields to s8* since that's we store them
-    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
+    ir_gen__types__entry_common_header(ir_module, entry, ANY_TYPE_KIND_ENUM, fields);
+    fields[4] = build_static_array(pool, ir_module->common.ir_ubyte_ptr, values, length);
+    fields[5] = build_literal_usize(pool, length); // length
 
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_enum_type_type, fields, 6, false);
@@ -379,12 +359,12 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
     // alias AnyUnionType  = AnyCompositeType
     // ---------------------------------------------------------------------------------------------
 
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
     ir_value_t **result = &array_values[array_value_index];
-    type_table_entry_t *entry = &type_table->entries[array_value_index];
+    rtti_table_entry_t *entry = &rtti_table->entries[array_value_index];
     ir_type_extra_composite_t *extra_info = (ir_type_extra_composite_t*) entry->ir_type->extra;
 
     ir_gen_composite_rtti_info_t info;
@@ -414,21 +394,12 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
     ir_gen__types__composite_entry_free_info(&info);
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 9);
-    fields[0] = build_literal_usize(pool, kind);                                      // kind
-    fields[1] = build_literal_cstr_ex(pool, &ir_module->type_map, entry->name);       // name
-    fields[2] = build_bool(pool, entry->is_alias);                                    // is_alias
-    fields[3] = build_const_sizeof(pool, ir_module->common.ir_usize, entry->ir_type); // size
-    fields[4] = members_array;                                                        // members
-    fields[5] = length;                                                               // length
-    fields[6] = offsets_array;                                                        // offsets
-    fields[7] = member_names_array;                                                   // member_names
-    fields[8] = is_packed;                                                            // is_packed
-
-    // Cast pointer fields to s8* since that's we store them
-    fields[1] = build_const_bitcast(pool, fields[1], ir_module->common.ir_ptr);
-    fields[4] = build_const_bitcast(pool, fields[4], ir_module->common.ir_ptr);
-    fields[6] = build_const_bitcast(pool, fields[6], ir_module->common.ir_ptr);
-    fields[7] = build_const_bitcast(pool, fields[7], ir_module->common.ir_ptr);
+    ir_gen__types__entry_common_header(ir_module, entry, kind, fields);
+    fields[4] = as_vernacular_pointer(ir_module, members_array);
+    fields[5] = length;
+    fields[6] = as_vernacular_pointer(ir_module, offsets_array);
+    fields[7] = as_vernacular_pointer(ir_module, member_names_array);
+    fields[8] = is_packed;
     
     // Create struct literal and set as initializer
     ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_composite_type_type, fields, 9, false);
@@ -443,9 +414,8 @@ failure:
     return FAILURE;
 }
 
-errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_types_t *rtti_types, type_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info){
-    ast_elem_t *first_ast_elem = entry->ast_type.elements[0];
-
+errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_types_t *rtti_types, rtti_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info){
+    ast_elem_t *first_ast_elem = entry->resolved_ast_type.elements[0];
 
     weak_cstr_t name = NULL;
     bool is_polymorphic = first_ast_elem->id == AST_ELEM_GENERIC_BASE;
@@ -528,7 +498,6 @@ void ir_gen__types__composite_entry_free_info(ir_gen_composite_rtti_info_t *info
 }
 
 ir_value_t *ir_gen__types__composite_entry_members_array(compiler_t *compiler, object_t *object, ir_gen_composite_rtti_info_t *info){
-    type_table_t *type_table = object->ast.type_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
     ast_field_map_t *field_map = &info->core_composite_info->layout.field_map;
@@ -545,7 +514,7 @@ ir_value_t *ir_gen__types__composite_entry_members_array(compiler_t *compiler, o
 
         // Resolve any polymorphics in field type
         if(info->core_composite_info->is_polymorphic){
-            if(ast_resolve_type_polymorphs(compiler, type_table, &info->poly_catalog, unprocessed_field_type, &field_type))
+            if(ast_resolve_type_polymorphs(compiler, NULL, &info->poly_catalog, unprocessed_field_type, &field_type))
                 return NULL;
         } else {
             field_type = *unprocessed_field_type;
@@ -608,16 +577,17 @@ ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rt
 
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     
-    ir_value_t **array_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * type_table->length);
+    ir_value_t **array_values = ir_pool_alloc(pool, sizeof(ir_value_t*) * rtti_table->length);
 
     // Preparation for each array value
     if(ir_gen__types__prepare_each_value(compiler, object, rtti_types, array_values)) return NULL;
 
     // Fill in each RTTI value
-    for(length_t i = 0; i != type_table->length; i++){
-        type_table_entry_t *entry = &type_table->entries[i];
+    for(length_t i = 0; i != rtti_table->length; i++){
+        rtti_table_entry_t *entry = &rtti_table->entries[i];
+
         switch(entry->ir_type->kind){
         case TYPE_KIND_POINTER:
             // Pointer Types
@@ -636,7 +606,7 @@ ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rt
             if(ir_gen__types__func_ptr_entry(object, array_values, i, rtti_types)) return NULL;
             continue;
         default:
-            if(entry->is_enum){
+            if(entry->traits & RTTI_TABLE_ENTRY_IS_ENUM){
                 // Enum Types
                 if(ir_gen__types__enum_entry(object, array_values, i, rtti_types)) return NULL;
             } else {
@@ -651,16 +621,16 @@ ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rt
 }
 
 errorcode_t ir_gen__types__prepare_each_value(compiler_t *compiler, object_t *object, ir_rtti_types_t *rtti_types, ir_value_t **array_values){
-    // NOTE: 'array_values' must have a length of 'type_table->length'
+    // NOTE: 'array_values' must have a length of 'rtti_table->length'
 
     ir_module_t *ir_module = &object->ir_module;
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
 
-    for(length_t i = 0; i != type_table->length; i++){
-        type_table_entry_t *entry = &type_table->entries[i];
+    for(length_t i = 0; i != rtti_table->length; i++){
+        rtti_table_entry_t *entry = &rtti_table->entries[i];
 
         // Resolve AST type to IR type for each type table entry
-        if(ir_gen_resolve_type(compiler, object, &entry->ast_type, &entry->ir_type)){
+        if(ir_gen_resolve_type(compiler, object, &entry->resolved_ast_type, &entry->ir_type)){
             return FAILURE;
         }
 
@@ -682,7 +652,7 @@ errorcode_t ir_gen__types__prepare_each_value(compiler_t *compiler, object_t *ob
             any_type_variant = rtti_types->any_fixed_array_type_type;
             break;
         default:
-            if(entry->is_enum){
+            if(entry->traits & RTTI_TABLE_ENTRY_IS_ENUM){
                 any_type_variant = rtti_types->any_enum_type_type;
             } else {
                 any_type_variant = rtti_types->any_type_type;
@@ -697,24 +667,46 @@ errorcode_t ir_gen__types__prepare_each_value(compiler_t *compiler, object_t *ob
 }
 
 ir_value_t *ir_gen__types__get_rtti_pointer_for(object_t *object, ast_type_t *ast_type, ir_value_t **array_values, ir_rtti_types_t *rtti_types){
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
 
-    // Find subtype index
-    maybe_index_t subtype_index = -1;
-    ir_value_t *subtype_rtti;
+    // Find subtype by lookup name
+    strong_cstr_t lookup_name = ast_type_str(ast_type);
+    maybe_index_t index = rtti_table_find_index(rtti_table, lookup_name);
+    free(lookup_name);
 
-    // Find subtype by human-readable name
-    char *human_readable = ast_type_str(ast_type);
-    subtype_index = type_table_find(type_table, human_readable);
-    free(human_readable);
-
-    if(subtype_index == -1){
-        subtype_rtti = build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
+    if(index >= 0){
+        return build_const_bitcast(pool, array_values[index], rtti_types->any_type_ptr_type);
     } else {
-        subtype_rtti = build_const_bitcast(pool, array_values[subtype_index], rtti_types->any_type_ptr_type);
+        return build_null_pointer_of_type(pool, rtti_types->any_type_ptr_type);
     }
+}
 
-    return subtype_rtti;
+static void collect_into_preallocated_rtti_table_entry_list(void *item, void *user_pointer){
+    ast_type_t *ast_type = (ast_type_t*) item;
+    rtti_table_entry_list_t *list = (rtti_table_entry_list_t*) user_pointer;
+
+    rtti_table_entry_list_append_unchecked(list, (rtti_table_entry_t){
+        .name = ast_type_str(ast_type),
+        .resolved_ast_type = *ast_type,
+        .traits = TRAIT_NONE,
+        .ir_type = NULL,
+    });
+
+    *ast_type = AST_TYPE_NONE;
+}
+
+rtti_table_entry_list_t rtti_collector_collect(rtti_collector_t *rtti_collector){
+    length_t count = rtti_collector->ast_types_used.impl.count;
+
+    rtti_table_entry_list_t list = (rtti_table_entry_list_t){
+        .entries = malloc(sizeof(rtti_table_entry_t) * count),
+        .length = 0,
+        .capacity = count,
+    };
+
+    // Collect entries from RTTI collector
+    set_collect(&rtti_collector->ast_types_used.impl, collect_into_preallocated_rtti_table_entry_list, &list);
+    return list;
 }

@@ -2,10 +2,10 @@
 #include "UTIL/ground.h"
 #include "UTIL/hash.h"
 
-hash_t hash_data(void *data, length_t size){
+hash_t hash_data(const void *data, length_t size){
     hash_t hash = 0;
     for(length_t i = 0; i != size; i++){
-        hash = (hash * 31) + ((char*) data)[i];
+        hash = (hash * 31) + (hash_t)((char*) data)[i];
     }
     return hash;
 }

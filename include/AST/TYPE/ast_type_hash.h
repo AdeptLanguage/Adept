@@ -18,11 +18,11 @@ extern "C" {
 
 // ---------------- ast_type_hash ----------------
 // Hashes an AST type
-hash_t ast_type_hash(ast_type_t *type);
+hash_t ast_type_hash(const ast_type_t *type);
 
 // ---------------- ast_types_hash ----------------
 // Hashes a collection of AST types
-hash_t ast_types_hash(ast_type_t *types, length_t length);
+hash_t ast_types_hash(const ast_type_t *types, length_t length);
 
 #ifdef __cplusplus
 }

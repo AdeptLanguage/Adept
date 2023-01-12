@@ -256,7 +256,7 @@ def run_all_tests():
     test("return_ten", [executable, join(src_dir, "return_ten/main.adept")], compiles)
     test("rtti_enum",
         [executable, join(src_dir, "rtti_enum/main.adept"), "-e"],
-        lambda output: b"Information about every enum:\n  AnyTypeKind : ['VOID', 'BOOL', 'BYTE', 'UBYTE', 'SHORT', 'USHORT', 'INT', 'UINT', 'LONG', 'ULONG', 'FLOAT', 'DOUBLE', 'PTR', 'STRUCT', 'UNION', 'FUNC_PTR', 'FIXED_ARRAY', 'ENUM']\n  MyEnum : ['NONE', 'ERROR', 'WARNING', 'INFO', 'ICON']\n  Ownership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringOwnership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringReplaceNothingBehavior : ['OR_CLONE', 'OR_VIEW']" in output
+        lambda output: b"Information about every enum used:\n  MyEnum : ['NONE', 'ERROR', 'WARNING', 'INFO', 'ICON']\n  Ownership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringOwnership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringReplaceNothingBehavior : ['OR_CLONE', 'OR_VIEW']\n" in output
     )
     test("runtime_resource", [executable, join(src_dir, "runtime_resource/main.adept")], compiles)
     test("scientific", [executable, join(src_dir, "scientific/main.adept")], compiles)

@@ -29,12 +29,12 @@ set(core_source_files
 	src/AST/POLY/ast_resolve.c src/AST/POLY/ast_translate.c
 	src/AST/TYPE/ast_type_clone.c src/AST/TYPE/ast_type_free.c
 	src/AST/TYPE/ast_type_hash.c src/AST/TYPE/ast_type_helpers.c src/AST/TYPE/ast_type_identical.c
-	src/AST/TYPE/ast_type_is.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_str.c
+	src/AST/TYPE/ast_type_is.c src/AST/TYPE/ast_type_make.c src/AST/TYPE/ast_type_set.c src/AST/TYPE/ast_type_str.c
 	src/AST/UTIL/string_builder_extensions.c src/AST/ast_dump.c
 	src/AST/ast_expr.c src/AST/ast_layout.c src/AST/ast_named_expression.c
 	src/AST/ast_poly_catalog.c src/AST/ast.c
 	src/AST/meta_directives.c src/BKEND/backend.c src/BKEND/ir_to_c.c src/BKEND/ir_to_llvm.c src/BKEND/ir_to_llvm_impl.c src/BRIDGE/any.c
-	src/BRIDGE/bridge.c src/BRIDGE/type_table.c src/BRIDGEIR/rtti.c src/DRVR/compiler.c
+	src/BRIDGE/bridge.c src/BRIDGE/rtti_collector.c src/BRIDGEIR/rtti_table.c src/BRIDGEIR/rtti_table_entry.c src/BRIDGEIR/rtti.c src/DRVR/compiler.c
 	src/DRVR/config.c src/DRVR/object.c src/INFER/infer.c
 	src/IR/ir_pool.c src/IR/ir_proc_map.c src/IR/ir_type_map.c src/IR/ir_proc_query.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir_value_str.c
 	src/IR/ir.c src/IR/ir_dump.c src/IR/ir_func_endpoint.c src/IR/ir_lowering.c src/IR/ir_module.c
@@ -48,7 +48,7 @@ set(core_source_files
 	src/PARSE/parse_stmt.c src/PARSE/parse_struct.c src/PARSE/parse_type.c src/PARSE/parse_util.c
 	src/PARSE/parse.c src/TOKEN/token_data.c src/UTIL/color.c src/UTIL/datatypes.c src/NET/download.c
 	src/UTIL/builtin_type.c src/UTIL/filename.c src/UTIL/func_pair.c src/UTIL/ground.c src/UTIL/hash.c src/UTIL/jsmn_helper.c src/UTIL/levenshtein.c
-	src/UTIL/list.c src/UTIL/search.c src/NET/stash.c src/UTIL/string_builder.c
+	src/UTIL/list.c src/UTIL/search.c src/UTIL/set.c src/NET/stash.c src/UTIL/string_builder.c
 	src/UTIL/string_list.c src/UTIL/string.c src/UTIL/util.c)
 
 add_executable(adept)

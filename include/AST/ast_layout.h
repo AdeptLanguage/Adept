@@ -13,6 +13,7 @@
 
 #include "AST/ast_type_lean.h"
 #include "UTIL/ground.h"
+#include "UTIL/hash.h"
 #include "UTIL/trait.h"
 
 // ---------------- AST_LAYOUT_ENDPOINT_END_INDEX ----------------
@@ -215,6 +216,10 @@ bool ast_layout_is_simple_struct(ast_layout_t *layout);
 // Returns whether a layout is that of a simple union type
 bool ast_layout_is_simple_union(ast_layout_t *layout);
 
+// ---------------- ast_layout_hash ----------------
+// Hashes for an AST layout
+hash_t ast_layout_hash(const ast_layout_t *layout);
+
 // ---------------- ast_layout_skeleton_init ----------------
 // Constructs an empty 'ast_layout_skeleton_t'
 void ast_layout_skeleton_init(ast_layout_skeleton_t *skeleton);
@@ -240,6 +245,10 @@ bool ast_layout_skeletons_identical(ast_layout_skeleton_t *skeleton_a, ast_layou
 // One 'indentation' = Four Spaces
 void ast_layout_skeleton_print(ast_layout_skeleton_t *skeleton, int indentation);
 
+// ---------------- ast_layout_skeleton_hash ----------------
+// Hashes an AST layout skeleton
+hash_t ast_layout_skeleton_hash(const ast_layout_skeleton_t *skeleton);
+
 // ---------------- ast_layout_skeleton_has_polymorph ----------------
 // Returns whether an 'ast_layout_skeleton_t' contains a polymorph
 bool ast_layout_skeleton_has_polymorph(ast_layout_skeleton_t *skeleton);
@@ -260,6 +269,10 @@ bool ast_layout_bone_has_polymorph(ast_layout_bone_t *bone);
 // Converts an 'ast_layout_bone_t' to a string
 // Returns NULL on internal error
 strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *field_map, ast_layout_endpoint_t endpoint);
+
+// ---------------- ast_layout_bone_hash ----------------
+// Hashes an AST layout bone
+hash_t ast_layout_bone_hash(const ast_layout_bone_t *bone);
 
 // ---------------- ast_layout_bones_identical ----------------
 // Returns whether two 'ast_layout_bone_t' values are identical
@@ -305,6 +318,10 @@ maybe_null_weak_cstr_t ast_field_map_get_name_of_endpoint(ast_field_map_t *field
 // Prints an 'ast_field_map_t' to stdout for debugging
 // 'maybe_skeleton' is optional, but can be supplied in order to include field types
 void ast_field_map_print(ast_field_map_t *field_map, ast_layout_skeleton_t *maybe_skeleton);
+
+// ---------------- ast_field_map_hash ----------------
+// Hashes an AST field map
+hash_t ast_field_map_hash(const ast_field_map_t *field_map);
 
 // ---------------- ast_simple_field_map_get_count ----------------
 // Gets the number of arrows in an 'ast_field_map_t'

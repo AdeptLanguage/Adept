@@ -69,7 +69,7 @@ errorcode_t ast_translate_poly_parent_class(
     }
 
     // Resolve polymorphs in the stated parent type
-    errorcode_t errorcode = ast_resolve_type_polymorphs(compiler, ast->type_table, &catalog, poly_extended_type, out_type);
+    errorcode_t errorcode = ast_resolve_type_polymorphs(compiler, NULL, &catalog, poly_extended_type, out_type);
     ast_poly_catalog_free(&catalog);
     return errorcode ? FAILURE : SUCCESS;
 }

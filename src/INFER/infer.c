@@ -7,7 +7,6 @@
 
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
-#include "BRIDGE/type_table.h"
 #include "UTIL/builtin_type.h"
 #include "UTIL/color.h"
 #include "UTIL/levenshtein.h"
@@ -34,44 +33,17 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
         .scope = NULL,
     };
 
-    ast->type_table = malloc(sizeof(type_table_t));
-    type_table_init(ast->type_table);
-    ctx.type_table = ast->type_table;
-
     // Sort named expressions, aliases, and others so we can binary search on them later
     ast_named_expression_list_sort(&ast->named_expressions);
     qsort(ast->aliases, ast->aliases_length, sizeof(ast_alias_t), ast_aliases_cmp);
     qsort(ast->enums, ast->enums_length, sizeof(ast_enum_t), ast_enums_cmp);
     qsort(ast->globals, ast->globals_length, sizeof(ast_global_t), ast_globals_cmp);
 
-    for(length_t i = 0; i != ast->composites_length; i++){
-        ast_composite_t *composite = &ast->composites[i];
-
-        if(infer_layout_skeleton(&ctx, &composite->layout.skeleton)) return FAILURE;
-
-        type_table_give_base(ctx.type_table, composite->name);
+    if(infer_in_composites(&ctx, ast->composites, ast->composites_length)
+    || infer_in_globals(&ctx, ast->globals, ast->globals_length)
+    || infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)){
+        return FAILURE;
     }
-
-    for(length_t i = 0; i != ast->enums_length; i++){
-        ast_enum_t *enum_definition = &ast->enums[i];
-
-        type_table_give_enum(ctx.type_table, enum_definition->name);
-    }
-
-    for(length_t i = 0; i != ast->globals_length; i++){
-        if(infer_type(&ctx, &ast->globals[i].type)) return FAILURE;
-
-        ast_expr_t **global_initial = &ast->globals[i].initial;
-
-        if(*global_initial != NULL){
-            unsigned int default_primitive = ast_primitive_from_ast_type(&ast->globals[i].type);
-            if(infer_expr(&ctx, NULL, global_initial, default_primitive, false)) return FAILURE;
-        }
-    }
-
-    if(infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)) return FAILURE;
-
-    ast->type_table = ctx.type_table;
 
     // We had unused variables and have been told to treat them as errors, so exit
     if(compiler->traits & COMPILER_WARN_AS_ERROR && compiler->show_unused_variables_how_to_disable){
@@ -95,6 +67,36 @@ errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skele
             break;
         default:
             die("infer_layout_skeleton() - Unrecognized bone kind %d\n", (int) bone->kind);
+        }
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t infer_in_composites(infer_ctx_t *ctx, ast_composite_t *composites, length_t composites_length){
+    for(length_t i = 0; i != composites_length; i++){
+        ast_composite_t *composite = &composites[i];
+
+        if(infer_layout_skeleton(ctx, &composite->layout.skeleton)){
+            return FAILURE;
+        }
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t infer_in_globals(infer_ctx_t *ctx, ast_global_t *globals, length_t globals_length){
+    for(length_t i = 0; i != globals_length; i++){
+        ast_global_t *global = &globals[i];
+
+        if(infer_type(ctx, &global->type)) return FAILURE;
+
+        if(global->initial != NULL){
+            unsigned int default_primitive = ast_primitive_from_ast_type(&global->type);
+
+            if(infer_expr(ctx, NULL, &global->initial, default_primitive, false)){
+                return FAILURE;
+            }
         }
     }
 
@@ -484,7 +486,6 @@ errorcode_t infer_expr(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t **root
         }
 
         if(default_assigned_type != EXPR_NONE){
-            infer_mention_expression_literal_type(ctx, default_assigned_type);
             if(undetermined_expr_list_give_solution(ctx, &undetermined, default_assigned_type)){
                 free(undetermined.expressions);
                 return FAILURE;
@@ -511,54 +512,42 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
     switch((*expr)->id){
     case EXPR_NONE: break;
     case EXPR_BYTE:
-        type_table_give_base(ctx->type_table, "byte");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_UBYTE:
-        type_table_give_base(ctx->type_table, "ubyte");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_SHORT:
-        type_table_give_base(ctx->type_table, "short");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_USHORT:
-        type_table_give_base(ctx->type_table, "ushort");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_INT:
-        type_table_give_base(ctx->type_table, "int");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_UINT:
-        type_table_give_base(ctx->type_table, "uint");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_LONG:
-        type_table_give_base(ctx->type_table, "long");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_ULONG:
-        type_table_give_base(ctx->type_table, "ulong");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_USIZE:
-        type_table_give_base(ctx->type_table, "usize");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_POLYCOUNT:
         if(undetermined_expr_list_give_solution(ctx, undetermined, EXPR_USIZE)) return FAILURE;
         break;
     case EXPR_FLOAT:
-        type_table_give_base(ctx->type_table, "float");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_DOUBLE:
-        type_table_give_base(ctx->type_table, "double");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_BOOLEAN:
-        type_table_give_base(ctx->type_table, "bool");
         if(undetermined_expr_list_give_solution(ctx, undetermined, (*expr)->id)) return FAILURE;
         break;
     case EXPR_VARIABLE:
@@ -605,7 +594,6 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             if(local_undetermined.solution == EXPR_NONE){
                 unsigned int default_assigned_type = generics_primitive_type(local_undetermined.expressions, local_undetermined.expressions_length);
                 if(default_assigned_type != EXPR_NONE){
-                    infer_mention_expression_literal_type(ctx, default_assigned_type);
                     if(undetermined_expr_list_give_solution(ctx, &local_undetermined, default_assigned_type)){
                         free(local_undetermined.expressions);
                         return FAILURE;
@@ -782,10 +770,8 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
             }
         }
         break;
-    case EXPR_TYPEINFO: {
-            // Don't infer target type, but give it to the type table
-            type_table_give(ctx->type_table, &(((ast_expr_typeinfo_t*) *expr)->type), NULL);
-        }
+    case EXPR_TYPEINFO:
+        // Nothing to infer
         break;
     case EXPR_TERNARY: {
             ast_expr_ternary_t *ternary = (ast_expr_ternary_t*) *expr;
@@ -810,8 +796,6 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
                 unsigned int default_assigned_type = generics_primitive_type(local_undetermined.expressions, local_undetermined.expressions_length);
 
                 if(default_assigned_type != EXPR_NONE){
-                    infer_mention_expression_literal_type(ctx, default_assigned_type);
-
                     if(undetermined_expr_list_give_solution(ctx, &local_undetermined, default_assigned_type)){
                         free(local_undetermined.expressions);
                         return FAILURE;
@@ -1223,23 +1207,21 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
     length_t length = 0;
     length_t capacity = 0;
 
-    for(length_t e = 0; e < type->elements_length; e++){
-        ast_elem_t *elem = type->elements[e];
+    for(length_t elem_i = 0; elem_i < type->elements_length; elem_i++){
+        ast_elem_t *elem = type->elements[elem_i];
 
         switch(elem->id){
         case AST_ELEM_BASE: {
                 weak_cstr_t base = ((ast_elem_base_t*) elem)->base;
 
-                if(streq(base, "void") && type->elements_length > 1 && e != 0 && type->elements[e - 1]->id == AST_ELEM_POINTER){
+                if(streq(base, "void") && type->elements_length > 1 && elem_i != 0 && type->elements[elem_i - 1]->id == AST_ELEM_POINTER){
                     // Substitute '*void' with 'ptr'
 
                     // Create replacement element
                     ast_elem_base_t *ptr_elem = malloc(sizeof(ast_elem_base_t));
                     ptr_elem->id = AST_ELEM_BASE;
-                    ptr_elem->source = type->elements[e]->source;
+                    ptr_elem->source = type->elements[elem_i]->source;
                     ptr_elem->base = strclone("ptr");
-
-                    strong_cstr_t typename = ast_type_str(type);
 
                     // Free base type element 'void' that will disappear
                     ast_elem_free(elem);
@@ -1249,14 +1231,6 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
 
                     // Replace previous '*' with 'ptr'
                     new_elements[length - 1] = (ast_elem_t*) ptr_elem;
-
-                    ast_type_t replaced_view = (ast_type_t){
-                        .elements = new_elements,
-                        .elements_length = length,
-                        .source = original_source,
-                    };
-
-                    type_table_give(ctx->type_table, &replaced_view, typename);
                     continue;
                 }
 
@@ -1265,24 +1239,22 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
                 if(alias_index != -1){
                     // NOTE: The alias target type was already resolved of any aliases,
                     //       so we don't have to scan the new elements
-                    ast_type_t cloned = ast_type_clone(&aliases[alias_index].type);
+                    ast_alias_t *alias = &aliases[alias_index];
+                    ast_type_t cloned = ast_type_clone(&alias->type);
+
                     expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, cloned.elements_length, 4);
 
-                    {
-                        if(ctx->aliases_recursion_depth++ >= 100){
-                            compiler_panicf(ctx->compiler, original_source, "Recursion depth of 100 exceeded, most likely a circular definition");
-                            return FAILURE;
-                        }
-
-                        if(infer_type_inner(ctx, &cloned, original_source)) return FAILURE;
-
-                        type_table_give(ctx->type_table, &cloned, strclone(base));
-                        ctx->aliases_recursion_depth--;
+                    if(ctx->aliases_recursion_depth++ >= 100){
+                        compiler_panicf(ctx->compiler, original_source, "Recursion depth of 100 exceeded, most likely a circular definition");
+                        return FAILURE;
                     }
 
+                    if(infer_type_inner(ctx, &cloned, original_source)) return FAILURE;
+                    ctx->aliases_recursion_depth--;
+
                     // Move all the elements from the cloned type to this type
-                    for(length_t m = 0; m != cloned.elements_length; m++){
-                        new_elements[length++] = cloned.elements[m];
+                    for(length_t i = 0; i != cloned.elements_length; i++){
+                        new_elements[length++] = cloned.elements[i];
                     }
 
                     ast_elem_free(elem);
@@ -1292,37 +1264,47 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
                 }
             }
             break;
-        case AST_ELEM_FUNC:
-            for(length_t a = 0; a != ((ast_elem_func_t*) elem)->arity; a++){
-                if(infer_type(ctx, &((ast_elem_func_t*) elem)->arg_types[a])) return FAILURE;
+        case AST_ELEM_FUNC: {
+                ast_elem_func_t *func_elem = (ast_elem_func_t*) elem;
+
+                for(length_t i = 0; i != func_elem->arity; i++){
+                    if(infer_type(ctx, &func_elem->arg_types[i])) return FAILURE;
+                }
+                
+                if(infer_type(ctx, func_elem->return_type)) return FAILURE;
             }
-            if(infer_type(ctx, ((ast_elem_func_t*) elem)->return_type)) return FAILURE;
             break;
         case AST_ELEM_GENERIC_BASE: {
-                for(length_t a = 0; a != ((ast_elem_generic_base_t*) elem)->generics_length; a++){
-                    if(infer_type(ctx, &((ast_elem_generic_base_t*) elem)->generics[a])) return FAILURE;
+                ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) elem;
+
+                for(length_t i = 0; i != generic_base_elem->generics_length; i++){
+                    if(infer_type(ctx, &generic_base_elem->generics[i])) return FAILURE;
                 }
             }
             break;
         case AST_ELEM_VAR_FIXED_ARRAY: {
+                ast_elem_var_fixed_array_t *var_fixed_array_elem = (ast_elem_var_fixed_array_t*) elem;
+
                 // Take out expression from variable fixed array and perform inference on it
-                ast_expr_t **length = &(((ast_elem_var_fixed_array_t*) elem)->length);
-                if(infer_expr(ctx, NULL, length, EXPR_NONE, false)) return FAILURE;
+                if(infer_expr(ctx, NULL, &var_fixed_array_elem->length, EXPR_NONE, false)) return FAILURE;
 
                 length_t value;
-                if(ast_expr_deduce_to_size(*length, &value)){
-                    compiler_panic(ctx->compiler, (*length)->source, "Could not deduce fixed array size at compile time");
+                if(ast_expr_deduce_to_size(var_fixed_array_elem->length, &value)){
+                    compiler_panic(ctx->compiler, var_fixed_array_elem->length->source, "Could not deduce fixed array size at compile time");
                     return FAILURE;
                 }
 
-                ast_expr_free_fully(*length);
+                ast_expr_free_fully(var_fixed_array_elem->length);
 
                 // Boil it down to a regular fixed array
-                // DANGEROUS: Relying on memory layout
-                // DANGEROUS: Assuming that sizeof(ast_elem_fixed_array_t) <= sizeof(ast_elem_var_fixed_array_t)
-                ((ast_elem_fixed_array_t*) elem)->id = AST_ELEM_FIXED_ARRAY;
-                ((ast_elem_fixed_array_t*) elem)->length = value;
-                // neglect ((ast_elem_fixed_array_t*) elem)->source;
+                // DANGEROUS: Low level memory trickery to avoid allocating
+                static_assert(sizeof(ast_elem_fixed_array_t) <= sizeof(ast_elem_var_fixed_array_t), "Assumes that we can reuse element memory");
+
+                *((ast_elem_fixed_array_t*) var_fixed_array_elem) = (ast_elem_fixed_array_t){
+                    .id = AST_ELEM_FIXED_ARRAY,
+                    .length = value,
+                    .source = var_fixed_array_elem->source,
+                };
             }
             break;
         }
@@ -1483,86 +1465,4 @@ void infer_var_list_nearest(infer_var_list_t *list, const char *name, char **out
     if(out_distance && *out_nearest_name) *out_distance = minimum;
 
     free(distances);
-}
-
-void infer_mention_expression_literal_type(infer_ctx_t *ctx, unsigned int expression_literal_id){
-    // HACK: Mention types created through primitive data to the type table
-    // (since with the current system, we can't know what types we will need very well)
-    // TODO: Change the system so the resolution of rtti is further delayed
-    // - Isaac Shelton, January 20th 2019
-    switch(expression_literal_id){
-    case EXPR_NONE:
-    case EXPR_NULL:
-        // The type would've had already been mentioned to the type table,
-        // so we don't have to worry about it
-        break;
-    case EXPR_BOOLEAN:
-        type_table_give_base(ctx->type_table, "bool");
-        break;
-    case EXPR_BYTE:
-        type_table_give_base(ctx->type_table, "byte");
-        break;
-    case EXPR_UBYTE:
-        type_table_give_base(ctx->type_table, "ubyte");
-        break;
-    case EXPR_SHORT:
-        type_table_give_base(ctx->type_table, "short");
-        break;
-    case EXPR_USHORT:
-        type_table_give_base(ctx->type_table, "ushort");
-        break;
-    case EXPR_INT:
-        type_table_give_base(ctx->type_table, "int");
-        break;
-    case EXPR_UINT:
-        type_table_give_base(ctx->type_table, "uint");
-        break;
-    case EXPR_LONG:
-        type_table_give_base(ctx->type_table, "long");
-        break;
-    case EXPR_ULONG:
-        type_table_give_base(ctx->type_table, "ulong");
-        break;
-    case EXPR_USIZE:
-        type_table_give_base(ctx->type_table, "usize");
-        break;
-    case EXPR_DOUBLE:
-        type_table_give_base(ctx->type_table, "double");
-        break;
-    case EXPR_FLOAT:
-        type_table_give_base(ctx->type_table, "float");
-        break;
-    case EXPR_CSTR: {
-            // Create '*ubyte' type template for cloning
-            // ------------------------------
-            ast_elem_pointer_t ptr_elem = (ast_elem_pointer_t){
-                .id = AST_ELEM_POINTER,
-                .source = NULL_SOURCE,
-            };
-
-            ast_elem_base_t cstr_base_elem = (ast_elem_base_t){
-                .id = AST_ELEM_BASE,
-                .source = NULL_SOURCE,
-                .base = "ubyte",
-            };
-
-            ast_type_t cstr_type = (ast_type_t){
-                .elements = (ast_elem_t*[]){
-                    (ast_elem_t*) &ptr_elem,
-                    (ast_elem_t*) &cstr_base_elem,
-                },
-                .elements_length = 2,
-                .source = NULL_SOURCE,
-            };
-            // ------------------------------
-
-            type_table_give(ctx->type_table, &cstr_type, NULL);
-        }
-        break;
-    case EXPR_STR:
-        type_table_give_base(ctx->type_table, "String");
-        break;
-    default:
-        die("infer_mention_expression_literal_type() - Unrecognized literal expression ID\n", (int) expression_literal_id);
-    }
 }

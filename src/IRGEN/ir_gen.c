@@ -11,7 +11,6 @@
 #include "AST/ast_type.h"
 #include "BRIDGE/any.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGE/type_table.h"
 #include "BRIDGEIR/rtti.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
@@ -52,6 +51,7 @@ errorcode_t ir_gen(compiler_t *compiler, object_t *object){
         || ir_gen_auxiliary_builders(compiler, object)
         || ir_gen_functions_body(compiler, object, NULL)
         || ir_gen_vtables(compiler, object)
+        || ir_gen_build_rtti_table(object)
         || ir_gen_special_globals(compiler, object)
         || ir_gen_fill_in_rtti(object);
 }
@@ -820,6 +820,17 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
     return SUCCESS;
 }
 
+errorcode_t ir_gen_build_rtti_table(object_t *object){
+    ir_module_t *ir_module = &object->ir_module;
+
+    rtti_collector_t rtti_collector = *ir_module->rtti_collector;
+    ir_module->rtti_collector = NULL;
+
+    ir_module->rtti_table = ir_pool_alloc(&ir_module->pool, sizeof(rtti_table_t));
+    *ir_module->rtti_table = rtti_table_create(rtti_collector, &object->ast);
+    return SUCCESS;
+}
+
 errorcode_t ir_gen_special_globals(compiler_t *compiler, object_t *object){
     ast_global_t *globals = object->ast.globals;
     length_t globals_length = object->ast.globals_length;
@@ -838,7 +849,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
     ir_module_t *ir_module = &object->ir_module;
     ir_pool_t *pool = &ir_module->pool;
-    type_table_t *type_table = object->ast.type_table;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
 
     // NOTE: DANGEROUS: 'global_variable_id' is assumed to be the same between AST and IR global variable lists
     ir_global_t *ir_global = &ir_module->globals[global_variable_id];
@@ -853,7 +864,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
             return SUCCESS;
         }
 
-        ir_global->trusted_static_initializer = build_literal_usize(pool, type_table->length);
+        ir_global->trusted_static_initializer = build_literal_usize(pool, rtti_table->length);
         return SUCCESS;
     }
 
@@ -908,13 +919,13 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 }
 
 errorcode_t ir_gen_fill_in_rtti(object_t *object){
-    type_table_t *type_table = object->ast.type_table;
     rtti_relocations_t *rtti_relocations = &object->ir_module.rtti_relocations;
+    rtti_table_t *rtti_table = object->ir_module.rtti_table;
 
-    if(type_table == NULL) return FAILURE;
+    if(rtti_table == NULL) return FAILURE;
 
     for(length_t i = 0; i != rtti_relocations->length; i++){
-        if(rtti_resolve(type_table, &rtti_relocations->relocations[i])) return FAILURE;
+        if(rtti_resolve(rtti_table, &rtti_relocations->relocations[i])) return FAILURE;
     }
 
     return SUCCESS;

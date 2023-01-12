@@ -13,7 +13,7 @@
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type.h"
 #include "BRIDGE/bridge.h"
-#include "BRIDGE/type_table.h"
+#include "BRIDGE/rtti_collector.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
@@ -67,7 +67,6 @@ typedef struct ir_builder {
     ast_elem_t *static_bool_elems;
     ir_type_t *s8_type;
     ir_type_t *ptr_type;
-    type_table_t *type_table;
     func_id_t noop_defer_function;
     bool has_noop_defer_function;
 } ir_builder_t;

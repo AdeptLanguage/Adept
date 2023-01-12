@@ -15,7 +15,7 @@ extern "C" {
 #include "AST/ast.h"
 #include "AST/ast_poly_catalog.h"
 #include "AST/ast_type_lean.h"
-#include "BRIDGE/type_table.h"
+#include "BRIDGEIR/rtti_table_entry.h"
 #include "DRVR/compiler.h"
 #include "DRVR/object.h"
 #include "IR/ir.h"
@@ -42,7 +42,7 @@ typedef struct {
     ir_value_t **array_values;            // non-null, weak pointer to RTTI value skeletons which are currently being filled in
     ir_rtti_types_t *rtti_types;          // non-null
     ast_composite_t *core_composite_info; // non-null
-    type_table_entry_t *entry;            // non-null
+    rtti_table_entry_t *entry;            // non-null
     
     // The following only exist if 'core_composite_info->is_polymorphic' is true
     ast_poly_catalog_t poly_catalog;
@@ -101,7 +101,7 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
 
 // ---------------- ir_gen__types__composite_entry_get_info ----------------
 // Collects common information used to generate RTTI info for a composite type
-errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_types_t *rtti_types, type_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info);
+errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_types_t *rtti_types, rtti_table_entry_t *entry, ir_value_t **array_values, ir_gen_composite_rtti_info_t *out_info);
 
 // ---------------- ir_gen__types__composite_entry_free_info ----------------
 // Frees common information used to generate RTTI info for a composite type
@@ -123,6 +123,10 @@ ir_value_t *ir_gen__types__composite_entry_member_names_array(ir_module_t *ir_mo
 // Gets the RTTI type information pointer for an AST type
 // Returns an ir_value_t that's a null pointer if the type couldn't be found
 ir_value_t *ir_gen__types__get_rtti_pointer_for(object_t *object, ast_type_t *ast_type, ir_value_t **array_values, ir_rtti_types_t *rtti_types);
+
+// ---------------- rtti_collector_collect ----------------
+// Creates a list of RTTI table entries by taking data from an RTTI collector.
+rtti_table_entry_list_t rtti_collector_collect(rtti_collector_t *rtti_collector);
 
 #ifdef __cplusplus
 }

@@ -176,8 +176,10 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
             goto polymorphic_failure;
         }
 
+        rtti_collector_t *rtti_collector = builder->object->ir_module.rtti_collector;
+
         ast_type_t concrete_return_type;
-        if(ast_resolve_type_polymorphs(builder->compiler, builder->type_table, &catalog, &poly_template_return_type, &concrete_return_type)){
+        if(ast_resolve_type_polymorphs(builder->compiler, rtti_collector, &catalog, &poly_template_return_type, &concrete_return_type)){
             res = FAILURE;
             goto polymorphic_failure;
         }

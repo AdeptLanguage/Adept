@@ -18,7 +18,7 @@ typedef length_t hash_t;
 
 // ---------------- hash_data ----------------
 // Hashes a generic block of memory
-hash_t hash_data(void *data, length_t size);
+hash_t hash_data(const void *data, length_t size);
 
 // ---------------- hash_combine ----------------
 // Combines two hashes into one

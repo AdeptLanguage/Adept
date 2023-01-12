@@ -47,7 +47,6 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     ast->common.ast_variadic_array = NULL;
     ast->common.ast_initializer_list = NULL;
 
-    ast->type_table = NULL;
     ast->meta_definitions = NULL;
     ast->meta_definitions_length = 0;
     ast->meta_definitions_capacity = 0;
@@ -193,9 +192,6 @@ void ast_free(ast_t *ast){
     ast_type_free(&ast->common.ast_usize_type);
     ast_type_free_fully(ast->common.ast_variadic_array);
     ast_type_free_fully(ast->common.ast_initializer_list);
-
-    type_table_free(ast->type_table);
-    free(ast->type_table);
 
     for(length_t i = 0; i != ast->meta_definitions_length; i++){
         meta_expr_free_fully(ast->meta_definitions[i].value);
@@ -414,17 +410,21 @@ bool ast_func_has_polymorphic_signature(ast_func_t *func){
 }
 
 void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source){
-    alias->name = name;
-    alias->type = type;
-    alias->traits = traits;
-    alias->source = source;
+    *alias = (ast_alias_t){
+        .name = name,
+        .type = type,
+        .traits = traits,
+        .source = source,
+    };
 }
 
 void ast_enum_init(ast_enum_t *enum_definition,  weak_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
-    enum_definition->name = name;
-    enum_definition->kinds = kinds;
-    enum_definition->length = length;
-    enum_definition->source = source;
+    *enum_definition = (ast_enum_t){
+        .name = name,
+        .kinds = kinds,
+        .length = length,
+        .source = source,
+    };
 }
 
 ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name){

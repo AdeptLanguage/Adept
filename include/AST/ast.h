@@ -20,7 +20,6 @@ extern "C" {
 #include "AST/ast_named_expression.h"
 #include "AST/ast_type.h"
 #include "AST/meta_directives.h"
-#include "BRIDGE/type_table.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/index_id_list.h"
@@ -226,9 +225,6 @@ typedef struct {
     length_t libraries_length;
     length_t libraries_capacity;
     ast_shared_common_t common;
-
-    // Data members for bridging
-    type_table_t *type_table;
 
     // Data members for meta definitions
     meta_definition_t *meta_definitions;

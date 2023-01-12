@@ -66,6 +66,10 @@ errorcode_t ir_gen_globals(compiler_t *compiler, object_t *object);
 // Generates IR instructions for initializing global variables
 errorcode_t ir_gen_globals_init(ir_builder_t *builder);
 
+// ---------------- ir_gen_build_rtti_table ----------------
+// Constructs the RTTI table for a module
+errorcode_t ir_gen_build_rtti_table(object_t *object);
+
 // ---------------- ir_gen_special_global ----------------
 // Generates initializers for special global variables
 errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_global_t *ast_global, length_t global_variable_id);

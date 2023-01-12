@@ -10,6 +10,8 @@
 
 #include <stdbool.h>
 
+#include "BRIDGE/rtti_collector.h"
+#include "BRIDGEIR/rtti_table.h"
 #include "IR/ir.h"
 #include "IR/ir_func_endpoint.h"
 #include "IR/ir_pool.h"
@@ -31,6 +33,8 @@ typedef struct ir_module {
     length_t globals_length;
     ir_anon_globals_t anon_globals;
     ir_gen_sf_cache_t sf_cache;
+    rtti_collector_t *rtti_collector;
+    rtti_table_t *rtti_table;
     rtti_relocations_t rtti_relocations;
     struct ir_builder *init_builder;
     struct ir_builder *deinit_builder;

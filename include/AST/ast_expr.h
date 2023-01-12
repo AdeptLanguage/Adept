@@ -523,7 +523,7 @@ ast_expr_t *ast_expr_clone_if_not_null(ast_expr_t *expr);
 
 // ---------------- ast_exprs_clone ----------------
 // Clones an array of expressions
-static inline ast_expr_t **ast_exprs_clone(ast_expr_t **exprs, length_t arity){
+inline ast_expr_t **ast_exprs_clone(ast_expr_t **exprs, length_t arity){
     ast_expr_t **array = malloc(sizeof *array * arity);
 
     for(length_t i = 0; i < arity; i++){

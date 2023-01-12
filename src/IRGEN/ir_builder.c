@@ -104,7 +104,6 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
     builder->s8_type = ir_type_make(builder->pool, TYPE_KIND_S8, NULL);
 
     builder->ptr_type = ir_type_make_pointer_to(builder->pool, builder->s8_type);
-    builder->type_table = object->ast.type_table;
     builder->has_noop_defer_function = false;
     builder->noop_defer_function = 0;
 }
@@ -1173,8 +1172,8 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             ast_layout_skeleton_t *skeleton = &composite->layout.skeleton;
             length_t field_count = ast_simple_field_map_get_count(&composite->layout.field_map);
 
-            for(length_t f = 0; f != field_count; f++){
-                ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
+            for(length_t field_i = 0; field_i != field_count; field_i++){
+                ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, field_i);
 
                 // Capture snapshot for if we need to backtrack
                 ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
@@ -1189,7 +1188,7 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
 
                 ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
 
-                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
+                ir_value_t *ir_field_value = build_member(builder, this_ir_value, field_i, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
                 errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value, composite->source);
 
                 if(failed){
@@ -1235,11 +1234,13 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
             ast_layout_skeleton_t *skeleton = &template->layout.skeleton;
             length_t field_count = ast_simple_field_map_get_count(&template->layout.field_map);
 
+            rtti_collector_t *rtti_collector = builder->object->ir_module.rtti_collector;
+
             for(length_t f = 0; f != field_count; f++){
                 ast_type_t *ast_unresolved_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
                 ast_type_t ast_field_type;
 
-                if(ast_resolve_type_polymorphs(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
+                if(ast_resolve_type_polymorphs(builder->compiler, rtti_collector, &catalog, ast_unresolved_field_type, &ast_field_type)){
                     ast_poly_catalog_free(&catalog);
                     return ALT_FAILURE;
                 }
@@ -1512,11 +1513,13 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
             ast_layout_skeleton_t *skeleton = &template->layout.skeleton;
             length_t field_count = ast_simple_field_map_get_count(&template->layout.field_map);
 
+            rtti_collector_t *rtti_collector = builder->object->ir_module.rtti_collector;
+
             for(length_t f = 0; f != field_count; f++){
                 ast_type_t *ast_unresolved_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
                 ast_type_t ast_field_type;
 
-                if(ast_resolve_type_polymorphs(builder->compiler, builder->type_table, &catalog, ast_unresolved_field_type, &ast_field_type)){
+                if(ast_resolve_type_polymorphs(builder->compiler, rtti_collector, &catalog, ast_unresolved_field_type, &ast_field_type)){
                     ast_poly_catalog_free(&catalog);
                     return ALT_FAILURE;
                 }
@@ -1935,8 +1938,10 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     
     func->statements = ast_expr_list_clone(&poly_func->statements);
 
-    if(ast_resolve_expr_list_polymorphs(compiler, object->ast.type_table, catalog, &func->statements)
-    || ast_resolve_type_polymorphs(compiler, object->ast.type_table, catalog, &poly_func->return_type, &func->return_type)){
+    rtti_collector_t *rtti_collector = object->ir_module.rtti_collector;
+
+    if(ast_resolve_expr_list_polymorphs(compiler, rtti_collector, catalog, &func->statements)
+    || ast_resolve_type_polymorphs(compiler, rtti_collector, catalog, &poly_func->return_type, &func->return_type)){
         goto failure;
     }
 
@@ -1996,7 +2001,9 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
     // but that is already guaranteed by the signature of all polymorphic dispatcher functions since they have a `$This extends OwnerType` clause
     ast_type_t concrete_parent_type;
 
-    if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, catalog, &parent_type, &concrete_parent_type)){
+    rtti_collector_t *rtti_collector = object->ir_module.rtti_collector;
+
+    if(ast_resolve_type_polymorphs(compiler, rtti_collector, catalog, &parent_type, &concrete_parent_type)){
         goto failure;
     }
 
@@ -2010,7 +2017,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
     ast_type_t *arg_types = malloc(sizeof(ast_type_t) * arity);
 
     for(length_t i = 0; i != arity; i++){
-        if(ast_resolve_type_polymorphs(compiler, object->ast.type_table, catalog, &originating_virtual->arg_types[i], &arg_types[i])){
+        if(ast_resolve_type_polymorphs(compiler, rtti_collector, catalog, &originating_virtual->arg_types[i], &arg_types[i])){
             ast_types_free_fully(arg_types, arity);
             goto failure;
         }

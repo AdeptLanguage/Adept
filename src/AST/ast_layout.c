@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AST/TYPE/ast_type_hash.h"
 #include "AST/TYPE/ast_type_identical.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
@@ -159,6 +160,15 @@ bool ast_layout_is_simple_union(ast_layout_t *layout){
     return true;
 }
 
+hash_t ast_layout_hash(const ast_layout_t *layout){
+    hash_t hash;
+    hash = hash_data(&layout->kind, sizeof layout->kind);
+    hash = hash_combine(hash, ast_field_map_hash(&layout->field_map));
+    hash = hash_combine(hash, ast_layout_skeleton_hash(&layout->skeleton));
+    hash = hash_combine(hash, hash_data(&layout->traits, sizeof layout->traits));
+    return hash;
+}
+
 void ast_layout_skeleton_init(ast_layout_skeleton_t *skeleton){
     skeleton->bones = NULL;
     skeleton->bones_length = 0;
@@ -232,6 +242,17 @@ void ast_layout_skeleton_print(ast_layout_skeleton_t *skeleton, int indentation)
     for(length_t i = 0; i != skeleton->bones_length; i++){
         ast_layout_bone_print(&skeleton->bones[i], indentation);
     }
+}
+
+hash_t ast_layout_skeleton_hash(const ast_layout_skeleton_t *skeleton){
+    hash_t hash = 0;
+
+    for(length_t i = 0; i < skeleton->bones_length; i++){
+        ast_layout_bone_t *bone = &skeleton->bones[i];
+        hash = hash_combine(hash, ast_layout_bone_hash(bone));
+    }
+
+    return hash;
 }
 
 void ast_layout_bone_print(ast_layout_bone_t *bone, int indentation){
@@ -338,6 +359,27 @@ strong_cstr_t ast_layout_bone_str(ast_layout_bone_t *bone, ast_field_map_t *fiel
     }
 
     return string_builder_finalize(&builder);
+}
+
+hash_t ast_layout_bone_hash(const ast_layout_bone_t *bone){
+    hash_t hash = hash_data(&bone->kind, sizeof bone->kind);
+    hash = hash_combine(hash, hash_data(&bone->traits, sizeof bone->traits));
+
+    switch(bone->kind){
+    case AST_LAYOUT_BONE_KIND_TYPE:
+        hash = hash_combine(hash, ast_type_hash(&bone->type));
+        break;
+    case AST_LAYOUT_BONE_KIND_STRUCT:
+    case AST_LAYOUT_BONE_KIND_UNION:
+        for(length_t i = 0; i < bone->children.bones_length; i++){
+            hash = hash_combine(hash, ast_layout_bone_hash(&bone->children.bones[i]));
+        }
+        break;
+    default:
+        die("ast_layout_bone_hash() got unrecognized layout bone kind\n");
+    }
+    
+    return hash;
 }
 
 bool ast_layout_bones_identical(ast_layout_bone_t *bone_a, ast_layout_bone_t *bone_b){
@@ -590,6 +632,19 @@ void ast_field_map_print(ast_field_map_t *field_map, ast_layout_skeleton_t *mayb
         printf("%s %s\n", arrow->name, s);
         free(s);
     }
+}
+
+hash_t ast_field_map_hash(const ast_field_map_t *field_map){
+    hash_t hash = 0;
+
+    for(length_t i = 0; i < field_map->arrows_length; i++){
+        ast_field_arrow_t *arrow = &field_map->arrows[i];
+
+        hash = hash_combine(hash, hash_data(arrow->name, strlen(arrow->name)));
+        hash = hash_combine(hash, hash_data(&arrow->endpoint, sizeof arrow->endpoint));
+    }
+
+    return hash;
 }
 
 length_t ast_simple_field_map_get_count(ast_field_map_t *simple_field_map){

@@ -6,9 +6,23 @@
 
 #include "IR/ir_type.h"
 #include "IRGEN/ir_builder.h"
+#include "UTIL/builtin_type.h"
+
+static rtti_collector_t *create_rtti_collector(ir_pool_t *pool){
+    rtti_collector_t *rtti_collector = ir_pool_alloc(pool, sizeof(rtti_collector_t));
+    rtti_collector_init(rtti_collector);
+
+    // Mention builtin primitive types to RTTI collector
+    for(length_t i = 0; i < NUM_ITEMS(global_primitives_extended); i++){
+        rtti_collector_mention_base(rtti_collector, global_primitives_extended[i]);
+    } 
+
+    return rtti_collector;
+}
 
 void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t globals_length, length_t number_of_function_names_guess){
-    ir_pool_init(&ir_module->pool);
+    ir_pool_t *pool = &ir_module->pool;
+    ir_pool_init(pool);
 
     ir_module->funcs = (ir_funcs_t){
         .funcs = malloc(sizeof(ir_func_t) * funcs_capacity),
@@ -23,7 +37,12 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->globals = malloc(sizeof(ir_global_t) * globals_length);
     ir_module->globals_length = 0;
     ir_module->anon_globals = (ir_anon_globals_t){0};
+
     ir_gen_sf_cache_init(&ir_module->sf_cache, IR_GEN_SF_CACHE_SUGGESTED_NUM_BUCKETS);
+
+    ir_module->rtti_collector = create_rtti_collector(pool);
+    ir_module->rtti_table = NULL;
+
     ir_module->rtti_relocations = (rtti_relocations_t){0};
     ir_module->init_builder = NULL;
     ir_module->deinit_builder = NULL;
@@ -33,18 +52,17 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     ir_module->vtable_init_list = (ir_vtable_init_list_t){0};
     ir_module->vtable_dispatch_list = (ir_vtable_dispatch_list_t){0};
 
-    // Initialize common data
-    ir_pool_t *pool = &ir_module->pool;
-    ir_shared_common_t *common = &ir_module->common;
-
-    memset(common, 0, sizeof *common);
-    common->ir_ubyte = ir_type_make(pool, TYPE_KIND_U8, NULL);
-    common->ir_ubyte_ptr = ir_type_make_pointer_to(pool, common->ir_ubyte);
-    common->ir_usize = ir_type_make(pool, TYPE_KIND_U64, NULL);
-    common->ir_usize_ptr = ir_type_make_pointer_to(&ir_module->pool, common->ir_usize);
-    common->ir_ptr = ir_type_make_pointer_to(pool, common->ir_ubyte);
-    common->ir_bool = ir_type_make(pool, TYPE_KIND_BOOLEAN, NULL);
-    common->has_rtti_array = TROOLEAN_UNKNOWN;
+    // Create shared resources
+    ir_module->common = (ir_shared_common_t){
+        .ir_ubyte = ir_type_make(pool, TYPE_KIND_U8, NULL),
+        .ir_ubyte_ptr = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL)),
+        .ir_usize = ir_type_make(pool, TYPE_KIND_U64, NULL),
+        .ir_usize_ptr = ir_type_make_pointer_to(&ir_module->pool, ir_type_make(pool, TYPE_KIND_U64, NULL)),
+        .ir_ptr = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL)),
+        .ir_bool = ir_type_make(pool, TYPE_KIND_BOOLEAN, NULL),
+        .has_rtti_array = TROOLEAN_UNKNOWN,
+        /* rest zero initialized */
+    };
 }
 
 void ir_module_free(ir_module_t *ir_module){
@@ -54,7 +72,6 @@ void ir_module_free(ir_module_t *ir_module){
     ir_type_map_free(&ir_module->type_map);
     free(ir_module->globals);
     free(ir_module->anon_globals.globals);
-    ir_pool_free(&ir_module->pool);
     ir_gen_sf_cache_free(&ir_module->sf_cache);
 
     // Free init_builder
@@ -70,11 +87,22 @@ void ir_module_free(ir_module_t *ir_module){
     }
 
     ir_static_variables_free(&ir_module->static_variables);
+
+    if(ir_module->rtti_collector){
+        rtti_collector_free(ir_module->rtti_collector);
+    }
+
+    if(ir_module->rtti_table){
+        rtti_table_free(ir_module->rtti_table);
+    }
+
     rtti_relocations_free(&ir_module->rtti_relocations);
     ir_job_list_free(&ir_module->job_list);
     free_list_free(&ir_module->defer_free);
     ir_vtable_init_list_free(&ir_module->vtable_init_list);
     ir_vtable_dispatch_list_free(&ir_module->vtable_dispatch_list);
+
+    ir_pool_free(&ir_module->pool);
 }
 
 void ir_module_create_func_mapping(ir_module_t *module, weak_cstr_t function_name, ir_func_endpoint_t endpoint, bool add_to_job_list){
