@@ -74,7 +74,7 @@ typedef struct {
     LLVMValueRef line_phi;
     LLVMValueRef column_phi;
     LLVMValueRef failure_message_bytes;
-} llvm_null_check_t;
+} llvm_check_t, llvm_null_check_t, llvm_vtable_check_t;
 
 typedef struct {
     LLVMBasicBlockRef init_routine;
@@ -97,8 +97,8 @@ typedef struct {
     compiler_t *compiler;
     object_t *object;
 
-    // Variables only used for compilation with null checks
     llvm_null_check_t null_check;
+    llvm_vtable_check_t vtable_check;
 
     llvm_string_table_t string_table;
     llvm_phi2_relocation_list_t relocation_list;
@@ -143,6 +143,8 @@ errorcode_t ir_to_llvm_allocate_stack_variables(llvm_context_t *llvm, varstack_t
 // ---------------- build_llvm_null_check_on_failure_block ----------------
 // Creates 'llvm->null_check_on_fail_block'
 void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_skeleton, ir_func_t *module_func);
+void build_llvm_vtable_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_skeleton, ir_func_t *module_func);
+void build_llvm_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_skeleton, ir_func_t *module_func, const char *error_msg, llvm_check_t *check);
 
 // ---------------- ir_to_llvm_globals ----------------
 // Generates LLVM globals for IR globals
@@ -151,6 +153,7 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object);
 // ---------------- llvm_create_optional_null_check ----------------
 // Generates LLVM instructions to check for null pointer
 void llvm_create_optional_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock);
+void llvm_create_vtable_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock);
 
 // ---------------- ir_to_llvm_config_optlvl ----------------
 // Converts optimization level to LLVM optimization constant

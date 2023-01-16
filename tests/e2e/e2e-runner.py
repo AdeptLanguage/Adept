@@ -337,6 +337,12 @@ def run_all_tests():
     test("variadic_print", [executable, join(src_dir, "variadic_print/main.adept")], compiles)
     test("version", [executable, join(src_dir, "version/main.adept")], compiles)
     test("void_ptr", [executable, join(src_dir, "void_ptr/main.adept")], compiles)
+    test("vtable_checks", [executable, join(src_dir, "vtable_checks/main.adept")], compiles)
+    test("vtable_checks show runtime error",
+        [join(src_dir, "vtable_checks/main")],
+        lambda output: b"===== RUNTIME ERROR: MISTAKENLY CALLING VIRTUAL METHOD ON UNCONSTRUCTED INSTANCE OF CLASS! =====\nIn file:\t" in output and b"main.adept\nIn function:\tmain() void\nLine:\t27\nColumn:\t31\n\nDid you forget to construct your instance?\n - `my_instance MyClass()`\n - `my_instance *MyClass = new MyClass()`\n - `my_instance.__constructor__()`" in output,
+        expected_exitcode=1
+    )
     test("while", [executable, join(src_dir, "while/main.adept")], compiles)
     test("while_continue", [executable, join(src_dir, "while_continue/main.adept")], compiles)
     test("windowed", [executable, join(src_dir, "windowed/main.adept")], compiles)

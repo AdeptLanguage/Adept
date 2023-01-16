@@ -166,6 +166,8 @@ typedef struct {
     func_id_t ir_func_id;
     ir_value_t **values;
     length_t values_length;
+    int maybe_line_number;
+    int maybe_column_number;
 } ir_instr_call_t;
 
 // ---------------- ir_instr_call_address_t ----------------
@@ -473,11 +475,12 @@ typedef struct {
 } ir_func_t;
 
 // Possible traits for ir_func_t
-#define IR_FUNC_FOREIGN     TRAIT_1
-#define IR_FUNC_VARARG      TRAIT_2
-#define IR_FUNC_MAIN        TRAIT_3
-#define IR_FUNC_STDCALL     TRAIT_4
-#define IR_FUNC_POLYMORPHIC TRAIT_5
+#define IR_FUNC_FOREIGN         TRAIT_1
+#define IR_FUNC_VARARG          TRAIT_2
+#define IR_FUNC_MAIN            TRAIT_3
+#define IR_FUNC_STDCALL         TRAIT_4
+#define IR_FUNC_POLYMORPHIC     TRAIT_5
+#define IR_FUNC_VALIDATE_VTABLE TRAIT_6
 
 // ---------------- ir_job_list_t ----------------
 // List of jobs required during IR generation

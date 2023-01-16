@@ -399,10 +399,10 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     module_func->export_as = ast_func->export_as;
     module_func->argument_types = malloc(sizeof(ir_type_t*) * (ast_func->traits & AST_FUNC_VARIADIC ? ast_func->arity + 1 : ast_func->arity));
 
-    if(compiler->checks & COMPILER_NULL_CHECKS){
-        module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);        
-        module_func->maybe_filename = compiler->objects[ast_func->source.object_index]->filename;
+    module_func->maybe_definition_string = ir_gen_ast_definition_string(&module->pool, ast_func);        
+    module_func->maybe_filename = compiler->objects[ast_func->source.object_index]->filename;
 
+    if(compiler->checks & COMPILER_NULL_CHECKS){
         int line, column;
         lex_get_location(compiler->objects[ast_func->source.object_index]->buffer, ast_func->source.index, &line, &column);
         module_func->maybe_line_number = line;
@@ -422,6 +422,10 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     if(ast_func->traits & AST_FUNC_STDCALL)     module_func->traits |= IR_FUNC_STDCALL;
     if(ast_func->traits & AST_FUNC_POLYMORPHIC) module_func->traits |= IR_FUNC_POLYMORPHIC;
     #endif
+
+    if(ast_func->traits & AST_FUNC_DISPATCHER){
+        module_func->traits |= IR_FUNC_VALIDATE_VTABLE;
+    }
 
     ir_func_endpoint_t new_endpoint = (ir_func_endpoint_t){
         .ast_func_id = ast_func_id,
@@ -661,9 +665,9 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr);
         ir_value_t *vtable = build_load(&builder, build_member(&builder, this_value, /*index of __vtable__ field*/ 0, ir_ptr_ptr, ast_func.source), NULL_SOURCE);
 
-        ir_value_t *index = build_literal_usize(builder.pool, 0);
-
         ir_value_t *table = build_bitcast(&builder, vtable, ir_type_make_pointer_to(builder.pool, object->ir_module.common.ir_ptr));
+
+        ir_value_t *index = build_literal_usize(builder.pool, 0);
         ir_value_t *raw_function_pointer = build_load(&builder, build_array_access(&builder, table, index, NULL_SOURCE), NULL_SOURCE);
 
         ir_type_t *function_pointer_type;

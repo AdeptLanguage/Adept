@@ -299,21 +299,12 @@ ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value
     return instruction;
 }
 
-ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length){
-    ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
-
-    *instruction = (ir_instr_call_t){
-        .id = INSTRUCTION_CALL,
-        .result_type = result_type,
-        .values = arguments,
-        .values_length = arguments_length,
-        .ir_func_id = ir_func_id,
-    };
-
+ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, source_t code_source){
+    build_call_ignore_result(builder, ir_func_id, result_type, arguments, arguments_length, code_source);
     return build_value_from_prev_instruction(builder);
 }
 
-void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length){
+void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, source_t code_source){
     ir_instr_call_t *instruction = (ir_instr_call_t*) build_instruction(builder, sizeof(ir_instr_call_t));
 
     *instruction = (ir_instr_call_t){
@@ -323,6 +314,10 @@ void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_ty
         .values_length = arguments_length,
         .ir_func_id = ir_func_id,
     };
+    
+    if(builder->object->ir_module.funcs.funcs[ir_func_id].traits & IR_FUNC_VALIDATE_VTABLE){
+        lex_get_location(builder->compiler->objects[code_source.object_index]->buffer, code_source.index, &instruction->maybe_line_number, &instruction->maybe_column_number);
+    }
 }
 
 ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity){
@@ -1120,7 +1115,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
                 ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.value.ir_func_id].return_type;
                 ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, mutable_value);
 
-                build_call_ignore_result(builder, pair.value.ir_func_id, result_type, arguments, 1);
+                build_call_ignore_result(builder, pair.value.ir_func_id, result_type, arguments, 1, from_source);
                 return SUCCESS;
             }
 
@@ -1336,7 +1331,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
                     ir_value_t **arguments = ir_pool_alloc_init(builder->pool, ir_value_t*, values[i]);
                     ir_type_t *return_type = builder->object->ir_module.funcs.funcs[ir_func_id].return_type;                
 
-                    values[i] = build_call(builder, ir_func_id, return_type, arguments, 1);
+                    values[i] = build_call(builder, ir_func_id, return_type, arguments, 1, NULL_SOURCE);
                 }
             }
         }
@@ -1371,7 +1366,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
                 ir_type_t *result_type = builder->object->ir_module.funcs.funcs[ir_func_id].return_type;
 
                 // Perform __pass__
-                build_store(builder, build_call(builder, ir_func_id, result_type, arguments, 1), mutable_value, ast_type->source);
+                build_store(builder, build_call(builder, ir_func_id, result_type, arguments, 1, from_source), mutable_value, ast_type->source);
                 return SUCCESS;
             }
 
@@ -1698,7 +1693,7 @@ errorcode_t handle_assign_management(
         if(errorcode) goto failure;
     
         ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
-        build_call_ignore_result(builder, pair.ir_func_id, result_type, arguments, 2);
+        build_call_ignore_result(builder, pair.ir_func_id, result_type, arguments, 2, source_on_failure);
         return SUCCESS;
     }
 
@@ -1741,7 +1736,7 @@ ir_value_t *handle_math_management(ir_builder_t *builder, ir_math_operands_t *op
             *out_type = ast_type_clone(&ast->funcs[pair.ast_func_id].return_type);
         }
 
-        return build_call(builder, pair.ir_func_id, result_type, arguments, 2);
+        return build_call(builder, pair.ir_func_id, result_type, arguments, 2, from_source);
     }
 
     return NULL;
@@ -1757,10 +1752,16 @@ ir_value_t *handle_math_management_allow_other_direction(ir_builder_t *builder, 
     return handle_math_management(builder, &flipped_ops, from_source, out_type, overload_name);
 }
 
-ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, ir_value_t *index_value,
-        ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type){
-    
-    // NOTE: Attempts to use [] operator on a value that doesn't have a built-in version
+ir_value_t *handle_access_management(
+    ir_builder_t *builder,
+    ir_value_t *value,
+    ir_value_t *index_value,
+    ast_type_t *array_type,
+    ast_type_t *index_type,
+    ast_type_t *out_ptr_to_element_type,
+    source_t source
+){
+    // Attempts to use [] operator on a value that doesn't have a built-in version
     
     // We can only perform special access management if we're working with a pointer to a mutable struct-like
     if(
@@ -1807,7 +1808,7 @@ ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *value, i
         *out_ptr_to_element_type = ast_type_clone(&ast->funcs[pair.ast_func_id].return_type);
     }
 
-    return build_call(builder, pair.ir_func_id, result_ir_type, arguments, 2);
+    return build_call(builder, pair.ir_func_id, result_ir_type, arguments, 2, source);
 }
 
 errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, func_id_t ast_poly_func_id, ast_type_t *types,

@@ -415,6 +415,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         .compiler = compiler,
         .object = object,
         .null_check = (llvm_null_check_t){0},
+        .vtable_check = (llvm_vtable_check_t){0},
         .string_table = (llvm_string_table_t){0},
         .relocation_list = (llvm_phi2_relocation_list_t){0},
         .static_variable_info = (llvm_static_variable_info_t){0},

@@ -800,7 +800,7 @@ errorcode_t ir_gen_do_construct(
 
     func_id_t ir_func_id = pair.ir_func_id;
     ir_type_t *ir_return_type = object->ir_module.funcs.funcs[ir_func_id].return_type;
-    build_call_ignore_result(builder, ir_func_id, ir_return_type, arg_values, arity);
+    build_call_ignore_result(builder, ir_func_id, ir_return_type, arg_values, arity, source);
 
     ast_types_free(arg_types, arity);
     free(arg_types);

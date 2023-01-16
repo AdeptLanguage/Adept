@@ -82,6 +82,13 @@ static LLVMValueRef llvm_get_zero_value(llvm_context_t *llvm, ir_type_t *type){
     }
 }
 
+static void reset_on_failure_phis(llvm_context_t *llvm){
+    llvm->null_check.line_phi = NULL;
+    llvm->null_check.column_phi = NULL;
+    llvm->vtable_check.line_phi = NULL;
+    llvm->vtable_check.column_phi = NULL;
+}
+
 LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
     // Converts an ir type to an llvm type
     LLVMTypeRef type_ref_tmp;
@@ -479,8 +486,7 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         }
 
         // Drop references to any old PHIs
-        llvm->null_check.line_phi = NULL;
-        llvm->null_check.column_phi = NULL;
+        reset_on_failure_phis(llvm);
 
         errorcode_t errorcode = ir_to_llvm_basicblocks(
             llvm,
@@ -514,6 +520,10 @@ errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblocks_t basicb
     if(llvm->compiler->checks & COMPILER_NULL_CHECKS && basicblocks.length != 0){
         build_llvm_null_check_on_failure_block(llvm, func_skeleton, module_func);
     }
+
+    if(basicblocks.length != 0){
+        build_llvm_vtable_check_on_failure_block(llvm, func_skeleton, module_func);
+    }
     
     for(length_t b = 0; b != basicblocks.length; b++){
         LLVMPositionBuilderAtEnd(builder, llvm_blocks[b]);
@@ -543,9 +553,17 @@ errorcode_t ir_to_llvm_basicblocks(llvm_context_t *llvm, ir_basicblocks_t basicb
 
     // Remove basicblock and PHI nodes for null check failure pseudo-function if not used
     if(llvm->compiler->checks & COMPILER_NULL_CHECKS) {
-        // NOTE: Assumes (LLVMCountIncoming(llvm->line_phi) == LLVMCountIncoming(llvm->column_phi))
+        // NOTE: Assumes (LLVMCountIncoming(line_phi) == LLVMCountIncoming(column_phi))
         if(llvm->null_check.line_phi && LLVMCountIncoming(llvm->null_check.line_phi) == 0 && llvm->null_check.on_fail_block){
             LLVMDeleteBasicBlock(llvm->null_check.on_fail_block);
+        }
+    }
+
+    // Remove basicblock and PHI nodes for vtable check failure pseudo-function if not used
+    if(module_func->traits & IR_FUNC_VALIDATE_VTABLE) {
+        // NOTE: Assumes (LLVMCountIncoming(line_phi) == LLVMCountIncoming(column_phi))
+        if(llvm->vtable_check.line_phi && LLVMCountIncoming(llvm->vtable_check.line_phi) == 0 && llvm->vtable_check.on_fail_block){
+            LLVMDeleteBasicBlock(llvm->vtable_check.on_fail_block);
         }
     }
 
@@ -585,13 +603,23 @@ errorcode_t ir_to_llvm_allocate_stack_variables(llvm_context_t *llvm, varstack_t
 }
 
 void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_skeleton, ir_func_t *module_func){
+    const char *error_msg = "===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS! =====\nIn file:\t%s\nIn function:\t%s\nLine:\t%d\nColumn:\t%d\n";
+    build_llvm_check_on_failure_block(llvm, func_skeleton, module_func, error_msg, &llvm->null_check);
+}
+
+void build_llvm_vtable_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_skeleton, ir_func_t *module_func){
+    const char *error_msg = "===== RUNTIME ERROR: MISTAKENLY CALLING VIRTUAL METHOD ON UNCONSTRUCTED INSTANCE OF CLASS! =====\nIn file:\t%s\nIn function:\t%s\nLine:\t%d\nColumn:\t%d\n\nDid you forget to construct your instance?\n - `my_instance MyClass()`\n - `my_instance *MyClass = new MyClass()`\n - `my_instance.__constructor__()`\n";
+    build_llvm_check_on_failure_block(llvm, func_skeleton, module_func, error_msg, &llvm->vtable_check);
+}
+
+void build_llvm_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_skeleton, ir_func_t *module_func, const char *error_msg, llvm_check_t *check){
     LLVMBuilderRef builder = llvm->builder;
 
     // Line number and column number and created via a PHI node
     // when we call pseudo-function to handle null check failures
     // Create pseudo-function
-    llvm->null_check.on_fail_block = LLVMAppendBasicBlock(func_skeleton, "");
-    LLVMPositionBuilderAtEnd(builder, llvm->null_check.on_fail_block);
+    check->on_fail_block = LLVMAppendBasicBlock(func_skeleton, "");
+    LLVMPositionBuilderAtEnd(builder, check->on_fail_block);
 
     // Establish dependencies and define them if necessary
     LLVMValueRef printf_fn = LLVMGetNamedFunction(llvm->module, "printf");
@@ -610,12 +638,9 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
         printf_fn = LLVMAddFunction(llvm->module, "printf", printf_fn_type);
     }
 
-    llvm_null_check_t *null_check = &llvm->null_check;
-
     // Create template error message
-    if(null_check->failure_message_bytes == NULL){
-        const char *error_msg = "===== RUNTIME ERROR: NULL POINTER DEREFERENCE, MEMBER-ACCESS, OR ELEMENT-ACCESS! =====\nIn file:\t%s\nIn function:\t%s\nLine:\t%d\nColumn:\t%d\n";
-        null_check->failure_message_bytes = llvm_create_global_string(llvm, error_msg);
+    if(check->failure_message_bytes == NULL){
+        check->failure_message_bytes = llvm_create_global_string(llvm, error_msg);
     }
 
     // Decide on filename to use for error message
@@ -630,11 +655,11 @@ void build_llvm_null_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef f
     // Define function definition string
     LLVMValueRef func_name_str = llvm_create_global_string(llvm, func_name);
 
-    llvm->null_check.line_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
-    llvm->null_check.column_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
+    check->line_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
+    check->column_phi = LLVMBuildPhi(llvm->builder, LLVMInt32Type(), "");
 
     // Create argument list
-    LLVMValueRef args[] = {null_check->failure_message_bytes, filename_str, func_name_str, llvm->null_check.line_phi, llvm->null_check.column_phi};
+    LLVMValueRef args[] = {check->failure_message_bytes, filename_str, func_name_str, check->line_phi, check->column_phi};
 
     // Print the error message
     LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(printf_fn)), printf_fn, args, NUM_ITEMS(args), "");
@@ -740,6 +765,12 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 const char *implementation_name;
                 char stack_storage[256];
                 ir_func_t *target_ir_func = &llvm->object->ir_module.funcs.funcs[call_instr->ir_func_id];
+
+                if(target_ir_func->traits & IR_FUNC_VALIDATE_VTABLE){
+                    // Validate that subject.__vtable__ is not NULL
+                    assert(call_instr->values_length >= 1);
+                    llvm_create_vtable_check(llvm, f, arguments[0], call_instr->maybe_line_number, call_instr->maybe_column_number, &llvm_exit_blocks[b]);
+                }
 
                 if(target_ir_func->traits & IR_FUNC_FOREIGN){
                     implementation_name = compiler_unnamespaced_name(target_ir_func->name);
@@ -1376,17 +1407,43 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
 void llvm_create_optional_null_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock){
     if(!(llvm->compiler->checks & COMPILER_NULL_CHECKS)) return;
 
+    llvm_check_t *check = &llvm->null_check;
     LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(llvm->func_skeletons[func_skeleton_index], "");
 
     LLVMBasicBlockRef current_block = LLVMGetInsertBlock(llvm->builder);
     LLVMValueRef line_value = LLVMConstInt(LLVMInt32Type(), line, true);
     LLVMValueRef column_value = LLVMConstInt(LLVMInt32Type(), column, true);
 
-    LLVMAddIncoming(llvm->null_check.line_phi, &line_value, &current_block, 1);
-    LLVMAddIncoming(llvm->null_check.column_phi, &column_value, &current_block, 1);
+    LLVMAddIncoming(check->line_phi, &line_value, &current_block, 1);
+    LLVMAddIncoming(check->column_phi, &column_value, &current_block, 1);
 
     LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, pointer, "");
-    LLVMBuildCondBr(llvm->builder, if_null, llvm->null_check.on_fail_block, not_null_block);
+    LLVMBuildCondBr(llvm->builder, if_null, check->on_fail_block, not_null_block);
+    LLVMPositionBuilderAtEnd(llvm->builder, not_null_block);
+
+    // Set landing basicblock output to be the not-null case block
+    if(out_landing_basicblock) *out_landing_basicblock = not_null_block;
+}
+
+void llvm_create_vtable_check(llvm_context_t *llvm, length_t func_skeleton_index, LLVMValueRef pointer, int line, int column, LLVMBasicBlockRef *out_landing_basicblock){
+    LLVMBasicBlockRef not_null_block = LLVMAppendBasicBlock(llvm->func_skeletons[func_skeleton_index], "");
+
+    llvm_check_t *check = &llvm->vtable_check;
+    LLVMTypeRef llvm_ptr_ty = LLVMPointerType(LLVMInt8Type(), 0);
+    LLVMTypeRef llvm_ptr_ptr_ty = LLVMPointerType(llvm_ptr_ty, 0);
+
+    LLVMValueRef field_ref = LLVMBuildBitCast(llvm->builder, pointer, llvm_ptr_ptr_ty, "");
+    LLVMValueRef vtable = LLVMBuildLoad2(llvm->builder, llvm_ptr_ty, field_ref, "");
+
+    LLVMBasicBlockRef current_block = LLVMGetInsertBlock(llvm->builder);
+    LLVMValueRef line_value = LLVMConstInt(LLVMInt32Type(), line, true);
+    LLVMValueRef column_value = LLVMConstInt(LLVMInt32Type(), column, true);
+
+    LLVMAddIncoming(check->line_phi, &line_value, &current_block, 1);
+    LLVMAddIncoming(check->column_phi, &column_value, &current_block, 1);
+
+    LLVMValueRef if_null = LLVMBuildIsNull(llvm->builder, vtable, "");
+    LLVMBuildCondBr(llvm->builder, if_null, check->on_fail_block, not_null_block);
     LLVMPositionBuilderAtEnd(llvm->builder, not_null_block);
 
     // Set landing basicblock output to be the not-null case block
@@ -1526,8 +1583,7 @@ errorcode_t ir_to_llvm_inject_init_built(llvm_context_t *llvm){
     }
 
     // Drop references to any old PHIs
-    llvm->null_check.line_phi = NULL;
-    llvm->null_check.column_phi = NULL;
+    reset_on_failure_phis(llvm);
 
     errorcode_t errorcode = ir_to_llvm_basicblocks(llvm, basicblocks, func_skeleton,
             module_func, llvm_blocks, llvm_exit_blocks, f);
@@ -1599,8 +1655,7 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     }
 
     // Drop references to any old PHIs
-    llvm->null_check.line_phi = NULL;
-    llvm->null_check.column_phi = NULL;
+    reset_on_failure_phis(llvm);
 
     errorcode_t errorcode = ir_to_llvm_basicblocks(llvm, basicblocks, func_skeleton, module_func, llvm_blocks, llvm_exit_blocks, f);
 

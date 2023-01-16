@@ -648,9 +648,9 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
         ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
 
         if(ir_value){
-            *ir_value = build_call(builder, pair.ir_func_id, result_type, arg_values, arg_arity);
+            *ir_value = build_call(builder, pair.ir_func_id, result_type, arg_values, arg_arity, expr->source);
         } else {
-            build_call_ignore_result(builder, pair.ir_func_id, result_type, arg_values, arg_arity);
+            build_call_ignore_result(builder, pair.ir_func_id, result_type, arg_values, arg_arity, expr->source);
         }
 
         // Restore the stack if we allocated memory on it
@@ -992,7 +992,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
     // Create variadic array value using the special function '__variadic_array__'
     func_id_t ir_func_id = builder->object->ir_module.common.variadic_ir_func_id;
     ir_type_t *result_type = builder->object->ir_module.common.ir_variadic_array;
-    ir_value_t *returned_value = build_call(builder, ir_func_id, result_type, variadic_array_function_arguments, 4);
+    ir_value_t *returned_value = build_call(builder, ir_func_id, result_type, variadic_array_function_arguments, 4, source_on_failure);
 
     // Make space for variadic array argument
     if(variadic_count == 0){
@@ -1653,7 +1653,7 @@ errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_acces
         // to use the __access__ management method (if the array value is a structure)
         
         ast_type_t element_pointer_type;
-        *ir_value = handle_access_management(builder, array_value, index_value, &array_type, &index_type, &element_pointer_type);
+        *ir_value = handle_access_management(builder, array_value, index_value, &array_type, &index_type, &element_pointer_type, expr->source);
         if(*ir_value == NULL) goto array_access_not_allowed;
 
         // If successful in calling __access__ method, then swap the array type to the *Element type
@@ -1928,9 +1928,9 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     // Don't even bother with result unless we care about the it
     if(ir_value){
-        *ir_value = build_call(builder, pair.ir_func_id, ir_return_type, arg_values, arg_arity);
+        *ir_value = build_call(builder, pair.ir_func_id, ir_return_type, arg_values, arg_arity, expr->source);
     } else {
-        build_call_ignore_result(builder, pair.ir_func_id, ir_return_type, arg_values, arg_arity);
+        build_call_ignore_result(builder, pair.ir_func_id, ir_return_type, arg_values, arg_arity, expr->source);
     }
     
     if(used_temporary_subject && !expr->allow_drop){

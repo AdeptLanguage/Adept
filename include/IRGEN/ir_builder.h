@@ -134,11 +134,11 @@ ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value
 
 // ---------------- build_call ----------------
 // Builds a call instruction
-ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length);
+ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, source_t source);
 
 // ---------------- build_call_ignore_result ----------------
 // Builds a call instruction, but doesn't give back a reference to the result
-void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length);
+void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, source_t code_source);
 
 // ---------------- build_call_address ----------------
 // Builds a call function address instruction
@@ -473,8 +473,15 @@ ir_value_t *handle_math_management_allow_other_direction(ir_builder_t *builder, 
 // Handles '__access__' management function calls for [] operator
 // NOTE: Returns SUCCESS if nothing went wrong
 // NOTE: Returns FAILURE if compile time error occurred
-ir_value_t *handle_access_management(ir_builder_t *builder, ir_value_t *array_mutable_struct_value, ir_value_t *index_value,
-    ast_type_t *array_type, ast_type_t *index_type, ast_type_t *out_ptr_to_element_type);
+ir_value_t *handle_access_management(
+    ir_builder_t *builder,
+    ir_value_t *value,
+    ir_value_t *index_value,
+    ast_type_t *array_type,
+    ast_type_t *index_type,
+    ast_type_t *out_ptr_to_element_type,
+    source_t source
+);
 
 // ---------------- instantiate_poly_func ----------------
 // Instantiates a polymorphic function
