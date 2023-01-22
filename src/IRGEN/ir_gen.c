@@ -384,6 +384,8 @@ errorcode_t ir_gen_func_template(compiler_t *compiler, object_t *object, weak_cs
 
     memset(module_func, 0, sizeof *module_func);
     module_func->name = name;
+    module_func->maybe_line_number = -1;
+    module_func->maybe_column_number = -1;
     return SUCCESS;
 }
 
@@ -948,7 +950,6 @@ weak_cstr_t ir_gen_ast_definition_string(ir_pool_t *pool, ast_func_t *ast_func){
     weak_cstr_t result = ir_pool_alloc(pool, finalized.length + 1);
     memcpy(result, finalized.cstr, finalized.length + 1);
     free(finalized.cstr);
-
     return result;
 }
 

@@ -462,8 +462,8 @@ typedef struct {
     weak_cstr_t name;
     weak_cstr_t maybe_filename;
     weak_cstr_t maybe_definition_string;
-    length_t maybe_line_number;
-    length_t maybe_column_number;
+    int maybe_line_number;
+    int maybe_column_number;
     trait_t traits;
     ir_type_t *return_type;
     ir_type_t **argument_types;

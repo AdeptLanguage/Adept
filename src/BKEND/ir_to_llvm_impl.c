@@ -392,7 +392,30 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
 
         for(length_t a = 0; a != ir_func->arity; a++){
             parameters[a] = ir_to_llvm_type(llvm, ir_func->argument_types[a]);
-            if(parameters[a] == NULL) return FAILURE;
+
+            if(parameters[a] == NULL){
+                strong_cstr_t typename = ir_type_str(ir_func->argument_types[a]);
+                compiler_panicf(llvm->compiler, NULL_SOURCE, "Could not resolve argument type %d of type %s for IR func %s (IR func ID = %d)", a, typename, ir_func->name, (int) ir_func_id);
+
+                if(ir_func->maybe_filename){
+                    printf("In File: %s\n", ir_func->maybe_filename);
+                }
+
+                if(ir_func->maybe_definition_string){
+                    printf("IR Function Definition: %s\n", ir_func->maybe_definition_string);
+                }
+
+                if(ir_func->maybe_line_number >= 0){
+                    printf("Line: %d\n", ir_func->maybe_line_number);
+                }
+
+                if(ir_func->maybe_column_number >= 0){
+                    printf("Column: %d\n", ir_func->maybe_column_number);
+                }
+
+                free(typename);
+                return FAILURE;
+            }
         }
 
         LLVMTypeRef return_type = ir_to_llvm_type(llvm, ir_func->return_type);

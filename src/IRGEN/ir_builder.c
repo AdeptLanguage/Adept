@@ -1657,7 +1657,7 @@ errorcode_t handle_assign_management(
     instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
     errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, destination_ast_type, &result);
-    if(errorcode) goto failure;
+    if(errorcode) goto handle_errorcode;
 
     if(result.has){
         ast_t *ast = &builder->object->ast;
@@ -1669,7 +1669,7 @@ errorcode_t handle_assign_management(
             free(typename);
 
             errorcode = ALT_FAILURE;
-            goto failure;
+            goto handle_errorcode;
         }
 
         build_zeroinit(builder, destination);
@@ -1680,7 +1680,8 @@ errorcode_t handle_assign_management(
         };
 
         if(!ast_types_conform(builder, &value, value_ast_type, destination_ast_type, CONFORM_MODE_CALL_ARGUMENTS_LOOSE)){
-            goto failure;
+            errorcode = FAILURE;
+            goto handle_errorcode;
         }
 
         ir_value_t **arguments = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * 2);
@@ -1690,16 +1691,14 @@ errorcode_t handle_assign_management(
         errorcode = handle_pass_management(builder, arguments, ast->funcs[pair.ast_func_id].arg_types, ast->funcs[pair.ast_func_id].arg_type_traits, 2);
         ast_type_free(&arg_types[0]);
 
-        if(errorcode) goto failure;
+        if(errorcode) goto handle_errorcode;
     
         ir_type_t *result_type = builder->object->ir_module.funcs.funcs[pair.ir_func_id].return_type;
         build_call_ignore_result(builder, pair.ir_func_id, result_type, arguments, 2, source_on_failure);
         return SUCCESS;
     }
 
-    errorcode = FAILURE;
-
-failure:
+handle_errorcode:
     instructions_snapshot_restore(builder, &instructions_snapshot);
     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
     return errorcode;
@@ -2599,6 +2598,8 @@ instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder){
         .current_block_id = builder->current_block_id,
         .current_basicblock_instructions_length = builder->current_block->instructions.length,
         .basicblocks_length = builder->basicblocks.length,
+        .funcs_length = builder->object->ir_module.funcs.length,
+        .job_list_length = builder->job_list->length,
     };
 }
 
@@ -2607,4 +2608,6 @@ void instructions_snapshot_restore(ir_builder_t *builder, instructions_snapshot_
     builder->current_block = &builder->basicblocks.blocks[builder->current_block_id];
     builder->current_block->instructions.length = snapshot->current_basicblock_instructions_length;
     builder->basicblocks.length = snapshot->basicblocks_length;
+    builder->object->ir_module.funcs.length = snapshot->funcs_length;
+    builder->job_list->length = snapshot->job_list_length;
 }

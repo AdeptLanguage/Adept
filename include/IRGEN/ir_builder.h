@@ -545,6 +545,8 @@ typedef struct {
     length_t current_block_id;
     length_t current_basicblock_instructions_length;
     length_t basicblocks_length;
+    length_t funcs_length;
+    length_t job_list_length;
 } instructions_snapshot_t;
 
 instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder);
