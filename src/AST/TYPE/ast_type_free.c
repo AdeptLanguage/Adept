@@ -75,6 +75,11 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length){
         case AST_ELEM_LAYOUT:
             ast_layout_free(&(((ast_elem_layout_t*) elem)->layout));
             break;
+        case AST_ELEM_ANONYMOUS_ENUM: {
+                ast_elem_anonymous_enum_t *anon_enum = (ast_elem_anonymous_enum_t*) elem;
+                strong_cstr_list_free(&anon_enum->kinds);
+            }
+            break;
         default:
             die("ast_elems_free() - Unrecognized type element ID %zu at index %zu\n", (size_t) elem->id, i);
         }

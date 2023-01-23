@@ -16,8 +16,6 @@
 #include "UTIL/util.h"
 
 errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign){
-    char **kinds = NULL;
-    length_t length = 0;
     source_t source = parse_ctx_peek_source(ctx);
 
     if(ctx->composite_association != NULL){
@@ -41,6 +39,8 @@ errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign){
     // Prepend namespace if applicable
     parse_prepend_namespace(ctx, &name);
 
+    weak_cstr_t *kinds;
+    length_t length;
     if(parse_enum_body(ctx, &kinds, &length)) return FAILURE;
 
     ast_add_enum(ctx->ast, name, kinds, length, source);
@@ -56,14 +56,17 @@ errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign){
     return SUCCESS;
 }
 
-errorcode_t parse_enum_body(parse_ctx_t *ctx, char ***kinds, length_t *length){
+errorcode_t parse_enum_body(parse_ctx_t *ctx, weak_cstr_t **kinds, length_t *length){
     length_t *i = ctx->i;
     token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
     length_t capacity = 0;
-    
-    if(parse_ignore_newlines(ctx, "Expected '(' after enum name")
-    || parse_eat(ctx, TOKEN_OPEN, "Expected '(' after enum name")){
+
+    *kinds = NULL;
+    *length = 0;
+
+    if(parse_ignore_newlines(ctx, "Expected '(' at beginning of enum body")
+    || parse_eat(ctx, TOKEN_OPEN, "Expected '(' at beginning of enum body")){
         return FAILURE;
     }
 

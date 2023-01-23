@@ -60,6 +60,10 @@ length_t string_count_character(const char *string, length_t length, char charac
 // Returns whether a string starts with another string
 bool string_starts_with(weak_cstr_t original, weak_cstr_t stub);
 
+// ---------------- string_compare_for_qsort ----------------
+// Compares two strings for qsort
+int string_compare_for_qsort(const void *, const void *);
+
 #ifdef __cplusplus
 }
 #endif

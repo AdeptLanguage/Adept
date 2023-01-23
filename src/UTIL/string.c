@@ -133,3 +133,7 @@ bool string_starts_with(weak_cstr_t original, weak_cstr_t stub){
     length_t stub_length = strlen(stub);
     return stub_length <= original_length && strncmp(original, stub, stub_length) == 0;
 }
+
+int string_compare_for_qsort(const void *a, const void *b){
+    return strcmp(*((const char**) a), *((const char**) b));
+}

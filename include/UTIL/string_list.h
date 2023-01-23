@@ -28,6 +28,9 @@ typedef listof(weak_cstr_t, items) weak_cstr_list_t;
 // ---------------- strong_cstr_list_free ----------------
 void strong_cstr_list_free(strong_cstr_list_t *list);
 
+// ---------------- strong_cstr_list_clone ----------------
+strong_cstr_list_t strong_cstr_list_clone(const strong_cstr_list_t *list);
+
 #ifdef __cplusplus
 }
 #endif

@@ -164,6 +164,7 @@ errorcode_t parse_stmts(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_scop
                 case TOKEN_POLYMORPH: /*polymorphic type*/ case TOKEN_COLON: /*experimental : type syntax*/
                 case TOKEN_POLYCOUNT: /*polymorphic count*/
                 case TOKEN_STRUCT: case TOKEN_PACKED: case TOKEN_UNION: /* anonymous composites */
+                case TOKEN_ENUM: /* anonymous enums */
                     *i -= 1;
                     if(parse_stmt_declare(ctx, stmt_list)) return FAILURE;
                     break;

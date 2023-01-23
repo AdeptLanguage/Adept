@@ -17,12 +17,13 @@ extern "C" {
     ---------------------------------------------------------------------------
 */
 
-#include "UTIL/hash.h"
-#include "UTIL/trait.h"
-#include "UTIL/ground.h"
 #include "AST/ast_expr.h"
 #include "AST/ast_layout.h"
 #include "AST/ast_type_lean.h" // IWYU pragma: export
+#include "UTIL/hash.h"
+#include "UTIL/string_list.h"
+#include "UTIL/trait.h"
+#include "UTIL/ground.h"
 
 // Possible AST type elements
 enum {
@@ -41,6 +42,7 @@ enum {
     AST_ELEM_GENERIC_BASE,
     AST_ELEM_LAYOUT,
     AST_ELEM_UNKNOWN_ENUM,
+    AST_ELEM_ANONYMOUS_ENUM,
 };
 
 // Possible data flow patterns
@@ -166,6 +168,15 @@ typedef struct {
     source_t source;
     weak_cstr_t kind_name;
 } ast_elem_unknown_enum_t;
+
+// ---------------- ast_elem_anonymous_enum_t ----------------
+// Type element for an anonymous enum
+// NOTE: `kinds` must be a sorted and contain distinct members
+typedef struct {
+    unsigned int id;
+    source_t source;
+    strong_cstr_list_t kinds;
+} ast_elem_anonymous_enum_t;
 
 // ---------------- ast_type_clone ----------------
 // Clones an AST type, producing a duplicate

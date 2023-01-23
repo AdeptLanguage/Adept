@@ -9,7 +9,7 @@
 #include "UTIL/trait.h"
 
 static hash_t ast_elem_base_hash(const ast_elem_base_t *elem, hash_t working_hash){
-    return hash_combine(working_hash, hash_data(elem->base, strlen(elem->base)));
+    return hash_combine(working_hash, hash_string(elem->base));
 }
 
 static hash_t ast_elem_fixed_array_hash(const ast_elem_fixed_array_t *elem, hash_t working_hash){
@@ -23,24 +23,24 @@ static hash_t ast_elem_func_hash(const ast_elem_func_t *elem, hash_t working_has
 }
 
 static hash_t ast_elem_polymorph_hash(const ast_elem_polymorph_t *elem, hash_t working_hash){
-    return hash_combine(working_hash, hash_data(elem->name, strlen(elem->name)));
+    return hash_combine(working_hash, hash_string(elem->name));
 }
 
 static hash_t ast_elem_polycount_hash(const ast_elem_polycount_t *elem, hash_t working_hash){
-    working_hash = hash_combine(working_hash, hash_data("#", 1));
-    return         hash_combine(working_hash, hash_data(elem->name, strlen(elem->name)));
+    working_hash = hash_combine(working_hash, hash_string("#"));
+    return         hash_combine(working_hash, hash_string(elem->name));
 }
 
 static hash_t ast_elem_polymorph_prereq_hash(const ast_elem_polymorph_prereq_t *elem, hash_t working_hash){
-    working_hash = hash_combine(working_hash, hash_data(elem->similarity_prerequisite, strlen(elem->similarity_prerequisite)));
-    working_hash = hash_combine(working_hash, hash_data(elem->name, strlen(elem->name)));
+    working_hash = hash_combine(working_hash, hash_string(elem->similarity_prerequisite));
+    working_hash = hash_combine(working_hash, hash_string(elem->name));
     working_hash = elem->extends.elements_length != 0 ? hash_combine(working_hash, ast_type_hash(&elem->extends)) : working_hash;
     return working_hash;
 }
 
 static hash_t ast_elem_generic_base_hash(const ast_elem_generic_base_t *elem, hash_t working_hash){
     working_hash = hash_combine(working_hash, hash_data(&elem->name_is_polymorphic, sizeof(elem->name_is_polymorphic)));
-    working_hash = hash_combine(working_hash, hash_data(elem->name, strlen(elem->name)));
+    working_hash = hash_combine(working_hash, hash_string(elem->name));
     return         hash_combine(working_hash, ast_types_hash(elem->generics, elem->generics_length));
 }
 
@@ -49,7 +49,14 @@ static hash_t ast_elem_layout_hash(const ast_elem_layout_t* elem, hash_t working
 }
 
 static hash_t ast_elem_unknown_enum_hash(const ast_elem_unknown_enum_t *elem, hash_t working_hash){
-    return hash_combine(working_hash, hash_data(elem->kind_name, strlen(elem->kind_name)));
+    return hash_combine(working_hash, hash_string(elem->kind_name));
+}
+
+static hash_t ast_elem_anonymous_enum_hash(const ast_elem_anonymous_enum_t *elem, hash_t working_hash){
+    for(length_t i = 0; i != elem->kinds.length; i++){
+        return hash_combine(working_hash, hash_string(elem->kinds.items[i]));
+    }
+    return working_hash;
 }
 
 static hash_t ast_elem_hash(const ast_elem_t *elem){
@@ -83,6 +90,8 @@ static hash_t ast_elem_hash(const ast_elem_t *elem){
         break;
     case AST_ELEM_UNKNOWN_ENUM:
         return ast_elem_unknown_enum_hash((const ast_elem_unknown_enum_t*) elem, id_hash);
+    case AST_ELEM_ANONYMOUS_ENUM:
+        return ast_elem_anonymous_enum_hash((const ast_elem_anonymous_enum_t*) elem, id_hash);
     default:
         die("ast_elem_hash() - Unrecognized type element ID 0x%08X\n", elem->id);
     }

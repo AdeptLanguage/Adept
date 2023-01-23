@@ -21,6 +21,7 @@ static ast_elem_t *ast_elem_polymorph_prereq_clone(const ast_elem_polymorph_prer
 static ast_elem_t *ast_elem_generic_base_clone(const ast_elem_generic_base_t*);
 static ast_elem_t *ast_elem_layout_clone(const ast_elem_layout_t*);
 static ast_elem_t *ast_elem_unknown_enum_clone(const ast_elem_unknown_enum_t*);
+static ast_elem_t *ast_elem_anonymous_enum_clone(const ast_elem_anonymous_enum_t*);
 
 ast_type_t ast_type_clone(const ast_type_t *original){
     return (ast_type_t){
@@ -60,6 +61,8 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *original){
         return ast_elem_layout_clone((ast_elem_layout_t*) original);
     case AST_ELEM_UNKNOWN_ENUM:
         return ast_elem_unknown_enum_clone((ast_elem_unknown_enum_t*) original);
+    case AST_ELEM_ANONYMOUS_ENUM:
+        return ast_elem_anonymous_enum_clone((ast_elem_anonymous_enum_t*) original);
     default:
         die("ast_elem_clone() - Unrecognized type element ID\n");
     }
@@ -199,6 +202,14 @@ static ast_elem_t *ast_elem_unknown_enum_clone(const ast_elem_unknown_enum_t *or
         .id = AST_ELEM_UNKNOWN_ENUM,
         .source = original->source,
         .kind_name = original->kind_name,
+    });
+}
+
+static ast_elem_t *ast_elem_anonymous_enum_clone(const ast_elem_anonymous_enum_t *original){
+    return (ast_elem_t*) malloc_init(ast_elem_anonymous_enum_t, {
+        .id = AST_ELEM_ANONYMOUS_ENUM,
+        .source = original->source,
+        .kinds = strong_cstr_list_clone(&original->kinds),
     });
 }
 

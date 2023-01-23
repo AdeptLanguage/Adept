@@ -296,6 +296,9 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             return FAILURE;
         }
         break;
+    case AST_ELEM_ANONYMOUS_ENUM:
+        *resolved_type = ir_module->common.ir_usize;
+        break;
     default: {
             strong_cstr_t unresolved_typename = ast_type_str(unresolved_type);
             compiler_panicf(compiler, unresolved_type->source, "INTERNAL ERROR: Unknown type element id in type '%s'", unresolved_typename);
