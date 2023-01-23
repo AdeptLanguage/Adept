@@ -242,5 +242,5 @@ static bool is_math_func(const char *func_name){
         "__subtract__"
     };
 
-    return (binary_string_search(sorted, sizeof sorted / sizeof *sorted, func_name) != -1);
+    return (binary_string_search_const(sorted, sizeof sorted / sizeof *sorted, func_name) != -1);
 }

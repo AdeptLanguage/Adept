@@ -103,6 +103,21 @@ static bool ast_elem_unknown_enum_identical(ast_elem_t *raw_a, ast_elem_t *raw_b
     return streq(a->kind_name, b->kind_name);
 }
 
+static bool ast_elem_anonymous_enum_identical(ast_elem_t *raw_a, ast_elem_t *raw_b){
+    ast_elem_anonymous_enum_t *a = (ast_elem_anonymous_enum_t*) raw_a;
+    ast_elem_anonymous_enum_t *b = (ast_elem_anonymous_enum_t*) raw_b;
+
+    // NOTE: Assumes that members of anonymous enums are sorted and distinct
+
+    if(a->kinds.length != b->kinds.length) return false;
+
+    for(length_t i = 0; i < a->kinds.length; i++){
+        if(!streq(a->kinds.items[i], b->kinds.items[i])) return false;
+    }
+
+    return true;
+}
+
 bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
     // NOTE: Returns true if the two types are identical
     // NOTE: The two types must be EXACTLY the same to be considered identical
@@ -152,6 +167,9 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
             return false;
         case AST_ELEM_UNKNOWN_ENUM:
             if(!ast_elem_unknown_enum_identical(a_elem, b_elem)) return false;
+            break;
+        case AST_ELEM_ANONYMOUS_ENUM:
+            if(!ast_elem_anonymous_enum_identical(a_elem, b_elem)) return false;
             break;
         default:
             die("ast_types_identical() - Unrecognized element ID %d\n", (int) a_elem->id);

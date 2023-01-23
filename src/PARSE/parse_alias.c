@@ -49,7 +49,7 @@ errorcode_t parse_alias(parse_ctx_t *ctx){
     };
     length_t invalid_names_length = sizeof(invalid_names) / sizeof(const char*);
 
-    if(binary_string_search(invalid_names, invalid_names_length, name) != -1){
+    if(binary_string_search_const(invalid_names, invalid_names_length, name) != -1){
         compiler_panicf(ctx->compiler, source, "Reserved type name '%s' can't be used to create an alias", name);
         free(name);
         return FAILURE;

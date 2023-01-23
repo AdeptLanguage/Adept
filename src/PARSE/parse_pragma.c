@@ -85,7 +85,7 @@ errorcode_t parse_pragma(parse_ctx_t *ctx){
     #define PRAGMA_WINDOWS_ONLY                     0x00000024
     #define PRAGMA_WINDRES                          0x00000025
 
-    maybe_index_t directive = binary_string_search(directives, directives_length, directive_string);
+    maybe_index_t directive = binary_string_search_const(directives, directives_length, directive_string);
 
     switch(directive){
     case PRAGMA___BUILTIN_WARN_BAD_PRINTF_FORMAT: // '__builtin_warn_bad_printf_format' directive

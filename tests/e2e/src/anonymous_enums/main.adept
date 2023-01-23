@@ -1,0 +1,25 @@
+
+import basics
+
+func main {
+    a, b, c enum (A, C, B)
+
+    a = ::A
+    b = ::B
+    c = ::C
+
+    print(a as usize, b as usize, c as usize)
+
+    assert typeinfo enum (A, B, C) == typeinfo enum (C, A, B)
+
+    ty_info *AnyEnumType = typeinfo enum (A, B, C) as *AnyEnumType
+    assert ty_info.kind == ::ENUM
+
+    print(ty_info.name)
+
+    each *ubyte in [ty_info.members, ty_info.length] {
+        printf(" - member %d is %s\n", idx, it)
+    }
+
+    print(a, b, c)
+}

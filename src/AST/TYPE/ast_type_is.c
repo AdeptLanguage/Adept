@@ -140,3 +140,9 @@ bool ast_type_is_unknown_enum(const ast_type_t *type){
     if(type->elements[0]->id != AST_ELEM_UNKNOWN_ENUM) return false;
     return true;
 }
+
+bool ast_type_is_anonymous_enum(const ast_type_t *type){
+    if(type->elements_length != 1) return false;
+    if(type->elements[0]->id != AST_ELEM_ANONYMOUS_ENUM) return false;
+    return true;
+}

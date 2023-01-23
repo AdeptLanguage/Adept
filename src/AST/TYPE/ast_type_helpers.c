@@ -8,6 +8,7 @@
 #include "AST/ast_type.h"
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
+#include "UTIL/search.h"
 
 void ast_type_prepend_ptr(ast_type_t *type){
     // Prepends a '*' to an existing ast_type_t
@@ -128,4 +129,8 @@ maybe_null_weak_cstr_t ast_type_struct_name(const ast_type_t *type){
     default:
         return NULL;
     }
+}
+
+maybe_index_t ast_elem_anonymous_enum_get_member_index(ast_elem_anonymous_enum_t *anonymous_enum, const char *member_name){
+    return binary_string_search(anonymous_enum->kinds.items, anonymous_enum->kinds.length, member_name);
 }

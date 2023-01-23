@@ -313,20 +313,39 @@ errorcode_t ir_gen__types__enum_entry(object_t *object, ir_value_t **array_value
 
     const char *enum_name = entry->name;
     ast_t *ast = &object->ast;
-    maybe_index_t enum_index = ast_find_enum(ast->enums, ast->enums_length, entry->name);
 
-    if(enum_index < 0){
-        internalerrorprintf("Failed to generate RTTI for enum '%s' that should exist\n", enum_name);
-        return FAILURE;
-    }
+    ir_value_t **values;
+    length_t length;
 
-    ast_enum_t *enum_definition = &ast->enums[enum_index];
+    if(ast_type_is_anonymous_enum(&entry->resolved_ast_type)){
+        // Anonymous enum
 
-    length_t length = enum_definition->length;
-    ir_value_t **values = malloc(sizeof(ir_value_t) * length);
+        ast_elem_anonymous_enum_t *anonymous_enum = (ast_elem_anonymous_enum_t*) entry->resolved_ast_type.elements[0];
 
-    for(length_t i = 0; i != length; i++){
-        values[i] = build_literal_cstr_ex(pool, &ir_module->type_map, enum_definition->kinds[i]);
+        length = anonymous_enum->kinds.length;
+        values = malloc(sizeof(ir_value_t*) * length);
+
+        for(length_t i = 0; i != length; i++){
+            values[i] = build_literal_cstr_ex(pool, &ir_module->type_map, anonymous_enum->kinds.items[i]);
+        }
+    } else {
+        // Named enum
+
+        maybe_index_t enum_index = ast_find_enum(ast->enums, ast->enums_length, entry->name);
+
+        if(enum_index < 0){
+            internalerrorprintf("Failed to generate RTTI for enum '%s' that should exist\n", enum_name);
+            return FAILURE;
+        }
+
+        ast_enum_t *enum_definition = &ast->enums[enum_index];
+
+        length = enum_definition->length;
+        values = malloc(sizeof(ir_value_t*) * length);
+
+        for(length_t i = 0; i != length; i++){
+            values[i] = build_literal_cstr_ex(pool, &ir_module->type_map, enum_definition->kinds[i]);
+        }
     }
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);

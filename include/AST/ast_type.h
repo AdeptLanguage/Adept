@@ -298,6 +298,10 @@ bool ast_type_is_func(const ast_type_t *type);
 // Returns whether an AST type is an unknown type of an enum value
 bool ast_type_is_unknown_enum(const ast_type_t *type);
 
+// ---------------- ast_type_is_anonymous_enum ----------------
+// Returns whether an AST type is an anonymous enum type
+bool ast_type_is_anonymous_enum(const ast_type_t *type);
+
 // ---------------- ast_type_has_polymorph ----------------
 // Returns whether an AST type contains a polymorphic type
 bool ast_type_has_polymorph(const ast_type_t *type);
@@ -332,6 +336,11 @@ void ast_type_unwrap_fixed_array(ast_type_t *inout_type);
 // ---------------- ast_type_struct_name ----------------
 // Returns the struct name for a type (or NULL if not applicable)
 maybe_null_weak_cstr_t ast_type_struct_name(const ast_type_t *type);
+
+// ---------------- ast_elem_anonymous_enum_get_member_index ----------------
+// Returns the index of a member of an anonymous enum
+// Returns -1 if no member with the given name exists
+maybe_index_t ast_elem_anonymous_enum_get_member_index(ast_elem_anonymous_enum_t *anonymous_enum, const char *member_name);
 
 // ---------------- ast_elem_clone ----------------
 // Clones an AST type element, producing a duplicate

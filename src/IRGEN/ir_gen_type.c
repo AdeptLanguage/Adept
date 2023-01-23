@@ -633,6 +633,19 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             return true;
         }
     }
+    
+    if(ast_type_is_anonymous_enum(ast_to_type) && ast_type_is_unknown_enum(ast_from_type)){
+        ast_elem_anonymous_enum_t *anonymous_enum = (ast_elem_anonymous_enum_t*) ast_to_type->elements[0];
+        ast_elem_unknown_enum_t *unknown_enum = (ast_elem_unknown_enum_t*) ast_from_type->elements[0];
+
+        maybe_index_t member_index = ast_elem_anonymous_enum_get_member_index(anonymous_enum, unknown_enum->kind_name);
+
+        if(member_index >= 0){
+            *ir_value = build_literal_usize(builder->pool, member_index);
+            assert(*ir_value != NULL);
+            return true;
+        }
+    }
 
     // Worst case scenario, we try to use user-defined __as__ method
     if((mode & CONFORM_MODE_USER_IMPLICIT || mode & CONFORM_MODE_USER_EXPLICIT)){

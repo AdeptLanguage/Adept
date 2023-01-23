@@ -26,9 +26,9 @@ extern "C" {
 extern const char * const global_primitives[13];
 extern const char * const global_primitives_extended[15];
 
-#define typename_builtin_type(base) binary_string_search(global_primitives, 13, base)
+#define typename_builtin_type(base) binary_string_search_const(global_primitives, 13, base)
 
-#define typename_is_extended_builtin_type(base) (binary_string_search(global_primitives_extended, 15, base) != -1)
+#define typename_is_extended_builtin_type(base) (binary_string_search_const(global_primitives_extended, 15, base) != -1)
 
 #ifdef __cplusplus
 }

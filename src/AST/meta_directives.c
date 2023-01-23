@@ -639,7 +639,7 @@ meta_expr_t *meta_get_special_variable(compiler_t *compiler, object_t *object, w
     };
 
     length_t special_dynamic_meta_variables_length = sizeof(special_dynamic_meta_variables) / sizeof(const char *);
-    maybe_index_t special_index = binary_string_search(special_dynamic_meta_variables, special_dynamic_meta_variables_length, variable_name);
+    maybe_index_t special_index = binary_string_search_const(special_dynamic_meta_variables, special_dynamic_meta_variables_length, variable_name);
 
     // Do special stuff instead if dynamic compiler meta variable
     if(special_index < 0) return NULL;

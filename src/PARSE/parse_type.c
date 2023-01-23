@@ -253,7 +253,7 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
             qsort(raw_kinds, raw_kinds_length, sizeof(weak_cstr_t), string_compare_for_qsort);
 
             // Assert distinct
-            for(length_t i = 1; i != raw_kinds_length; i++){
+            for(length_t i = 1; i < raw_kinds_length; i++){
                 const char *prev = raw_kinds[i - 1];
                 const char *current = raw_kinds[i];
 

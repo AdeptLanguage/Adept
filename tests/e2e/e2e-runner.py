@@ -21,6 +21,10 @@ def run_all_tests():
     test("andor", [executable, join(src_dir, "andor/main.adept")], compiles)
     test("andor_circuit", [executable, join(src_dir, "andor_circuit/main.adept")], compiles)
     test("anonymous_composites", [executable, join(src_dir, "anonymous_composites/main.adept")], compiles)
+    test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles)
+    test("anonymous_enums layout check",
+        [join(src_dir, "anonymous_enums/main")],
+        lambda output: b"0\n1\n2\nenum (A, B, C)\n - member 0 is A\n - member 1 is B\n - member 2 is C\nA\nB\nC\n" in output)
     test("anonymous_fields", [executable, join(src_dir, "anonymous_fields/main.adept")], compiles)
     test("any_fixed_array", [executable, join(src_dir, "any_fixed_array/main.adept")], compiles)
     test("any_function_pointer", [executable, join(src_dir, "any_function_pointer/main.adept")], compiles)
@@ -256,7 +260,7 @@ def run_all_tests():
     test("return_ten", [executable, join(src_dir, "return_ten/main.adept")], compiles)
     test("rtti_enum",
         [executable, join(src_dir, "rtti_enum/main.adept"), "-e"],
-        lambda output: b"Information about every enum used:\n  MyEnum : ['NONE', 'ERROR', 'WARNING', 'INFO', 'ICON']\n  Ownership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringOwnership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringReplaceNothingBehavior : ['OR_CLONE', 'OR_VIEW']\n" in output
+         lambda output: b"Information about every enum used:\n  AnyTypeKind : ['VOID', 'BOOL', 'BYTE', 'UBYTE', 'SHORT', 'USHORT', 'INT', 'UINT', 'LONG', 'ULONG', 'FLOAT', 'DOUBLE', 'PTR', 'STRUCT', 'UNION', 'FUNC_PTR', 'FIXED_ARRAY', 'ENUM']\n  MyEnum : ['NONE', 'ERROR', 'WARNING', 'INFO', 'ICON']\n  Ownership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringOwnership : ['REFERENCE', 'OWN', 'GIVEN', 'DONOR']\n  StringReplaceNothingBehavior : ['OR_CLONE', 'OR_VIEW']\n" in output
     )
     test("runtime_resource", [executable, join(src_dir, "runtime_resource/main.adept")], compiles)
     test("scientific", [executable, join(src_dir, "scientific/main.adept")], compiles)

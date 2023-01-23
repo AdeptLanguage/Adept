@@ -278,7 +278,7 @@ errorcode_t pkg_compress_word(FILE *file, token_t *token){
         "bool", "byte", "double", "float", "int", "long", "short", "ubyte", "uint", "ulong", "ushort", "usize"
     };
 
-    maybe_index_t index = binary_string_search(compressible_words, compressible_words_length, token->data);
+    maybe_index_t index = binary_string_search_const(compressible_words, compressible_words_length, token->data);
 
     if(index == -1){
         tokenid_t id = token->id;

@@ -465,7 +465,7 @@ static inline void running(lex_ctx_t *ctx, tokenid_t intent){
     identifier[size] = '\0';
 
     if(intent == TOKEN_WORD){
-        maybe_index_t keyword_index = binary_string_search(global_token_keywords_list, global_token_keywords_list_length, identifier);
+        maybe_index_t keyword_index = binary_string_search_const(global_token_keywords_list, global_token_keywords_list_length, identifier);
         
         // Handle word tokens that should be keywords
         if(keyword_index != -1){
