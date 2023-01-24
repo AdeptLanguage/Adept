@@ -75,16 +75,20 @@ errorcode_t infer(compiler_t *compiler, object_t *object);
 errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skeleton);
 
 // ---------------- infer_in_composites ----------------
-// Infers aliases in a list of composites
+// Infers type aliases in a list of composites
 errorcode_t infer_in_composites(infer_ctx_t *ctx, ast_composite_t *composites, length_t composites_length);
 
 // ---------------- infer_in_globals ----------------
-// Infers aliases in a list of global variables
+// Infers type/value aliases in a list of global variables
 errorcode_t infer_in_globals(infer_ctx_t *ctx, ast_global_t *globals, length_t globals_length);
 
 // ---------------- infer_in_funcs ----------------
-// Infers aliases and generics in a list of functions
+// Infers type/value aliases and generics in a list of functions
 errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_length);
+
+// ---------------- infer_in_func_aliases ----------------
+// Infers type/value aliases in a list of function aliases
+errorcode_t infer_in_func_aliases(infer_ctx_t *ctx, ast_func_alias_t *func_aliases, length_t length);
 
 // ---------------- infer_in_stmts ----------------
 // Infers aliases and generics in a list of statements

@@ -41,7 +41,8 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
 
     if(infer_in_composites(&ctx, ast->composites, ast->composites_length)
     || infer_in_globals(&ctx, ast->globals, ast->globals_length)
-    || infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)){
+    || infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)
+    || infer_in_func_aliases(&ctx, ast->func_aliases, ast->func_aliases_length)){
         return FAILURE;
     }
 
@@ -168,6 +169,18 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
 
         infer_var_scope_free(ctx->compiler, ctx->scope);
         ctx->scope = previous_scope;
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t infer_in_func_aliases(infer_ctx_t *ctx, ast_func_alias_t *func_aliases, length_t length){
+    for(length_t i = 0; i < length; i++){
+        ast_func_alias_t *func_alias = &func_aliases[i];
+
+        for(length_t i = 0; i != func_alias->arity; i++){
+            if(infer_type(ctx, &func_alias->arg_types[i])) return FAILURE;
+        }
     }
 
     return SUCCESS;

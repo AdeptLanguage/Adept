@@ -860,14 +860,16 @@ errorcode_t parse_func_alias(parse_ctx_t *ctx){
 
     expand((void**) &ast->func_aliases, sizeof(ast_func_alias_t), ast->func_aliases_length, &ast->func_aliases_capacity, 1, 8);
 
-    ast_func_alias_t *falias = &ast->func_aliases[ast->func_aliases_length++];
-    falias->from = from;
-    falias->to = to;
-    falias->arg_types = arg_types;
-    falias->arity = arity;
-    falias->required_traits = required_traits;
-    falias->source = source;
-    falias->match_first_of_name = match_first_of_name;
+    ast->func_aliases[ast->func_aliases_length++] = (ast_func_alias_t){
+        .from = from,
+        .to = to,
+        .arg_types = arg_types,
+        .arity = arity,
+        .required_traits = required_traits,
+        .source = source,
+        .match_first_of_name = match_first_of_name,
+    };
+
     return SUCCESS;
 }
 
