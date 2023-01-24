@@ -13,6 +13,7 @@ void ir_proc_query_init_find_func_regular(
     trait_t traits_mask,
     trait_t traits_match,
     trait_t forbid_traits,
+    length_t instantiation_depth,
     source_t from_source
 ){
     *out_query = (ir_proc_query_t){
@@ -33,6 +34,7 @@ void ir_proc_query_init_find_func_regular(
         .traits_match = traits_match,
         .forbid_traits = forbid_traits,
         .optional_gives = NULL,
+        .instantiation_depth = instantiation_depth,
         .from_source = from_source,
     };
 }
@@ -46,9 +48,10 @@ void ir_proc_query_init_find_method_regular(
     ast_type_t *arg_types,
     length_t length,
     trait_t forbid_traits,
+    length_t instantiation_depth,
     source_t from_source
 ){
-    ir_proc_query_init_find_func_regular(out_query, compiler, object, name, arg_types, length, TRAIT_NONE, TRAIT_NONE, forbid_traits, from_source);
+    ir_proc_query_init_find_func_regular(out_query, compiler, object, name, arg_types, length, TRAIT_NONE, TRAIT_NONE, forbid_traits, instantiation_depth, from_source);
     out_query->struct_name = struct_name;
 }
 
@@ -62,6 +65,7 @@ void ir_proc_query_init_find_func_conforming(
     ast_type_t *optional_gives,
     bool no_user_casts,
     trait_t forbid_traits,
+    length_t instantiation_depth,
     source_t from_source
 ){
     *out_query = (ir_proc_query_t){
@@ -82,6 +86,7 @@ void ir_proc_query_init_find_func_conforming(
         .traits_match = TRAIT_NONE,
         .forbid_traits = forbid_traits,
         .optional_gives = optional_gives,
+        .instantiation_depth = instantiation_depth,
         .from_source = from_source,
     };
 }
@@ -96,9 +101,10 @@ void ir_proc_query_init_find_method_conforming(
     length_t *inout_length,
     ast_type_t *optional_gives,
     trait_t forbid_traits,
+    length_t instantiation_depth,
     source_t from_source
 ){
-    ir_proc_query_init_find_func_conforming(out_query, builder, name, inout_arg_values, inout_arg_types, inout_length, optional_gives, false, forbid_traits, from_source);
+    ir_proc_query_init_find_func_conforming(out_query, builder, name, inout_arg_values, inout_arg_types, inout_length, optional_gives, false, forbid_traits, instantiation_depth, from_source);
     out_query->struct_name = struct_name;
 }
 
@@ -112,6 +118,7 @@ void ir_proc_query_init_find_func_conforming_without_defaults(
     ast_type_t *optional_gives,
     bool no_user_casts,
     trait_t forbid_traits,
+    length_t instantiation_depth,
     source_t from_source
 ){
     *out_query = (ir_proc_query_t){
@@ -132,6 +139,7 @@ void ir_proc_query_init_find_func_conforming_without_defaults(
         .traits_match = TRAIT_NONE,
         .forbid_traits = forbid_traits,
         .optional_gives = optional_gives,
+        .instantiation_depth = instantiation_depth,
         .from_source = from_source,
     };
 }
@@ -146,9 +154,10 @@ void ir_proc_query_init_find_method_conforming_without_defaults(
     length_t length,
     ast_type_t *optional_gives,
     trait_t forbid_traits,
+    length_t instantiation_depth,
     source_t from_source
 ){
-    ir_proc_query_init_find_func_conforming_without_defaults(out_query, builder, name, arg_values, arg_types, length, optional_gives, false, forbid_traits, from_source);
+    ir_proc_query_init_find_func_conforming_without_defaults(out_query, builder, name, arg_values, arg_types, length, optional_gives, false, forbid_traits, instantiation_depth, from_source);
     out_query->struct_name = struct_name;
 }
 

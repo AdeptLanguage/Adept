@@ -68,6 +68,7 @@ ast_type_t ast_type_make_unknown_enum(source_t source, weak_cstr_t kind_name);
 
 // ---------------- ast_type_make_anonymous_enum ----------------
 // Creates an anonymous enum type
+// NOTE: `kinds` does NOT have to be sorted
 ast_type_t ast_type_make_anonymous_enum(source_t source, const char **kinds, length_t length);
 
 // =====================================================================
@@ -128,6 +129,7 @@ ast_elem_t *ast_elem_unknown_enum_make(source_t source, weak_cstr_t kind_name);
 
 // ---------------- ast_elem_anonymous_enum_make ----------------
 // Makes an anonymous enum type element
+// NOTE: `raw_kinds` does NOT have to be sorted
 ast_elem_t *ast_elem_make_anonymous_enum(source_t source, const char **raw_kinds, length_t length);
 
 // =====================================================================

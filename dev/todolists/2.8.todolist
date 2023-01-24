@@ -12,7 +12,6 @@ MEDIUM-PRIORITY:
     ```
 * 'break default' to break to default condition of switch statement
 * __return__ and return POD
-* switch over enums without enums name for each entry: idea: exhaustive switch kind using CardKind { ... }
 * @incognito
 * traits/interfaces and 'derive Thingable1, Thingable2, Thingable3 for Thing'
 * built-in meta functions like supports()
@@ -59,7 +58,6 @@ MEDIUM-PRIORITY:
 * add standard library method for random choice of element from arrays/lists/initializer-lists/etc
 * improve how Optional behaves with non-POD types like Strings, particularly creating them and checking them, e.g. some() and isSome()
 * add constructors for Optional
-* do proper implementation of replace(*String, T, T) so that replacement strings are able to contain the needle string
 * improve linux cross compilation
 * better error message for when accidentally doing `class Rectangle (w, h float) extends Shape` (should have `extends Shape` before fields)
 * add better backtracking error messages for when cannot instantiate polymorphic type e.g. for `value <NotExistentType> Optional`
@@ -101,6 +99,7 @@ LOW-PRIORITY:
 * include trace back for `Encountered undetermined polymorphic type '$T' in type '$T'` error
 * `delete[count] pointer` syntax to allow for __defer__/delete in single step
 * allow trailing comma for enum members
+* modernize random in standard library to utilize `~>`? e.g. `random() ~> bool`, `random() ~> int`, `random() ~> double`, etc. or add `randomBool`
 
 v2.4 COMPLETED:
 + Standard Library Imports
@@ -169,4 +168,10 @@ v2.8 COMPLETED:
 + add values for unknown enums, e.g. `::KIND`
 + added ability to compile/link against Window's resource files with `pragma windres "my_resource.rc"` (even when cross compiling)
 + add way for constructors to not generate stand-alone helper functions [adding via `in constructor`]
-+ lots of bug fixes
++ do proper implementation of replace(*String, T, T) so that replacement strings are able to contain the needle string
++ added runtime error for attempting to call virtual method on unconstructed class instance
++ added user-defined runtime assertions via `assert EXPRESSION` and `assert EXPRESSION, MESSAGE`
++ added `__assertion_failed__` user-definable special function for handling failed assertions, supports messages of arbitrary types, standard implementations can be imported from `2.8/assertions.adept` or specific implementations from `2.8/assertions/*.adept`
++ added anonymous enums, e.g. `enum (FRUIT, VEGETABLE, GRAIN)`
++ added `__flat_enum__` polymorphic prerequisite
++ lots of bug fixes and quality of life improvements

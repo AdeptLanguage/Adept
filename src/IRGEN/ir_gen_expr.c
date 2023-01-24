@@ -1430,7 +1430,7 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     else {
         optional_func_pair_t result;
 
-        if(ir_gen_find_func_regular(builder->compiler, builder->object, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, expr->source, &result)
+        if(ir_gen_find_func_regular(builder->compiler, builder->object, expr->name, expr->match_args, expr->match_args_length, TRAIT_NONE, TRAIT_NONE, ir_builder_instantiation_depth(builder), expr->source, &result)
         || !result.has){
             // If nothing exists and the lookup is tentative, fail tentatively
             if(expr->tentative) goto fail_tentatively;

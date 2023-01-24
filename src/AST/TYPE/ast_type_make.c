@@ -107,6 +107,10 @@ ast_elem_t *ast_elem_anonymous_enum_make(source_t source, const char **raw_kinds
         kinds.items[i] = strclone(raw_kinds[i]);
     }
 
+    // Sort kinds list
+    qsort(kinds.items, kinds.length, sizeof(strong_cstr_t), (int(*)(const void *, const void *)) &string_compare_for_qsort);
+
+    // Return completed anonymous enum type element
     return (ast_elem_t*) malloc_init(ast_elem_anonymous_enum_t, {
         .id = AST_ELEM_ANONYMOUS_ENUM,
         .source = source,

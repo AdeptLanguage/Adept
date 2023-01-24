@@ -384,6 +384,7 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     func->export_as = options->export_name;
     func->virtual_origin = INVALID_FUNC_ID;
     func->virtual_dispatcher = INVALID_FUNC_ID;
+    func->instantiation_depth = 0;
 
     #if ADEPT_INSIGHT_BUILD
     func->end_source = options->source;

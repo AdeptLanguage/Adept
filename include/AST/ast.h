@@ -45,6 +45,7 @@ typedef struct {
     ast_expr_list_t statements;
     source_t source;
     maybe_null_strong_cstr_t export_as;
+    length_t instantiation_depth;
     
     union {
         func_id_t virtual_origin; // can be INVALID_FUNC_ID

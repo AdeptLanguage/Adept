@@ -487,7 +487,7 @@ ir_value_t *handle_access_management(
 // Instantiates a polymorphic function
 // NOTE: 'instantiation_source' may be NULL_SOURCE
 errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, func_id_t ast_poly_func_id, ast_type_t *types,
-        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_endpoint_t *out_endpoint);
+        length_t types_list_length, ast_poly_catalog_t *catalog, length_t instantiation_depth, ir_func_endpoint_t *out_endpoint);
 
 // ---------------- instantiate_default_for_virtual_dispatcher ----------------
 // Instantiates (if necessary) a concrete version of the default implementation
@@ -496,6 +496,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
     compiler_t *compiler,
     object_t *object,
     func_id_t dispatcher_id,
+    length_t instantiation_depth,
     source_t instantiation_source,
     ast_poly_catalog_t *catalog,
     func_id_t *out_ast_concrete_virtual_origin
@@ -505,20 +506,20 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
 // Attempts to auto-generate __defer__ management method
 // NOTE: Does NOT check for existing suitable __defer__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result);
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, length_t instantiation_depth, optional_func_pair_t *result);
 
 // ---------------- attempt_autogen___pass__ ----------------
 // Attempts to auto-generate __pass__ management function
 // NOTE: Does NOT check for existing suitable __pass__ functions
 // NOTE: Returns FAILURE if couldn't auto generate
-errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result);
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, length_t instantiation_depth, optional_func_pair_t *result);
 
 // ---------------- attempt_autogen___assign__ ----------------
 // Attempts to auto-generate __assign__ management method
 // NOTE: Does NOT check for existing suitable __assign__ methods
 // NOTE: Returns FAILURE if couldn't auto generate
 // NOTE: Returns ALT_FAILURE if something went really wrong
-errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result);
+errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, length_t instantiation_depth, optional_func_pair_t *result);
 
 // ---------------- is_allowed_builtin_auto_conversion ----------------
 // Returns whether a builtin auto conversion is allowed
@@ -538,6 +539,10 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
 // ---------------- ir_gen_actualize_unknown_enum ----------------
 // Converts a value of an unknown enum to a concrete IR value
 ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t *out_expr_type);
+
+// ---------------- ir_builder_instantiation_depth ----------------
+// Gets the current instantiation depth of a builder
+length_t ir_builder_instantiation_depth(ir_builder_t *builder);
 
 // ---------------- instructions_snapshot_t ----------------
 // Snapshot used to easily reset the forward generation of IR instructions

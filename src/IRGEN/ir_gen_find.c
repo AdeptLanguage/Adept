@@ -196,7 +196,7 @@ static errorcode_t actualize_suitable_polymorphic(ir_proc_query_t *query, option
     ast_type_t *arg_types = ir_proc_query_getter_arg_types(query);
     length_t arg_types_length = ir_proc_query_getter_length(query);
 
-    if(instantiate_poly_func(compiler, object, query->from_source, endpoint.ast_func_id, arg_types, arg_types_length, catalog, &instance)){
+    if(instantiate_poly_func(compiler, object, query->from_source, endpoint.ast_func_id, arg_types, arg_types_length, catalog, query->instantiation_depth, &instance)){
         ast_func_t *poly_func = &object->ast.funcs[ast_func_id];
 
         strong_cstr_t display = ast_func_head_str(poly_func);
@@ -380,15 +380,15 @@ static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, opt
     object_t *object = ir_proc_query_getter_object(query);
 
     if(streq(query->proc_name, "__defer__")){
-        return attempt_autogen___defer__(compiler, object, types, length, result);
+        return attempt_autogen___defer__(compiler, object, types, length, query->instantiation_depth, result);
     }
 
     if(streq(query->proc_name, "__assign__")){
-        return attempt_autogen___assign__(compiler, object, types, length, result);
+        return attempt_autogen___assign__(compiler, object, types, length, query->instantiation_depth, result);
     }
 
     if(streq(query->proc_name, "__pass__") && ir_proc_query_is_function(query)){
-        return attempt_autogen___pass__(compiler, object, types, length, result);
+        return attempt_autogen___pass__(compiler, object, types, length, query->instantiation_depth, result);
     }
 
     return FAILURE;
@@ -447,11 +447,12 @@ errorcode_t ir_gen_find_func_regular(
     length_t arg_types_length,
     trait_t traits_mask,
     trait_t traits_match,
+    length_t instantiation_depth,
     source_t from_source,
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_func_regular(&query, compiler, object, function_name, arg_types, arg_types_length, traits_mask, traits_match, TRAIT_NONE, from_source);
+    ir_proc_query_init_find_func_regular(&query, compiler, object, function_name, arg_types, arg_types_length, traits_mask, traits_match, TRAIT_NONE, instantiation_depth, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -467,7 +468,7 @@ errorcode_t ir_gen_find_func_conforming(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_func_conforming(&query, builder, function_name, inout_arg_values, inout_arg_types, inout_length, optional_gives, no_user_casts, normal_forbidden_traits, from_source);
+    ir_proc_query_init_find_func_conforming(&query, builder, function_name, inout_arg_values, inout_arg_types, inout_length, optional_gives, no_user_casts, normal_forbidden_traits, ir_builder_instantiation_depth(builder), from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -483,7 +484,7 @@ errorcode_t ir_gen_find_func_conforming_without_defaults(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_func_conforming_without_defaults(&query, builder, function_name, arg_values, arg_types, length, optional_gives, no_user_casts, normal_forbidden_traits, from_source);
+    ir_proc_query_init_find_func_conforming_without_defaults(&query, builder, function_name, arg_values, arg_types, length, optional_gives, no_user_casts, normal_forbidden_traits, ir_builder_instantiation_depth(builder), from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -494,11 +495,12 @@ errorcode_t ir_gen_find_method(
     weak_cstr_t method_name,
     ast_type_t *arg_types,
     length_t arg_types_length,
+    length_t instantiation_depth,
     source_t from_source,
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, normal_forbidden_traits, from_source);
+    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, normal_forbidden_traits, instantiation_depth, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -509,12 +511,13 @@ errorcode_t ir_gen_find_dispatchee(
     weak_cstr_t method_name,
     ast_type_t *arg_types,
     length_t arg_types_length,
+    length_t instantiation_depth,
     source_t from_source,
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
     trait_t forbidden = AST_FUNC_DISPATCHER;
-    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, forbidden, from_source);
+    ir_proc_query_init_find_method_regular(&query, compiler, object, struct_name, method_name, arg_types, arg_types_length, forbidden, instantiation_depth, from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -530,7 +533,7 @@ errorcode_t ir_gen_find_method_conforming(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_method_conforming(&query, builder, struct_name, name, inout_arg_values, inout_arg_types, inout_length, gives, normal_forbidden_traits, from_source);
+    ir_proc_query_init_find_method_conforming(&query, builder, struct_name, name, inout_arg_values, inout_arg_types, inout_length, gives, normal_forbidden_traits, ir_builder_instantiation_depth(builder), from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 
@@ -546,7 +549,7 @@ errorcode_t ir_gen_find_method_conforming_without_defaults(
     optional_func_pair_t *out_result
 ){
     ir_proc_query_t query;
-    ir_proc_query_init_find_method_conforming_without_defaults(&query, builder, struct_name, name, arg_values, arg_types, length, gives, normal_forbidden_traits, from_source);
+    ir_proc_query_init_find_method_conforming_without_defaults(&query, builder, struct_name, name, arg_values, arg_types, length, gives, normal_forbidden_traits, ir_builder_instantiation_depth(builder), from_source);
     return ir_gen_find_proc(&query, out_result);
 }
 

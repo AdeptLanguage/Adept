@@ -47,6 +47,7 @@ errorcode_t ir_gen_find_func_regular(
     length_t arg_types_length,
     trait_t traits_mask,
     trait_t traits_match,
+    length_t instantiation_depth,
     source_t from_source,
     optional_func_pair_t *out_result
 );
@@ -93,6 +94,7 @@ errorcode_t ir_gen_find_method(
     weak_cstr_t method_name,
     ast_type_t *arg_types,
     length_t arg_types_length,
+    length_t instantiation_depth,
     source_t from_source,
     optional_func_pair_t *out_result
 );
@@ -106,6 +108,7 @@ errorcode_t ir_gen_find_dispatchee(
     weak_cstr_t method_name,
     ast_type_t *arg_types,
     length_t arg_types_length,
+    length_t instantiation_depth,
     source_t from_source,
     optional_func_pair_t *out_result
 );

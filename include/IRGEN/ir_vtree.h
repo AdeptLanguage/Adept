@@ -34,6 +34,7 @@ typedef struct vtree {
     ir_func_endpoint_list_t virtuals;
     ir_func_endpoint_list_t table;
     vtree_list_t children;
+    length_t instantiation_depth;
     ir_value_t *finalized_table;
 } vtree_t;
 
@@ -58,7 +59,7 @@ void vtree_list_free(vtree_list_t *vtree_list);
 // Finds a vtree in a vtree list that has the given signature type,
 // If none exists, a new vtree will be created and inserted.
 // Will always return a vtree with a matching signature.
-vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *signature);
+vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *signature, length_t instantiation_depth);
 
 // ---------------- vtree_list_find ----------------
 // Finds a vtree in a vtree list that has the given signature

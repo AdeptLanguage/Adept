@@ -82,7 +82,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
 
             if(func->traits & AST_FUNC_VIRTUAL && endpoint.ir_func_id != INVALID_FUNC_ID){
                 ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
-                vtree_t *vtree = vtree_list_find_or_append(&vtree_list, &subject_type);
+                vtree_t *vtree = vtree_list_find_or_append(&vtree_list, &subject_type, 0);
                 vtree_append_virtual(vtree, endpoint);
             }
         }
@@ -94,7 +94,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
 
         if(func->traits & AST_FUNC_CLASS_CONSTRUCTOR && !(func->traits & AST_FUNC_POLYMORPHIC)){
             ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
-            vtree_list_find_or_append(&vtree_list, &subject_type);
+            vtree_list_find_or_append(&vtree_list, &subject_type, 0);
         }
     }
 
@@ -142,7 +142,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
                 ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
 
                 virtual_addition_t addition = (virtual_addition_t){
-                    .vtree = vtree_list_find_or_append(&vtree_list, &subject_type),
+                    .vtree = vtree_list_find_or_append(&vtree_list, &subject_type, func->instantiation_depth),
                     .endpoint = endpoint,
                 };
 
@@ -156,7 +156,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
 
             if(func->traits & AST_FUNC_CLASS_CONSTRUCTOR && !(func->traits & AST_FUNC_POLYMORPHIC)){
                 ast_type_t subject_type = ast_type_unwrapped_view(&func->arg_types[0]);
-                vtree_list_find_or_append(&vtree_list, &subject_type);
+                vtree_list_find_or_append(&vtree_list, &subject_type, func->instantiation_depth);
             }
         }
 
@@ -335,7 +335,7 @@ errorcode_t ir_gen_functions(compiler_t *compiler, object_t *object){
             error = ir_gen_find_func_named(object, falias->to, &is_unique, &pair, false);
         } else {
             optional_func_pair_t result;
-            error = ir_gen_find_func_regular(compiler, object, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, falias->source, &result);
+            error = ir_gen_find_func_regular(compiler, object, falias->to, falias->arg_types, falias->arity, req_traits_mask, falias->required_traits, 0, falias->source, &result);
 
             if(error == SUCCESS){
                 if(!result.has) continue;

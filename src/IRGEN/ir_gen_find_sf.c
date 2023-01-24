@@ -14,7 +14,7 @@
 #include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 
-errorcode_t ir_gen_find_pass_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_func_pair_t *result){
+errorcode_t ir_gen_find_pass_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, length_t instantiation_depth, optional_func_pair_t *result){
     // Finds the correct __pass__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
@@ -26,7 +26,7 @@ errorcode_t ir_gen_find_pass_func(compiler_t *compiler, object_t *object, ast_ty
         return SUCCESS;
     }
 
-    errorcode_t errorcode = ir_gen_find_func_regular(compiler, object, "__pass__", arg_type, 1, TRAIT_NONE, TRAIT_NONE, NULL_SOURCE, result);
+    errorcode_t errorcode = ir_gen_find_func_regular(compiler, object, "__pass__", arg_type, 1, TRAIT_NONE, TRAIT_NONE, instantiation_depth, NULL_SOURCE, result);
 
     if(errorcode == SUCCESS && result->has){
         cache_entry->pass = result->value;
@@ -38,7 +38,7 @@ errorcode_t ir_gen_find_pass_func(compiler_t *compiler, object_t *object, ast_ty
     return errorcode;
 }
 
-errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_func_pair_t *result){
+errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, length_t instantiation_depth, optional_func_pair_t *result){
     // Finds the correct __defer__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
@@ -67,7 +67,7 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_t
     errorcode_t errorcode;
 
     if(struct_name){
-        errorcode = ir_gen_find_method(compiler, object, struct_name, "__defer__", &ast_type_ptr, 1, NULL_SOURCE, result);
+        errorcode = ir_gen_find_method(compiler, object, struct_name, "__defer__", &ast_type_ptr, 1, instantiation_depth, NULL_SOURCE, result);
     } else {
         errorcode = FAILURE;
     }
@@ -82,7 +82,7 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_t
     return errorcode;
 }
 
-errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_func_pair_t *result){
+errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, length_t instantiation_depth, optional_func_pair_t *result){
     // Finds the correct __assign__ function for a type
     // NOTE: Returns SUCCESS when a function was found,
     //               FAILURE when a function wasn't found and
@@ -115,7 +115,7 @@ errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_
     errorcode_t errorcode;
     
     if(struct_name){
-        errorcode = ir_gen_find_method(compiler, object, struct_name, "__assign__", args, 2, NULL_SOURCE, result);
+        errorcode = ir_gen_find_method(compiler, object, struct_name, "__assign__", args, 2, instantiation_depth, NULL_SOURCE, result);
     } else {
         errorcode = FAILURE;
     }

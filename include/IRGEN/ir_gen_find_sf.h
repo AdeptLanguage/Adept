@@ -25,21 +25,21 @@ extern "C" {
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_pass_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_func_pair_t *result);
+errorcode_t ir_gen_find_pass_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, length_t instantiation_depth, optional_func_pair_t *result);
 
 // ---------------- ir_gen_find_defer_func ----------------
 // Finds the correct __defer__ function for a type
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_func_pair_t *result);
+errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, length_t instantiation_depth, optional_func_pair_t *result);
 
 // ---------------- ir_gen_find_assign_func ----------------
 // Finds the correct __assign__ function for a type
 // NOTE: Returns SUCCESS when a function was found,
 //               FAILURE when a function wasn't found and
 //               ALT_FAILURE when something goes wrong
-errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, optional_func_pair_t *result);
+errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_type_t *arg_type, length_t instantiation_depth, optional_func_pair_t *result);
 
 #ifdef __cplusplus
 }

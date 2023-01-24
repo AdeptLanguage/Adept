@@ -22,7 +22,7 @@ static int compare_strings(const void *raw_a, const void *raw_b){
 static errorcode_t ir_gen_check_prereq_assign(compiler_t *compiler, object_t *object, ast_type_t *concrete_type, bool *out_meets){
     optional_func_pair_t result;
 
-    errorcode_t res = ir_gen_find_assign_func(compiler, object, concrete_type, &result);
+    errorcode_t res = ir_gen_find_assign_func(compiler, object, concrete_type, 0, &result);
     if(res == ALT_FAILURE) return res;
 
     *out_meets = (res == SUCCESS && result.has);

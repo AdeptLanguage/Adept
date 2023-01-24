@@ -61,6 +61,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
     object_t *object,
     const ast_type_t *child_subject_type,
     func_id_t ast_func_id,
+    length_t instantiation_depth,
     optional_func_pair_t *out_result
 );
 

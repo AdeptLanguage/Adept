@@ -1103,7 +1103,7 @@ errorcode_t handle_single_deference(ir_builder_t *builder, ast_type_t *ast_type,
             ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
 
             optional_func_pair_t pair;
-            errorcode_t errorcode = ir_gen_find_defer_func(builder->compiler, builder->object, ast_type, &pair);
+            errorcode_t errorcode = ir_gen_find_defer_func(builder->compiler, builder->object, ast_type, ir_builder_instantiation_depth(builder), &pair);
 
             if(errorcode){
                 ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
@@ -1317,7 +1317,7 @@ errorcode_t handle_pass_management(ir_builder_t *builder, ir_value_t **values, a
         if(value_type_kind == TYPE_KIND_STRUCTURE || value_type_kind == TYPE_KIND_FIXED_ARRAY){
             if(ast_type_allows_pass_management(&types[i])){
                 optional_func_pair_t pair;
-                errorcode_t errorcode = ir_gen_find_pass_func(builder->compiler, builder->object, &types[i], &pair);
+                errorcode_t errorcode = ir_gen_find_pass_func(builder->compiler, builder->object, &types[i], ir_builder_instantiation_depth(builder), &pair);
 
                 if(errorcode == ALT_FAILURE){
                     return FAILURE;
@@ -1352,7 +1352,7 @@ errorcode_t handle_single_pass(ir_builder_t *builder, ast_type_t *ast_type, ir_v
     case AST_ELEM_BASE:
     case AST_ELEM_GENERIC_BASE: {
             optional_func_pair_t pair;
-            errorcode_t errorcode = ir_gen_find_pass_func(builder->compiler, builder->object, ast_type, &pair);
+            errorcode_t errorcode = ir_gen_find_pass_func(builder->compiler, builder->object, ast_type, ir_builder_instantiation_depth(builder), &pair);
 
             if(errorcode){
                 return errorcode;
@@ -1656,7 +1656,7 @@ errorcode_t handle_assign_management(
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
     instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
 
-    errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, destination_ast_type, &result);
+    errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, destination_ast_type, ir_builder_instantiation_depth(builder), &result);
     if(errorcode) goto handle_errorcode;
 
     if(result.has){
@@ -1811,7 +1811,7 @@ ir_value_t *handle_access_management(
 }
 
 errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source_t instantiation_source, func_id_t ast_poly_func_id, ast_type_t *types,
-        length_t types_list_length, ast_poly_catalog_t *catalog, ir_func_endpoint_t *out_endpoint){
+        length_t types_list_length, ast_poly_catalog_t *catalog, length_t instantiation_depth, ir_func_endpoint_t *out_endpoint){
 
     ast_func_t *poly_func = &object->ast.funcs[ast_poly_func_id];
     length_t required_arity = poly_func->arity;
@@ -1823,6 +1823,11 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     
     // Require not disallowed
     if(poly_func->traits & AST_FUNC_DISALLOW) return FAILURE;
+
+    if(instantiation_depth > 128){
+        compiler_panicf(compiler, instantiation_source, "Exceeded maximum compile-time polymorphic instantiation depth, perhaps you have an infinitely recursive polymorphic definition?");
+        return FAILURE;
+    }
 
     // Determine whether we are missing arguments
     bool requires_use_of_defaults = required_arity > types_list_length;
@@ -1883,6 +1888,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     func->traits |= poly_func->traits & ~(AST_FUNC_MAIN | AST_FUNC_POLYMORPHIC);
     func->traits |= AST_FUNC_GENERATED | AST_FUNC_NO_SUGGEST;
     func->virtual_origin = poly_func->virtual_origin;
+    func->instantiation_depth = instantiation_depth + 1;
 
     if(poly_func->arg_defaults) {
         func->arg_defaults = malloc(sizeof(ast_expr_t *) * poly_func->arity);
@@ -1953,7 +1959,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
     if(func->traits & AST_FUNC_DISPATCHER){
         func_id_t ast_concrete_virtual_origin;
 
-        if(instantiate_default_for_virtual_dispatcher(compiler, object, ast_func_id, instantiation_source, catalog, &ast_concrete_virtual_origin)){
+        if(instantiate_default_for_virtual_dispatcher(compiler, object, ast_func_id, instantiation_depth, instantiation_source, catalog, &ast_concrete_virtual_origin)){
             goto failure;
         }
 
@@ -1973,6 +1979,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
     compiler_t *compiler,
     object_t *object,
     func_id_t dispatcher_id,
+    length_t instantiation_depth,
     source_t instantiation_source,
     ast_poly_catalog_t *catalog,
     func_id_t *out_ast_concrete_virtual_origin
@@ -2025,7 +2032,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
 
     // Create virtual function if necessary
     optional_func_pair_t result;
-    errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, method_name, arg_types, arity, instantiation_source, &result);
+    errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, method_name, arg_types, arity, instantiation_depth, instantiation_source, &result);
 
     ast_types_free_fully(arg_types, arity);
 
@@ -2053,7 +2060,7 @@ failure:
     return FAILURE;
 }
 
-errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){
+errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, length_t instantiation_depth, optional_func_pair_t *result){
     if(type_list_length != 1) return FAILURE;
 
     bool is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
@@ -2128,7 +2135,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
         }
 
         optional_func_pair_t result;
-        errorcode_t errorcode = ir_gen_find_defer_func(compiler, object, &field_info.ast_type, &result);
+        errorcode_t errorcode = ir_gen_find_defer_func(compiler, object, &field_info.ast_type, instantiation_depth, &result);
         ast_type_free(&field_info.ast_type);
 
         if(errorcode == ALT_FAILURE) return errorcode;
@@ -2178,6 +2185,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
 
     memset(&func->statements, 0, sizeof(ast_expr_list_t));
     func->return_type = ast_type_make_base(strclone("void"));
+    func->instantiation_depth = instantiation_depth + 1;
 
     // Create IR function
     ir_func_endpoint_t newest_endpoint;
@@ -2198,7 +2206,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){
+errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, length_t instantiation_depth, optional_func_pair_t *result){
     if(type_list_length != 1) return FAILURE;
 
     bool is_base = ast_type_is_base(&arg_types[0]);
@@ -2278,8 +2286,8 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
     func->arity = 1;
 
     memset(&func->statements, 0, sizeof(ast_expr_list_t));
-
     func->return_type = ast_type_clone(&arg_types[0]);
+    func->instantiation_depth = instantiation_depth + 1;
 
     // Don't generate any statements because children will
     // be taken care of inside __defer__ function during IR generation
@@ -2302,7 +2310,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
     return SUCCESS;
 }
 
-errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, optional_func_pair_t *result){
+errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, ast_type_t *arg_types, length_t type_list_length, length_t instantiation_depth, optional_func_pair_t *result){
     if(type_list_length != 2) return FAILURE;
 
     bool subject_is_base_ptr = ast_type_is_base_ptr(&arg_types[0]);
@@ -2390,7 +2398,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         }
 
         optional_func_pair_t result;
-        errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, &field_info.ast_type, &result);
+        errorcode_t errorcode = ir_gen_find_assign_func(compiler, object, &field_info.ast_type, instantiation_depth, &result);
         
         ast_type_free(&field_info.ast_type);
 
@@ -2454,6 +2462,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     func->arity = 2;
     func->statements = ast_expr_list_create(field_map.arrows_length);
     func->return_type = ast_type_make_base(strclone("void"));
+    func->instantiation_depth = instantiation_depth + 1;
 
     // Generate assignment statements
     for(length_t i = 0; i != field_map.arrows_length; i++){
@@ -2591,6 +2600,10 @@ ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object
 
     ast_expr_free_fully(enum_expr);
     return result;
+}
+
+length_t ir_builder_instantiation_depth(ir_builder_t *builder){
+    return builder->object->ast.funcs[builder->ast_func_id].instantiation_depth;
 }
 
 instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder){

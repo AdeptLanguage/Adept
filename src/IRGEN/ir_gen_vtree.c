@@ -42,7 +42,7 @@ errorcode_t ir_gen_vtree_overrides(
         optional_func_pair_t result;
 
         // Attempt to find suitable method to override with
-        if(ir_gen_vtree_search_for_single_override(compiler, object, &start->signature, ast_func_id, &result)){
+        if(ir_gen_vtree_search_for_single_override(compiler, object, &start->signature, ast_func_id, start->instantiation_depth, &result)){
             return FAILURE;
         }
 
@@ -82,7 +82,7 @@ errorcode_t ir_gen_vtree_overrides(
 
         // Find the default implementation of our own virtual method
         // This will instantiate a polymorphic function if necessary
-        if(ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result)){
+        if(ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, 0, source_on_error, &result)){
             strong_cstr_t typename = ast_type_str(&start->signature);
             errorprintf("Could not generate vtable for class '%s' due to errors\n", typename);
             free(typename);
@@ -127,6 +127,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
     object_t *object,
     const ast_type_t *child_subject_type,
     func_id_t ast_func_id,
+    length_t instantiation_depth,
     optional_func_pair_t *out_result
 ){
     ast_t *ast = &object->ast;
@@ -144,7 +145,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
     ast_type_free(&arg_types[0]);
     arg_types[0] = ast_type_pointer_to(ast_type_clone(child_subject_type));
 
-    errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, source_on_error, &result);
+    errorcode_t errorcode = ir_gen_find_dispatchee(compiler, object, struct_name, ast_func->name, arg_types, ast_func->arity, instantiation_depth, source_on_error, &result);
 
     // TODO: Clean up code so that this revalidation isn't needed
     // Revalidate AST function
@@ -227,7 +228,7 @@ errorcode_t ir_gen_vtree_link_up_nodes(
             return FAILURE;
         }
 
-        vtree_t *parent_vtree = vtree_list_find_or_append(vtree_list, &parent);
+        vtree_t *parent_vtree = vtree_list_find_or_append(vtree_list, &parent, vtree->instantiation_depth);
 
         if(parent_vtree == NULL){
             strong_cstr_t typename = ast_type_str(&vtree->signature);
@@ -255,7 +256,7 @@ errorcode_t ir_gen_vtree_inject_addition_for_descendants(compiler_t *compiler, o
         // Search for overriding method
         optional_func_pair_t result;
 
-        if(ir_gen_vtree_search_for_single_override(compiler, object, &child->signature, addition.endpoint.ast_func_id, &result)){
+        if(ir_gen_vtree_search_for_single_override(compiler, object, &child->signature, addition.endpoint.ast_func_id, child->instantiation_depth, &result)){
             return FAILURE;
         }
 

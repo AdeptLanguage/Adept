@@ -15,7 +15,7 @@ void vtree_list_free(vtree_list_t *vtree_list){
     free(vtree_list->vtrees);
 }
 
-vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *signature){
+vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *signature, length_t instantiation_depth){
     for(length_t i = 0; i != vtree_list->length; i++){
         if(ast_types_identical(&vtree_list->vtrees[i]->signature, signature)){
             return vtree_list->vtrees[i];
@@ -30,6 +30,7 @@ vtree_t *vtree_list_find_or_append(vtree_list_t *vtree_list, const ast_type_t *s
         .virtuals = (ir_func_endpoint_list_t){0},
         .table = (ir_func_endpoint_list_t){0},
         .children = (vtree_list_t){0},
+        .instantiation_depth = instantiation_depth + 1,
         .finalized_table = NULL,
     };
 
