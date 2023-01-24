@@ -91,9 +91,11 @@ errorcode_t parse_primary_expr(parse_ctx_t *ctx, ast_expr_t **out_expr){
     case TOKEN_FALSE:
         *out_expr = ast_expr_create_bool(false, sources[(*i)++]);
         break;
-    case TOKEN_CSTRING:
-        *out_expr = ast_expr_create_cstring((char*) tokens[*i].data, sources[*i]);
-        *i += 1;
+    case TOKEN_CSTRING: {
+            token_string_data_t *string_data = (token_string_data_t*) tokens[*i].data;
+            *out_expr = ast_expr_create_cstring_of_length(string_data->array, string_data->length, sources[*i]);
+            *i += 1;
+        }
         break;
     case TOKEN_STRING: {
             token_string_data_t *string_data = (token_string_data_t*) tokens[*i].data;
@@ -1106,16 +1108,16 @@ errorcode_t parse_expr_new(parse_ctx_t *ctx, ast_expr_t **out_expr){
         // This is actually an 'ast_expr_new_cstring_t' expression,
         // instead of a 'ast_expr_new_t' expression
 
-        ast_expr_new_cstring_t *new_cstring_expr = malloc(sizeof(ast_expr_new_cstring_t));
+        token_string_data_t *string_data = (token_string_data_t*) parse_ctx_peek_data(ctx);
 
-        *new_cstring_expr = (ast_expr_new_cstring_t){
+        *out_expr = (ast_expr_t*) malloc_init(ast_expr_new_cstring_t, {
             .id = EXPR_NEW_CSTRING,
             .source = source,
-            .value = (char*) parse_ctx_peek_data(ctx),
-        };
+            .array = string_data->array,
+            .length = string_data->length,
+        });
 
         *i += 1;
-        *out_expr = (ast_expr_t*) new_cstring_expr;
         return SUCCESS;
     }
 

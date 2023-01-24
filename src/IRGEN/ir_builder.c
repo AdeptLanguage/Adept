@@ -650,7 +650,7 @@ ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t lengt
 
     length_t num_fields = 4;
     ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * num_fields);
-    values[0] = build_literal_cstr_of_length(builder, array, length);
+    values[0] = build_literal_cstr_of_size(builder, array, length);
     values[1] = build_literal_usize(builder->pool, length);
     values[2] = build_literal_usize(builder->pool, length);
     values[3] = build_literal_usize(builder->pool, 0); // DANGEROUS: This is a hack to initialize String.ownership as a reference
@@ -666,22 +666,22 @@ ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t lengt
 }
 
 ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
-    return build_literal_cstr_of_length(builder, value, strlen(value) + 1);
+    return build_literal_cstr_of_size(builder, value, strlen(value) + 1);
 }
 
 ir_value_t *build_literal_cstr_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value){
-    return build_literal_cstr_of_length_ex(pool, type_map, value, strlen(value) + 1);
+    return build_literal_cstr_of_size_ex(pool, type_map, value, strlen(value) + 1);
 }
 
-ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, char *array, length_t length){
-    return build_literal_cstr_of_length_ex(builder->pool, builder->type_map, array, length);
+ir_value_t *build_literal_cstr_of_size(ir_builder_t *builder, char *array, length_t size){
+    return build_literal_cstr_of_size_ex(builder->pool, builder->type_map, array, size);
 }
 
-ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t size){
+ir_value_t *build_literal_cstr_of_size_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t size){
     ir_type_t *ir_ubyte_type;
 
     if(!ir_type_map_find(type_map, "ubyte", &ir_ubyte_type)){
-        die("build_literal_cstr_of_length_ex() - Failed to find 'ubyte' type mapping\n");
+        die("build_literal_cstr_of_size_ex() - Failed to find 'ubyte' type mapping\n");
     }
 
     return ir_pool_alloc_init(pool, ir_value_t, {
@@ -1697,6 +1697,8 @@ errorcode_t handle_assign_management(
         build_call_ignore_result(builder, pair.ir_func_id, result_type, arguments, 2, source_on_failure);
         return SUCCESS;
     }
+
+    errorcode = FAILURE;
 
 handle_errorcode:
     instructions_snapshot_restore(builder, &instructions_snapshot);

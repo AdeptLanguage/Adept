@@ -35,24 +35,33 @@ void tokenlist_print(tokenlist_t *tokenlist, const char *buffer){
             break;
         case TOKEN_EXTRA_DATA_FORMAT_LEN_STRING: {
                 token_string_data_t *string_data = (token_string_data_t*) token->data;
-                printf("%s \"", global_token_name_table[token->id]);
+                char quote_char = token->id == TOKEN_STRING ? '"' : '\'';
+                printf("%s %c", global_token_name_table[token->id], quote_char);
 
                 for(length_t i = 0; i != string_data->length; i++){
-                    switch(string_data->array[i]){
+                    char c = string_data->array[i];
+
+                    switch(c){
                     case '\0': putchar('\\'); putchar('0');  break;
                     case '\t': putchar('\\'); putchar('t');  break;
                     case '\n': putchar('\\'); putchar('n');  break;
                     case '\r': putchar('\\'); putchar('r');  break;
                     case '\b': putchar('\\'); putchar('b');  break;
                     case '\\': putchar('\\'); putchar('\\'); break;
-                    case '"':  putchar('\\'); putchar('"');  break;
                     case 0x1B: putchar('\\'); putchar('e');  break;
+                    case '"':
+                    case '\'': 
+                        if(quote_char == c){
+                            putchar('\\');
+                        }
+                        putchar(c);
+                        break;
                     default:
                         putchar(string_data->array[i]);
                     }
                 }
 
-                printf("\"\n");
+                printf("%c\n", quote_char);
             }
             break;
         case TOKEN_EXTRA_DATA_FORMAT_MEMORY:

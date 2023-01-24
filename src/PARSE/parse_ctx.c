@@ -113,12 +113,10 @@ maybe_null_weak_cstr_t parse_eat_string(parse_ctx_t *ctx, const char *error){
 
     tokenid_t id = parse_ctx_peek(ctx);
 
-    if(id == TOKEN_CSTRING)
-        return (char*) ctx->tokenlist->tokens[(*ctx->i)++].data;
-    
-    if(id == TOKEN_STRING)
+    if(id == TOKEN_CSTRING || id == TOKEN_STRING){
         // Do lazy conversion to weak c-string
         return ((token_string_data_t*) ctx->tokenlist->tokens[(*ctx->i)++].data)->array;
+    }
 
     // ERROR: That token isn't a string
     if(error) compiler_panic(ctx->compiler, parse_ctx_peek_source(ctx), error);
@@ -189,13 +187,11 @@ maybe_null_weak_cstr_t parse_grab_string(parse_ctx_t *ctx, const char *error){
     *ctx->i += 1;
 
     tokenid_t id = parse_ctx_peek(ctx);
-
-    if(id == TOKEN_CSTRING)
-        return (char*) ctx->tokenlist->tokens[(*ctx->i)].data;
     
-    if(id == TOKEN_STRING)
+    if(id == TOKEN_CSTRING || id == TOKEN_STRING){
         // Do lazy conversion to weak c-string
         return ((token_string_data_t*) ctx->tokenlist->tokens[(*ctx->i)].data)->array;
+    }
 
     // ERROR: That token isn't a string
     if(error) compiler_panic(ctx->compiler, parse_ctx_peek_source(ctx), error);

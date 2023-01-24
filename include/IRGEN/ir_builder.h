@@ -247,8 +247,8 @@ ir_value_t *build_literal_cstr_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak
 
 // ---------------- build_literal_cstr ----------------
 // Builds a literal c-string value
-ir_value_t *build_literal_cstr_of_length(ir_builder_t *builder, weak_cstr_t value, length_t length);
-ir_value_t *build_literal_cstr_of_length_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value, length_t size);
+ir_value_t *build_literal_cstr_of_size(ir_builder_t *builder, weak_cstr_t value, length_t size);
+ir_value_t *build_literal_cstr_of_size_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value, length_t size);
 
 // ---------------- build_null_pointer ----------------
 // Builds a literal null pointer value

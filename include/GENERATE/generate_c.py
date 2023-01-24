@@ -56,7 +56,7 @@ tokens = [
     Token("none"                  , TokenType.NONE         , ExtraDataFormat.ID_ONLY    , None                                ),
     Token("word"                  , TokenType.WORD         , ExtraDataFormat.C_STRING   , None                                ),
     Token("string"                , TokenType.LITERAL      , ExtraDataFormat.LEN_STRING , None                                ),
-    Token("cstring"               , TokenType.LITERAL      , ExtraDataFormat.C_STRING   , None                                ),
+    Token("cstring"               , TokenType.LITERAL      , ExtraDataFormat.LEN_STRING , None                                ),
     Token("add"                   , TokenType.OPERATOR     , ExtraDataFormat.ID_ONLY    , None                                ),
     Token("subtract"              , TokenType.OPERATOR     , ExtraDataFormat.ID_ONLY    , None                                ),
     Token("multiply"              , TokenType.OPERATOR     , ExtraDataFormat.ID_ONLY    , None                                ),

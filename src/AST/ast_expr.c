@@ -580,11 +580,21 @@ ast_expr_t *ast_expr_create_string(char *array, length_t length, source_t source
     });
 }
 
-ast_expr_t *ast_expr_create_cstring(char *value, source_t source){
+ast_expr_t *ast_expr_create_cstring(char *array, source_t source){
     return (ast_expr_t*) malloc_init(ast_expr_cstr_t, {
         .id = EXPR_CSTR,
         .source = source,
-        .value = value,
+        .array = array,
+        .length = strlen(array),
+    });
+}
+
+ast_expr_t *ast_expr_create_cstring_of_length(char *array, length_t length, source_t source){
+    return (ast_expr_t*) malloc_init(ast_expr_cstr_t, {
+        .id = EXPR_CSTR,
+        .source = source,
+        .array = array,
+        .length = length,
     });
 }
 

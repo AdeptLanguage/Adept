@@ -30,60 +30,7 @@ static strong_cstr_t ast_expr_ubyte_to_str(ast_expr_ubyte_t *ubyte_expr){
 }
 
 static strong_cstr_t ast_expr_cstr_to_str(ast_expr_cstr_t *cstr_expr){
-    // Converts a literal c-string expression into a human-readable string
-    // ast_expr_cstr_t   --->   "'Hello World'"
-
-    // Raw contents and length of contents of c-string
-    weak_cstr_t contents = cstr_expr->value;
-    length_t contents_length = strlen(contents);
-
-    // Next index into local buffer to write characters into
-    length_t put_index = 1;
-
-    // Number of characters in raw string that will need to be escaped
-    length_t special_characters = 0;
-
-    // Count number of characters in c-string that will need
-    // to be escaped
-    for(length_t i = 0; i != contents_length; i++)
-        if(contents[i] <= 0x1F || contents[i] == '\\')
-            special_characters++;
-
-    // Allocate space for stringified result
-    strong_cstr_t result = malloc(contents_length + special_characters + 3);
-
-    // First character in result is always '\''
-    result[0] = '\'';
-
-    for(length_t c = 0; c != contents_length; c++){
-        if(contents[c] > 0x1F && contents[c] != '\\'){
-            // If the it's a normal character, just copy it into the result buffer
-            result[put_index++] = contents[c];
-        } else {
-            // Otherwise, write the corresponding escape sequence
-            result[put_index++] = '\\';
-    
-            switch(contents[c]){
-            case '\n': result[put_index++] = 'n';  break;
-            case '\r': result[put_index++] = 'r';  break;
-            case '\t': result[put_index++] = 't';  break;
-            case '\b': result[put_index++] = 'b';  break;
-            case '\'': result[put_index++] = '\''; break;
-            case '\\': result[put_index++] = '\\'; break;
-            case 0x1B: result[put_index++] = 'e';  break;
-            default:   result[put_index++] = '?';  break;
-            }
-        }
-    }
-
-    // Last character in result is always '\''
-    result[put_index++] = '\'';
-
-    // And we must terminate it, since we plan on using it as a null-terminated string
-    result[put_index++] = '\0';
-
-    // Return ownership of allocated result buffer
-    return result;
+    return string_to_escaped_string(cstr_expr->array, cstr_expr->length, '\'', true);
 }
 
 static weak_cstr_t ast_expr_math_get_operator(ast_expr_math_t *expr){
@@ -265,7 +212,10 @@ static strong_cstr_t ast_expr_new_to_str(ast_expr_new_t *new_expr){
 }
 
 static strong_cstr_t ast_expr_new_cstring_to_str(ast_expr_new_cstring_t *new_cstring_expr){
-    return mallocandsprintf("new '%s'", new_cstring_expr->value);
+    strong_cstr_t escaped = string_to_escaped_string(new_cstring_expr->array, new_cstring_expr->length, '\'', true);
+    strong_cstr_t result = mallocandsprintf("new %s", escaped);
+    free(escaped);
+    return result;
 }
 
 static strong_cstr_t ast_expr_enum_value_to_str(ast_expr_enum_value_t *enum_value_expr){

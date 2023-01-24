@@ -71,13 +71,9 @@ typedef struct { DERIVE_AST_EXPR; adept_double value; } ast_expr_double_t;
 // Expression for a literal boolean value
 typedef struct { DERIVE_AST_EXPR; adept_bool value; } ast_expr_boolean_t;
 
-// ---------------- ast_expr_str_t ----------------
-// Expression for a literal length-string value
-typedef struct { DERIVE_AST_EXPR; weak_cstr_t array; length_t length; } ast_expr_str_t;
-
-// ---------------- ast_expr_cstr_t ----------------
-// Expression for a literal null-terminated string value
-typedef struct { DERIVE_AST_EXPR; weak_cstr_t value; } ast_expr_cstr_t;
+// ---------------- ast_expr_str_t, ast_expr_cstr_t ----------------
+// Expression for a literal string value
+typedef struct { DERIVE_AST_EXPR; weak_cstr_t array; length_t length; } ast_expr_str_t, ast_expr_cstr_t;
 
 // ---------------- ast_expr_null_t ----------------
 // Expression for 'null' value
@@ -125,7 +121,7 @@ typedef struct {
 
 // ---------------- ast_expr_new_cstring_t ----------------
 // Dynamically allocates a null-terminated string on the heap
-typedef struct { DERIVE_AST_EXPR; weak_cstr_t value; } ast_expr_new_cstring_t;
+typedef struct { DERIVE_AST_EXPR; weak_cstr_t array; length_t length; } ast_expr_new_cstring_t;
 
 // ---------------- ast_expr_enum_value_t ----------------
 // Gets the constant value of an enum kind
@@ -551,7 +547,8 @@ ast_expr_t *ast_expr_create_string(char *array, length_t length, source_t source
 
 // ---------------- ast_expr_create_cstring ----------------
 // Creates a cstring expression
-ast_expr_t *ast_expr_create_cstring(char *value, source_t source);
+ast_expr_t *ast_expr_create_cstring(char *array, source_t source);
+ast_expr_t *ast_expr_create_cstring_of_length(char *array, length_t length, source_t source);
 
 // ---------------- ast_expr_create_null ----------------
 // Creates a null expression

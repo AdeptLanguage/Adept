@@ -236,7 +236,22 @@ static inline errorcode_t cstring(lex_ctx_t *ctx, compiler_t *compiler){
     }
 
     // Otherwise, create C-String token
-    add_token(&ctx->tokenlist, (token_t){TOKEN_CSTRING, string}, (source_t){ctx->i, size + 2, ctx->object_index});
+    add_token(
+        &ctx->tokenlist,
+        (token_t){
+            .id = TOKEN_CSTRING,
+            .data = malloc_init(token_string_data_t, {
+                .array = string,
+                .length = length,
+            })
+        },
+        (source_t){
+            .index = ctx->i,
+            .stride = size + 2,
+            .object_index = ctx->object_index
+        }
+    );
+
     ctx->i += size + 2;
     return SUCCESS;
 }

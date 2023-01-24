@@ -28,7 +28,9 @@ strong_cstr_t string_to_escaped_string(const char *array, length_t length, char 
 
     // Count number of special characters (\n, \t, \b, etc.)
     for(length_t i = 0; i != length; i++){
-        if(array[i] <= 0x1F || array[i] == '\\' || array[i] == escaped_quote) special_characters++;
+        if(array[i] <= 0x1F || array[i] == '\\' || array[i] == escaped_quote){
+            special_characters++;
+        }
     }
 
     strong_cstr_t string = malloc(length + special_characters + 3);
@@ -63,7 +65,10 @@ strong_cstr_t string_to_escaped_string(const char *array, length_t length, char 
         }
     }
 
-    if(escaped_quote && surround) string[put_index++] = escaped_quote;
+    if(escaped_quote && surround){
+        string[put_index++] = escaped_quote;
+    }
+
     string[put_index++] = '\0';
     return string;
 }

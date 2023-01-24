@@ -436,7 +436,7 @@ errorcode_t ir_gen_expr_str(ir_builder_t *builder, ast_expr_str_t *expr, ir_valu
 }
 
 errorcode_t ir_gen_expr_cstr(ir_builder_t *builder, ast_expr_cstr_t *expr, ir_value_t **ir_value, ast_type_t *out_expr_type){
-    *ir_value = build_literal_cstr(builder, expr->value);
+    *ir_value = build_literal_cstr_of_size(builder, expr->array, expr->length + 1);
 
     // Has type of '*ubyte'
     if(out_expr_type != NULL){
@@ -2103,13 +2103,13 @@ errorcode_t ir_gen_expr_new_cstring(ir_builder_t *builder, ast_expr_new_cstring_
     ir_shared_common_t *common = &builder->object->ir_module.common;
 
     // Get IR value for bytes necessary
-    ir_value_t *num_bytes = build_literal_usize(builder->pool, strlen(expr->value) + 1);
+    ir_value_t *num_bytes = build_literal_usize(builder->pool, expr->length + 1);
 
     // Build heap allocation instruction
     ir_value_t *result = build_bitcast(builder, build_malloc(builder, common->ir_ubyte, num_bytes, true), common->ir_ptr);
 
     // Copy constant string bytes into heap-allocated block of memory
-    build_memcpy(builder, result, build_literal_cstr(builder, expr->value), num_bytes, false);
+    build_memcpy(builder, result, build_literal_cstr_of_size(builder, expr->array, expr->length + 1), num_bytes, false);
 
     // Result type is *ubyte
     if(out_expr_type != NULL){
@@ -2655,7 +2655,7 @@ errorcode_t ir_gen_expr_typenameof(ir_builder_t *builder, ast_expr_typenameof_t 
     memcpy(name, on_heap, size);
     free(on_heap);
     
-    *ir_value = build_literal_cstr_of_length(builder, name, size);
+    *ir_value = build_literal_cstr_of_size(builder, name, size);
 
     if(out_expr_type != NULL){
         *out_expr_type = ast_type_make_base_ptr(strclone("ubyte"));

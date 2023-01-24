@@ -1461,14 +1461,9 @@ errorcode_t parse_llvm_asm(parse_ctx_t *ctx, ast_expr_list_t *stmt_list){
 
     while(tokens[*i].id != TOKEN_END){
         switch(tokens[*i].id){
-        case TOKEN_STRING: {
+        case TOKEN_STRING: case TOKEN_CSTRING: {
                 token_string_data_t *string_data = (token_string_data_t*) tokens[*i].data;
                 string_builder_append_view(&builder, string_data->array, string_data->length);
-                string_builder_append_char(&builder, '\n');
-            }
-            break;
-        case TOKEN_CSTRING: {
-                string_builder_append(&builder, (const char*) tokens[*i].data);
                 string_builder_append_char(&builder, '\n');
             }
             break;
