@@ -29,6 +29,28 @@ static errorcode_t ir_gen_check_prereq_assign(compiler_t *compiler, object_t *ob
     return SUCCESS;
 }
 
+static errorcode_t ir_gen_check_prereq_flat_enum(object_t *object, ast_type_t *concrete_type, bool *out_meets){
+    if(ast_type_is_anonymous_enum(concrete_type)){
+        *out_meets = true;
+        return SUCCESS;
+    }
+
+    ast_t *ast = &object->ast;
+
+    if(ast_type_is_base(concrete_type)){
+        const char *enum_name = ast_type_struct_name(concrete_type);
+        maybe_index_t found_index = ast_find_enum(ast->enums, ast->enums_length, enum_name);
+
+        if(found_index >= 0){
+            *out_meets = true;
+            return SUCCESS;
+        }
+    }
+
+    *out_meets = false;
+    return SUCCESS;
+}
+
 static ast_elem_base_t *try_ast_elem_base(ast_elem_t *elem){
     return elem->id == AST_ELEM_BASE ? (ast_elem_base_t*) elem : NULL;
 }
@@ -106,6 +128,9 @@ errorcode_t ir_gen_check_prereq(
     case SPECIAL_PREREQ_ASSIGN:
         // $T~__assign__
         return ir_gen_check_prereq_assign(compiler, object, concrete_type_view, out_meets);
+    case SPECIAL_PREREQ_FLAT_ENUM:
+        // $T~__flat_enum__
+        return ir_gen_check_prereq_flat_enum(object, concrete_type_view, out_meets);
     case SPECIAL_PREREQ_NUMBER:
         // $T~__number__
         return ir_gen_check_prereq_number(concrete_elem, out_meets);

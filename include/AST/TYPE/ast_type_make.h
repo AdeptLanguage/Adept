@@ -66,6 +66,10 @@ ast_type_t ast_type_make_generic_float(void);
 // Creates an unknown enum value type
 ast_type_t ast_type_make_unknown_enum(source_t source, weak_cstr_t kind_name);
 
+// ---------------- ast_type_make_anonymous_enum ----------------
+// Creates an anonymous enum type
+ast_type_t ast_type_make_anonymous_enum(source_t source, const char **kinds, length_t length);
+
 // =====================================================================
 // =                          ast_elem_*_make                          =
 // =====================================================================
@@ -121,6 +125,10 @@ ast_elem_t *ast_elem_var_fixed_array_make(source_t source, ast_expr_t *length);
 // ---------------- ast_elem_unknown_enum_make ----------------
 // Makes an unknown enum value type element
 ast_elem_t *ast_elem_unknown_enum_make(source_t source, weak_cstr_t kind_name);
+
+// ---------------- ast_elem_anonymous_enum_make ----------------
+// Makes an anonymous enum type element
+ast_elem_t *ast_elem_make_anonymous_enum(source_t source, const char **raw_kinds, length_t length);
 
 // =====================================================================
 // =                              helpers                              =

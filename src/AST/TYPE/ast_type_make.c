@@ -94,6 +94,26 @@ ast_elem_t *ast_elem_unknown_enum_make(source_t source, weak_cstr_t kind_name){
     });
 }
 
+ast_elem_t *ast_elem_anonymous_enum_make(source_t source, const char **raw_kinds, length_t length){
+    // Allocate list of kinds
+    strong_cstr_list_t kinds = (strong_cstr_list_t){
+        .items = malloc(sizeof(strong_cstr_t) * length),
+        .length = length,
+        .capacity = length
+    };
+
+    // Fill in kinds list
+    for(length_t i = 0; i != length; i++){
+        kinds.items[i] = strclone(raw_kinds[i]);
+    }
+
+    return (ast_elem_t*) malloc_init(ast_elem_anonymous_enum_t, {
+        .id = AST_ELEM_ANONYMOUS_ENUM,
+        .source = source,
+        .kinds = kinds,
+    });
+}
+
 // =====================================================================
 // =                            from_*elems                            =
 // =====================================================================
@@ -192,12 +212,21 @@ ast_type_t ast_type_make_generic_float(void){
 }
 
 ast_type_t ast_type_make_unknown_enum(source_t source, weak_cstr_t kind_name){
-    ast_type_t result = from_1elems(
+    ast_type_t type = from_1elems(
         ast_elem_unknown_enum_make(source, kind_name)
     );
 
-    result.source = source;
-    return result;
+    type.source = source;
+    return type;
+}
+
+ast_type_t ast_type_make_anonymous_enum(source_t source, const char **kinds, length_t length){
+    ast_type_t type = from_1elems(
+        ast_elem_anonymous_enum_make(source, kinds, length)
+    );
+
+    type.source = source;
+    return type;
 }
 
 // =====================================================================

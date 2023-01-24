@@ -23,6 +23,7 @@ extern "C" {
 // (sorted)
 enum special_prereq {
     SPECIAL_PREREQ_ASSIGN,
+    SPECIAL_PREREQ_FLAT_ENUM,
     SPECIAL_PREREQ_NUMBER,
     SPECIAL_PREREQ_POD,
     SPECIAL_PREREQ_PRIMITIVE,
@@ -34,7 +35,7 @@ enum special_prereq {
 
 // (sorted)
 static const char *global_special_prerequisites[] = {
-    "__assign__", "__number__", "__pod__", "__primitive__", "__signed__", "__struct__", "__unsigned__"
+    "__assign__", "__flat_enum__", "__number__", "__pod__", "__primitive__", "__signed__", "__struct__", "__unsigned__"
 };
 
 static_assert(
