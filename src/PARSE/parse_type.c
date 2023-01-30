@@ -19,6 +19,7 @@
 #include "TOKEN/token_data.h"
 #include "UTIL/datatypes.h"
 #include "UTIL/ground.h"
+#include "UTIL/string.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
