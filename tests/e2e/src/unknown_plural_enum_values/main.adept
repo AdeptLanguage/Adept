@@ -1,0 +1,29 @@
+
+import basics
+import random
+
+enum Animal (CAT, DOG, BAT)
+
+func main {
+    randomSetSeed(2023)
+
+    repeat static 10 {
+        fruit enum (APPLE, ORANGE, BANANA) = randomDouble() > 0.5 ? (randomDouble() > 0.5 ? ::APPLE : ::ORANGE) : ::BANANA
+        print(fruit)
+    }
+
+    repeat static 10 {
+        animal Animal = randomDouble() > 0.5 ? (randomDouble() > 0.5 ? ::DOG : ::CAT) : ::BAT
+        print(animal)
+    }
+
+    print("-----------")
+
+    functionThatAcceptsEnum(true ? (true ? ::CAT : ::DOG) : ::BAT )
+    functionThatAcceptsEnum(true ? (false ? ::CAT : ::DOG) : ::BAT )
+    functionThatAcceptsEnum(false ? (false ? ::CAT : ::DOG) : ::BAT )
+}
+
+func functionThatAcceptsEnum(animal Animal) {
+    print(animal)
+}

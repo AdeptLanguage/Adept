@@ -7,6 +7,7 @@
 #include "AST/ast_layout.h"
 #include "AST/ast_type.h"
 #include "UTIL/color.h"
+#include "UTIL/string_list.h"
 
 static bool ast_elem_base_identical(ast_elem_t *raw_a, ast_elem_t *raw_b){
     ast_elem_base_t *a = (ast_elem_base_t*) raw_a;
@@ -103,6 +104,13 @@ static bool ast_elem_unknown_enum_identical(ast_elem_t *raw_a, ast_elem_t *raw_b
     return streq(a->kind_name, b->kind_name);
 }
 
+static bool ast_elem_unknown_plural_enum_identical(ast_elem_t *raw_a, ast_elem_t *raw_b){
+    ast_elem_unknown_plural_enum_t *a = (ast_elem_unknown_plural_enum_t*) raw_a;
+    ast_elem_unknown_plural_enum_t *b = (ast_elem_unknown_plural_enum_t*) raw_b;
+
+    return strong_cstr_list_equals(&a->kinds, &b->kinds);
+}
+
 static bool ast_elem_anonymous_enum_identical(ast_elem_t *raw_a, ast_elem_t *raw_b){
     ast_elem_anonymous_enum_t *a = (ast_elem_anonymous_enum_t*) raw_a;
     ast_elem_anonymous_enum_t *b = (ast_elem_anonymous_enum_t*) raw_b;
@@ -167,6 +175,9 @@ bool ast_types_identical(const ast_type_t *a, const ast_type_t *b){
             return false;
         case AST_ELEM_UNKNOWN_ENUM:
             if(!ast_elem_unknown_enum_identical(a_elem, b_elem)) return false;
+            break;
+        case AST_ELEM_UNKNOWN_PLURAL_ENUM:
+            if(!ast_elem_unknown_plural_enum_identical(a_elem, b_elem)) return false;
             break;
         case AST_ELEM_ANONYMOUS_ENUM:
             if(!ast_elem_anonymous_enum_identical(a_elem, b_elem)) return false;

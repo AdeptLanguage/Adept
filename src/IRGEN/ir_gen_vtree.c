@@ -71,7 +71,7 @@ errorcode_t ir_gen_vtree_overrides(
         assert(ast_func->arity >= 1 && ast_type_is_pointer(&ast_func->arg_types[0]));
 
         ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
-        weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
+        weak_cstr_t struct_name = ast_type_base_name(&subject_non_pointer_type);
 
         // Create argument type list for virtual method using concrete subject type
         // NOTE: We shouldn't have to worry about any polymorphs in the argument types,
@@ -139,7 +139,7 @@ errorcode_t ir_gen_vtree_search_for_single_override(
     assert(ast_func->arity > 0 && ast_type_is_pointer(&ast_func->arg_types[0]));
 
     ast_type_t subject_non_pointer_type = ast_type_unwrapped_view(&ast_func->arg_types[0]);
-    weak_cstr_t struct_name = ast_type_struct_name(&subject_non_pointer_type);
+    weak_cstr_t struct_name = ast_type_base_name(&subject_non_pointer_type);
 
     ast_type_t *arg_types = ast_types_clone(ast_func->arg_types, ast_func->arity);
     ast_type_free(&arg_types[0]);

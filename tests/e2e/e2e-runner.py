@@ -304,6 +304,11 @@ def run_all_tests():
     test("undef", [executable, join(src_dir, "undef/main.adept")], compiles)
     test("union", [executable, join(src_dir, "union/main.adept")], compiles)
     test("unknown_enum_values", [executable, join(src_dir, "unknown_enum_values/main.adept")], compiles)
+    test("unknown_plural_enum_values", [executable, join(src_dir, "unknown_plural_enum_values/main.adept")], compiles)
+    test("unknown_plural_enum_values check",
+        [join(src_dir, "unknown_plural_enum_values/main"), "-e"],
+        lambda output: b"BANANA\nAPPLE\nAPPLE\nAPPLE\nBANANA\nBANANA\nORANGE\nORANGE\nORANGE\nAPPLE\nCAT\nCAT\nBAT\nBAT\nBAT\nBAT\nBAT\nBAT\nBAT\nBAT\n-----------\nCAT\nDOG\nBAT\n" in output,
+    )
     test("unless", [executable, join(src_dir, "unless/main.adept")], compiles)
     test("unlesselse", [executable, join(src_dir, "unlesselse/main.adept")], compiles)
     test("unnecessary_manual_defer_call", [executable, join(src_dir, "unnecessary_manual_defer_call/main.adept")], compiles)

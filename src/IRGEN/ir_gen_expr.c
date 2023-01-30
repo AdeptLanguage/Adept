@@ -39,6 +39,7 @@
 #include "UTIL/func_pair.h"
 #include "UTIL/ground.h"
 #include "UTIL/string.h"
+#include "UTIL/string_list.h"
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
@@ -2353,9 +2354,9 @@ errorcode_t ir_gen_expr_ternary(ir_builder_t *builder, ast_expr_ternary_t *expr,
     // Ensure the resulting types of the two branches is the same
     if(!ast_types_identical(&if_true_type, &if_false_type)){
         // Try to autocast to larger type of the two if there is one
-        bool conflict_resolved = ir_gen_resolve_ternary_conflict(builder, &if_true, &if_false, &if_true_type, &if_false_type, &when_true_landing, &when_false_landing);
+        errorcode_t conflict = ir_gen_resolve_ternary_conflict(builder, &if_true, &if_false, &if_true_type, &if_false_type, &when_true_landing, &when_false_landing);
         
-        if(!conflict_resolved){
+        if(conflict){
             char *if_true_typename = ast_type_str(&if_true_type);
             char *if_false_typename = ast_type_str(&if_false_type);
             compiler_panicf(builder->compiler, expr->source, "Ternary operator could result in different types '%s' and '%s'", if_true_typename, if_false_typename);
@@ -2863,15 +2864,77 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
     return SUCCESS;
 }
 
-successful_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
+errorcode_t ir_gen_resolve_ternary_conflict_try_merge_unknown_enums(
+    ir_builder_t *builder,
+    ir_value_t **a,
+    ir_value_t **b,
+    ast_type_t *a_type,
+    ast_type_t *b_type,
+    length_t a_basicblock,
+    length_t b_basicblock
+){
+    // Attempt combination into generic plural enum
+
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instrs_snapshot = instructions_snapshot_capture(builder);
+
+    strong_cstr_list_t merged_kinds = {0};
+    const bool a_suits = ast_type_unknown_enum_like_extract_kinds(a_type, &merged_kinds);
+    const bool b_suits = ast_type_unknown_enum_like_extract_kinds(b_type, &merged_kinds);
+
+    if(a_suits && b_suits){
+        strong_cstr_list_sort(&merged_kinds);
+        strong_cstr_list_presorted_remove_duplicates(&merged_kinds);
+
+        ast_type_t merged_type = ast_type_make_unknown_plural_enum(NULL_SOURCE, merged_kinds);
+        merged_kinds = (strong_cstr_list_t){0}; // consumed
+
+        ir_value_t *original_a = *a;
+
+        build_using_basicblock(builder, a_basicblock);
+
+        // Cast value a to merged type (a and a_type)
+        if(ir_gen_merge_unknown_enum_like_into_plural_unknown_enum(builder, a, a_type, &merged_type)){
+            ast_type_free(&merged_type);
+            goto failure;
+        }
+
+        build_using_basicblock(builder, b_basicblock);
+
+        // Cast value b to merged type (b and b_type)
+        if(ir_gen_merge_unknown_enum_like_into_plural_unknown_enum(builder, b, b_type, &merged_type)){
+            *a = original_a;
+            ast_type_free(&merged_type);
+            goto failure;
+        }
+
+        *a_type = ast_type_clone(&merged_type);
+        *b_type = merged_type;
+        return SUCCESS;
+    } else {
+        strong_cstr_list_free(&merged_kinds);
+        goto failure;
+    }
+
+failure:
+    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+    instructions_snapshot_restore(builder, &instrs_snapshot);
+    return FAILURE;
+}
+
+errorcode_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
         length_t *inout_a_basicblock, length_t *inout_b_basicblock){
     
-    if(!ast_type_is_base(a_type) || !ast_type_is_base(b_type)) return UNSUCCESSFUL;
-    if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) a_type->elements[0])->base )) return UNSUCCESSFUL;
-    if(!typename_is_extended_builtin_type( ((ast_elem_base_t*) b_type->elements[0])->base )) return UNSUCCESSFUL;
-    if(global_type_kind_signs[(*a)->type->kind] != global_type_kind_signs[(*b)->type->kind]) return UNSUCCESSFUL;
-    if(global_type_kind_is_float[(*a)->type->kind] != global_type_kind_is_float[(*b)->type->kind]) return UNSUCCESSFUL;
-    if(global_type_kind_is_integer[(*a)->type->kind] != global_type_kind_is_integer[(*b)->type->kind]) return UNSUCCESSFUL;
+    if(!ast_type_is_base(a_type)
+    || !ast_type_is_base(b_type)
+    || !typename_is_extended_builtin_type(ast_type_base_name(a_type))
+    || !typename_is_extended_builtin_type(ast_type_base_name(b_type))
+    || global_type_kind_signs[(*a)->type->kind] != global_type_kind_signs[(*b)->type->kind]
+    || global_type_kind_is_float[(*a)->type->kind] != global_type_kind_is_float[(*b)->type->kind]
+    || global_type_kind_is_integer[(*a)->type->kind] != global_type_kind_is_integer[(*b)->type->kind]
+    ){
+        return ir_gen_resolve_ternary_conflict_try_merge_unknown_enums(builder, a, b, a_type, b_type, *inout_a_basicblock, *inout_b_basicblock);
+    }
     
     size_t a_size = global_type_kind_sizes_in_bits_64[(*a)->type->kind];
     size_t b_size = global_type_kind_sizes_in_bits_64[(*b)->type->kind];
@@ -2892,15 +2955,14 @@ successful_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t *
         build_using_basicblock(builder, *inout_b_basicblock);
     }
 
-    successful_t successful = ast_types_conform(builder, smaller_value, smaller_type, bigger_type, CONFORM_MODE_PRIMITIVES);
-
-    if(successful){
+    if(ast_types_conform(builder, smaller_value, smaller_type, bigger_type, CONFORM_MODE_PRIMITIVES)){
         *(a_size < b_size ? inout_a_basicblock : inout_b_basicblock) = builder->current_block_id;
         ast_type_free(smaller_type);
         *smaller_type = ast_type_clone(bigger_type);
+        return SUCCESS;
     }
-    
-    return successful;
+
+    return FAILURE;
 }
 
 unsigned int ivf_instruction(ir_type_t *a_type, unsigned int i_instr, unsigned int f_instr){

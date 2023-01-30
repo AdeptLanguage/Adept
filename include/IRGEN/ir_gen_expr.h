@@ -192,7 +192,7 @@ errorcode_t ir_gen_math(ir_builder_t *builder, ir_math_operands_t *ops, source_t
 // ---------------- ir_gen_resolve_ternary_conflict ----------------
 // Attempts to resolve conflict between two possible result types
 // of a ternary expression
-successful_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
+errorcode_t ir_gen_resolve_ternary_conflict(ir_builder_t *builder, ir_value_t **a, ir_value_t **b, ast_type_t *a_type, ast_type_t *b_type,
         length_t *inout_a_basicblock, length_t *inout_b_basicblock);
 
 // ---------------- ivf_instruction ----------------

@@ -118,6 +118,20 @@ static void ast_elem_unknown_enum_str(string_builder_t *builder, ast_elem_unknow
     string_builder_append(builder, "]");
 }
 
+static void ast_elem_unknown_plural_enum_str(string_builder_t *builder, ast_elem_unknown_plural_enum_t *elem){
+    string_builder_append(builder, "[enum with ");
+
+    for(length_t i = 0; i < elem->kinds.length; i++){
+        if(i != 0){
+            string_builder_append(builder, ", ");
+        }
+
+        string_builder_append(builder, elem->kinds.items[i]);
+    }
+
+    string_builder_append(builder, "]");
+}
+
 static void ast_elem_anonymous_enum_str(string_builder_t *builder, ast_elem_anonymous_enum_t *elem){
     string_builder_append(builder, "enum (");
 
@@ -172,6 +186,9 @@ static void ast_elem_str(string_builder_t *builder, ast_elem_t *elem){
         break;
     case AST_ELEM_UNKNOWN_ENUM:
         ast_elem_unknown_enum_str(builder, (ast_elem_unknown_enum_t*) elem);
+        break;
+    case AST_ELEM_UNKNOWN_PLURAL_ENUM:
+        ast_elem_unknown_plural_enum_str(builder, (ast_elem_unknown_plural_enum_t*) elem);
         break;
     case AST_ELEM_ANONYMOUS_ENUM:
         ast_elem_anonymous_enum_str(builder, (ast_elem_anonymous_enum_t*) elem);

@@ -1788,7 +1788,7 @@ ir_value_t *handle_access_management(
         *index_type,
     };
 
-    weak_cstr_t struct_name = ast_type_struct_name(array_type);
+    weak_cstr_t struct_name = ast_type_base_name(array_type);
     errorcode_t search_error = ir_gen_find_method_conforming_without_defaults(builder, struct_name, "__access__", arguments, argument_ast_types, 2, NULL, NULL_SOURCE, &result);
 
     ast_t *ast = &builder->object->ast;
@@ -2019,7 +2019,7 @@ errorcode_t instantiate_default_for_virtual_dispatcher(
     // No function can be both a dispatcher and virtual origin
     assert(!(originating_virtual->traits & AST_FUNC_DISPATCHER));
 
-    weak_cstr_t struct_name = ast_type_struct_name(&concrete_parent_type);
+    weak_cstr_t struct_name = ast_type_base_name(&concrete_parent_type);
     weak_cstr_t method_name = originating_virtual->name;
 
     length_t arity = originating_virtual->arity;
@@ -2602,6 +2602,69 @@ ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object
 
     ast_expr_free_fully(enum_expr);
     return result;
+}
+
+errorcode_t ir_gen_actualize_unknown_plural_enum(ir_builder_t *builder, const char *enum_name, const strong_cstr_list_t *kinds, ir_value_t **ir_value, source_t source){
+    ast_t *ast = &builder->object->ast;
+
+    maybe_index_t enum_index =  ast_find_enum(ast->enums, ast->enums_length, enum_name);
+    if(enum_index < 0) return FAILURE;
+
+    ast_enum_t *enum_definition = &ast->enums[enum_index];
+
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instrs_snapshot = instructions_snapshot_capture(builder);
+    length_t count = kinds->length;
+    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * count);
+    ir_type_t *item_type = builder->object->ir_module.common.ir_usize;
+
+    for(length_t i = 0; i < count; i++){
+        const char *kind_name = kinds->items[i];
+        length_t index_value;
+
+        if(!ast_enum_find_kind(enum_definition, kind_name, &index_value)){
+            goto failure;
+        }
+
+        values[i] = build_literal_usize(builder->pool, index_value);
+    }
+
+    ir_value_t *map = build_static_array(builder->pool, item_type, values, count);
+    *ir_value = build_load(builder, build_array_access(builder, map, *ir_value, source), source);
+    return SUCCESS;
+
+failure:
+    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+    instructions_snapshot_restore(builder, &instrs_snapshot);
+    return FAILURE;
+}
+
+errorcode_t ir_gen_actualize_unknown_plural_enum_to_anonymous(ir_builder_t *builder, const strong_cstr_list_t *to_kinds, const strong_cstr_list_t *from_kinds, ir_value_t **ir_value, source_t source){
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+    instructions_snapshot_t instrs_snapshot = instructions_snapshot_capture(builder);
+    length_t count = from_kinds->length;
+    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * count);
+    ir_type_t *item_type = builder->object->ir_module.common.ir_usize;
+
+    for(length_t i = 0; i < count; i++){
+        const char *kind_name = from_kinds->items[i];
+        maybe_index_t index_value = binary_string_search(to_kinds->items, to_kinds->length, kind_name);
+
+        if(index_value < 0){
+            goto failure;
+        }
+
+        values[i] = build_literal_usize(builder->pool, (adept_usize) index_value);
+    }
+
+    ir_value_t *map = build_static_array(builder->pool, item_type, values, count);
+    *ir_value = build_load(builder, build_array_access(builder, map, *ir_value, source), source);
+    return SUCCESS;
+
+failure:
+    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+    instructions_snapshot_restore(builder, &instrs_snapshot);
+    return FAILURE;
 }
 
 length_t ir_builder_instantiation_depth(ir_builder_t *builder){

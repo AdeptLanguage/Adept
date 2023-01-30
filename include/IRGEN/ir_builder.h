@@ -540,6 +540,14 @@ errorcode_t ir_builder_get_noop_defer_func(ir_builder_t *builder, source_t sourc
 // Converts a value of an unknown enum to a concrete IR value
 ir_value_t *ir_gen_actualize_unknown_enum(compiler_t *compiler, object_t *object, weak_cstr_t enum_name, weak_cstr_t kind_name, source_t source, ast_type_t *out_expr_type);
 
+// ---------------- ir_gen_actualize_unknown_plural_enum ----------------
+// Converts a value of an unknown plural enum to a concrete IR value for a regular enum
+errorcode_t ir_gen_actualize_unknown_plural_enum(ir_builder_t *builder, const char *enum_name, const strong_cstr_list_t *kinds, ir_value_t **ir_value, source_t source);
+
+// ---------------- ir_gen_actualize_unknown_plural_enum_to_anonymous ----------------
+// Converts a value of an unknown plural enum to a concrete IR value for an anonymous enum
+errorcode_t ir_gen_actualize_unknown_plural_enum_to_anonymous(ir_builder_t *builder, const strong_cstr_list_t *to_kinds, const strong_cstr_list_t *from_kinds, ir_value_t **ir_value, source_t source);
+
 // ---------------- ir_builder_instantiation_depth ----------------
 // Gets the current instantiation depth of a builder
 length_t ir_builder_instantiation_depth(ir_builder_t *builder);

@@ -14,6 +14,7 @@ extern "C" {
 
 #include "UTIL/list.h"
 #include "UTIL/ground.h"
+#include "UTIL/hash.h"
 
 // ---------------- strong_cstr_list_t ----------------
 typedef listof(strong_cstr_t, items) strong_cstr_list_t;
@@ -30,6 +31,21 @@ void strong_cstr_list_free(strong_cstr_list_t *list);
 
 // ---------------- strong_cstr_list_clone ----------------
 strong_cstr_list_t strong_cstr_list_clone(const strong_cstr_list_t *list);
+
+// ---------------- strong_cstr_list_bsearch ----------------
+maybe_index_t strong_cstr_list_bsearch(const strong_cstr_list_t *list, const char *item);
+
+// ---------------- strong_cstr_list_sort ----------------
+void strong_cstr_list_sort(strong_cstr_list_t *list);
+
+// ---------------- strong_cstr_list_presorted_remove_duplicates ----------------
+void strong_cstr_list_presorted_remove_duplicates(strong_cstr_list_t *list);
+
+// ---------------- strong_cstr_list_presorted_has_duplicates ----------------
+const char *strong_cstr_list_presorted_has_duplicates(strong_cstr_list_t *list);
+
+// ---------------- strong_cstr_list_equals ----------------
+bool strong_cstr_list_equals(strong_cstr_list_t *a, strong_cstr_list_t *b);
 
 #ifdef __cplusplus
 }

@@ -94,6 +94,14 @@ ast_elem_t *ast_elem_unknown_enum_make(source_t source, weak_cstr_t kind_name){
     });
 }
 
+ast_elem_t *ast_elem_unknown_plural_enum_make(source_t source, strong_cstr_list_t kinds){
+    return (ast_elem_t*) malloc_init(ast_elem_unknown_plural_enum_t, {
+        .id = AST_ELEM_UNKNOWN_PLURAL_ENUM,
+        .source = source,
+        .kinds = kinds,
+    });
+}
+
 ast_elem_t *ast_elem_anonymous_enum_make(source_t source, const char **raw_kinds, length_t length){
     // Allocate list of kinds
     strong_cstr_list_t kinds = (strong_cstr_list_t){
@@ -108,7 +116,7 @@ ast_elem_t *ast_elem_anonymous_enum_make(source_t source, const char **raw_kinds
     }
 
     // Sort kinds list
-    qsort(kinds.items, kinds.length, sizeof(strong_cstr_t), (int(*)(const void *, const void *)) &string_compare_for_qsort);
+    strong_cstr_list_sort(&kinds);
 
     // Return completed anonymous enum type element
     return (ast_elem_t*) malloc_init(ast_elem_anonymous_enum_t, {
@@ -218,6 +226,15 @@ ast_type_t ast_type_make_generic_float(void){
 ast_type_t ast_type_make_unknown_enum(source_t source, weak_cstr_t kind_name){
     ast_type_t type = from_1elems(
         ast_elem_unknown_enum_make(source, kind_name)
+    );
+
+    type.source = source;
+    return type;
+}
+
+ast_type_t ast_type_make_unknown_plural_enum(source_t source, strong_cstr_list_t kinds){
+    ast_type_t type = from_1elems(
+        ast_elem_unknown_plural_enum_make(source, kinds)
     );
 
     type.source = source;

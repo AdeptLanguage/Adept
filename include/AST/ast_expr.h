@@ -21,6 +21,7 @@ extern "C" {
 #include "UTIL/datatypes.h"
 #include "UTIL/ground.h"
 #include "UTIL/list.h"
+#include "UTIL/string_list.h"
 #include "UTIL/trait.h"
 
 // ---------------- ast_expr_byte_t ----------------
@@ -129,7 +130,17 @@ typedef struct { DERIVE_AST_EXPR; weak_cstr_t enum_name; weak_cstr_t kind_name; 
 
 // ---------------- ast_expr_generic_enum_value_t ----------------
 // Gets the constant value of a generic enum kind
+// Used for [enum with APPLE] for example
 typedef struct { DERIVE_AST_EXPR; weak_cstr_t kind_name; } ast_expr_generic_enum_value_t;
+
+// ---------------- ast_expr_generic_plural_enum_value_t ----------------
+// A value that represents one out of a number of possible generic enum kind states
+// Used for [enum with APPLE, ORANGE] for example
+typedef struct {
+    DERIVE_AST_EXPR;
+    strong_cstr_list_t kinds;
+    length_t member_index;
+} ast_expr_generic_plural_enum_value_t;
 
 // ---------------- ast_expr_static_data_t ----------------
 // Represents a static array value

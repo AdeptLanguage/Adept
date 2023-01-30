@@ -9,6 +9,7 @@
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
+#include "UTIL/string.h"
 
 void ast_type_prepend_ptr(ast_type_t *type){
     // Prepends a '*' to an existing ast_type_t
@@ -118,7 +119,7 @@ void ast_type_unwrap_fixed_array(ast_type_t *inout_type){
     inout_type->elements_length--; // Reduce length accordingly
 }
 
-maybe_null_weak_cstr_t ast_type_struct_name(const ast_type_t *type){
+maybe_null_weak_cstr_t ast_type_base_name(const ast_type_t *type){
     if(type->elements_length == 0) return NULL;
 
     switch(type->elements[0]->id){
@@ -129,6 +130,27 @@ maybe_null_weak_cstr_t ast_type_struct_name(const ast_type_t *type){
     default:
         return NULL;
     }
+}
+
+successful_t ast_type_unknown_enum_like_extract_kinds(const ast_type_t *ast_type, strong_cstr_list_t *out_into_list){
+    if(ast_type_is_unknown_enum(ast_type)){
+        ast_elem_unknown_enum_t *unknown_enum = (ast_elem_unknown_enum_t*) ast_type->elements[0];
+
+        strong_cstr_list_append(out_into_list, strclone(unknown_enum->kind_name));
+        return true;
+    }
+
+    if(ast_type_is_unknown_plural_enum(ast_type)){
+        ast_elem_unknown_plural_enum_t *unknown_plural_enum = (ast_elem_unknown_plural_enum_t*) ast_type->elements[0];
+
+        for(length_t i = 0; i != unknown_plural_enum->kinds.length; i++){
+            strong_cstr_list_append(out_into_list, strclone(unknown_plural_enum->kinds.items[i]));
+        }
+
+        return true;
+    }
+    
+    return false;
 }
 
 maybe_index_t ast_elem_anonymous_enum_get_member_index(ast_elem_anonymous_enum_t *anonymous_enum, const char *member_name){

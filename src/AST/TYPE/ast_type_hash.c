@@ -6,6 +6,7 @@
 #include "UTIL/color.h"
 #include "UTIL/ground.h"
 #include "UTIL/hash.h"
+#include "UTIL/string_list.h"
 #include "UTIL/trait.h"
 
 static hash_t ast_elem_base_hash(const ast_elem_base_t *elem, hash_t working_hash){
@@ -52,6 +53,10 @@ static hash_t ast_elem_unknown_enum_hash(const ast_elem_unknown_enum_t *elem, ha
     return hash_combine(working_hash, hash_string(elem->kind_name));
 }
 
+static hash_t ast_elem_unknown_plural_enum_hash(const ast_elem_unknown_plural_enum_t *elem, hash_t working_hash){
+    return hash_combine(working_hash, hash_strings(elem->kinds.items, elem->kinds.length));
+}
+
 static hash_t ast_elem_anonymous_enum_hash(const ast_elem_anonymous_enum_t *elem, hash_t working_hash){
     for(length_t i = 0; i != elem->kinds.length; i++){
         return hash_combine(working_hash, hash_string(elem->kinds.items[i]));
@@ -90,6 +95,8 @@ static hash_t ast_elem_hash(const ast_elem_t *elem){
         break;
     case AST_ELEM_UNKNOWN_ENUM:
         return ast_elem_unknown_enum_hash((const ast_elem_unknown_enum_t*) elem, id_hash);
+    case AST_ELEM_UNKNOWN_PLURAL_ENUM:
+        return ast_elem_unknown_plural_enum_hash((const ast_elem_unknown_plural_enum_t*) elem, id_hash);
     case AST_ELEM_ANONYMOUS_ENUM:
         return ast_elem_anonymous_enum_hash((const ast_elem_anonymous_enum_t*) elem, id_hash);
     default:

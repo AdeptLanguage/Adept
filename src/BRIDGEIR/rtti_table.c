@@ -14,7 +14,7 @@ rtti_table_t rtti_table_create(rtti_collector_t rtti_collector, ast_t *ast){
         rtti_table_entry_t *entry = &list.entries[i];
 
         if(ast_type_is_base(&entry->resolved_ast_type)){
-            const char *name = ast_type_struct_name(&entry->resolved_ast_type);
+            const char *name = ast_type_base_name(&entry->resolved_ast_type);
 
             // Mark enums
             if(ast_type_is_anonymous_enum(&entry->resolved_ast_type) || (ast_composite_find_exact(ast, name) == NULL && !typename_is_extended_builtin_type(name) && ast_find_enum(ast->enums, ast->enums_length, name) >= 0)){

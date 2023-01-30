@@ -38,7 +38,7 @@ static errorcode_t ir_gen_check_prereq_flat_enum(object_t *object, ast_type_t *c
     ast_t *ast = &object->ast;
 
     if(ast_type_is_base(concrete_type)){
-        const char *enum_name = ast_type_struct_name(concrete_type);
+        const char *enum_name = ast_type_base_name(concrete_type);
         maybe_index_t found_index = ast_find_enum(ast->enums, ast->enums_length, enum_name);
 
         if(found_index >= 0){

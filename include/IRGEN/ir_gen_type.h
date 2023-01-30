@@ -64,6 +64,13 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
 // conformed the value to the new type.
 successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast_type_t *ast_from_type, ast_type_t *ast_to_type, trait_t mode);
 
+// ----------------  ir_gen_merge_unknown_enum_like_into_plural_unknown_enum ----------------
+// Converts an unknown enum like value into a selected unknown plural enum type
+// e.g. [enum with REFERENCE] to [enum with OWN, REFERENCE]
+// e.g. [enum with OWN, REFERENCE] to [enum with GIVEN, OWN, REFERENCE]
+// e.g. [enum with GIVEN, OWN, REFERENCE] to [enum with DONATED, GIVEN, OWN, REFERENCE]
+errorcode_t ir_gen_merge_unknown_enum_like_into_plural_unknown_enum(ir_builder_t *builder, ir_value_t **ir_value, const ast_type_t *ast_type, const ast_type_t *merged_type);
+
 // ---------------- ast_types_merge ----------------
 // Attempts to find a common AST type for two IR values
 // and merge them into a common AST type. Returns true

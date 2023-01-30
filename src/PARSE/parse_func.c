@@ -217,7 +217,7 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
     // for  `struct Person (...) { constructor(name String, age int){ ... } }`
 
     const ast_type_t this_pointee_type_view = ast_type_unwrapped_view(&constructor->arg_types[0]);
-    weak_cstr_t struct_name = ast_type_struct_name(&this_pointee_type_view);
+    weak_cstr_t struct_name = ast_type_base_name(&this_pointee_type_view);
 
     ast_func_head_t func_head = (ast_func_head_t){
         .name = strclone(struct_name),

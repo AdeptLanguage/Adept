@@ -249,30 +249,27 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
                 return FAILURE;
             }
 
-            // Sort kinds
-            qsort(raw_kinds, raw_kinds_length, sizeof(weak_cstr_t), string_compare_for_qsort);
-
-            // Assert distinct
-            for(length_t i = 1; i < raw_kinds_length; i++){
-                const char *prev = raw_kinds[i - 1];
-                const char *current = raw_kinds[i];
-
-                if(streq(prev, current)){
-                    compiler_panicf(ctx->compiler, source, "Anonymous enum type cannot have more than one member named '%s'", current);
-                    return FAILURE;
-                }
-            }
+            strong_cstr_list_t kinds = (strong_cstr_list_t){
+                .items = raw_kinds,
+                .length = raw_kinds_length,
+                .capacity = raw_kinds_length,
+            };
 
             // Convert each `weak_cstr_t` to a `strong_cstr_t`
             for(length_t i = 0; i != raw_kinds_length; i++){
                 raw_kinds[i] = strclone(raw_kinds[i]);
             }
 
-            strong_cstr_list_t kinds = (strong_cstr_list_t){
-                .items = raw_kinds,
-                .length = raw_kinds_length,
-                .capacity = raw_kinds_length,
-            };
+            // Sort kinds
+            strong_cstr_list_sort(&kinds);
+
+            // Assert distinct
+            const char *duplicate_name = strong_cstr_list_presorted_has_duplicates(&kinds);
+            if(duplicate_name){
+                compiler_panicf(ctx->compiler, source, "Anonymous enum type cannot have more than one member named '%s'", duplicate_name);
+                strong_cstr_list_free(&kinds);
+                return FAILURE;
+            }
 
             out_type->elements[out_type->elements_length] = (ast_elem_t*) malloc_init(ast_elem_anonymous_enum_t, {
                 .id = AST_ELEM_ANONYMOUS_ENUM,

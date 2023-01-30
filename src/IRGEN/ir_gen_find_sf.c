@@ -63,7 +63,7 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_t
     ast_type_ptr.elements_length = 2;
     ast_type_ptr.source = arg_type->source;
 
-    weak_cstr_t struct_name = ast_type_struct_name(arg_type);
+    weak_cstr_t struct_name = ast_type_base_name(arg_type);
     errorcode_t errorcode;
 
     if(struct_name){
@@ -111,7 +111,7 @@ errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_
     args[0] = ast_type_ptr;
     args[1] = *arg_type;
 
-    weak_cstr_t struct_name = ast_type_struct_name(arg_type);
+    weak_cstr_t struct_name = ast_type_base_name(arg_type);
     errorcode_t errorcode;
     
     if(struct_name){

@@ -297,6 +297,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
         }
         break;
     case AST_ELEM_ANONYMOUS_ENUM:
+    case AST_ELEM_UNKNOWN_PLURAL_ENUM:
         *resolved_type = ir_module->common.ir_usize;
         break;
     default: {
@@ -633,6 +634,26 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
             return true;
         }
     }
+
+    // Handle conforming of values of unknown plural enum types to concrete enum values
+    if(ast_type_is_base(ast_to_type) && ast_type_is_unknown_plural_enum(ast_from_type)){
+        const char *enum_name = ast_type_base_name(ast_to_type);
+        ast_elem_unknown_plural_enum_t *from_unknown_enum = (ast_elem_unknown_plural_enum_t*) ast_from_type->elements[0];
+
+        if(ir_gen_actualize_unknown_plural_enum(builder, enum_name, &from_unknown_enum->kinds, ir_value, ast_to_type->source) == SUCCESS){
+            return true;
+        }
+    }
+
+    // Handle conforming of values of unknown plural enum types to concrete anonymous enum values
+    if(ast_type_is_anonymous_enum(ast_to_type) && ast_type_is_unknown_plural_enum(ast_from_type)){
+        ast_elem_anonymous_enum_t *elem = (ast_elem_anonymous_enum_t*) ast_to_type->elements[0];
+        ast_elem_unknown_plural_enum_t *from_unknown_enum = (ast_elem_unknown_plural_enum_t*) ast_from_type->elements[0];
+
+        if(ir_gen_actualize_unknown_plural_enum_to_anonymous(builder, &elem->kinds, &from_unknown_enum->kinds, ir_value, ast_to_type->source) == SUCCESS){
+            return true;
+        }
+    }
     
     if(ast_type_is_anonymous_enum(ast_to_type) && ast_type_is_unknown_enum(ast_from_type)){
         ast_elem_anonymous_enum_t *anonymous_enum = (ast_elem_anonymous_enum_t*) ast_to_type->elements[0];
@@ -705,6 +726,62 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
     }
 
     return false;
+}
+
+static ir_value_t *ir_gen_index_value_for_kind(ir_pool_t *pool, const strong_cstr_list_t *kinds, const char *kind_name){
+    maybe_index_t index = strong_cstr_list_bsearch(kinds, kind_name);
+
+    if(index >= 0){
+        return build_literal_usize(pool, index);
+    } else {
+        return NULL;
+    }
+}
+
+errorcode_t ir_gen_merge_unknown_enum_like_into_plural_unknown_enum(ir_builder_t *builder, ir_value_t **ir_value, const ast_type_t *ast_type, const ast_type_t *merged_type){
+    ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
+
+    assert(ast_type_is_unknown_plural_enum(merged_type));
+    ast_elem_unknown_plural_enum_t *to_plural = (ast_elem_unknown_plural_enum_t*) merged_type->elements[0];
+
+    if(ast_type_is_unknown_enum(ast_type)){
+        const char *kind_name = ((ast_elem_unknown_enum_t*) ast_type->elements[0])->kind_name;
+
+        ir_value_t *index_value = ir_gen_index_value_for_kind(builder->pool, &to_plural->kinds, kind_name);
+        if(index_value == NULL) goto failure;
+
+        *ir_value = index_value;
+        return SUCCESS;
+    } else if(ast_type_is_unknown_plural_enum(ast_type)){
+        ast_elem_unknown_plural_enum_t *from_plural = (ast_elem_unknown_plural_enum_t*) ast_type->elements[0];
+        
+        length_t count = from_plural->kinds.length;
+        ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * count);
+        ir_type_t *item_type = builder->object->ir_module.common.ir_usize;
+
+        for(length_t i = 0; i < count; i++){
+            const char *kind_name = from_plural->kinds.items[i];
+
+            values[i] = ir_gen_index_value_for_kind(builder->pool, &to_plural->kinds, kind_name);
+            if(values[i] == NULL) goto failure;
+        }
+
+        ir_value_t *map = build_static_array(builder->pool, item_type, values, count);
+        *ir_value = build_load(builder, build_array_access(builder, map, *ir_value, ast_type->source), ast_type->source);
+        return SUCCESS;
+    }
+
+    strong_cstr_t a_str, merged_str;
+
+failure:
+    a_str = ast_type_str(ast_type);
+    merged_str = ast_type_str(merged_type);
+    compiler_panicf(builder->compiler, ast_type->source, "Failed to merge unknown enum value(s) from type '%s' into '%s'", a_str, merged_str);
+    free(merged_str);
+    free(a_str);
+
+    ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
+    return FAILURE;
 }
 
 successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b){

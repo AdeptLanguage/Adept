@@ -749,7 +749,7 @@ errorcode_t ir_gen_do_construct(
     source_t source
 ){
     object_t *object = builder->object;
-    weak_cstr_t struct_name = ast_type_struct_name(struct_ast_type);
+    weak_cstr_t struct_name = ast_type_base_name(struct_ast_type);
 
     // Take snapshot of construction state,
     // so that if this call ends up to be a no-op,

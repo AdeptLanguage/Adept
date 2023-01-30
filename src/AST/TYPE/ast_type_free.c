@@ -40,7 +40,6 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length){
         case AST_ELEM_FIXED_ARRAY:
         case AST_ELEM_GENERIC_INT:
         case AST_ELEM_GENERIC_FLOAT:
-        case AST_ELEM_UNKNOWN_ENUM:
             break;
         case AST_ELEM_VAR_FIXED_ARRAY: 
             ast_expr_free_fully(((ast_elem_var_fixed_array_t*) elem)->length);
@@ -74,6 +73,12 @@ void ast_elems_free(ast_elem_t **elements, length_t elements_length){
             break;
         case AST_ELEM_LAYOUT:
             ast_layout_free(&(((ast_elem_layout_t*) elem)->layout));
+            break;
+        case AST_ELEM_UNKNOWN_ENUM:
+            // Nothing to free
+            break;
+        case AST_ELEM_UNKNOWN_PLURAL_ENUM:
+            strong_cstr_list_free(&((ast_elem_unknown_plural_enum_t*) elem)->kinds);
             break;
         case AST_ELEM_ANONYMOUS_ENUM: {
                 ast_elem_anonymous_enum_t *anon_enum = (ast_elem_anonymous_enum_t*) elem;

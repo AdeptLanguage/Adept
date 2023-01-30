@@ -746,7 +746,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
                 return FAILURE;
             }
 
-            const char *base = ast_type_struct_name(&static_data->type);
+            const char *base = ast_type_base_name(&static_data->type);
             ast_composite_t *composite = ast_composite_find_exact(ctx->ast, base);
 
             if(composite == NULL){
