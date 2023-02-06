@@ -20,8 +20,10 @@ message(STATUS "Found ZLIB ${ZLIB_LIBRARIES}")
 
 if (MSVC)
     add_compile_options(/W4 /WX)
-else()
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_compile_options(-Wall -Wextra -pedantic)
+else()
+    add_compile_options(-Wall -Wextra)
 endif()
 
 set(core_source_files
