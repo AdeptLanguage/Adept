@@ -19,9 +19,11 @@ func main {
 
     print("-----------")
 
-    functionThatAcceptsEnum(true ? (true ? ::CAT : ::DOG) : ::BAT )
-    functionThatAcceptsEnum(true ? (false ? ::CAT : ::DOG) : ::BAT )
-    functionThatAcceptsEnum(false ? (false ? ::CAT : ::DOG) : ::BAT )
+    // The conditions of these ternary expressions could be determined at runtime if desired.
+    // We'll just use `true` and `false` though so it's obvious what the answers should be.
+    functionThatAcceptsEnum( true ? (true ? ::CAT : ::DOG) : ::BAT )
+    functionThatAcceptsEnum( true ? (false ? ::CAT : ::DOG) : ::BAT )
+    functionThatAcceptsEnum( false ? (false ? ::CAT : ::DOG) : ::BAT )
 }
 
 func functionThatAcceptsEnum(animal Animal) {

@@ -1048,3 +1048,18 @@ ast_case_t *ast_case_list_append(ast_case_list_t *list, ast_case_t ast_case){
     *new_case = ast_case;
     return new_case;
 }
+
+unsigned short from_assign[EXPR_TOTAL] = {
+    [EXPR_ADD_ASSIGN] = EXPR_ADD,
+    [EXPR_SUBTRACT_ASSIGN] = EXPR_ADD,
+    [EXPR_MULTIPLY_ASSIGN] = EXPR_MULTIPLY,
+    [EXPR_DIVIDE_ASSIGN] = EXPR_DIVIDE,
+    [EXPR_MODULUS_ASSIGN] = EXPR_MODULUS,
+    [EXPR_AND_ASSIGN] = EXPR_BIT_AND,
+    [EXPR_OR_ASSIGN] = EXPR_BIT_OR,
+    [EXPR_XOR_ASSIGN] = EXPR_BIT_XOR,
+    [EXPR_LSHIFT_ASSIGN] = EXPR_BIT_LSHIFT,
+    [EXPR_RSHIFT_ASSIGN] = EXPR_BIT_RSHIFT,
+    [EXPR_LGC_LSHIFT_ASSIGN] = EXPR_BIT_LGC_LSHIFT,
+    [EXPR_LGC_RSHIFT_ASSIGN] = EXPR_BIT_LGC_RSHIFT,
+};

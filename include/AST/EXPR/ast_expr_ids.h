@@ -139,6 +139,8 @@ enum {
 
 #define MAX_AST_EXPR (EXPR_TOTAL - 1)
 
+extern unsigned short from_assign[EXPR_TOTAL];
+
 #ifdef __cplusplus
 }
 #endif

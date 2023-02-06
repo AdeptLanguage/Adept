@@ -112,42 +112,6 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         break;
 
     #undef build_literal_ir_value
-    
-    case EXPR_BIT_AND:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_AND), "bitwise and", NULL, false)){
-            return FAILURE;
-        }
-        break;
-    case EXPR_BIT_OR:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_OR), "bitwise or", NULL, false)){
-            return FAILURE;
-        }
-        break;
-    case EXPR_BIT_XOR:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_XOR), "bitwise xor", NULL, false)){
-            return FAILURE;
-        }
-        break;
-    case EXPR_BIT_LSHIFT:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_LSHIFT), "left shift", NULL, false)){
-            return FAILURE;
-        }
-        break;
-    case EXPR_BIT_LGC_LSHIFT:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(/*logical and arithmetic left shifts are the same*/ INSTRUCTION_BIT_LSHIFT), "logical left shift", NULL, false)){
-            return FAILURE;
-        }
-        break;
-    case EXPR_BIT_RSHIFT:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvs(/*same as logical if unsigned*/ INSTRUCTION_BIT_LGC_RSHIFT, /*otherwise use arithmetic*/ INSTRUCTION_BIT_RSHIFT), "right shift", NULL, false)){
-            return FAILURE;
-        }
-        break;
-    case EXPR_BIT_LGC_RSHIFT:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_i(INSTRUCTION_BIT_LGC_RSHIFT), "logical right shift", NULL, false)){
-            return FAILURE;
-        }
-        break;
     case EXPR_NULL:
         if(out_expr_type != NULL){
             *out_expr_type = ast_type_make_base(strclone("ptr"));
@@ -156,48 +120,31 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
         *ir_value = build_null_pointer(builder->pool);
         break;
     case EXPR_ADD:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_ADD, INSTRUCTION_FADD), "add", "__add__", false))
-            return FAILURE;
-        break;
     case EXPR_SUBTRACT:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT), "subtract", "__subtract__", false))
-            return FAILURE;
-        break;
     case EXPR_MULTIPLY:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY), "multiply", "__multiply__", false))
-            return FAILURE;
-        break;
     case EXPR_DIVIDE:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE), "divide", "__divide__", false))
-            return FAILURE;
-        break;
     case EXPR_MODULUS:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS), "take the modulus of", "__modulus__", false))
-            return FAILURE;
-        break;
     case EXPR_EQUALS:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS), "test equality for", "__equals__", true))
-            return FAILURE;
-        break;
     case EXPR_NOTEQUALS:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_ivf(INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS), "test inequality for", "__not_equals__", true))
-            return FAILURE;
-        break;
     case EXPR_GREATER:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER), "compare", "__greater_than__", true))
-            return FAILURE;
-        break;
     case EXPR_LESSER:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER), "compare", "__less_than__", true))
-            return FAILURE;
-        break;
     case EXPR_GREATEREQ:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ), "compare", "__greater_than_or_equal__", true))
-            return FAILURE;
-        break;
     case EXPR_LESSEREQ:
-        if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, instr_choosing_uvsvf(INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ), "compare", "__less_than_or_equal__", true))
-            return FAILURE;
+    case EXPR_BIT_AND:
+    case EXPR_BIT_OR:
+    case EXPR_BIT_XOR:
+    case EXPR_BIT_LSHIFT:
+    case EXPR_BIT_LGC_LSHIFT:
+    case EXPR_BIT_RSHIFT:
+    case EXPR_BIT_LGC_RSHIFT: {
+            const ir_gen_math_spec_t *info = &ir_gen_math_specs[expr->id];
+
+            assert(info->choices.method != INSTR_CHOOSING_METHOD_NONE);
+
+            if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, info)){
+                return FAILURE;
+            }
+        }
         break;
     case EXPR_AND:
         if(ir_gen_expr_and(builder, (ast_expr_and_t*) expr, ir_value, out_expr_type)) return FAILURE;
@@ -2701,9 +2648,13 @@ errorcode_t ir_gen_expr_alignof(ir_builder_t *builder, ast_expr_alignof_t *expr,
     return SUCCESS;
 }
 
-errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
-        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean){
-
+errorcode_t ir_gen_expr_math(
+    ir_builder_t *builder,
+    ast_expr_math_t *math_expr,
+    ir_value_t **ir_value,
+    ast_type_t *out_expr_type,
+    const ir_gen_math_spec_t *info
+){
     ast_type_t lhs_type, rhs_type;
     ir_value_t *lhs, *rhs;
 
@@ -2727,10 +2678,7 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
         math_expr->source,
         ir_value,
         out_expr_type,
-        instr_choosing,
-        op_verb,
-        overload,
-        result_is_boolean
+        info
     );
 
     ast_type_free(&lhs_type);
@@ -2738,13 +2686,21 @@ errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, 
     return errorcode;
 }
 
-errorcode_t ir_gen_math(ir_builder_t *builder, ir_math_operands_t *ops, source_t source, ir_value_t **ir_value, ast_type_t *out_expr_type,
-        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean){
-
+errorcode_t ir_gen_math(
+    ir_builder_t *builder,
+    ir_math_operands_t *ops,
+    source_t source,
+    ir_value_t **ir_value,
+    ast_type_t *out_expr_type,
+    const ir_gen_math_spec_t *info
+){
     // Conform the second value to the type of the first
     if(!ast_types_conform(builder, &ops->rhs, ops->rhs_type, ops->lhs_type, CONFORM_MODE_CALCULATION)){
-        if(overload){
-            *ir_value = handle_math_management_allow_other_direction(builder, ops, source, out_expr_type, overload);
+        if(info->override){
+            *ir_value = info->commutative
+                ? handle_math_management_allow_other_direction(builder, ops, source, out_expr_type, info->override)
+                : handle_math_management(builder, ops, source, out_expr_type, info->override);
+            
             if(*ir_value != NULL) return SUCCESS;
         }
 
@@ -2759,14 +2715,14 @@ errorcode_t ir_gen_math(ir_builder_t *builder, ir_math_operands_t *ops, source_t
 
     // Determine which instruction to use
     unsigned int instr_id;
-    switch(instr_choosing.method){
+    switch(info->choices.method){
     case INSTR_CHOOSING_METHOD_IvF: {
-            struct instr_choosing_ivf ivf = instr_choosing.as_ivf;
+            struct instr_choosing_ivf ivf = info->choices.as_ivf;
             instr_id = ivf_instruction(ops->lhs->type, ivf.i_instr, ivf.f_instr);
         }
         break;
     case INSTR_CHOOSING_METHOD_UvSvF: {
-            struct instr_choosing_uvsvf uvsvf = instr_choosing.as_uvsvf;
+            struct instr_choosing_uvsvf uvsvf = info->choices.as_uvsvf;
             instr_id = uvsvf_instruction(ops->lhs->type, uvsvf.u_instr, uvsvf.s_instr, uvsvf.f_instr);
         }
         break;
@@ -2776,28 +2732,28 @@ errorcode_t ir_gen_math(ir_builder_t *builder, ir_math_operands_t *ops, source_t
 
     // We couldn't use the built-in instructions to operate on these types
     if(instr_id == INSTRUCTION_NONE){
-        // Try to use the overload function if it exists
-        *ir_value = overload
-            ? handle_math_management(builder, ops, source, out_expr_type, overload)
+        // Try to use the overriden function if it exists
+        *ir_value = info->override
+            ? handle_math_management(builder, ops, source, out_expr_type, info->override)
             : NULL;
 
-        // If we got a value back, then we successfully used the overload function instead
+        // If we got a value back, then we successfully used the overriden function instead
         if(*ir_value != NULL) return SUCCESS;
 
         // Otherwise, we don't have a way to operate on these types
         strong_cstr_t lhs_type_string = ast_type_str(ops->lhs_type);
         strong_cstr_t rhs_type_string = ast_type_str(ops->rhs_type);
-        compiler_panicf(builder->compiler, source, "Cannot %s those types (%s and %s)", op_verb, lhs_type_string, rhs_type_string);
+        compiler_panicf(builder->compiler, source, "Cannot %s those types (%s and %s)", info->verb, lhs_type_string, rhs_type_string);
         free(lhs_type_string);
         free(rhs_type_string);
         return FAILURE;
     }
 
-    *ir_value = build_math(builder, instr_id, ops->lhs, ops->rhs, result_is_boolean ? ir_builder_bool(builder) : ops->lhs->type);
+    *ir_value = build_math(builder, instr_id, ops->lhs, ops->rhs, info->result_is_boolean ? ir_builder_bool(builder) : ops->lhs->type);
 
     // Write the result type, will either be a boolean or the same type as the given arguments
     if(out_expr_type != NULL){
-        if(result_is_boolean){
+        if(info->result_is_boolean){
             *out_expr_type = ast_type_make_base(strclone("bool"));
         } else {
             *out_expr_type = ast_type_clone(ops->lhs_type);
@@ -3022,3 +2978,120 @@ enum ir_type_category ir_type_get_category(ir_type_t *type){
         return PRIMITIVE_NA;
     }
 }
+
+ir_gen_math_spec_t ir_gen_math_specs[EXPR_TOTAL] = {
+    [EXPR_ADD] = {
+        .choices = instr_choosing_ivf(INSTRUCTION_ADD, INSTRUCTION_FADD),
+        .verb = "add",
+        .override = "__add__",
+        .commutative = true,
+    },
+    [EXPR_SUBTRACT] = {
+        .choices = instr_choosing_ivf(INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT),
+        .verb = "subtract",
+        .override = "__subtract__",
+        .commutative = false,
+    },
+    [EXPR_MULTIPLY] = {
+        .choices = instr_choosing_ivf(INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY),
+        .verb = "multiply",
+        .override = "__multiply__",
+        .commutative = true,
+    },
+    [EXPR_DIVIDE] = {
+        .choices = instr_choosing_uvsvf(INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE),
+        .verb = "divide",
+        .override = "__divide__",
+        .commutative = false,
+    },
+    [EXPR_MODULUS] = {
+        .choices = instr_choosing_uvsvf(INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS),
+        .verb = "take modulus of",
+        .override = "__modulus__",
+        .commutative = false,
+    },
+    [EXPR_EQUALS] = {
+        .choices = instr_choosing_ivf(INSTRUCTION_EQUALS, INSTRUCTION_FEQUALS),
+        .verb = "test equality for",
+        .override = "__equals__",
+        .commutative = true,
+        .result_is_boolean = true,
+    },
+    [EXPR_NOTEQUALS] = {
+        .choices = instr_choosing_ivf(INSTRUCTION_NOTEQUALS, INSTRUCTION_FNOTEQUALS),
+        .verb = "test inequality for",
+        .override = "__not_equals__",
+        .commutative = true,
+        .result_is_boolean = true,
+    },
+    [EXPR_GREATER] = {
+        .choices = instr_choosing_uvsvf(INSTRUCTION_UGREATER, INSTRUCTION_SGREATER, INSTRUCTION_FGREATER),
+        .verb = "compare",
+        .override = "__greater_than__",
+        .commutative = false,
+        .result_is_boolean = true,
+    },
+    [EXPR_LESSER] = {
+        .choices = instr_choosing_uvsvf(INSTRUCTION_ULESSER, INSTRUCTION_SLESSER, INSTRUCTION_FLESSER),
+        .verb = "compare",
+        .override = "__less_than__",
+        .commutative = false,
+        .result_is_boolean = true,
+    },
+    [EXPR_GREATEREQ] = {
+        .choices = instr_choosing_uvsvf(INSTRUCTION_UGREATEREQ, INSTRUCTION_SGREATEREQ, INSTRUCTION_FGREATEREQ),
+        .verb = "compare",
+        .override = "__greater_than_or_equal__",
+        .commutative = false,
+        .result_is_boolean = true,
+    },
+    [EXPR_LESSEREQ] = {
+        .choices = instr_choosing_uvsvf(INSTRUCTION_ULESSEREQ, INSTRUCTION_SLESSEREQ, INSTRUCTION_FLESSEREQ),
+        .verb = "compare",
+        .override = "__less_than_or_equal__",
+        .commutative = false,
+        .result_is_boolean = true,
+    },
+    [EXPR_BIT_AND] = {
+        .choices = instr_choosing_i(INSTRUCTION_BIT_AND),
+        .verb = "bitwise and",
+        .override = NULL,
+        .commutative = true,
+    },
+    [EXPR_BIT_OR] = {
+        .choices = instr_choosing_i(INSTRUCTION_BIT_OR),
+        .verb = "bitwise or",
+        .override = NULL,
+        .commutative = true,
+    },
+    [EXPR_BIT_XOR] = {
+        .choices = instr_choosing_i(INSTRUCTION_BIT_XOR),
+        .verb = "bitwise xor",
+        .override = NULL,
+        .commutative = true,
+    },
+    [EXPR_BIT_LSHIFT] = {
+        .choices = instr_choosing_i(INSTRUCTION_BIT_LSHIFT),
+        .verb = "left shift",
+        .override = NULL,
+        .commutative =  false,
+    },
+    [EXPR_BIT_LGC_LSHIFT] = {
+        .choices = instr_choosing_i(/*logical and arithmetic left shifts are the same*/ INSTRUCTION_BIT_LSHIFT),
+        .verb = "logical left shift",
+        .override = NULL,
+        .commutative = false,
+    },
+    [EXPR_BIT_RSHIFT] = {
+        .choices = instr_choosing_uvs(/*same as logical if unsigned*/ INSTRUCTION_BIT_LGC_RSHIFT, /*otherwise use arithmetic*/ INSTRUCTION_BIT_RSHIFT),
+        .verb = "right shift",
+        .override = NULL,
+        .commutative = false,
+    },
+    [EXPR_BIT_LGC_RSHIFT] = {
+        .choices = instr_choosing_i(INSTRUCTION_BIT_LGC_RSHIFT),
+        .verb = "logical right shift",
+        .override = NULL,
+        .commutative = false,
+    },
+};

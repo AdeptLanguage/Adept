@@ -41,7 +41,7 @@ MEDIUM-PRIORITY:
 * make records use the newly added "better constructors"
 * prefer used-defined constructor over automatically generated constructor for records
 * better struct literals
-* assert and/or static assert
+* static assert
 * throw error if duplicate/overlapping polymorphic composites with same name and arguments exist
 * polymorphic wildcards e.g. <?> List
 * allow direct calling of function pointer values (rather than having to first store them in a variable)
@@ -62,6 +62,7 @@ MEDIUM-PRIORITY:
 * better error message for when accidentally doing `class Rectangle (w, h float) extends Shape` (should have `extends Shape` before fields)
 * add better backtracking error messages for when cannot instantiate polymorphic type e.g. for `value <NotExistentType> Optional`
 * anonymous generic compile-time sum types e.g. ubyte | String
+* add ability to use polymorphic parent class type in `extends` polymorphic prerequisite
 
 LOW-PRIORITY:
 * Finish 'Any'
@@ -175,3 +176,4 @@ v2.8 COMPLETED:
 + added anonymous enums, e.g. `enum (FRUIT, VEGETABLE, GRAIN)`
 + added `__flat_enum__` polymorphic prerequisite
 + lots of bug fixes and quality of life improvements
++ add plural unknown enum values, e.g. functionThatAcceptsEnum( x ? (y ? ::CAT : ::DOG) : ::BAT )

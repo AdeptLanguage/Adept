@@ -26,6 +26,29 @@
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
 
+enum instr_choosing_method {
+    INSTR_CHOOSING_METHOD_NONE,
+    INSTR_CHOOSING_METHOD_IvF,
+    INSTR_CHOOSING_METHOD_UvSvF,
+};
+struct instr_choosing_ivf { unsigned int i_instr, f_instr; };
+struct instr_choosing_uvsvf { unsigned int u_instr, s_instr, f_instr; };
+struct instr_choosing {
+    enum instr_choosing_method method;
+    union {
+        struct instr_choosing_ivf as_ivf;
+        struct instr_choosing_uvsvf as_uvsvf;
+    };
+};
+
+typedef struct {
+    struct instr_choosing choices;
+    const char *verb;
+    maybe_null_weak_cstr_t override;
+    bool commutative : 1;
+    bool result_is_boolean : 1;
+} ir_gen_math_spec_t;
+
 // ---------------- ir_gen_expr ----------------
 // ir_gens an AST expression into an IR value and
 // stores the resulting AST type in 'out_expr_type'
@@ -144,50 +167,46 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 //     - instr1 is chosen for unsigned integers
 //     - instr2 is chosen for signed integers
 //     - instr3 is chosen for floats
-enum instr_choosing_method {
-    INSTR_CHOOSING_METHOD_IvF,
-    INSTR_CHOOSING_METHOD_UvSvF,
-};
-struct instr_choosing_ivf { unsigned int i_instr, f_instr; };
-struct instr_choosing_uvsvf { unsigned int u_instr, s_instr, f_instr; };
-struct instr_choosing {
-    enum instr_choosing_method method;
-    union {
-        struct instr_choosing_ivf as_ivf;
-        struct instr_choosing_uvsvf as_uvsvf;
-    };
-};
-static inline struct instr_choosing instr_choosing_ivf(unsigned int i_instr, unsigned int f_instr){
-    return (struct instr_choosing){
-        .method = INSTR_CHOOSING_METHOD_IvF,
-        .as_ivf = (struct instr_choosing_ivf){
-            .i_instr = i_instr,
-            .f_instr = f_instr,
-        },
-    };
-}
-static inline struct instr_choosing instr_choosing_i(unsigned int i_instr){
-    return instr_choosing_ivf(i_instr, INSTRUCTION_NONE);
-}
-static inline struct instr_choosing instr_choosing_uvsvf(unsigned int u_instr, unsigned int s_instr, unsigned int f_instr){
-    return (struct instr_choosing){
-        .method = INSTR_CHOOSING_METHOD_UvSvF,
-        .as_uvsvf = (struct instr_choosing_uvsvf){
-            .u_instr = u_instr,
-            .s_instr = s_instr,
-            .f_instr = f_instr,
-        },
-    };
-}
-static inline struct instr_choosing instr_choosing_uvs(unsigned int u_instr, unsigned int s_instr){
-    return instr_choosing_uvsvf(u_instr, s_instr, INSTRUCTION_NONE);
-}
 
-errorcode_t ir_gen_expr_math(ir_builder_t *builder, ast_expr_math_t *math_expr, ir_value_t **ir_value, ast_type_t *out_expr_type,
-        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean);
+#define instr_choosing_ivf(I_INSTR, F_INSTR)   \
+    ((struct instr_choosing){                  \
+        .method = INSTR_CHOOSING_METHOD_IvF,   \
+        .as_ivf = (struct instr_choosing_ivf){ \
+            .i_instr = (I_INSTR),              \
+            .f_instr = (F_INSTR),              \
+        },                                     \
+    })
 
-errorcode_t ir_gen_math(ir_builder_t *builder, ir_math_operands_t *ops, source_t source, ir_value_t **ir_value, ast_type_t *out_expr_type,
-        struct instr_choosing instr_choosing, const char *op_verb, maybe_null_weak_cstr_t overload, bool result_is_boolean);
+#define instr_choosing_i(I_INSTR) instr_choosing_ivf((I_INSTR), INSTRUCTION_NONE)
+
+#define instr_choosing_uvsvf(U_INSTR, S_INSTR, F_INSTR) \
+    ((struct instr_choosing){                           \
+        .method = INSTR_CHOOSING_METHOD_UvSvF,          \
+        .as_uvsvf = (struct instr_choosing_uvsvf){      \
+            .u_instr = (U_INSTR),                       \
+            .s_instr = (S_INSTR),                       \
+            .f_instr = (F_INSTR),                       \
+        }                                               \
+    })
+
+#define instr_choosing_uvs(U_INSTR, S_INSTR) instr_choosing_uvsvf((U_INSTR), (S_INSTR), INSTRUCTION_NONE)
+
+errorcode_t ir_gen_expr_math(
+    ir_builder_t *builder,
+    ast_expr_math_t *math_expr,
+    ir_value_t **ir_value,
+    ast_type_t *out_expr_type,
+    const ir_gen_math_spec_t *info
+);
+
+errorcode_t ir_gen_math(
+    ir_builder_t *builder,
+    ir_math_operands_t *ops,
+    source_t source,
+    ir_value_t **ir_value,
+    ast_type_t *out_expr_type,
+    const ir_gen_math_spec_t *info
+);
 
 // ---------------- ir_gen_resolve_ternary_conflict ----------------
 // Attempts to resolve conflict between two possible result types
@@ -216,5 +235,7 @@ enum ir_type_category {
 // ---------------- ir_type_get_category ----------------
 // Returns a general category for an IR type.
 enum ir_type_category ir_type_get_category(ir_type_t *type);
+
+extern ir_gen_math_spec_t ir_gen_math_specs[EXPR_TOTAL];
 
 #endif // _ISAAC_IR_GEN_EXPR_H
