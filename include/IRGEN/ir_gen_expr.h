@@ -31,8 +31,8 @@ enum instr_choosing_method {
     INSTR_CHOOSING_METHOD_IvF,
     INSTR_CHOOSING_METHOD_UvSvF,
 };
-struct instr_choosing_ivf { unsigned int i_instr, f_instr; };
-struct instr_choosing_uvsvf { unsigned int u_instr, s_instr, f_instr; };
+struct instr_choosing_ivf { ir_instr_id_t i_instr, f_instr; };
+struct instr_choosing_uvsvf { ir_instr_id_t u_instr, s_instr, f_instr; };
 struct instr_choosing {
     enum instr_choosing_method method;
     union {
@@ -169,25 +169,25 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 //     - instr3 is chosen for floats
 
 #define instr_choosing_ivf(I_INSTR, F_INSTR)    \
-    ((struct instr_choosing){                   \
+    (struct instr_choosing){                    \
         .method = INSTR_CHOOSING_METHOD_IvF,    \
-        .as_ivf = (struct instr_choosing_ivf){  \
-            .i_instr = (unsigned int)(I_INSTR), \
-            .f_instr = (unsigned int)(F_INSTR), \
+        .as_ivf = {                             \
+            .i_instr = (I_INSTR),               \
+            .f_instr = (F_INSTR),               \
         },                                      \
-    })
+    }
 
 #define instr_choosing_i(I_INSTR) instr_choosing_ivf((I_INSTR), INSTRUCTION_NONE)
 
 #define instr_choosing_uvsvf(U_INSTR, S_INSTR, F_INSTR) \
-    ((struct instr_choosing){                           \
+    (struct instr_choosing){                            \
         .method = INSTR_CHOOSING_METHOD_UvSvF,          \
-        .as_uvsvf = (struct instr_choosing_uvsvf){      \
-            .u_instr = (unsigned int)(U_INSTR),         \
-            .s_instr = (unsigned int)(S_INSTR),         \
-            .f_instr = (unsigned int)(F_INSTR),         \
+        .as_uvsvf = {                                   \
+            .u_instr = (U_INSTR),                       \
+            .s_instr = (S_INSTR),                       \
+            .f_instr = (F_INSTR),                       \
         }                                               \
-    })
+    }
 
 #define instr_choosing_uvs(U_INSTR, S_INSTR) instr_choosing_uvsvf((U_INSTR), (S_INSTR), INSTRUCTION_NONE)
 

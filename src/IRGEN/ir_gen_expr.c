@@ -2981,13 +2981,7 @@ enum ir_type_category ir_type_get_category(ir_type_t *type){
 
 ir_gen_math_spec_t ir_gen_math_specs[EXPR_TOTAL] = {
     [EXPR_ADD] = {
-        .choices = {
-            .method = 1,
-            .as_ivf = {
-                .i_instr = 1,
-                .f_instr = 2,
-            },
-        },
+        .choices = instr_choosing_ivf(INSTRUCTION_ADD, INSTRUCTION_FADD),
         .verb = "add",
         .override = "__add__",
         .commutative = true,
