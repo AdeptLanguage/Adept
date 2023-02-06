@@ -168,13 +168,13 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 //     - instr2 is chosen for signed integers
 //     - instr3 is chosen for floats
 
-#define instr_choosing_ivf(I_INSTR, F_INSTR)   \
-    ((struct instr_choosing){                  \
-        .method = INSTR_CHOOSING_METHOD_IvF,   \
-        .as_ivf = (struct instr_choosing_ivf){ \
-            .i_instr = (I_INSTR),              \
-            .f_instr = (F_INSTR),              \
-        },                                     \
+#define instr_choosing_ivf(I_INSTR, F_INSTR)    \
+    ((struct instr_choosing){                   \
+        .method = INSTR_CHOOSING_METHOD_IvF,    \
+        .as_ivf = (struct instr_choosing_ivf){  \
+            .i_instr = (unsigned int)(I_INSTR), \
+            .f_instr = (unsigned int)(F_INSTR), \
+        },                                      \
     })
 
 #define instr_choosing_i(I_INSTR) instr_choosing_ivf((I_INSTR), INSTRUCTION_NONE)
@@ -183,9 +183,9 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
     ((struct instr_choosing){                           \
         .method = INSTR_CHOOSING_METHOD_UvSvF,          \
         .as_uvsvf = (struct instr_choosing_uvsvf){      \
-            .u_instr = (U_INSTR),                       \
-            .s_instr = (S_INSTR),                       \
-            .f_instr = (F_INSTR),                       \
+            .u_instr = (unsigned int)(U_INSTR),         \
+            .s_instr = (unsigned int)(S_INSTR),         \
+            .f_instr = (unsigned int)(F_INSTR),         \
         }                                               \
     })
 

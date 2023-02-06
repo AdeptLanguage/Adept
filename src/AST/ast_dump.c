@@ -302,6 +302,7 @@ void ast_dump_stmts(FILE *file, ast_expr_t **statements, length_t length, length
             break;
         case EXPR_WHILE:
             ast_dump_stmt_simple_conditional(file, (ast_expr_conditional_t*) stmt, "while", indentation);
+            break;
         case EXPR_UNTIL:
             ast_dump_stmt_simple_conditional(file, (ast_expr_conditional_t*) stmt, "until", indentation);
             break;
