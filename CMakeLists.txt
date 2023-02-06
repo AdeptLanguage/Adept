@@ -162,7 +162,7 @@ else()
 	target_link_libraries(libadept ${CURL_LIBRARIES} -lLLVM)
 endif()
 
-set_target_properties(adept PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(adept PROPERTIES C_STANDARD 11 LINKER_LANGUAGE CXX)
 
 # Post compilation steps
 
