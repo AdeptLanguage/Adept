@@ -1,0 +1,25 @@
+
+import basics
+
+enum RelaxedEnum (
+    Entry1,
+    Entry2,
+    Entry3,
+    Entry4,
+    Entry5,
+)
+
+func main {
+    printEnum(null as *RelaxedEnum)
+    printEnum(null as *enum(A, B, C, D, E, ))
+}
+
+func printEnum(_enum_type *$E~__flat_enum__) {
+    ty *AnyEnumType = typeinfo $E as *AnyEnumType
+
+    assert ty.kind == ::ENUM
+
+    each member *ubyte in static [ty.members, ty.length] {
+        printf(" - %s\n", member)
+    }
+}

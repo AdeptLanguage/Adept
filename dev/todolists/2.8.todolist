@@ -46,7 +46,6 @@ MEDIUM-PRIORITY:
 * polymorphic wildcards e.g. <?> List
 * allow direct calling of function pointer values (rather than having to first store them in a variable)
 * add mechanism to do a clean refresh of runtime required resources
-* make enum syntax less strict
 * add a simpler way to get the name of an enum value at runtime
 * add error for duplicate field names
 * add runtime error for trying to use unconstructed instance of class
@@ -99,7 +98,6 @@ LOW-PRIORITY:
 * parse arguments before reading config, and never check for updates when using options such as `--root`, `-h`, and `--help`
 * include trace back for `Encountered undetermined polymorphic type '$T' in type '$T'` error
 * `delete[count] pointer` syntax to allow for __defer__/delete in single step
-* allow trailing comma for enum members
 * modernize random in standard library to utilize `~>`? e.g. `random() ~> bool`, `random() ~> int`, `random() ~> double`, etc. or add `randomBool`
 
 v2.4 COMPLETED:
@@ -177,3 +175,5 @@ v2.8 COMPLETED:
 + added `__flat_enum__` polymorphic prerequisite
 + lots of bug fixes and quality of life improvements
 + add plural unknown enum values, e.g. functionThatAcceptsEnum( x ? (y ? ::CAT : ::DOG) : ::BAT )
++ allow trailing comma for enum members
++ make enum syntax less strict

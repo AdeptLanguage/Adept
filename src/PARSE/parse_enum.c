@@ -58,7 +58,6 @@ errorcode_t parse_enum(parse_ctx_t *ctx, bool is_foreign){
 
 errorcode_t parse_enum_body(parse_ctx_t *ctx, weak_cstr_t **kinds, length_t *length){
     length_t *i = ctx->i;
-    token_t *tokens = ctx->tokenlist->tokens;
     source_t *sources = ctx->tokenlist->sources;
     length_t capacity = 0;
 
@@ -70,39 +69,35 @@ errorcode_t parse_enum_body(parse_ctx_t *ctx, weak_cstr_t **kinds, length_t *len
         return FAILURE;
     }
 
-    while(tokens[*i].id != TOKEN_CLOSE){
+    while(parse_ctx_peek(ctx) != TOKEN_CLOSE){
         expand((void**) kinds, sizeof(char*), *length, &capacity, 1, 4);
 
         if(parse_ignore_newlines(ctx, "Expected element")){
-            free(*kinds);
-            return FAILURE;
+            goto failure;
         }
 
         char *kind = parse_eat_word(ctx, "Expected element");
-        if(kind == NULL){
-            free(*kinds);
-            return FAILURE;
-        }
+        if(kind == NULL) goto failure;
 
         (*kinds)[(*length)++] = kind;
 
         if(parse_ignore_newlines(ctx, "Expected ',' or ')'")){
-            free(*kinds);
-            return FAILURE;
+            goto failure;
         }
 
-        if(tokens[*i].id == TOKEN_NEXT){
-            if(tokens[++(*i)].id == TOKEN_CLOSE){
-                compiler_panic(ctx->compiler, sources[*i], "Expected element after ',' in element list");
-                free(*kinds);
-                return FAILURE;
-            }
-        } else if(tokens[*i].id != TOKEN_CLOSE){
+        if(parse_eat(ctx, TOKEN_NEXT, NULL) != SUCCESS && parse_ctx_peek(ctx) != TOKEN_CLOSE){
             compiler_panic(ctx->compiler, sources[*i], "Expected ',' after element");
-            free(*kinds);
-            return FAILURE;
+            goto failure;
+        }
+
+        if(parse_ignore_newlines(ctx, "Expected ')' after enum members")){
+            goto failure;
         }
     }
 
     return SUCCESS;
+
+failure:
+    free(*kinds);
+    return FAILURE;
 }
