@@ -32,7 +32,7 @@ extern "C" {
 // =============================================================
 // ---------------- Possible IR instruction IDs ----------------
 // =============================================================
-enum {
+enum ir_instr_id {
     INSTRUCTION_NONE,           
     INSTRUCTION_ADD,             // ir_instr_math_t
     INSTRUCTION_FADD,            // ir_instr_math_t
@@ -120,6 +120,8 @@ enum {
     INSTRUCTION_DEINIT_SVARS,    // ir_instr_t
     INSTRUCTION_UNREACHABLE,     // ir_instr_t
 };
+
+typedef enum ir_instr_id ir_instr_id_t;
 
 // ---------------- ir_instr_t ----------------
 // General structure for intermediate
