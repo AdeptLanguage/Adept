@@ -3,7 +3,6 @@
 HIGH-PRIORITY:
 
 MEDIUM-PRIORITY:
-* allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.
 * 'each-in' loops with custom 'idx' name
     ```
     each object Object in objects using object_idx {
@@ -177,3 +176,4 @@ v2.8 COMPLETED:
 + add plural unknown enum values, e.g. functionThatAcceptsEnum( x ? (y ? ::CAT : ::DOG) : ::BAT )
 + allow trailing comma for enum members
 + make enum syntax less strict
++ allow '+=', '-=', etc. with definitions of '__add__', '__subtract__', etc.

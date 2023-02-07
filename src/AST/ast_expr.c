@@ -1051,7 +1051,7 @@ ast_case_t *ast_case_list_append(ast_case_list_t *list, ast_case_t ast_case){
 
 unsigned short from_assign[EXPR_TOTAL] = {
     [EXPR_ADD_ASSIGN] = EXPR_ADD,
-    [EXPR_SUBTRACT_ASSIGN] = EXPR_ADD,
+    [EXPR_SUBTRACT_ASSIGN] = EXPR_SUBTRACT,
     [EXPR_MULTIPLY_ASSIGN] = EXPR_MULTIPLY,
     [EXPR_DIVIDE_ASSIGN] = EXPR_DIVIDE,
     [EXPR_MODULUS_ASSIGN] = EXPR_MODULUS,

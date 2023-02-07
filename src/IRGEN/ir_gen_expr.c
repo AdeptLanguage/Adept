@@ -2665,7 +2665,7 @@ errorcode_t ir_gen_expr_math(
         return FAILURE;
     }
 
-    ir_math_operands_t operands = (ir_math_operands_t){
+    ir_math_operands_t operands = {
         .lhs = lhs,
         .rhs = rhs,
         .lhs_type = &lhs_type,

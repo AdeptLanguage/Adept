@@ -905,26 +905,7 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
         ast_type_free(&destination_type);
         ast_type_free(&other_value_type);
         return errorcode;
-    } else {
-        // We only have to manually conform other type if doing POD operations,
-        // and since as of now, non-POD assignment arithmetic isn't supported,
-        // all non-regular assignments will be POD
-
-        if(!ast_types_conform(builder, &other_value, &other_value_type, &destination_type, CONFORM_MODE_CALCULATION)){
-            strong_cstr_t a_type_str = ast_type_str(&other_value_type);
-            strong_cstr_t b_type_str = ast_type_str(&destination_type);
-            compiler_panicf(builder->compiler, stmt->source, "Incompatible types '%s' and '%s'", a_type_str, b_type_str);
-            free(a_type_str);
-            free(b_type_str);
-            ast_type_free(&destination_type);
-            ast_type_free(&other_value_type);
-            return FAILURE;
-        }
     }
-
-    // Otherwise, Handle Non-Regular Assignment
-    ast_type_free(&destination_type);
-    ast_type_free(&other_value_type);
 
     ir_value_t *original_value = build_load(builder, destination, stmt->source);
     unsigned short equivalent_expr_id = from_assign[assignment_kind];
@@ -934,17 +915,48 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
         return FAILURE;
     }
 
-    ir_gen_math_spec_t *math_spec = &ir_gen_math_specs[equivalent_expr_id];
+    ir_gen_math_spec_t *info = &ir_gen_math_specs[equivalent_expr_id];
 
-    unsigned int instr_id = ir_instr_choosing_run(&math_spec->choices, original_value->type);
-    const char *op_verb = math_spec->verb;
+    // Else, Math-Assignment
 
-    if(instr_id == INSTRUCTION_NONE){
-        compiler_panicf(builder->compiler, stmt->source, "Cannot %s those types", op_verb);
+    ir_math_operands_t operands = {
+        .lhs = original_value,
+        .rhs = other_value,
+        .lhs_type = &destination_type,
+        .rhs_type = &other_value_type,
+    };
+
+    ir_value_t *result_value;
+    ast_type_t result_type;
+
+    errorcode_t errorcode = ir_gen_math(
+        builder,
+        &operands,
+        stmt->source,
+        &result_value,
+        &result_type,
+        info
+    );
+    if(errorcode) return errorcode;
+
+    if(!ast_types_identical(&destination_type, &result_type)){
+        strong_cstr_t destination_typename = ast_type_str(&destination_type);
+        strong_cstr_t result_typename = ast_type_str(&result_type);
+        compiler_panicf(builder->compiler, stmt->source, "Math result type '%s' does not match destination type '%s'", destination_typename, result_typename);
+        free(destination_typename);
+        free(result_typename);
+
+        ast_type_free(&destination_type);
+        ast_type_free(&other_value_type);
+        ast_type_free(&result_type);
         return FAILURE;
     }
 
-    build_store(builder, build_math(builder, instr_id, original_value, other_value, other_value->type), destination, stmt->source);
+    ast_type_free(&destination_type);
+    ast_type_free(&other_value_type);
+    ast_type_free(&result_type);
+
+    build_store(builder, result_value, destination, stmt->source);
     return SUCCESS;
 }
 

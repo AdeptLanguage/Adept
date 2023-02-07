@@ -185,6 +185,7 @@ def run_all_tests():
     test("management_math", [executable, join(src_dir, "management_math/main.adept")], compiles)
     test("management_pass", [executable, join(src_dir, "management_pass/main.adept")], compiles)
     test("mathassign", [executable, join(src_dir, "mathassign/main.adept")], compiles)
+    test("mathassign_managed", [executable, join(src_dir, "mathassign_managed/main.adept")], compiles)
     test("member", [executable, join(src_dir, "member/main.adept")], compiles)
     test("meta", [executable, join(src_dir, "meta/main.adept")], compiles)
     test("meta_dynamic", [executable, join(src_dir, "meta_dynamic/main.adept")], compiles)

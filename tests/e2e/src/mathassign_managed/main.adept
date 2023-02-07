@@ -1,0 +1,27 @@
+
+import basics
+
+record MyInteger (value int)
+
+func toString(x MyInteger) String = toString(x.value)
+func __add__(a, b MyInteger) MyInteger = MyInteger(a.value + b.value)
+func __subtract__(a, b MyInteger) MyInteger = MyInteger(a.value - b.value)
+func __multiply__(a, b MyInteger) MyInteger = MyInteger(a.value * b.value)
+func __divide__(a, b MyInteger) MyInteger = MyInteger(a.value / b.value)
+
+func main {
+    a MyInteger = MyInteger(10)
+    b MyInteger = MyInteger(11)
+
+    c MyInteger = a
+
+    c += b // c == 21
+
+    c += b // c == 32
+    c -= b // c == 21
+
+    c *= b // c == 231
+    c /= b // c == 21
+
+    print(c)
+}
