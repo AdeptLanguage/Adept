@@ -33,16 +33,17 @@ enum instr_choosing_method {
 };
 struct instr_choosing_ivf { ir_instr_id_t i_instr, f_instr; };
 struct instr_choosing_uvsvf { ir_instr_id_t u_instr, s_instr, f_instr; };
-struct instr_choosing {
+
+typedef struct {
     enum instr_choosing_method method;
     union {
         struct instr_choosing_ivf as_ivf;
         struct instr_choosing_uvsvf as_uvsvf;
     };
-};
+} ir_instr_choosing_t;
 
 typedef struct {
-    struct instr_choosing choices;
+    ir_instr_choosing_t choices;
     const char *verb;
     maybe_null_weak_cstr_t override;
     bool commutative : 1;
@@ -169,7 +170,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 //     - instr3 is chosen for floats
 
 #define instr_choosing_ivf(I_INSTR, F_INSTR)    \
-    (struct instr_choosing){                    \
+    (ir_instr_choosing_t){                      \
         .method = INSTR_CHOOSING_METHOD_IvF,    \
         .as_ivf = {                             \
             .i_instr = (I_INSTR),               \
@@ -180,7 +181,7 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *ast_va
 #define instr_choosing_i(I_INSTR) instr_choosing_ivf((I_INSTR), INSTRUCTION_NONE)
 
 #define instr_choosing_uvsvf(U_INSTR, S_INSTR, F_INSTR) \
-    (struct instr_choosing){                            \
+    (ir_instr_choosing_t){                              \
         .method = INSTR_CHOOSING_METHOD_UvSvF,          \
         .as_uvsvf = {                                   \
             .u_instr = (U_INSTR),                       \
@@ -236,6 +237,13 @@ enum ir_type_category {
 // Returns a general category for an IR type.
 enum ir_type_category ir_type_get_category(ir_type_t *type);
 
+// ---------------- ir_instr_choosing_run ----------------
+// Gets the correct instruction ID using an instruction choosing mechanism
+// for a given IR type
+ir_instr_id_t ir_instr_choosing_run(const ir_instr_choosing_t *choices, ir_type_t *ir_type);
+
+// ---------------- ir_gen_math_specs ----------------
+// Data about how to generate various math expression
 extern ir_gen_math_spec_t ir_gen_math_specs[EXPR_TOTAL];
 
 #endif // _ISAAC_IR_GEN_EXPR_H

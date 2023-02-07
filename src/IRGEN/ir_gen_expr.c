@@ -2714,23 +2714,8 @@ errorcode_t ir_gen_math(
     }
 
     // Determine which instruction to use
-    unsigned int instr_id;
-    switch(info->choices.method){
-    case INSTR_CHOOSING_METHOD_IvF: {
-            struct instr_choosing_ivf ivf = info->choices.as_ivf;
-            instr_id = ivf_instruction(ops->lhs->type, ivf.i_instr, ivf.f_instr);
-        }
-        break;
-    case INSTR_CHOOSING_METHOD_UvSvF: {
-            struct instr_choosing_uvsvf uvsvf = info->choices.as_uvsvf;
-            instr_id = uvsvf_instruction(ops->lhs->type, uvsvf.u_instr, uvsvf.s_instr, uvsvf.f_instr);
-        }
-        break;
-    default:
-        instr_id = INSTRUCTION_NONE;
-    }
+    ir_instr_id_t instr_id = ir_instr_choosing_run(&info->choices, ops->lhs->type);
 
-    // We couldn't use the built-in instructions to operate on these types
     if(instr_id == INSTRUCTION_NONE){
         // Try to use the overriden function if it exists
         *ir_value = info->override
@@ -2976,6 +2961,23 @@ enum ir_type_category ir_type_get_category(ir_type_t *type){
     default:
         // Otherwise, no category
         return PRIMITIVE_NA;
+    }
+}
+
+ir_instr_id_t ir_instr_choosing_run(const ir_instr_choosing_t *choices,  ir_type_t *ir_type){
+    switch(choices->method){
+    case INSTR_CHOOSING_METHOD_IvF: {
+            struct instr_choosing_ivf ivf = choices->as_ivf;
+            return ivf_instruction(ir_type, ivf.i_instr, ivf.f_instr);
+        }
+        break;
+    case INSTR_CHOOSING_METHOD_UvSvF: {
+            struct instr_choosing_uvsvf uvsvf = choices->as_uvsvf;
+            return uvsvf_instruction(ir_type, uvsvf.u_instr, uvsvf.s_instr, uvsvf.f_instr);
+        }
+        break;
+    default:
+        return INSTRUCTION_NONE;
     }
 }
 

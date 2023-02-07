@@ -927,63 +927,17 @@ errorcode_t ir_gen_stmt_assignment_like(ir_builder_t *builder, ast_expr_assign_t
     ast_type_free(&other_value_type);
 
     ir_value_t *original_value = build_load(builder, destination, stmt->source);
+    unsigned short equivalent_expr_id = from_assign[assignment_kind];
 
-    unsigned int instr_id;
-    const char *op_verb;
-
-    switch(assignment_kind){
-    case EXPR_ADD_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_ADD, INSTRUCTION_FADD);
-        op_verb = "add";
-        break;
-    case EXPR_SUBTRACT_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_SUBTRACT, INSTRUCTION_FSUBTRACT);
-        op_verb = "subtract";
-        break;
-    case EXPR_MULTIPLY_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_MULTIPLY, INSTRUCTION_FMULTIPLY);
-        op_verb = "multiply";
-        break;
-    case EXPR_DIVIDE_ASSIGN:
-        instr_id = uvsvf_instruction(original_value->type, INSTRUCTION_UDIVIDE, INSTRUCTION_SDIVIDE, INSTRUCTION_FDIVIDE);
-        op_verb = "divide";
-        break;
-    case EXPR_MODULUS_ASSIGN:
-        instr_id = uvsvf_instruction(original_value->type, INSTRUCTION_UMODULUS, INSTRUCTION_SMODULUS, INSTRUCTION_FMODULUS);
-        op_verb = "take the modulus of";
-        break;
-    case EXPR_AND_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_AND, INSTRUCTION_NONE);
-        op_verb = "perform bitwise 'and' on";
-        break;
-    case EXPR_OR_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_OR, INSTRUCTION_NONE);
-        op_verb = "perform bitwise 'or' on";
-        break;
-    case EXPR_XOR_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_XOR, INSTRUCTION_NONE);
-        op_verb = "perform bitwise 'xor' on";
-        break;
-    case EXPR_LSHIFT_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE);
-        op_verb = "perform bitwise 'left shift' on";
-        break;
-    case EXPR_RSHIFT_ASSIGN:
-        instr_id = uvsvf_instruction(original_value->type, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_BIT_RSHIFT, INSTRUCTION_FMODULUS);
-        op_verb = "perform bitwise 'right shift' on";
-        break;
-    case EXPR_LGC_LSHIFT_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_LSHIFT, INSTRUCTION_NONE);
-        op_verb = "perform bitwise 'logical left shift' on";
-        break;
-    case EXPR_LGC_RSHIFT_ASSIGN:
-        instr_id = ivf_instruction(original_value->type, INSTRUCTION_BIT_LGC_RSHIFT, INSTRUCTION_NONE);
-        op_verb = "perform bitwise 'logical right shift' on";
-        break;
-    default:
+    if(equivalent_expr_id == EXPR_NONE){
         compiler_panic(builder->compiler, stmt->source, "INTERNAL ERROR: ir_gen_stmts() got unknown assignment operator id");
         return FAILURE;
     }
+
+    ir_gen_math_spec_t *math_spec = &ir_gen_math_specs[equivalent_expr_id];
+
+    unsigned int instr_id = ir_instr_choosing_run(&math_spec->choices, original_value->type);
+    const char *op_verb = math_spec->verb;
 
     if(instr_id == INSTRUCTION_NONE){
         compiler_panicf(builder->compiler, stmt->source, "Cannot %s those types", op_verb);
