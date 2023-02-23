@@ -20,7 +20,8 @@
 #include "IR/ir_type.h"
 #include "IR/ir_type_map.h"
 #include "IR/ir_value.h"
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
+#include "IRGEN/ir_build_literal.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen_expr.h"
 #include "IRGEN/ir_gen_polymorphable.h"
@@ -576,7 +577,7 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         // Convert RTTI pointer to be s8* since that's how pointers inside of composite are stored
         values[0] = build_bitcast(builder, values[0], builder->object->ir_module.common.ir_ptr);
         
-        *ir_value = build_struct_construction(builder->pool, any_type, values, 2);
+        *ir_value = build_const_struct_literal(builder->pool, any_type, values, 2);
         return true;
     }
 
@@ -764,7 +765,7 @@ errorcode_t ir_gen_merge_unknown_enum_like_into_plural_unknown_enum(ir_builder_t
             if(values[i] == NULL) goto failure;
         }
 
-        ir_value_t *map = build_static_array(builder->pool, item_type, values, count);
+        ir_value_t *map = build_array_literal(builder->pool, item_type, values, count);
         *ir_value = build_load(builder, build_array_access(builder, map, *ir_value, ast_type->source), ast_type->source);
         return SUCCESS;
     }

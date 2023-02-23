@@ -22,7 +22,8 @@
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
 #include "IRGEN/ir_autogen.h"
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
+#include "IRGEN/ir_build_literal.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_cache.h"
 #include "IRGEN/ir_gen.h"
@@ -180,6 +181,16 @@ ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder){
     });
 }
 
+void ir_builder_add_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure){
+    rtti_relocations_append(&builder->object->ir_module.rtti_relocations, (
+        (rtti_relocation_t){
+            .human_notation = human_notation,
+            .id_ref = id_ref,
+            .source_on_failure = source_on_failure,
+        }
+    ));
+}
+
 ir_type_t* ir_builder_usize(ir_builder_t *builder){
     return builder->object->ir_module.common.ir_usize;
 }
@@ -223,297 +234,7 @@ maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_fai
     return -1;
 }
 
-ir_value_t *build_literal_int(ir_pool_t *pool, adept_int value){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_LITERAL,
-        .type = ir_type_make(pool, TYPE_KIND_S32, NULL),
-        .extra = ir_pool_memclone(pool, &value, sizeof value),
-    });
-}
-
-ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize value){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_LITERAL,
-        .type = ir_type_make(pool, TYPE_KIND_U64, NULL),
-        .extra = ir_pool_memclone(pool, &value, sizeof value),
-    });
-}
-
-ir_value_t *build_unknown_enum_value(ir_pool_t *pool, source_t source, weak_cstr_t kind_name){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_UNKNOWN_ENUM,
-        .type = ir_type_make_unknown_enum(pool, source, kind_name),
-        .extra = NULL,
-    });
-}
-
-ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length){
-    ir_type_t *ir_string_type = builder->object->ir_module.common.ir_string_struct;
-
-    if(ir_string_type == NULL){
-        redprintf("Can't create string literal without String type present");
-        printf("\nTry importing '%s/String.adept'\n", ADEPT_VERSION_STRING);
-        return NULL;
-    }
-
-    length_t num_fields = 4;
-    ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * num_fields);
-    values[0] = build_literal_cstr_of_size(builder, array, length);
-    values[1] = build_literal_usize(builder->pool, length);
-    values[2] = build_literal_usize(builder->pool, length);
-    values[3] = build_literal_usize(builder->pool, 0); // DANGEROUS: This is a hack to initialize String.ownership as a reference
-
-    return ir_pool_alloc_init(builder->pool, ir_value_t, {
-        .value_type = VALUE_TYPE_STRUCT_LITERAL,
-        .type = ir_string_type,
-        .extra = ir_pool_alloc_init(builder->pool, ir_value_struct_literal_t, {
-            .values = values,
-            .length = num_fields,
-        })
-    });
-}
-
-ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value){
-    return build_literal_cstr_of_size(builder, value, strlen(value) + 1);
-}
-
-ir_value_t *build_literal_cstr_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value){
-    return build_literal_cstr_of_size_ex(pool, type_map, value, strlen(value) + 1);
-}
-
-ir_value_t *build_literal_cstr_of_size(ir_builder_t *builder, char *array, length_t size){
-    return build_literal_cstr_of_size_ex(builder->pool, builder->type_map, array, size);
-}
-
-ir_value_t *build_literal_cstr_of_size_ex(ir_pool_t *pool, ir_type_map_t *type_map, char *array, length_t size){
-    ir_type_t *ir_ubyte_type;
-
-    if(!ir_type_map_find(type_map, "ubyte", &ir_ubyte_type)){
-        die("build_literal_cstr_of_size_ex() - Failed to find 'ubyte' type mapping\n");
-    }
-
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_CSTR_OF_LEN,
-        .type = ir_type_make_pointer_to(pool, ir_ubyte_type),
-        .extra = ir_pool_alloc_init(pool, ir_value_cstr_of_len_t, {
-            .array = array,
-            .size = size,
-        })
-    });
-}
-
-ir_value_t *build_null_pointer(ir_pool_t *pool){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_NULLPTR,
-        .type = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_S8, NULL)),
-        .extra = NULL,
-    });
-}
-
-ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_NULLPTR_OF_TYPE,
-        .type = type,
-        .extra = NULL,
-    });
-}
-
-ir_value_t *build_func_addr(ir_pool_t *pool, ir_type_t *result_type, func_id_t ir_func_id){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_FUNC_ADDR,
-        .type = result_type,
-        .extra = ir_pool_alloc_init(pool, ir_value_func_addr_t, {
-            .ir_func_id = ir_func_id,
-        })
-    });
-}
-
-ir_value_t *build_func_addr_by_name(ir_pool_t *pool, ir_type_t *result_type, const char *name){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_FUNC_ADDR_BY_NAME,
-        .type = result_type,
-        .extra = ir_pool_alloc_init(pool, ir_value_func_addr_by_name_t, {
-            .name = name,
-        })
-    });
-}
-
-ir_value_t *build_cast(ir_builder_t *builder, unsigned int const_cast_value_type, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t *to){
-    if(VALUE_TYPE_IS_CONSTANT(from->value_type)){
-        return build_const_cast(builder->pool, const_cast_value_type, from, to);
-    } else {
-        return build_nonconst_cast(builder, nonconst_cast_instr_type, from, to);
-    }
-}
-
-ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int cast_instr_id, ir_value_t *from, ir_type_t* to){
-    ir_instr_cast_t *instruction = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
-
-    *instruction = (ir_instr_cast_t){
-        .id = cast_instr_id,
-        .result_type = to,
-        .value = from,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_const_cast(ir_pool_t *pool, unsigned int cast_value_type, ir_value_t *from, ir_type_t *to){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = cast_value_type,
-        .type = to,
-        .extra = from,
-    });
-}
-
-ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
-    ir_instr_alloc_t *instruction = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
-
-    *instruction = (ir_instr_alloc_t){
-        .id = INSTRUCTION_ALLOC,
-        .result_type = ir_type_make_pointer_to(builder->pool, type),
-        .alignment = 0,
-        .count = NULL,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t *count){
-    ir_instr_alloc_t *instruction = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
-
-    *instruction = (ir_instr_alloc_t){
-        .id = INSTRUCTION_ALLOC,
-        .result_type = ir_type_make_pointer_to(builder->pool, type),
-        .alignment = 0,
-        .count = count,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment){
-    ir_instr_alloc_t *instruction = (ir_instr_alloc_t*) build_instruction(builder, sizeof(ir_instr_alloc_t));
-
-    *instruction = (ir_instr_alloc_t){
-        .id = INSTRUCTION_ALLOC,
-        .result_type = ir_type_make_pointer_to(builder->pool, type),
-        .alignment = alignment,
-        .count = NULL,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_stack_save(ir_builder_t *builder){
-    ir_instr_t *instruction = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
-
-    *instruction = (ir_instr_t){
-        .id = INSTRUCTION_STACK_SAVE,
-        .result_type = builder->object->ir_module.common.ir_ptr,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
-void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer){
-    ir_instr_unary_t *instruction = (ir_instr_unary_t*) build_instruction(builder, sizeof(ir_instr_unary_t));
-
-    *instruction = (ir_instr_unary_t){
-        .id = INSTRUCTION_STACK_RESTORE,
-        .result_type = NULL,
-        .value = stack_pointer,
-    };
-}
-
-ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result){
-    ir_instr_math_t *instruction = (ir_instr_math_t*) build_instruction(builder, sizeof(ir_instr_math_t));
-
-    *instruction = (ir_instr_math_t){
-        .id = instr_id,
-        .a = a,
-        .b = b,
-        .result_type = result,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_phi2(ir_builder_t *builder, ir_type_t *result_type, ir_value_t *a, ir_value_t *b, length_t landing_a_block_id, length_t landing_b_block_id){
-    ir_instr_phi2_t *instruction = (ir_instr_phi2_t*) build_instruction(builder, sizeof(ir_instr_phi2_t));
-
-    *instruction = (ir_instr_phi2_t){
-        .id = INSTRUCTION_PHI2,
-        .result_type = result_type,
-        .a = a,
-        .b = b,
-        .block_id_a = landing_a_block_id,
-        .block_id_b = landing_b_block_id,
-    };
-
-    return build_value_from_prev_instruction(builder);
-}
-
-ir_value_t *build_bool(ir_pool_t *pool, adept_bool value){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_LITERAL,
-        .type = ir_type_make(pool, TYPE_KIND_BOOLEAN, NULL),
-        .extra = ir_pool_memclone(pool, &value, sizeof value),
-    });
-}
-
-errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure){
-    rtti_relocations_append(&builder->object->ir_module.rtti_relocations, (
-        (rtti_relocation_t){
-            .human_notation = human_notation,
-            .id_ref = id_ref,
-            .source_on_failure = source_on_failure,
-        }
-    ));
-
-    return SUCCESS;
-}
-
-void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, weak_cstr_t constraints, ir_value_t **args, length_t arity, bool has_side_effects, bool is_stack_align){
-    ir_instr_asm_t *instruction = (ir_instr_asm_t*) build_instruction(builder, sizeof(ir_instr_asm_t));
-
-    *instruction = (ir_instr_asm_t){
-        .id = INSTRUCTION_ASM,
-        .result_type = NULL,
-        .assembly = assembly,
-        .constraints = constraints,
-        .args = args,
-        .arity = arity,
-        .is_intel = is_intel,
-        .has_side_effects = has_side_effects,
-        .is_stack_align = is_stack_align,
-    };
-}
-
-void build_deinit_svars(ir_builder_t *builder){
-    ir_instr_t *instruction = build_instruction(builder, sizeof(ir_instr_t));
-
-    *instruction = (ir_instr_t){
-        .id = INSTRUCTION_DEINIT_SVARS,
-        .result_type = NULL,
-    };
-}
-
-void build_unreachable(ir_builder_t *builder){
-    ir_instr_t *instruction = (ir_instr_t*) build_instruction(builder, sizeof(ir_instr_t));
-
-    *instruction = (ir_instr_t){
-        .id = INSTRUCTION_UNREACHABLE,
-        .result_type = NULL,
-    };
-}
-
-void build_main_deinitialization(ir_builder_t *builder){
-    handle_deference_for_globals(builder);
-    build_deinit_svars(builder);
-}
-
-void open_scope(ir_builder_t *builder){
+void ir_builder_open_scope(ir_builder_t *builder){
     bridge_scope_t *old_scope = builder->scope;
 
     bridge_scope_t *new_scope = malloc(sizeof(bridge_scope_t));
@@ -525,16 +246,16 @@ void open_scope(ir_builder_t *builder){
     builder->scope = new_scope;
 }
 
-void close_scope(ir_builder_t *builder){
+void ir_builder_close_scope(ir_builder_t *builder){
     builder->scope->following_var_id = builder->next_var_id;
     builder->scope = builder->scope->parent;
     
     if(builder->scope == NULL){
-        die("close_scope() - Cannot close bridge scope with no parent\n");
+        die("ir_builder_close_scope() - Cannot close bridge scope with no parent\n");
     }
 }
 
-void push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id){
+void ir_builder_push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id){
     block_stack_push(&builder->block_stack, ((block_t){
         .label = label,
         .break_id = break_basicblock_id,
@@ -543,11 +264,11 @@ void push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_ba
     }));
 }
 
-void pop_loop_label(ir_builder_t *builder){
+void ir_builder_pop_loop_label(ir_builder_t *builder){
     block_stack_pop(&builder->block_stack);
 }
 
-bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
+bridge_var_t *ir_builder_add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits){
     bridge_var_list_t *list = &builder->scope->list;
 
     index_id_t id = INVALID_INDEX_ID;
@@ -1982,7 +1703,7 @@ errorcode_t ir_gen_actualize_unknown_plural_enum(ir_builder_t *builder, const ch
         values[i] = build_literal_usize(builder->pool, index_value);
     }
 
-    ir_value_t *map = build_static_array(builder->pool, item_type, values, count);
+    ir_value_t *map = build_array_literal(builder->pool, item_type, values, count);
     *ir_value = build_load(builder, build_array_access(builder, map, *ir_value, source), source);
     return SUCCESS;
 
@@ -2010,7 +1731,7 @@ errorcode_t ir_gen_actualize_unknown_plural_enum_to_anonymous(ir_builder_t *buil
         values[i] = build_literal_usize(builder->pool, (adept_usize) index_value);
     }
 
-    ir_value_t *map = build_static_array(builder->pool, item_type, values, count);
+    ir_value_t *map = build_array_literal(builder->pool, item_type, values, count);
     *ir_value = build_load(builder, build_array_access(builder, map, *ir_value, source), source);
     return SUCCESS;
 

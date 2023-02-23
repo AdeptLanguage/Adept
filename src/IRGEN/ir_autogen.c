@@ -2,7 +2,7 @@
 #include "AST/ast_layout.h"
 #include "AST/POLY/ast_resolve.h"
 #include "IRGEN/ir_autogen.h"
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
 #include "IRGEN/ir_gen_type.h"
 
 errorcode_t ir_autogen_for_children_of_struct_like(

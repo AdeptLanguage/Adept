@@ -151,13 +151,13 @@ errorcode_t infer_in_funcs(infer_ctx_t *ctx, ast_func_t *funcs, length_t funcs_l
                     || function->traits & (AST_FUNC_MAIN | AST_FUNC_DISALLOW | AST_FUNC_DISPATCHER)
                     || (a == 0 && streq(function->arg_names[a], "this"));
                 
-                infer_var_scope_add_variable(ctx->scope, function->arg_names[a], &function->arg_types[a], function->arg_sources[a], force_used, false);
+                infer_var_scope_ir_builder_add_variable(ctx->scope, function->arg_names[a], &function->arg_types[a], function->arg_sources[a], force_used, false);
             }
         }
 
         if(function->traits & AST_FUNC_VARIADIC){
             // Add variadic array variable
-            infer_var_scope_add_variable(ctx->scope, function->variadic_arg_name, ctx->ast->common.ast_variadic_array, function->variadic_source, false, false);
+            infer_var_scope_ir_builder_add_variable(ctx->scope, function->variadic_arg_name, ctx->ast->common.ast_variadic_array, function->variadic_source, false, false);
         }
         
         // Infer expressions in statements
@@ -235,7 +235,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                     }
                 }
 
-                infer_var_scope_add_variable(ctx->scope, declare_stmt->name, &declare_stmt->type, declare_stmt->source, false, declare_stmt->traits & AST_EXPR_DECLARATION_CONST);
+                infer_var_scope_ir_builder_add_variable(ctx->scope, declare_stmt->name, &declare_stmt->type, declare_stmt->source, false, declare_stmt->traits & AST_EXPR_DECLARATION_CONST);
             }
             break;
         case EXPR_ASSIGN:
@@ -352,8 +352,8 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 if(loop->list      && infer_expr(ctx, func, &loop->list, EXPR_USIZE, true))     return FAILURE;
  
                 infer_var_scope_push(&ctx->scope);
-                infer_var_scope_add_variable(ctx->scope, "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
-                infer_var_scope_add_variable(ctx->scope, loop->it_name ? loop->it_name : "it", loop->it_type, loop->source, true, false);
+                infer_var_scope_ir_builder_add_variable(ctx->scope, "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
+                infer_var_scope_ir_builder_add_variable(ctx->scope, loop->it_name ? loop->it_name : "it", loop->it_type, loop->source, true, false);
 
                 if(infer_in_stmts(ctx, func, &loop->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
@@ -369,7 +369,7 @@ errorcode_t infer_in_stmts(infer_ctx_t *ctx, ast_func_t *func, ast_expr_list_t *
                 if(infer_expr(ctx, func, &loop->limit, EXPR_USIZE, false)) return FAILURE;
  
                 infer_var_scope_push(&ctx->scope);
-                infer_var_scope_add_variable(ctx->scope, loop->idx_name ? loop->idx_name : "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
+                infer_var_scope_ir_builder_add_variable(ctx->scope, loop->idx_name ? loop->idx_name : "idx", &ctx->ast->common.ast_usize_type, loop->source, true, false);
 
                 if(infer_in_stmts(ctx, func, &loop->statements)){
                     infer_var_scope_pop(ctx->compiler, &ctx->scope);
@@ -828,7 +828,7 @@ errorcode_t infer_expr_inner(infer_ctx_t *ctx, ast_func_t *ast_func, ast_expr_t 
                 return FAILURE;
             }
 
-            infer_var_scope_add_variable(ctx->scope, def->name, &def->type, def->source, true, false);
+            infer_var_scope_ir_builder_add_variable(ctx->scope, def->name, &def->type, def->source, true, false);
         }
         break;
     case EXPR_VA_ARG: {
@@ -1398,7 +1398,7 @@ ast_named_expression_t* infer_var_scope_find_named_expression(infer_var_scope_t 
     return scope->parent ? infer_var_scope_find_named_expression(scope->parent, name) : NULL;
 }
 
-void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const){
+void infer_var_scope_ir_builder_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const){
     // NOTE: Assumes name is a valid C-String
 
     infer_var_list_append(&scope->list, ((infer_var_t){

@@ -126,6 +126,49 @@ void ir_module_create_method_mapping(ir_module_t *module, weak_cstr_t struct_nam
     ir_proc_map_insert(&module->method_map, &key, sizeof key, endpoint, &compare_ir_method_key);
 }
 
+ir_value_t *ir_module_create_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant, ir_value_t *initializer_or_null){
+    unsigned int value_type;
+    trait_t traits;
+
+    if(is_constant){
+        value_type = VALUE_TYPE_CONST_ANON_GLOBAL;
+        traits = IR_ANON_GLOBAL_CONSTANT;
+    } else {
+        value_type = VALUE_TYPE_ANON_GLOBAL;
+        traits = TRAIT_NONE;
+    }
+
+    ir_anon_globals_append(&module->anon_globals, (
+        (ir_anon_global_t){
+            .type = type,
+            .traits = traits,
+            .initializer = initializer_or_null,
+        }
+    ));
+
+    length_t anon_global_id = module->anon_globals.length - 1;
+
+    return ir_pool_alloc_init(&module->pool, ir_value_t, {
+        .value_type = value_type,
+        .type = ir_type_make_pointer_to(&module->pool, type),
+        .extra = ir_pool_alloc_init(&module->pool, ir_value_anon_global_t, {
+            .anon_global_id = anon_global_id,
+        })
+    });
+}
+
+void ir_module_set_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer){
+    switch(anon_global->value_type){
+    case VALUE_TYPE_ANON_GLOBAL:
+    case VALUE_TYPE_CONST_ANON_GLOBAL: {
+            ir_value_anon_global_t *extra = (ir_value_anon_global_t*) anon_global->extra;
+            module->anon_globals.globals[extra->anon_global_id].initializer = initializer;
+        }
+        break;
+    default:
+        internalerrorprintf("ir_module_set_anon_global_initializer() - Cannot set initializer on a value that isn't a reference to an anonymous global variable\n");
+    }
+}
 
 void ir_module_defer_free(ir_module_t *module, void *pointer){
     free_list_append(&module->defer_free, pointer);

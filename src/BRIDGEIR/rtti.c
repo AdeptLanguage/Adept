@@ -9,7 +9,8 @@
 #include "IR/ir_module.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
+#include "IRGEN/ir_build_literal.h"
 #include "IRGEN/ir_builder.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
@@ -34,9 +35,7 @@ ir_value_t* rtti_for(ir_builder_t *builder, const ast_type_t *ast_type, source_t
     ir_value_t *rtti_array = build_load(builder, build_gvarptr(builder, ir_type_make_pointer_to(builder->pool, rtti_array_type), __types__), NULL_SOURCE);
 
     // Register necessary RTTI relocation
-    if(build_rtti_relocation(builder, ast_type_str(ast_type), ((adept_usize*) placeholder_index->extra), source_on_failure)){
-        return NULL;
-    }
+    ir_builder_add_rtti_relocation(builder, ast_type_str(ast_type), ((adept_usize*) placeholder_index->extra), source_on_failure);
 
     // Return value `__types__[placeholder]`
     return build_load(builder, build_array_access(builder, rtti_array, placeholder_index, NULL_SOURCE), NULL_SOURCE);

@@ -22,7 +22,8 @@
 #include "IR/ir_type.h"
 #include "IR/ir_type_map.h"
 #include "IR/ir_value.h"
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
+#include "IRGEN/ir_build_literal.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
@@ -199,7 +200,7 @@ errorcode_t ir_gen_vtables(compiler_t *compiler, object_t *object){
                 ir_vtable_entries[j] = build_func_addr(&module->pool, module->common.ir_ptr, vtree->table.endpoints[j].ir_func_id);
             }
 
-            ir_value_t *vtable = build_static_array(&module->pool, module->common.ir_ptr, ir_vtable_entries, vtree->table.length);
+            ir_value_t *vtable = build_array_literal(&module->pool, module->common.ir_ptr, ir_vtable_entries, vtree->table.length);
             vtree->finalized_table = build_const_bitcast(&module->pool, vtable, module->common.ir_ptr);
         }
     }
@@ -605,13 +606,13 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
             arg_traits |= BRIDGE_VAR_POD;
         }
 
-        add_variable(&builder, ast_func.arg_names[i], &ast_func.arg_types[i], ir_funcs->funcs[ir_func_id].argument_types[i], arg_traits);
+        ir_builder_add_variable(&builder, ast_func.arg_names[i], &ast_func.arg_types[i], ir_funcs->funcs[ir_func_id].argument_types[i], arg_traits);
     }
 
     // Append variadic array argument for variadic functions
     if(ast_func.traits & AST_FUNC_VARIADIC){
         // AST variadic type is already guaranteed to exist
-        add_variable(&builder, ast_func.variadic_arg_name, object->ast.common.ast_variadic_array, object->ir_module.common.ir_variadic_array, TRAIT_NONE);
+        ir_builder_add_variable(&builder, ast_func.variadic_arg_name, object->ast.common.ast_variadic_array, object->ir_module.common.ir_variadic_array, TRAIT_NONE);
     }
 
     // Initialize all global variables
@@ -714,7 +715,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     handle_deference_for_variables(&builder, &builder.scope->list);
 
     if(is_main_like){
-        build_main_deinitialization(&builder);
+        build_global_cleanup(&builder);
     }
 
     if(ast_func.traits & AST_FUNC_AUTOGEN){

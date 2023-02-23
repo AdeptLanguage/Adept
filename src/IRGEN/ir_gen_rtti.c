@@ -15,7 +15,8 @@
 #include "IR/ir_type.h"
 #include "IR/ir_type_map.h"
 #include "IR/ir_value.h"
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
+#include "IRGEN/ir_build_literal.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen_rtti.h"
 #include "IRGEN/ir_gen_type.h"
@@ -51,7 +52,7 @@ errorcode_t ir_gen__types__(compiler_t *compiler, object_t *object, ir_global_t 
     if(array_values == NULL) return FAILURE;
 
     // Create RTTI Array and set __types__'s initializer to be it
-    ir_global->trusted_static_initializer = build_static_array(pool, rtti_types.any_type_ptr_type, array_values, array_length);
+    ir_global->trusted_static_initializer = build_array_literal(pool, rtti_types.any_type_ptr_type, array_values, array_length);
     return SUCCESS;
 }
 
@@ -134,8 +135,8 @@ errorcode_t ir_gen__types__pointer_entry(object_t *object, ir_value_t **array_va
     fields[4] = as_vernacular_pointer(ir_module, subtype_rtti); // subtype
 
     // Create struct literal and set as initializer
-    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_ptr_type_type, fields, 5, false);
-    build_anon_global_initializer(ir_module, *result, initializer);
+    ir_value_t *initializer = build_struct_literal(ir_module, rtti_types->any_ptr_type_type, fields, 5, false);
+    ir_module_set_anon_global_initializer(ir_module, *result, initializer);
 
     // Bitcast '*AnyPtrType' to '*AnyType'
     *result = build_const_bitcast(pool, *result, rtti_types->any_type_ptr_type);
@@ -177,8 +178,8 @@ errorcode_t ir_gen__types__fixed_array_entry(object_t *object, ir_value_t **arra
     fields[5] = length;                                         // length
 
     // Create struct literal and set as initializer
-    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_fixed_array_type_type, fields, 6, false);
-    build_anon_global_initializer(ir_module, *result, initializer);
+    ir_value_t *initializer = build_struct_literal(ir_module, rtti_types->any_fixed_array_type_type, fields, 6, false);
+    ir_module_set_anon_global_initializer(ir_module, *result, initializer);
 
     // Bitcast '*AnyFixedArrayType' to '*AnyType'
     *result = build_const_bitcast(pool, *result, rtti_types->any_type_ptr_type);
@@ -223,7 +224,7 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
         arg_rtti_values[i] = ir_gen__types__get_rtti_pointer_for(object, &fp->arg_types[i], array_values, rtti_types);
     }
 
-    ir_value_t *args = build_static_array(pool, rtti_types->any_type_ptr_type, arg_rtti_values, fp->arity);
+    ir_value_t *args = build_array_literal(pool, rtti_types->any_type_ptr_type, arg_rtti_values, fp->arity);
 
     // Construct value for length (number of arguments)
     ir_value_t *length = build_literal_usize(pool, fp->arity);
@@ -240,8 +241,8 @@ errorcode_t ir_gen__types__func_ptr_entry(object_t *object, ir_value_t **array_v
     fields[8] = build_bool(pool, fp->traits & AST_FUNC_STDCALL); // is_stdcall
 
     // Create struct literal and set as initializer
-    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_funcptr_type_type, fields, 9, false);
-    build_anon_global_initializer(ir_module, *result, initializer);
+    ir_value_t *initializer = build_struct_literal(ir_module, rtti_types->any_funcptr_type_type, fields, 9, false);
+    ir_module_set_anon_global_initializer(ir_module, *result, initializer);
 
     // Bitcast '*AnyFuncPtrType' to '*AnyType'
     *result = build_const_bitcast(pool, *result, rtti_types->any_type_ptr_type);
@@ -286,8 +287,8 @@ errorcode_t ir_gen__types__primitive_entry(object_t *object, ir_value_t **array_
     ir_gen__types__entry_common_header(ir_module, entry, kind_id, fields);
 
     // Create struct literal and set as initializer
-    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_type_type, fields, 4, false);
-    build_anon_global_initializer(ir_module, *result, initializer);
+    ir_value_t *initializer = build_struct_literal(ir_module, rtti_types->any_type_type, fields, 4, false);
+    ir_module_set_anon_global_initializer(ir_module, *result, initializer);
     
     // We don't have to bitcast '*AnyType' to '*AnyType', since it already is a '*AnyType'
     return SUCCESS;
@@ -351,12 +352,12 @@ errorcode_t ir_gen__types__enum_entry(object_t *object, ir_value_t **array_value
 
     ir_value_t **fields = ir_pool_alloc(pool, sizeof(ir_value_t*) * 6);
     ir_gen__types__entry_common_header(ir_module, entry, ANY_TYPE_KIND_ENUM, fields);
-    fields[4] = build_static_array(pool, ir_module->common.ir_ubyte_ptr, values, length);
+    fields[4] = build_array_literal(pool, ir_module->common.ir_ubyte_ptr, values, length);
     fields[5] = build_literal_usize(pool, length); // length
 
     // Create struct literal and set as initializer
-    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_enum_type_type, fields, 6, false);
-    build_anon_global_initializer(ir_module, *result, initializer);
+    ir_value_t *initializer = build_struct_literal(ir_module, rtti_types->any_enum_type_type, fields, 6, false);
+    ir_module_set_anon_global_initializer(ir_module, *result, initializer);
     
     // We don't have to bitcast '*AnyType' to '*AnyType', since it already is a '*AnyType'
     return SUCCESS;
@@ -422,8 +423,8 @@ errorcode_t ir_gen__types__composite_entry(compiler_t *compiler, object_t *objec
     fields[8] = is_packed;
     
     // Create struct literal and set as initializer
-    ir_value_t *initializer = build_static_struct(ir_module, rtti_types->any_composite_type_type, fields, 9, false);
-    build_anon_global_initializer(ir_module, *result, initializer);
+    ir_value_t *initializer = build_struct_literal(ir_module, rtti_types->any_composite_type_type, fields, 9, false);
+    ir_module_set_anon_global_initializer(ir_module, *result, initializer);
 
     // Bitcast '*AnyCompositeType' to '*AnyType'
     *result = build_const_bitcast(pool, *result, rtti_types->any_type_ptr_type);
@@ -546,7 +547,7 @@ ir_value_t *ir_gen__types__composite_entry_members_array(compiler_t *compiler, o
         }
     }
 
-    return build_static_array(pool, info->rtti_types->any_type_ptr_type, members, field_map->arrows_length);
+    return build_array_literal(pool, info->rtti_types->any_type_ptr_type, members, field_map->arrows_length);
 }
 
 ir_value_t *ir_gen__types__composite_entry_offsets_array(object_t *object, ir_gen_composite_rtti_info_t *info){
@@ -573,7 +574,7 @@ ir_value_t *ir_gen__types__composite_entry_offsets_array(object_t *object, ir_ge
         offsets[i] = offset;
     }
 
-    return build_static_array(pool, ir_module->common.ir_usize, offsets, field_map->arrows_length);
+    return build_array_literal(pool, ir_module->common.ir_usize, offsets, field_map->arrows_length);
 }
 
 ir_value_t *ir_gen__types__composite_entry_member_names_array(ir_module_t *ir_module, ir_gen_composite_rtti_info_t *info){
@@ -587,7 +588,7 @@ ir_value_t *ir_gen__types__composite_entry_member_names_array(ir_module_t *ir_mo
         member_names[i] = build_literal_cstr_ex(pool, type_map, field_map->arrows[i].name);
     }
 
-    return build_static_array(pool, ir_module->common.ir_ubyte_ptr, member_names, field_map->arrows_length);
+    return build_array_literal(pool, ir_module->common.ir_ubyte_ptr, member_names, field_map->arrows_length);
 }
 
 ir_value_t **ir_gen__types__values(compiler_t *compiler, object_t *object, ir_rtti_types_t *rtti_types){
@@ -678,7 +679,7 @@ errorcode_t ir_gen__types__prepare_each_value(compiler_t *compiler, object_t *ob
         }
 
         // Create empty anonymous global variable of the correct AnyType variant for the entry
-        array_values[i] = build_anon_global(ir_module, any_type_variant, true);
+        array_values[i] = ir_module_create_anon_global(ir_module, any_type_variant, true, NULL);
     }
 
     return SUCCESS;

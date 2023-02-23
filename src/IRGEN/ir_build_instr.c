@@ -1,5 +1,6 @@
 
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
+#include "IRGEN/ir_build_literal.h"
 #include "LEX/lex.h"
 
 #define BUILD_VALUE(TYPE, ...) ( \
@@ -230,143 +231,117 @@ void build_return(ir_builder_t *builder, ir_value_t *value){
     });
 }
 
-ir_value_t *build_static_struct(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable){
-    ir_value_t *value = ir_pool_alloc_init(&module->pool, ir_value_t, {
-        .value_type = VALUE_TYPE_STRUCT_LITERAL,
-        .type = type,
-        .extra = ir_pool_alloc_init(&module->pool, ir_value_struct_literal_t, {
-            .values = values,
-            .length = length,
-        })
-    });
-
-    // If mutability is required, then create an anonymous global for the structure data
-    if(make_mutable){
-        // Create anonymous global
-        ir_value_t *anonymous_global_variable = build_anon_global(module, type, true);
-
-        // Set initializer for anonymous global
-        build_anon_global_initializer(module, anonymous_global_variable, value);
-
-        // Use mutable anonymous global instead of constant
-        value = anonymous_global_variable;
-    }
-
-    return value;
-}
-
-ir_value_t *build_struct_construction(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_STRUCT_CONSTRUCTION,
-        .type = type,
-        .extra = ir_pool_alloc_init(pool, ir_value_struct_construction_t, {
-            .values = values,
-            .length = length,
-        })
-    });
-}
-
-ir_value_t *build_offsetof(ir_builder_t *builder, ir_type_t *type, length_t index){
-    return build_offsetof_ex(builder->pool, ir_builder_usize(builder), type, index);
-}
-
-ir_value_t *build_offsetof_ex(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type, length_t index){
-    if(type->kind != TYPE_KIND_STRUCTURE){
-        die("build_offsetof() - Cannot get offset of field for non-struct type\n");
-    }
-
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_OFFSETOF,
-        .type = usize_type,
-        .extra = ir_pool_alloc_init(pool, ir_value_offsetof_t, {
-            .type = type,
-            .index = index,
-        })
-    });
-}
-
-ir_value_t *build_const_sizeof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_CONST_SIZEOF,
-        .type = usize_type,
-        .extra = ir_pool_alloc_init(pool, ir_value_const_sizeof_t, {
-            .type = type,
-        })
-    });
-}
-
-ir_value_t *build_const_alignof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_t *type){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_CONST_ALIGNOF,
-        .type = usize_type,
-        .extra = ir_pool_alloc_init(pool, ir_value_const_alignof_t, {
-            .type = type,
-        })
-    });
-}
-
-ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_CONST_ADD,
-        .type = a->type,
-        .extra = ir_pool_alloc_init(pool, ir_value_const_math_t, {
-            .a = a,
-            .b = b,
-        })
-    });
-}
-
-ir_value_t *build_static_array(ir_pool_t *pool, ir_type_t *item_type, ir_value_t **values, length_t length){
-    return ir_pool_alloc_init(pool, ir_value_t, {
-        .value_type = VALUE_TYPE_ARRAY_LITERAL,
-        .type = ir_type_make_pointer_to(pool, item_type),
-        .extra = ir_pool_alloc_init(pool, ir_value_array_literal_t, {
-            .values = values,
-            .length = length,
-        })
-    });
-}
-
-ir_value_t *build_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant){
-    unsigned int value_type;
-    trait_t traits;
-
-    if(is_constant){
-        value_type = VALUE_TYPE_CONST_ANON_GLOBAL;
-        traits = IR_ANON_GLOBAL_CONSTANT;
+ir_value_t *build_cast(ir_builder_t *builder, unsigned int const_cast_value_type, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t *to){
+    if(VALUE_TYPE_IS_CONSTANT(from->value_type)){
+        return build_const_cast(builder->pool, const_cast_value_type, from, to);
     } else {
-        value_type = VALUE_TYPE_ANON_GLOBAL;
-        traits = TRAIT_NONE;
+        return build_nonconst_cast(builder, nonconst_cast_instr_type, from, to);
     }
+}
 
-    ir_anon_globals_append(&module->anon_globals, (
-        (ir_anon_global_t){
-            .type = type,
-            .traits = traits,
-            .initializer = NULL,
-        }
-    ));
+ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int cast_instr_id, ir_value_t *from, ir_type_t* to){
+    ir_instr_cast_t *instruction = (ir_instr_cast_t*) build_instruction(builder, sizeof(ir_instr_cast_t));
 
-    length_t anon_global_id = module->anon_globals.length - 1;
+    *instruction = (ir_instr_cast_t){
+        .id = cast_instr_id,
+        .result_type = to,
+        .value = from,
+    };
 
-    return ir_pool_alloc_init(&module->pool, ir_value_t, {
-        .value_type = value_type,
-        .type = ir_type_make_pointer_to(&module->pool, type),
-        .extra = ir_pool_alloc_init(&module->pool, ir_value_anon_global_t, {
-            .anon_global_id = anon_global_id,
-        })
+    return build_value_from_prev_instruction(builder);
+}
+
+ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
+    return BUILD_VALUE(ir_instr_alloc_t, {
+        .id = INSTRUCTION_ALLOC,
+        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .alignment = 0,
+        .count = NULL,
     });
 }
 
-void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer){
-    switch(anon_global->value_type){
-    case VALUE_TYPE_ANON_GLOBAL:
-    case VALUE_TYPE_CONST_ANON_GLOBAL: {
-            ir_value_anon_global_t *extra = (ir_value_anon_global_t*) anon_global->extra;
-            module->anon_globals.globals[extra->anon_global_id].initializer = initializer;
-        }
-        break;
-    default:
-        internalerrorprintf("build_anon_global_initializer() - Cannot set initializer on a value that isn't a reference to an anonymous global variable\n");
-    }
+ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t *count){
+    return BUILD_VALUE(ir_instr_alloc_t, {
+        .id = INSTRUCTION_ALLOC,
+        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .alignment = 0,
+        .count = count,
+    });
+}
+
+ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment){
+    return BUILD_VALUE(ir_instr_alloc_t, {
+        .id = INSTRUCTION_ALLOC,
+        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .alignment = alignment,
+        .count = NULL,
+    });
+}
+
+ir_value_t *build_stack_save(ir_builder_t *builder){
+    return BUILD_VALUE(ir_instr_t, {
+        .id = INSTRUCTION_STACK_SAVE,
+        .result_type = builder->object->ir_module.common.ir_ptr,
+    });
+}
+
+void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer){
+    BUILD_INSTR(ir_instr_unary_t, {
+        .id = INSTRUCTION_STACK_RESTORE,
+        .result_type = NULL,
+        .value = stack_pointer,
+    });
+}
+
+ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result){
+    return BUILD_VALUE(ir_instr_math_t, {
+        .id = instr_id,
+        .a = a,
+        .b = b,
+        .result_type = result,
+    });
+}
+
+ir_value_t *build_phi2(ir_builder_t *builder, ir_type_t *result_type, ir_value_t *a, ir_value_t *b, length_t landing_a_block_id, length_t landing_b_block_id){
+    return BUILD_VALUE(ir_instr_phi2_t, {
+        .id = INSTRUCTION_PHI2,
+        .result_type = result_type,
+        .a = a,
+        .b = b,
+        .block_id_a = landing_a_block_id,
+        .block_id_b = landing_b_block_id,
+    });
+}
+
+void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, weak_cstr_t constraints, ir_value_t **args, length_t arity, bool has_side_effects, bool is_stack_align){
+    BUILD_INSTR(ir_instr_asm_t, {
+        .id = INSTRUCTION_ASM,
+        .result_type = NULL,
+        .assembly = assembly,
+        .constraints = constraints,
+        .args = args,
+        .arity = arity,
+        .is_intel = is_intel,
+        .has_side_effects = has_side_effects,
+        .is_stack_align = is_stack_align,
+    });
+}
+
+void build_deinit_svars(ir_builder_t *builder){
+    BUILD_INSTR(ir_instr_t, {
+        .id = INSTRUCTION_DEINIT_SVARS,
+        .result_type = NULL,
+    });
+}
+
+void build_unreachable(ir_builder_t *builder){
+    BUILD_INSTR(ir_instr_t, {
+        .id = INSTRUCTION_UNREACHABLE,
+        .result_type = NULL,
+    });
+}
+
+void build_global_cleanup(ir_builder_t *builder){
+    handle_deference_for_globals(builder);
+    build_deinit_svars(builder);
 }

@@ -26,7 +26,8 @@
 #include "IR/ir_type.h"
 #include "IR/ir_type_map.h"
 #include "IR/ir_value.h"
-#include "IRGEN/ir_build.h"
+#include "IRGEN/ir_build_instr.h"
+#include "IRGEN/ir_build_literal.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_gen.h"
 #include "IRGEN/ir_gen_expr.h"
@@ -2151,7 +2152,7 @@ errorcode_t ir_gen_expr_static_array(ir_builder_t *builder, ast_expr_static_data
     }
 
     // Build static array value
-    *ir_value = build_static_array(builder->pool, type, values, length);
+    *ir_value = build_array_literal(builder->pool, type, values, length);
 
     // Result type is pointer to element type
     if(out_expr_type != NULL){
@@ -2224,7 +2225,7 @@ errorcode_t ir_gen_expr_static_struct(ir_builder_t *builder, ast_expr_static_dat
     }
 
     // Build struct literal IR value
-    *ir_value = build_static_struct(&builder->object->ir_module, type, values, length, true);
+    *ir_value = build_struct_literal(&builder->object->ir_module, type, values, length, true);
 
     // Result type is pointer to struct
     if(out_expr_type != NULL){
@@ -2558,7 +2559,7 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
 
         // Add the variable
         ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id);
-        add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+        ir_builder_add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
         errorcode_t errorcode = ir_gen_assign(builder, initial, &initial_value_ast_type, destination, &def->type, is_assign_pod, def->source);
         ast_type_free(&initial_value_ast_type);
@@ -2568,14 +2569,14 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
         *ir_value = destination;
     } else if(def->id == EXPR_ILDECLAREUNDEF && !(builder->compiler->traits & COMPILER_NO_UNDEF)){
         // Mark the variable as undefined memory so it isn't auto-initialized later on
-        add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
+        ir_builder_add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_UNDEF | BRIDGE_VAR_POD : BRIDGE_VAR_UNDEF);
 
         // Result is pointer to variable on stack
         *ir_value = build_lvarptr(builder, var_pointer_type, builder->next_var_id - 1);
     } else /* plain ILDECLARE or --no-undef ILDECLAREUNDEF */ {
         // Variable declaration without initial value
         
-        add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
+        ir_builder_add_variable(builder, def->name, &def->type, ir_decl_type, is_pod ? BRIDGE_VAR_POD : TRAIT_NONE);
 
         // Zero initialize the variable
         ir_value_t *destination = build_lvarptr(builder, var_pointer_type, builder->next_var_id - 1);

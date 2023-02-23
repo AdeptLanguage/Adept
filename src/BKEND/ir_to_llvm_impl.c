@@ -339,8 +339,8 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             return LLVMConstSIToFP(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
     case VALUE_TYPE_CONST_REINTERPRET:
             return ir_to_llvm_value(llvm, value->extra);
-    case VALUE_TYPE_STRUCT_CONSTRUCTION: {
-            ir_value_struct_construction_t *construction = (ir_value_struct_construction_t*) value->extra;
+    case VALUE_TYPE_CONST_STRUCT_LITERAL: {
+            ir_value_const_struct_literal_t *construction = (ir_value_const_struct_literal_t*) value->extra;
 
             LLVMValueRef constructed = LLVMGetUndef(ir_to_llvm_type(llvm, value->type));
 

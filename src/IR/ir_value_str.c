@@ -139,7 +139,7 @@ static strong_cstr_t const_cast_to_str(ir_value_t *value, const char *cast_kind)
 }
 
 static strong_cstr_t const_struct_construction_to_str(ir_value_t *value){
-    ir_value_struct_construction_t *construction = value->extra;
+    ir_value_const_struct_literal_t *construction = value->extra;
     strong_cstr_t of = ir_type_str(value->type);
 
     strong_cstr_t result = mallocandsprintf("const-construct %s (from %d values)", of, (int) construction->length);
@@ -232,7 +232,7 @@ strong_cstr_t ir_value_str(ir_value_t *value){
     case VALUE_TYPE_CONST_REINTERPRET:
         result = const_cast_to_str(value, "creinterp");
         break;
-    case VALUE_TYPE_STRUCT_CONSTRUCTION:
+    case VALUE_TYPE_CONST_STRUCT_LITERAL:
         result = const_struct_construction_to_str(value);
         break;
     default:

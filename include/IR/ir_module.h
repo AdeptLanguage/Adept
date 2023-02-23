@@ -61,6 +61,14 @@ void ir_module_create_func_mapping(ir_module_t *module, weak_cstr_t function_nam
 // Create a new method mapping
 void ir_module_create_method_mapping(ir_module_t *module, weak_cstr_t struct_name, weak_cstr_t method_name, ir_func_endpoint_t endpoint);
 
+// ---------------- ir_module_create_anon_global ----------------
+// Builds an anonymous global variable
+ir_value_t *ir_module_create_anon_global(ir_module_t *module, ir_type_t *type, bool is_constant, ir_value_t *initializer_or_null);
+
+// ---------------- ir_module_set_anon_global_initializer ----------------
+// Builds an anonymous global variable initializer
+void ir_module_set_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer);
+
 // ---------------- ir_module_defer_free ----------------
 // Schedules a heap allocation to be deallocated
 // when an IR module is destroyed.

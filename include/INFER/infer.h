@@ -164,9 +164,9 @@ infer_var_t* infer_var_scope_find(infer_var_scope_t *scope, const char *name);
 // Finds a named expression mapping within an inference variable scope
 ast_named_expression_t* infer_var_scope_find_named_expression(infer_var_scope_t *scope, const char *name);
 
-// ---------------- infer_var_scope_add_variable ----------------
+// ---------------- infer_var_scope_ir_builder_add_variable ----------------
 // Adds a variables to an inference variable scope
-void infer_var_scope_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const);
+void infer_var_scope_ir_builder_add_variable(infer_var_scope_t *scope, weak_cstr_t name, ast_type_t *type, source_t source, bool force_used, bool is_const);
 
 // ---------------- infer_var_scope_add_named_expression ----------------
 // Adds a named expression mapping to an inference variable scope

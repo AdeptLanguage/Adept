@@ -95,9 +95,11 @@ ir_instr_t *build_instruction(ir_builder_t *builder, length_t size);
 // Builds an IR value from the result of the previous instruction
 ir_value_t *build_value_from_prev_instruction(ir_builder_t *builder);
 
-// ---------------- build_anon_global_initializer ----------------
-// Builds an anonymous global variable initializer
-void build_anon_global_initializer(ir_module_t *module, ir_value_t *anon_global, ir_value_t *initializer);
+// ---------------- ir_builder_add_rtti_relocation ----------------
+// Adds an RTTI index that requires resolution to the rtti_relocations array
+// NOTE: Despite its name, this function does not add any instructions,
+//       it simply marks an RTTI index to be filled in later
+void ir_builder_add_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure);
 
 // ---------------- ir_builder_usize ----------------
 // Gets a shared IR usize type
@@ -115,170 +117,26 @@ ir_type_t *ir_builder_bool(ir_builder_t *builder);
 // Gets the global variable index for the runtime type information array '__types__'
 maybe_index_t ir_builder___types__(ir_builder_t *builder, source_t source_on_failure);
 
-// ---------------- build_literal_int ----------------
-// Builds a literal int value
-ir_value_t *build_literal_int(ir_pool_t *pool, adept_int value);
-
-// ---------------- build_literal_usize ----------------
-// Builds a literal usize value
-ir_value_t *build_literal_usize(ir_pool_t *pool, adept_usize value);
-
-// ---------------- build_unknown_enum_value ----------------
-// Builds an enum value of an unknown type
-ir_value_t *build_unknown_enum_value(ir_pool_t *pool, source_t source, weak_cstr_t kind_name);
-
-// ---------------- build_literal_str ----------------
-// Builds a literal string value
-// NOTE: If no 'String' type is present, an error will be printed and NULL will be returned
-ir_value_t *build_literal_str(ir_builder_t *builder, char *array, length_t length);
-
-// ---------------- build_literal_cstr ----------------
-// Builds a literal c-string value
-ir_value_t *build_literal_cstr(ir_builder_t *builder, weak_cstr_t value);
-ir_value_t *build_literal_cstr_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value);
-
-// ---------------- build_literal_cstr ----------------
-// Builds a literal c-string value
-ir_value_t *build_literal_cstr_of_size(ir_builder_t *builder, weak_cstr_t value, length_t size);
-ir_value_t *build_literal_cstr_of_size_ex(ir_pool_t *pool, ir_type_map_t *type_map, weak_cstr_t value, length_t size);
-
-// ---------------- build_null_pointer ----------------
-// Builds a literal null pointer value
-ir_value_t *build_null_pointer(ir_pool_t *pool);
-
-// ---------------- build_null_pointer_of_type ----------------
-// Builds a literal null pointer value
-ir_value_t *build_null_pointer_of_type(ir_pool_t *pool, ir_type_t *type);
-
-// ---------------- build_literal_func_addr ----------------
-// Builds a literal function address
-ir_value_t *build_func_addr(ir_pool_t *pool, ir_type_t *result_type, func_id_t ir_func_id);
-ir_value_t *build_func_addr_by_name(ir_pool_t *pool, ir_type_t *result_type, const char *name);
-
-// ---------------- build_cast ----------------
-// Casts an IR value to an IR type
-// NOTE: const_cast_value_type is a valid VALUE_TYPE_* cast value
-// NOTE: nonconst_cast_instr_type is a valid INSTRUCTION_* cast value
-ir_value_t *build_cast(ir_builder_t *builder, unsigned int const_cast_value_type, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t *to);
-
-// ---------------- build_const_cast ----------------
-// Builds a constant cast value and returns it
-// NOTE: const_cast_value_type is a valid VALUE_TYPE_* cast value
-ir_value_t *build_const_cast(ir_pool_t *pool, unsigned int const_cast_value_type, ir_value_t *from, ir_type_t *to);
-
-// ---------------- build_nonconst_cast ----------------
-// Builds a non-constant cast instruction and returns
-// the casted result as an ir_value_t*
-// NOTE: nonconst_cast_instr_type is a valid INSTRUCTION_* cast value
-ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int nonconst_cast_instr_type, ir_value_t *from, ir_type_t* to);
-
-// ---------------- build_<cast> ----------------
-// Builds a specialized value cast
-#define build_bitcast(builder, from, to)     build_cast(builder, VALUE_TYPE_CONST_BITCAST, INSTRUCTION_BITCAST, from, to)
-#define build_zext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_ZEXT, INSTRUCTION_ZEXT, from, to)
-#define build_sext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_SEXT, INSTRUCTION_SEXT, from, to)
-#define build_trunc(builder, from, to)       build_cast(builder, VALUE_TYPE_CONST_TRUNC, INSTRUCTION_TRUNC, from, to)
-#define build_fext(builder, from, to)        build_cast(builder, VALUE_TYPE_CONST_FEXT, INSTRUCTION_FEXT, from, to)
-#define build_ftrunc(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_FTRUNC, INSTRUCTION_FTRUNC, from, to)
-#define build_inttoptr(builder, from, to)    build_cast(builder, VALUE_TYPE_CONST_INTTOPTR, INSTRUCTION_INTTOPTR, from, to)
-#define build_ptrtoint(builder, from, to)    build_cast(builder, VALUE_TYPE_CONST_PTRTOINT, INSTRUCTION_PTRTOINT, from, to)
-#define build_fptoui(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_FPTOUI, INSTRUCTION_FPTOUI, from, to)
-#define build_fptosi(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_FPTOSI, INSTRUCTION_FPTOSI, from, to)
-#define build_uitofp(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_UITOFP, INSTRUCTION_UITOFP, from, to)
-#define build_sitofp(builder, from, to)      build_cast(builder, VALUE_TYPE_CONST_SITOFP, INSTRUCTION_SITOFP, from, to)
-#define build_reinterpret(builder, from, to) build_cast(builder, VALUE_TYPE_CONST_REINTERPRET, INSTRUCTION_REINTERPRET, from, to)
-
-#define build_const_bitcast(pool, from, to)     build_const_cast(pool, VALUE_TYPE_CONST_BITCAST, from, to)
-#define build_const_zext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_ZEXT, from, to)
-#define build_const_sext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_SEXT, from, to)
-#define build_const_trunc(pool, from, to)       build_const_cast(pool, VALUE_TYPE_CONST_TRUNC, from, to)
-#define build_const_fext(pool, from, to)        build_const_cast(pool, VALUE_TYPE_CONST_FEXT, from, to)
-#define build_const_ftrunc(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_FTRUNC, from, to)
-#define build_const_inttoptr(pool, from, to)    build_const_cast(pool, VALUE_TYPE_CONST_INTTOPTR, from, to)
-#define build_const_ptrtoint(pool, from, to)    build_const_cast(pool, VALUE_TYPE_CONST_PTRTOINT, from, to)
-#define build_const_fptoui(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_FPTOUI, from, to)
-#define build_const_fptosi(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_FPTOSI, from, to)
-#define build_const_uitofp(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_UITOFP, from, to)
-#define build_const_sitofp(pool, from, to)      build_const_cast(pool, VALUE_TYPE_CONST_SITOFP, from, to)
-#define build_const_reinterpret(pool, from, to) build_const_cast(pool, VALUE_TYPE_CONST_REINTERPRET, from, to)
-
-// ---------------- build_alloc ----------------
-// Allocates space on the stack for a variable of a type
-// NOTE: This is only used for dynamic allocations w/ STACK_SAVE and STACK_RESTORE
-ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type);
-ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t *count);
-ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment);
-
-// ---------------- build_stack_restore ----------------
-// Saves the current position of the stack by returning the stack pointer
-ir_value_t *build_stack_save(ir_builder_t *builder);
-
-// ---------------- build_stack_restore ----------------
-// Restores the stack to a previous position
-void build_stack_restore(ir_builder_t *builder, ir_value_t *stack_pointer);
-
-// ---------------- build_math ----------------
-// Builds a basic math instruction
-ir_value_t *build_math(ir_builder_t *builder, unsigned int instr_id, ir_value_t *a, ir_value_t *b, ir_type_t *result);
-
-// ---------------- build_phi2 ----------------
-// Builds a PHI2 instruction
-ir_value_t *build_phi2(ir_builder_t *builder, ir_type_t *result_type, ir_value_t *a, ir_value_t *b, length_t landing_a_block_id, length_t landing_b_block_id);
-
-// ---------------- build_bool ----------------
-// Builds a literal boolean value
-ir_value_t *build_bool(ir_pool_t *pool, adept_bool value);
-
-// ---------------- build_rtti_relocation ----------------
-// Adds an RTTI index that requires resolution to the rtti_relocations array
-// NOTE: Despite its name, this function does not add any instructions,
-//       it simply marks an RTTI index to be filled in later
-errorcode_t build_rtti_relocation(ir_builder_t *builder, strong_cstr_t human_notation, adept_usize *id_ref, source_t source_on_failure);
-
-// ---------------- build_llvm_asm ----------------
-// Builds an inline assembly instruction
-void build_llvm_asm(ir_builder_t *builder, bool is_intel, weak_cstr_t assembly, weak_cstr_t constraints, ir_value_t **args, length_t arity, bool has_side_effects, bool is_stack_align);
-
-// ---------------- build_deinit_svars ----------------
-// Builds an instruction that will handle the deinitialization
-// of all static variables
-// NOTE: Most of the time, 'build_main_deinitialization'
-// should be used instead of this function, since
-// it covers all main-related deinitialization routines
-void build_deinit_svars(ir_builder_t *builder);
-
-// ---------------- build_unreachable ----------------
-// Builds an instruction that indicates an unreachable code path
-void build_unreachable(ir_builder_t *builder);
-
-// ---------------- build_main_deinitialization ----------------
-// Builds all main-related deinitialization routines
-void build_main_deinitialization(ir_builder_t *builder);
-
-// ---------------- prepare_for_new_label ----------------
-// Ensures there's enough room for another label
-void prepare_for_new_label(ir_builder_t *builder);
-
-// ---------------- open_scope ----------------
+// ---------------- ir_builder_open_scope ----------------
 // Opens a new scope
-void open_scope(ir_builder_t *builder);
+void ir_builder_open_scope(ir_builder_t *builder);
 
-// ---------------- close_scope ----------------
+// ---------------- ir_builder_close_scope ----------------
 // Closes the current scope
-void close_scope(ir_builder_t *builder);
+void ir_builder_close_scope(ir_builder_t *builder);
 
-// ---------------- push_loop_label ----------------
+// ---------------- ir_builder_push_loop_label ----------------
 // Pushes a block label off of the block label stack
-void push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id);
+void ir_builder_push_loop_label(ir_builder_t *builder, weak_cstr_t label, length_t break_basicblock_id, length_t continue_basicblock_id);
 
-// ---------------- pop_loop_label ----------------
+// ---------------- ir_builder_pop_loop_label ----------------
 // Pops a block label off of the block label stack
-void pop_loop_label(ir_builder_t *builder);
+void ir_builder_pop_loop_label(ir_builder_t *builder);
 
-// ---------------- add_variable ----------------
+// ---------------- ir_builder_add_variable ----------------
 // Adds a variable to the current bridge_scope_t
 // Returns a temporary pointer to the constructed variable
-bridge_var_t *add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
+bridge_var_t *ir_builder_add_variable(ir_builder_t *builder, weak_cstr_t name, ast_type_t *ast_type, ir_type_t *ir_type, trait_t traits);
 
 // ---------------- handle_deference_for_variables ----------------
 // Handles deference for variables in a variable list
@@ -452,7 +310,7 @@ typedef struct {
     length_t basicblocks_length;
     length_t funcs_length;
     length_t job_list_length;
-} ir_instrs_snapshot_t ;
+} ir_instrs_snapshot_t;
 
 ir_instrs_snapshot_t ir_instrs_snapshot_capture(ir_builder_t *builder);
 void ir_instrs_snapshot_restore(ir_builder_t *builder, ir_instrs_snapshot_t *snapshot);
