@@ -755,7 +755,7 @@ errorcode_t ir_gen_do_construct(
     // so that if this call ends up to be a no-op,
     // we can reset back as if nothing happened
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
     ir_value_t **raw_arg_values;
     ast_type_t *raw_arg_types;
@@ -810,7 +810,7 @@ failure:
     ast_types_free(arg_types, arity);
     free(arg_types);
     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-    instructions_snapshot_restore(builder, &instructions_snapshot);
+    ir_instrs_snapshot_restore(builder, &instrs_snapshot);
     return FAILURE;
 }
 

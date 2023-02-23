@@ -39,7 +39,7 @@ set(core_source_files
 	src/BRIDGE/bridge.c src/BRIDGE/rtti_collector.c src/BRIDGEIR/rtti_table.c src/BRIDGEIR/rtti_table_entry.c src/BRIDGEIR/rtti.c src/DRVR/compiler.c
 	src/DRVR/config.c src/DRVR/object.c src/INFER/infer.c
 	src/IR/ir_pool.c src/IR/ir_proc_map.c src/IR/ir_type_map.c src/IR/ir_proc_query.c src/IR/ir_type.c src/IR/ir_type_spec.c src/IR/ir_value_str.c
-	src/IR/ir.c src/IR/ir_dump.c src/IR/ir_func_endpoint.c src/IR/ir_lowering.c src/IR/ir_module.c
+	src/IR/ir.c src/IR/ir_dump.c src/IR/ir_func_endpoint.c src/IR/ir_lowering.c src/IR/ir_module.c src/IRGEN/ir_autogen.c
 	src/IRGEN/ir_builder.c src/IRGEN/ir_cache.c src/IRGEN/ir_gen_args.c src/IRGEN/ir_gen_check_prereq.c
 	src/IRGEN/ir_gen_expr.c src/IRGEN/ir_gen_find_sf.c src/IRGEN/ir_gen_find.c
 	src/IRGEN/ir_gen_polymorphable.c src/IRGEN/ir_gen_qualifiers.c src/IRGEN/ir_gen_rtti.c src/IRGEN/ir_gen_stmt.c src/IRGEN/ir_gen_type.c

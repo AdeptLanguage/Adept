@@ -21,6 +21,7 @@
 #include "IR/ir_pool.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
+#include "IRGEN/ir_autogen.h"
 #include "IRGEN/ir_builder.h"
 #include "IRGEN/ir_cache.h"
 #include "IRGEN/ir_gen.h"
@@ -984,13 +985,13 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         ir_builder_t *defer_builder = traits & BRIDGE_VAR_STATIC ? builder->object->ir_module.deinit_builder : builder;
 
         ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(defer_builder->pool);
-        instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+        ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
         ir_value_t *ir_variable_value = build_varptr(defer_builder, ir_type_make_pointer_to(defer_builder->pool, variable->ir_type), variable);
         errorcode_t failed = handle_single_deference(defer_builder, variable->ast_type, ir_variable_value, variable->source);
 
         if(failed){
-            instructions_snapshot_restore(builder, &instructions_snapshot);
+            ir_instrs_snapshot_restore(builder, &instrs_snapshot);
             ir_pool_snapshot_restore(defer_builder->pool, &pool_snapshot);
 
             // Real failure if a compile time error occurred
@@ -1028,14 +1029,14 @@ errorcode_t handle_deference_for_globals(ir_builder_t *builder){
         }
 
         // Capture snapshot of current instruction building state (for if we need to revert)
-        instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+        ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
         // DANGEROUS: Assuming i is the same as the global variable id
         ir_value_t *ir_value = build_gvarptr(builder, ir_type, i);
         errorcode_t failed = handle_single_deference(builder, &global->type, ir_value, global->source);
 
         if(failed){
-            instructions_snapshot_restore(builder, &instructions_snapshot);
+            ir_instrs_snapshot_restore(builder, &instrs_snapshot);
 
             // Revert recent pool allocations
             ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
@@ -1064,7 +1065,7 @@ static errorcode_t visit_fixed_array_items(
 
     // Remember current state of instruction building in case we have to revert back
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
     // Convert from '*n T' to '*T'
     mutable_value = build_array_access(builder, mutable_value, build_literal_usize(builder->pool, 0), ast_type->source);
@@ -1080,7 +1081,7 @@ static errorcode_t visit_fixed_array_items(
         errorcode_t errorcode = handle_single(builder, &temporary_rest_of_type, mutable_item_value, from_source);
 
         if(errorcode){
-            instructions_snapshot_restore(builder, &instructions_snapshot);
+            ir_instrs_snapshot_restore(builder, &instrs_snapshot);
             ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
             return errorcode;
         }
@@ -1152,131 +1153,9 @@ errorcode_t handle_children_deference(ir_builder_t *builder){
     }
 
     switch(concrete_elem->id){
-    case AST_ELEM_BASE: {
-            weak_cstr_t struct_name = ((ast_elem_base_t*) concrete_elem)->base;
-
-            // Attempt to call __defer__ on members
-            ast_composite_t *composite = ast_composite_find_exact(&builder->object->ast, struct_name);
-
-            // Don't bother with structs that don't exist
-            if(composite == NULL) return FAILURE;
-
-            // Don't handle children for complex composite types
-            if(!ast_layout_is_simple_struct(&composite->layout)) return SUCCESS;
-
-            ast_layout_skeleton_t *skeleton = &composite->layout.skeleton;
-            length_t field_count = ast_simple_field_map_get_count(&composite->layout.field_map);
-
-            for(length_t field_i = 0; field_i != field_count; field_i++){
-                ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, field_i);
-
-                // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
-                
-                ir_type_t *ir_field_type, *this_ir_type;
-                if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type)
-                ){
-                    return ALT_FAILURE;
-                }
-
-                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
-
-                ir_value_t *ir_field_value = build_member(builder, this_ir_value, field_i, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
-                errorcode_t failed = handle_single_deference(builder, ast_field_type, ir_field_value, composite->source);
-
-                if(failed){
-                    // Remove VARPTR, LOAD, and MEMBER instruction
-                    builder->current_block->instructions.length -= 3;
-
-                    // Revert recent pool allocations
-                    ir_pool_snapshot_restore(builder->pool, &snapshot);
-
-                    // Propagate alternate failure cause
-                    if(failed == ALT_FAILURE) return ALT_FAILURE;
-                }
-            }
-        }
-        break;
-    case AST_ELEM_GENERIC_BASE: {
-            ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) concrete_elem;
-            weak_cstr_t template_name = generic_base->name;
-
-            // Attempt to call __defer__ on members
-            ast_poly_composite_t *template = ast_poly_composite_find_exact(&builder->object->ast, template_name);
-
-            // Don't bother with polymorphic structs that don't exist
-            if(template == NULL) return FAILURE;
-
-            // Don't handle children for complex composite types
-            if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
-
-            // Substitution Catalog
-            ast_poly_catalog_t catalog;
-            ast_poly_catalog_init(&catalog);
-
-            if(template->generics_length != generic_base->generics_length){
-                internalerrorprintf("handle_children_dereference() - Polymorphic struct '%s' type parameter length mismatch when generating child deference!\n", generic_base->name);
-                ast_poly_catalog_free(&catalog);
-                return ALT_FAILURE;
-            }
-
-            for(length_t i = 0; i != template->generics_length; i++){
-                ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
-            }
-
-            ast_layout_skeleton_t *skeleton = &template->layout.skeleton;
-            length_t field_count = ast_simple_field_map_get_count(&template->layout.field_map);
-
-            rtti_collector_t *rtti_collector = builder->object->ir_module.rtti_collector;
-
-            for(length_t f = 0; f != field_count; f++){
-                ast_type_t *ast_unresolved_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
-                ast_type_t ast_field_type;
-
-                if(ast_resolve_type_polymorphs(builder->compiler, rtti_collector, &catalog, ast_unresolved_field_type, &ast_field_type)){
-                    ast_poly_catalog_free(&catalog);
-                    return ALT_FAILURE;
-                }
-
-                // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
-                
-                ir_type_t *ir_field_type, *this_ir_type;
-                if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, this_ast_type, &this_ir_type)
-                ){
-                    ast_poly_catalog_free(&catalog);
-                    ast_type_free(&ast_field_type);
-                    return ALT_FAILURE;
-                }
-
-                ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, this_ir_type), 0), this_ast_type->source);
-
-                ir_value_t *ir_field_value = build_member(builder, this_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), this_ast_type->source);
-                errorcode_t failed = handle_single_deference(builder, &ast_field_type, ir_field_value, template->source);
-                ast_type_free(&ast_field_type);
-
-                if(failed){
-                    // Remove VARPTR, LOAD, and MEMBER instruction
-                    builder->current_block->instructions.length -= 3;
-
-                    // Revert recent pool allocations
-                    ir_pool_snapshot_restore(builder->pool, &snapshot);
-
-                    // Propagate alternate failure cause
-                    if(failed == ALT_FAILURE){
-                        ast_poly_catalog_free(&catalog);
-                        return ALT_FAILURE;
-                    }
-                }
-            }
-
-            ast_poly_catalog_free(&catalog);
-        }
-        break;
+    case AST_ELEM_BASE:
+    case AST_ELEM_GENERIC_BASE:
+        return ir_autogen_for_children_of_struct_like(builder, IR_AUTOGEN_ACTION_DEFER,  concrete_elem, this_ast_type); 
     default:
         return FAILURE;
     }
@@ -1426,142 +1305,9 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
 
     // Generate code for __pass__ function
     switch(first_elem->id){
-    case AST_ELEM_BASE: {
-            weak_cstr_t struct_name = ((ast_elem_base_t*) first_elem)->base;
-
-            // Attempt to call __pass__ on members
-            ast_composite_t *composite = ast_composite_find_exact(&builder->object->ast, struct_name);
-
-            // Don't bother with structs that don't exist
-            if(composite == NULL) return FAILURE;
-
-            // Don't handle children for complex composite types
-            if(!ast_layout_is_simple_struct(&composite->layout)) return SUCCESS;
-
-            ast_layout_skeleton_t *skeleton = &composite->layout.skeleton;
-            length_t field_count = ast_simple_field_map_get_count(&composite->layout.field_map);
-
-            for(length_t f = 0; f != field_count; f++){
-                ast_type_t *ast_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
-
-                // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
-                
-                ir_type_t *ir_field_type, *passed_ir_type;
-                if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type)
-                ){
-                    return ALT_FAILURE;
-                }
-
-                if(ir_field_type->kind != TYPE_KIND_STRUCTURE && ir_field_type->kind != TYPE_KIND_FIXED_ARRAY){
-                    ir_pool_snapshot_restore(builder->pool, &snapshot);
-                    continue;
-                }
-
-                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
-
-                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), ast_field_type->source);
-                errorcode_t failed = handle_single_pass(builder, ast_field_type, ir_field_reference, NULL_SOURCE);
-
-                if(failed){
-                    // Remove VARPTR and MEMBER instruction
-                    builder->current_block->instructions.length -= 2;
-
-                    // Revert recent pool allocations
-                    ir_pool_snapshot_restore(builder->pool, &snapshot);
-
-                    // Propagate alternate failure cause
-                    if(failed == ALT_FAILURE) return ALT_FAILURE;
-                }
-            }
-        }
-        break;
-    case AST_ELEM_GENERIC_BASE: {
-            ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) first_elem;
-            weak_cstr_t template_name = generic_base->name;
-
-            // Attempt to call __pass__ on members
-            ast_poly_composite_t *template = ast_poly_composite_find_exact(&builder->object->ast, template_name);
-
-            // Don't bother with polymorphic structs that don't exist
-            if(template == NULL) return FAILURE;
-
-            // Don't handle children for complex composite types
-            if(!ast_layout_is_simple_struct(&template->layout)) return SUCCESS;
-
-            // Substitution Catalog
-            ast_poly_catalog_t catalog;
-            ast_poly_catalog_init(&catalog);
-
-            if(template->generics_length != generic_base->generics_length){
-                internalerrorprintf("handle_children_pass() - Polymorphic struct '%s' type parameter length mismatch when generating child passing!\n", generic_base->name);
-                ast_poly_catalog_free(&catalog);
-                return ALT_FAILURE;
-            }
-
-            for(length_t i = 0; i != template->generics_length; i++){
-                ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
-            }
-
-            ast_layout_skeleton_t *skeleton = &template->layout.skeleton;
-            length_t field_count = ast_simple_field_map_get_count(&template->layout.field_map);
-
-            rtti_collector_t *rtti_collector = builder->object->ir_module.rtti_collector;
-
-            for(length_t f = 0; f != field_count; f++){
-                ast_type_t *ast_unresolved_field_type = ast_layout_skeleton_get_type_at_index(skeleton, f);
-                ast_type_t ast_field_type;
-
-                if(ast_resolve_type_polymorphs(builder->compiler, rtti_collector, &catalog, ast_unresolved_field_type, &ast_field_type)){
-                    ast_poly_catalog_free(&catalog);
-                    return ALT_FAILURE;
-                }
-
-                // Capture snapshot for if we need to backtrack
-                ir_pool_snapshot_t snapshot = ir_pool_snapshot_capture(builder->pool);
-
-                ir_type_t *ir_field_type, *passed_ir_type;
-                if(
-                    ir_gen_resolve_type(builder->compiler, builder->object, &ast_field_type, &ir_field_type) ||
-                    ir_gen_resolve_type(builder->compiler, builder->object, passed_ast_type, &passed_ir_type)
-                ){
-                    ast_poly_catalog_free(&catalog);
-                    ast_type_free(&ast_field_type);
-                    return ALT_FAILURE;
-                }
-
-                if(ir_field_type->kind != TYPE_KIND_STRUCTURE && ir_field_type->kind != TYPE_KIND_FIXED_ARRAY){
-                    ir_pool_snapshot_restore(builder->pool, &snapshot);
-                    ast_type_free(&ast_field_type);
-                    continue;
-                }
-
-                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
-
-                ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, f, ir_type_make_pointer_to(builder->pool, ir_field_type), ast_field_type.source);
-                errorcode_t failed = handle_single_pass(builder, &ast_field_type, ir_field_reference, NULL_SOURCE);
-                ast_type_free(&ast_field_type);
-
-                if(failed){
-                    // Remove VARPTR, LOAD, and MEMBER instruction
-                    builder->current_block->instructions.length -= 3;
-
-                    // Revert recent pool allocations
-                    ir_pool_snapshot_restore(builder->pool, &snapshot);
-
-                    // Propagate alternate failure cause
-                    if(failed == ALT_FAILURE){
-                        ast_poly_catalog_free(&catalog);
-                        return ALT_FAILURE;
-                    }
-                }
-            }
-
-            ast_poly_catalog_free(&catalog);
-        }
-        break;
+    case AST_ELEM_BASE:
+    case AST_ELEM_GENERIC_BASE:
+        return ir_autogen_for_children_of_struct_like(builder, IR_AUTOGEN_ACTION_PASS, first_elem, passed_ast_type);
     case AST_ELEM_FIXED_ARRAY: {
             if(passed_ast_type->elements_length < 2){
                 compiler_panic(builder->compiler, passed_ast_type->source, "INTERNAL ERROR: AST_ELEM_FIXED_ARRAY of handle_children_pass only got one element in type");
@@ -1654,7 +1400,7 @@ errorcode_t handle_assign_management(
     errorcode_t errorcode;
 
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
     errorcode = ir_gen_find_assign_func(builder->compiler, builder->object, destination_ast_type, ir_builder_instantiation_depth(builder), &result);
     if(errorcode) goto handle_errorcode;
@@ -1701,7 +1447,7 @@ errorcode_t handle_assign_management(
     errorcode = FAILURE;
 
 handle_errorcode:
-    instructions_snapshot_restore(builder, &instructions_snapshot);
+    ir_instrs_snapshot_restore(builder, &instrs_snapshot);
     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
     return errorcode;
 }
@@ -2613,7 +2359,7 @@ errorcode_t ir_gen_actualize_unknown_plural_enum(ir_builder_t *builder, const ch
     ast_enum_t *enum_definition = &ast->enums[enum_index];
 
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instrs_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
     length_t count = kinds->length;
     ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * count);
     ir_type_t *item_type = builder->object->ir_module.common.ir_usize;
@@ -2635,13 +2381,13 @@ errorcode_t ir_gen_actualize_unknown_plural_enum(ir_builder_t *builder, const ch
 
 failure:
     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-    instructions_snapshot_restore(builder, &instrs_snapshot);
+    ir_instrs_snapshot_restore(builder, &instrs_snapshot);
     return FAILURE;
 }
 
 errorcode_t ir_gen_actualize_unknown_plural_enum_to_anonymous(ir_builder_t *builder, const strong_cstr_list_t *to_kinds, const strong_cstr_list_t *from_kinds, ir_value_t **ir_value, source_t source){
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instrs_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
     length_t count = from_kinds->length;
     ir_value_t **values = ir_pool_alloc(builder->pool, sizeof(ir_value_t*) * count);
     ir_type_t *item_type = builder->object->ir_module.common.ir_usize;
@@ -2663,7 +2409,7 @@ errorcode_t ir_gen_actualize_unknown_plural_enum_to_anonymous(ir_builder_t *buil
 
 failure:
     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-    instructions_snapshot_restore(builder, &instrs_snapshot);
+    ir_instrs_snapshot_restore(builder, &instrs_snapshot);
     return FAILURE;
 }
 
@@ -2671,8 +2417,8 @@ length_t ir_builder_instantiation_depth(ir_builder_t *builder){
     return builder->object->ast.funcs[builder->ast_func_id].instantiation_depth;
 }
 
-instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder){
-    return (instructions_snapshot_t){
+ir_instrs_snapshot_t ir_instrs_snapshot_capture(ir_builder_t *builder){
+    return (ir_instrs_snapshot_t ){
         .current_block_id = builder->current_block_id,
         .current_basicblock_instructions_length = builder->current_block->instructions.length,
         .basicblocks_length = builder->basicblocks.length,
@@ -2681,7 +2427,7 @@ instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder){
     };
 }
 
-void instructions_snapshot_restore(ir_builder_t *builder, instructions_snapshot_t *snapshot){
+void ir_instrs_snapshot_restore(ir_builder_t *builder, ir_instrs_snapshot_t *snapshot){
     builder->current_block_id = snapshot->current_block_id;
     builder->current_block = &builder->basicblocks.blocks[builder->current_block_id];
     builder->current_block->instructions.length = snapshot->current_basicblock_instructions_length;

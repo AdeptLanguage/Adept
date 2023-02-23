@@ -492,9 +492,7 @@ errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_ty
         ast_poly_catalog_init(&poly_catalog);
 
         // Mention type resolution rules to polymorphic type catalog
-        for(length_t i = 0; i != maybe_weak_generics_length; i++){
-            ast_poly_catalog_add_type(&poly_catalog, template->generics[i], &maybe_weak_generics[i]);
-        }
+        ast_poly_catalog_add_types(&poly_catalog, template->generics, maybe_weak_generics, maybe_weak_generics_length);
     }
 
     out_info->rtti_types = rtti_types;

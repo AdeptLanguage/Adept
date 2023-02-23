@@ -20,13 +20,19 @@ void ast_poly_catalog_free(ast_poly_catalog_t *catalog){
     free(catalog->counts.counts);
 }
 
-void ast_poly_catalog_add_type(ast_poly_catalog_t *catalog, weak_cstr_t name, const ast_type_t *binding){
+void ast_poly_catalog_add_type(ast_poly_catalog_t *catalog, weak_cstr_t name, ast_type_t *binding){
     ast_poly_catalog_types_append(&catalog->types, (
         (ast_poly_catalog_type_t){
             .name = name,
             .binding = ast_type_clone(binding),
         }
     ));
+}
+
+void ast_poly_catalog_add_types(ast_poly_catalog_t *catalog, weak_cstr_t *names, ast_type_t *bindings, length_t length){
+    for(length_t i = 0; i != length; i++){
+        ast_poly_catalog_add_type(catalog, names[i], &bindings[i]);
+    }
 }
 
 void ast_poly_catalog_add_count(ast_poly_catalog_t *catalog, weak_cstr_t name, length_t binding){

@@ -243,10 +243,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
 
             ast_poly_catalog_t catalog;
             ast_poly_catalog_init(&catalog);
-
-            for(length_t i = 0; i != template->generics_length; i++){
-                ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
-            }
+            ast_poly_catalog_add_types(&catalog, template->generics, generic_base->generics, template->generics_length);
 
             ast_layout_bone_t layout_as_bone = ast_layout_as_bone(&template->layout);
             ir_type_t *created_type = ast_layout_bone_to_ir_type(compiler, object, &layout_as_bone, &catalog);

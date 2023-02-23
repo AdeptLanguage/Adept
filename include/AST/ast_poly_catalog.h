@@ -57,7 +57,11 @@ void ast_poly_catalog_free(ast_poly_catalog_t *catalog);
 
 // ---------------- ast_poly_catalog_add_type ----------------
 // Adds a type binding to a polymorphic catalog
-void ast_poly_catalog_add_type(ast_poly_catalog_t *catalog, weak_cstr_t name, const ast_type_t *binding);
+void ast_poly_catalog_add_type(ast_poly_catalog_t *catalog, weak_cstr_t name, ast_type_t *binding);
+
+// ---------------- ast_poly_catalog_add_types ----------------
+// Adds a collection of type bindings to a polymorphic catalog
+void ast_poly_catalog_add_types(ast_poly_catalog_t *catalog, weak_cstr_t *names, ast_type_t *bindings, length_t length);
 
 // ---------------- ast_poly_catalog_add_count ----------------
 // Adds a count binding to polymorphic catalog

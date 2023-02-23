@@ -552,7 +552,7 @@ errorcode_t ir_gen_actualize_unknown_plural_enum_to_anonymous(ir_builder_t *buil
 // Gets the current instantiation depth of a builder
 length_t ir_builder_instantiation_depth(ir_builder_t *builder);
 
-// ---------------- instructions_snapshot_t ----------------
+// ---------------- ir_instrs_snapshot_t ----------------
 // Snapshot used to easily reset the forward generation of IR instructions
 typedef struct {
     length_t current_block_id;
@@ -560,9 +560,9 @@ typedef struct {
     length_t basicblocks_length;
     length_t funcs_length;
     length_t job_list_length;
-} instructions_snapshot_t;
+} ir_instrs_snapshot_t ;
 
-instructions_snapshot_t instructions_snapshot_capture(ir_builder_t *builder);
-void instructions_snapshot_restore(ir_builder_t *builder, instructions_snapshot_t *snapshot);
+ir_instrs_snapshot_t ir_instrs_snapshot_capture(ir_builder_t *builder);
+void ir_instrs_snapshot_restore(ir_builder_t *builder, ir_instrs_snapshot_t *snapshot);
 
 #endif // _ISAAC_IR_BUILDER_H

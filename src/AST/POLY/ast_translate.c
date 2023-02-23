@@ -63,10 +63,7 @@ errorcode_t ast_translate_poly_parent_class(
     // Create polymorph catalog
     ast_poly_catalog_t catalog;
     ast_poly_catalog_init(&catalog);
-
-    for(length_t i = 0; i != generics_length; i++){
-        ast_poly_catalog_add_type(&catalog, generics[i], &concrete_generic_base->generics[i]);
-    }
+    ast_poly_catalog_add_types(&catalog, generics, concrete_generic_base->generics, generics_length);
 
     // Resolve polymorphs in the stated parent type
     errorcode_t errorcode = ast_resolve_type_polymorphs(compiler, NULL, &catalog, poly_extended_type, out_type);

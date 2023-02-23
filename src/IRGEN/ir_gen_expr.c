@@ -453,7 +453,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     // so that if this call ends up to be a no-op,
     // we can reset back as if nothing happened
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
     ir_value_t **arg_values;
     ast_type_t *arg_types;
@@ -522,7 +522,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     if(error == SUCCESS){
         if(!result.has){
             // This function call is a no-op
-            instructions_snapshot_restore(builder, &instructions_snapshot);
+            ir_instrs_snapshot_restore(builder, &instrs_snapshot);
             ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
 
             if(!expr->is_tentative){
@@ -1115,9 +1115,7 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
         }
 
         // Add each entry given for the generic base structure type to the list of known polymorphic type substitutions
-        for(length_t i = 0; i != template->generics_length; i++){
-            ast_poly_catalog_add_type(&catalog, template->generics[i], &generic_base->generics[i]);
-        }
+        ast_poly_catalog_add_types(&catalog, template->generics, generic_base->generics, template->generics_length);
 
         // Get the AST field type of the target field by index and resolve any polymorphs
         ast_type_t field_type;
@@ -1740,7 +1738,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
     // so that if this call ends up to be a no-op,
     // we can reset back as if nothing happened
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instructions_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
     // Setup for generating method call
     ast_t *ast = &builder->object->ast;
@@ -1835,7 +1833,7 @@ errorcode_t ir_gen_expr_call_method(ir_builder_t *builder, ast_expr_call_method_
 
     if(!result.has){
         // This method call is a no-op
-        instructions_snapshot_restore(builder, &instructions_snapshot);
+        ir_instrs_snapshot_restore(builder, &instrs_snapshot);
         ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
         ast_types_free_fully(arg_types, arg_arity);
 
@@ -2817,7 +2815,7 @@ errorcode_t ir_gen_resolve_ternary_conflict_try_merge_unknown_enums(
     // Attempt combination into generic plural enum
 
     ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(builder->pool);
-    instructions_snapshot_t instrs_snapshot = instructions_snapshot_capture(builder);
+    ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
     strong_cstr_list_t merged_kinds = {0};
     const bool a_suits = ast_type_unknown_enum_like_extract_kinds(a_type, &merged_kinds);
@@ -2859,7 +2857,7 @@ errorcode_t ir_gen_resolve_ternary_conflict_try_merge_unknown_enums(
 
 failure:
     ir_pool_snapshot_restore(builder->pool, &pool_snapshot);
-    instructions_snapshot_restore(builder, &instrs_snapshot);
+    ir_instrs_snapshot_restore(builder, &instrs_snapshot);
     return FAILURE;
 }
 

@@ -61,6 +61,7 @@ MEDIUM-PRIORITY:
 * add better backtracking error messages for when cannot instantiate polymorphic type e.g. for `value <NotExistentType> Optional`
 * anonymous generic compile-time sum types e.g. ubyte | String
 * add ability to use polymorphic parent class type in `extends` polymorphic prerequisite
+* fix bug with __defer__ calls for fixed arrays are not being generated in the automatic implementation of __defer__ inside of structs
 
 LOW-PRIORITY:
 * Finish 'Any'

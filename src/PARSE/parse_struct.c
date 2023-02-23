@@ -445,10 +445,7 @@ static errorcode_t resolve_polymorphs_in_integration(
 
     ast_poly_catalog_t catalog;
     ast_poly_catalog_init(&catalog);
-
-    for(length_t i = 0; i != generics_length; i++){
-        ast_poly_catalog_add_type(&catalog, generics[i], &generic_base->generics[i]);
-    }
+    ast_poly_catalog_add_types(&catalog, generics, generic_base->generics, generics_length);
 
     ast_layout_bone_t root = ast_layout_as_bone(&layout);
 
