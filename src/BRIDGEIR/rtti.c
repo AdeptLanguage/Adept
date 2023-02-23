@@ -9,6 +9,7 @@
 #include "IR/ir_module.h"
 #include "IR/ir_type.h"
 #include "IR/ir_value.h"
+#include "IRGEN/ir_build.h"
 #include "IRGEN/ir_builder.h"
 #include "UTIL/color.h"
 #include "UTIL/datatypes.h"
