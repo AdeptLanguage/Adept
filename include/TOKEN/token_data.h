@@ -4,7 +4,7 @@
 #ifndef _ISAAC_TOKEN_DATA_H
 #define _ISAAC_TOKEN_DATA_H
 
-#define TOKEN_ITERATION_VERSION 0x639E2CA8
+#define TOKEN_ITERATION_VERSION 0x63FCD5C0
 
 #define TOKEN_NONE                  0x00000000
 #define TOKEN_WORD                  0x00000001
@@ -169,23 +169,5 @@ extern const char global_token_extra_format_table[];
 
 extern const char *global_token_keywords_list[];
 extern unsigned long long global_token_keywords_list_length;
-
-// DEPRECATED: Pre-lexed files will probably be removed in the future.
-// Used in place of common sequences in packages.
-// Not recognized by parser.
-#define TOKEN_PKG_MIN         TOKEN_PKG_WBOOL
-#define TOKEN_PKG_WBOOL       0x0000000D0
-#define TOKEN_PKG_WBYTE       0x0000000D1
-#define TOKEN_PKG_WDOUBLE     0x0000000D2
-#define TOKEN_PKG_WFLOAT      0x0000000D3
-#define TOKEN_PKG_WINT        0x0000000D4
-#define TOKEN_PKG_WLONG       0x0000000D5
-#define TOKEN_PKG_WSHORT      0x0000000D6
-#define TOKEN_PKG_WUBYTE      0x0000000D7
-#define TOKEN_PKG_WUINT       0x0000000D8
-#define TOKEN_PKG_WULONG      0x0000000D9
-#define TOKEN_PKG_WUSHORT     0x0000000DA
-#define TOKEN_PKG_WUSIZE      0x0000000DB
-#define TOKEN_PKG_MAX         TOKEN_PKG_WUSIZE
 
 #endif // _ISAAC_TOKEN_DATA_H

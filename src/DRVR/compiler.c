@@ -30,7 +30,6 @@
 #include "DRVR/config.h"
 #include "DRVR/object.h"
 #include "LEX/lex.h"
-#include "LEX/pkg.h"
 #include "LEX/token.h"
 #include "PARSE/parse.h"
 #include "UTIL/color.h"
@@ -679,7 +678,6 @@ void show_help(bool show_advanced_options){
     printf("    -n FILENAME       Output to FILENAME (relative to file)\n");
 
     if(show_advanced_options){
-        printf("    -p, --package     Output a package [OBSOLETE]\n");
         printf("    -d                Include debugging symbols [UNIMPLEMENTED]\n");
     }
 
@@ -824,30 +822,18 @@ void compiler_add_user_search_path(compiler_t *compiler, weak_cstr_t search_path
 }
 
 errorcode_t compiler_create_package(compiler_t *compiler, object_t *object){
-    char *package_filename;
-
-    if(compiler->output_filename != NULL){
-        filename_auto_ext(&compiler->output_filename, compiler->cross_compile_for, FILENAME_AUTO_PACKAGE);
-        package_filename = compiler->output_filename;
-    } else {
-        package_filename = filename_ext(object->filename, "dep");
-    }
-
-    if(pkg_write(package_filename, &object->tokenlist)){
-        object_panic_plain(object, "Failed to export to package");
-        if(compiler->output_filename == NULL) free(package_filename);
-        return FAILURE;
-    }
-
-    if(compiler->output_filename == NULL) free(package_filename);
-    return SUCCESS;
+    (void) compiler;
+    
+    object_panic_plain(object, "Exporting compressed package is no longer supported");
+    return FAILURE;
 }
 
 errorcode_t compiler_read_file(compiler_t *compiler, object_t *object){
     length_t filename_length = strlen(object->filename);
 
     if(filename_length >= 4 && streq(&object->filename[filename_length - 4], ".dep")){
-        return pkg_read(object);
+        object_panic_plain(object, "Importing compressed package is no longer supported");
+        return FAILURE;
     } else {
         return lex(compiler, object);
     }

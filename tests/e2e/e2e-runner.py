@@ -224,8 +224,6 @@ def run_all_tests():
         lambda output: b"123456789\n" in output
     )
     test("order", [executable, join(src_dir, "order/main.adept")], compiles)
-    test("package", [executable, join(src_dir, "package/main.adept")], compiles)
-    test("package_use", [executable, join(src_dir, "package_use/main.adept")], compiles)
     test("pass_func", [executable, join(src_dir, "pass_func/main.adept")], compiles)
     test("permissive_blocks", [executable, join(src_dir, "permissive_blocks/main.adept")], compiles)
     test("poly_default_args", [executable, join(src_dir, "poly_default_args/main.adept")], compiles)

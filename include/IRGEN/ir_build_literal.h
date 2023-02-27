@@ -24,11 +24,11 @@
 #include "UTIL/trait.h"
 
 // ---------------- build_struct_literal ----------------
-// Builds a static struct
+// Builds a struct literal
 ir_value_t *build_struct_literal(ir_module_t *module, ir_type_t *type, ir_value_t **values, length_t length, bool make_mutable);
 
 // ---------------- build_const_struct_literal ----------------
-// Builds a struct construction
+// Builds a const struct literal
 ir_value_t *build_const_struct_literal(ir_pool_t *pool, ir_type_t *type, ir_value_t **values, length_t length);
 
 // ---------------- build_offsetof ----------------
@@ -50,7 +50,7 @@ ir_value_t *build_const_alignof(ir_pool_t *pool, ir_type_t *usize_type, ir_type_
 ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b);
 
 // ---------------- build_array_literal ----------------
-// Builds a static array
+// Builds an array literal
 ir_value_t *build_array_literal(ir_pool_t *pool, ir_type_t *item_type, ir_value_t **values, length_t length);
 
 // ---------------- build_literal_int ----------------
