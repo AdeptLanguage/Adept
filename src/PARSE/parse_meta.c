@@ -24,6 +24,81 @@
 #include "UTIL/string.h"
 #include "UTIL/util.h"
 
+static const char *standard_directives[] = {
+    "default", "define", "done", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
+    "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning"
+};
+
+enum {
+    META_DIRECTIVE_INVALID = -1,
+    META_DIRECTIVE_DEFAULT,
+    META_DIRECTIVE_DEFINE,
+    META_DIRECTIVE_DONE,
+    META_DIRECTIVE_ELIF,
+    META_DIRECTIVE_ELSE,
+    META_DIRECTIVE_END,
+    META_DIRECTIVE_ERROR,
+    META_DIRECTIVE_GET,
+    META_DIRECTIVE_HALT,
+    META_DIRECTIVE_IF,
+    META_DIRECTIVE_IMPORT,
+    META_DIRECTIVE_INPUT,
+    META_DIRECTIVE_PLACE,
+    META_DIRECTIVE_PLACE_ERROR,
+    META_DIRECTIVE_PLACE_WARNING,
+    META_DIRECTIVE_PRAGMA,
+    META_DIRECTIVE_PRINT,
+    META_DIRECTIVE_PRINT_ERROR,
+    META_DIRECTIVE_PRINT_WARNING,
+    META_DIRECTIVE_RUNTIME_RESOURCE,
+    META_DIRECTIVE_SET,
+    META_DIRECTIVE_UNLESS,
+    META_DIRECTIVE_WARNING,
+};
+
+static errorcode_t skip_until_matching_end(parse_ctx_t *ctx, bool allow_else, source_t source_on_failure){
+    length_t *i = ctx->i;
+    tokenlist_t *tokenlist = ctx->tokenlist;
+    length_t ends_needed = 1;
+
+    while(++(*i) != tokenlist->length && ends_needed != 0){
+        if(parse_ctx_peek(ctx) != TOKEN_META) continue;
+
+        weak_cstr_t pass_over_directive_name = (weak_cstr_t) parse_ctx_peek_data(ctx);
+        maybe_index_t passover_meta_id = binary_string_search_const(standard_directives, sizeof standard_directives / sizeof(weak_cstr_t), pass_over_directive_name);
+
+        switch(passover_meta_id){
+        case META_DIRECTIVE_IF:
+        case META_DIRECTIVE_UNLESS:
+            ends_needed++;
+            break;
+        case META_DIRECTIVE_END:
+            ends_needed--;
+            break;
+        case META_DIRECTIVE_ELSE:
+            // Raise an error if we are passing over an `#else` at the same level as the origin `#else` block
+            if(!allow_else && ends_needed == 1){
+                compiler_panic(ctx->compiler, parse_ctx_peek_source(ctx), "Unexpected '#else' meta directive");
+                return FAILURE;
+            }
+            break;
+        case META_DIRECTIVE_INVALID:
+            // That meta directive that we are passing over isn't recognized
+            compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Unrecognized meta directive #%s", pass_over_directive_name);
+            return FAILURE;
+        default:;
+            // Recognized meta directive that we don't care about
+        }
+    }
+
+    if(parse_ctx_at_end(ctx)){
+        compiler_panic(ctx->compiler, source_on_failure, "Expected '#end' meta directive before termination");
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 errorcode_t parse_meta(parse_ctx_t *ctx){
     // NOTE: Assumes (parse_ctx_peek(ctx) == TOKEN_META)
 
@@ -32,35 +107,6 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
     source_t source = tokenlist->sources[*i];
 
     char *directive_name = tokenlist->tokens[*i].data;
-
-    const char *standard_directives[] = {
-        "default", "define", "done", "elif", "else", "end", "error", "get", "halt", "if", "import", "input", "place", "place_error", "place_warning",
-        "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning"
-    };
-
-    #define META_DIRECTIVE_DEFAULT           0
-    #define META_DIRECTIVE_DEFINE            1
-    #define META_DIRECTIVE_DONE              2
-    #define META_DIRECTIVE_ELIF              3
-    #define META_DIRECTIVE_ELSE              4
-    #define META_DIRECTIVE_END               5
-    #define META_DIRECTIVE_ERROR             6
-    #define META_DIRECTIVE_GET               7
-    #define META_DIRECTIVE_HALT              8
-    #define META_DIRECTIVE_IF                9
-    #define META_DIRECTIVE_IMPORT            10
-    #define META_DIRECTIVE_INPUT             11
-    #define META_DIRECTIVE_PLACE             12
-    #define META_DIRECTIVE_PLACE_ERROR       13
-    #define META_DIRECTIVE_PLACE_WARNING     14
-    #define META_DIRECTIVE_PRAGMA            15
-    #define META_DIRECTIVE_PRINT             16
-    #define META_DIRECTIVE_PRINT_ERROR       17
-    #define META_DIRECTIVE_PRINT_WARNING     18
-    #define META_DIRECTIVE_RUNTIME_RESOURCE  19
-    #define META_DIRECTIVE_SET               20
-    #define META_DIRECTIVE_UNLESS            21
-    #define META_DIRECTIVE_WARNING           22
 
     maybe_index_t standard = binary_string_search_const(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
@@ -106,32 +152,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             if(parse_meta_expr(ctx, &value)) return FAILURE;
             meta_expr_free_fully(value);
 
-            // Skip over everything until #end
-            length_t ends_needed = 1;
-
-            while(++(*i) != tokenlist->length && ends_needed != 0){
-                if(tokenlist->tokens[*i].id != TOKEN_META) continue;
-
-                char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
-                maybe_index_t pass_id = binary_string_search_const(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
-
-                switch(pass_id){
-                case META_DIRECTIVE_IF: case META_DIRECTIVE_UNLESS:
-                    ends_needed++;
-                    break;
-                case META_DIRECTIVE_END:
-                    ends_needed--;
-                    break;
-                case -1:
-                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Unrecognized meta directive #%s", pass_over_directive_name);
-                    return FAILURE;
-                }
-            }
-
-            if(*i == tokenlist->length){
-                compiler_panic(ctx->compiler, source, "Expected '#end' meta directive before termination");
-                return FAILURE;
-            }
+            if(skip_until_matching_end(ctx, true, source)) return FAILURE;
         }
         break;
     case META_DIRECTIVE_ELSE: {
@@ -143,38 +164,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
                 return FAILURE;
             }
 
-            // Skip over everything until #end
-            length_t ends_needed = 1;
-
-            while(++(*i) != tokenlist->length && ends_needed != 0){
-                if(tokenlist->tokens[*i].id != TOKEN_META) continue;
-
-                char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
-                maybe_index_t pass_id = binary_string_search_const(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
-
-                switch(pass_id){
-                case META_DIRECTIVE_IF: case META_DIRECTIVE_UNLESS:
-                    ends_needed++;
-                    break;
-                case META_DIRECTIVE_END:
-                    ends_needed--;
-                    break;
-                case META_DIRECTIVE_ELSE:
-                    if(ends_needed == 1){
-                        compiler_panic(ctx->compiler, tokenlist->sources[*i], "Unexpected '#else' meta directive");
-                        return FAILURE;
-                    }
-                    break;
-                case -1:
-                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Unrecognized meta directive #%s", pass_over_directive_name);
-                    return FAILURE;
-                }
-            }
-
-            if(*i == tokenlist->length){
-                compiler_panic(ctx->compiler, source, "Expected '#end' meta directive before termination");
-                return FAILURE;
-            }
+            if(skip_until_matching_end(ctx, false, source)) return FAILURE;
         }
         break;
     case META_DIRECTIVE_END: // end
