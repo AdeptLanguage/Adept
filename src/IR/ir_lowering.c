@@ -54,10 +54,8 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
         if(ir_lower_const_fptosi(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_UITOFP:
-        if(ir_lower_const_uitofp(pool, inout_value)) return FAILURE;
-        break;
     case VALUE_TYPE_CONST_SITOFP:
-        if(ir_lower_const_sitofp(pool, inout_value)) return FAILURE;
+        if(ir_lower_const_xitofp(pool, inout_value)) return FAILURE;
         break;
     case VALUE_TYPE_CONST_REINTERPRET:
         if(ir_lower_const_reinterpret(inout_value)) return FAILURE;
@@ -398,7 +396,7 @@ errorcode_t ir_lower_const_fptosi(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
-errorcode_t ir_lower_const_uitofp(ir_pool_t *pool, ir_value_t **inout_value){
+errorcode_t ir_lower_const_xitofp(ir_pool_t *pool, ir_value_t **inout_value){
     // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
     //       In other words, that the value inside the given value is not another constant cast
 
@@ -410,69 +408,23 @@ errorcode_t ir_lower_const_uitofp(ir_pool_t *pool, ir_value_t **inout_value){
 
     double as_float;
     char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
+    bool is_signed = (from_spec.traits & IR_TYPE_TRAIT_SIGNED);
 
     switch(from_spec.bytes){
     case 1:
-        as_float = *((uint8_t*) ((*child)->extra));
+        as_float = is_signed ? *((int8_t*) ((*child)->extra)) : *((uint8_t*) ((*child)->extra));
         break;
     case 2:
-        as_float = *((uint16_t*) ((*child)->extra));
+        as_float = is_signed ? *((int16_t*) ((*child)->extra)) : *((uint16_t*) ((*child)->extra));
         break;
     case 4:
-        as_float = *((uint32_t*) ((*child)->extra));
+        as_float = is_signed ? *((int32_t*) ((*child)->extra)) : *((uint32_t*) ((*child)->extra));
         break;
     case 8:
-        as_float = *((uint64_t*) ((*child)->extra));
+        as_float = is_signed ? *((int64_t*) ((*child)->extra)) : *((uint64_t*) ((*child)->extra));
         break;
     default:
-        internalerrorprintf("ir_lower_const_uitofp() - Could not perform operation\n");
-        return FAILURE;
-    }
-    
-    // Convert floating point number to requested size
-    if(to_spec.bytes == 4){
-        *((adept_float*) new_pointer) = as_float;
-    } else {
-        *((adept_double*) new_pointer) = as_float;
-    }
-
-    // Promote the altered child literal value
-    (*child)->extra = new_pointer;
-    *inout_value = *child;
-
-    // Change the type of the literal value
-    (*inout_value)->type = type;
-    return SUCCESS;
-}
-
-errorcode_t ir_lower_const_sitofp(ir_pool_t *pool, ir_value_t **inout_value){
-    // NOTE: Assumes that '!VALUE_TYPE_IS_CONSTANT_CAST((*inout_value)->value_type)' is true
-    //       In other words, that the value inside the given value is not another constant cast
-
-    ir_type_t *type = (*inout_value)->type;
-    ir_value_t **child = (ir_value_t**) &((*inout_value)->extra);
-
-    ir_type_spec_t to_spec, from_spec;
-    if(!ir_type_get_spec(type, &to_spec) || !ir_type_get_spec((*child)->type, &from_spec)) return false;
-    
-    double as_float;
-    char *new_pointer = ir_pool_alloc(pool, to_spec.bytes);
-
-    switch(from_spec.bytes){
-    case 1:
-        as_float = *((int8_t*) ((*child)->extra));
-        break;
-    case 2:
-        as_float = *((int16_t*) ((*child)->extra));
-        break;
-    case 4:
-        as_float = *((int32_t*) ((*child)->extra));
-        break;
-    case 8:
-        as_float = *((int64_t*) ((*child)->extra));
-        break;
-    default:
-        internalerrorprintf("ir_lower_const_sitofp() - Could not perform operation\n");
+        internalerrorprintf("ir_lower_const_xitofp() - Could not perform operation\n");
         return FAILURE;
     }
     
