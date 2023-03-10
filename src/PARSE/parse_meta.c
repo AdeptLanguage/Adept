@@ -29,8 +29,8 @@ static const char *standard_directives[] = {
     "pragma", "print", "print_error", "print_warning", "runtime_resource", "set", "unless", "warning"
 };
 
-enum {
-    META_DIRECTIVE_INVALID = -1,
+enum meta_directive {
+    INVALID_META_DIRECTIVE = -1,
     META_DIRECTIVE_DEFAULT,
     META_DIRECTIVE_DEFINE,
     META_DIRECTIVE_DONE,
@@ -82,7 +82,7 @@ static errorcode_t skip_until_matching_end(parse_ctx_t *ctx, bool allow_else, so
                 return FAILURE;
             }
             break;
-        case META_DIRECTIVE_INVALID:
+        case INVALID_META_DIRECTIVE:
             // That meta directive that we are passing over isn't recognized
             compiler_panicf(ctx->compiler, parse_ctx_peek_source(ctx), "Unrecognized meta directive #%s", pass_over_directive_name);
             return FAILURE;
@@ -99,185 +99,213 @@ static errorcode_t skip_until_matching_end(parse_ctx_t *ctx, bool allow_else, so
     return SUCCESS;
 }
 
+static errorcode_t parse_meta_directive_default(parse_ctx_t *ctx){
+    weak_cstr_t definition_name = parse_grab_word(ctx, "Expected transcendent variable name after #default");
+    if(definition_name == NULL) return FAILURE;
+
+    parse_ctx_advance(ctx);
+
+    meta_expr_t *value;
+    if(parse_meta_expr(ctx, &value)) return FAILURE;
+    if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
+
+    meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
+
+    if(existing == NULL){
+        meta_definition_add(&ctx->ast->meta_definitions, &ctx->ast->meta_definitions_length, &ctx->ast->meta_definitions_capacity, definition_name, value);
+    } else {
+        meta_expr_free_fully(value);
+    }
+}
+
+static errorcode_t parse_meta_directive_done(parse_ctx_t *ctx){
+    ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+    return FAILURE;
+}
+
+static errorcode_t parse_meta_directive_elif(parse_ctx_t *ctx, source_t source_on_failure){
+    // This gets triggered when #if was true
+
+    // Ensure #elif is allowed here
+    if(!parse_ctx_get_meta_else_allowed(ctx, ctx->meta_ends_expected)){
+        compiler_panic(ctx->compiler, source_on_failure, "Unexpected '#elif' meta directive");
+        return FAILURE;
+    }
+
+    // Pass over #elif expression
+    parse_ctx_advance(ctx);
+    meta_expr_t *value;
+    if(parse_meta_expr(ctx, &value)) return FAILURE;
+    meta_expr_free_fully(value);
+
+    if(skip_until_matching_end(ctx, true, source_on_failure)) return FAILURE;
+    return SUCCESS;
+}
+
+static errorcode_t parse_meta_directive_else(parse_ctx_t *ctx, source_t source_on_failure){
+    // This gets triggered when #if was true
+
+    // Ensure #else if allowed here
+    if(!parse_ctx_get_meta_else_allowed(ctx, ctx->meta_ends_expected)){
+        compiler_panic(ctx->compiler, source_on_failure, "Unexpected '#else' meta directive");
+        return FAILURE;
+    }
+
+    if(skip_until_matching_end(ctx, false, source_on_failure)) return FAILURE;
+
+    return SUCCESS;
+}
+
+static errorcode_t parse_meta_directive_end(parse_ctx_t *ctx, source_t source_on_failure){
+    if(ctx->meta_ends_expected-- == 0){
+        compiler_panic(ctx->compiler, source_on_failure, "Unexpected '#end' meta directive");
+        return FAILURE;
+    }
+    
+    parse_ctx_advance(ctx);
+    return SUCCESS;
+}
+
+static errorcode_t parse_meta_directive_error(parse_ctx_t *ctx, source_t source_on_failure){
+    parse_ctx_advance(ctx);
+
+    meta_expr_t *value;
+    if(parse_meta_expr(ctx, &value)) return FAILURE;
+    if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
+
+    strong_cstr_t s = meta_expr_str(value);
+    compiler_panicf(ctx->compiler, source_on_failure, "%s", s);
+    free(s);
+
+    meta_expr_free_fully(value);
+    
+    #ifdef ADEPT_INSIGHT_BUILD
+        return SUCCESS;
+    #else
+        return FAILURE;
+    #endif
+}
+
+static errorcode_t parse_meta_directive_conditional(parse_ctx_t *ctx, enum meta_directive directive, source_t source_on_failure){
+    bool is_unless = directive == META_DIRECTIVE_UNLESS;
+    
+    parse_ctx_advance(ctx);
+
+    meta_expr_t *value;
+    if(parse_meta_expr(ctx, &value)) return FAILURE;
+
+    bool whether;
+    if(meta_expr_into_bool(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value, &whether)){
+        meta_expr_free_fully(value);
+        return FAILURE;
+    }
+    
+    whether ^= is_unless;
+    meta_expr_free_fully(value);
+
+    // If true, continue parsing as normal
+    if(whether){
+        if(ctx->meta_ends_expected++ == 256){
+            compiler_panic(ctx->compiler, source_on_failure, "Exceeded maximum meta conditional depth of 256");
+            return FAILURE;
+        }
+        parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, true);
+        return SUCCESS;
+    }
+
+    // Otherwise, skip over this section until either #else, #elif, or #end
+    length_t ends_needed = 1;
+
+    while(++(*i) != tokenlist->length && ends_needed != 0){
+        if(tokenlist->tokens[*i].id != TOKEN_META) continue;
+
+        char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
+        maybe_index_t pass_id = binary_string_search_const(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
+
+        if(pass_id == META_DIRECTIVE_IF || pass_id == META_DIRECTIVE_UNLESS){
+            ends_needed++;
+        } else if(pass_id == META_DIRECTIVE_END){
+            ends_needed--;
+        } else if(pass_id == META_DIRECTIVE_ELIF){
+            if(ends_needed == 1){
+                (*i)++;
+
+                meta_expr_t *value;
+                if(parse_meta_expr(ctx, &value)) return FAILURE;
+
+                bool whether;
+                if(meta_expr_into_bool(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value, &whether)){
+                    meta_expr_free_fully(value);
+                    return FAILURE;
+                }
+
+                meta_expr_free_fully(value);
+
+                if(whether){   
+                    if(ctx->meta_ends_expected++ == 256){
+                        compiler_panic(ctx->compiler, tokenlist->sources[*i], "Exceeded maximum meta conditional depth of 256");
+                        return FAILURE;
+                    }
+                    parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, true);
+                    break;
+                }
+            }
+        } else if(pass_id == META_DIRECTIVE_ELSE){
+            if(ends_needed == 1){
+                if(ctx->meta_ends_expected++ == 256){
+                    compiler_panic(ctx->compiler, tokenlist->sources[*i], "Exceeded maximum meta conditional depth of 256");
+                    return FAILURE;
+                }
+                parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, false);
+                break;
+            }
+        } else if(pass_id == -1){
+            compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Unrecognized meta directive #%s", pass_over_directive_name);
+            return FAILURE;
+        }
+    }
+
+    if(parse_ctx_at_end(ctx)){
+        compiler_panic(ctx->compiler, source_on_failure, "Expected '#end' meta directive before termination");
+        return FAILURE;
+    }
+    
+    return SUCCESS;
+}
+
 errorcode_t parse_meta(parse_ctx_t *ctx){
-    // NOTE: Assumes (parse_ctx_peek(ctx) == TOKEN_META)
+    assert(parse_ctx_peek(ctx) == TOKEN_META);
 
     length_t *i = ctx->i;
     tokenlist_t *tokenlist = ctx->tokenlist;
     source_t source = tokenlist->sources[*i];
 
-    char *directive_name = tokenlist->tokens[*i].data;
+    weak_cstr_t directive_name = (weak_cstr_t) parse_ctx_peek_data(ctx);
+    maybe_index_t directive = binary_string_search_const(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
 
-    maybe_index_t standard = binary_string_search_const(standard_directives, sizeof(standard_directives) / sizeof(char*), directive_name);
-
-    if(standard == -1){
+    if(directive == INVALID_META_DIRECTIVE){
         compiler_panicf(ctx->compiler, source, "Unrecognized meta directive #%s", directive_name);
         return FAILURE;
     }
 
-    switch(standard){
-    case META_DIRECTIVE_DEFAULT: { // default
-            char *definition_name = parse_grab_word(ctx, "Expected transcendent variable name after #default");
-            if(!definition_name) return FAILURE;
-            (*i)++;
-
-            meta_expr_t *value;
-            if(parse_meta_expr(ctx, &value)) return FAILURE;
-            if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
-
-            meta_definition_t *existing = meta_definition_find(ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, definition_name);
-
-            if(existing == NULL){
-                meta_definition_add(&ctx->ast->meta_definitions, &ctx->ast->meta_definitions_length, &ctx->ast->meta_definitions_capacity, definition_name, value);
-            } else {
-                meta_expr_free_fully(value);
-            }
-        }
-        break;
-    case META_DIRECTIVE_DONE: // done
-        ctx->compiler->result_flags |= COMPILER_RESULT_SUCCESS;
+    switch(directive){
+    case META_DIRECTIVE_DEFAULT:
+        return parse_meta_directive_default(ctx);
+    case META_DIRECTIVE_DONE:
+        return parse_meta_directive_done(ctx);
+    case META_DIRECTIVE_ELIF:
+        return parse_meta_directive_elif(ctx, source);
+    case META_DIRECTIVE_ELSE:
+        return parse_meta_directive_else(ctx, source);
+    case META_DIRECTIVE_END:
+        return parse_meta_directive_end(ctx, source);
+    case META_DIRECTIVE_ERROR:
+        return parse_meta_directive_error(ctx, source);
+    case META_DIRECTIVE_HALT:
         return FAILURE;
-    case META_DIRECTIVE_ELIF: {
-            // This gets triggered when #if was true
-
-            // Ensure #elif is allowed here
-            if(!parse_ctx_get_meta_else_allowed(ctx, ctx->meta_ends_expected)){
-                compiler_panic(ctx->compiler, source, "Unexpected '#elif' meta directive");
-                return FAILURE;
-            }
-
-            // Pass over #elif expression
-            (*i)++;
-            meta_expr_t *value;
-            if(parse_meta_expr(ctx, &value)) return FAILURE;
-            meta_expr_free_fully(value);
-
-            if(skip_until_matching_end(ctx, true, source)) return FAILURE;
-        }
-        break;
-    case META_DIRECTIVE_ELSE: {
-            // This gets triggered when #if was true
-
-            // Ensure #else if allowed here
-            if(!parse_ctx_get_meta_else_allowed(ctx, ctx->meta_ends_expected)){
-                compiler_panic(ctx->compiler, source, "Unexpected '#else' meta directive");
-                return FAILURE;
-            }
-
-            if(skip_until_matching_end(ctx, false, source)) return FAILURE;
-        }
-        break;
-    case META_DIRECTIVE_END: // end
-        if(ctx->meta_ends_expected-- == 0){
-            compiler_panic(ctx->compiler, source, "Unexpected '#end' meta directive");
-            return FAILURE;
-        }
-        (*i)++;
-        break;
-    case META_DIRECTIVE_ERROR: // error
-        (*i)++;
-
-        meta_expr_t *value;
-        if(parse_meta_expr(ctx, &value)) return FAILURE;
-        if(meta_collapse(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value)) return FAILURE;
-
-        char *print_value = meta_expr_str(value);
-        compiler_panicf(ctx->compiler, source, "%s", print_value);
-        free(print_value);
-
-        meta_expr_free_fully(value);
-        
-        #ifndef ADEPT_INSIGHT_BUILD
-        return FAILURE;
-        #else
-        break;
-        #endif
-    case META_DIRECTIVE_HALT: // halt
-        return FAILURE;
-    case META_DIRECTIVE_IF: case META_DIRECTIVE_UNLESS: { // if, unless
-            bool is_unless = standard == META_DIRECTIVE_UNLESS;
-            (*i)++;
-
-            meta_expr_t *value;
-            if(parse_meta_expr(ctx, &value)) return FAILURE;
-
-            bool whether;
-            if(meta_expr_into_bool(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value, &whether)){
-                meta_expr_free_fully(value);
-                return FAILURE;
-            }
-            
-            whether ^= is_unless;
-            meta_expr_free_fully(value);
-
-            // If true, continue parsing as normal
-            if(whether){
-                if(ctx->meta_ends_expected++ == 256){
-                    compiler_panic(ctx->compiler, source, "Exceeded maximum meta conditional depth of 256");
-                    return FAILURE;
-                }
-                parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, true);
-                break;
-            }
-
-            // Otherwise, skip over this section until either #else, #elif, or #end
-            length_t ends_needed = 1;
-
-            while(++(*i) != tokenlist->length && ends_needed != 0){
-                if(tokenlist->tokens[*i].id != TOKEN_META) continue;
-
-                char *pass_over_directive_name = (char*) tokenlist->tokens[*i].data;
-                maybe_index_t pass_id = binary_string_search_const(standard_directives, sizeof(standard_directives) / sizeof(char*), pass_over_directive_name);
-
-                if(pass_id == META_DIRECTIVE_IF || pass_id == META_DIRECTIVE_UNLESS){
-                    ends_needed++;
-                } else if(pass_id == META_DIRECTIVE_END){
-                    ends_needed--;
-                } else if(pass_id == META_DIRECTIVE_ELIF){
-                    if(ends_needed == 1){
-                        (*i)++;
-
-                        meta_expr_t *value;
-                        if(parse_meta_expr(ctx, &value)) return FAILURE;
-
-                        bool whether;
-                        if(meta_expr_into_bool(ctx->compiler, ctx->object, ctx->ast->meta_definitions, ctx->ast->meta_definitions_length, &value, &whether)){
-                            meta_expr_free_fully(value);
-                            return FAILURE;
-                        }
-
-                        meta_expr_free_fully(value);
-
-                        if(whether){   
-                            if(ctx->meta_ends_expected++ == 256){
-                                compiler_panic(ctx->compiler, tokenlist->sources[*i], "Exceeded maximum meta conditional depth of 256");
-                                return FAILURE;
-                            }
-                            parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, true);
-                            break;
-                        }
-                    }
-                } else if(pass_id == META_DIRECTIVE_ELSE){
-                    if(ends_needed == 1){
-                        if(ctx->meta_ends_expected++ == 256){
-                            compiler_panic(ctx->compiler, tokenlist->sources[*i], "Exceeded maximum meta conditional depth of 256");
-                            return FAILURE;
-                        }
-                        parse_ctx_set_meta_else_allowed(ctx, ctx->meta_ends_expected, false);
-                        break;
-                    }
-                } else if(pass_id == -1){
-                    compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Unrecognized meta directive #%s", pass_over_directive_name);
-                    return FAILURE;
-                }
-            }
-
-            if(*i == tokenlist->length){
-                compiler_panic(ctx->compiler, source, "Expected '#end' meta directive before termination");
-                return FAILURE;
-            }
-        }
-        break;
+    case META_DIRECTIVE_IF:
+    case META_DIRECTIVE_UNLESS:
+        return parse_meta_directive_conditional(ctx, directive, source);
     case META_DIRECTIVE_IMPORT: {
             length_t old_i = (*i)++;
 
@@ -488,7 +516,7 @@ errorcode_t parse_meta(parse_ctx_t *ctx){
             meta_expr_t *value = NULL;
 
             if(tokenlist->tokens[++(*i)].id == TOKEN_NEWLINE){
-                if(standard == META_DIRECTIVE_DEFINE){
+                if(directive == META_DIRECTIVE_DEFINE){
                     compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Expected initial value for meta variable definition");
                 } else {
                     compiler_panicf(ctx->compiler, tokenlist->sources[*i], "Expected new value for meta variable");

@@ -112,19 +112,20 @@ EM_JS(int, node_fs_existsSync, (const char *filename), {
     var fs = require('fs');
 
     try {
-        contents = fs.readFileSync(UTF8ToString(filename), "utf8");
+        var contents = fs.readFileSync(UTF8ToString(filename), "utf8");
     } catch(error){
         return null;
     }
 
-    bytes = lengthBytesUTF8(contents);
-    ptr = _malloc(bytes + (will_append_newline ? 2 : 1));
+    var bytes = lengthBytesUTF8(contents);
+    var ptr = _malloc(bytes + (will_append_newline ? 2 : 1));
     stringToUTF8(contents, ptr, bytes + 1);
     return ptr;
 });
 
 EM_JS(strong_cstr_t, node_fs_readFileSync_binary_hex, (const char *filename), {
     var fs = require('fs');
+    var contents;
 
     try {
         contents = fs.readFileSync(UTF8ToString(filename)).toString('hex');
@@ -132,8 +133,8 @@ EM_JS(strong_cstr_t, node_fs_readFileSync_binary_hex, (const char *filename), {
         return null;
     }
 
-    bytes = lengthBytesUTF8(contents);
-    ptr = _malloc(bytes + 1);
+    var bytes = lengthBytesUTF8(contents);
+    var ptr = _malloc(bytes + 1);
     stringToUTF8(contents, ptr, bytes + 1);
     return ptr;
 });

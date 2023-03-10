@@ -181,8 +181,8 @@ EM_JS(strong_cstr_t, node_path_resolve, (const char *filename), {
         return null;
     }
 
-	bytes = lengthBytesUTF8(contents);
-	ptr = _malloc(bytes + 1);
+	var bytes = lengthBytesUTF8(contents);
+	var ptr = _malloc(bytes + 1);
 	stringToUTF8(contents, ptr, bytes + 1);
 	return ptr;
 });

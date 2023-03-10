@@ -173,6 +173,12 @@ void *parse_ctx_peek_data_take(parse_ctx_t *ctx);
 // Equivalent to: (*ctx->i == ctx->tokenlist->length)
 bool parse_ctx_at_end(parse_ctx_t *ctx);
 
+// ------------------ parse_ctx_advance ------------------
+// Increments the token index for a parse context
+inline void parse_ctx_advance(parse_ctx_t *ctx){
+    (*ctx->i)++;
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -229,3 +229,5 @@ void *parse_ctx_peek_data_take(parse_ctx_t *ctx){
 bool parse_ctx_at_end(parse_ctx_t *ctx){
     return *ctx->i == ctx->tokenlist->length;
 }
+
+extern inline void parse_ctx_advance(parse_ctx_t *ctx);
