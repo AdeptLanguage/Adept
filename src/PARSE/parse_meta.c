@@ -116,6 +116,8 @@ static errorcode_t parse_meta_directive_default(parse_ctx_t *ctx){
     } else {
         meta_expr_free_fully(value);
     }
+
+    return SUCCESS;
 }
 
 static errorcode_t parse_meta_directive_done(parse_ctx_t *ctx){
@@ -187,6 +189,9 @@ static errorcode_t parse_meta_directive_error(parse_ctx_t *ctx, source_t source_
 }
 
 static errorcode_t parse_meta_directive_conditional(parse_ctx_t *ctx, enum meta_directive directive, source_t source_on_failure){
+    tokenlist_t *tokenlist = ctx->tokenlist;
+    length_t *i = ctx->i;
+
     bool is_unless = directive == META_DIRECTIVE_UNLESS;
     
     parse_ctx_advance(ctx);
