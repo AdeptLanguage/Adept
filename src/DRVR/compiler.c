@@ -118,13 +118,33 @@ void compiler_invoke(compiler_t *compiler, int argc, char **argv){
     compiler->config.cainfo_file = mallocandsprintf("%scurl-ca-bundle.crt", compiler->root);
     #endif
 
+    // Pre-scan arguments
+    bool no_update = false;
+
+    for(int i = 1; i < argc; i++){
+        const char *arg = argv[i];
+
+        if( streq(arg, "-h")
+         || streq(arg, "--help")
+         || streq(arg, "--help-advanced")
+         || streq(arg, "-H")
+         || streq(arg, "--root")
+         || streq(arg, "--version")
+         || streq(arg, "-v")
+         || streq(arg, "--no-update")
+        ){
+            no_update = true;
+            break;
+        }
+    }
+
     #ifdef ADEPT_ENABLE_PACKAGE_MANAGER
     {
         // Read persistent config file
         compiler->config_filename = mallocandsprintf("%sadept.config", compiler->root);
         weak_cstr_t config_warning = NULL;
 
-        if(!config_read(&compiler->config, compiler->config_filename, &config_warning) && config_warning){
+        if(!config_read(&compiler->config, compiler->config_filename, no_update, &config_warning) && config_warning){
             yellowprintf("%s\n", config_warning);
         }
     }

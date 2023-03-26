@@ -30,7 +30,7 @@ void config_free(config_t *config){
     free(config->cainfo_file);
 }
 
-successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *out_warning){
+successful_t config_read(config_t *config, weak_cstr_t filename, bool no_update, weak_cstr_t *out_warning){
     char *raw_buffer = NULL;
     length_t raw_buffer_length;
 
@@ -116,7 +116,7 @@ successful_t config_read(config_t *config, weak_cstr_t filename, weak_cstr_t *ou
         break;
     }
 
-    if(should_update){
+    if(should_update && !no_update){
         if(config->show_checking_for_updates_message){
             lightblueprintf("Checking for available updates as scheduled in 'adept.config'\n");
         }
