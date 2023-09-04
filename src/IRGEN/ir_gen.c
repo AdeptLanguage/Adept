@@ -431,6 +431,9 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         module_func->traits |= IR_FUNC_VALIDATE_VTABLE;
     }
 
+    if(ast_func->traits & AST_FUNC_INIT)   module_func->traits |= IR_FUNC_INIT;
+    if(ast_func->traits & AST_FUNC_DEINIT) module_func->traits |= IR_FUNC_DEINIT;
+
     ir_func_endpoint_t new_endpoint = (ir_func_endpoint_t){
         .ast_func_id = ast_func_id,
         .ir_func_id = ir_func_id,
@@ -510,16 +513,44 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
     }
 
     if(ast_func->traits & AST_FUNC_MAIN){
-        if(module->common.has_main){
-            source_t source = object->ast.funcs[module->common.ast_main_id].source;
+        if(module->common.has_init){
+            source_t source = object->ast.funcs[module->common.ast_init_id].source;
             compiler_panic(compiler, ast_func->source, "Cannot define main function when one already exists");
             compiler_panic(compiler, source, "Original main function defined here");
             return FAILURE;
         }
         
-        module->common.has_main = true;
-        module->common.ast_main_id = ast_func_id;
-        module->common.ir_main_id = ir_func_id;
+        module->common.has_init = true;
+        module->common.ast_init_id = ast_func_id;
+        module->common.ir_init_id = ir_func_id;
+        module->common.ast_deinit_id = ast_func_id;
+        module->common.ir_deinit_id = ir_func_id;
+    }
+
+    if(ast_func->traits & AST_FUNC_INIT){
+        if(module->common.has_init){
+            source_t source = object->ast.funcs[module->common.ast_init_id].source;
+            compiler_panic(compiler, ast_func->source, "Cannot define shared library init function when one already exists");
+            compiler_panic(compiler, source, "Original init function defined here");
+            return FAILURE;
+        }
+        
+        module->common.has_init = true;
+        module->common.ast_init_id = ast_func_id;
+        module->common.ir_init_id = ir_func_id;
+    }
+
+    if(ast_func->traits & AST_FUNC_DEINIT){
+        if(module->common.has_deinit){
+            source_t source = object->ast.funcs[module->common.ast_init_id].source;
+            compiler_panic(compiler, ast_func->source, "Cannot define shared library deinit function when one already exists");
+            compiler_panic(compiler, source, "Original deinit function defined here");
+            return FAILURE;
+        }
+        
+        module->common.has_deinit = true;
+        module->common.ast_deinit_id = ast_func_id;
+        module->common.ir_deinit_id = ir_func_id;
     }
 
     if(ast_func->traits & AST_FUNC_MAIN && ast_type_is_void(&ast_func->return_type)){
@@ -539,8 +570,8 @@ errorcode_t ir_gen_auxiliary_builders(compiler_t *compiler, object_t *object){
     ir_module->init_builder = malloc(sizeof(ir_builder_t));
     object->ir_module.deinit_builder = malloc(sizeof(ir_builder_t));
 
-    ir_builder_init(ir_module->init_builder, compiler, object, common->ast_main_id, common->ir_main_id, true);
-    ir_builder_init(ir_module->deinit_builder, compiler, object, common->ast_main_id, common->ir_main_id, true);
+    ir_builder_init(ir_module->init_builder, compiler, object, common->ast_init_id, common->ir_deinit_id, true);
+    ir_builder_init(ir_module->deinit_builder, compiler, object, common->ast_init_id, common->ir_deinit_id, true);
     return SUCCESS;
 }
 
@@ -580,7 +611,8 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     // Instead we'll retain a reference to its container
     ir_funcs_t *ir_funcs = &object->ir_module.funcs;
     
-    bool is_main_like = ast_func.traits & AST_FUNC_MAIN || ast_func.traits & AST_FUNC_WINMAIN;
+    bool is_init_like = ast_func.traits & AST_FUNC_MAIN || ast_func.traits & AST_FUNC_WINMAIN || ast_func.traits & AST_FUNC_INIT;
+    bool is_deinit_like = ast_func.traits & AST_FUNC_MAIN || ast_func.traits & AST_FUNC_WINMAIN || ast_func.traits & AST_FUNC_DEINIT;
 
     bool show_is_empty_warning = ast_func.statements.length == 0
                               && !(ast_func.traits & AST_FUNC_GENERATED)
@@ -616,7 +648,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
     }
 
     // Initialize all global variables
-    if(is_main_like && ir_gen_globals_init(&builder)) goto failure;
+    if(is_init_like && ir_gen_globals_init(&builder)) goto failure;
 
     // Create vtable initialization instruction for this function if it's a class constructor
     if(ast_func.traits & AST_FUNC_CLASS_CONSTRUCTOR){
@@ -714,7 +746,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
     handle_deference_for_variables(&builder, &builder.scope->list);
 
-    if(is_main_like){
+    if(is_deinit_like){
         build_global_cleanup(&builder);
     }
 

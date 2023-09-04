@@ -619,7 +619,7 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
     func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
 
-    ast_func_create_template(func, &(ast_func_head_t){
+    ast_func_create_template(ctx->compiler, func, &(ast_func_head_t){
         .name = strclone(name),
         .source = NULL_SOURCE,
         .is_foreign = false,

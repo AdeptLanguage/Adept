@@ -63,7 +63,7 @@ static errorcode_t add_dispatcher(parse_ctx_t *ctx, func_id_t virtual_origin){
         .export_name = NULL,
     };
 
-    ast_func_create_template(func, &func_head);
+    ast_func_create_template(ctx->compiler, func, &func_head);
 
     func->virtual_origin = virtual_origin;
     func->traits |= AST_FUNC_DISPATCHER | AST_FUNC_GENERATED | AST_FUNC_POLYMORPHIC;
@@ -120,7 +120,7 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
 
-    ast_func_create_template(func, &func_head);
+    ast_func_create_template(ctx->compiler, func, &func_head);
 
     if(func_head.is_foreign && ctx->composite_association != NULL){
         compiler_panicf(ctx->compiler, source, "Cannot declare foreign function within struct domain");
@@ -205,13 +205,13 @@ errorcode_t parse_func(parse_ctx_t *ctx){
     if(parse_func_body(ctx, func)) return FAILURE;
 
     if(func_head_parse_info.is_constructor && !func_head_parse_info.is_in_only_constructor){
-        parse_func_solidify_constructor(ast, func, source);
+        parse_func_solidify_constructor(ctx->compiler, ast, func, source);
     }
 
     return SUCCESS;
 }
 
-void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source_t source){
+void parse_func_solidify_constructor(compiler_t *compiler, ast_t *ast, ast_func_t *constructor, source_t source){
     // Automatically create subject-less constructor for subject-ful constructor
     // e.g. `func Person(name POD String, age POD int) Person { ... }`
     // for  `struct Person (...) { constructor(name String, age int){ ... } }`
@@ -238,7 +238,7 @@ void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source
     func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
 
-    ast_func_create_template(func, &func_head);
+    ast_func_create_template(compiler, func, &func_head);
 
     if(ast_func_has_polymorphic_signature(constructor)) {
         func->traits |= AST_FUNC_POLYMORPHIC;

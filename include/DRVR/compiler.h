@@ -27,25 +27,26 @@ extern "C" {
 #include "UTIL/trait.h"
 
 // Possible compiler trait options
-#define COMPILER_SHOW_CONSOLE     TRAIT_1
-#define COMPILER_MAKE_PACKAGE     TRAIT_2
-#define COMPILER_INFLATE_PACKAGE  TRAIT_3
-#define COMPILER_EXECUTE_RESULT   TRAIT_4
-#define COMPILER_DEBUG_SYMBOLS    TRAIT_5
-#define COMPILER_NO_WARN          TRAIT_6
-#define COMPILER_NO_UNDEF         TRAIT_7
-#define COMPILER_NO_TYPEINFO      TRAIT_8
-#define COMPILER_NO_REMOVE_OBJECT TRAIT_A
-#define COMPILER_UNSAFE_META      TRAIT_B
-#define COMPILER_UNSAFE_NEW       TRAIT_C
-#define COMPILER_FUSSY            TRAIT_D
-#define COMPILER_FORCE_STDLIB     TRAIT_E
-#define COMPILER_WARN_AS_ERROR    TRAIT_F
-#define COMPILER_SHORT_WARNINGS   TRAIT_G
-#define COMPILER_EMIT_OBJECT      TRAIT_2_1
-#define COMPILER_COLON_COLON      TRAIT_2_2
-#define COMPILER_TYPE_COLON       TRAIT_2_3
-#define COMPILER_WINDOWED         TRAIT_2_4
+#define COMPILER_SHOW_CONSOLE             TRAIT_1
+#define COMPILER_MAKE_PACKAGE             TRAIT_2
+#define COMPILER_INFLATE_PACKAGE          TRAIT_3
+#define COMPILER_EXECUTE_RESULT           TRAIT_4
+#define COMPILER_DEBUG_SYMBOLS            TRAIT_5
+#define COMPILER_NO_WARN                  TRAIT_6
+#define COMPILER_NO_UNDEF                 TRAIT_7
+#define COMPILER_NO_TYPEINFO              TRAIT_8
+#define COMPILER_NO_REMOVE_OBJECT         TRAIT_A
+#define COMPILER_UNSAFE_META              TRAIT_B
+#define COMPILER_UNSAFE_NEW               TRAIT_C
+#define COMPILER_FUSSY                    TRAIT_D
+#define COMPILER_FORCE_STDLIB             TRAIT_E
+#define COMPILER_WARN_AS_ERROR            TRAIT_F
+#define COMPILER_SHORT_WARNINGS           TRAIT_G
+#define COMPILER_EMIT_OBJECT              TRAIT_2_1
+#define COMPILER_COLON_COLON              TRAIT_2_2
+#define COMPILER_TYPE_COLON               TRAIT_2_3
+#define COMPILER_WINDOWED                 TRAIT_2_4
+#define COMPILER_OUTPUT_DYNAMIC_LIBRARY   TRAIT_2_5
 
 // Possible compiler trait checks
 #define COMPILER_NULL_CHECKS      TRAIT_1
@@ -133,6 +134,9 @@ typedef struct compiler {
     string_builder_t user_linker_options;
     strong_cstr_list_t user_search_paths;
     strong_cstr_list_t windows_resources;
+
+    weak_cstr_t init_point;
+    weak_cstr_t deinit_point;
 } compiler_t;
 
 #define CROSS_COMPILE_NONE    0x00

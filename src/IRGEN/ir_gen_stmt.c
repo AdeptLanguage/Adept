@@ -584,11 +584,11 @@ errorcode_t ir_gen_stmt_return(ir_builder_t *builder, ast_expr_return_t *stmt, b
         ast_func_t *ast_func = &ast->funcs[builder->ast_func_id];
 
         return_type = ast_func->return_type;
-        is_in_main_function  = ast_func->traits & AST_FUNC_MAIN;
-        is_in_pass_function  = ast_func->traits & AST_FUNC_PASS;
-        is_in_defer_function = ast_func->traits & AST_FUNC_DEFER;
-        is_in_winmain_function  = ast_func->traits & AST_FUNC_WINMAIN;
-        autogen_enabled      = ast_func->traits & AST_FUNC_AUTOGEN;
+        is_in_main_function    = ast_func->traits & AST_FUNC_MAIN;
+        is_in_pass_function    = ast_func->traits & AST_FUNC_PASS;
+        is_in_defer_function   = ast_func->traits & AST_FUNC_DEFER;
+        is_in_winmain_function = ast_func->traits & AST_FUNC_WINMAIN;
+        autogen_enabled        = ast_func->traits & AST_FUNC_AUTOGEN;
     }
 
     ir_value_t *ir_value_to_be_returned = NULL;
@@ -826,8 +826,16 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
     // a scope for the secondary builder.
     if(working_builder != primary_builder){
         // Using a different location will require that our program has an entry point
-        if(!primary_builder->object->ir_module.common.has_main){
-            compiler_panicf(primary_builder->compiler, stmt->source, "Cannot use static variables without a main function");
+        if(!primary_builder->object->ir_module.common.has_deinit){
+            const char *message = "";
+
+            if(primary_builder->compiler->traits & COMPILER_OUTPUT_DYNAMIC_LIBRARY){
+                message = "Cannot use static variables without a shared library deinit function";
+            } else {
+                message = "Cannot use static variables without a main function";
+            }
+
+            compiler_panicf(primary_builder->compiler, stmt->source, message);
             return FAILURE;
         }
 

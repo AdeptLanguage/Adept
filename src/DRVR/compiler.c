@@ -267,6 +267,9 @@ void compiler_init(compiler_t *compiler){
 
     // Allow '::' and ': Type' by default
     compiler->traits |= COMPILER_COLON_COLON | COMPILER_TYPE_COLON;
+
+    compiler->init_point = NULL;
+    compiler->deinit_point = NULL;
 }
 
 void compiler_free(compiler_t *compiler){
@@ -357,6 +360,18 @@ object_t *compiler_new_object(compiler_t *compiler){
 
     compiler->objects[compiler->objects_length++] = object;
     return object;
+}
+
+static errorcode_t read_dll_init_deinit(compiler_t *compiler, weak_cstr_t *argv, int *arg_index, int argc){
+    if(*arg_index + 2 >= argc){
+        redprintf("Expected init function name and deinit function name after '%s' flag\n", argv[*arg_index]);
+        printf("  USAGE: %s <init function name> <deinit function name>\n", argv[*arg_index]);
+        return FAILURE;
+    }
+
+    compiler->init_point = argv[++*arg_index];
+    compiler->deinit_point = argv[++*arg_index];
+    return SUCCESS;
 }
 
 errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, char **argv){
@@ -513,6 +528,23 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 printf("[-] Cross compiling for WebAssembly\n");
                 printf("    (Adept is intended for true 64-bit architectures, some things may break!)\n");
                 compiler->cross_compile_for = CROSS_COMPILE_WASM32;
+            } else if(streq(arg, "--dll")){
+                #ifndef _WIN32
+                printf("[-] Cross compiling for Windows x86_64 (.DLL)\n");
+                compiler->cross_compile_for = CROSS_COMPILE_WINDOWS;
+                #endif
+
+                compiler->traits |= COMPILER_OUTPUT_DYNAMIC_LIBRARY;
+
+                if(read_dll_init_deinit(compiler, argv, &arg_index, argc)){
+                    return FAILURE;
+                }
+            } else if(streq(arg, "--so") || streq(arg, "--dylib") || streq(arg, "-shared") || streq(arg, "--shared")){
+                compiler->traits |= COMPILER_OUTPUT_DYNAMIC_LIBRARY;
+
+                if(read_dll_init_deinit(compiler, argv, &arg_index, argc)){
+                    return FAILURE;
+                }
             } else if(arg[0] == '-' && (arg[1] == 'L' || arg[1] == 'l')){
                 // Forward argument to linker
                 compiler_add_user_linker_option(compiler, arg);

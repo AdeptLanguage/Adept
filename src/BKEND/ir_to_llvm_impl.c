@@ -490,7 +490,8 @@ errorcode_t ir_to_llvm_function_bodies(llvm_context_t *llvm, object_t *object){
         llvm->relocation_list.length = 0;
 
         // Determine whether this function is the entry point
-        bool is_entry_function = module_funcs[f].traits & IR_FUNC_MAIN && llvm->static_variable_info.init_routine == NULL;
+        trait_t ir_func_traits = module_funcs[f].traits;
+        bool is_entry_function = (ir_func_traits & IR_FUNC_MAIN || ir_func_traits & IR_FUNC_INIT) && llvm->static_variable_info.init_routine == NULL;
 
         // Inject true entry before faux program entry
         if(is_entry_function){
@@ -1302,7 +1303,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
                 LLVMValueRef *va_copy_intrinsic = &llvm->intrinsics.va_copy;
 
-
                 if(*va_copy_intrinsic == NULL){
                     LLVMTypeRef ptr_type = LLVMPointerType(LLVMInt8Type(), 0);
 
@@ -1401,8 +1401,9 @@ errorcode_t ir_to_llvm_globals(llvm_context_t *llvm, object_t *object){
         bool is_external = globals[i].traits & IR_GLOBAL_EXTERNAL;
         LLVMTypeRef global_llvm_type = ir_to_llvm_type(llvm, globals[i].type);
 
-        if(is_external)
+        if(!is_external){
             ir_implementation(i, 'g', global_implementation_name);
+        }
 
         llvm->global_variables[i] = LLVMAddGlobal(module, global_llvm_type, is_external ? globals[i].name : global_implementation_name);
         LLVMSetLinkage(llvm->global_variables[i], is_external ? LLVMExternalLinkage : LLVMInternalLinkage);
@@ -1570,7 +1571,7 @@ errorcode_t ir_to_llvm_inject_init_built(llvm_context_t *llvm){
     LLVMBuilderRef builder = LLVMCreateBuilder();
     ir_basicblocks_t basicblocks = init_builder->basicblocks;
 
-    if(!llvm->object->ir_module.common.has_main){
+    if(!llvm->object->ir_module.common.has_init){
         LLVMPositionBuilderAtEnd(builder, llvm->static_variable_info.init_routine);
         LLVMBuildBr(builder, llvm->static_variable_info.init_post);
         LLVMDisposeBuilder(builder);
@@ -1586,7 +1587,7 @@ errorcode_t ir_to_llvm_inject_init_built(llvm_context_t *llvm){
     llvm->catalog = &catalog;
     llvm->stack = &stack_frame;
 
-    length_t f = object->ir_module.common.ir_main_id;
+    length_t f = object->ir_module.common.ir_init_id;
     ir_func_t *module_func = &object->ir_module.funcs.funcs[f];
 
     LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
@@ -1658,7 +1659,7 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     llvm->catalog = &catalog;
     llvm->stack = &stack_frame;
 
-    length_t f = object->ir_module.common.ir_main_id;
+    length_t f = object->ir_module.common.ir_deinit_id;
     ir_func_t *module_func = &object->ir_module.funcs.funcs[f];
 
     LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);

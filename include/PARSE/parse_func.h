@@ -10,6 +10,7 @@ extern "C" {
 
 #include "AST/ast.h"
 #include "AST/ast_type_lean.h"
+#include "DRVR/compiler.h"
 #include "PARSE/parse_ctx.h"
 #include "UTIL/ground.h"
 #include "UTIL/trait.h"
@@ -62,7 +63,7 @@ void parse_free_unbackfilled_arguments(ast_func_t *func, length_t backfill);
 
 // ------------------ parse_func_solidify_constructor ------------------
 // Solidifies a parsed constructor for subject-less use
-void parse_func_solidify_constructor(ast_t *ast, ast_func_t *constructor, source_t source);
+void parse_func_solidify_constructor(compiler_t *compiler, ast_t *ast, ast_func_t *constructor, source_t source);
 
 // ------------------ parse_func_alias ------------------
 // Parses a function alias

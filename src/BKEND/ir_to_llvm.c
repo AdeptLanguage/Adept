@@ -95,7 +95,7 @@ static void autofill_output_filename(compiler_t *compiler, object_t *object){
         compiler->output_filename = filename_without_ext(object->filename);
     }
     
-    filename_auto_ext(&compiler->output_filename, compiler->cross_compile_for, FILENAME_AUTO_EXECUTABLE);
+    filename_auto_ext(&compiler->output_filename, compiler->cross_compile_for, FILENAME_AUTO_EXECUTABLE, compiler->traits & COMPILER_OUTPUT_DYNAMIC_LIBRARY);
 }
 
 static strong_cstr_t get_objfile_filename(compiler_t *compiler){
@@ -152,13 +152,15 @@ static strong_cstr_t create_windows_link_command(
     // --start-group -static
     string_builder_append(&builder, " --start-group -static ");
 
-    // crt2.o
-    string_builder_append2_quoted(&builder, bin_root, "crt2.o");
-    string_builder_append_char(&builder, ' ');
+    if(!(compiler->traits & COMPILER_OUTPUT_DYNAMIC_LIBRARY)){
+        // crt2.o
+        string_builder_append2_quoted(&builder, bin_root, "crt2.o");
+        string_builder_append_char(&builder, ' ');
 
-    // crt2begin.o
-    string_builder_append2_quoted(&builder, bin_root, "crtbegin.o");
-    string_builder_append_char(&builder, ' ');
+        // crt2begin.o
+        string_builder_append2_quoted(&builder, bin_root, "crtbegin.o");
+        string_builder_append_char(&builder, ' ');
+    }
 
     // Options
     string_builder_append(&builder, linker_additional);
@@ -178,7 +180,9 @@ static strong_cstr_t create_windows_link_command(
     }
 
     // libdep.a
-    string_builder_append2_quoted(&builder, bin_root, "libdep.a");
+    if(!(compiler->traits & COMPILER_OUTPUT_DYNAMIC_LIBRARY)){
+        string_builder_append2_quoted(&builder, bin_root, "libdep.a");
+    }
 
     // --end-group C:/Windows/System32/msvcrt.dll
     string_builder_append(&builder, " --end-group ");
@@ -264,6 +268,10 @@ static strong_cstr_t create_linker_additional(llvm_context_t *llvm){
 
     if(compiler->user_linker_options.length != 0){
         string_builder_append(&builder, compiler->user_linker_options.buffer);
+    }
+
+    if(compiler->traits & COMPILER_OUTPUT_DYNAMIC_LIBRARY){
+        string_builder_append(&builder, "-shared ");
     }
 
     return strong_cstr_empty_if_null(string_builder_finalize(&builder));

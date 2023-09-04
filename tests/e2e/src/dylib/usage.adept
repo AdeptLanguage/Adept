@@ -1,0 +1,19 @@
+
+#if __windows__
+    foreign "main.dll"
+#elif __macos__
+    foreign "main.dylib"
+#else
+    foreign "main.so"
+#end
+
+foreign my_main_init() void
+foreign my_main_deinit() void
+foreign my_main_print(message *ubyte) void
+
+func main {
+    my_main_init()
+    my_main_print('Hello World')
+    my_main_print('Bye World')
+    my_main_deinit()
+}

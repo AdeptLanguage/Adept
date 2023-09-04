@@ -93,6 +93,8 @@ typedef struct {
 #define AST_FUNC_DISPATCHER             TRAIT_2_3
 #define AST_FUNC_CLASS_CONSTRUCTOR      TRAIT_2_4
 #define AST_FUNC_WARN_BAD_PRINTF_FORMAT TRAIT_2_5
+#define AST_FUNC_INIT                   TRAIT_2_6
+#define AST_FUNC_DEINIT                 TRAIT_2_7
 
 // ------------------ ast_func_prefixes_t ------------------
 // Information about the keywords that prefix a function
@@ -297,7 +299,7 @@ func_id_t ast_new_func(ast_t *ast);
 
 // ---------------- ast_func_create_template ----------------
 // Fills out a blank template for a new function
-void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options);
+void ast_func_create_template(struct compiler *compiler, ast_func_t *func, const ast_func_head_t *options);
 
 // ---------------- ast_func_has_polymorphic_signature ----------------
 // Returns whether an AST function has polymorphic arguments or return type

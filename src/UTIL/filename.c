@@ -211,27 +211,52 @@ strong_cstr_t filename_absolute(const char *filename){
     #endif
 }
 
-void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_for, unsigned int mode){
+void filename_auto_ext(strong_cstr_t *out_filename, unsigned int cross_compile_for, unsigned int mode, bool is_shared_library){
     if(mode == FILENAME_AUTO_PACKAGE){
         filename_append_if_missing(out_filename, ".dep");
         return;
     }
 
     if(mode == FILENAME_AUTO_EXECUTABLE){
-        #if defined(__WIN32__)
-            // Ignore unused variable 'cross_compile_for'
-            (void) cross_compile_for;
+        int platform = -1;
 
-            // Windows file extensions
-            filename_append_if_missing(out_filename, ".exe");
-            return;
-        #else
-            // MacOS / Linux / General Unix file extensions
+        if(cross_compile_for != CROSS_COMPILE_NONE){
+            switch(cross_compile_for){
+            case CROSS_COMPILE_WINDOWS:
+                platform = 0;
+                break;
+            case CROSS_COMPILE_MACOS:
+                platform = 1;
+                break;
+            default:
+                platform = -1;
+            }
+        } else {
+            #if defined(__WIN32__)
+                platform = 0;
+            #elif defined(__APPLE__)
+                platform = 1;
+            #endif
+        }
 
-            if(cross_compile_for == CROSS_COMPILE_WINDOWS)
+        switch(platform){
+        case 0: // Windows
+            if(is_shared_library){
+                filename_append_if_missing(out_filename, ".dll");
+            } else {
                 filename_append_if_missing(out_filename, ".exe");
-            return;
-        #endif
+            }
+            break;
+        case 1: // macOS
+            if(is_shared_library){
+                filename_append_if_missing(out_filename, ".dylib");
+            }
+            break;
+        default:
+            if(is_shared_library){
+                filename_append_if_missing(out_filename, ".so");
+            }
+        }
     }
 }
 

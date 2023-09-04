@@ -363,7 +363,7 @@ func_id_t ast_new_func(ast_t *ast){
     return ast->funcs_length++;
 }
 
-void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
+void ast_func_create_template(compiler_t *compiler, ast_func_t *func, const ast_func_head_t *options){
     func->name = options->name;
     func->arg_names = NULL;
     func->arg_types = NULL;
@@ -402,6 +402,10 @@ void ast_func_create_template(ast_func_t *func, const ast_func_head_t *options){
     // Handle WinMain
     if(streq(options->name, "WinMain") && options->export_name && streq(options->export_name, "WinMain")){
         func->traits |= AST_FUNC_WINMAIN;
+    } else if(compiler->init_point && streq(options->name, compiler->init_point) && options->export_name && streq(options->export_name, compiler->init_point)){
+        func->traits |= AST_FUNC_INIT;
+    } else if(compiler->deinit_point && streq(options->name, compiler->deinit_point) && options->export_name && streq(options->export_name, compiler->deinit_point)){
+        func->traits |= AST_FUNC_DEINIT;
     }
 }
 

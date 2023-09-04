@@ -947,7 +947,7 @@ errorcode_t instantiate_poly_func(compiler_t *compiler, object_t *object, source
         .is_override = poly_func->traits & AST_FUNC_OVERRIDE,
     };
 
-    ast_func_create_template(func, &(ast_func_head_t){
+    ast_func_create_template(compiler, func, &(ast_func_head_t){
         .name = strclone(poly_func->name),
         .source = poly_func->source,
         .is_foreign = false,
@@ -1235,7 +1235,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
     func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
 
-    ast_func_create_template(func, &(ast_func_head_t){
+    ast_func_create_template(compiler, func, &(ast_func_head_t){
         .name = strclone("__defer__"),
         .source = NULL_SOURCE,
         .is_foreign = false,
@@ -1337,7 +1337,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
     func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
     
-    ast_func_create_template(func, &(ast_func_head_t){
+    ast_func_create_template(compiler, func, &(ast_func_head_t){
         .name = strclone("__pass__"),
         .source = NULL_SOURCE,
         .is_foreign = false,
@@ -1504,7 +1504,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
     func_id_t ast_func_id = ast_new_func(ast);
     ast_func_t *func = &ast->funcs[ast_func_id];
 
-    ast_func_create_template(func, &(ast_func_head_t){
+    ast_func_create_template(compiler, func, &(ast_func_head_t){
         .name = strclone("__assign__"),
         .source = NULL_SOURCE,
         .is_foreign = false,

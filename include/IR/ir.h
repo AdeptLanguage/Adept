@@ -483,6 +483,8 @@ typedef struct {
 #define IR_FUNC_STDCALL         TRAIT_4
 #define IR_FUNC_POLYMORPHIC     TRAIT_5
 #define IR_FUNC_VALIDATE_VTABLE TRAIT_6
+#define IR_FUNC_INIT            TRAIT_7
+#define IR_FUNC_DEINIT          TRAIT_8
 
 // ---------------- ir_job_list_t ----------------
 // List of jobs required during IR generation
@@ -537,9 +539,12 @@ typedef struct {
     troolean has_rtti_array;
     ir_type_t *ir_variadic_array;          // NOTE: Can be NULL
     func_id_t variadic_ir_func_id;         // NOTE: Only exists if 'ir_variadic_array' isn't null
-    bool has_main;
-    func_id_t ast_main_id;
-    func_id_t ir_main_id;
+    bool has_init;
+    bool has_deinit;
+    func_id_t ast_init_id;
+    func_id_t ir_init_id;
+    func_id_t ast_deinit_id;
+    func_id_t ir_deinit_id;
 } ir_shared_common_t;
 
 // ---------------- ir_static_variable_t ----------------

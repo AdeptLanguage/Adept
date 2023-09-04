@@ -11,6 +11,10 @@ tests/e2e/src/**/pragma/pragma
 tests/e2e/src/native_linking/*.a
 tests/e2e/unused
 tests/e2e/src/runtime_resource/my_file.txt
+tests/e2e/src/dylib/main.dll
+tests/e2e/src/dylib/main.dylib
+tests/e2e/src/dylib/main.so
+tests/e2e/src/dylib/usage
 bugs
 dev/counter.py
 dev/iwyu.out

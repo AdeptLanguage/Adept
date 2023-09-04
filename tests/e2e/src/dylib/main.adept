@@ -1,0 +1,36 @@
+
+pragma dylib my_main_init my_main_deinit
+pragma ignore_unused
+
+import basics
+
+// --------------------------------------
+
+struct Logger (name String) {
+    constructor(name String) {
+        this.name = name
+        printf("[LOGGER %S] Created\n", this.name)
+    }
+
+    func __defer__ {
+        printf("[LOGGER %S] Destroyed\n", this.name)
+    }
+}
+
+// --------------------------------------
+
+global_variable_logger Logger = Logger("global variable")
+
+func "my_main_init" my_main_init(){
+    print("Initialize called")
+
+    static static_variable_logger Logger = Logger("static variable")
+}
+
+func "my_main_print" my_main_print(message *ubyte){
+    printf("[MY_MAIN] %s\n", message)
+}
+
+func "my_main_deinit" my_main_deinit(){
+    print("Deinitialize called")
+}
