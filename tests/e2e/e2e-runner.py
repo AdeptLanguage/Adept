@@ -122,6 +122,8 @@ def run_all_tests():
         expected_exitcode=1
     )
     test("dropped_values", [executable, join(src_dir, "dropped_values/main.adept")], compiles)
+    test("dylib (library)", [executable, join(src_dir, "dylib/main.adept")], compiles)
+    test("dylib (usage)", [executable, join(src_dir, "dylib/usage.adept")], compiles)
     test("each_in", [executable, join(src_dir, "each_in/main.adept")], compiles)
     test("each_in_fixed", [executable, join(src_dir, "each_in_fixed/main.adept")], compiles)
     test("each_in_list", [executable, join(src_dir, "each_in_list/main.adept")], compiles)

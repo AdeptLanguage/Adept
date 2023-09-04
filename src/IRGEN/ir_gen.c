@@ -521,6 +521,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
         }
         
         module->common.has_init = true;
+        module->common.has_deinit = true;
         module->common.ast_init_id = ast_func_id;
         module->common.ir_init_id = ir_func_id;
         module->common.ast_deinit_id = ast_func_id;

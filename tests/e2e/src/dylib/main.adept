@@ -8,7 +8,7 @@ import basics
 
 struct Logger (name String) {
     constructor(name String) {
-        this.name = name
+        this.name = name.commit()
         printf("[LOGGER %S] Created\n", this.name)
     }
 
