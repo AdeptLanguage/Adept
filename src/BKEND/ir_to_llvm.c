@@ -156,11 +156,11 @@ static strong_cstr_t create_windows_link_command(
         // crt2.o
         string_builder_append2_quoted(&builder, bin_root, "crt2.o");
         string_builder_append_char(&builder, ' ');
-
-        // crt2begin.o
-        string_builder_append2_quoted(&builder, bin_root, "crtbegin.o");
-        string_builder_append_char(&builder, ' ');
     }
+
+    // crt2begin.o
+    string_builder_append2_quoted(&builder, bin_root, "crtbegin.o");
+    string_builder_append_char(&builder, ' ');
 
     // Options
     string_builder_append(&builder, linker_additional);
@@ -180,9 +180,7 @@ static strong_cstr_t create_windows_link_command(
     }
 
     // libdep.a
-    if(!(compiler->traits & COMPILER_OUTPUT_DYNAMIC_LIBRARY)){
-        string_builder_append2_quoted(&builder, bin_root, "libdep.a");
-    }
+    string_builder_append2_quoted(&builder, bin_root, "libdep.a");
 
     // --end-group C:/Windows/System32/msvcrt.dll
     string_builder_append(&builder, " --end-group ");
