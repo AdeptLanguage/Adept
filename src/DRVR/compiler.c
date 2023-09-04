@@ -765,12 +765,13 @@ void show_help(bool show_advanced_options){
         printf("    --PIC             Forces PIC relocation model\n");
         printf("    --no-PIC          Forbids PIC relocation model\n");
 
-        printf("\nLinker Options:\n");
-        printf("    --libm            Forces linking against libc math library\n");
-
         printf("\nCross Compilation:\n");
         printf("    --windows         Output Windows Executable (Requires Extension)\n");
         printf("    --macos           Output MacOS Mach-O Object File\n");
+
+        printf("\nLinker Options:\n");
+        printf("    --libm                            Forces linking against libc math library\n");
+        printf("    --dylib <init fn> <deinit fn>     Creates dynamic library instead of executable with init/deinit points\n");
         
         printf("\nIgnore Options:\n");
         printf("    --ignore-all                      Enables all ignore options\n");
