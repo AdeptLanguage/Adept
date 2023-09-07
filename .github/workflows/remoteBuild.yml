@@ -406,6 +406,7 @@ jobs:
     name: Deploy
     needs: [test, build-windows-installer, build-macos-installer]
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
     steps:
       - name: Get workflow dispatch inputs (workflow dispatch)
         if: github.event_name == 'workflow_dispatch'
