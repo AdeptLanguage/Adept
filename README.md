@@ -10,7 +10,7 @@ A blazing fast language for general purpose programming.
 [Download Adept v2.7 Cross-Compilation Extensions](https://github.com/IsaacShelton/AdeptCrossCompilation/releases/)
 
 ## Resources
-[Adept v2.6 Documentation (v2.7 in progress)](https://github.com/AdeptLanguage/Adept/wiki)
+[Adept v2.7 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
 
 [Adept v2.7 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
 
