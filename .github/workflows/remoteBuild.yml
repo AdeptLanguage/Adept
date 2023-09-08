@@ -92,7 +92,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         shell: bash
         run: |
-          curl -o curl.zip -L https://curl.se/windows/dl-7.83.1/curl-7.83.1-win64-mingw.zip
+          curl -o curl.zip -L https://curl.se/windows/dl-8.2.1_11/curl-8.2.1_11-win64-mingw.zip
           unzip curl.zip
           mv curl-7.83.1-win64-mingw libcurl
       - name: Install libcurl (Ubuntu)
