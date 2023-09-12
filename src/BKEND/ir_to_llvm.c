@@ -109,7 +109,6 @@ static strong_cstr_t create_windows_link_command(
     const char *windres,
     const char *objfile_filename,
     const char *linker_additional,
-    const char *libmsvcrt,
     const char *include,
     bool cmd_shell
 ){
@@ -182,10 +181,10 @@ static strong_cstr_t create_windows_link_command(
     // libdep.a
     string_builder_append2_quoted(&builder, bin_root, "libdep.a");
 
-    // --end-group C:/Windows/System32/msvcrt.dll
+    // --end-group libmsvcrt.a
     string_builder_append(&builder, " --end-group ");
 
-    string_builder_append_quoted(&builder, libmsvcrt);
+    string_builder_append2_quoted(&builder, bin_root, "libmsvcrt.a");
     string_builder_append_char(&builder, ' ');
 
     // --subsystem windows
@@ -288,7 +287,7 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
 
     // Windows -> Windows
     strong_cstr_t include = mallocandsprintf("%sinclude", llvm->compiler->root);
-    strong_cstr_t result = create_windows_link_command(llvm->compiler, llvm->compiler->root, "bin\\ld.exe", "bin\\windres.exe", objfile_filename, linker_additional, "C:/Windows/System32/msvcrt.dll", include, true);
+    strong_cstr_t result = create_windows_link_command(llvm->compiler, llvm->compiler->root, "bin\\windres.exe", objfile_filename, linker_additional, libmsvcrt, include, true);
 
     free(include);
     return result;
@@ -302,12 +301,11 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
         strong_cstr_t alt_bin_root = mallocandsprintf("%scross-compile-windows/", llvm->compiler->root);
         strong_cstr_t cross_linker = mallocandsprintf("%s%s", alt_bin_root, linker);
         strong_cstr_t cross_windres = mallocandsprintf("%s%s", alt_bin_root, windres);
-        strong_cstr_t libmsvcrt = mallocandsprintf("%s%s", alt_bin_root, "libmsvcrt.a");
         strong_cstr_t include = mallocandsprintf("%scross-compile-windows/include", llvm->compiler->root);
         strong_cstr_t result = NULL;
 
         if(file_exists(cross_linker) && file_exists(cross_windres)){
-            result = create_windows_link_command(llvm->compiler, alt_bin_root, linker, windres, objfile_filename, linker_additional, libmsvcrt, include, false);
+            result = create_windows_link_command(llvm->compiler, alt_bin_root, linker, windres, objfile_filename, linker_additional, include, false);
         } else {
             printf("\n");
             redprintf("Cross compiling for Windows requires the 'cross-compile-windows' for v2.8+ extension!\n");
@@ -316,7 +314,6 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
         }
 
         free(include);
-        free(libmsvcrt);
         free(alt_bin_root);
         free(cross_linker);
         free(cross_windres);
