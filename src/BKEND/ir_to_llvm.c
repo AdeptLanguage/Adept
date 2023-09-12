@@ -287,7 +287,7 @@ static maybe_null_strong_cstr_t create_link_command_from_parts(llvm_context_t *l
 
     // Windows -> Windows
     strong_cstr_t include = mallocandsprintf("%sinclude", llvm->compiler->root);
-    strong_cstr_t result = create_windows_link_command(llvm->compiler, llvm->compiler->root, "bin\\windres.exe", objfile_filename, linker_additional, libmsvcrt, include, true);
+    strong_cstr_t result = create_windows_link_command(llvm->compiler, llvm->compiler->root, "bin\\ld.exe", "bin\\windres.exe", objfile_filename, linker_additional, include, true);
 
     free(include);
     return result;
