@@ -22,18 +22,14 @@ enum {
     DEBUG_SIGNAL_AT_LINKING,            // data = NULL
 };
 
-#ifdef ENABLE_DEBUG_FEATURES
-    #include "DRVR/compiler.h"
+#include "DRVR/compiler.h"
 
-    // ---------------- debug_signal(compiler, signal, data) ----------------
-    // Sends a signal to this debugging module
-    #define debug_signal(a, b, c) handle_debug_signal(a, b, c);
+// ---------------- debug_signal(compiler, signal, data) ----------------
+// Sends a signal to this debugging module
+#define debug_signal(a, b, c) handle_debug_signal(a, b, c);
 
-    // ---------------- handle_debug_signal ----------------
-    // Implementation of 'debug_signal'
-    void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data);
-#else
-    #define debug_signal(a, b, c) ((void) 0)
-#endif // ENABLE_DEBUG_FEATURES
+// ---------------- handle_debug_signal ----------------
+// Implementation of 'debug_signal'
+void handle_debug_signal(compiler_t *compiler, unsigned int sig, void *data);
 
 #endif // _ISAAC_DEBUG_H

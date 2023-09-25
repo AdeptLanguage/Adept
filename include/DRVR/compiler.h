@@ -70,13 +70,11 @@ extern "C" {
 #define OPTIMIZATION_ABSOLUTELY_NOTHING 0x04
 
 // Possible compiler debug trait options
-#ifdef ENABLE_DEBUG_FEATURES
 #define COMPILER_DEBUG_STAGES          TRAIT_1
 #define COMPILER_DEBUG_DUMP            TRAIT_2
 #define COMPILER_DEBUG_LLVMIR          TRAIT_3
 #define COMPILER_DEBUG_NO_VERIFICATION TRAIT_4
 #define COMPILER_DEBUG_NO_RESULT       TRAIT_5
-#endif // ENABLE_DEBUG_FEATURES
 
 // Possible compiler result flags (for internal use)
 #define COMPILER_RESULT_NONE                    TRAIT_NONE
@@ -113,10 +111,7 @@ typedef struct compiler {
     troolean use_pic;          // Generate using PIC relocation model
     bool use_libm;             // Link to libm using '-lm'
     bool extract_import_order;   // Parse file to extract order of all imported files
-    
-    #ifdef ENABLE_DEBUG_FEATURES
     trait_t debug_traits;      // COMPILER_DEBUG_* options
-    #endif // ENABLE_DEBUG_FEATURES
 
     // Default standard library to import from (global version)
     // If NULL, then use ADEPT_VERSION_STRING

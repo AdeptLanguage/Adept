@@ -63,10 +63,12 @@ target_include_directories(libadept PRIVATE include ${CURL_INCLUDE_DIR} ${LLVM_I
 target_link_directories(libadept PRIVATE ${CURL_LIBRARY_DIRS} ${LLVM_LIBRARY_DIRS})
 target_compile_definitions(libadept PRIVATE ADEPT_ENABLE_PACKAGE_MANAGER)
 
+message(STATUS "Including debug files")
+list(APPEND core_source_files src/DBG/debug.c)
+add_definitions( -DENABLE_DEBUG_FEATURES )
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	message(STATUS "Including debug files")
-	list(APPEND core_source_files src/DBG/debug.c)
-	add_definitions( -DENABLE_DEBUG_FEATURES )
+	message(STATUS "Compiling with debug flags")
 
 	if(ADEPT_ENABLE_ASAN)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address,undefined,implicit-conversion,bounds")
@@ -78,7 +80,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak")
 	endif()
 else()
-	message(STATUS "Excluding debug files")
+	message(STATUS "Compiling without debug flags")
 endif()
 
 set(app_source_files
