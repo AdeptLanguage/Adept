@@ -679,6 +679,18 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     // Otherwise no function or variable with a matching name was found
     // ...
 
+    if(streq(expr->name, "__pass__") && expr->arity == 1){
+        // If __pass__function can't be found or generated, just return the argument
+
+        *ir_value = arg_values[0];
+        
+        if(out_expr_type != NULL){
+            *out_expr_type = arg_types[0];
+            free(arg_types);
+        }
+        return SUCCESS;
+    }
+
     // If the call expression was tentative, then ignore the failure
     if(expr->is_tentative){
         if(out_expr_type != NULL){

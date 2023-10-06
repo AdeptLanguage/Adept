@@ -33,6 +33,8 @@ static errorcode_t try_to_autogen_proc_to_fill_query(ir_proc_query_t *query, opt
 static errorcode_t ir_gen_find_proc_sweep(ir_proc_query_t *query, optional_func_pair_t *result, unsigned int conform_mode_if_applicable);
 
 errorcode_t ir_gen_find_proc(ir_proc_query_t *query, optional_func_pair_t *result){
+    result->has = false;
+
     // Allow using empty type for 'optional_gives' instead of NULL
     if(query->optional_gives && query->optional_gives->elements_length == 0){
         query->optional_gives = NULL;
