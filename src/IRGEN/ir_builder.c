@@ -746,8 +746,6 @@ errorcode_t handle_assign_management(
             goto handle_errorcode;
         }
 
-        build_zeroinit(builder, destination);
-
         ast_type_t arg_types[2] = {
             ast_type_pointer_to(ast_type_clone(destination_ast_type)),
             *destination_ast_type,

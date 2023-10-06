@@ -855,11 +855,9 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
     }
 
     // Perform initialization
+    build_zeroinit(working_builder, destination);
 
-    if(stmt->value == NULL){
-        // No initial value - Zero Initialize
-        build_zeroinit(working_builder, destination);
-    } else {
+    if(stmt->value != NULL){
         // Initial value - Assign Accordingly
 
         ir_value_t *initial;
