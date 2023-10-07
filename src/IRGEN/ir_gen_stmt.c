@@ -1331,21 +1331,31 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
 
     length_t prep_basicblock_id = (length_t) -1; // garbage value
 
-    if(!stmt->is_static){
-        prep_basicblock_id = build_basicblock(builder);
-        build_using_basicblock(builder, prep_basicblock_id);
-    }
-
     ast_expr_phantom_t *single_expr = NULL;
 
     // NOTE: The follow values only exist if 'single_expr' isn't null
     ir_value_t *single_value = NULL; // (alias for 'single_expr->type')
     ast_type_t single_type;
 
+    bool list_was_mutable = true;
+
     if(stmt->list){
         if(ir_gen_expr(builder, stmt->list, &single_value, true, &single_type)) return FAILURE;
 
-        single_expr = (ast_expr_phantom_t*) ast_expr_create_phantom(single_type, single_value, stmt->list->source, expr_is_mutable(stmt->list));
+        if(!expr_is_mutable(stmt->list)){
+            list_was_mutable = false;
+            ir_builder_add_variable(builder, "$____each_in_list____$", &single_type, single_value->type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
+            ir_value_t *list_on_stack = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, single_value->type), builder->next_var_id - 1);
+            build_store(builder, single_value, list_on_stack, stmt->source);
+            single_value = list_on_stack;
+        }
+
+        single_expr = (ast_expr_phantom_t*) ast_expr_create_phantom(single_type, single_value, stmt->list->source, true);
+    }
+
+    if(!stmt->is_static){
+        prep_basicblock_id = build_basicblock(builder);
+        build_using_basicblock(builder, prep_basicblock_id);
     }
     
     ir_value_t *fixed_array_value = NULL;
@@ -1543,15 +1553,6 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     // Generate jump inc_block
     build_using_basicblock(builder, inc_basicblock_id);
 
-    if(!stmt->is_static && stmt->list && !single_expr->is_mutable){
-        // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
-
-        if(handle_single_deference(builder, &single_type, single_value, single_expr->source) == ALT_FAILURE){
-            ir_builder_close_scope(builder);
-            goto failure;
-        }
-    }
-
     // Increment
     ir_value_t *incremented = build_math(builder, INSTRUCTION_ADD, build_load(builder, idx_ptr, stmt->source), build_literal_usize(builder->pool, 1), idx_ir_type);
     
@@ -1564,7 +1565,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
     ir_builder_close_scope(builder);
     build_using_basicblock(builder, end_basicblock_id);
 
-    if(stmt->list && !single_expr->is_mutable){
+    if(stmt->list && !list_was_mutable){
         // Call '__defer__' on list value and recompute the list if the each-in loop isn't static
 
         if(handle_single_deference(builder, &single_type, single_value, stmt->list->source) == ALT_FAILURE){
