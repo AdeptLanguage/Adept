@@ -1659,9 +1659,6 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     llvm->catalog = &catalog;
     llvm->stack = &stack_frame;
 
-    length_t f = object->ir_module.common.ir_deinit_id;
-    ir_func_t *module_func = &object->ir_module.funcs.funcs[f];
-
     LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
     LLVMValueRef func_skeleton = llvm->static_variable_info.deinit_function;
 
@@ -1681,7 +1678,17 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     // Drop references to any old PHIs
     reset_on_failure_phis(llvm);
 
-    errorcode_t errorcode = ir_to_llvm_basicblocks(llvm, basicblocks, func_skeleton, module_func, llvm_blocks, llvm_exit_blocks, f);
+    errorcode_t errorcode = SUCCESS;
+
+    if(object->ir_module.common.has_deinit){
+        length_t f = object->ir_module.common.ir_deinit_id;
+        ir_func_t *module_func = &object->ir_module.funcs.funcs[f];
+        errorcode = ir_to_llvm_basicblocks(llvm, basicblocks, func_skeleton, module_func, llvm_blocks, llvm_exit_blocks, f);
+    } else {
+        LLVMDeleteFunction(llvm->static_variable_info.deinit_function);
+        llvm->static_variable_info.deinit_function = NULL;
+        warningprintf("No main or main-like function exists to perform global deinitialization in, skipping...\n");
+    }
 
     if(errorcode == SUCCESS){
         LLVMBuildRetVoid(builder);
