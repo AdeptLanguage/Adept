@@ -1659,35 +1659,39 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     llvm->catalog = &catalog;
     llvm->stack = &stack_frame;
 
-    LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
-    LLVMValueRef func_skeleton = llvm->static_variable_info.deinit_function;
-
-    // If the true exit point of a block changed, its real value will be in here
-    // (Used for PHI instructions to have the proper end point)
-    LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
-
-    // Information about PHI instructions that need to have their incoming blocks delayed
-    llvm->relocation_list.length = 0;
-
-    // Create basicblocks
-    for(length_t b = 0; b != basicblocks.length; b++){
-        llvm_blocks[b] = LLVMAppendBasicBlock(func_skeleton, "");
-        llvm_exit_blocks[b] = llvm_blocks[b];
-    }
-
-    // Drop references to any old PHIs
-    reset_on_failure_phis(llvm);
-
     errorcode_t errorcode = SUCCESS;
 
     if(object->ir_module.common.has_deinit){
+        LLVMBasicBlockRef *llvm_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
+        LLVMValueRef func_skeleton = llvm->static_variable_info.deinit_function;
+
+        // If the true exit point of a block changed, its real value will be in here
+        // (Used for PHI instructions to have the proper end point)
+        LLVMBasicBlockRef *llvm_exit_blocks = malloc(sizeof(LLVMBasicBlockRef) * basicblocks.length);
+
+        // Information about PHI instructions that need to have their incoming blocks delayed
+        llvm->relocation_list.length = 0;
+
+        // Create basicblocks
+        for(length_t b = 0; b != basicblocks.length; b++){
+            llvm_blocks[b] = LLVMAppendBasicBlock(func_skeleton, "");
+            llvm_exit_blocks[b] = llvm_blocks[b];
+        }
+
+        // Drop references to any old PHIs
+        reset_on_failure_phis(llvm);
+
         length_t f = object->ir_module.common.ir_deinit_id;
         ir_func_t *module_func = &object->ir_module.funcs.funcs[f];
         errorcode = ir_to_llvm_basicblocks(llvm, basicblocks, func_skeleton, module_func, llvm_blocks, llvm_exit_blocks, f);
+        free(llvm_blocks);
+        free(llvm_exit_blocks);
     } else {
-        LLVMDeleteFunction(llvm->static_variable_info.deinit_function);
-        llvm->static_variable_info.deinit_function = NULL;
         warningprintf("No main or main-like function exists to perform global deinitialization in, skipping...\n");
+
+        LLVMValueRef func_skeleton = llvm->static_variable_info.deinit_function;
+        LLVMBasicBlockRef block = LLVMAppendBasicBlock(func_skeleton, "");
+        LLVMPositionBuilderAtEnd(builder, block);
     }
 
     if(errorcode == SUCCESS){
@@ -1697,8 +1701,6 @@ errorcode_t ir_to_llvm_inject_deinit_built(llvm_context_t *llvm){
     value_catalog_free(&catalog);
     free(stack_frame.values);
     free(stack_frame.types);
-    free(llvm_blocks);
-    free(llvm_exit_blocks);
     LLVMDisposeBuilder(builder);
     return errorcode;
 }
