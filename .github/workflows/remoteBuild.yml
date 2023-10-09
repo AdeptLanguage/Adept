@@ -54,19 +54,13 @@ jobs:
         run: |
           export CC=x86_64-w64-mingw32-gcc
           export CXX=x86_64-w64-mingw32-g++
-      - name: Utilize cached LLVM if available
+      - name: Utilize cached LLVM if available (Windows)
+        if: matrix.os == 'windows-latest'
         uses: actions/cache@v2
         id: llvm
         with:
           path: ${{github.workspace}}/llvm
           key: ${{runner.os}}-cache-llvm-13.0.1-${{ hashFiles('llvm/**/*.txt') }}
-      - name: Download LLVM (Unix)
-        if: steps.llvm.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
-        uses: KyleMayes/install-llvm-action@v1.6.1
-        with:
-          version: "13.0.1"
-          directory: ${{github.workspace}}/llvm
-          cached: ${{ steps.llvm.outputs.cache-hit }}
       # For some god-forsaken reason, there is no prebuilt version of LLVM for developing on Windows.
       # Every version comes with llvm-config, LLVMConfig.cmake, and other files needed, expect Windows!
       # Which means we're gonna have to spend an hour or so compiling from scratch (Github willing)
@@ -95,12 +89,6 @@ jobs:
           curl -o curl.zip -L https://curl.se/windows/dl-8.2.1_11/curl-8.2.1_11-win64-mingw.zip
           unzip curl.zip
           mv curl-8.2.1_11-win64-mingw libcurl
-      - name: Install libcurl (Ubuntu)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libncurses5
-          sudo apt-get install -y libcurl4-openssl-dev
       - name: Download static zlib libraries (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
@@ -113,6 +101,17 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=${{github.workspace}}/llvm/build -DCMAKE_LIBRARY_PATH=C:\msys64\usr\lib -DCURL_LIBRARY=curl -DCURL_LIBRARY_DIRS=${{github.workspace}}/libcurl/lib -DCURL_INCLUDE_DIR=libcurl/include -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           LLVM_DIR: ${{github.workspace}}/llvm/build
+      - name: Install LLVM and dependencies (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install llvm@17
+      - name: Install LLVM and dependencies (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libncurses5
+          sudo apt-get install -y libcurl4-openssl-dev
+          sudo apt-get install -y llvm-17-dev
       - name: Configure (Unix)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
