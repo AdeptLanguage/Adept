@@ -59,12 +59,12 @@ jobs:
         id: llvm
         with:
           path: ${{github.workspace}}/llvm
-          key: ${{runner.os}}-cache-llvm-17.0.2-${{ hashFiles('llvm/**/*.txt') }}
+          key: ${{runner.os}}-cache-llvm-13.0.1-${{ hashFiles('llvm/**/*.txt') }}
       - name: Download LLVM (Unix)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
         uses: KyleMayes/install-llvm-action@v1.6.1
         with:
-          version: "17.0.2"
+          version: "13.0.1"
           directory: ${{github.workspace}}/llvm
           cached: ${{ steps.llvm.outputs.cache-hit }}
       # For some god-forsaken reason, there is no prebuilt version of LLVM for developing on Windows.
@@ -73,13 +73,13 @@ jobs:
       # At least we have ninja
       - name: Download LLVM Source Code (Windows)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
-        run: curl -o llvm-source-tree.tar.xz -L https://github.com/llvm/llvm-project/releases/download/llvmorg-17.0.2/llvm-17.0.2.src.tar.xz
+        run: curl -o llvm-source-tree.tar.xz -L https://github.com/llvm/llvm-project/releases/download/llvmorg-13.0.1/llvm-13.0.1.src.tar.xz
       - name: Extract LLVM Source Code (Windows)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
         run: |
           7z x llvm-source-tree.tar.xz
           tar xf llvm-source-tree.tar
-          mv llvm-17.0.2.src llvm
+          mv llvm-13.0.1.src llvm
       - name: Build LLVM from Source (Windows)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
         working-directory: ${{github.workspace}}/llvm
