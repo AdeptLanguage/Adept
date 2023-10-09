@@ -111,11 +111,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
-          sudo apt-get install -y llvm-16-dev
+          sudo apt-get install -y llvm-15-dev
       - name: Configure (macOS)
         if: ${{ matrix.os != 'macos-latest' }}
         run: |
-          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=/usr/local/opt/llvm@16 -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+        env:
+          LLVM_DIR: /usr/local/opt/llvm@16
       - name: Configure (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
