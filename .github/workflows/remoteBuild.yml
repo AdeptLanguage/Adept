@@ -105,18 +105,19 @@ jobs:
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew install llvm@16
-          export PATH="/usr/local/opt/llvm@16/bin:$PATH"
-          export LDFLAGS="-L/usr/local/opt/llvm@16/lib"
-          export CPPFLAGS="-I/usr/local/opt/llvm@16/include"
       - name: Install LLVM and dependencies (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
-          sudo apt-get install -y llvm-dev
-      - name: Configure (Unix)
-        if: ${{ matrix.os != 'windows-latest' }}
+          sudo apt-get install -y llvm-16-dev
+      - name: Configure (macOS)
+        if: ${{ matrix.os != 'macos-latest' }}
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH=/usr/local/opt/llvm@16 -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+      - name: Configure (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
       - name: Build
