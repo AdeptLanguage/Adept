@@ -114,15 +114,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
-          deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
-          deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
-          sudo apt-get install -y llvm-17-dev
+          sudo apt-get install -y llvm-dev
       - name: Configure (Unix)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
-        env:
-          LLVM_DIR: ${{github.workspace}}/llvm/lib/cmake
       - name: Build
         run: |
           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
