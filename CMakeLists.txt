@@ -12,11 +12,13 @@ endif()
 find_package(LLVM REQUIRED)
 find_package(CURL REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(zstd REQUIRED)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Found Curl ${CURL_LIBRARIES}")
 message(STATUS "Found ZLIB ${ZLIB_LIBRARIES}")
+message(STATUS "Found ztd ${zstd_LIBRARY}")
 
 if (MSVC)
     add_compile_options(/W4 /WX)
@@ -92,7 +94,7 @@ target_sources(adept PRIVATE ${app_source_files})
 target_sources(libadept PRIVATE ${app_source_files})
 
 if(WIN32)
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} ${ZLIB_LIBRARIES} -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} ${zstd_LIBRARY} ${ZLIB_LIBRARIES} -lpsapi -lshell32 -lole32 -luuid -ladvapi32)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC On)
@@ -104,7 +106,7 @@ if(WIN32)
 endif()
 
 if(APPLE)
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lldap -lpthread ${ZLIB_LIBRARIES} -lcurses)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} -lldap -lpthread ${zstd_LIBRARY} ${ZLIB_LIBRARIES} -lcurses)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC Off)
@@ -113,7 +115,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
 	# Linux
-	set(extra_libs ${EXTRA_REQUIRED_LIBS} -ldl -lpthread ${ZLIB_LIBRARIES} -lcurses -lm)
+	set(extra_libs ${EXTRA_REQUIRED_LIBS} -ldl -lpthread ${zstd_LIBRARY} ${ZLIB_LIBRARIES} -lcurses -lm)
 
 	if(ADEPT_LINK_LLVM_STATIC STREQUAL "default")
 		set(ADEPT_LINK_LLVM_STATIC Off)
@@ -164,8 +166,8 @@ else()
 	message(STATUS "Linking against LLVM dynamically")
 	message(STATUS "${LLVM_LIBRARY_DIRS}/../bin/llvm-config")
 	execute_process(COMMAND ${LLVM_LIBRARY_DIRS}/../bin/llvm-config --libs OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE llvm_dynamic_libs)
-	target_link_libraries(adept ${CURL_LIBRARIES} ${llvm_dynamic_libs} ${ZLIB_LIBRARIES})
-	target_link_libraries(libadept ${CURL_LIBRARIES} ${llvm_dynamic_libs} ${ZLIB_LIBRARIES})
+	target_link_libraries(adept ${CURL_LIBRARIES} ${llvm_dynamic_libs} ${zstd_LIBRARY} ${ZLIB_LIBRARIES})
+	target_link_libraries(libadept ${CURL_LIBRARIES} ${llvm_dynamic_libs}  ${zstd_LIBRARY} ${ZLIB_LIBRARIES})
 endif()
 
 set_target_properties(adept PROPERTIES C_STANDARD 11 LINKER_LANGUAGE CXX)
