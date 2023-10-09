@@ -104,8 +104,10 @@ jobs:
       - name: Install LLVM and dependencies (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          brew search llvm
-          brew install llvm
+          brew install llvm@16
+          export PATH="/usr/local/opt/llvm@16/bin:$PATH"
+          export LDFLAGS="-L/usr/local/opt/llvm@16/lib"
+          export CPPFLAGS="-I/usr/local/opt/llvm@16/include"
       - name: Install LLVM and dependencies (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
