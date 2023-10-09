@@ -65,7 +65,7 @@ errorcode_t ir_lower_const_cast(ir_pool_t *pool, ir_value_t **inout_value){
     return SUCCESS;
 }
 
-static bool is_little_endian(){
+static bool is_little_endian(void){
     unsigned short x = 1;
     return *((unsigned char*) &x) == 1;
 }

@@ -177,7 +177,10 @@ typedef struct {
 typedef struct {
     unsigned int id;
     ir_type_t *result_type;
-    ir_value_t *address;
+    ir_value_t *function_address;
+    ir_type_t **function_arg_types;
+    length_t function_arg_types_length;
+    bool function_is_vararg;
     ir_value_t **values;
     length_t values_length;
 } ir_instr_call_address_t;

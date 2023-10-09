@@ -711,6 +711,8 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         ir_type_t *result_type;
         length_t arity;
         ir_value_t **arg_values;
+        ir_type_t **param_types;
+        bool is_vararg;
 
         {
             ir_func_t *ir_func = &builder.object->ir_module.funcs.funcs[ir_func_id];
@@ -719,6 +721,8 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
             function_pointer_type = ir_type_make_function_pointer(builder.pool, ir_func->argument_types, ir_func->arity, ir_func->return_type, funcptr_traits);
             result_type = ir_func->return_type;
             arity = ir_func->arity;
+            param_types = ir_func->argument_types;
+            is_vararg = funcptr_traits & AST_FUNC_VARARG;
 
             arg_values = ir_pool_alloc(builder.pool, sizeof(ir_type_t*) * arity);
 
@@ -728,7 +732,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         }
 
         ir_value_t *function_pointer = build_bitcast(&builder, raw_function_pointer, function_pointer_type);
-        ir_value_t *result = build_call_address(&builder, result_type, function_pointer, arg_values, arity);
+        ir_value_t *result = build_call_address(&builder, result_type, function_pointer, arg_values, arity, param_types, arity, is_vararg);
 
         build_return(&builder, result_type->kind != TYPE_KIND_VOID ? result : NULL);
 

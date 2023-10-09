@@ -140,11 +140,14 @@ void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_ty
     });
 }
 
-ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity){
+ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity, ir_type_t **param_types, length_t param_types_length, bool is_vararg){
     return BUILD_VALUE(ir_instr_call_address_t, {
         .id = INSTRUCTION_CALL_ADDRESS,
         .result_type = return_type,
-        .address = address,
+        .function_address = address,
+        .function_arg_types = param_types,
+        .function_arg_types_length = param_types_length,
+        .function_is_vararg = is_vararg,
         .values = arg_values,
         .values_length = arity,
     });

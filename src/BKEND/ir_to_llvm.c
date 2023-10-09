@@ -2,7 +2,6 @@
 #include <ctype.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Target.h>
-#include <llvm-c/Transforms/IPO.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -359,10 +358,8 @@ static errorcode_t emit_to_file(
     weak_cstr_t objfile_filename
 ){
     LLVMCodeGenFileType codegen = LLVMObjectFile;
-    
-    LLVMAddGlobalOptimizerPass(pass_manager);
-    LLVMAddConstantMergePass(pass_manager);
-    LLVMRunPassManager(pass_manager, module);
+
+    (void) pass_manager;
 
     char *llvm_error;
     if(LLVMTargetMachineEmitToFile(target_machine, module, objfile_filename, codegen, &llvm_error)){
@@ -411,6 +408,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
         .catalog = (void*) 0xD3ADB33F,
         .stack = (void*) 0xD3ADB33F,
         .func_skeletons = malloc(sizeof(LLVMValueRef) * ir_module->funcs.length),
+        .func_skeleton_types = malloc(sizeof(LLVMValueRef) * ir_module->funcs.length),
         .global_variables = malloc(sizeof(LLVMValueRef) * ir_module->globals_length),
         .anon_global_variables = malloc(sizeof(LLVMValueRef) * ir_module->anon_globals.length),
         .data_layout = data_layout,
@@ -434,6 +432,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     || ir_to_llvm_inject_init_built(&llvm)
     || ir_to_llvm_inject_deinit_built(&llvm)){
         free(llvm.func_skeletons);
+        free(llvm.func_skeleton_types);
         free(llvm.global_variables);
         free(llvm.anon_global_variables);
         free(llvm.string_table.entries);
@@ -453,7 +452,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     #endif // ENABLE_DEBUG_FEATURES
 
     // Free reference arrays
-    free(llvm.func_skeletons);
+    free(llvm.func_skeleton_types);
     free(llvm.global_variables);
     free(llvm.anon_global_variables);
     free(llvm.static_variables.variables);

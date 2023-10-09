@@ -70,7 +70,7 @@ void build_call_ignore_result(ir_builder_t *builder, func_id_t ir_func_id, ir_ty
 
 // ---------------- build_call_address ----------------
 // Builds a call function address instruction
-ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity);
+ir_value_t *build_call_address(ir_builder_t *builder, ir_type_t *return_type, ir_value_t *address, ir_value_t **arg_values, length_t arity, ir_type_t **param_types, length_t param_types_length, bool is_vararg);
 
 // ---------------- build_break ----------------
 // Builds a break instruction

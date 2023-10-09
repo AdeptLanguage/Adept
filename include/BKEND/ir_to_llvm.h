@@ -90,6 +90,7 @@ typedef struct {
     value_catalog_t *catalog;
     varstack_t *stack;
     LLVMValueRef *func_skeletons;
+    LLVMTypeRef *func_skeleton_types;
     LLVMValueRef *global_variables;
     LLVMValueRef *anon_global_variables;
     LLVMTargetDataRef data_layout;

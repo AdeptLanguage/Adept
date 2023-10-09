@@ -82,6 +82,25 @@ static LLVMValueRef llvm_get_zero_value(llvm_context_t *llvm, ir_type_t *type){
     }
 }
 
+static void llvm_build_memset(llvm_context_t *llvm, LLVMValueRef args[4]){
+        LLVMValueRef *memset_intrinsic = &llvm->intrinsics.memset;
+
+        LLVMTypeRef arg_types[] = {
+        LLVMPointerType(LLVMInt8Type(), 0),
+        LLVMInt8Type(),
+        llvm->i64_type,
+        LLVMInt1Type(),
+    };
+
+    LLVMTypeRef memset_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
+
+    if(*memset_intrinsic == NULL){
+        *memset_intrinsic = LLVMAddFunction(llvm->module, "llvm.memset.p0.i64", memset_intrinsic_type);
+    }
+
+    LLVMBuildCall2(llvm->builder, memset_intrinsic_type, *memset_intrinsic, args, 4, "");
+}
+
 static void reset_on_failure_phis(llvm_context_t *llvm){
     llvm->null_check.line_phi = NULL;
     llvm->null_check.column_phi = NULL;
@@ -383,6 +402,7 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
     ir_func_t *module_funcs = object->ir_module.funcs.funcs;
     length_t module_funcs_length = object->ir_module.funcs.length;
     LLVMValueRef *func_skeletons = llvm->func_skeletons;
+    LLVMTypeRef *func_skeleton_types = llvm->func_skeleton_types;
 
     LLVMAttributeRef nounwind = LLVMCreateEnumAttribute(LLVMGetGlobalContext(), LLVMGetEnumAttributeKindForName("nounwind", 8), 0);
 
@@ -421,6 +441,9 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
         LLVMTypeRef return_type = ir_to_llvm_type(llvm, ir_func->return_type);
         LLVMTypeRef llvm_func_type = LLVMFunctionType(return_type, parameters, ir_func->arity, ir_func->traits & IR_FUNC_VARARG);
 
+        // Remember type for function
+        func_skeleton_types[ir_func_id] = llvm_func_type;
+
         LLVMValueRef *skeleton = &func_skeletons[ir_func_id];
 
         if(ir_func->traits & IR_FUNC_FOREIGN){
@@ -432,7 +455,6 @@ errorcode_t ir_to_llvm_functions(llvm_context_t *llvm, object_t *object){
         } else {
             char adept_implementation_name[256];
             ir_implementation(ir_func_id, 'a', adept_implementation_name);
-
             *skeleton = LLVMAddFunction(llvm_module, adept_implementation_name, llvm_func_type);
             LLVMSetLinkage(*skeleton, LLVMPrivateLinkage);
         }
@@ -649,16 +671,16 @@ void build_llvm_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_s
     LLVMValueRef printf_fn = LLVMGetNamedFunction(llvm->module, "printf");
     LLVMValueRef exit_fn = LLVMGetNamedFunction(llvm->module, "exit");
 
+    LLVMTypeRef int32 = LLVMInt32Type();
+    LLVMTypeRef charptr = LLVMPointerType(LLVMInt8Type(), 0);
+    LLVMTypeRef printf_fn_type = LLVMFunctionType(int32, &charptr, 1, true);
+    LLVMTypeRef exit_fn_type = LLVMFunctionType(int32, &int32, 1, false);
+
     if(exit_fn == NULL){
-        LLVMTypeRef int32 = LLVMInt32Type();
-        LLVMTypeRef exit_fn_type = LLVMFunctionType(int32, &int32, 1, false);
         exit_fn = LLVMAddFunction(llvm->module, "exit", exit_fn_type);
     }
 
     if(printf_fn == NULL){
-        LLVMTypeRef int32 = LLVMInt32Type();
-        LLVMTypeRef charptr = LLVMPointerType(LLVMInt8Type(), 0);
-        LLVMTypeRef printf_fn_type = LLVMFunctionType(int32, &charptr, 1, true);
         printf_fn = LLVMAddFunction(llvm->module, "printf", printf_fn_type);
     }
 
@@ -686,11 +708,11 @@ void build_llvm_check_on_failure_block(llvm_context_t *llvm, LLVMValueRef func_s
     LLVMValueRef args[] = {check->failure_message_bytes, filename_str, func_name_str, check->line_phi, check->column_phi};
 
     // Print the error message
-    LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(printf_fn)), printf_fn, args, NUM_ITEMS(args), "");
+    LLVMBuildCall2(builder, printf_fn_type, printf_fn, args, NUM_ITEMS(args), "");
 
     // Exit the program
     LLVMValueRef one = LLVMConstInt(LLVMInt32Type(), 1, true);
-    LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(exit_fn)), exit_fn, &one, 1, "");
+    LLVMBuildCall2(builder, exit_fn_type, exit_fn, &one, 1, "");
     LLVMBuildUnreachable(builder);
 }
 
@@ -810,7 +832,9 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 LLVMValueRef named_func = LLVMGetNamedFunction(llvm->module, implementation_name);
                 assert(named_func != NULL);
 
-                llvm_result = LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(named_func)), named_func, arguments, call_instr->values_length, "");
+                LLVMTypeRef function_type = llvm->func_skeleton_types[call_instr->ir_func_id];
+
+                llvm_result = LLVMBuildCall2(builder, function_type, named_func, arguments, call_instr->values_length, "");
                 catalog->blocks[b].value_references[i] = llvm_result;
             }
             break;
@@ -822,10 +846,19 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     arguments[v] = ir_to_llvm_value(llvm, call_addr_instr->values[v]);
                 }
 
-                LLVMValueRef target_func = ir_to_llvm_value(llvm, call_addr_instr->address);
+                LLVMValueRef target_func = ir_to_llvm_value(llvm, call_addr_instr->function_address);
 
-                llvm_result = LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(target_func)), target_func, arguments, call_addr_instr->values_length, "");
+                LLVMTypeRef return_type = ir_to_llvm_type(llvm, call_addr_instr->result_type);
+                LLVMTypeRef *param_types = malloc(sizeof(LLVMTypeRef) * call_addr_instr->function_arg_types_length);
+                for(size_t i = 0; i < call_addr_instr->function_arg_types_length; i++){
+                    param_types[i] = ir_to_llvm_type(llvm, call_addr_instr->function_arg_types[i]);
+                }
+                LLVMTypeRef function_type = LLVMFunctionType(return_type, param_types, call_addr_instr->values_length, call_addr_instr->function_is_vararg);
+
+                llvm_result = LLVMBuildCall2(builder, function_type, target_func, arguments, call_addr_instr->values_length, "");
                 catalog->blocks[b].value_references[i] = llvm_result;
+
+                free(param_types);
             }
             break;
         case INSTRUCTION_STORE: {
@@ -1060,7 +1093,18 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
         case INSTRUCTION_ZEROINIT: {
                 ir_value_t *ir_value = ((ir_instr_zeroinit_t*) instr)->destination;
                 LLVMValueRef destination = ir_to_llvm_value(llvm, ir_value);
-                LLVMBuildStore(builder, LLVMConstNull(LLVMGetElementType(LLVMTypeOf(destination))), destination);
+
+                LLVMTypeRef destination_type = ir_to_llvm_type(llvm, ir_type_dereference(ir_value->type));
+                LLVMValueRef per_item_size = LLVMConstInt(llvm->i64_type, LLVMABISizeOfType(llvm->data_layout, destination_type), false);
+
+                LLVMValueRef args[] = {
+                    LLVMBuildBitCast(llvm->builder, destination, LLVMPointerType(LLVMInt8Type(), 0), ""),
+                    LLVMConstInt(LLVMInt8Type(), 0, false),
+                    per_item_size,
+                    LLVMConstInt(LLVMInt1Type(), 0, false),
+                };
+
+                llvm_build_memset(llvm, args);
             }
             break;
         case INSTRUCTION_MALLOC: {
@@ -1081,20 +1125,6 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     catalog->blocks[b].value_references[i] = allocated;
 
                     if(!(malloc_instr->is_undef || llvm->compiler->traits & COMPILER_UNSAFE_NEW)){
-                        LLVMValueRef *memset_intrinsic = &llvm->intrinsics.memset;
-
-                        if(*memset_intrinsic == NULL){
-                            LLVMTypeRef arg_types[] = {
-                                LLVMPointerType(LLVMInt8Type(), 0),
-                                LLVMInt8Type(),
-                                llvm->i64_type,
-                                LLVMInt1Type(),
-                            };
-
-                            LLVMTypeRef memset_intrinsic_type = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
-                            *memset_intrinsic = LLVMAddFunction(llvm->module, "llvm.memset.p0i8.i64", memset_intrinsic_type);
-                        }
-
                         LLVMValueRef per_item_size = LLVMConstInt(llvm->i64_type, LLVMABISizeOfType(llvm->data_layout, ty), false);
                         count = LLVMBuildZExt(llvm->builder, count, llvm->i64_type, "");
 
@@ -1105,7 +1135,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                             LLVMConstInt(LLVMInt1Type(), 0, false),
                         };
 
-                        LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(*memset_intrinsic)), *memset_intrinsic, args, 4, "");
+                        llvm_build_memset(llvm, args);
                     }
                 }
             }
@@ -1119,16 +1149,16 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
                 LLVMValueRef *memcpy_intrinsic = &llvm->intrinsics.memcpy;
 
-                if(*memcpy_intrinsic == NULL){
-                    LLVMTypeRef arg_types[] = {
-                        LLVMPointerType(LLVMInt8Type(), 0),
-                        LLVMPointerType(LLVMInt8Type(), 0),
-                        llvm->i64_type,
-                        LLVMInt1Type(),
-                    };
-                    LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
+                LLVMTypeRef arg_types[] = {
+                    LLVMPointerType(LLVMInt8Type(), 0),
+                    LLVMPointerType(LLVMInt8Type(), 0),
+                    llvm->i64_type,
+                    LLVMInt1Type(),
+                };
+                LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 4, 0);
 
-                    *memcpy_intrinsic = LLVMAddFunction(llvm->module, "llvm.memcpy.p0i8.p0i8.i64", signature);
+                if(*memcpy_intrinsic == NULL){
+                    *memcpy_intrinsic = LLVMAddFunction(llvm->module, "llvm.memcpy.p0.p0.i64", signature);
                 }
 
                 LLVMValueRef args[] = {
@@ -1138,7 +1168,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     LLVMConstInt(LLVMInt1Type(), memcpy_instr->is_volatile, false),
                 };
 
-                LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(*memcpy_intrinsic)), *memcpy_intrinsic, args, 4, "");
+                LLVMBuildCall2(builder, signature, *memcpy_intrinsic, args, 4, "");
                 catalog->blocks[b].value_references[i] = NULL;
             }
             break;
@@ -1241,24 +1271,25 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
             break;
         case INSTRUCTION_STACK_SAVE: {
                 LLVMValueRef *stacksave_intrinsic = &llvm->intrinsics.stacksave;
+                LLVMTypeRef signature = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), NULL, 0, false);
 
                 if(*stacksave_intrinsic == NULL){
-                    LLVMTypeRef signature = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), NULL, 0, 0);
                     *stacksave_intrinsic = LLVMAddFunction(llvm->module, "llvm.stacksave", signature);
                 }
 
-                catalog->blocks[b].value_references[i] = LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(*stacksave_intrinsic)), *stacksave_intrinsic, NULL, 0, "");
+                catalog->blocks[b].value_references[i] = LLVMBuildCall2(builder, signature, *stacksave_intrinsic, NULL, 0, "");
             }
             break;
         case INSTRUCTION_STACK_RESTORE: {
                 LLVMValueRef *stackrestore_intrinsic = &llvm->intrinsics.stackrestore;
 
-                if(*stackrestore_intrinsic == NULL){
-                    LLVMTypeRef arg_types[] = {
-                        LLVMPointerType(LLVMInt8Type(), 0),
-                    };
+                LLVMTypeRef arg_types[] = {
+                    LLVMPointerType(LLVMInt8Type(), 0),
+                };
 
-                    LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 1, 0);
+                LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 1, false);
+
+                if(*stackrestore_intrinsic == NULL){
                     *stackrestore_intrinsic = LLVMAddFunction(llvm->module, "llvm.stackrestore", signature);
                 }
 
@@ -1266,7 +1297,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value),
                 };
 
-                LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(*stackrestore_intrinsic)), *stackrestore_intrinsic, args, 1, "");
+                LLVMBuildCall2(builder, signature, *stackrestore_intrinsic, args, 1, "");
                 catalog->blocks[b].value_references[i] = NULL;
             }
             break;
@@ -1274,12 +1305,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 bool is_start = instr->id == INSTRUCTION_VA_START;
                 LLVMValueRef *va_intrinsic = is_start ? &llvm->intrinsics.va_start : &llvm->intrinsics.va_end;
 
-                if(*va_intrinsic == NULL){
-                    LLVMTypeRef arg_types[] = {
-                        LLVMPointerType(LLVMInt8Type(), 0),
-                    };
+                LLVMTypeRef arg_types[] = {
+                    LLVMPointerType(LLVMInt8Type(), 0),
+                };
 
-                    LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 1, 0);
+                LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 1, false);
+
+                if(*va_intrinsic == NULL){
                     *va_intrinsic = LLVMAddFunction(llvm->module, is_start ? "llvm.va_start" : "llvm.va_end", signature);
                 }
 
@@ -1287,7 +1319,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     ir_to_llvm_value(llvm, ((ir_instr_unary_t*) instr)->value),
                 };
                 
-                LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(*va_intrinsic)), *va_intrinsic, args, 1, "");
+                LLVMBuildCall2(builder, signature, *va_intrinsic, args, 1, "");
                 catalog->blocks[b].value_references[i] = NULL;
             }
             break;
@@ -1302,17 +1334,14 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 ir_instr_va_copy_t *va_copy_instr = (ir_instr_va_copy_t*) instr;
 
                 LLVMValueRef *va_copy_intrinsic = &llvm->intrinsics.va_copy;
+                LLVMTypeRef ptr_type = LLVMPointerType(LLVMInt8Type(), 0);
+                LLVMTypeRef parameters[] = {
+                    ptr_type,
+                    ptr_type
+                };
+                LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), parameters, NUM_ITEMS(parameters), false);
 
                 if(*va_copy_intrinsic == NULL){
-                    LLVMTypeRef ptr_type = LLVMPointerType(LLVMInt8Type(), 0);
-
-                    LLVMTypeRef parameters[] = {
-                        ptr_type,
-                        ptr_type
-                    };
-
-                    LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), parameters, NUM_ITEMS(parameters), 0);
-
                     *va_copy_intrinsic = LLVMAddFunction(llvm->module, "llvm.va_copy", signature);
                 }
 
@@ -1321,7 +1350,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     ir_to_llvm_value(llvm, va_copy_instr->src_value),
                 };
                 
-                LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(*va_copy_intrinsic)), *va_copy_intrinsic, args, NUM_ITEMS(args), "");
+                LLVMBuildCall2(builder, signature, *va_copy_intrinsic, args, NUM_ITEMS(args), "");
                 catalog->blocks[b].value_references[i] = NULL;
             }
             break;
@@ -1354,7 +1383,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     #endif
                 );
                 
-                LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(inline_asm)), inline_asm, args, asm_instr->arity, "");
+                LLVMBuildCall2(builder, signature, inline_asm, args, asm_instr->arity, "");
             }
             break;
         case INSTRUCTION_DEINIT_SVARS:
@@ -1362,7 +1391,9 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 die("ir_to_llvm_instructions() - INSTRUCTION_DEINIT_SVARS cannot operate since static_variables_deinitialization_function doesn't exist\n");
             }
 
-            LLVMBuildCall2(builder, LLVMGetElementType(LLVMTypeOf(llvm->static_variable_info.deinit_function)), llvm->static_variable_info.deinit_function, NULL, 0, "");
+            LLVMTypeRef function_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
+
+            LLVMBuildCall2(builder, function_type, llvm->static_variable_info.deinit_function, NULL, 0, "");
             break;
         case INSTRUCTION_UNREACHABLE:
             LLVMBuildUnreachable(builder);

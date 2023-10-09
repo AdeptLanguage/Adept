@@ -2810,8 +2810,21 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
     // Handle __pass__ management for values that need it
     if(handle_pass_management(builder, arg_values, function_elem->arg_types, NULL, call->arity)) return FAILURE;
 
+    ir_type_t **param_types = ir_pool_alloc(builder->pool, sizeof(ir_type_t*) * function_elem->arity);
+
+    for(size_t i = 0; i < function_elem->arity; i++){
+        if(ir_gen_resolve_type(builder->compiler, builder->object, &function_elem->arg_types[i], &param_types[i])){
+            return FAILURE;
+        }
+
+        if(!ir_types_identical(param_types[i], arg_values[i]->type)){
+            compiler_panic(builder->compiler, call->source, "INTERNAL ERROR: Expected actual and calling argument types to be the same");
+            return FAILURE;
+        }
+    }
+
     // Generate the actual call address instruction
-    *inout_ir_value = build_call_address(builder, ir_return_type, *inout_ir_value, arg_values, call->arity);
+    *inout_ir_value = build_call_address(builder, ir_return_type, *inout_ir_value, arg_values, call->arity, param_types, function_elem->arity, function_elem->traits & AST_FUNC_VARARG);
 
     if(out_expr_type != NULL) *out_expr_type = ast_type_clone(function_elem->return_type);
     return SUCCESS;

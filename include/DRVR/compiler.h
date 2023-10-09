@@ -193,7 +193,7 @@ void show_help(bool show_advanced_options);
 
 // ---------------- show_how_to_ignore_unused_variables ----------------
 // Displays information on how to ignore unused variables
-void show_how_to_ignore_unused_variables();
+void show_how_to_ignore_unused_variables(void);
 
 // ---------------- show_version ----------------
 // Displays program version information

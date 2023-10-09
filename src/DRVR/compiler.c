@@ -789,7 +789,7 @@ void show_help(bool show_advanced_options){
     #endif // ENABLE_DEBUG_FEATURES
 }
 
-void show_how_to_ignore_unused_variables(){
+void show_how_to_ignore_unused_variables(void){
     blueprintf("Choose one or more options to ignore unused variables:\n");
     printf("  A.) prefix the variable with '_'              [single variable]\n");
     printf("  B.) add 'pragma ignore_unused' to your file   [entire project]\n");

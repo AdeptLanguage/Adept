@@ -297,7 +297,7 @@ static void ir_dump_call_instruction(FILE *file, ir_instr_call_t *instruction, i
 }
 
 static void ir_dump_call_address_instruction(FILE *file, ir_instr_call_address_t *instruction){
-    strong_cstr_t address = ir_value_str(instruction->address);
+    strong_cstr_t address = ir_value_str(instruction->function_address);
     strong_cstr_t args = ir_values_str(instruction->values, instruction->values_length);
     strong_cstr_t result_type = ir_type_str(instruction->result_type);
 

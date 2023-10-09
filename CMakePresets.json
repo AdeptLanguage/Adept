@@ -9,11 +9,11 @@
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm@14",
+                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm@17",
                 "ADEPT_LINK_LLVM_STATIC": false,
                 "CMAKE_EXPORT_COMPILE_COMMANDS": true,
-                "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm@14/bin/clang",
-                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm@14/bin/clang++",
+                "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm@17/bin/clang",
+                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm@17/bin/clang++",
                 "ADEPT_ENABLE_ASAN": true,
                 "ADEPT_ENABLE_LSAN": true
             }
@@ -26,9 +26,9 @@
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm@14/bin/clang",
-                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm@14/bin/clang++",
-                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm@14",
+                "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm@17/bin/clang",
+                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm@17/bin/clang++",
+                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm@17",
                 "ADEPT_LINK_LLVM_STATIC": false
             }
         },
