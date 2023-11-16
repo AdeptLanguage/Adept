@@ -122,7 +122,9 @@ jobs:
           sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get install -y llvm-15-dev
-          dpkg -L libzstd-dev
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew install libzstd-dev
+          brew ls -v libztd-dev
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
@@ -133,8 +135,6 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
-          zstd_DIR: /usr/lib/x86_64-linux-gnu
-          zstd_LIBRARY: /usr/lib/x86_64-linux-gnu/libzstd.a
       - name: Build
         run: |
           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
