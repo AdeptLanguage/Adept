@@ -123,7 +123,8 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get install -y llvm-15-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew install zstd@1.5.5
+          brew install zstd
+          brew ls -v zstd
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
