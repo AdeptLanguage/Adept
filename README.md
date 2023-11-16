@@ -26,6 +26,8 @@ A blazing fast language for general purpose programming.
 
 [Adept v2.7 Sublime Text Syntax Highlighting](https://github.com/AdeptLanguage/AdeptSublimeText)
 
+[Adept v2.7 Geany Text Syntax Highlighting](https://github.com/iahung3/adept.geany.syntaxcoloring)
+
 ## Command-Line Usage
 
 `adept [filename] [options]`
