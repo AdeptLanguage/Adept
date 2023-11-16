@@ -135,6 +135,8 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+        env:
+          zstd_DIR: /home/linuxbrew/.linuxbrew/Cellar/zstd/1.5.5/lib/cmake/zstd/
       - name: Build
         run: |
           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
