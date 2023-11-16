@@ -133,7 +133,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
-          zstd_DIR: /usr/lib/x86_64-linux-gnu/
+          zstd_DIR: /usr/lib/x86_64-linux-gnu
           zstd_LIBRARY: /usr/lib/x86_64-linux-gnu/libzstd.a
       - name: Build
         run: |
