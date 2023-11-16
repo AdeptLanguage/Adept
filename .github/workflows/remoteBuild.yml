@@ -123,6 +123,8 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get install -y llvm-15-dev
           sudo apt-get --purge remove libzstd-dev
+          ls ~
+          ls /usr/linuxbrew
           sudo apt-get install -y libzstd-dev
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
