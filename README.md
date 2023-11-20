@@ -28,7 +28,7 @@ A blazing fast language for general purpose programming.
 
 [Adept v2.7 Geany Syntax Highlighting](https://github.com/iahung3/adept.geany.syntaxcoloring)
 
-[Adept v2.7 JEdit Syntax Highlighting](https://github.com/iahung3/adept.jedit.syntaxcoloring]
+[Adept v2.7 JEdit Syntax Highlighting](https://github.com/iahung3/adept.jedit.syntaxcoloring)
 
 ## Command-Line Usage
 
