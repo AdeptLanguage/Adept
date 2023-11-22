@@ -30,6 +30,8 @@ A blazing fast language for general purpose programming.
 
 [Adept v2.7 JEdit Syntax Highlighting](https://github.com/iahung3/adept.jedit.syntaxcoloring)
 
+[Adept v2.7 Kate Syntax Highlighting](https://github.com/iahung3/adept.kate.syntaxcoloring)
+
 ## Command-Line Usage
 
 `adept [filename] [options]`
