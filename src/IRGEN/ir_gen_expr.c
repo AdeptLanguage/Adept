@@ -896,7 +896,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
 
     // Obtain IR type for 'ubyte' type
     ir_type_t *ubyte_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-    ubyte_type->kind = TYPE_KIND_S8;
+    ubyte_type->kind = TYPE_KIND_U8;
     /* neglect ubyte_type->extra */
 
     // Allocate memory on the stack to hold raw data array
@@ -2819,6 +2819,16 @@ errorcode_t ir_gen_call_function_value(ir_builder_t *builder, ast_type_t *tmp_as
 
         if(!ir_types_identical(param_types[i], arg_values[i]->type)){
             compiler_panic(builder->compiler, call->source, "INTERNAL ERROR: Expected actual and calling argument types to be the same");
+            strong_cstr_t a = ir_type_str(param_types[i]);
+            strong_cstr_t b = ir_type_str(arg_values[i]->type);
+            printf("Expected: %s vs Actual: %s for argument #%d\n", a, b, 1 + (int) i);
+            free(a);
+            free(b);
+            strong_cstr_t expected_ast_type_name = ast_type_str(&function_elem->arg_types[i]);
+            strong_cstr_t actual_ast_type_name = ast_type_str(&arg_types[i]);
+            printf("Expected value of AST type: %s, Actual AST type: %s\n", expected_ast_type_name, actual_ast_type_name);
+            free(expected_ast_type_name);
+            free(actual_ast_type_name);
             return FAILURE;
         }
     }
