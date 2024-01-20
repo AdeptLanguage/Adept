@@ -111,6 +111,8 @@ jobs:
           LLVM_DIR: ${{github.workspace}}/llvm/llvm/build
           zstd_DIR: C:\msys64\mingw64
           zstd_LIBRARY: C:\msys64\mingw64\lib\libzstd.a
+          ZLIB_INCLUDE_DIR: C:\msys64\mingw64\usr\include
+          ZLIB_LIBRARY: C:\msys64\mingw64\usr\lib\libz.a
       - name: Install LLVM and dependencies (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
