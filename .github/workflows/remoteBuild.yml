@@ -107,8 +107,6 @@ jobs:
           dir C:\msys64\mingw64
           dir C:\msys64\mingw64\lib
           dir C:\msys64\mingw64\lib\cmake
-          dir C:\msys64\mingw64\usr\local
-          dir C:\msys64\mingw64\usr\local\include
           dir C:\msys64\mingw64\usr\lib
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="${{github.workspace}}/llvm/llvm/build;C:\msys64\mingw64" -DCMAKE_LIBRARY_PATH=C:\msys64\usr\lib -DCURL_LIBRARY=curl -DCURL_LIBRARY_DIRS=${{github.workspace}}/libcurl/lib -DCURL_INCLUDE_DIR=libcurl/include -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
