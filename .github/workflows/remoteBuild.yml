@@ -93,7 +93,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           C:\msys64\usr\bin\pacman -S zlib-devel --noconfirm
-          C:\mysy64\usr\bin\pacman -S mingw-w64-x86_64-zlib --noconfirm # They moved it into main package it seems?
+          C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-zlib --noconfirm # They moved it into main package it seems?
           dir C:\msys64\usr\lib
           del C:\msys64\usr\lib\libz.dll.a
           del C:\msys64\mingw64\lib\libz.dll.a
