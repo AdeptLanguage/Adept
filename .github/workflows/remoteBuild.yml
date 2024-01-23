@@ -93,8 +93,10 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           C:\msys64\usr\bin\pacman -S zlib-devel --noconfirm
+          C:\mysy64\usr\bin\pacman -S mingw-w64-x86_64-zlib --noconfirm # They moved it into main package it seems?
           dir C:\msys64\usr\lib
           del C:\msys64\usr\lib\libz.dll.a
+          del C:\msys64\mingw64\lib\libz.dll.a
       - name: Download zstd library (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
@@ -112,8 +114,8 @@ jobs:
           LLVM_DIR: ${{github.workspace}}/llvm/llvm/build
           zstd_DIR: C:\msys64\mingw64
           zstd_LIBRARY: C:\msys64\mingw64\lib\libzstd.a
-          ZLIB_INCLUDE_DIR: C:\msys64\mingw64\usr\include
-          ZLIB_LIBRARY: C:\msys64\mingw64\usr\lib\libz.a
+          ZLIB_INCLUDE_DIR: C:\msys64\mingw64\include
+          ZLIB_LIBRARY: C:\msys64\mingw64\lib\libz.a
       - name: Install LLVM and dependencies (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
