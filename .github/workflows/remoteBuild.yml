@@ -92,7 +92,7 @@ jobs:
       - name: Download static zlib libraries (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          C:\mysy64\usr\bin\pacman -S mingw-w64-x86_64-zlib --noconfirm
+          C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-zlib --noconfirm
       - name: Download zstd library (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
