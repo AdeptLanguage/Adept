@@ -92,11 +92,7 @@ jobs:
       - name: Download static zlib libraries (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          C:\msys64\usr\bin\pacman -S zlib-devel --noconfirm
-          C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-zlib --noconfirm # They moved it into main package it seems?
-          dir C:\msys64\usr\lib
-          del C:\msys64\usr\lib\libz.dll.a
-          del C:\msys64\mingw64\lib\libz.dll.a
+          C:\mysy64\usr\bin\pacman -S mingw-w64-x86_64-zlib --noconfirm
       - name: Download zstd library (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
@@ -105,11 +101,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           $env:Path = "C:/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin;$env:Path"
-          dir C:\msys64
-          dir C:\msys64\mingw64
-          dir C:\msys64\mingw64\lib
-          dir C:\msys64\mingw64\lib\cmake
-          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="${{github.workspace}}/llvm/llvm/build;C:\msys64\mingw64" -DCMAKE_LIBRARY_PATH=C:\msys64\usr\lib -DCURL_LIBRARY=curl -DCURL_LIBRARY_DIRS=${{github.workspace}}/libcurl/lib -DCURL_INCLUDE_DIR=libcurl/include -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="${{github.workspace}}/llvm/llvm/build;C:\msys64\mingw64" -DCMAKE_LIBRARY_PATH=C:\msys64\mingw64\lib -DCURL_LIBRARY=curl -DCURL_LIBRARY_DIRS=${{github.workspace}}/libcurl/lib -DCURL_INCLUDE_DIR=libcurl/include -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           LLVM_DIR: ${{github.workspace}}/llvm/llvm/build
           zstd_DIR: C:\msys64\mingw64
