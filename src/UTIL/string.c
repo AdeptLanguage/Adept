@@ -34,7 +34,10 @@ strong_cstr_t string_to_escaped_string(const char *array, length_t length, char 
     }
 
     strong_cstr_t string = malloc(length + special_characters + 3);
-    if(escaped_quote && surround) string[put_index++] = escaped_quote;
+
+    if(escaped_quote && surround){
+        string[put_index++] = escaped_quote;
+    }
     
     for(length_t i = 0; i != length; i++){
         if(array[i] <= 0x1F || array[i] == '\\' || (array[i] == escaped_quote && escaped_quote)){
@@ -47,11 +50,13 @@ strong_cstr_t string_to_escaped_string(const char *array, length_t length, char 
         }
 
         switch(array[i]){
-        case '\0': string[put_index++] =  '0'; break;
-        case '\t': string[put_index++] =  't'; break;
         case '\n': string[put_index++] =  'n'; break;
         case '\r': string[put_index++] =  'r'; break;
+        case '\t': string[put_index++] =  't'; break;
         case '\b': string[put_index++] =  'b'; break;
+        case '\f': string[put_index++] =  'f'; break;
+        case '\v': string[put_index++] =  'v'; break;
+        case '\0': string[put_index++] =  '0'; break;
         case '\\': string[put_index++] = '\\'; break;
         case 0x1B: string[put_index++] =  'e'; break;
         default:
