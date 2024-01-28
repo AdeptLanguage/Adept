@@ -90,6 +90,8 @@ strong_cstr_t string_to_unescaped_string(const char *data, length_t length, leng
         case 'r': output[put++] = '\r';  break;
         case 't': output[put++] = '\t';  break;
         case 'b': output[put++] = '\b';  break;
+        case 'f': output[put++] = '\f';  break;
+        case 'v': output[put++] = '\v';  break;
         case '0': output[put++] = '\0';  break;
         case '"': output[put++] = '"';   break;
         case 'e': output[put++] = 0x1B;  break;
