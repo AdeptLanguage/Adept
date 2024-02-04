@@ -1320,6 +1320,14 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
                 };
             }
             break;
+        case AST_ELEM_LAYOUT: {
+                ast_elem_layout_t *layout_elem = (ast_elem_layout_t*) elem;
+
+                if(infer_layout_skeleton(ctx, &layout_elem->layout.skeleton)){
+                    return FAILURE;
+                }
+            }
+            break;
         }
 
         // If not an alias, continue on as usual
