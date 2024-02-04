@@ -28,7 +28,7 @@
 #define TYPE_KIND_STRUCTURE         0x0000000E // extra = ir_type_extra_composite_t*
 #define TYPE_KIND_UNION             0x0000000F // extra = ir_type_extra_composite_t*
 #define TYPE_KIND_VOID              0x00000010 // extra = NULL
-#define TYPE_KIND_FUNCPTR           0x00000011 // extra = ir_type_extra_function_t*
+#define TYPE_KIND_FUNCPTR           0x00000011 // extra = NULL
 #define TYPE_KIND_FIXED_ARRAY       0x00000012 // extra = ir_type_extra_fixed_array_t*
 #define TYPE_KIND_UNKNOWN_ENUM      0x00000013 // extra = ir_type_extra_unknown_enum_t*
 #define TYPE_KIND_UNBUILT_COMPOSITE 0x00000014 // extra = ast_composite_t* (only used during processing)
@@ -37,8 +37,8 @@
 
 // ---------------- ir_type_t ----------------
 // An intermediate representation type
-// 'extra' can optionally contain one of the following:
-// 'ir_type_t', 'ir_type_extra_composite_t', or 'ir_type_extra_function_t'
+// 'extra' can optionally contain one of the following for example:
+// 'ir_type_t', 'ir_type_extra_composite_t', 'ir_type_extra_fixed_array_t', 'ir_type_extra_unknown_enum_t'
 typedef struct {
     unsigned int kind;
     void *extra;
@@ -55,20 +55,6 @@ typedef struct {
 
 // Possible traits for ir_type_extra_composite_t
 #define TYPE_KIND_COMPOSITE_PACKED TRAIT_1
-
-// ---------------- ir_type_extra_function_t ----------------
-// Structure for 'extra' field of 'ir_type_t' for function
-// pointer types
-typedef struct {
-    ir_type_t **arg_types;
-    length_t arity;
-    ir_type_t *return_type;
-    trait_t traits;
-} ir_type_extra_function_t;
-
-// Possible traits for ir_type_extra_function_t
-#define TYPE_KIND_FUNC_VARARG  TRAIT_1
-#define TYPE_KIND_FUNC_STDCALL TRAIT_2
 
 // ---------------- ir_type_extra_fixed_array_t ----------------
 // Structure for 'extra' field of 'ir_type_t' for fixed arrays
@@ -112,10 +98,6 @@ ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool);
 // ---------------- ir_type_make_unknown_enum ----------------
 // Gets the type for a value of an unknown enum
 ir_type_t *ir_type_make_unknown_enum(ir_pool_t *pool, source_t source, weak_cstr_t kind_name);
-
-// ---------------- ast_func_traits_to_type_kind_func_traits ----------------
-// Converts AST function traits to IR function pointer traits
-trait_t ast_func_traits_to_type_kind_func_traits(trait_t ast_func_traits);
 
 // ---------------- ir_type_dereference ----------------
 // Gets the type pointed to by a pointer type

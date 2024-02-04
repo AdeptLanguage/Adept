@@ -716,12 +716,11 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
 
         {
             ir_func_t *ir_func = &builder.object->ir_module.funcs.funcs[ir_func_id];
-            trait_t funcptr_traits = ast_func_traits_to_type_kind_func_traits(ast_func.traits);
 
             result_type = ir_func->return_type;
             arity = ir_func->arity;
             param_types = ir_func->argument_types;
-            is_vararg = funcptr_traits & AST_FUNC_VARARG;
+            is_vararg = ast_func.traits & AST_FUNC_VARARG;
 
             arg_values = ir_pool_alloc(builder.pool, sizeof(ir_type_t*) * arity);
 

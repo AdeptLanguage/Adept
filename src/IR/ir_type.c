@@ -126,13 +126,6 @@ ir_type_t *ir_type_make_unknown_enum(ir_pool_t *pool, source_t source, weak_cstr
     }));
 }
 
-trait_t ast_func_traits_to_type_kind_func_traits(trait_t ast_func_traits){
-    trait_t type_kind_func_traits = TRAIT_NONE;
-    if(ast_func_traits & AST_FUNC_VARARG)  type_kind_func_traits |= TYPE_KIND_FUNC_VARARG;
-    if(ast_func_traits & AST_FUNC_STDCALL) type_kind_func_traits |= TYPE_KIND_FUNC_STDCALL;
-    return type_kind_func_traits;
-}
-
 ir_type_t *ir_type_dereference(ir_type_t *type){
     if(type->kind != TYPE_KIND_POINTER) return NULL;
     return (ir_type_t*) type->extra;
