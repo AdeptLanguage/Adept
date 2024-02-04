@@ -35,12 +35,12 @@ void set_free(set_t *set, set_free_item_func_t optional_free_func){
 }
 
 bool set_insert(set_t *set, void *item){
-    hash_t hash = (*set->hash_func)(item);
+    hash_t hash = (*set->hash_func)((const void*) item);
     set_entry_t **slot = &set->entries[hash % set->capacity];
 
     if(*slot == NULL){
         *slot = malloc_init(set_entry_t, {
-            .data = set->optional_preinsert_clone_func ? (*set->optional_preinsert_clone_func)(item) : item,
+            .data = set->optional_preinsert_clone_func ? (*set->optional_preinsert_clone_func)((const void*) item) : item,
             .next = NULL,
         });
     } else {
@@ -56,7 +56,7 @@ bool set_insert(set_t *set, void *item){
         }
 
         prev->next = malloc_init(set_entry_t, {
-            .data = set->optional_preinsert_clone_func ? (*set->optional_preinsert_clone_func)(item) : item,
+            .data = set->optional_preinsert_clone_func ? (*set->optional_preinsert_clone_func)((const void*) item) : item,
             .next = NULL,
         });
     }

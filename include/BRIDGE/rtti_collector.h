@@ -18,7 +18,7 @@ void rtti_collector_free(rtti_collector_t *collector);
 
 // ---------------- rtti_collector_mention ----------------
 // Mentions an AST type to an RTTI collector
-void rtti_collector_mention(rtti_collector_t *collector, const ast_type_t *type);
+void rtti_collector_mention(rtti_collector_t *collector, ast_type_t *type);
 
 // ---------------- rtti_collector_mention_base ----------------
 // Helper to mention a simple base AST type to an RTTI collector.

@@ -1414,24 +1414,10 @@ errorcode_t ir_gen_expr_func_addr(ir_builder_t *builder, ast_expr_func_addr_t *e
     }
 
     ast_t *ast = &builder->object->ast;
-    ir_module_t *module = &builder->object->ir_module;
     trait_t ast_func_traits = TRAIT_NONE;
 
     // Create the IR function pointer type
-    ir_type_t *ir_funcptr_type;
-
-    {
-        ast_func_t *ast_func = &ast->funcs[pair.ast_func_id];
-        ir_func_t *ir_func = &module->funcs.funcs[pair.ir_func_id];
-
-        ast_func_traits = ast_func->traits;
-
-        length_t arity = ast_func->arity;
-        ir_type_t **arg_types = ir_func->argument_types;
-        ir_type_t *return_type = ast_func->traits & AST_FUNC_MAIN ? ir_type_make(builder->pool, TYPE_KIND_S32, NULL) : ir_func->return_type;
-
-        ir_funcptr_type = ir_type_make_function_pointer(builder->pool, arg_types, arity, return_type, expr->traits);
-    }
+    ir_type_t *ir_funcptr_type = ir_type_make_function_pointer(builder->pool);
 
     // If the function is only referenced by C-mangled name, then get its address by it
     // Otherwise, just get its function address like normal using its IR function id
@@ -1478,10 +1464,9 @@ errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, a
     if(ir_builder_get_noop_defer_func(builder, source_on_error, &ir_func_id)) return FAILURE;
 
     ir_module_t *module = &builder->object->ir_module;
-    ir_func_t *ir_func = &module->funcs.funcs[ir_func_id];
 
     // Get function pointer type for no-op defer function
-    ir_type_t *ir_noop_funcptr_type = ir_type_make_function_pointer(builder->pool, ir_func->argument_types, 1, ir_func->return_type, TRAIT_NONE);
+    ir_type_t *ir_noop_funcptr_type = ir_type_make_function_pointer(builder->pool);
 
     // Resolve argument types
     ir_type_t **arg_types = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
@@ -1491,7 +1476,7 @@ errorcode_t ir_gen_expr_func_addr_noop_result_for_defer(ir_builder_t *builder, a
     }
 
     // Get function pointer type
-    ir_type_t *ir_final_funcptr_type = ir_type_make_function_pointer(builder->pool, arg_types, 1, ir_func->return_type, TRAIT_NONE);
+    ir_type_t *ir_final_funcptr_type = ir_type_make_function_pointer(builder->pool);
 
     // Get function address
     *ir_value = build_func_addr(builder->pool, ir_noop_funcptr_type, ir_func_id);

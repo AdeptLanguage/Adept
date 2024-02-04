@@ -177,24 +177,11 @@ LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
             }
         }
         break;
-    case TYPE_KIND_VOID: return LLVMVoidType();
-    case TYPE_KIND_FUNCPTR: {
-            ir_type_extra_function_t *function = (ir_type_extra_function_t*) ir_type->extra;
-            LLVMTypeRef args[length_max(1, function->arity)];
-
-            for(length_t i = 0; i != function->arity; i++){
-                args[i] = ir_to_llvm_type(llvm, function->arg_types[i]);
-                if(args[i] == NULL) return NULL;
-            }
-
-            LLVMTypeRef type_ref_tmp = LLVMFunctionType(ir_to_llvm_type(llvm, function->return_type),
-                args, function->arity, function->traits & TYPE_KIND_FUNC_VARARG);
-            type_ref_tmp = LLVMPointerType(type_ref_tmp, 0);
-
-            return type_ref_tmp;
-        }
-        break;
-    case TYPE_KIND_FIXED_ARRAY:{
+    case TYPE_KIND_VOID:
+        return LLVMVoidType();
+    case TYPE_KIND_FUNCPTR:
+            return LLVMPointerType(LLVMIntType(8), 0);
+    case TYPE_KIND_FIXED_ARRAY: {
             ir_type_extra_fixed_array_t *fixed_array = (ir_type_extra_fixed_array_t*) ir_type->extra;
             type_ref_tmp = ir_to_llvm_type(llvm, fixed_array->subtype);
             if(type_ref_tmp == NULL) return NULL;

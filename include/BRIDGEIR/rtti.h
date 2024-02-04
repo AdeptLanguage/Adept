@@ -12,7 +12,7 @@
 
 // ---------------- rtti_for ----------------
 // NOTE: Returns NULL on failure
-ir_value_t* rtti_for(ir_builder_t *builder, const ast_type_t *ast_type, source_t source_on_failure);
+ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t source_on_failure);
 
 // ---------------- rtti_resolve ----------------
 // Resolves a single RTTI relocation

@@ -202,26 +202,8 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             }
         }
         break;
-    case AST_ELEM_FUNC: {
-            ast_elem_func_t *function = (ast_elem_func_t*) unresolved_type->elements[non_concrete_layers];
-
-            trait_t type_kind_func_traits = ast_func_traits_to_type_kind_func_traits(function->traits);
-            ir_type_t **arg_types = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_t*) * function->arity);
-
-            for(length_t a = 0; a != function->arity; a++){
-                if(ir_gen_resolve_type(compiler, object, &function->arg_types[a], &arg_types[a])) return FAILURE;
-            }
-            
-            ir_type_t *return_type = NULL;
-
-            if(function->return_type != NULL){
-                if(ir_gen_resolve_type(compiler, object, function->return_type, &return_type)) return FAILURE;
-            } else {
-                return_type = ir_type_make(&ir_module->pool, TYPE_KIND_VOID, NULL);
-            }
-
-            *resolved_type = ir_type_make_function_pointer(&ir_module->pool, arg_types, function->arity, return_type, type_kind_func_traits);
-        }
+    case AST_ELEM_FUNC:
+        *resolved_type = ir_type_make_pointer_to(&ir_module->pool, ir_module->common.ir_ubyte);
         break;
     case AST_ELEM_GENERIC_BASE: {
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];

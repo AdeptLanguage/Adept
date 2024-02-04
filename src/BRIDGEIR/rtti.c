@@ -16,7 +16,7 @@
 #include "UTIL/datatypes.h"
 #include "UTIL/ground.h"
 
-ir_value_t* rtti_for(ir_builder_t *builder, const ast_type_t *ast_type, source_t source_on_failure){
+ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t source_on_failure){
     // NOTE: Returns NULL on failure
 
     // Mention AST type to RTTI collector if applicable

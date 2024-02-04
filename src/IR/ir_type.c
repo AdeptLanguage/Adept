@@ -115,17 +115,8 @@ ir_type_t* ir_type_make_fixed_array_of(ir_pool_t *pool, length_t length, ir_type
     return fixed_array_type;
 }
 
-ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool, ir_type_t **arg_types, length_t arity, ir_type_t *return_type, trait_t type_kind_func_traits){
-    ir_type_extra_function_t *extra = ir_pool_alloc(pool, sizeof(ir_type_extra_function_t));
-
-    *extra = (ir_type_extra_function_t){
-        .arg_types = arg_types,
-        .arity = arity,
-        .return_type = return_type,
-        .traits = type_kind_func_traits,
-    };
-
-    return ir_type_make(pool, TYPE_KIND_FUNCPTR, extra);
+ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool){
+    return ir_type_make(pool, TYPE_KIND_FUNCPTR, NULL);
 }
 
 ir_type_t *ir_type_make_unknown_enum(ir_pool_t *pool, source_t source, weak_cstr_t kind_name){

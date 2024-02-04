@@ -107,7 +107,7 @@ ir_type_t *ir_type_make_fixed_array_of(ir_pool_t *pool, length_t length, ir_type
 
 // ---------------- ir_type_make_function_pointer ----------------
 // Gets the type for a function pointer
-ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool, ir_type_t **arg_types, length_t arity, ir_type_t *return_type, trait_t type_kind_func_traits);
+ir_type_t *ir_type_make_function_pointer(ir_pool_t *pool);
 
 // ---------------- ir_type_make_unknown_enum ----------------
 // Gets the type for a value of an unknown enum

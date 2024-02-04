@@ -9,7 +9,7 @@ void rtti_collector_free(rtti_collector_t *collector){
     ast_type_set_free(&collector->ast_types_used);
 }
 
-void rtti_collector_mention(rtti_collector_t *collector, const ast_type_t *type){
+void rtti_collector_mention(rtti_collector_t *collector, ast_type_t *type){
     ast_type_set_insert(&collector->ast_types_used, type);
 }
 

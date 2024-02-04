@@ -10,11 +10,27 @@ static ast_type_t *ast_type_clone_on_heap(const ast_type_t *type){
     return result;
 }
 
-void ast_type_set_init(ast_type_set_t *set, length_t num_buckets){
-    set_init(&set->impl, num_buckets, (set_hash_func_t) &ast_type_hash, (set_equals_func_t) &ast_types_identical, (set_preinsert_clone_func_t) &ast_type_clone_on_heap);
+static hash_t ast_type_set_hash_function(const void *value) {
+    return ast_type_hash((const ast_type_t*) value);
 }
 
-bool ast_type_set_insert(ast_type_set_t *set, const ast_type_t *type){
+static bool ast_type_set_equals_function(const void *a, const void *b){
+    return ast_types_identical((const ast_type_t*) a, (const ast_type_t*) b);
+}
+
+static void *ast_type_set_preinsert_clone_function(const void *value){
+    return ast_type_clone_on_heap((const ast_type_t*) value);
+}
+
+static void ast_type_set_free_function(void *value){
+    ast_type_free_fully((ast_type_t*) value);
+}
+
+void ast_type_set_init(ast_type_set_t *set, length_t num_buckets){
+    set_init(&set->impl, num_buckets, &ast_type_set_hash_function, &ast_type_set_equals_function, &ast_type_set_preinsert_clone_function);
+}
+
+bool ast_type_set_insert(ast_type_set_t *set, ast_type_t *type){
     return set_insert(&set->impl, (void*) type);
 }
 
@@ -23,5 +39,5 @@ void ast_type_set_traverse(ast_type_set_t *set, void (*run_func)(ast_type_t*)){
 }
 
 void ast_type_set_free(ast_type_set_t *set){
-    set_free(&set->impl, (set_free_item_func_t) &ast_type_free_fully);
+    set_free(&set->impl, &ast_type_set_free_function);
 }

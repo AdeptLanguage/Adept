@@ -707,7 +707,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         ir_value_t *index = build_literal_usize(builder.pool, 0);
         ir_value_t *raw_function_pointer = build_load(&builder, build_array_access(&builder, table, index, NULL_SOURCE), NULL_SOURCE);
 
-        ir_type_t *function_pointer_type;
+        ir_type_t *function_pointer_type = ir_type_make_function_pointer(builder.pool);
         ir_type_t *result_type;
         length_t arity;
         ir_value_t **arg_values;
@@ -718,7 +718,6 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
             ir_func_t *ir_func = &builder.object->ir_module.funcs.funcs[ir_func_id];
             trait_t funcptr_traits = ast_func_traits_to_type_kind_func_traits(ast_func.traits);
 
-            function_pointer_type = ir_type_make_function_pointer(builder.pool, ir_func->argument_types, ir_func->arity, ir_func->return_type, funcptr_traits);
             result_type = ir_func->return_type;
             arity = ir_func->arity;
             param_types = ir_func->argument_types;
