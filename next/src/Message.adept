@@ -34,6 +34,6 @@ func adept\Info(content String, source <adept\Source> Optional) adept\Message
 func adept\Icon() adept\Message
     = adept\Message(
         ::ICON,
-        sprintf("The Adept Compiler v%S - (c) 2016-2023 Isaac Shelton", adept\VERSION_STRING),
+        sprintf("The Adept Compiler v%S - (c) 2016-2024 Isaac Shelton", adept\VERSION_STRING),
         none()
     )

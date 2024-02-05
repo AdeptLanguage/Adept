@@ -705,7 +705,7 @@ void show_help(bool show_advanced_options){
     printf("     /▔▔\\\n");
     printf("    /    \\    \n");
     printf("   /      \\    \n");
-    printf("  /   /\\   \\        The Adept Compiler v%s - (c) 2016-2023 Isaac Shelton\n", ADEPT_VERSION_STRING);
+    printf("  /   /\\   \\        The Adept Compiler v%s - (c) 2016-2024 Isaac Shelton\n", ADEPT_VERSION_STRING);
     printf(" /   /\\__   \\\n");
     printf("/___/    \\___\\\n\n");
     terminal_set_color(TERMINAL_COLOR_DEFAULT);
