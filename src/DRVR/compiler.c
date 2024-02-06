@@ -569,6 +569,8 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 compiler->debug_traits |= COMPILER_DEBUG_NO_VERIFICATION;
             } else if(streq(arg, "--no-result")){
                 compiler->debug_traits |= COMPILER_DEBUG_NO_RESULT;
+            } else if(streq(arg, "--no-update")){
+                // Ignore, this argument is handled before argument parsing
             }
             else {
                 redprintf("Invalid argument: %s\n", arg);
@@ -776,6 +778,7 @@ void show_help(bool show_advanced_options){
         printf("    --ignore-partial-support          Ignore partial compiler support warnings\n");
         printf("    --ignore-unrecognized-directives  Ignore unrecognized pragma directives\n");
         printf("    --ignore-unused                   Ignore unused variables\n");
+        printf("    --no-update                       Don't check for available compiler updates\n");
     }
 
     #ifdef ENABLE_DEBUG_FEATURES
