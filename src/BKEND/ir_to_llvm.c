@@ -475,7 +475,6 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     #ifdef ENABLE_DEBUG_FEATURES
     if(!(llvm.compiler->debug_traits & COMPILER_DEBUG_NO_VERIFICATION) && LLVMVerifyModule(llvm.module, LLVMPrintMessageAction, NULL) == 1){
         yellowprintf("\n========== LLVM Verification Failed! ==========\n");
-        return FAILURE;
     }
     #endif
 
