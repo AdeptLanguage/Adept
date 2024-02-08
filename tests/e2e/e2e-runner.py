@@ -3,6 +3,7 @@
 import sys
 from os.path import join, dirname, abspath
 from framework import test, e2e_framework_run
+import os
 
 e2e_root_dir = dirname(abspath(__file__))
 src_dir = join(e2e_root_dir, "src")
@@ -22,6 +23,7 @@ def run_all_tests():
     test("andor_circuit", [executable, join(src_dir, "andor_circuit/main.adept")], compiles)
     test("anonymous_composites", [executable, join(src_dir, "anonymous_composites/main.adept")], compiles)
     test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles)
+    print(os.listdir("."))
     test("anonymous_enums layout check",
         [join(src_dir, "anonymous_enums/main")],
         lambda output: b"0\n1\n2\nenum (A, B, C)\n - member 0 is A\n - member 1 is B\n - member 2 is C\nA\nB\nC\n" in output)
