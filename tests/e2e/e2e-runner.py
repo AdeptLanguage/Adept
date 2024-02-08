@@ -31,8 +31,14 @@ def run_all_tests():
     test("anonymous_composites", [executable, join(src_dir, "anonymous_composites/main.adept")], compiles)
     test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles_also_show)
 
+    subprocess.run([executable, "--version"]) 
     subprocess.run([executable, join(src_dir, "anonymous_enums/main.adept")]) 
+    subprocess.run([executable, "--version"]) 
     print(os.listdir("src/anonymous_enums"))
+    print(os.listdir("src"))
+    print(os.listdir("."))
+    print(os.listdir(".."))
+    print(os.listdir("../.."))
 
     test("anonymous_enums layout check",
         [join(src_dir, "anonymous_enums/main")],
