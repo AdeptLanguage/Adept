@@ -8,6 +8,10 @@ import os
 e2e_root_dir = dirname(abspath(__file__))
 src_dir = join(e2e_root_dir, "src")
 
+def compiles_also_show(output):
+    print(output)
+    return True
+
 def run_all_tests():
     executable = sys.argv[1]
     compiles = lambda _: True
@@ -22,8 +26,10 @@ def run_all_tests():
     test("andor", [executable, join(src_dir, "andor/main.adept")], compiles)
     test("andor_circuit", [executable, join(src_dir, "andor_circuit/main.adept")], compiles)
     test("anonymous_composites", [executable, join(src_dir, "anonymous_composites/main.adept")], compiles)
-    test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles)
-    print(os.listdir("."))
+    test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles_also_show)
+
+    print(os.listdir("src/anonymous_enums"))
+
     test("anonymous_enums layout check",
         [join(src_dir, "anonymous_enums/main")],
         lambda output: b"0\n1\n2\nenum (A, B, C)\n - member 0 is A\n - member 1 is B\n - member 2 is C\nA\nB\nC\n" in output)
