@@ -495,6 +495,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
             LLVMDisposeMessage(triple);
             LLVMDisposeModule(llvm.module);
             free(objfile_filename);
+            return FAILURE;
         }
     }
 
