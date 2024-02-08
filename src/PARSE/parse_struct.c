@@ -315,6 +315,11 @@ errorcode_t parse_composite_body(
         }
     }
 
+    if(backfill != 0){
+        compiler_panicf(ctx->compiler, sources[*i], "Expected field type for last field");
+        return FAILURE;
+    }
+
     return SUCCESS;
 
 failure:
@@ -584,6 +589,11 @@ errorcode_t parse_anonymous_composite(
         }
     }
 
+    if(backfill != 0){
+        compiler_panicf(ctx->compiler, sources[*i], "Expected field type for last field");
+        return FAILURE;
+    }
+
     ast_layout_endpoint_increment(inout_next_endpoint);
     (*i)++;
     return SUCCESS;
@@ -655,8 +665,12 @@ errorcode_t parse_create_record_constructor(parse_ctx_t *ctx, weak_cstr_t name, 
 
     for(length_t i = 0; i != field_map->arrows_length; i++){
         ast_field_arrow_t *arrow = &field_map->arrows[i];
+
+        ast_type_t *type = ast_layout_skeleton_get_type(skeleton, arrow->endpoint);
+        assert(type != NULL);
+
         func->arg_names[i] = strclone(arrow->name);
-        func->arg_types[i] = ast_type_clone(ast_layout_skeleton_get_type(skeleton, arrow->endpoint));
+        func->arg_types[i] = ast_type_clone(type);
         func->arg_flows[i] = FLOW_IN;
         func->arg_sources[i] = NULL_SOURCE;
         func->arg_type_traits[i] = AST_FUNC_ARG_TYPE_TRAIT_POD;
