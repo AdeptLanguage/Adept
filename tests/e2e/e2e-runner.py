@@ -38,8 +38,14 @@ def run_all_tests():
     subprocess.run([executable, "--version"]) 
     print(os.listdir("src/anonymous_enums"))
 
-    text_file = open(join(src_dir, "anonymous_enums/sample.txt"), "w")
-    content = "Hello World"
+    text_file = open(join(src_dir, "anonymous_enums/x.adept"), "w")
+    content = """
+    import basics
+
+    func main {
+        print("Hello World")
+    }
+    """
     n = text_file.write(content)
 
     if n == len(content):
@@ -49,6 +55,8 @@ def run_all_tests():
 
     # Close file
     text_file.close()
+    print(os.listdir("src/anonymous_enums"))
+    subprocess.run([executable, join(src_dir, "anonymous_enums/x.adept", "-o", "src/anonymous_enums/x")]) 
     print(os.listdir("src/anonymous_enums"))
 
     print(os.listdir("src"))
