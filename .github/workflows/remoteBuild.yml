@@ -522,7 +522,7 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date '+%B %d %Y at %l:%M %p %Z')"
       - name: Release
-        uses: IsaacShelton/update-existing-release@v1.3.3
+        uses: IsaacShelton/update-existing-release@v1.3.4
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           release: ${{env.releaseName}}
