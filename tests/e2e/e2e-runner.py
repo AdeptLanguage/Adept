@@ -4,17 +4,8 @@ import sys
 from os.path import join, dirname, abspath
 from framework import test, e2e_framework_run
 
-# Temporary
-import os
-import subprocess
-import time
-
 e2e_root_dir = dirname(abspath(__file__))
 src_dir = join(e2e_root_dir, "src")
-
-def compiles_also_show(output):
-    print(output)
-    return True
 
 def run_all_tests():
     executable = sys.argv[1]
@@ -30,40 +21,7 @@ def run_all_tests():
     test("andor", [executable, join(src_dir, "andor/main.adept")], compiles)
     test("andor_circuit", [executable, join(src_dir, "andor_circuit/main.adept")], compiles)
     test("anonymous_composites", [executable, join(src_dir, "anonymous_composites/main.adept")], compiles)
-    test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles_also_show)
-
-    time.sleep(5) # Wait for file system to catch up?
-    subprocess.run([executable, "--version"]) 
-    subprocess.run([executable, join(src_dir, "anonymous_enums/main.adept")]) 
-    subprocess.run([executable, "--version"]) 
-    print(os.listdir("src/anonymous_enums"))
-
-    text_file = open(join(src_dir, "anonymous_enums/x.adept"), "w")
-    content = """
-    import basics
-
-    func main {
-        print("Hello World")
-    }
-    """
-    n = text_file.write(content)
-
-    if n == len(content):
-        print("Success! String written to text file.")
-    else:
-        print("Failure! String not written to text file.")
-
-    # Close file
-    text_file.close()
-    print(os.listdir("src/anonymous_enums"))
-    subprocess.run([executable, join(src_dir, "anonymous_enums/x.adept"), "-o", "src/anonymous_enums/x", "-e"]) 
-    print(os.listdir("src/anonymous_enums"))
-
-    print(os.listdir("src"))
-    print(os.listdir("."))
-    print(os.listdir(".."))
-    print(os.listdir("../.."))
-
+    test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles)
     test("anonymous_enums layout check",
         [join(src_dir, "anonymous_enums/main")],
         lambda output: b"0\n1\n2\nenum (A, B, C)\n - member 0 is A\n - member 1 is B\n - member 2 is C\nA\nB\nC\n" in output)
