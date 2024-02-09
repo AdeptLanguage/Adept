@@ -49,7 +49,7 @@ def run_all_tests():
 
     # Close file
     text_file.close()
-    subprocess.run([executable, join(src_dir, "anonymous_enums/main.adept")]) 
+    print(os.listdir("src/anonymous_enums"))
 
     print(os.listdir("src"))
     print(os.listdir("."))
