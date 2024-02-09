@@ -118,8 +118,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
-          sudo apt-get install -y llvm-15-dev
+          # sudo apt-get install -y llvm-15-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew install llvm@16
           brew install zstd
           brew ls -v zstd
       - name: Configure (macOS)
