@@ -119,7 +119,7 @@ jobs:
           sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get install -y llvm-15-dev
-          sudo apt-get list | grep llvm
+          sudo apt list --installed | grep llvm
           sudo apt-get remove -y llvm-13
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install zstd
