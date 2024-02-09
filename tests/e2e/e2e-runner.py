@@ -37,6 +37,20 @@ def run_all_tests():
     subprocess.run([executable, join(src_dir, "anonymous_enums/main.adept")]) 
     subprocess.run([executable, "--version"]) 
     print(os.listdir("src/anonymous_enums"))
+
+    text_file = open(join(src_dir, "anonymous_enums/sample.txt"), "w")
+    content = "Hello World"
+    n = text_file.write(content)
+
+    if n == len(content):
+        print("Success! String written to text file.")
+    else:
+        print("Failure! String not written to text file.")
+
+    # Close file
+    text_file.close()
+    subprocess.run([executable, join(src_dir, "anonymous_enums/main.adept")]) 
+
     print(os.listdir("src"))
     print(os.listdir("."))
     print(os.listdir(".."))
