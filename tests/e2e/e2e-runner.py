@@ -7,6 +7,7 @@ from framework import test, e2e_framework_run
 # Temporary
 import os
 import subprocess
+import time
 
 e2e_root_dir = dirname(abspath(__file__))
 src_dir = join(e2e_root_dir, "src")
@@ -31,6 +32,7 @@ def run_all_tests():
     test("anonymous_composites", [executable, join(src_dir, "anonymous_composites/main.adept")], compiles)
     test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles_also_show)
 
+    time.sleep(5) # Wait for file system to catch up?
     subprocess.run([executable, "--version"]) 
     subprocess.run([executable, join(src_dir, "anonymous_enums/main.adept")]) 
     subprocess.run([executable, "--version"]) 
