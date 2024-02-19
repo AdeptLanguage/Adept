@@ -1096,13 +1096,11 @@ errorcode_t ir_gen_get_field_info(compiler_t *compiler, object_t *object, weak_c
     if(elem->id == AST_ELEM_GENERIC_BASE){
         // Polymorphic composite type
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) elem;
-
-        weak_cstr_t composite_name = generic_base->name;
-        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, composite_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact_from_elem(&object->ast, generic_base);
 
         // Find the polymorphic structure
         if(template == NULL){
-            compiler_panicf(compiler, source, "INTERNAL ERROR: Failed to find polymorphic composite '%s' that should exist", composite_name);
+            compiler_panicf(compiler, source, "INTERNAL ERROR: Failed to find polymorphic composite '%s' that should exist", generic_base->name);
             return FAILURE;
         }
 

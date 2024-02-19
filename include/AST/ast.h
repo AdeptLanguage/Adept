@@ -317,9 +317,10 @@ void ast_enum_init(ast_enum_t *enum_definition, weak_cstr_t name, weak_cstr_t *k
 // Finds a composite by its exact name
 ast_composite_t *ast_composite_find_exact(ast_t *ast, const char *name);
 
-// ---------------- ast_poly_composite_find_exact ----------------
+// ---------------- ast_poly_composite_find_exact (and friends) ----------------
 // Finds a polymorphic composite by its exact name
-ast_poly_composite_t *ast_poly_composite_find_exact(ast_t *ast, const char *name);
+ast_poly_composite_t *ast_poly_composite_find_exact_from_elem(ast_t *ast, ast_elem_generic_base_t *elem);
+ast_poly_composite_t *ast_poly_composite_find_exact(ast_t *ast, const char *name, length_t num_generics);
 
 // ---------------- ast_find_composite ----------------
 // Finds a composite (polymorphic or not) using an AST type

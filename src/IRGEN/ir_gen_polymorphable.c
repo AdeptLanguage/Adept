@@ -194,11 +194,10 @@ static errorcode_t enforce_prereq(
                 return FAILURE;
             }
 
-            weak_cstr_t given_name = generic_base_elem->name;
-            ast_poly_composite_t *given = ast_poly_composite_find_exact(ast, given_name);
+            ast_poly_composite_t *given = ast_poly_composite_find_exact_from_elem(&object->ast, generic_base_elem);
 
             if(given == NULL){
-                internalerrorprintf("ir_gen_polymorphable() - Failed to find polymorphic struct '%s', which should exist\n", given_name);
+                internalerrorprintf("ir_gen_polymorphable() - Failed to find polymorphic struct '%s', which should exist\n", generic_base_elem->name);
                 return FAILURE;
             }
 

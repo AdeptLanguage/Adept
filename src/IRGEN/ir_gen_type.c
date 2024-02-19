@@ -209,7 +209,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
 
             // Find polymorphic structure
-            ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, generic_base->name);
+            ast_poly_composite_t *template = ast_poly_composite_find_exact_from_elem(&object->ast, generic_base);
 
             if(template == NULL){
                 compiler_panicf(compiler, generic_base->source, "Undeclared polymorphic type '%s'", generic_base->name);

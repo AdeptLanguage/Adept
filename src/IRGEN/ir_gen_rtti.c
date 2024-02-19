@@ -454,7 +454,7 @@ errorcode_t ir_gen__types__composite_entry_get_info(object_t *object, ir_rtti_ty
         maybe_weak_generics_length = generic_base_elem->generics_length;
 
         // Find polymorphic composite
-        core_composite_info = (ast_composite_t*) ast_poly_composite_find_exact(&object->ast, name);
+        core_composite_info = (ast_composite_t*) ast_poly_composite_find_exact_from_elem(&object->ast, generic_base_elem);
     } else if(first_ast_elem->id == AST_ELEM_BASE){
         name = ((ast_elem_base_t*) first_ast_elem)->base;
         

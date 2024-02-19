@@ -1177,8 +1177,7 @@ errorcode_t attempt_autogen___defer__(compiler_t *compiler, object_t *object, as
         field_map = composite->layout.field_map;
     } else if(is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
-        weak_cstr_t struct_name = generic_base->name;
-        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, struct_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact_from_elem(&object->ast, generic_base);
 
         // Require generic structure to exist
         if(template == NULL) return FAILURE;
@@ -1313,9 +1312,7 @@ errorcode_t attempt_autogen___pass__(compiler_t *compiler, object_t *object, ast
 
     } else if(is_generic_base){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[0];
-        weak_cstr_t struct_name = generic_base->name;
-        
-        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, struct_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact_from_elem(&object->ast, generic_base);
 
         // Require generic structure to exist
         if(template == NULL) return FAILURE;
@@ -1436,8 +1433,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
         field_map = composite->layout.field_map;
     } else if(subject_is_generic_base_ptr){
         ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) arg_types[0].elements[1];
-        weak_cstr_t struct_name = generic_base->name;
-        ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, struct_name);
+        ast_poly_composite_t *template = ast_poly_composite_find_exact_from_elem(&object->ast, generic_base);
 
         // Require generic structure to exist
         if(template == NULL){

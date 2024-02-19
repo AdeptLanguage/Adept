@@ -21,8 +21,8 @@ errorcode_t ir_autogen_for_children_of_struct_like(
     ast_composite_t *composite = NULL;
 
     if(is_polymorphic){
-        weak_cstr_t template_name = ((ast_elem_generic_base_t*) struct_like_elem)->name;
-        composite = (ast_composite_t*) ast_poly_composite_find_exact(ast, template_name);
+        ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) struct_like_elem;
+        composite = (ast_composite_t*) ast_poly_composite_find_exact_from_elem(ast, generic_base);
     } else {
         weak_cstr_t composite_name = ((ast_elem_base_t*) struct_like_elem)->base;
         composite = ast_composite_find_exact(ast, composite_name);

@@ -157,10 +157,11 @@ errorcode_t func_args_polymorphable(ir_builder_t *builder, ast_func_t *poly_temp
     length_t num_conforms = length_min(type_list_length, required_arity);
 
     for(i = 0; i != num_conforms; i++){
-        if(ast_type_has_polymorph(&poly_template_arg_types[i]))
+        if(ast_type_has_polymorph(&poly_template_arg_types[i])){
             res = ir_gen_polymorphable(builder->compiler, builder->object, &arg_value_list[i], &arg_types[i], &poly_template_arg_types[i], &catalog, true);
-        else
+        } else {
             res = ast_types_conform(builder, &arg_value_list[i], &arg_types[i], &poly_template_arg_types[i], conform_mode) ? SUCCESS : FAILURE;
+        }
 
         if(res != SUCCESS){
             i++;

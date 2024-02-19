@@ -481,7 +481,7 @@ errorcode_t ir_gen_func_head(compiler_t *compiler, object_t *object, ast_func_t 
             break;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) this_type->elements[1];
-                ast_poly_composite_t *template = ast_poly_composite_find_exact(&object->ast, generic_base->name);
+                ast_poly_composite_t *template = ast_poly_composite_find_exact_from_elem(&object->ast, generic_base);
                 
                 if(template == NULL){
                     compiler_panicf(compiler, this_type->source, "Undeclared polymorphic struct '%s'", generic_base->name);

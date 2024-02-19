@@ -448,11 +448,16 @@ successful_t ast_composite_find_exact_field(ast_composite_t *composite, const ch
     return true;
 }
 
-ast_poly_composite_t *ast_poly_composite_find_exact(ast_t *ast, const char *name){
+ast_poly_composite_t *ast_poly_composite_find_exact_from_elem(ast_t *ast, ast_elem_generic_base_t *elem){
+    return ast_poly_composite_find_exact(ast, elem->name, elem->generics_length);
+}
+
+ast_poly_composite_t *ast_poly_composite_find_exact(ast_t *ast, const char *name, length_t num_generics){
     // TODO: Maybe sort and do a binary search or something
     for(length_t i = 0; i != ast->poly_composites_length; i++){
-        if(streq(ast->poly_composites[i].name, name)){
-            return &ast->poly_composites[i];
+        ast_poly_composite_t *poly_composite = &ast->poly_composites[i];
+        if(streq(poly_composite->name, name) && poly_composite->generics_length == num_generics){
+            return poly_composite;
         }
     }
     return NULL;
