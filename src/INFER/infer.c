@@ -42,6 +42,7 @@ errorcode_t infer(compiler_t *compiler, object_t *object){
     qsort(ast->globals, ast->globals_length, sizeof(ast_global_t), ast_globals_cmp);
 
     if(infer_in_composites(&ctx, ast->composites, ast->composites_length)
+    || infer_in_poly_composites(&ctx, ast->poly_composites, ast->poly_composites_length)
     || infer_in_globals(&ctx, ast->globals, ast->globals_length)
     || infer_in_funcs(&ctx, ast->funcs, ast->funcs_length)
     || infer_in_func_aliases(&ctx, ast->func_aliases, ast->func_aliases_length)){
@@ -81,6 +82,18 @@ errorcode_t infer_in_composites(infer_ctx_t *ctx, ast_composite_t *composites, l
         ast_composite_t *composite = &composites[i];
 
         if(infer_layout_skeleton(ctx, &composite->layout.skeleton)){
+            return FAILURE;
+        }
+    }
+
+    return SUCCESS;
+}
+
+errorcode_t infer_in_poly_composites(infer_ctx_t *ctx, ast_poly_composite_t *poly_composites, length_t poly_composites_length){
+    for(length_t i = 0; i != poly_composites_length; i++){
+        ast_poly_composite_t *poly_composite = &poly_composites[i];
+
+        if(infer_layout_skeleton(ctx, &poly_composite->layout.skeleton)){
             return FAILURE;
         }
     }
@@ -1292,6 +1305,10 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) elem;
 
+                for(length_t i = 0; i != generic_base_elem->generics_length; i++){
+                    if(infer_type(ctx, &generic_base_elem->generics[i])) return FAILURE;
+                }
+
                 int alias_index = ast_find_alias(aliases, aliases_length, generic_base_elem->name, generic_base_elem->generics_length);
                 
                 if(alias_index != -1){
@@ -1332,10 +1349,6 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
 
                     free(cloned.elements);
                     continue; // Don't do normal stuff that follows
-                }
-
-                for(length_t i = 0; i != generic_base_elem->generics_length; i++){
-                    if(infer_type(ctx, &generic_base_elem->generics[i])) return FAILURE;
                 }
             }
             break;

@@ -78,6 +78,10 @@ errorcode_t infer_layout_skeleton(infer_ctx_t *ctx, ast_layout_skeleton_t *skele
 // Infers type aliases in a list of composites
 errorcode_t infer_in_composites(infer_ctx_t *ctx, ast_composite_t *composites, length_t composites_length);
 
+// ---------------- infer_in_poly_composites ----------------
+// Infers type aliases in a list of poly composites
+errorcode_t infer_in_poly_composites(infer_ctx_t *ctx, ast_poly_composite_t *poly_composites, length_t poly_composites_length);
+
 // ---------------- infer_in_globals ----------------
 // Infers type/value aliases in a list of global variables
 errorcode_t infer_in_globals(infer_ctx_t *ctx, ast_global_t *globals, length_t globals_length);
