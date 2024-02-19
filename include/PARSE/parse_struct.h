@@ -15,6 +15,11 @@ extern "C" {
 #include "PARSE/parse_ctx.h"
 #include "UTIL/ground.h"
 
+// ------------------ parse_generics ------------------
+// Parses a list of generics
+// Only writes to `out_` parameters on success
+errorcode_t parse_generics(parse_ctx_t *ctx, strong_cstr_t **out_generics, length_t *out_generics_length);
+
 // ------------------ parse_composite ------------------
 // Parses a composite
 errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union);

@@ -26,6 +26,57 @@
 #include "UTIL/trait.h"
 #include "UTIL/util.h"
 
+errorcode_t parse_generics(parse_ctx_t *ctx, strong_cstr_t **out_generics, length_t *out_generics_length){
+    strong_cstr_t *generics = NULL;
+    length_t generics_length = 0;
+    length_t generics_capacity = 0;
+
+    *out_generics = NULL;
+    *out_generics_length = 0;
+
+    if(parse_eat(ctx, TOKEN_LESSTHAN, NULL) == SUCCESS){
+        while(parse_ctx_peek(ctx) != TOKEN_GREATERTHAN){
+            expand((void**) &generics, sizeof(strong_cstr_t), generics_length, &generics_capacity, 1, 4);
+
+            if(parse_ignore_newlines(ctx, "Expected polymorphic generic type")){
+                goto failure;
+            }
+
+            if(parse_ctx_peek(ctx) != TOKEN_POLYMORPH){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected polymorphic generic type");
+                goto failure;
+            }
+
+            generics[generics_length++] = parse_ctx_peek_data_take(ctx);
+            *ctx->i += 1;
+
+            if(parse_ignore_newlines(ctx, "Expected '>' or ',' after polymorphic generic type")){
+                goto failure;
+            }
+
+            if(parse_eat(ctx, TOKEN_NEXT, NULL) == SUCCESS){
+                if(parse_ctx_peek(ctx) == TOKEN_GREATERTHAN){
+                    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected polymorphic generic type after ',' in generics list");
+                    goto failure;
+                }
+            } else if(parse_ctx_peek(ctx) != TOKEN_GREATERTHAN){
+                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*ctx->i], "Expected ',' after polymorphic generic type");
+                goto failure;
+            }
+        }
+
+        (*ctx->i)++;
+    }
+
+    *out_generics = generics;
+    *out_generics_length = generics_length;
+    return SUCCESS;
+
+failure:
+    free_strings(generics, generics_length);
+    return FAILURE;
+}
+
 errorcode_t parse_composite(parse_ctx_t *ctx, bool is_union){
     ast_t *ast = ctx->ast;
     source_t source = parse_ctx_peek_source(ctx);
@@ -174,40 +225,9 @@ errorcode_t parse_composite_head(
 
     strong_cstr_t *generics = NULL;
     length_t generics_length = 0;
-    length_t generics_capacity = 0;
 
-    if(parse_eat(ctx, TOKEN_LESSTHAN, NULL) == SUCCESS){
-        while(parse_ctx_peek(ctx) != TOKEN_GREATERTHAN){
-            expand((void**) &generics, sizeof(strong_cstr_t), generics_length, &generics_capacity, 1, 4);
-
-            if(parse_ignore_newlines(ctx, "Expected polymorphic generic type")){
-                goto failure;
-            }
-
-            if(parse_ctx_peek(ctx) != TOKEN_POLYMORPH){
-                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type");
-                goto failure;
-            }
-
-            generics[generics_length++] = parse_ctx_peek_data_take(ctx);
-            *i += 1;
-
-            if(parse_ignore_newlines(ctx, "Expected '>' or ',' after polymorphic generic type")){
-                goto failure;
-            }
-
-            if(parse_eat(ctx, TOKEN_NEXT, NULL) == SUCCESS){
-                if(parse_ctx_peek(ctx) == TOKEN_GREATERTHAN){
-                    compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected polymorphic generic type after ',' in generics list");
-                    goto failure;
-                }
-            } else if(parse_ctx_peek(ctx) != TOKEN_GREATERTHAN){
-                compiler_panic(ctx->compiler, ctx->tokenlist->sources[*i], "Expected ',' after polymorphic generic type");
-                goto failure;
-            }
-        }
-
-        (*i)++;
+    if(parse_generics(ctx, &generics, &generics_length)){
+        goto failure;
     }
 
     if(ctx->compiler->traits & COMPILER_COLON_COLON && ctx->prename){

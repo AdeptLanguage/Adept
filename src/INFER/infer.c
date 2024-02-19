@@ -7,6 +7,8 @@
 
 #include "AST/ast_expr.h"
 #include "AST/ast_type.h"
+#include "AST/ast_poly_catalog.h"
+#include "AST/POLY/ast_resolve.h"
 #include "UTIL/builtin_type.h"
 #include "UTIL/color.h"
 #include "UTIL/levenshtein.h"
@@ -1247,7 +1249,7 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
                     continue;
                 }
 
-                int alias_index = ast_find_alias(aliases, aliases_length, base);
+                int alias_index = ast_find_alias(aliases, aliases_length, base, 0);
                 
                 if(alias_index != -1){
                     // NOTE: The alias target type was already resolved of any aliases,
@@ -1289,6 +1291,48 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
             break;
         case AST_ELEM_GENERIC_BASE: {
                 ast_elem_generic_base_t *generic_base_elem = (ast_elem_generic_base_t*) elem;
+
+                int alias_index = ast_find_alias(aliases, aliases_length, generic_base_elem->name, generic_base_elem->generics_length);
+                
+                if(alias_index != -1){
+                    // NOTE: The alias target type was already resolved of any aliases,
+                    //       so we don't have to scan the new elements
+                    ast_alias_t *alias = &aliases[alias_index];
+
+                    // Replace polymorphic type parameters with what we specified
+                    ast_poly_catalog_t catalog;
+                    ast_poly_catalog_init(&catalog);
+                    ast_poly_catalog_add_types(&catalog, alias->generics, generic_base_elem->generics, alias->generics_length);
+
+                    ast_type_t cloned;
+                    if(ast_resolve_type_polymorphs(ctx->compiler, NULL, &catalog, &alias->type, &cloned)){
+                        ast_poly_catalog_free(&catalog);
+                        return FAILURE;
+                    }
+
+                    ast_poly_catalog_free(&catalog);
+
+                    // Place result of un-aliasing in the result type
+                    expand((void**) &new_elements, sizeof(ast_elem_t*), length, &capacity, cloned.elements_length, 4);
+
+                    if(ctx->aliases_recursion_depth++ >= 100){
+                        compiler_panicf(ctx->compiler, original_source, "Recursion depth of 100 exceeded, most likely a circular definition");
+                        return FAILURE;
+                    }
+
+                    if(infer_type_inner(ctx, &cloned, original_source)) return FAILURE;
+                    ctx->aliases_recursion_depth--;
+
+                    // Move all the elements from the cloned type to this type
+                    for(length_t i = 0; i != cloned.elements_length; i++){
+                        new_elements[length++] = cloned.elements[i];
+                    }
+
+                    ast_elem_free(elem);
+
+                    free(cloned.elements);
+                    continue; // Don't do normal stuff that follows
+                }
 
                 for(length_t i = 0; i != generic_base_elem->generics_length; i++){
                     if(infer_type(ctx, &generic_base_elem->generics[i])) return FAILURE;

@@ -17,6 +17,7 @@ def run_all_tests():
     )
     test("address", [executable, join(src_dir, "address/main.adept")], compiles)
     test("aliases", [executable, join(src_dir, "aliases/main.adept")], compiles)
+    test("aliases_polymorphic", [executable, join(src_dir, "aliases_polymorphic/main.adept")], compiles)
     test("alignof", [executable, join(src_dir, "alignof/main.adept")], compiles)
     test("andor", [executable, join(src_dir, "andor/main.adept")], compiles)
     test("andor_circuit", [executable, join(src_dir, "andor_circuit/main.adept")], compiles)

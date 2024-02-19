@@ -1,0 +1,12 @@
+
+import 'sys/cstdio.adept'
+
+record <$A, $B> Douplet (a $A, b $B)
+
+alias <$T, $S> TwoThing = <$T, $S> Douplet
+
+func main {
+    two_thing <int, double> TwoThing = Douplet(12si, 9.0)
+
+    printf('first=%d second=%f\n', two_thing.a, two_thing.b)
+}

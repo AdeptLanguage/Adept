@@ -184,7 +184,7 @@ void any_inject_ast_AnyStructType(ast_t *ast){
 
     ast_type_t strong_type = ast_type_make_base(strclone("AnyCompositeType"));
 
-    ast_add_alias(ast, strclone("AnyStructType"), strong_type, TRAIT_NONE, NULL_SOURCE);
+    ast_add_alias(ast, strclone("AnyStructType"), strong_type, NULL, 0, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyUnionType(ast_t *ast){
@@ -195,7 +195,7 @@ void any_inject_ast_AnyUnionType(ast_t *ast){
 
     ast_type_t strong_type = ast_type_make_base(strclone("AnyCompositeType"));
 
-    ast_add_alias(ast, strclone("AnyUnionType"), strong_type, TRAIT_NONE, NULL_SOURCE);
+    ast_add_alias(ast, strclone("AnyUnionType"), strong_type, NULL, 0, TRAIT_NONE, NULL_SOURCE);
 }
 
 void any_inject_ast_AnyFuncPtrType(ast_t *ast){

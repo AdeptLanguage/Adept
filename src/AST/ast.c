@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "AST/TYPE/ast_type_make.h"
 #include "AST/UTIL/string_builder_extensions.h"
@@ -255,8 +256,10 @@ void ast_free_composites(ast_composite_t *composites, length_t composites_length
 
 void ast_free_aliases(ast_alias_t *aliases, length_t aliases_length){
     for(length_t i = 0; i != aliases_length; i++){
-        free(aliases[i].name);
-        ast_type_free(&aliases[i].type);
+        ast_alias_t *alias = &aliases[i];
+        free(alias->name);
+        free_strings(alias->generics, alias->generics_length);
+        ast_type_free(&alias->type);
     }
 }
 
@@ -414,10 +417,12 @@ bool ast_func_has_polymorphic_signature(ast_func_t *func){
         || ast_type_has_polymorph(&func->return_type);
 }
 
-void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source){
+void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, strong_cstr_t *generics, length_t generics_length, trait_t traits, source_t source){
     *alias = (ast_alias_t){
         .name = name,
         .type = type,
+        .generics = generics,
+        .generics_length = generics_length,
         .traits = traits,
         .source = source,
     };
@@ -509,15 +514,21 @@ successful_t ast_enum_find_kind(ast_enum_t *ast_enum, const char *name, length_t
     return false;
 }
 
-maybe_index_t ast_find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias){
+maybe_index_t ast_find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias, length_t num_generics){
     // If not found returns -1 else returns index inside array
 
     maybe_index_t first, middle, last, comparison;
     first = 0; last = aliases_length - 1;
 
+    ast_alias_t target = {
+        .name = (char*) alias, // As the comparison doesn't modify anything, we can guarantee that putting a `const char*` here for this specific case is okay
+        .generics_length = num_generics,
+        /* ... rest unused ... */
+    };
+
     while(first <= last){
         middle = (first + last) / 2;
-        comparison = strcmp(aliases[middle].name, alias);
+        comparison = ast_aliases_cmp(&aliases[middle], &target);
 
         if(comparison == 0) return middle;
         else if(comparison > 0) last = middle - 1;
@@ -606,11 +617,11 @@ bool ast_func_end_is_reachable(ast_t *ast, func_id_t ast_func_id){
     return ast_func_end_is_reachable_inner(&ast->funcs[ast_func_id].statements, 20, 0);
 }
 
-void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait_t traits, source_t source){
+void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, strong_cstr_t *generics, length_t generics_length, trait_t traits, source_t source){
     expand((void**) &ast->aliases, sizeof(ast_alias_t), ast->aliases_length, &ast->aliases_capacity, 1, 8);
 
     ast_alias_t *alias = &ast->aliases[ast->aliases_length++];
-    ast_alias_init(alias, name, strong_type, traits, source);
+    ast_alias_init(alias, name, strong_type, generics, generics_length, traits, source);
 }
 
 void ast_add_enum(ast_t *ast, strong_cstr_t name, weak_cstr_t *kinds, length_t length, source_t source){
@@ -751,8 +762,18 @@ void va_args_inject_ast(compiler_t *compiler, ast_t *ast){
     }
 }
 
-int ast_aliases_cmp(const void *a, const void *b){
-    return strcmp(((ast_alias_t*) a)->name, ((ast_alias_t*) b)->name);
+int ast_aliases_cmp(const void *raw_a, const void *raw_b){
+    ast_alias_t *a = (ast_alias_t*) raw_a;
+    ast_alias_t *b = (ast_alias_t*) raw_b;
+
+    int res = strcmp(a->name, b->name);
+    if(res != 0) return res;
+
+    if(a->generics_length != b->generics_length){
+        return a->generics_length < b->generics_length ? -1 : 1;
+    }
+
+    return 0;
 }
 
 int ast_enums_cmp(const void *a, const void *b){

@@ -152,6 +152,8 @@ typedef struct {
 typedef struct {
     strong_cstr_t name;
     ast_type_t type;
+    strong_cstr_t *generics;
+    length_t generics_length;
     trait_t traits;
     source_t source;
 } ast_alias_t;
@@ -307,7 +309,7 @@ bool ast_func_has_polymorphic_signature(ast_func_t *func);
 
 // ---------------- ast_alias_init ----------------
 // Initializes an AST alias
-void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, trait_t traits, source_t source);
+void ast_alias_init(ast_alias_t *alias, weak_cstr_t name, ast_type_t type, strong_cstr_t *generics, length_t generics_length, trait_t traits, source_t source);
 
 // ---------------- ast_enum_init ----------------
 // Initializes an AST enum
@@ -341,7 +343,7 @@ bool ast_enum_contains(ast_enum_t *ast_enum, const char *kind_name);
 
 // ---------------- ast_find_alias ----------------
 // Finds an alias by name
-maybe_index_t ast_find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias);
+maybe_index_t ast_find_alias(ast_alias_t *aliases, length_t aliases_length, const char *alias, length_t num_generics);
 
 // ---------------- ast_find_enum ----------------
 // Finds a enum expression by name
@@ -360,7 +362,7 @@ bool ast_func_end_is_reachable_inner(ast_expr_list_t *stmts, unsigned int max_de
 
 // ---------------- ast_add_alias ----------------
 // Adds a type alias to the global scope of an AST
-void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, trait_t traits, source_t source);
+void ast_add_alias(ast_t *ast, strong_cstr_t name, ast_type_t strong_type, strong_cstr_t *generics, length_t generics_length, trait_t traits, source_t source);
 
 // ---------------- ast_add_enum ----------------
 // Adds an enum to the global scope of an AST
