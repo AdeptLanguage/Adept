@@ -13,6 +13,7 @@
 #include "TOKEN/token_data.h"
 #include "UTIL/ground.h"
 #include "UTIL/search.h"
+#include "UTIL/string.h"
 #include "UTIL/trait.h"
 
 errorcode_t parse_alias(parse_ctx_t *ctx){
