@@ -320,29 +320,29 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             die("Exiting from unexpected undetermined generic enum\n");
         }
     case VALUE_TYPE_CONST_BITCAST:
-            return LLVMConstBitCast(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildBitCast(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_ZEXT:
-            return LLVMConstZExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildZExt(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_SEXT:
-            return LLVMConstSExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildSExt(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_FEXT:
-            return LLVMConstFPExt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildFPExt(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_TRUNC:
-            return LLVMConstTrunc(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildTrunc(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_FTRUNC:
-            return LLVMConstFPTrunc(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildFPTrunc(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_INTTOPTR:
-            return LLVMConstIntToPtr(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildIntToPtr(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_PTRTOINT:
-            return LLVMConstPtrToInt(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildPtrToInt(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_FPTOUI:
-            return LLVMConstFPToUI(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildFPToUI(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_FPTOSI:
-            return LLVMConstFPToSI(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildFPToSI(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_UITOFP:
-            return LLVMConstUIToFP(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildUIToFP(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_SITOFP:
-            return LLVMConstSIToFP(ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type));
+            return LLVMBuildSIToFP(llvm->builder, ir_to_llvm_value(llvm, value->extra), ir_to_llvm_type(llvm, value->type), "");
     case VALUE_TYPE_CONST_REINTERPRET:
             return ir_to_llvm_value(llvm, value->extra);
     case VALUE_TYPE_CONST_STRUCT_LITERAL: {
