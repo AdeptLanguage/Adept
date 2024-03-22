@@ -1261,7 +1261,11 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 LLVMTypeRef signature = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), NULL, 0, false);
 
                 if(*stacksave_intrinsic == NULL){
+                    #if LLVM_VERSION_MAJOR < 18
                     *stacksave_intrinsic = LLVMAddFunction(llvm->module, "llvm.stacksave", signature);
+                    #else
+                    *stacksave_intrinsic = LLVMAddFunction(llvm->module, "llvm.stacksave.p0", signature);
+                    #endif
                 }
 
                 catalog->blocks[b].value_references[i] = LLVMBuildCall2(builder, signature, *stacksave_intrinsic, NULL, 0, "");
@@ -1277,7 +1281,11 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 1, false);
 
                 if(*stackrestore_intrinsic == NULL){
+                    #if LLVM_VERSION_MAJOR < 18
                     *stackrestore_intrinsic = LLVMAddFunction(llvm->module, "llvm.stackrestore", signature);
+                    #else
+                    *stackrestore_intrinsic = LLVMAddFunction(llvm->module, "llvm.stackrestore.p0", signature);
+                    #endif
                 }
 
                 LLVMValueRef args[] = {
