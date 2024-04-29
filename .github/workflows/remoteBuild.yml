@@ -127,6 +127,7 @@ jobs:
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
+          echo $HOMEBREW_LIBRARY_PATHS
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           LLVM_DIR: /opt/homebrew/opt/llvm
