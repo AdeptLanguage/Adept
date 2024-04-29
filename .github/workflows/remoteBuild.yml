@@ -111,7 +111,7 @@ jobs:
       - name: Install LLVM and dependencies (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          brew install llvm@18
+          brew install llvm
           brew install zstd
       - name: Install LLVM and dependencies (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -122,21 +122,21 @@ jobs:
           sudo apt-get remove -y llvm-13
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install zstd
-          brew install llvm@18
+          brew install llvm
           brew ls -v zstd
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
-          LLVM_DIR: /opt/homebrew/Cellar/llvm@18
+          LLVM_DIR: /opt/homebrew/Cellar/llvm
           zstd_DIR: /usr/local/opt/zstd
       - name: Configure (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
-          LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm@18
+          LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
       - name: Build
         run: |
