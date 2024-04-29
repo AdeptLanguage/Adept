@@ -292,8 +292,8 @@ errorcode_t ir_gen_expr_and(ir_builder_t *builder, ast_expr_and_t *expr, ir_valu
     build_break(builder, merge_block_id);
     build_using_basicblock(builder, landing_a_block_id);
     build_cond_break(builder, a, landing_more_block_id, merge_block_id);
-
     build_using_basicblock(builder, merge_block_id);
+
     *ir_value = build_phi2(builder, ir_builder_bool(builder), build_bool(builder->pool, false), b, landing_a_block_id, landing_b_block_id);
     return SUCCESS;
 }

@@ -971,7 +971,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
         case INSTRUCTION_ARRAY_ACCESS: {
                 ir_instr_array_access_t *array_access_instr = (ir_instr_array_access_t*) instr;
                 LLVMValueRef foundation = ir_to_llvm_value(llvm, array_access_instr->value);
-                LLVMTypeRef struct_type = ir_to_llvm_type(llvm, ir_type_unwrap(array_access_instr->value->type));
+                LLVMTypeRef item_type = ir_to_llvm_type(llvm, ir_type_unwrap(array_access_instr->value->type));
 
                 llvm_create_optional_null_check(llvm, f, foundation, array_access_instr->maybe_line_number, array_access_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
@@ -981,8 +981,8 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
                 catalog->blocks[b].value_references[i] = 
                     (LLVMIsConstant(foundation) && LLVMIsConstant(gep_indices[0]))
-                        ? LLVMConstGEP2(struct_type, foundation, gep_indices, NUM_ITEMS(gep_indices))
-                        : LLVMBuildGEP2(builder, struct_type, foundation, gep_indices, NUM_ITEMS(gep_indices), "");
+                        ? LLVMConstGEP2(item_type, foundation, gep_indices, NUM_ITEMS(gep_indices))
+                        : LLVMBuildGEP2(builder, item_type, foundation, gep_indices, NUM_ITEMS(gep_indices), "");
             }
             break;
         case INSTRUCTION_BITCAST:
