@@ -129,7 +129,7 @@ jobs:
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
-          LLVM_DIR: /opt/homebrew/Cellar/llvm
+          LLVM_DIR: /opt/homebrew/opt/llvm
           zstd_DIR: /usr/local/opt/zstd
       - name: Configure (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
