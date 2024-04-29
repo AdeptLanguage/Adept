@@ -12,17 +12,21 @@ A blazing fast language for general purpose programming.
 ## Resources
 [Adept v2.7 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
 
+[Adept v2.7 Language Server](https://github.com/IsaacShelton/AdeptVim)
+
 [Adept v2.7 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
 
 [Adept v2.7 Working with Domestic and Foreign Libraries](https://github.com/IsaacShelton/AdeptWorkingWithC)
 
 [Adept v2.7 MacOS Homebrew Tap](https://github.com/AdeptLanguage/homebrew-tap)
 
-[Adept v2.7 Vim Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
+[Adept v2.7 Vim Plugin](https://github.com/Angluca/adept.vim)
 
-[Adept v2.7 VS-Code Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
+[Adept v2.7 Vim Bare-Bones Syntax Highlighting](https://github.com/IsaacShelton/AdeptVim)
 
-[Adept v2.7 VS-Code Language Server](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
+[Adept v2.7 VSCode Syntax Highlighting](https://github.com/IsaacShelton/AdeptVSCode)
+
+[Adept v2.7 VSCode Language Server](https://github.com/IsaacShelton/AdeptVSCodeLanguage)
 
 [Adept v2.7 Sublime Text Syntax Highlighting](https://github.com/AdeptLanguage/AdeptSublimeText)
 
