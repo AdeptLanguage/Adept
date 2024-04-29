@@ -55,6 +55,7 @@ set(core_source_files
 	src/UTIL/list.c src/UTIL/search.c src/UTIL/set.c src/NET/stash.c src/UTIL/string_builder.c
 	src/UTIL/string_list.c src/UTIL/string.c src/UTIL/util.c)
 
+set(CMAKE_EXE_LINKER_FLAGS "-static")
 add_executable(adept)
 target_include_directories(adept PRIVATE include ${CURL_INCLUDE_DIR} ${LLVM_INCLUDE_DIRS})
 target_link_directories(adept PRIVATE ${CURL_LIBRARY_DIRS} ${LLVM_LIBRARY_DIRS})
