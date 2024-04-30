@@ -127,13 +127,17 @@ jobs:
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
+          echo 
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           CC: /opt/homebrew/opt/llvm/bin/clang
           LLVM_DIR: /opt/homebrew/opt/llvm
           zstd_DIR: /usr/local/opt/zstd
+          LD_LIBRARY_PATH: ""
           LIBCXXABI_USE_LLVM_UNWINDER: "OFF"
           COMPILER_RT_USE_LLVM_UNWINDER: "OFF"
+          CFLAGS: -DBUILD_SHARED_LIBS=OFF LIBCXXABI_USE_LLVM_UNWINDER=OFF COMPILER_RT_USE_LLVM_UNWINDER=OFF
+          CXXFLAGS: -DBUILD_SHARED_LIBS=OFF LIBCXXABI_USE_LLVM_UNWINDER=OFF COMPILER_RT_USE_LLVM_UNWINDER=OFF
       - name: Configure (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
