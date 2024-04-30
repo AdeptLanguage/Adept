@@ -138,7 +138,7 @@ jobs:
           LD_LIBRARY_PATH: ""
           CFLAGS: -static-libstdc++
           CXXFLAGS: -static-libstdc++
-          LDFLAGS: -static-libstdc++
+          LDFLAGS: /opt/homebrew/opt/llvm/lib/libunwind.a
       - name: Configure (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
