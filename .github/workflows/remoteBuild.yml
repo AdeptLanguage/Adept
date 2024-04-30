@@ -113,7 +113,6 @@ jobs:
         run: |
           brew install llvm
           brew install zstd
-          brew install libunwind
       - name: Install LLVM and dependencies (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
@@ -133,6 +132,8 @@ jobs:
           CC: /opt/homebrew/opt/llvm/bin/clang
           LLVM_DIR: /opt/homebrew/opt/llvm
           zstd_DIR: /usr/local/opt/zstd
+          LIBCXXABI_USE_LLVM_UNWINDER: "OFF"
+          COMPILER_RT_USE_LLVM_UNWINDER: "OFF"
       - name: Configure (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
