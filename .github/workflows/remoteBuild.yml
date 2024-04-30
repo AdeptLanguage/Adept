@@ -127,15 +127,11 @@ jobs:
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          echo $PATH
-          ls /opt/homebrew/opt/llvm/lib/
-          /opt/homebrew/opt/llvm/lib/../bin/llvm-config --cxxflags --ldflags --libs --link-static
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           CC: /opt/homebrew/opt/llvm/bin/clang
           LLVM_DIR: /opt/homebrew/opt/llvm
           zstd_DIR: /usr/local/opt/zstd
-          LD_LIBRARY_PATH: ""
           CFLAGS: -static-libstdc++
           CXXFLAGS: -static-libstdc++
           LDFLAGS: /opt/homebrew/opt/llvm/lib/libunwind.a
