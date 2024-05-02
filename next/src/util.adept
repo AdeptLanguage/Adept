@@ -1,6 +1,0 @@
-
-func adept\toHeap(value $T) *$T {
-    on_heap *$T = new $T
-    *on_heap = value
-    return on_heap
-}

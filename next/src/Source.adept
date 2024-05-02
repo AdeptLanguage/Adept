@@ -1,8 +1,0 @@
-
-import Optional
-
-record adept\Source (object_index, index, stride usize)
-
-func __equals__(a, b adept\Source) bool {
-    return memcmp(&a, &b, sizeof(a)) == 0
-}

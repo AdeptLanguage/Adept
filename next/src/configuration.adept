@@ -1,5 +1,0 @@
-
-#default adept\version_string "3.0"
-#default adept\emscripten __wasm__
-
-define adept\VERSION_STRING = #get adept\version_string
