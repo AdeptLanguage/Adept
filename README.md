@@ -12,7 +12,7 @@ A blazing fast language for general purpose programming.
 ## Resources
 [Adept v2.7 Documentation](https://github.com/AdeptLanguage/Adept/wiki)
 
-[Adept v2.7 Language Server](https://github.com/IsaacShelton/AdeptVim)
+[Adept v2.7 Language Server](https://github.com/IsaacShelton/AdeptLSP)
 
 [Adept v2.7 Standard Library](https://github.com/AdeptLanguage/AdeptImport)
 
