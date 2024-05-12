@@ -285,7 +285,7 @@ func makeNumericSkewer String {
         }
     }
 
-    return skewer
+    return skewer.commit()
 }
 
 func makeAlphabetSkewer String {
@@ -303,7 +303,7 @@ func makeAlphabetSkewer String {
         skewer.append("-")
     }
 
-    return skewer
+    return skewer.commit()
 }
 ```
 
