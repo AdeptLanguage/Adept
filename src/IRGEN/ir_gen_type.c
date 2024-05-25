@@ -379,6 +379,18 @@ successful_t ast_types_conform(ir_builder_t *builder, ir_value_t **ir_value, ast
         return true;
     }
 
+    // Integer to float
+    if(mode & CONFORM_MODE_INT_TO_FLOAT && from_traits & TYPE_TRAIT_INTEGER && (to_type_kind == TYPE_KIND_FLOAT || to_type_kind == TYPE_KIND_DOUBLE)){
+        if(ir_gen_resolve_type(builder->compiler, builder->object, ast_to_type, &ir_to_type)) return false;
+
+        if (IS_TYPE_KIND_SIGNED(from_type_kind)) {
+            *ir_value = build_sitofp(builder, *ir_value, ir_to_type);
+        } else {
+            *ir_value = build_uitofp(builder, *ir_value, ir_to_type);
+        }
+        return true;
+    }
+
     // Do bitcast if appropriate
     if(
         ((
@@ -765,7 +777,7 @@ failure:
     return FAILURE;
 }
 
-successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b){
+successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b, ast_type_t *out_common_type, trait_t mode){
     // NOTE: _____RETURNS TRUE ON SUCCESSFUL MERGE_____
     // NOTE: If the types are not identical, then this function will attempt to make
     //           the two values have a common type
@@ -773,9 +785,17 @@ successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_
     // NOTE: This function can be used as a substitute for ast_types_identical if the desired
     //           behavior is to make two values conform to each other, for one-way casting use ast_types_conform()
 
-    if(ast_types_conform(builder, ir_value_a, ast_type_a, ast_type_b, CONFORM_MODE_STANDARD)) return false;
-    if(ast_types_conform(builder, ir_value_b, ast_type_b, ast_type_a, CONFORM_MODE_STANDARD)) return false;
-    return true;
+    if(ast_types_conform(builder, ir_value_a, ast_type_a, ast_type_b, mode)){
+        *out_common_type = ast_type_clone(ast_type_b);
+        return true;
+    }
+
+    if(ast_types_conform(builder, ir_value_b, ast_type_b, ast_type_a, mode)){
+        *out_common_type = ast_type_clone(ast_type_a);
+        return true;
+    }
+
+    return false;
 }
 
 ir_type_t *ast_layout_bone_to_ir_type(compiler_t *compiler, object_t *object, ast_layout_bone_t *bone, ast_poly_catalog_t *optional_catalog){

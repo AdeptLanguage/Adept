@@ -40,13 +40,14 @@
 #define CONFORM_MODE_CLASS_POINTERS TRAIT_B    // Allow conforming class pointers
 #define CONFORM_MODE_USER_EXPLICIT  TRAIT_C    // Allow explicit user-defined conversions via __as__
 #define CONFORM_MODE_USER_IMPLICIT  TRAIT_D    // Allow implicit user-defined conversions via __as__
+#define CONFORM_MODE_INT_TO_FLOAT   TRAIT_E    // Allow implicit conversion from integers to floats
 #define CONFORM_MODE_ALL            TRAIT_ALL  // Allow all conformation methods
 
 #define CONFORM_MODE_CALL_ARGUMENTS              CONFORM_MODE_STANDARD
 #define CONFORM_MODE_CALL_ARGUMENTS_LOOSE_NOUSER CONFORM_MODE_PRIMITIVES | CONFORM_MODE_VARIADIC | CONFORM_MODE_POINTERPTR | CONFORM_MODE_PTR_TO_BOOL | CONFORM_MODE_CLASS_POINTERS
 #define CONFORM_MODE_CALL_ARGUMENTS_LOOSE        CONFORM_MODE_CALL_ARGUMENTS_LOOSE_NOUSER | CONFORM_MODE_USER_IMPLICIT
 #define CONFORM_MODE_ASSIGNING                   CONFORM_MODE_PRIMITIVES | CONFORM_MODE_POINTERPTR | CONFORM_MODE_PTR_TO_BOOL | CONFORM_MODE_INT_TO_BOOL | CONFORM_MODE_CLASS_POINTERS | CONFORM_MODE_USER_IMPLICIT
-#define CONFORM_MODE_CALCULATION                 CONFORM_MODE_PRIMITIVES | CONFORM_MODE_POINTERPTR | CONFORM_MODE_PTR_TO_BOOL | CONFORM_MODE_INT_TO_BOOL
+#define CONFORM_MODE_CALCULATION                 CONFORM_MODE_PRIMITIVES | CONFORM_MODE_POINTERPTR | CONFORM_MODE_PTR_TO_BOOL | CONFORM_MODE_INT_TO_BOOL | CONFORM_MODE_INT_TO_FLOAT
 #define CONFORM_MODE_RETURN                      CONFORM_MODE_CALCULATION | CONFORM_MODE_USER_IMPLICIT
 
 // ---------------- ir_gen_type_mappings ----------------
@@ -75,7 +76,7 @@ errorcode_t ir_gen_merge_unknown_enum_like_into_plural_unknown_enum(ir_builder_t
 // Attempts to find a common AST type for two IR values
 // and merge them into a common AST type. Returns true
 // if successfully merged them to a common AST type.
-successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b);
+successful_t ast_types_merge(ir_builder_t *builder, ir_value_t **ir_value_a, ir_value_t **ir_value_b, ast_type_t *ast_type_a, ast_type_t *ast_type_b, ast_type_t *out_common_type, trait_t mode);
 
 // ---------------- ast_layout_bone_to_ir_type ----------------
 // Converts an ast_layout_bone_t to an ir_type_t

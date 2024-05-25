@@ -139,11 +139,12 @@ errorcode_t ir_gen_expr(ir_builder_t *builder, ast_expr_t *expr, ir_value_t **ir
     case EXPR_BIT_LGC_LSHIFT:
     case EXPR_BIT_RSHIFT:
     case EXPR_BIT_LGC_RSHIFT: {
-            const ir_gen_math_spec_t *info = &ir_gen_math_specs[expr->id];
+            ir_gen_math_spec_t info = ir_gen_math_specs[expr->id];
+            info.allow_type_merging = true;
 
-            assert(info->choices.method != INSTR_CHOOSING_METHOD_NONE);
+            assert(info.choices.method != INSTR_CHOOSING_METHOD_NONE);
 
-            if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, info)){
+            if(ir_gen_expr_math(builder, (ast_expr_math_t*) expr, ir_value, out_expr_type, &info)){
                 return FAILURE;
             }
         }
@@ -2689,8 +2690,21 @@ errorcode_t ir_gen_math(
     ast_type_t *out_expr_type,
     const ir_gen_math_spec_t *info
 ){
-    // Conform the second value to the type of the first
-    if(!ast_types_conform(builder, &ops->rhs, ops->rhs_type, ops->lhs_type, CONFORM_MODE_CALCULATION)){
+    ast_type_t common_ast_type = AST_TYPE_NONE;
+
+    if(info->allow_type_merging) {
+        // Merge the values
+        if(!ast_types_merge(builder, &ops->lhs, &ops->rhs, ops->lhs_type, ops->rhs_type, &common_ast_type, CONFORM_MODE_CALCULATION)){
+            common_ast_type  = AST_TYPE_NONE;
+        }
+    } else {
+        // Conform the second value to the type of the first
+        if(ast_types_conform(builder, &ops->rhs, ops->rhs_type, ops->lhs_type, CONFORM_MODE_CALCULATION)){
+            common_ast_type = ast_type_clone(ops->lhs_type);
+        }
+    }
+
+    if(AST_TYPE_IS_NONE(common_ast_type)){
         if(info->override){
             *ir_value = info->commutative
                 ? handle_math_management_allow_other_direction(builder, ops, source, out_expr_type, info->override)
@@ -2708,10 +2722,14 @@ errorcode_t ir_gen_math(
         return FAILURE;
     }
 
+    ir_type_t *common_ir_type = ops->lhs->type;
+
     // Determine which instruction to use
-    ir_instr_id_t instr_id = ir_instr_choosing_run(&info->choices, ops->lhs->type);
+    ir_instr_id_t instr_id = ir_instr_choosing_run(&info->choices, common_ir_type);
 
     if(instr_id == INSTRUCTION_NONE){
+        ast_type_free(&common_ast_type);
+
         // Try to use the overriden function if it exists
         *ir_value = info->override
             ? handle_math_management(builder, ops, source, out_expr_type, info->override)
@@ -2729,14 +2747,15 @@ errorcode_t ir_gen_math(
         return FAILURE;
     }
 
-    *ir_value = build_math(builder, instr_id, ops->lhs, ops->rhs, info->result_is_boolean ? ir_builder_bool(builder) : ops->lhs->type);
+    *ir_value = build_math(builder, instr_id, ops->lhs, ops->rhs, info->result_is_boolean ? ir_builder_bool(builder) : common_ir_type);
 
     // Write the result type, will either be a boolean or the same type as the given arguments
     if(out_expr_type != NULL){
         if(info->result_is_boolean){
             *out_expr_type = ast_type_make_base(strclone("bool"));
+            ast_type_free(&common_ast_type);
         } else {
-            *out_expr_type = ast_type_clone(ops->lhs_type);
+            *out_expr_type = common_ast_type;
         }
     }
 

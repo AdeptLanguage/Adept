@@ -60,6 +60,8 @@ static char *get_triple(compiler_t *compiler){
         return LLVMCreateMessage("x86_64-pc-windows-gnu");
     case CROSS_COMPILE_MACOS:
         return LLVMCreateMessage("x86_64-apple-darwin19.6.0");
+    case CROSS_COMPILE_LINUX:
+        return LLVMCreateMessage("x86_64-unknown-linux-gnu");
     case CROSS_COMPILE_WASM32:
         return LLVMCreateMessage("wasm32-unknown-unknown");
     }
@@ -514,6 +516,15 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     if(compiler->cross_compile_for == CROSS_COMPILE_MACOS){
         // Don't support linking output Mach-O object files
         printf("Mach-O Object File Generated (Requires Manual Linking)\n");
+        printf("\nLink Command: '%s'\n", link_command);
+        free(objfile_filename);
+        free(link_command);
+        return SUCCESS;
+    }
+
+    if(compiler->cross_compile_for == CROSS_COMPILE_LINUX){
+        // Don't support linking output Mach-O object files
+        printf("GNU/Linux Object File Generated (Requires Manual Linking)\n");
         printf("\nLink Command: '%s'\n", link_command);
         free(objfile_filename);
         free(link_command);

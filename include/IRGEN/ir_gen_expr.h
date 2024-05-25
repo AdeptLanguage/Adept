@@ -48,6 +48,7 @@ typedef struct {
     maybe_null_weak_cstr_t override;
     bool commutative : 1;
     bool result_is_boolean : 1;
+    bool allow_type_merging : 1;
 } ir_gen_math_spec_t;
 
 // ---------------- ir_gen_expr ----------------

@@ -175,6 +175,7 @@ def run_all_tests():
     test("inner_struct", [executable, join(src_dir, "inner_struct/main.adept")], compiles)
     test("inner_struct_polymorphic", [executable, join(src_dir, "inner_struct_polymorphic/main.adept")], compiles)
     test("int_ptr_cast", [executable, join(src_dir, "int_ptr_cast/main.adept")], compiles)
+    test("int_to_float_promotion_in_math", [executable, join(src_dir, "int_to_float_promotion_in_math/main.adept")], compiles)
     test("internal_deference", [executable, join(src_dir, "internal_deference/main.adept")], compiles)
     test("internal_deference_generic", [executable, join(src_dir, "internal_deference_generic/main.adept")], compiles)
     test("list_map", [executable, join(src_dir, "list_map/main.adept")], compiles)

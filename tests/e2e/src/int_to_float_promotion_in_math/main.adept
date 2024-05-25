@@ -1,0 +1,9 @@
+
+import basics
+
+func main {
+    x int = 3
+    y double = 4
+
+    print(x * y)
+}
