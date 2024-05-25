@@ -523,7 +523,7 @@ errorcode_t ir_to_llvm(compiler_t *compiler, object_t *object){
     }
 
     if(compiler->cross_compile_for == CROSS_COMPILE_LINUX){
-        // Don't support linking output Mach-O object files
+        // Linking linux object files may depend on target system, so require manual linking for now
         printf("GNU/Linux Object File Generated (Requires Manual Linking)\n");
         printf("\nLink Command: '%s'\n", link_command);
         free(objfile_filename);
