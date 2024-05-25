@@ -524,6 +524,11 @@ errorcode_t parse_arguments(compiler_t *compiler, object_t *object, int argc, ch
                 printf("[-] Cross compiling for MacOS x86_64\n");
                 compiler->cross_compile_for = CROSS_COMPILE_MACOS;
                 #endif
+            } else if(streq(arg, "--linux")){
+                #ifndef __linux__
+                printf("[-] Cross compiling for Linux x86_64\n");
+                compiler->cross_compile_for = CROSS_COMPILE_LINUX;
+                #endif
             } else if(streq(arg, "--wasm32")){
                 printf("[-] Cross compiling for WebAssembly\n");
                 printf("    (Adept is intended for true 64-bit architectures, some things may break!)\n");
@@ -765,6 +770,7 @@ void show_help(bool show_advanced_options){
         printf("\nCross Compilation:\n");
         printf("    --windows         Output Windows Executable (Requires Extension)\n");
         printf("    --macos           Output MacOS Mach-O Object File\n");
+        printf("    --linux           Output Linux ELF Object File\n");
 
         printf("\nLinker Options:\n");
         printf("    --libm                            Forces linking against libc math library\n");
