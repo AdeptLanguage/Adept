@@ -166,24 +166,24 @@ jobs:
           files: res
           outPath: res.tar.gz
       - name: Upload Build Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         with:
           name: build-${{ matrix.os }}-archive
           path: build-${{ matrix.os }}.tar.gz
       - name: Upload E2E Testing Infrastructure Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         if: ${{ matrix.os == 'ubuntu-latest' }}
         with:
           name: e2e-archive
           path: e2e.tar.gz
       - name: Upload Resources Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         if: ${{ matrix.os == 'windows-latest' }}
         with:
           name: res
           path: res.tar.gz
       - name: Upload LICENSE Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         if: ${{ matrix.os == 'ubuntu-latest' }}
         with:
           name: LICENSE
@@ -326,12 +326,12 @@ jobs:
           mv stage adept-${{env.shortVersion}}-standalone
           powershell Compress-Archive adept-${{env.shortVersion}}-standalone Adept-${{env.shortVersion}}-standalone-x86_64-Windows.zip
       - name: Upload Windows Installer Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         with:
           name: windows-installer
           path: AdeptWindowsInstaller/Adept-${{env.shortVersion}}-installer.exe
       - name: Upload Windows Standalone Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         with:
           name: windows-standalone
           path: Adept-${{env.shortVersion}}-standalone-x86_64-Windows.zip
@@ -415,12 +415,12 @@ jobs:
           mv stage/application adept-${{env.shortVersion}}-standalone
           zip -vr Adept-${{env.shortVersion}}-standalone-arm64-MacOS.zip adept-${{env.shortVersion}}-standalone/ -x "*.DS_Store"
       - name: Upload MacOS Installer Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         with:
           name: macos-installer
           path: macOS-installer-builder/build/Adept-${{env.shortVersion}}-installer.pkg
       - name: Upload MacOS Standalone Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.1.7
         with:
           name: macos-standalone
           path: macOS-installer-builder/Adept-${{env.shortVersion}}-standalone-arm64-MacOS.zip
