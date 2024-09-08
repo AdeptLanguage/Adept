@@ -56,6 +56,10 @@ for example.
 
 If you wish to link LLVM statically like the precompiled binaries do, you can specify `-DADEPT_LINK_LLVM_STATIC=On` when configuring with CMake.
 
+On Windows, this requires the additional libraries:
+
+- `pacman -S mingw-w64-x86_64-zstd --noconfirm`
+
 For example,
 
 - `git clone https://github.com/AdeptLanguage/Adept`
