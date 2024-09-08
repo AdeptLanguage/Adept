@@ -14,6 +14,7 @@
 - `pacman -S mingw-w64-x86_64-gcc --noconfirm`
 - `pacman -S mingw-w64-x86_64-llvm --noconfirm`
 - `pacman -S mingw-w64-x86_64-zlib --noconfirm`
+- `pacman -S mingw-w64-x86_64-zstd --noconfirm`
 - `git clone https://github.com/AdeptLanguage/Adept`
 - `cd Adept`
 - `mkdir build`
@@ -52,13 +53,19 @@ LLVM_DIR=/opt/homebrew/opt/llvm zstd_DIR=/usr/local/opt/zstd cmake -B build -DCM
 
 for example.
 
-# Linking LLVM Statically
+# Linking LLVM Statically vs Dynamically
 
-If you wish to link LLVM statically like the precompiled binaries do, you can specify `-DADEPT_LINK_LLVM_STATIC=On` when configuring with CMake.
+### Windows
 
-On Windows, this requires the additional libraries:
+On Windows, LLVM is linked against statically by default.
 
-- `pacman -S mingw-w64-x86_64-zstd --noconfirm`
+You can specify `-DADEPT_LINK_LLVM_STATIC=Off` when configuring CMake to prefer dynamic linking if you like.
+
+### macOS / Linux
+
+On macOS and Linux, LLVM is linked against dynamically by default.
+
+You can specify `-DADEPT_LINK_LLVM_STATIC=On` when configuring with CMake to prefer static linking if you like.
 
 For example,
 
