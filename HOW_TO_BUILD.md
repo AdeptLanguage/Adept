@@ -46,8 +46,6 @@ Clone and build:
 
 (May not be needed) - Depending on your setup, you may need to tell CMake where to find each library. This is done by setting environment variables.
 
-(it doesn't have to be global like in the example)
-
 `
 LLVM_DIR=/opt/homebrew/opt/llvm zstd_DIR=/usr/local/opt/zstd cmake -B build -DCMAKE_BUILD_TYPE="Release" -DCMAKE_C_FLAGS="-w" -G Ninja
 `
