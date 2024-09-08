@@ -117,7 +117,6 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y libncurses5
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get remove -y llvm-13
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
