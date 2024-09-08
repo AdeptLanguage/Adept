@@ -203,11 +203,11 @@ jobs:
         with:
           python-version: '3.x' 
       - name: Download Build Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-${{ matrix.os }}-archive
       - name: Download E2E Testing Infrastructure Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: e2e-archive
       - name: Unpack 1/2
@@ -261,15 +261,15 @@ jobs:
           echo 'longVersion=nightly' >> $GITHUB_ENV
           echo 'alternativeBinaryName=adept-nightly' >> $GITHUB_ENV
       - name: Download Build Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-windows-latest-archive
       - name: Download Support Libraries Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: res
       - name: Download LICENSE Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: LICENSE
       - name: Unpack Build Artifact
@@ -362,7 +362,7 @@ jobs:
         with:
           python-version: '3.x' 
       - name: Download Build Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-macos-latest-archive
       - name: Unpack
@@ -452,15 +452,15 @@ jobs:
           echo 'releaseName=Nightly' >> $GITHUB_ENV
           echo 'releaseTagName=Nightly' >> $GITHUB_ENV
       - name: Download Build Artifact (windows-latest)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-windows-latest-archive
       - name: Download Build Artifact (macos-latest)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-macos-latest-archive
       - name: Download Build Artifact (ubuntu-latest)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-ubuntu-latest-archive
       - name: Checkout Adept Default Configuration
@@ -474,19 +474,19 @@ jobs:
           repository: 'AdeptLanguage/AdeptImport'
           path: 'AdeptImport'
       - name: Download Windows Installer Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: windows-installer
       - name: Download Windows Standalone Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: windows-standalone
       - name: Download macOS Installer Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: macos-installer
       - name: Download macOS Standalone Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: macos-standalone
       - name: Pre-Unpack
