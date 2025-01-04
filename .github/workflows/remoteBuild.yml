@@ -60,20 +60,20 @@ jobs:
         id: llvm
         with:
           path: ${{github.workspace}}/llvm
-          key: ${{runner.os}}-cache-llvm-project-16.0.6-${{ hashFiles('llvm/**/*.txt') }}
+          key: ${{runner.os}}-cache-llvm-project-19.1.6-${{ hashFiles('llvm/**/*.txt') }}
       # For some god-forsaken reason, there is no prebuilt version of LLVM for developing on Windows.
       # Every version comes with llvm-config, LLVMConfig.cmake, and other files needed, expect Windows!
       # Which means we're gonna have to spend an hour or so compiling from scratch (Github willing)
       # At least we have ninja
       - name: Download LLVM Source Code (Windows)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
-        run: curl -o llvm-source-tree.tar.xz -L https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.6/llvm-project-16.0.6.src.tar.xz
+        run: curl -o llvm-source-tree.tar.xz -L https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.6/llvm-project-19.1.6.src.tar.xz
       - name: Extract LLVM Source Code (Windows)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
         run: |
           7z x llvm-source-tree.tar.xz
           tar xf llvm-source-tree.tar
-          mv llvm-project-16.0.6.src llvm
+          mv llvm-project-19.1.6.src llvm
       - name: Build LLVM from Source (Windows)
         if: steps.llvm.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
         working-directory: ${{github.workspace}}/llvm/llvm
