@@ -31,7 +31,7 @@ Install build tools:
 
 Install required dependencies:
 
-- `llvm` (preferably LLVM 17 or 18)
+- `llvm` (preferably LLVM 17 or 18 or 19)
 - `zstd` (for LLVM)
 - `zlib` (for LLVM)
 - `libcurl-dev`
