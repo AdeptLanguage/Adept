@@ -53,8 +53,8 @@ jobs:
         shell: bash
         run: |
           choco upgrade mingw
-          export CC=x86_64-w64-mingw32-gcc
-          export CXX=x86_64-w64-mingw32-g++
+          export CC=C:/ProgramData/mingw64/mingw64/bin/x86_64-w64-mingw32-gcc
+          export CXX=C:/ProgramData/mingw64/mingw64/bin/x86_64-w64-mingw32-g++
       - name: Utilize cached LLVM if available (Windows)
         if: matrix.os == 'windows-latest'
         uses: actions/cache@v2
