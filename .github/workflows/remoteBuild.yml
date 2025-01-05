@@ -127,12 +127,12 @@ jobs:
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
-          CC: gcc
+          CC: /opt/homebrew/opt/llvm/bin/clang
           LLVM_DIR: /opt/homebrew/opt/llvm
           zstd_DIR: /usr/local/opt/zstd
           CFLAGS: -static-libstdc++
           CXXFLAGS: -static-libstdc++
-          LDFLAGS: /opt/homebrew/opt/llvm/lib/libunwind.a
+          # LDFLAGS: /opt/homebrew/opt/llvm/lib/libunwind.a
       - name: Configure (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
