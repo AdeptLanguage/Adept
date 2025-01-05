@@ -52,6 +52,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: bash
         run: |
+          choco upgrade mingw
           export CC=x86_64-w64-mingw32-gcc
           export CXX=x86_64-w64-mingw32-g++
       - name: Utilize cached LLVM if available (Windows)
