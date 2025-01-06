@@ -54,7 +54,7 @@ jobs:
           msystem: mingw64
           update: true
           install: git mingw-w64-x86_64-gcc
-      - name: CI-Build
+      - name: Setup MSYS2
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
@@ -70,7 +70,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
         run: |
-          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="${{github.workspace}}/llvm/llvm/build" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
+          cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           LLVM_DIR: ${{github.workspace}}/llvm/llvm/build
           zstd_DIR: C:\msys64\mingw64
@@ -110,6 +110,7 @@ jobs:
           LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
       - name: Build (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
         run: |
           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
