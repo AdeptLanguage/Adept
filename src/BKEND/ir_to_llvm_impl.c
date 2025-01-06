@@ -1307,7 +1307,7 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                 LLVMTypeRef signature = LLVMFunctionType(LLVMVoidType(), arg_types, 1, false);
 
                 if(*va_intrinsic == NULL){
-                    *va_intrinsic = LLVMAddFunction(llvm->module, is_start ? "llvm.va_start" : "llvm.va_end", signature);
+                    *va_intrinsic = LLVMAddFunction(llvm->module, is_start ? "llvm.va_start.p0" : "llvm.va_end.p0", signature);
                 }
 
                 LLVMValueRef args[] = {
