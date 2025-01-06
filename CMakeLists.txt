@@ -72,10 +72,18 @@ target_include_directories(adept PRIVATE include ${CURL_INCLUDE_DIR} ${LLVM_INCL
 target_link_directories(adept PRIVATE ${CURL_LIBRARY_DIRS} ${LLVM_LIBRARY_DIRS})
 target_compile_definitions(adept PRIVATE ADEPT_ENABLE_PACKAGE_MANAGER)
 
+if(WIN32)
+    target_link_libraries(adept ntdll)
+endif()
+
 add_library(libadept STATIC)
 target_include_directories(libadept PRIVATE include ${CURL_INCLUDE_DIR} ${LLVM_INCLUDE_DIRS})
 target_link_directories(libadept PRIVATE ${CURL_LIBRARY_DIRS} ${LLVM_LIBRARY_DIRS})
 target_compile_definitions(libadept PRIVATE ADEPT_ENABLE_PACKAGE_MANAGER)
+
+if(WIN32)
+    target_link_libraries(libadept ntdll)
+endif()
 
 message(STATUS "Including debug files")
 list(APPEND core_source_files src/DBG/debug.c)
