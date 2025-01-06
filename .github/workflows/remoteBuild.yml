@@ -113,7 +113,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
         run: |
-          cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+          cmake --build "${{github.workspace}}/build" --config ${{env.BUILD_TYPE}}
       - name: Build (Unix)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
