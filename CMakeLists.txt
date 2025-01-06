@@ -73,7 +73,7 @@ target_link_directories(adept PRIVATE ${CURL_LIBRARY_DIRS} ${LLVM_LIBRARY_DIRS})
 target_compile_definitions(adept PRIVATE ADEPT_ENABLE_PACKAGE_MANAGER)
 
 if(WIN32)
-    target_link_libraries(adept ntdll)
+    target_link_libraries(adept "C:/Windows/System32/ntdll.dll")
 endif()
 
 add_library(libadept STATIC)
@@ -82,7 +82,7 @@ target_link_directories(libadept PRIVATE ${CURL_LIBRARY_DIRS} ${LLVM_LIBRARY_DIR
 target_compile_definitions(libadept PRIVATE ADEPT_ENABLE_PACKAGE_MANAGER)
 
 if(WIN32)
-    target_link_libraries(libadept ntdll)
+    target_link_libraries(libadept "C:/Windows/System32/ntdll.dll")
 endif()
 
 message(STATUS "Including debug files")
