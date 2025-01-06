@@ -49,11 +49,13 @@ jobs:
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@latest
       - uses: msys2/setup-msys2@v2
+        if: matrix.os == 'windows-latest'
         with:
           msystem: mingw64
           update: true
           install: git mingw-w64-x86_64-gcc
       - name: CI-Build
+        if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
           echo 'Running in MSYS2!'
