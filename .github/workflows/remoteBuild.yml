@@ -47,6 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Get latest CMake and Ninja
+        if: ${{ matrix.os != 'windows-latest' }}
         uses: lukka/get-cmake@latest
       - uses: msys2/setup-msys2@v2
         if: matrix.os == 'windows-latest'
