@@ -497,7 +497,7 @@ jobs:
         working-directory: ${{github.workspace}}
         run: |
           mkdir -p adept-${{env.shortVersion}}-standalone
-          cp ubuntu-22.04/build/adept adept-${{env.shortVersion}}-standalone/adept
+          cp ubuntu-latest/build/adept adept-${{env.shortVersion}}-standalone/adept
           mv AdeptConfig/adept.config adept-${{env.shortVersion}}-standalone/adept.config
           mv AdeptImport adept-${{env.shortVersion}}-standalone/import
           zip -r Adept-${{env.shortVersion}}-standalone-x86_64-Ubuntu.zip adept-${{env.shortVersion}}-standalone
