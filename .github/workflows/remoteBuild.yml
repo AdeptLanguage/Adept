@@ -493,7 +493,7 @@ jobs:
           command: x
           cwd: ubuntu-22.04
           files: build-ubuntu-22.04.tar.gz
-      - name: Package as Standalone for Ubuntu
+      - name: Package as Standalone for Ubuntu Latest
         working-directory: ${{github.workspace}}
         run: |
           mkdir -p adept-${{env.shortVersion}}-standalone
@@ -532,3 +532,4 @@ jobs:
             stage/Windows-x86_64-Installer-Adept-${{env.shortVersion}}.exe
             stage/Windows-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
             stage/Ubuntu-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
+            stage/Ubuntu-20.04-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
