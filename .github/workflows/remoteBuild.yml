@@ -159,7 +159,7 @@ jobs:
           path: res.tar.gz
       - name: Upload LICENSE Artifact
         uses: actions/upload-artifact@v4
-        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         with:
           name: LICENSE
           path: LICENSE
