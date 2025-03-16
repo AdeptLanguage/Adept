@@ -532,4 +532,4 @@ jobs:
             stage/Windows-x86_64-Installer-Adept-${{env.shortVersion}}.exe
             stage/Windows-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
             stage/Ubuntu-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
-            stage/Ubuntu-20.04-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
+            stage/Ubuntu-22.04-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
