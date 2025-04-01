@@ -863,7 +863,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
                 llvm_create_optional_null_check(llvm, f, destination, store_instr->maybe_line_number, store_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
-                catalog->blocks[b].value_references[i] = LLVMBuildStore(builder, value, destination);
+                LLVMValueRef result = LLVMBuildStore(builder, value, destination);
+
+                if (store_instr->is_volatile) {
+                    LLVMSetVolatile(result, true);
+                }
+
+                catalog->blocks[b].value_references[i] = result;
             }
             break;
         case INSTRUCTION_LOAD: {
@@ -874,7 +880,13 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
 
                 llvm_create_optional_null_check(llvm, f, address, load_instr->maybe_line_number, load_instr->maybe_column_number, &llvm_exit_blocks[b]);
 
-                catalog->blocks[b].value_references[i] = LLVMBuildLoad2(builder, loaded_type, address, "");
+                LLVMValueRef result = LLVMBuildLoad2(builder, loaded_type, address, "");
+
+                if (load_instr->is_volatile) {
+                    LLVMSetVolatile(result, true);
+                }
+
+                catalog->blocks[b].value_references[i] = result;
             }
             break;
         case INSTRUCTION_VARPTR:

@@ -221,6 +221,7 @@ typedef struct {
     ir_value_t *destination;
     int maybe_line_number;
     int maybe_column_number;
+    bool is_volatile;
 } ir_instr_store_t;
 
 // ---------------- ir_instr_load_t ----------------
@@ -231,6 +232,7 @@ typedef struct {
     ir_value_t *value;
     int maybe_line_number;
     int maybe_column_number;
+    bool is_volatile;
 } ir_instr_load_t;
 
 // ---------------- ir_instr_varptr_t ----------------

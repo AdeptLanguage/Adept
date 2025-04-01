@@ -1245,6 +1245,14 @@ errorcode_t infer_type_inner(infer_ctx_t *ctx, ast_type_t *type, source_t origin
                 if(streq(base, "void") && type->elements_length > 1 && elem_i != 0 && type->elements[elem_i - 1]->id == AST_ELEM_POINTER){
                     // Substitute '*void' with 'ptr'
 
+                    ast_elem_pointer_t *pointer = (ast_elem_pointer_t*) type->elements[elem_i - 1];
+                    
+                    // If volatile, cheat and convert to '*volatile ubyte'
+                    if (pointer->is_volatile) {
+                        compiler_panicf(ctx->compiler, original_source, "Cannot have volatile pointer to void, please use '*volatile ubyte' instead");
+                        return FAILURE;
+                    }
+
                     // Create replacement element
                     ast_elem_base_t *ptr_elem = malloc(sizeof(ast_elem_base_t));
                     ptr_elem->id = AST_ELEM_BASE;

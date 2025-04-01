@@ -70,7 +70,7 @@ void build_memcpy(ir_builder_t *builder, ir_value_t *destination, ir_value_t *va
     });
 }
 
-ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source){
+ir_value_t *build_load_with(ir_builder_t *builder, ir_value_t *value, bool is_volatile, source_t code_source){
     int line = -1, column = -1;
     ir_type_t *dereferenced_type = ir_type_dereference(value->type);
 
@@ -90,10 +90,18 @@ ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_s
         .value = value,
         .maybe_line_number = line,
         .maybe_column_number = column,
+        .is_volatile = is_volatile,
     });
 }
+ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source){
+    return build_load_with(builder, value, false, code_source);
+}
 
-ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source){
+ir_value_t *build_load_volatile(ir_builder_t *builder, ir_value_t *value, source_t code_source){
+    return build_load_with(builder, value, true, code_source);
+}
+
+ir_instr_store_t *build_store_with(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, bool is_volatile, source_t code_source){
     int line = -1, column = -1;
 
     // If null checks enabled, remember origin line/column
@@ -108,9 +116,18 @@ ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value
         .destination = destination,
         .maybe_line_number = line,
         .maybe_column_number = column,
+        .is_volatile = is_volatile,
     });
     
     return (ir_instr_store_t*) ir_instrs_last_unchecked(&builder->current_block->instructions);
+}
+
+ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source){
+    return build_store_with(builder, value, destination, false, code_source);
+}
+
+ir_instr_store_t *build_store_volatile(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source){
+    return build_store_with(builder, value, destination, true, code_source);
 }
 
 ir_value_t *build_call(ir_builder_t *builder, func_id_t ir_func_id, ir_type_t *result_type, ir_value_t **arguments, length_t arguments_length, source_t code_source){

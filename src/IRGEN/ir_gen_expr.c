@@ -1530,8 +1530,10 @@ errorcode_t ir_gen_expr_dereference(ir_builder_t *builder, ast_expr_dereference_
             return FAILURE;
         }
 
+        ir_type_extra_pointer_t *pointer = expr_value->type->extra;
+
         // Build and append a load instruction
-        *ir_value = build_load(builder, expr_value, expr->source);
+        *ir_value = build_load_with(builder, expr_value, pointer->is_volatile,  expr->source);
     } else {
         *ir_value = expr_value;
     }

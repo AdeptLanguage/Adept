@@ -14,8 +14,12 @@ static void ast_elem_base_str(string_builder_t *builder, ast_elem_base_t *elem){
     string_builder_append(builder, elem->base);
 }
 
-static void ast_elem_pointer_str(string_builder_t *builder){
+static void ast_elem_pointer_str(string_builder_t *builder, ast_elem_pointer_t *elem){
     string_builder_append_char(builder, '*');
+
+    if (elem->is_volatile) {
+        string_builder_append(builder, "volatile ");
+    }
 }
 
 static void ast_elem_fixed_array_str(string_builder_t *builder, ast_elem_fixed_array_t *elem){
@@ -152,7 +156,7 @@ static void ast_elem_str(string_builder_t *builder, ast_elem_t *elem){
         ast_elem_base_str(builder, (ast_elem_base_t*) elem);
         break;
     case AST_ELEM_POINTER:
-        ast_elem_pointer_str(builder);
+        ast_elem_pointer_str(builder, (ast_elem_pointer_t*) elem);
         break;
     case AST_ELEM_FIXED_ARRAY:
         ast_elem_fixed_array_str(builder, (ast_elem_fixed_array_t*) elem);

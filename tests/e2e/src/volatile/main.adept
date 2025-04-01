@@ -1,0 +1,18 @@
+
+// NOTE: The only way to verify this works is with --llvmir
+
+struct WithinStruct ( address *volatile ubyte )
+
+func main {
+    compatible_with_normal_pointers *volatile ubyte = null
+
+    my_int int = 10
+    rw *volatile int = &my_int
+
+    *rw = 10
+    _volatile_read_result int = *rw
+
+    within_struct WithinStruct
+    within_struct.address = null
+    *within_struct.address = 'a'ub
+}

@@ -1849,6 +1849,12 @@ errorcode_t ir_gen_assign_pod(ir_builder_t *builder, ir_value_t **value, ast_typ
         return FAILURE;
     }
 
-    build_store(builder, *value, destination, source_on_error);
+    bool is_volatile = false;
+    if(destination->type->kind == TYPE_KIND_POINTER){
+        ir_type_extra_pointer_t *pointer = destination->type->extra;
+        is_volatile = pointer->is_volatile;
+    }
+
+    build_store_with(builder, *value, destination, is_volatile, source_on_error);
     return SUCCESS;
 }

@@ -55,10 +55,14 @@ void build_memcpy(ir_builder_t *builder, ir_value_t *destination, ir_value_t *va
 // ---------------- build_load ----------------
 // Builds a load instruction
 ir_value_t *build_load(ir_builder_t *builder, ir_value_t *value, source_t code_source);
+ir_value_t *build_load_volatile(ir_builder_t *builder, ir_value_t *value, source_t code_source);
+ir_value_t *build_load_with(ir_builder_t *builder, ir_value_t *value, bool is_volatile, source_t code_source);
 
 // ---------------- build_store ----------------
 // Builds a store instruction
 ir_instr_store_t *build_store(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source);
+ir_instr_store_t *build_store_volatile(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, source_t code_source);
+ir_instr_store_t *build_store_with(ir_builder_t *builder, ir_value_t *value, ir_value_t *destination, bool is_volatile, source_t code_source);
 
 // ---------------- build_call ----------------
 // Builds a call instruction
