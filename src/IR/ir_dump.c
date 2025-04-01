@@ -244,9 +244,10 @@ static void ir_dump_switch_instruction(FILE *file, ir_instr_switch_t *instructio
 
 static void ir_dump_alloc_instruction(FILE *file, ir_instr_alloc_t *instruction){
     if(instruction->result_type->kind == TYPE_KIND_POINTER){
-        strong_cstr_t typename = ir_type_str(instruction->result_type->extra);
+        const ir_type_extra_pointer_t *pointer = (ir_type_extra_pointer_t*) instruction->result_type->extra;
+        strong_cstr_t typename = ir_type_str(pointer->inner);
         strong_cstr_t count = instruction->count ? ir_value_str(instruction->count) : strclone("single");
-        fprintf(file, "alloc %s, aligned %d, count %s\n", typename, instruction->alignment, count);
+        fprintf(file, "alloc %s%s, aligned %d, count %s\n", pointer->is_volatile ? "volatile " : "", typename, instruction->alignment, count);
         free(count);
         free(typename);
     } else {

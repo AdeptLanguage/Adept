@@ -727,7 +727,7 @@ errorcode_t ir_gen_stmt_declare(ir_builder_t *builder, ast_expr_declare_t *stmt)
     bridge_var_t *bridge_variable = ir_builder_add_variable(builder, stmt->name, &stmt->type, ir_type, traits);
 
     ir_value_t *variable = stmt->inputs.has
-        ? build_varptr(builder, ir_type_make_pointer_to(builder->pool, ir_type), bridge_variable)
+        ? build_varptr(builder, ir_type_make_pointer_to(builder->pool, ir_type, false), bridge_variable)
         : NULL;
 
     // Initialize variable if applicable
@@ -843,7 +843,7 @@ errorcode_t ir_gen_stmt_declare_try_init(ir_builder_t *primary_builder, ast_expr
         bridge_scope_init(working_builder->scope, NULL);
     }
 
-    ir_type_t *ir_type_ptr = ir_type_make_pointer_to(primary_builder->pool, ir_type);
+    ir_type_t *ir_type_ptr = ir_type_make_pointer_to(primary_builder->pool, ir_type, false);
 
     // Get pointer to where the variable is on the stack
     ir_value_t *destination;
@@ -1345,7 +1345,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
         if(!expr_is_mutable(stmt->list)){
             list_was_mutable = false;
             ir_builder_add_variable(builder, "$____each_in_list____$", &single_type, single_value->type, BRIDGE_VAR_POD | BRIDGE_VAR_UNDEF);
-            ir_value_t *list_on_stack = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, single_value->type), builder->next_var_id - 1);
+            ir_value_t *list_on_stack = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, single_value->type, false), builder->next_var_id - 1);
             build_store(builder, single_value, list_on_stack, stmt->source);
             single_value = list_on_stack;
         }
@@ -1392,7 +1392,7 @@ errorcode_t ir_gen_stmt_each(ir_builder_t *builder, ast_expr_each_in_t *stmt){
             if(ir_gen_resolve_type(builder->compiler, builder->object, &remaining_type, &item_ir_type))
                 goto failure;
 
-            fixed_array_value = build_bitcast(builder, single_value, ir_type_make_pointer_to(builder->pool, item_ir_type));
+            fixed_array_value = build_bitcast(builder, single_value, ir_type_make_pointer_to(builder->pool, item_ir_type, false));
 
             // Get array length from the type signature of the fixed array
             // NOTE: Assumes element->id == AST_ELEM_FIXED_ARRAY because of earlier 'ast_type_is_fixed_array' call should've verified

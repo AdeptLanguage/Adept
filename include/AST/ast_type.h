@@ -64,7 +64,11 @@ typedef struct {
 
 // ---------------- ast_elem_pointer_t ----------------
 // Type element for a pointer
-typedef ast_elem_t ast_elem_pointer_t;
+typedef struct {
+    unsigned int id;
+    source_t source;
+    bool is_volatile;
+} ast_elem_pointer_t;
 
 // ---------------- ast_elem_array_t ----------------
 // Type element for an array

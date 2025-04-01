@@ -53,7 +53,7 @@ static strong_cstr_t literal_to_str(ir_value_t *value, weak_cstr_t typename){
         break;
     case TYPE_KIND_POINTER:
         // '*ubyte' null-terminated string literal
-        if(typecast(ir_type_t*, value->type->extra)->kind == TYPE_KIND_U8){
+        if(typecast(ir_type_extra_pointer_t*, value->type->extra)->inner->kind == TYPE_KIND_U8){
             char *string = (char*) value->extra;
             value_part = string_to_escaped_string(string, strlen(string), '\'', true);
         } else {

@@ -85,7 +85,7 @@ ir_value_t *build_const_add(ir_pool_t *pool, ir_value_t *a, ir_value_t *b){
 ir_value_t *build_array_literal(ir_pool_t *pool, ir_type_t *item_type, ir_value_t **values, length_t length){
     return ir_pool_alloc_init(pool, ir_value_t, {
         .value_type = VALUE_TYPE_ARRAY_LITERAL,
-        .type = ir_type_make_pointer_to(pool, item_type),
+        .type = ir_type_make_pointer_to(pool, item_type, false),
         .extra = ir_pool_alloc_init(pool, ir_value_array_literal_t, {
             .values = values,
             .length = length,
@@ -164,7 +164,7 @@ ir_value_t *build_literal_cstr_of_size_ex(ir_pool_t *pool, ir_type_map_t *type_m
 
     return ir_pool_alloc_init(pool, ir_value_t, {
         .value_type = VALUE_TYPE_CSTR_OF_LEN,
-        .type = ir_type_make_pointer_to(pool, ir_ubyte_type),
+        .type = ir_type_make_pointer_to(pool, ir_ubyte_type, false),
         .extra = ir_pool_alloc_init(pool, ir_value_cstr_of_len_t, {
             .array = array,
             .size = size,
@@ -175,7 +175,7 @@ ir_value_t *build_literal_cstr_of_size_ex(ir_pool_t *pool, ir_type_map_t *type_m
 ir_value_t *build_null_pointer(ir_pool_t *pool){
     return ir_pool_alloc_init(pool, ir_value_t, {
         .value_type = VALUE_TYPE_NULLPTR,
-        .type = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL)),
+        .type = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL), false),
         .extra = NULL,
     });
 }

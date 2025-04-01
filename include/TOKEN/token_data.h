@@ -4,7 +4,7 @@
 #ifndef _ISAAC_TOKEN_DATA_H
 #define _ISAAC_TOKEN_DATA_H
 
-#define TOKEN_ITERATION_VERSION 0x63FCD5C0
+#define TOKEN_ITERATION_VERSION 0x67EAAACA
 
 #define TOKEN_NONE                  0x00000000
 #define TOKEN_WORD                  0x00000001
@@ -153,10 +153,11 @@
 #define TOKEN_VA_START              0x00000090
 #define TOKEN_VERBATIM              0x00000091
 #define TOKEN_VIRTUAL               0x00000092
-#define TOKEN_WHILE                 0x00000093
+#define TOKEN_VOLATILE              0x00000093
+#define TOKEN_WHILE                 0x00000094
 #define TOKEN_BIT_AND               0x00000021
 
-#define MAX_LEX_TOKEN 0x00000093
+#define MAX_LEX_TOKEN 0x00000094
 #define BEGINNING_OF_KEYWORD_TOKENS 0x0000004B
 
 #define TOKEN_EXTRA_DATA_FORMAT_ID_ONLY    0x00000061

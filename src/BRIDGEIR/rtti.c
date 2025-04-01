@@ -32,7 +32,7 @@ ir_value_t* rtti_for(ir_builder_t *builder, ast_type_t *ast_type, source_t sourc
     ir_value_t *placeholder_index = build_literal_usize(builder->pool, /* Will be filled in later */ 0);
 
     ir_type_t *rtti_array_type = builder->object->ir_module.globals[__types__].type;
-    ir_value_t *rtti_array = build_load(builder, build_gvarptr(builder, ir_type_make_pointer_to(builder->pool, rtti_array_type), __types__), NULL_SOURCE);
+    ir_value_t *rtti_array = build_load(builder, build_gvarptr(builder, ir_type_make_pointer_to(builder->pool, rtti_array_type, false), __types__), NULL_SOURCE);
 
     // Register necessary RTTI relocation
     ir_builder_add_rtti_relocation(builder, ast_type_str(ast_type), ((adept_usize*) placeholder_index->extra), source_on_failure);

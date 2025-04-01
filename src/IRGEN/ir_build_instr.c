@@ -45,7 +45,7 @@ ir_value_t *build_svarptr(ir_builder_t *builder, ir_type_t *ptr_type, length_t v
 ir_value_t *build_malloc(ir_builder_t *builder, ir_type_t *type, ir_value_t *amount, bool is_undef){
     return BUILD_VALUE(ir_instr_malloc_t, {
         .id = INSTRUCTION_MALLOC,
-        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .result_type = ir_type_make_pointer_to(builder->pool, type, false),
         .type = type,
         .amount = amount,
         .is_undef = is_undef,
@@ -257,7 +257,7 @@ ir_value_t *build_nonconst_cast(ir_builder_t *builder, unsigned int cast_instr_i
 ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
     return BUILD_VALUE(ir_instr_alloc_t, {
         .id = INSTRUCTION_ALLOC,
-        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .result_type = ir_type_make_pointer_to(builder->pool, type, false),
         .alignment = 0,
         .count = NULL,
     });
@@ -266,7 +266,7 @@ ir_value_t *build_alloc(ir_builder_t *builder, ir_type_t *type){
 ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t *count){
     return BUILD_VALUE(ir_instr_alloc_t, {
         .id = INSTRUCTION_ALLOC,
-        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .result_type = ir_type_make_pointer_to(builder->pool, type, false),
         .alignment = 0,
         .count = count,
     });
@@ -275,7 +275,7 @@ ir_value_t *build_alloc_array(ir_builder_t *builder, ir_type_t *type, ir_value_t
 ir_value_t *build_alloc_aligned(ir_builder_t *builder, ir_type_t *type, unsigned int alignment){
     return BUILD_VALUE(ir_instr_alloc_t, {
         .id = INSTRUCTION_ALLOC,
-        .result_type = ir_type_make_pointer_to(builder->pool, type),
+        .result_type = ir_type_make_pointer_to(builder->pool, type, false),
         .alignment = alignment,
         .count = NULL,
     });

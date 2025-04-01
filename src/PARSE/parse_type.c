@@ -52,11 +52,19 @@ errorcode_t parse_type(parse_ctx_t *ctx, ast_type_t *out_type){
 
         switch(id){
         case TOKEN_MULTIPLY: {
-                out_type->elements[out_type->elements_length++] = malloc_init(ast_elem_pointer_t, {
+                id = tokens[++(*i)].id;
+                bool is_volatile = false;
+
+                if (id == TOKEN_VOLATILE) {
+                    id = tokens[++(*i)].id;
+                    is_volatile = true;
+                }
+
+                out_type->elements[out_type->elements_length++] = (ast_elem_t*) malloc_init(ast_elem_pointer_t, {
                     .id = AST_ELEM_POINTER,
                     .source = sources[*i],
+                    .is_volatile = is_volatile,
                 });
-                id = tokens[++(*i)].id;
             }
             break;
         case TOKEN_GENERIC_INT: {

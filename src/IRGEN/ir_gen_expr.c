@@ -407,7 +407,7 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
             *out_expr_type = ast_type_clone(variable->ast_type);
         }
 
-        ir_type_t *ir_ptr_type = ir_type_make_pointer_to(builder->pool, variable->ir_type);
+        ir_type_t *ir_ptr_type = ir_type_make_pointer_to(builder->pool, variable->ir_type, false);
 
         // Variable-Pointer instruction to get pointer to stack variable
         *ir_value = build_varptr(builder, ir_ptr_type, variable);
@@ -437,7 +437,7 @@ errorcode_t ir_gen_expr_variable(ir_builder_t *builder, ast_expr_variable_t *exp
 
         // DANGEROUS: Using AST global variable index as IR global variable index
         ir_global_t *ir_global = &ir_module->globals[global_variable_index];
-        *ir_value = build_gvarptr(builder, ir_type_make_pointer_to(builder->pool, ir_global->type), global_variable_index);
+        *ir_value = build_gvarptr(builder, ir_type_make_pointer_to(builder->pool, ir_global->type, false), global_variable_index);
         
         // If not requested to leave the expression mutable, dereference it
         if(!leave_mutable) *ir_value = build_load(builder, *ir_value, expr->source);
@@ -478,7 +478,7 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     // Found variable of name in nearby scope
     if(is_var_function_like){
         // Get IR type of function from variable
-        tmp_ir_variable_type = ir_type_make_pointer_to(builder->pool, var->ir_type);
+        tmp_ir_variable_type = ir_type_make_pointer_to(builder->pool, var->ir_type, false);
 
         if(expr->gives.elements_length != 0){
             compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function variable");
@@ -618,20 +618,25 @@ errorcode_t ir_gen_expr_call(ir_builder_t *builder, ast_expr_call_t *expr, ir_va
     if(global_variable_index != -1){
         tmp_ast_variable_type = &ast->globals[global_variable_index].type;
 
-        // Get IR type of pointer to the variable type
-        tmp_ir_variable_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
-        tmp_ir_variable_type->kind = TYPE_KIND_POINTER;
-
         if(expr->gives.elements_length != 0){
             compiler_panicf(builder->compiler, expr->source, "Can't specify return type when calling function via global variable");
             ast_types_free_fully(arg_types, arg_arity);
             return FAILURE;
         }
 
-        if(ir_gen_resolve_type(builder->compiler, builder->object, tmp_ast_variable_type, (ir_type_t**) &tmp_ir_variable_type->extra)){
+        ir_type_t *inner = NULL;
+        if(ir_gen_resolve_type(builder->compiler, builder->object, tmp_ast_variable_type, &inner)){
             ast_types_free_fully(arg_types, arg_arity);
             return FAILURE;
         }
+
+        // Get IR type of pointer to the variable type
+        tmp_ir_variable_type = ir_pool_alloc(builder->pool, sizeof(ir_type_t));
+        tmp_ir_variable_type->kind = TYPE_KIND_POINTER;
+        tmp_ir_variable_type->extra = ir_pool_alloc_init(builder->pool, ir_type_extra_pointer_t, {
+            .inner = inner,
+            .is_volatile = false,
+        });
 
         // Ensure the type of the global variable is a function pointer
         if(tmp_ast_variable_type->elements_length != 1 || tmp_ast_variable_type->elements[0]->id != AST_ELEM_FUNC){
@@ -733,7 +738,7 @@ errorcode_t ir_gen_expr_super(ir_builder_t *builder, ast_expr_super_t *expr, ir_
     // Get value of 'this'
     ir_value_t *this_value = build_load(
         builder, 
-        build_varptr(builder, ir_type_make_pointer_to(builder->pool, bridge_var->ir_type), bridge_var),
+        build_varptr(builder, ir_type_make_pointer_to(builder->pool, bridge_var->ir_type, false), bridge_var),
         expr->source
     );
 
@@ -750,7 +755,7 @@ errorcode_t ir_gen_expr_super(ir_builder_t *builder, ast_expr_super_t *expr, ir_
         // Refresh vtable
 
         // Get pointer to vtable field
-        ir_value_t *destination = build_bitcast(builder, this_value, ir_type_make_pointer_to(builder->pool, builder->object->ir_module.common.ir_ptr));
+        ir_value_t *destination = build_bitcast(builder, this_value, ir_type_make_pointer_to(builder->pool, builder->object->ir_module.common.ir_ptr, false));
 
         // Create placeholder store instruction,
         // The proper value to be stored will be filled in later during vtable resolution
@@ -907,7 +912,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
         raw_data_array = build_alloc_array(builder, ubyte_type, bytes);
 
         // Bitcast the value fromm '[n] ubyte' type to '*ubyte' type
-        raw_data_array = build_bitcast(builder, raw_data_array, ir_type_make_pointer_to(builder->pool, ubyte_type));
+        raw_data_array = build_bitcast(builder, raw_data_array, ir_type_make_pointer_to(builder->pool, ubyte_type, false));
     } else {
         raw_data_array = build_null_pointer(builder->pool);
     }
@@ -917,7 +922,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
 
     for(length_t i = 0; i < variadic_count; i++){
         ir_value_t *arg = build_array_access(builder, raw_data_array, current_offset, source_on_failure);
-        arg = build_bitcast(builder, arg, ir_type_make_pointer_to(builder->pool, (*arg_values)[natural_arity + i]->type));
+        arg = build_bitcast(builder, arg, ir_type_make_pointer_to(builder->pool, (*arg_values)[natural_arity + i]->type, false));
         build_store(builder, (*arg_values)[natural_arity + i], arg, source_on_failure);
 
         // Move iterative offset 'current_offset' along by the size of the type we just wrote
@@ -929,7 +934,7 @@ errorcode_t ir_gen_expr_call_procedure_handle_variadic_packing(ir_builder_t *bui
     // Create raw types array of '*AnyType' values if runtime type info is enabled
     if(pAnyType_ir_type && variadic_count != 0){
         raw_types_array = build_alloc_array(builder, pAnyType_ir_type, build_literal_usize(builder->pool, variadic_count));
-        raw_types_array = build_bitcast(builder, raw_types_array, ir_type_make_pointer_to(builder->pool, pAnyType_ir_type));
+        raw_types_array = build_bitcast(builder, raw_types_array, ir_type_make_pointer_to(builder->pool, pAnyType_ir_type, false));
 
         for(length_t i = 0; i < variadic_count; i++){
             ir_value_t *arg_type = build_array_access(builder, raw_types_array, build_literal_usize(builder->pool, i), source_on_failure);
@@ -1018,10 +1023,10 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
 
         switch(waypoint.kind){
         case AST_LAYOUT_WAYPOINT_BITCAST:
-            *ir_value = build_bitcast(builder, *ir_value, ir_type_make_pointer_to(builder->pool, field_type));
+            *ir_value = build_bitcast(builder, *ir_value, ir_type_make_pointer_to(builder->pool, field_type, false));
             break;
         case AST_LAYOUT_WAYPOINT_OFFSET:
-            *ir_value = build_member(builder, *ir_value, waypoint.index, ir_type_make_pointer_to(builder->pool, field_type), expr->source);
+            *ir_value = build_member(builder, *ir_value, waypoint.index, ir_type_make_pointer_to(builder->pool, field_type, false), expr->source);
             break;
         default:
             internalerrorprintf("ir_gen_expr_member() - Unrecognized waypoint kind\n");
@@ -1039,7 +1044,7 @@ errorcode_t ir_gen_expr_member(ir_builder_t *builder, ast_expr_member_t *expr, i
         // Because of this, we have to bitcast it to the proper type
         // when we access ir via member access
 
-        *ir_value = build_bitcast(builder, *ir_value, ir_type_make_pointer_to(builder->pool, field_info.ir_type));
+        *ir_value = build_bitcast(builder, *ir_value, ir_type_make_pointer_to(builder->pool, field_info.ir_type, false));
     }
 
     if(out_expr_type){
@@ -1563,16 +1568,18 @@ errorcode_t ir_gen_expr_array_access(ir_builder_t *builder, ast_expr_array_acces
     }
 
     // Prepare different types of array values
-    if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_FIXED_ARRAY){
+    ir_type_extra_pointer_t *pointer = (ir_type_extra_pointer_t*) array_value->type->extra;
+    if(pointer->inner->kind == TYPE_KIND_FIXED_ARRAY){
         // Bitcast reference (that's to a fixed array of element) to pointer of element
         // (*)  [10] int -> *int
 
         assert(array_type.elements_length != 0);
         array_type.elements[0]->id = AST_ELEM_POINTER;
 
-        ir_type_t *casted_ir_type = ir_type_make_pointer_to(builder->pool, ((ir_type_extra_fixed_array_t*) ((ir_type_t*) array_value->type->extra)->extra)->subtype);
+        const ir_type_extra_fixed_array_t *fixed_array = pointer->inner->extra;
+        ir_type_t *casted_ir_type = ir_type_make_pointer_to(builder->pool, fixed_array->subtype, pointer->is_volatile);
         array_value = build_bitcast(builder, array_value, casted_ir_type);
-    } else if(((ir_type_t*) array_value->type->extra)->kind == TYPE_KIND_STRUCTURE){
+    } else if(pointer->inner->kind == TYPE_KIND_STRUCTURE){
         // Keep structure value mutable
     } else if(expr_is_mutable(expr->value)){
         // Load value reference
@@ -2366,7 +2373,8 @@ errorcode_t ir_gen_expr_crement(ir_builder_t *builder, ast_expr_unary_t *expr, i
         return FAILURE;
     }
 
-    ir_type_t *type = (ir_type_t*) mutable_expr->type->extra;
+    ir_type_extra_pointer_t *pointer = mutable_expr->type->extra;
+    ir_type_t *type = pointer->inner;
     void *extra = NULL;
     
     switch(type->kind){
@@ -2542,7 +2550,7 @@ errorcode_t ir_gen_expr_inline_declare(ir_builder_t *builder, ast_expr_inline_de
     if(ir_gen_resolve_type(builder->compiler, builder->object, &def->type, &ir_decl_type)) return FAILURE;
 
     // Get IR type of mutable declaration value
-    ir_type_t *var_pointer_type = ir_type_make_pointer_to(builder->pool, ir_decl_type);
+    ir_type_t *var_pointer_type = ir_type_make_pointer_to(builder->pool, ir_decl_type, false);
 
     // Determine how to create inline variable, and do so
     if(def->value != NULL){

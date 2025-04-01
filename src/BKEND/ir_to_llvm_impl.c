@@ -113,10 +113,15 @@ LLVMTypeRef ir_to_llvm_type(llvm_context_t *llvm, ir_type_t *ir_type){
     LLVMTypeRef type_ref_tmp;
 
     switch(ir_type->kind){
-    case TYPE_KIND_POINTER:
-        type_ref_tmp = ir_to_llvm_type(llvm, (ir_type_t*) ir_type->extra);
+    case TYPE_KIND_POINTER: {
+        const ir_type_extra_pointer_t *pointer = (ir_type_extra_pointer_t*) ir_type->extra;
+
+        type_ref_tmp = ir_to_llvm_type(llvm, pointer->inner);
+        assert(type_ref_tmp != NULL);
+
         if(type_ref_tmp == NULL) return NULL;
         return LLVMPointerType(type_ref_tmp, 0);
+    }
     case TYPE_KIND_S8:      return LLVMInt8Type();
     case TYPE_KIND_S16:     return LLVMInt16Type();
     case TYPE_KIND_S32:     return LLVMInt32Type();
@@ -229,7 +234,9 @@ LLVMValueRef ir_to_llvm_value(llvm_context_t *llvm, ir_value_t *value){
             ir_value_array_literal_t *array_literal = value->extra;
 
             // Assume that value->type is a pointer to array element type
-            LLVMTypeRef type = ir_to_llvm_type(llvm, (ir_type_t*) value->type->extra);
+            assert(value->type->kind == TYPE_KIND_POINTER);
+            const ir_type_extra_pointer_t *pointer = value->type->extra;
+            LLVMTypeRef type = ir_to_llvm_type(llvm, pointer->inner);
             
             LLVMValueRef values[length_max(1, array_literal->length)];
 
@@ -1247,9 +1254,11 @@ errorcode_t ir_to_llvm_instructions(llvm_context_t *llvm, ir_instrs_t instructio
                     die("ir_to_llvm_instructions() - INSTRUCTION_ALLOC has non-pointer result type\n");
                 }
 
+                const ir_type_extra_pointer_t *pointer = result_type->extra;
+
                 catalog->blocks[b].value_references[i] = (alloc->count)
-                    ? LLVMBuildArrayAlloca(llvm->builder, ir_to_llvm_type(llvm, result_type->extra), ir_to_llvm_value(llvm, alloc->count), "")
-                    : LLVMBuildAlloca(llvm->builder, ir_to_llvm_type(llvm, result_type->extra), "");
+                    ? LLVMBuildArrayAlloca(llvm->builder, ir_to_llvm_type(llvm, pointer->inner), ir_to_llvm_value(llvm, alloc->count), "")
+                    : LLVMBuildAlloca(llvm->builder, ir_to_llvm_type(llvm, pointer->inner), "");
 
                 if(alloc->alignment != 0){
                     LLVMSetAlignment(catalog->blocks[b].value_references[i], alloc->alignment);

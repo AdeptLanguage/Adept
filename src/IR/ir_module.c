@@ -55,10 +55,10 @@ void ir_module_init(ir_module_t *ir_module, length_t funcs_capacity, length_t gl
     // Create shared resources
     ir_module->common = (ir_shared_common_t){
         .ir_ubyte = ir_type_make(pool, TYPE_KIND_U8, NULL),
-        .ir_ubyte_ptr = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL)),
+        .ir_ubyte_ptr = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL), false),
         .ir_usize = ir_type_make(pool, TYPE_KIND_U64, NULL),
-        .ir_usize_ptr = ir_type_make_pointer_to(&ir_module->pool, ir_type_make(pool, TYPE_KIND_U64, NULL)),
-        .ir_ptr = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL)),
+        .ir_usize_ptr = ir_type_make_pointer_to(&ir_module->pool, ir_type_make(pool, TYPE_KIND_U64, NULL), false),
+        .ir_ptr = ir_type_make_pointer_to(pool, ir_type_make(pool, TYPE_KIND_U8, NULL), false),
         .ir_bool = ir_type_make(pool, TYPE_KIND_BOOLEAN, NULL),
         .has_rtti_array = TROOLEAN_UNKNOWN,
         /* rest zero initialized */
@@ -150,7 +150,7 @@ ir_value_t *ir_module_create_anon_global(ir_module_t *module, ir_type_t *type, b
 
     return ir_pool_alloc_init(&module->pool, ir_value_t, {
         .value_type = value_type,
-        .type = ir_type_make_pointer_to(&module->pool, type),
+        .type = ir_type_make_pointer_to(&module->pool, type, false),
         .extra = ir_pool_alloc_init(&module->pool, ir_value_anon_global_t, {
             .anon_global_id = anon_global_id,
         })

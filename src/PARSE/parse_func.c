@@ -458,7 +458,7 @@ errorcode_t parse_func_arguments(parse_ctx_t *ctx, ast_func_t *func){
                 generics[i] = ast_type_make_polymorph(strclone(ctx->composite_association->generics[i]), false);
             }
 
-            ast_elem_t *pointer = ast_elem_pointer_make(NULL_SOURCE);
+            ast_elem_t *pointer = ast_elem_pointer_make(NULL_SOURCE, false);
             ast_elem_t *generic_base = ast_elem_generic_base_make(strclone(ctx->composite_association->name), NULL_SOURCE, generics, generics_length);
 
             ast_elem_t **elements = malloc(sizeof(ast_elem_t*) * 2);

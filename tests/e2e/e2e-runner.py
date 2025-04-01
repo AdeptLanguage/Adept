@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys
+import time
 from os.path import join, dirname, abspath
 from framework import test, e2e_framework_run
 
@@ -24,7 +25,7 @@ def run_all_tests():
     test("anonymous_composites", [executable, join(src_dir, "anonymous_composites/main.adept")], compiles)
     test("anonymous_enums", [executable, join(src_dir, "anonymous_enums/main.adept")], compiles)
     test("anonymous_enums layout check",
-        [join(src_dir, "anonymous_enums/main")],
+        [executable, join(src_dir, "anonymous_enums/main.adept"), "-e"],
         lambda output: b"0\n1\n2\nenum (A, B, C)\n - member 0 is A\n - member 1 is B\n - member 2 is C\nA\nB\nC\n" in output)
     test("anonymous_fields", [executable, join(src_dir, "anonymous_fields/main.adept")], compiles)
     test("any_fixed_array", [executable, join(src_dir, "any_fixed_array/main.adept")], compiles)

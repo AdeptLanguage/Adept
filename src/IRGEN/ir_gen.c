@@ -662,13 +662,13 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         // Get value of 'this'
         ir_value_t *this_value = build_load(
             &builder, 
-            build_varptr(&builder, ir_type_make_pointer_to(builder.pool, bridge_var->ir_type), bridge_var),
+            build_varptr(&builder, ir_type_make_pointer_to(builder.pool, bridge_var->ir_type, false), bridge_var),
             ast_func.source
         );
 
         // Create 'this.__vtable__' value
         ir_type_t *ir_ptr = builder.object->ir_module.common.ir_ptr;
-        ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr);
+        ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr, false);
         ir_value_t *destination = build_member(&builder, this_value, /*index of __vtable__ field*/ 0, ir_ptr_ptr, ast_func.source);
 
         // Create placeholder store instruction,
@@ -693,16 +693,16 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
         // Get value of 'this'
         ir_value_t *this_value = build_load(
             &builder,
-            build_varptr(&builder, ir_type_make_pointer_to(builder.pool, bridge_var->ir_type), bridge_var),
+            build_varptr(&builder, ir_type_make_pointer_to(builder.pool, bridge_var->ir_type, false), bridge_var),
             ast_func.source
         );
 
         // Create 'this.__vtable__' value
         ir_type_t *ir_ptr = builder.object->ir_module.common.ir_ptr;
-        ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr);
+        ir_type_t *ir_ptr_ptr = ir_type_make_pointer_to(builder.pool, ir_ptr, false);
         ir_value_t *vtable = build_load(&builder, build_member(&builder, this_value, /*index of __vtable__ field*/ 0, ir_ptr_ptr, ast_func.source), NULL_SOURCE);
 
-        ir_value_t *table = build_bitcast(&builder, vtable, ir_type_make_pointer_to(builder.pool, object->ir_module.common.ir_ptr));
+        ir_value_t *table = build_bitcast(&builder, vtable, ir_type_make_pointer_to(builder.pool, object->ir_module.common.ir_ptr, false));
 
         ir_value_t *index = build_literal_usize(builder.pool, 0);
         ir_value_t *raw_function_pointer = build_load(&builder, build_array_access(&builder, table, index, NULL_SOURCE), NULL_SOURCE);
@@ -725,7 +725,7 @@ errorcode_t ir_gen_functions_body_statements(compiler_t *compiler, object_t *obj
             arg_values = ir_pool_alloc(builder.pool, sizeof(ir_type_t*) * arity);
 
             for(length_t i = 0; i != arity; i++){
-                arg_values[i] = build_load(&builder, build_lvarptr(&builder, ir_type_make_pointer_to(builder.pool, ir_func->argument_types[i]), i), NULL_SOURCE);
+                arg_values[i] = build_load(&builder, build_lvarptr(&builder, ir_type_make_pointer_to(builder.pool, ir_func->argument_types[i], false), i), NULL_SOURCE);
             }
         }
 
@@ -856,7 +856,7 @@ errorcode_t ir_gen_globals_init(ir_builder_t *builder){
 
         ast_type_free(&value_ast_type);
 
-        ir_type_t *ptr_to_type = ir_type_make_pointer_to(builder->pool, builder->object->ir_module.globals[g].type);
+        ir_type_t *ptr_to_type = ir_type_make_pointer_to(builder->pool, builder->object->ir_module.globals[g].type, false);
         ir_value_t *destination = build_gvarptr(builder, ptr_to_type, g);
         build_store(builder, value, destination, ast_global->source);
     }
@@ -920,8 +920,8 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
         }
 
         // Construct IR Types we need
-        ubyte_ptr_type = ir_type_make_pointer_to(pool, ubyte_ptr_type);
-        ubyte_ptr_ptr_type = ir_type_make_pointer_to(pool, ubyte_ptr_type);
+        ubyte_ptr_type = ir_type_make_pointer_to(pool, ubyte_ptr_type, false);
+        ubyte_ptr_ptr_type = ir_type_make_pointer_to(pool, ubyte_ptr_type, false);
 
         if(compiler->traits & COMPILER_NO_TYPEINFO){
             ir_global->trusted_static_initializer = build_null_pointer_of_type(pool, ubyte_ptr_ptr_type);
@@ -936,7 +936,7 @@ errorcode_t ir_gen_special_global(compiler_t *compiler, object_t *object, ast_gl
 
         ir_global->trusted_static_initializer = ir_pool_alloc_init(pool, ir_value_t, {
             .value_type = VALUE_TYPE_ARRAY_LITERAL,
-            .type = ir_type_make_pointer_to(pool, ubyte_ptr_type),
+            .type = ir_type_make_pointer_to(pool, ubyte_ptr_type, false),
             .extra = ir_pool_alloc_init(pool, ir_value_array_literal_t, {
                 .values = array_values,
                 .length = MAX_ANY_TYPE_KIND + 1,

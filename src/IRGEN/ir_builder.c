@@ -106,7 +106,7 @@ void ir_builder_init(ir_builder_t *builder, compiler_t *compiler, object_t *obje
 
     builder->s8_type = ir_type_make(builder->pool, TYPE_KIND_S8, NULL);
 
-    builder->ptr_type = ir_type_make_pointer_to(builder->pool, builder->s8_type);
+    builder->ptr_type = ir_type_make_pointer_to(builder->pool, builder->s8_type, false);
     builder->has_noop_defer_function = false;
     builder->noop_defer_function = 0;
 }
@@ -315,7 +315,7 @@ errorcode_t handle_deference_for_variables(ir_builder_t *builder, bridge_var_lis
         ir_pool_snapshot_t pool_snapshot = ir_pool_snapshot_capture(defer_builder->pool);
         ir_instrs_snapshot_t instrs_snapshot = ir_instrs_snapshot_capture(builder);
 
-        ir_value_t *ir_variable_value = build_varptr(defer_builder, ir_type_make_pointer_to(defer_builder->pool, variable->ir_type), variable);
+        ir_value_t *ir_variable_value = build_varptr(defer_builder, ir_type_make_pointer_to(defer_builder->pool, variable->ir_type, false), variable);
         errorcode_t failed = handle_single_deference(defer_builder, variable->ast_type, ir_variable_value, variable->source);
 
         if(failed){
@@ -603,7 +603,7 @@ errorcode_t handle_children_pass_root(ir_builder_t *builder, bool already_has_re
         return FAILURE;
     }
 
-    ir_value_t *variable_reference = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
+    ir_value_t *variable_reference = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type, false), 0);
     ir_value_t *return_value = build_load(builder, variable_reference, passed_ast_type->source);
 
     // Return modified value
@@ -669,10 +669,10 @@ errorcode_t handle_children_pass(ir_builder_t *builder){
                 }
 
                 // Get type of pointer to element
-                ir_type_t *ir_element_ptr_type = ir_type_make_pointer_to(builder->pool, ir_element_type);
+                ir_type_t *ir_element_ptr_type = ir_type_make_pointer_to(builder->pool, ir_element_type, false);
 
                 // Get pointer to elements of fixed array variable
-                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type), 0);
+                ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, passed_ir_type, false), 0);
                 mutable_passed_ir_value = build_bitcast(builder, mutable_passed_ir_value, ir_element_ptr_type);
 
                 // Access 'e'th element
@@ -839,7 +839,7 @@ ir_value_t *handle_access_management(
     // We can only perform special access management if we're working with a pointer to a mutable struct-like
     if(
         value->type->kind != TYPE_KIND_POINTER ||
-        ((ir_type_t*) value->type->extra)->kind != TYPE_KIND_STRUCTURE ||
+        ((ir_type_extra_pointer_t*) value->type->extra)->inner->kind != TYPE_KIND_STRUCTURE ||
         !ast_type_is_base_like(array_type)
     ){
         return NULL;

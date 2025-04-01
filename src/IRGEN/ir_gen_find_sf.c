@@ -54,10 +54,13 @@ errorcode_t ir_gen_find_defer_func(compiler_t *compiler, object_t *object, ast_t
     // Will be used as AST type for subject of method during lookup
     ast_type_t ast_type_ptr;
     ast_elem_t *ast_type_ptr_elems[2];
-    ast_elem_t ast_type_ptr_elem;
-    ast_type_ptr_elem.id = AST_ELEM_POINTER;
-    ast_type_ptr_elem.source = arg_type->source;
-    ast_type_ptr_elems[0] = &ast_type_ptr_elem;
+    ast_elem_pointer_t ast_type_ptr_elem = {
+        .id = AST_ELEM_POINTER,
+        .source = arg_type->source,
+        .is_volatile = false,
+    };
+    
+    ast_type_ptr_elems[0] = (ast_elem_t*) &ast_type_ptr_elem;
     ast_type_ptr_elems[1] = arg_type->elements[0];
     ast_type_ptr.elements = ast_type_ptr_elems;
     ast_type_ptr.elements_length = 2;
@@ -98,10 +101,12 @@ errorcode_t ir_gen_find_assign_func(compiler_t *compiler, object_t *object, ast_
     // Will be used as AST type for subject of method during lookup
     ast_type_t ast_type_ptr;
     ast_elem_t *ast_type_ptr_elems[2];
-    ast_elem_t ast_type_ptr_elem;
-    ast_type_ptr_elem.id = AST_ELEM_POINTER;
-    ast_type_ptr_elem.source = arg_type->source;
-    ast_type_ptr_elems[0] = &ast_type_ptr_elem;
+    ast_elem_pointer_t ast_type_ptr_elem = {
+        .id = AST_ELEM_POINTER,
+        .source = arg_type->source,
+        .is_volatile = false,
+    };
+    ast_type_ptr_elems[0] = (ast_elem_t*) &ast_type_ptr_elem;
     ast_type_ptr_elems[1] = arg_type->elements[0];
     ast_type_ptr.elements = ast_type_ptr_elems;
     ast_type_ptr.elements_length = 2;

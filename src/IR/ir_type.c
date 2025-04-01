@@ -17,8 +17,9 @@ strong_cstr_t ir_type_str(ir_type_t *type){
     case TYPE_KIND_NONE:
         return strclone("none_t");
     case TYPE_KIND_POINTER: {
-            strong_cstr_t inside = ir_type_str((ir_type_t*) type->extra);
-            strong_cstr_t result = mallocandsprintf("*%s", inside);
+            ir_type_extra_pointer_t *pointer = (ir_type_extra_pointer_t*) type->extra;
+            strong_cstr_t inside = ir_type_str(pointer->inner);
+            strong_cstr_t result = mallocandsprintf("*%s%s", pointer->is_volatile ? "volatile " : "" , inside);
             free(inside);
             return result;
         }
@@ -75,8 +76,11 @@ bool ir_types_identical(ir_type_t *a, ir_type_t *b){
     if(a->kind != b->kind) return false;
 
     switch(a->kind){
-    case TYPE_KIND_POINTER:
-        return ir_types_identical((ir_type_t*) a->extra, (ir_type_t*) b->extra);
+    case TYPE_KIND_POINTER: {
+        ir_type_extra_pointer_t *a_pointer = (ir_type_extra_pointer_t*) a->extra;
+        ir_type_extra_pointer_t *b_pointer = (ir_type_extra_pointer_t*) b->extra;
+        return ir_types_identical(a_pointer->inner, b_pointer->inner) && a_pointer->is_volatile == b_pointer->is_volatile;
+    }
     case TYPE_KIND_STRUCTURE: case TYPE_KIND_UNION:
         if(((ir_type_extra_composite_t*) a->extra)->subtypes_length != ((ir_type_extra_composite_t*) b->extra)->subtypes_length) return false;
         for(length_t i = 0; i != ((ir_type_extra_composite_t*) a->extra)->subtypes_length; i++){
@@ -97,11 +101,11 @@ ir_type_t *ir_type_make(ir_pool_t *pool, unsigned int kind, void *extra_data){
     return type;
 }
 
-ir_type_t* ir_type_make_pointer_to(ir_pool_t *pool, ir_type_t *base){
-    ir_type_t *ptr_type = ir_pool_alloc(pool, sizeof(ir_type_t));
-    ptr_type->kind = TYPE_KIND_POINTER;
-    ptr_type->extra = base;
-    return ptr_type;
+ir_type_t* ir_type_make_pointer_to(ir_pool_t *pool, ir_type_t *inner, bool is_volatile){
+    return ir_type_make(pool, TYPE_KIND_POINTER, ir_pool_alloc_init(pool, ir_type_extra_pointer_t, {
+        .inner = inner,
+        .is_volatile = is_volatile,
+    }));
 }
 
 ir_type_t* ir_type_make_fixed_array_of(ir_pool_t *pool, length_t length, ir_type_t *base){
@@ -128,15 +132,16 @@ ir_type_t *ir_type_make_unknown_enum(ir_pool_t *pool, source_t source, weak_cstr
 
 ir_type_t *ir_type_dereference(ir_type_t *type){
     if(type->kind != TYPE_KIND_POINTER) return NULL;
-    return (ir_type_t*) type->extra;
+    ir_type_extra_pointer_t *pointer = (ir_type_extra_pointer_t*) type->extra;
+    return pointer->inner;
 }
 
 ir_type_t *ir_type_unwrap(ir_type_t *type){
     switch(type->kind){
     case TYPE_KIND_POINTER:
-        return (ir_type_t*) type->extra;
+        return ((ir_type_extra_pointer_t*) type->extra)->inner;
     case TYPE_KIND_FIXED_ARRAY:
-        return (ir_type_t*) ((ir_type_extra_fixed_array_t*) type->extra)->subtype;
+        return ((ir_type_extra_fixed_array_t*) type->extra)->subtype;
     default:
         return type;
     }
@@ -144,7 +149,8 @@ ir_type_t *ir_type_unwrap(ir_type_t *type){
 
 bool ir_type_is_pointer_to(ir_type_t *type, unsigned int child_type_kind){
     if(type->kind != TYPE_KIND_POINTER) return false;
-    if(((ir_type_t*) type->extra)->kind != child_type_kind) return false;
+    ir_type_extra_pointer_t *pointer = type->extra;
+    if(pointer->inner->kind != child_type_kind) return false;
     return true;
 }
 

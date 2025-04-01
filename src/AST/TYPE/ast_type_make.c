@@ -19,6 +19,14 @@ ast_elem_t *ast_elem_empty_make(unsigned int id, source_t source){
     });
 }
 
+ast_elem_t *ast_elem_pointer_make(source_t source, bool is_volatile){
+    return (ast_elem_t*) malloc_init(ast_elem_pointer_t, {
+        .id = AST_ELEM_POINTER,
+        .source = source,
+        .is_volatile = is_volatile,
+    });
+}
+
 ast_elem_t *ast_elem_base_make(strong_cstr_t base, source_t source){
     return (ast_elem_t*) malloc_init(ast_elem_base_t, {
         .id = AST_ELEM_BASE,
@@ -172,15 +180,15 @@ ast_type_t ast_type_make_base(strong_cstr_t base){
 
 ast_type_t ast_type_make_base_ptr(strong_cstr_t base){
     return from_2elems(
-        ast_elem_pointer_make(NULL_SOURCE),
+        ast_elem_pointer_make(NULL_SOURCE, false),
         ast_elem_base_make(base, NULL_SOURCE)
     );
 }
 
 ast_type_t ast_type_make_base_ptr_ptr( strong_cstr_t base){
     return from_3elems(
-        ast_elem_pointer_make(NULL_SOURCE),
-        ast_elem_pointer_make(NULL_SOURCE),
+        ast_elem_pointer_make(NULL_SOURCE, false),
+        ast_elem_pointer_make(NULL_SOURCE, false),
         ast_elem_base_make(base, NULL_SOURCE)
     );
 }

@@ -16,7 +16,7 @@ void ast_type_prepend_ptr(ast_type_t *type){
 
     ast_elem_t **new_elements = malloc(sizeof(ast_elem_t*) * (type->elements_length + 1));
     memcpy(&new_elements[1], type->elements, sizeof(ast_elem_t*) * type->elements_length);
-    new_elements[0] = ast_elem_pointer_make(NULL_SOURCE);
+    new_elements[0] = ast_elem_pointer_make(NULL_SOURCE, false);
 
     free(type->elements);
     type->elements = new_elements;

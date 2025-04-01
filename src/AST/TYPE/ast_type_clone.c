@@ -12,6 +12,7 @@
 
 static ast_elem_t *ast_elem_empty_clone(const ast_elem_t*);
 static ast_elem_t *ast_elem_base_clone(const ast_elem_base_t*);
+static ast_elem_t *ast_elem_pointer_clone(const ast_elem_pointer_t*);
 static ast_elem_t *ast_elem_fixed_array_clone(const ast_elem_fixed_array_t*);
 static ast_elem_t *ast_elem_var_fixed_array_clone(const ast_elem_var_fixed_array_t*);
 static ast_elem_t *ast_elem_polycount_clone(const ast_elem_polycount_t*);
@@ -37,7 +38,7 @@ ast_elem_t *ast_elem_clone(const ast_elem_t *original){
     case AST_ELEM_BASE:
         return ast_elem_base_clone((ast_elem_base_t*) original);
     case AST_ELEM_POINTER:
-        return ast_elem_empty_clone(original);
+        return ast_elem_pointer_clone((ast_elem_pointer_t*) original);
     case AST_ELEM_ARRAY:
         return ast_elem_empty_clone(original);
     case AST_ELEM_FIXED_ARRAY:
@@ -79,6 +80,18 @@ static ast_elem_t *ast_elem_empty_clone(const ast_elem_t *original){
         original,
         sizeof(ast_elem_t)
     );
+}
+
+static ast_elem_t *ast_elem_pointer_clone(const ast_elem_pointer_t *original){
+    ast_elem_pointer_t *clone = malloc(sizeof *original);
+
+    *clone = (ast_elem_pointer_t){
+        .id = AST_ELEM_POINTER,
+        .source = original->source,
+        .is_volatile = original->is_volatile,
+    };
+
+    return (ast_elem_t*) clone;
 }
 
 static ast_elem_t *ast_elem_base_clone(const ast_elem_base_t *original){

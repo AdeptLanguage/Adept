@@ -149,10 +149,11 @@ const char *global_token_name_table[] = {
     "va_start keyword",                   // 0x00000090
     "verbatim keyword",                   // 0x00000091
     "virtual keyword",                    // 0x00000092
-    "while keyword",                      // 0x00000093
+    "volatile keyword",                   // 0x00000093
+    "while keyword",                      // 0x00000094
 };
 
-const char global_token_extra_format_table[] = "abccaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const char global_token_extra_format_table[] = "abccaaaaaaaaaaaaaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 const char *global_token_keywords_list[] = {
     "POD",
@@ -227,7 +228,8 @@ const char *global_token_keywords_list[] = {
     "va_start",
     "verbatim",
     "virtual",
+    "volatile",
     "while",
 };
 
-unsigned long long global_token_keywords_list_length = 73;
+unsigned long long global_token_keywords_list_length = 74;

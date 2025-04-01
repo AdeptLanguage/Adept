@@ -85,7 +85,7 @@ ast_elem_t *ast_elem_empty_make(unsigned int id, source_t source);
 
 // ---------------- ast_elem_pointer_make ----------------
 // Makes a pointer element (e.g. '*')
-#define ast_elem_pointer_make(SOURCE) ast_elem_empty_make(AST_ELEM_POINTER, SOURCE)
+ast_elem_t *ast_elem_pointer_make(source_t source, bool is_volatile);
 
 // ---------------- ast_elem_generic_int_make ----------------
 // Makes a generic int type element (no syntactic equivalent - represents the type of an unsuffixed integer)

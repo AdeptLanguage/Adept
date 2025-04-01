@@ -12,7 +12,7 @@
 // ------------------ Possible IR type kinds ------------------
 // ============================================================
 #define TYPE_KIND_NONE              0x00000000 // extra = NULL
-#define TYPE_KIND_POINTER           0x00000001 // extra = ir_type_t*
+#define TYPE_KIND_POINTER           0x00000001 // extra = ir_type_extra_pointer_t*
 #define TYPE_KIND_S8                0x00000002 // extra = NULL
 #define TYPE_KIND_S16               0x00000003 // extra = NULL
 #define TYPE_KIND_S32               0x00000004 // extra = NULL
@@ -43,6 +43,13 @@ typedef struct {
     unsigned int kind;
     void *extra;
 } ir_type_t;
+
+// ---------------- ir_type_extra_pointer_t ----------------
+// Structure for 'extra' field of 'ir_type_t' for pointer types
+typedef struct {
+    ir_type_t *inner;
+    bool is_volatile;
+} ir_type_extra_pointer_t;
 
 // ---------------- ir_type_extra_composite_t ----------------
 // Structure for 'extra' field of 'ir_type_t' for composite
@@ -85,7 +92,7 @@ ir_type_t *ir_type_make(ir_pool_t *pool, unsigned int kind, void *extra_data);
 
 // ---------------- ir_type_make_pointer_to ----------------
 // Gets the type of a pointer to a type
-ir_type_t *ir_type_make_pointer_to(ir_pool_t *pool, ir_type_t *base);
+ir_type_t *ir_type_make_pointer_to(ir_pool_t *pool, ir_type_t *base, bool is_volatile);
 
 // ---------------- ir_type_make_fixed_array_of ----------------
 // Gets the type of a fixed array of a type

@@ -203,7 +203,7 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
         }
         break;
     case AST_ELEM_FUNC:
-        *resolved_type = ir_type_make_pointer_to(&ir_module->pool, ir_module->common.ir_ubyte);
+        *resolved_type = ir_type_make_pointer_to(&ir_module->pool, ir_module->common.ir_ubyte, false);
         break;
     case AST_ELEM_GENERIC_BASE: {
             ast_elem_generic_base_t *generic_base = (ast_elem_generic_base_t*) unresolved_type->elements[non_concrete_layers];
@@ -294,8 +294,11 @@ errorcode_t ir_gen_resolve_type(compiler_t *compiler, object_t *object, const as
         unsigned int non_concrete_element_id = unresolved_type->elements[i - 1]->id;
 
         if(non_concrete_element_id == AST_ELEM_POINTER){
+            ir_type_extra_pointer_t *pointer = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_pointer_t));
             wrapped_type->kind = TYPE_KIND_POINTER;
-            wrapped_type->extra = *resolved_type;
+            wrapped_type->extra = pointer;
+            pointer->inner = *resolved_type;
+            pointer->is_volatile = ((ast_elem_pointer_t*) unresolved_type->elements[i - 1])->is_volatile;
         } else if(non_concrete_element_id == AST_ELEM_FIXED_ARRAY){
             ir_type_extra_fixed_array_t *fixed_array = ir_pool_alloc(&ir_module->pool, sizeof(ir_type_extra_fixed_array_t));
             fixed_array->subtype = *resolved_type;

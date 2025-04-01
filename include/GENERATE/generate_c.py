@@ -200,6 +200,7 @@ tokens = [
     Token("va_start"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "va_start keyword"                  ),
     Token("verbatim"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "verbatim keyword"                  ),
     Token("virtual"               , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "virtual keyword"                   ),
+    Token("volatile"              , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "volatile keyword"                   ),
     Token("while"                 , TokenType.KEYWORD      , ExtraDataFormat.ID_ONLY    , "while keyword"                     )
 ]
 

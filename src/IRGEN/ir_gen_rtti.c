@@ -72,7 +72,7 @@ errorcode_t ir_gen_rtti_fetch_rtti_representation_types(ir_module_t *ir_module, 
     }
 
     // Make '*AnyType' type
-    out_rtti_types->any_type_ptr_type = ir_type_make_pointer_to(pool, out_rtti_types->any_type_type);
+    out_rtti_types->any_type_ptr_type = ir_type_make_pointer_to(pool, out_rtti_types->any_type_type, false);
     return SUCCESS;
 }
 
@@ -89,7 +89,7 @@ errorcode_t ir_gen__types__placeholder(object_t *object, ir_global_t *ir_global)
     }
 
     // Construct '**AnyType' null pointer and set it as __types__'s initializer
-    ir_global->trusted_static_initializer = build_null_pointer_of_type(pool, ir_type_make_pointer_to(pool, ir_type_make_pointer_to(pool, any_type_type)));
+    ir_global->trusted_static_initializer = build_null_pointer_of_type(pool, ir_type_make_pointer_to(pool, ir_type_make_pointer_to(pool, any_type_type, false), false));
     return SUCCESS;
 }
 

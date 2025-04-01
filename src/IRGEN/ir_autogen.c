@@ -107,8 +107,8 @@ errorcode_t ir_autogen_for_child_of_struct(
 
     switch(action_kind){
     case IR_AUTOGEN_ACTION_DEFER: {
-            ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, param_ir_type), 0), param_ast_type->source);
-            ir_value_t *ir_field_value = build_member(builder, this_ir_value, field_i, ir_type_make_pointer_to(builder->pool, ir_field_type), param_ast_type->source);
+            ir_value_t *this_ir_value = build_load(builder, build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, param_ir_type, false), 0), param_ast_type->source);
+            ir_value_t *ir_field_value = build_member(builder, this_ir_value, field_i, ir_type_make_pointer_to(builder->pool, ir_field_type, false), param_ast_type->source);
             field_errorcode = handle_single_deference(builder, ast_field_type, ir_field_value, composite_source);
         }
         break;
@@ -118,8 +118,8 @@ errorcode_t ir_autogen_for_child_of_struct(
                 goto end;
             }
 
-            ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, param_ir_type), 0);
-            ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, field_i, ir_type_make_pointer_to(builder->pool, ir_field_type), field_source);
+            ir_value_t *mutable_passed_ir_value = build_lvarptr(builder, ir_type_make_pointer_to(builder->pool, param_ir_type, false), 0);
+            ir_value_t *ir_field_reference = build_member(builder, mutable_passed_ir_value, field_i, ir_type_make_pointer_to(builder->pool, ir_field_type, false), field_source);
             field_errorcode = handle_single_pass(builder, ast_field_type, ir_field_reference, NULL_SOURCE);
         }
         break;
