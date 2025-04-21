@@ -292,6 +292,7 @@ jobs:
           mv AdeptConfig/adept.config stage/adept.config
           mv AdeptImport stage/import
           mv LICENSE stage/LICENSE
+          find stage -type d -name ".git" -exec rm -rf {} +
       - name: Install Inno Setup
         run: choco install innosetup
       - name: Package as Installer
@@ -373,12 +374,14 @@ jobs:
           mv ../AdeptCrossCompilation-MacOS-to-Windows/cross-compile-windows stage/application/cross-compile-windows
           mv ../AdeptConfig/adept.config stage/application/adept.config
           mv ../build/adept stage/application/adept
+          find stage -type d -name ".git" -exec rm -rf {} +
       - name: Stage Installer Files
         working-directory: ${{github.workspace}}/macOS-installer-builder
         run: |
           sed -i '' -e 's/Adept 2.6/${{env.fullName}}/g' stage/installer/welcome.html
           sed -i '' -e 's/Adept 2.6/${{env.fullName}}/g' -e s/adept2-6/${{env.alternativeBinaryName}}/g stage/installer/conclusion.html
           sed -i '' -e s/adept2-6/${{env.alternativeBinaryName}}/g -e s/2.6.0/${{env.longVersion}}/g stage/installer/postinstall
+          find stage -type d -name ".git" -exec rm -rf {} +
       - name: Package as Installer
         working-directory: ${{github.workspace}}/macOS-installer-builder
         run: |
@@ -387,8 +390,9 @@ jobs:
       - name: Package as Standalone
         working-directory: ${{github.workspace}}/macOS-installer-builder
         run: |
+          find stage -type d -name ".git" -exec rm -rf {} +
           mv stage/application adept-${{env.shortVersion}}-standalone
-          zip -vr Adept-${{env.shortVersion}}-standalone-arm64-MacOS.zip adept-${{env.shortVersion}}-standalone/ -x "*.DS_Store"
+          zip -vr Adept-${{env.shortVersion}}-standalone-arm64-MacOS.zip adept-${{env.shortVersion}}-standalone/ -x "*.DS_Store" -x "*/.git/*"
       - name: Upload MacOS Installer Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -500,12 +504,14 @@ jobs:
           cp ubuntu-latest/build/adept adept-${{env.shortVersion}}-standalone/adept
           mv AdeptConfig/adept.config adept-${{env.shortVersion}}-standalone/adept.config
           mv AdeptImport adept-${{env.shortVersion}}-standalone/import
-          zip -r Adept-${{env.shortVersion}}-standalone-x86_64-Ubuntu.zip adept-${{env.shortVersion}}-standalone
+          find adept-${{env.shortVersion}}-standalone -type d -name ".git" -exec rm -rf {} +
+          zip -r Adept-${{env.shortVersion}}-standalone-x86_64-Ubuntu.zip adept-${{env.shortVersion}}-standalone -x "*/.git/*"
       - name: Package as Standalone for Ubuntu 22.04
         working-directory: ${{github.workspace}}
         run: |
           cp ubuntu-22.04/build/adept adept-${{env.shortVersion}}-standalone/adept
-          zip -r Adept-${{env.shortVersion}}-standalone-x86_64-Ubuntu-22.04.zip adept-${{env.shortVersion}}-standalone
+          find adept-${{env.shortVersion}}-standalone -type d -name ".git" -exec rm -rf {} +
+          zip -r Adept-${{env.shortVersion}}-standalone-x86_64-Ubuntu-22.04.zip adept-${{env.shortVersion}}-standalone -x "*/.git/*"
       - name: Stage
         run: |
           mkdir stage
@@ -533,3 +539,4 @@ jobs:
             stage/Windows-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
             stage/Ubuntu-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
             stage/Ubuntu-22.04-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
+           stage/Ubuntu-22.04-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
