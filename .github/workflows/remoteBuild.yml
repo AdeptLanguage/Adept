@@ -221,7 +221,8 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         working-directory: ${{github.workspace}}/e2e
         run: |
-          ../build/adept src/hello_world/main.adept -e
+          ../build/adept src/hello_world/main.adept
+          src/hello_world/main
           python3 e2e-runner.py ../build/adept
   build-windows-installer:
     name: Installer / windows-latest
