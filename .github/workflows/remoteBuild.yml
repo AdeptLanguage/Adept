@@ -220,6 +220,9 @@ jobs:
       - name: E2E Test (Unix)
         if: ${{ matrix.os != 'windows-latest' }}
         working-directory: ${{github.workspace}}/e2e
+          ../build/adept src/hello_world/main.adept -e
+        if: ${{ matrix.os != 'windows-latest' }}
+        working-directory: ${{github.workspace}}/e2e
         run: |
           python3 e2e-runner.py ../build/adept
   build-windows-installer:
