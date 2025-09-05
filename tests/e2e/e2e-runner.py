@@ -16,6 +16,7 @@ def run_all_tests():
         [executable],
         lambda output: b"     /\xe2\xe2\\\n    /    \\    \n   /      \\    \n  /   /\\   \\        The Adept Compiler v2.8 - (c) 2016-2024 Isaac Shelton\n /   /\\__   \\\n/___/    \\___\\\n\nUsage: adept [options] [filename]\n\nOptions:\n    -h, --help        Display this message\n    -e                Execute resulting executable\n    -w                Disable compiler warnings\n    -o FILENAME       Output to FILENAME (relative to working directory)\n    -n FILENAME       Output to FILENAME (relative to file)\n    -c                Emit object file\n    -O0,-O1,-O2,-O3   Set optimization level\n    --windowed        Don't open console with executable (only applies to Windows)\n    -std=2.x          Set standard library version\n    --version         Display compiler version\n    --root            Display root folder\n    --help-advanced   Show lesser used compiler flags\n" in output
     )
+    test("hello_world", [executable, join(src_dir, "hello_world/main.adept"), "-e"], lambda output: b"Hello world!" in output)
     test("address", [executable, join(src_dir, "address/main.adept")], compiles)
     test("aliases", [executable, join(src_dir, "aliases/main.adept")], compiles)
     test("aliases_polymorphic", [executable, join(src_dir, "aliases_polymorphic/main.adept")], compiles)
