@@ -110,8 +110,8 @@ jobs:
         env:
           LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm@20
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
-          LDFLAGS="-L/home/linuxbrew/.linuxbrew/opt/llvm@20/lib"
-          CPPFLAGS="-I/home/linuxbrew/.linuxbrew/opt/llvm@20/include"
+          LDFLAGS: "-L/home/linuxbrew/.linuxbrew/opt/llvm@20/lib"
+          CPPFLAGS: "-I/home/linuxbrew/.linuxbrew/opt/llvm@20/include"
       - name: Build (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
