@@ -226,6 +226,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         working-directory: ${{github.workspace}}/e2e
         run: |
+          ../build/adept --llvmir
           clang -v
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           clang -v
