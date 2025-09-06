@@ -230,7 +230,7 @@ jobs:
           clang -v
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           ../build/adept src/hello_world/main.adept --llvmir --no-result 2> hello.ll
-          llc hello.ll --relocation-model=PIE --filetype=obj -o hello.o
+          llc hello.ll --relocation-model=pie --filetype=obj -o hello.o
           file hello.o
           gcc hello.o -fPIE -o hello
           ./hello
