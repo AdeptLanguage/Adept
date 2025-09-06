@@ -90,7 +90,7 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install zstd
-          brew install llvm
+          brew install llvm@20
           brew ls -v zstd
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
@@ -98,7 +98,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           CC: /opt/homebrew/opt/llvm/bin/clang
-          LLVM_DIR: /opt/homebrew/opt/llvm
+          LLVM_DIR: /opt/homebrew/opt/llvm@20
           zstd_DIR: /usr/local/opt/zstd
           CFLAGS: -static-libstdc++
           CXXFLAGS: -static-libstdc++
@@ -108,7 +108,7 @@ jobs:
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
-          LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm
+          LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm@20
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
       - name: Build (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
@@ -123,7 +123,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
         run: |
           echo -e "foreign printf(format *ubyte, ...) int\nfunc main {\nprintf('Hello, world!\\n')\n}" > h.adept
-          build/adept h.adept
+          ${{github.workspace}}/build/adept h.adept
           ./h
       - name: Archive Build Result
         uses: a7ul/tar-action@v1.1.3
