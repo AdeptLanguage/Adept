@@ -226,12 +226,12 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         working-directory: ${{github.workspace}}/e2e
         run: |
+          clang -v
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           ../build/adept src/hello_world/main.adept --llvmir --no-result 2> hello.ll
           llc hello.ll -o hello.o
           gcc hello.o -o hello
           ./hello
-          clang -v
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           clang -v
           sudo apt-get install -y gdb
           gdb -batch -ex "run" -ex "bt" --args ../build/adept src/hello_world/main.adept 2>&1
