@@ -232,7 +232,7 @@ jobs:
           ../build/adept src/hello_world/main.adept --llvmir --no-result 2> hello.ll
           llc hello.ll --filetype=obj -o hello.o
           file hello.o
-          gcc hello.o -o hello
+          gcc hello.o -fPIE -o hello
           ./hello
           clang -v
           sudo apt-get install -y gdb
