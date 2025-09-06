@@ -86,12 +86,12 @@ jobs:
       - name: Install LLVM and dependencies (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
         run: |
-          sudo apt-get update
+          # sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew install zstd
+          # brew install zstd
           brew install llvm@20
           brew ls -v zstd
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
