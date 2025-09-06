@@ -86,13 +86,12 @@ jobs:
       - name: Install LLVM and dependencies (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
         run: |
-          # sudo apt-get update
+          sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          # brew install zstd
-          brew install llvm@20
+          brew install zstd
+          brew install llvm
           brew ls -v zstd
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
       - name: Configure (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
@@ -109,10 +108,8 @@ jobs:
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
-          LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm@20
+          LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
-          LDFLAGS: "-L/home/linuxbrew/.linuxbrew/opt/llvm@20/lib"
-          CPPFLAGS: "-I/home/linuxbrew/.linuxbrew/opt/llvm@20/include"
       - name: Build (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
@@ -122,12 +119,6 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-      - name: Test Build Artifact (Ubuntu)
-        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
-        run: |
-          echo -e "foreign printf(format *ubyte, ...) int\nfunc main {\nprintf('Hello, world!\\n')\n}" > h.adept
-          ${{github.workspace}}/build/adept h.adept
-          ./h
       - name: Archive Build Result
         uses: a7ul/tar-action@v1.1.3
         with:
@@ -203,15 +194,6 @@ jobs:
         with:
           command: x
           files: build-${{ matrix.os }}.tar.gz
-      - name: Install LLVM and dependencies (Ubuntu)
-        if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew install zstd
-          brew install llvm
-          brew ls -v zstd
       - name: Install libcurl for curl demo (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
         run: |
@@ -226,31 +208,6 @@ jobs:
         run: |
           $env:Path = "C:/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin;$env:Path"
           python3 e2e-runner.py ../build/adept
-      - name: E2E Test (Unix) (0)
-        if: ${{ matrix.os != 'windows-latest' }}
-        working-directory: ${{github.workspace}}/e2e
-        run: |
-          ldd ../build/adept
-      - name: E2E Test (Unix) (1)
-        if: ${{ matrix.os != 'windows-latest' }}
-        working-directory: ${{github.workspace}}/e2e
-        run: |
-          set -x
-          clang -v
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          ../build/adept src/hello_world/main.adept --llvmir --no-result 2> hello.ll
-          llc hello.ll --relocation-model=pic --filetype=obj -o hello.o
-          file hello.o
-          gcc hello.o -fPIE -o hello
-          ./hello
-          clang -v
-          sudo apt-get install -y gdb
-          gdb -batch -ex "run" -ex "layout asm" -ex "layout regs" -ex "bt" -ex "p \$_siginfo._sifields._sigfault.si_addr" -ex "info registers" -ex "display/100i \$pc" --args ../build/adept src/hello_world/main.adept --no-type-info 2>&1
-      - name: E2E Test (Unix) (2)
-        if: ${{ matrix.os != 'windows-latest' }}
-        working-directory: ${{github.workspace}}/e2e
-        run: |
-          src/hello_world/main
       - name: E2E Test (Unix)
         if: ${{ matrix.os != 'windows-latest' }}
         working-directory: ${{github.workspace}}/e2e
@@ -568,7 +525,7 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date '+%B %d %Y at %l:%M %p %Z')"
       - name: Release
-        uses: IsaacShelton/update-existing-release@v1.3.5
+        uses: IsaacShelton/update-existing-release@v1.3.4
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           release: ${{env.releaseName}}
@@ -582,4 +539,3 @@ jobs:
             stage/Windows-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
             stage/Ubuntu-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
             stage/Ubuntu-22.04-x86_64-Standalone-Adept-${{env.shortVersion}}.zip
-
