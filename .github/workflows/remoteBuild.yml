@@ -98,7 +98,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
           CC: /opt/homebrew/opt/llvm/bin/clang
-          LLVM_DIR: /opt/homebrew/opt/llvm@20
+          LLVM_DIR: /opt/homebrew/opt/llvm
           zstd_DIR: /usr/local/opt/zstd
           CFLAGS: -static-libstdc++
           CXXFLAGS: -static-libstdc++
@@ -110,6 +110,8 @@ jobs:
         env:
           LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm@20
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
+          LDFLAGS="-L/home/linuxbrew/.linuxbrew/opt/llvm@20/lib"
+          CPPFLAGS="-I/home/linuxbrew/.linuxbrew/opt/llvm@20/include"
       - name: Build (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
