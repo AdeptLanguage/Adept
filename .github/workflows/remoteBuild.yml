@@ -236,7 +236,7 @@ jobs:
           ./hello
           clang -v
           sudo apt-get install -y gdb
-          gdb -batch -ex "run" -ex "layout asm" -ex "layout regs" -ex "bt" -ex "p \$_siginfo._sifields._sigfault.si_addr" -ex "info registers" -ex "display/100i $pc" --args ../build/adept src/hello_world/main.adept --no-type-info 2>&1
+          gdb -batch -ex "run" -ex "layout asm" -ex "layout regs" -ex "bt" -ex "p \$_siginfo._sifields._sigfault.si_addr" -ex "info registers" -ex "display/100i \$pc" --args ../build/adept src/hello_world/main.adept --no-type-info 2>&1
       - name: E2E Test (Unix) (2)
         if: ${{ matrix.os != 'windows-latest' }}
         working-directory: ${{github.workspace}}/e2e
