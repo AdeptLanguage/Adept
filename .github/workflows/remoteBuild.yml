@@ -108,8 +108,11 @@ jobs:
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
+          CC: /home/linuxbrew/.linuxbrew/opt/llvm/bin/clang
           LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
+          CFLAGS: -static-libstdc++
+          CXXFLAGS: -static-libstdc++
       - name: Build (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
@@ -525,7 +528,7 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date '+%B %d %Y at %l:%M %p %Z')"
       - name: Release
-        uses: IsaacShelton/update-existing-release@v1.3.4
+        uses: IsaacShelton/update-existing-release@v1.3.5
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           release: ${{env.releaseName}}
