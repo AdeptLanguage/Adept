@@ -124,7 +124,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-      - name: - name: Test Build Artifact (Ubuntu)
+      - name: Test Build Artifact (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
         run: |
           echo -e "foreign printf(format *ubyte, ...) int\nfunc main {\nprintf('Hello, world!\\n')\n}" > h.adept
