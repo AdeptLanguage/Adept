@@ -86,8 +86,7 @@ jobs:
       - name: Install LLVM and dependencies (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04' }}
         run: |
-          sudo apt remove zstd
-          sudo apt remove llvm
+          sudo apt-get remove zstd
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
@@ -110,7 +109,6 @@ jobs:
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu" -DADEPT_LINK_LLVM_STATIC=On -B ${{github.workspace}}/build -G Ninja
         env:
-          CC: /home/linuxbrew/.linuxbrew/opt/llvm/bin/clang
           LLVM_DIR: /home/linuxbrew/.linuxbrew/opt/llvm
           zstd_DIR: /home/linuxbrew/.linuxbrew/opt/zstd
           CFLAGS: -static-libstdc++
