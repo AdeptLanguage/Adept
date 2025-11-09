@@ -953,7 +953,7 @@ errorcode_t parse_switch(parse_ctx_t *ctx, ast_expr_list_t *stmt_list, defer_sco
                 ast_case_t *newest_case = ast_case_list_append(&cases, (ast_case_t){
                     .condition = condition,
                     .source = case_source,
-                    .statements = {0},
+                    .statements = {/*zeroed*/},
                 });
 
                 list = &newest_case->statements;

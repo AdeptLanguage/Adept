@@ -1411,7 +1411,7 @@ errorcode_t attempt_autogen___assign__(compiler_t *compiler, object_t *object, a
 
     entry->has_assign = TROOLEAN_FALSE;
 
-    ast_field_map_t field_map;
+    ast_field_map_t field_map = {/*zeroed*/};
 
     // Cannot make if type is not a composite or if it's not simple
     if(subject_is_base_ptr){

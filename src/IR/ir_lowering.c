@@ -412,16 +412,16 @@ errorcode_t ir_lower_const_xitofp(ir_pool_t *pool, ir_value_t **inout_value){
 
     switch(from_spec.bytes){
     case 1:
-        as_float = is_signed ? *((int8_t*) ((*child)->extra)) : *((uint8_t*) ((*child)->extra));
+        as_float = is_signed ? (double) *((int8_t*) ((*child)->extra)) : (double) *((uint8_t*) ((*child)->extra));
         break;
     case 2:
-        as_float = is_signed ? *((int16_t*) ((*child)->extra)) : *((uint16_t*) ((*child)->extra));
+        as_float = is_signed ? (double) *((int16_t*) ((*child)->extra)) : (double) *((uint16_t*) ((*child)->extra));
         break;
     case 4:
-        as_float = is_signed ? *((int32_t*) ((*child)->extra)) : *((uint32_t*) ((*child)->extra));
+        as_float = is_signed ? (double) *((int32_t*) ((*child)->extra)) : (double) *((uint32_t*) ((*child)->extra));
         break;
     case 8:
-        as_float = is_signed ? *((int64_t*) ((*child)->extra)) : *((uint64_t*) ((*child)->extra));
+        as_float = is_signed ? (double) *((int64_t*) ((*child)->extra)) : (double) *((uint64_t*) ((*child)->extra));
         break;
     default:
         internalerrorprintf("ir_lower_const_xitofp() - Could not perform operation\n");
