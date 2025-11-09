@@ -408,9 +408,6 @@ successful_t ast_layout_endpoint_init_with(ast_layout_endpoint_t *endpoint, uint
     // Set end index, so we can determine the length of this endpoint's indices
     if(length != AST_LAYOUT_MAX_DEPTH) endpoint->indices[length] = AST_LAYOUT_ENDPOINT_END_INDEX;
 
-    // Silence warnings about copying uninitialized data
-    memset(endpoint->indices, 0, sizeof(uint16_t) * AST_LAYOUT_MAX_DEPTH);
-
     memcpy(endpoint->indices, indices, sizeof(uint16_t) * length);
     return true;
 }
