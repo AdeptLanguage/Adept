@@ -19,7 +19,7 @@ func main {
     curl = curl_easy_init()
 
     if(curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, 'https://example.com')
+        curl_easy_setopt(curl, CURLOPT_URL, 'https://www.google.com/robots.txt')
 
         /* specify certificate bundle (only required for windows) */
         #if __windows__

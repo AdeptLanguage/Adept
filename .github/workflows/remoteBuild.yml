@@ -136,7 +136,7 @@ jobs:
           outPath: build-${{ matrix.os }}.tar.gz
       - name: Archive E2E Infrastructure
         uses: a7ul/tar-action@v1.1.3
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         with:
           command: c
           cwd: tests
@@ -156,7 +156,7 @@ jobs:
           path: build-${{ matrix.os }}.tar.gz
       - name: Upload E2E Testing Infrastructure Artifact
         uses: actions/upload-artifact@v4
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         with:
           name: e2e-archive
           path: e2e.tar.gz
@@ -168,7 +168,7 @@ jobs:
           path: res.tar.gz
       - name: Upload LICENSE Artifact
         uses: actions/upload-artifact@v4
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         with:
           name: LICENSE
           path: LICENSE
