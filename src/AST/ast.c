@@ -155,6 +155,69 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     // __wasm__
     meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__wasm__", cross_compile_for == CROSS_COMPILE_WASM32);
 
+    // __bsd__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__bsd__",
+    #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__MidnightBSD__)
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
+    // __freebsd__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__freebsd__",
+    #ifdef __FreeBSD__
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
+    // __openbsd__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__openbsd__",
+    #ifdef __OpenBSD__
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
+    // __netbsd__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__netbsd__",
+    #ifdef __NetBSD__
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
+    // __dragonfly__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__dragonfly__",
+    #ifdef __DragonFly_
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
+    // __illumos__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__illumos__",
+    #ifdef __illumos__
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
+    // __haiku__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__haiku__",
+    #ifdef __HAIKU__
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
     unsigned short x = 0xEEFF;
     if (*((unsigned char*) &x) == 0xFF || cross_compile_for == CROSS_COMPILE_WINDOWS){
         // Little Endian
