@@ -218,6 +218,24 @@ void ast_init(ast_t *ast, unsigned int cross_compile_for){
     #endif
     );
 
+    // __cygwin__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__cygwin__",
+    #ifdef __CYGWIN__
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
+    // __msys__
+    meta_definition_add_bool(&ast->meta_definitions, &ast->meta_definitions_length, &ast->meta_definitions_capacity, "__msys__",
+    #ifdef __MSYS__
+        cross_compile_for == CROSS_COMPILE_NONE
+    #else
+        false
+    #endif
+    );
+
     unsigned short x = 0xEEFF;
     if (*((unsigned char*) &x) == 0xFF || cross_compile_for == CROSS_COMPILE_WINDOWS){
         // Little Endian
