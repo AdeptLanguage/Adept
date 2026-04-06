@@ -11,6 +11,7 @@ hash_t hash_data(const void *data, length_t size){
 }
 
 hash_t hash_string(const char *s){
+    if (s == NULL) return 0;
     return hash_data(s, strlen(s));
 }
 
